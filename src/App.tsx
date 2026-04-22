@@ -2092,6 +2092,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
           await updateDoc(cardRef, {
             current_stamps: newStamps,
             total_completed_cycles: newCycles,
+            tiersCompleted: store.rewardTiers?.length || 1,
             last_tap_timestamp: serverTimestamp()
           });
         } else {
@@ -2101,8 +2102,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
           if (newStamps >= limit) {
             newCycles = 1;
             // Cap at limit to force redemption before starting new cycle
-            if (newStamps > limit) newStamps = limit; 
-            
+            if (newStamps > limit) newStamps = limit;
+
             await addDoc(collection(db, 'transactions'), {
               user_id: customer.uid,
               store_id: store.id,
@@ -2118,6 +2119,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
             current_stamps: newStamps,
             total_completed_cycles: newCycles,
             stamps_required: limit,
+            tiersCompleted: store.rewardTiers?.length || 1,
             last_tap_timestamp: serverTimestamp(),
             isArchived: false
           });
@@ -2237,7 +2239,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
             </div>
             <StatSquare icon={<RefreshCw className="text-orange-500" />} label="Return Rate" value={`${returnRate}%`} />
             <StatSquare icon={<Award className="text-brand-gold" />} label="Redemption Rate" value={`${redemptionRate}%`} />
-            <StatSquare icon={<Gift className="text-pink-500" />} label="Rewards Given" value={String(storeCards.filter(c => c.isArchived).reduce((sum, c) => sum + (c.tiersCompleted || 1), 0))} />
+            <StatSquare icon={<Gift className="text-pink-500" />} label="Rewards Given" value={String(storeCards.filter(c => !c.isArchived).reduce((sum, c) => sum + ((c.total_completed_cycles || 0) * (c.tiersCompleted || 1)), 0))} />
           </div>
 
           <AnimatePresence>
@@ -3690,7 +3692,7 @@ function ProfileScreen({ profile, userCards, onLogout, onDeleteAccount, onViewUs
   if (!profile) return null;
 
   const lifetimeStamps = userCards.reduce((acc, c) => acc + (c.current_stamps || 0), 0) || profile.totalStamps || 0;
-  const archivedCardsCount = userCards.filter(c => c.isArchived).reduce((sum, c) => sum + (c.tiersCompleted || 1), 0);
+  const archivedCardsCount = userCards.filter(c => !c.isArchived).reduce((sum, c) => sum + ((c.total_completed_cycles || 0) * (c.tiersCompleted || 1)), 0);
   const activeCardsCount = userCards.filter(c => !c.isArchived).length;
 
   // Vendor stats
@@ -3766,7 +3768,7 @@ function ProfileScreen({ profile, userCards, onLogout, onDeleteAccount, onViewUs
         {/* Business stats */}
         <div className="grid grid-cols-2 gap-4">
           <StatSquare icon={<TrendingUp className="text-green-500" />} label="Stamps Given" value={String(totalStampsGiven)} />
-          <StatSquare icon={<Gift className="text-pink-500" />} label="Rewards Given" value={String(storeCards.filter(c => c.isArchived).reduce((sum, c) => sum + (c.tiersCompleted || 1), 0))} />
+          <StatSquare icon={<Gift className="text-pink-500" />} label="Rewards Given" value={String(storeCards.filter(c => !c.isArchived).reduce((sum, c) => sum + ((c.total_completed_cycles || 0) * (c.tiersCompleted || 1)), 0))} />
         </div>
 
         {/* Posts */}
@@ -7087,7 +7089,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
             </div>
           )}
           <div className="glass-card p-4 rounded-3xl text-center">
-            <p className="text-lg font-bold text-brand-navy">{allStoreCards.filter(c => c.isArchived).reduce((sum, c) => sum + (c.tiersCompleted || 1), 0)}</p>
+            <p className="text-lg font-bold text-brand-navy">{allStoreCards.filter(c => !c.isArchived).reduce((sum, c) => sum + ((c.total_completed_cycles || 0) * (c.tiersCompleted || 1)), 0)}</p>
             <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest mt-0.5">Rewards</p>
           </div>
         </div>
@@ -7572,7 +7574,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
               <p className="text-[10px] text-brand-navy/40 font-bold uppercase">Active</p>
             </div>
             <div className="text-center">
-              <p className="text-lg font-bold">{allCards.filter(c => c.isArchived).reduce((sum, c) => sum + (c.tiersCompleted || 1), 0)}</p>
+              <p className="text-lg font-bold">{allCards.filter(c => !c.isArchived).reduce((sum, c) => sum + ((c.total_completed_cycles || 0) * (c.tiersCompleted || 1)), 0)}</p>
               <p className="text-[10px] text-brand-navy/40 font-bold uppercase">Rewards</p>
             </div>
           </div>
