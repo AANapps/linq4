@@ -214,6 +214,7 @@ interface StoreProfile {
   lat?: number;
   lng?: number;
   rewardTiers?: { stamps: number; reward: string }[];
+  rewardsGiven?: number;
   visibilitySettings?: {
     members?: boolean;
     stamps?: boolean;
@@ -326,6 +327,7 @@ export default function App() {
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [needsEmailVerification, setNeedsEmailVerification] = useState(false);
   const [profileCollection, setProfileCollection] = useState<'users' | 'vendors' | null>(null);
+  const intendedRoleRef = useRef<'consumer' | 'vendor' | null>(null);
   const [activeTab, setActiveTab] = useState<string>('for-you');
   const [viewingStore, setViewingStore] = useState<StoreProfile | null>(null);
   const [viewingUser, setViewingUser] = useState<UserProfile | null>(null);
@@ -906,6 +908,7 @@ export default function App() {
         ownerUid: user.uid,
         isVerified: false,
         stamps_required_for_reward: 10,
+        rewardsGiven: 0,
         ...(data.location ? { lat: data.location.lat, lng: data.location.lng, location: data.location.city ?? '' } : {}),
       });
       setProfileCollection('vendors');
@@ -2233,6 +2236,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
             </div>
             <StatSquare icon={<RefreshCw className="text-orange-500" />} label="Return Rate" value={`${returnRate}%`} />
             <StatSquare icon={<Award className="text-brand-gold" />} label="Redemption Rate" value={`${redemptionRate}%`} />
+            <StatSquare icon={<Gift className="text-pink-500" />} label="Rewards Given" value={String(store?.rewardsGiven || 0)} />
           </div>
 
           <AnimatePresence>
@@ -2572,6 +2576,7 @@ function LoyaltyCard({ card, store, onViewStore }: { card: Card, store?: StorePr
   const handleArchive = async () => {
     if (!auth.currentUser || !store) return;
     setIsArchiving(true);
+    const numTiers = store.rewardTiers?.length || 1;
     try {
       // Create an archived record for the history/archive list
       await addDoc(collection(db, 'cards'), {
@@ -2592,9 +2597,13 @@ function LoyaltyCard({ card, store, onViewStore }: { card: Card, store?: StorePr
         stamps_required: store?.stamps_required_for_reward || limit,
         last_tap_timestamp: serverTimestamp(),
       });
-      // Increment rewards counter on profile
+      // Increment user's reward count by number of tiers on this card
       await updateDoc(doc(db, 'users', auth.currentUser.uid), {
-        totalRedeemed: increment(1),
+        totalRedeemed: increment(numTiers),
+      });
+      // Increment store's rewards-given counter by the same amount
+      await updateDoc(doc(db, 'stores', card.store_id), {
+        rewardsGiven: increment(numTiers),
       });
       setShowCompletionPopup(false);
     } catch (error) {
@@ -3678,7 +3687,7 @@ function ProfileScreen({ profile, userCards, onLogout, onDeleteAccount, onViewUs
 
   if (!profile) return null;
 
-  const lifetimeStamps = userCards.reduce((acc, c) => acc + (c.current_stamps || 0) + ((c.total_completed_cycles || 0) * 10), 0) || profile.totalStamps || 0;
+  const lifetimeStamps = userCards.reduce((acc, c) => acc + (c.current_stamps || 0), 0) || profile.totalStamps || 0;
   const archivedCardsCount = profile.totalRedeemed || 0;
   const activeCardsCount = userCards.filter(c => !c.isArchived).length;
 
@@ -3751,6 +3760,12 @@ function ProfileScreen({ profile, userCards, onLogout, onDeleteAccount, onViewUs
             </button>
           </div>
         )}
+
+        {/* Business stats */}
+        <div className="grid grid-cols-2 gap-4">
+          <StatSquare icon={<TrendingUp className="text-green-500" />} label="Stamps Given" value={String(totalStampsGiven)} />
+          <StatSquare icon={<Gift className="text-pink-500" />} label="Rewards Given" value={String(vendorStore?.rewardsGiven || 0)} />
+        </div>
 
         {/* Posts */}
         <div className="flex p-1 glass-card rounded-2xl">
@@ -7055,6 +7070,27 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
         <p className="text-sm text-brand-navy/60 leading-relaxed">{store.description}</p>
       </div>
 
+      {showStats && (
+        <div className="grid grid-cols-3 gap-3">
+          {(vis?.members !== false) && (
+            <div className="glass-card p-4 rounded-3xl text-center">
+              <p className="text-lg font-bold text-brand-navy">{totalMembers}</p>
+              <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest mt-0.5">Members</p>
+            </div>
+          )}
+          {(vis?.stamps !== false) && (
+            <div className="glass-card p-4 rounded-3xl text-center">
+              <p className="text-lg font-bold text-brand-navy">{totalStampsGiven}</p>
+              <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest mt-0.5">Stamps</p>
+            </div>
+          )}
+          <div className="glass-card p-4 rounded-3xl text-center">
+            <p className="text-lg font-bold text-brand-navy">{store.rewardsGiven || 0}</p>
+            <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest mt-0.5">Rewards</p>
+          </div>
+        </div>
+      )}
+
       <div className="glass-card p-6 rounded-[2.5rem] space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-bold">Top Collectors</h3>
@@ -7525,7 +7561,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
           <div className="grid grid-cols-3 gap-3 max-w-xs mx-auto">
             <div className="text-center">
               <p className="text-lg font-bold">
-                {allCards.reduce((acc, c) => acc + (c.current_stamps || 0) + ((c.total_completed_cycles || 0) * 10), 0) || targetUser.totalStamps || 0}
+                {allCards.reduce((acc, c) => acc + (c.current_stamps || 0), 0) || targetUser.totalStamps || 0}
               </p>
               <p className="text-[10px] text-brand-navy/40 font-bold uppercase">Stamps</p>
             </div>
