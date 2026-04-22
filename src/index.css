@@ -1,0 +1,62 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", sans-serif;
+
+  --color-brand-navy: #1E3A8A;
+  --color-brand-gold: #2563EB;
+  --color-brand-bg: #F8FAFF;
+  --color-brand-crimson: #1D4ED8;
+  --color-brand-rose: #BFDBFE;
+}
+
+@layer base {
+  body {
+    @apply font-sans antialiased;
+    background: #ffffff;
+    min-height: 100vh;
+    color: var(--color-brand-navy);
+  }
+}
+
+.card-shadow {
+  box-shadow: 0 8px 24px -8px rgba(17, 24, 39, 0.1);
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(17, 24, 39, 0.06);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(17, 24, 39, 0.06);
+  box-shadow: 0 4px 24px rgba(17, 24, 39, 0.06);
+}
+
+.gradient-red {
+  background: linear-gradient(135deg, #1D4ED8 0%, #2563EB 50%, #3B82F6 100%);
+}
+
+.gradient-card {
+  background: linear-gradient(135deg, rgba(29, 78, 216, 0.95) 0%, rgba(37, 99, 235, 0.98) 100%);
+}
+
+.gradient-soft {
+  background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+}
+
+@keyframes scan {
+  0% { top: 0; }
+  100% { top: 100%; }
+}
+
+.animate-scan {
+  animation: scan 2s ease-in-out infinite;
+}

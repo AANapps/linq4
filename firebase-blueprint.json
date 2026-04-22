@@ -1,0 +1,173 @@
+{
+  "entities": {
+    "Store": {
+      "title": "Store",
+      "description": "A vendor's store profile.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "category": { "type": "string", "enum": ["Food", "Beauty", "Barber", "Gym", "Parking", "Retail"] },
+        "address": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "logoUrl": { "type": "string" },
+        "coverUrl": { "type": "string" },
+        "ownerUid": { "type": "string" },
+        "description": { "type": "string" },
+        "stamps_required_for_reward": { "type": "number" },
+        "isVerified": { "type": "boolean" }
+      },
+      "required": ["name", "ownerUid", "stamps_required_for_reward"]
+    },
+    "User": {
+      "title": "User",
+      "description": "Consumer or Vendor profile.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["consumer", "vendor"] },
+        "total_cards_held": { "type": "number" },
+        "totalStamps": { "type": "number" },
+        "totalRedeemed": { "type": "number" }
+      },
+      "required": ["name", "email", "role"]
+    },
+    "Card": {
+      "title": "Card",
+      "description": "Junction between User and Store representing an active loyalty card.",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "store_id": { "type": "string" },
+        "current_stamps": { "type": "number" },
+        "total_completed_cycles": { "type": "number" },
+        "last_tap_timestamp": { "type": "string", "format": "date-time" },
+        "isArchived": { "type": "boolean" }
+      },
+      "required": ["user_id", "store_id", "current_stamps", "total_completed_cycles"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Record of a completed card cycle.",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "store_id": { "type": "string" },
+        "completed_at": { "type": "string", "format": "date-time" },
+        "stamps_at_completion": { "type": "number" },
+        "reward_claimed": { "type": "boolean" }
+      },
+      "required": ["user_id", "store_id", "completed_at"]
+    },
+    "Post": {
+      "title": "Post",
+      "description": "A post on a store feed.",
+      "type": "object",
+      "properties": {
+        "store_id": { "type": "string" },
+        "authorUid": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorPhoto": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "likesCount": { "type": "number" }
+      },
+      "required": ["store_id", "authorUid", "content"]
+    },
+    "UserReview": {
+      "title": "UserReview",
+      "description": "A review for a user.",
+      "type": "object",
+      "properties": {
+        "fromUid": { "type": "string" },
+        "fromName": { "type": "string" },
+        "fromPhoto": { "type": "string" },
+        "toUid": { "type": "string" },
+        "content": { "type": "string" },
+        "rating": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["fromUid", "toUid", "content", "rating"]
+    },
+    "FriendRequest": {
+      "title": "FriendRequest",
+      "description": "A notification/request for friendship.",
+      "type": "object",
+      "properties": {
+        "fromUid": { "type": "string" },
+        "fromName": { "type": "string" },
+        "fromPhoto": { "type": "string" },
+        "toUid": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "accepted", "declined"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["fromUid", "toUid", "status"]
+    },
+    "Friendship": {
+      "title": "Friendship",
+      "description": "An established friendship between two users.",
+      "type": "object",
+      "properties": {
+        "uids": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uids"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "A system or user-generated notification.",
+      "type": "object",
+      "properties": {
+        "toUid": { "type": "string" },
+        "fromUid": { "type": "string" },
+        "fromName": { "type": "string" },
+        "fromPhoto": { "type": "string" },
+        "type": { "type": "string", "enum": ["friend_request", "system", "like", "mention", "message"] },
+        "message": { "type": "string" },
+        "isRead": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["toUid", "type", "message"]
+    },
+    "Chat": {
+      "title": "Chat",
+      "description": "A conversation between two users.",
+      "type": "object",
+      "properties": {
+        "uids": { "type": "array", "items": { "type": "string" } },
+        "lastMessage": { "type": "string" },
+        "lastActivity": { "type": "string", "format": "date-time" },
+        "unreadCount": { "type": "object" }
+      },
+      "required": ["uids", "lastActivity"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "An individual message within a Chat.",
+      "type": "object",
+      "properties": {
+        "chatId": { "type": "string" },
+        "senderUid": { "type": "string" },
+        "senderName": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["chatId", "senderUid", "text", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": "User", "description": "User profiles." },
+    "/stores/{storeId}": { "schema": "Store", "description": "Store profiles." },
+    "/cards/{cardId}": { "schema": "Card", "description": "Active loyalty cards (junction table)." },
+    "/transactions/{transactionId}": { "schema": "Transaction", "description": "Completed card history." },
+    "/stores/{storeId}/posts/{postId}": { "schema": "Post", "description": "Store feed posts." },
+    "/user_reviews/{reviewId}": { "schema": "UserReview", "description": "Reviews for users." },
+    "/friend_requests/{requestId}": { "schema": "FriendRequest", "description": "Friendship requests." },
+    "/friendships/{friendshipId}": { "schema": "Friendship", "description": "Confirmed friendships." },
+    "/notifications/{notificationId}": { "schema": "Notification", "description": "User notifications." },
+    "/chats/{chatId}": { "schema": "Chat", "description": "User conversations." },
+    "/chats/{chatId}/messages/{messageId}": { "schema": "ChatMessage", "description": "Chat message history." }
+  }
+}
