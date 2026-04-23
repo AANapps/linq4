@@ -167,29 +167,9 @@ const AVATAR_SVGS: Record<string, string> = {
   default: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#1e3a5f"/><circle cx="50" cy="36" r="19" fill="#8fafc4"/><path d="M14 100 Q14 66 50 66 Q86 66 86 100Z" fill="#8fafc4"/></svg>`,
 };
 
-function avatarSrc(photoURL?: string | null, gender?: string): string {
-  if (photoURL) return photoURL;
+function avatarSrc(gender?: string | null): string {
   const key = gender && AVATAR_SVGS[gender] ? gender : 'default';
   return `data:image/svg+xml;base64,${btoa(AVATAR_SVGS[key])}`;
-}
-
-async function compressImage(file: File, size = 200): Promise<string> {
-  return new Promise(resolve => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = size; canvas.height = size;
-        const ctx = canvas.getContext('2d')!;
-        const min = Math.min(img.width, img.height);
-        ctx.drawImage(img, (img.width - min) / 2, (img.height - min) / 2, min, min, 0, 0, size, size);
-        resolve(canvas.toDataURL('image/jpeg', 0.78));
-      };
-      img.src = e.target!.result as string;
-    };
-    reader.readAsDataURL(file);
-  });
 }
 
 interface ConsumerOnboardingData {
@@ -198,7 +178,6 @@ interface ConsumerOnboardingData {
   handle: string;
   gender: string;
   birthday: string;
-  photoURL?: string;
   location: { lat: number; lng: number; city?: string } | null;
 }
 
@@ -911,7 +890,7 @@ export default function App() {
         name: data.name,
         handle: data.handle,
         email: user.email || '',
-        photoURL: (data as ConsumerOnboardingData).photoURL || user.photoURL || '',
+        photoURL: user.photoURL || '',
         role: 'consumer',
         onboardingComplete: true,
         ...(data.gender ? { gender: data.gender } : {}),
@@ -1488,8 +1467,6 @@ function OnboardingScreen({ user, onComplete }: {
   const [handleChecking, setHandleChecking] = React.useState(false);
   const [gender, setGender] = React.useState('');
   const [birthday, setBirthday] = React.useState('');
-  const [onboardingPhoto, setOnboardingPhoto] = React.useState('');
-  const onboardingFileRef = React.useRef<HTMLInputElement>(null);
 
   // Vendor fields
   const [businessName, setBusinessName] = React.useState('');
@@ -1563,36 +1540,16 @@ function OnboardingScreen({ user, onComplete }: {
     if (isVendor) {
       await onComplete({ type: 'vendor', businessName, category, address, phone, description, location: locationData });
     } else {
-      await onComplete({ type: 'consumer', name: fullName.trim(), handle, gender, birthday, photoURL: onboardingPhoto, location: locationData });
+      await onComplete({ type: 'consumer', name: fullName.trim(), handle, gender, birthday, location: locationData });
     }
   };
 
   const consumerSteps = [
-    // Step 0 — Identity (name + handle + optional photo)
+    // Step 0 — Identity (name + handle)
     <>
-      <input
-        ref={onboardingFileRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={async e => {
-          const file = e.target.files?.[0];
-          if (file) setOnboardingPhoto(await compressImage(file));
-          e.target.value = '';
-        }}
-      />
-      <button
-        type="button"
-        onClick={() => onboardingFileRef.current?.click()}
-        className="relative mx-auto mb-6 block"
-      >
-        <div className="w-24 h-24 rounded-[2rem] overflow-hidden border-4 border-white shadow-xl mx-auto">
-          <img src={avatarSrc(onboardingPhoto, gender)} alt="" className="w-full h-full object-cover" />
-        </div>
-        <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-brand-gold rounded-xl flex items-center justify-center shadow">
-          <Edit3 size={14} className="text-brand-navy" />
-        </div>
-      </button>
+      <div className="w-14 h-14 bg-brand-gold/10 rounded-full flex items-center justify-center mx-auto mb-4">
+        <UserCheck className="w-7 h-7 text-brand-gold" />
+      </div>
       <h2 className="font-display font-bold text-2xl text-brand-navy mb-1">Set up your profile</h2>
       <p className="text-sm text-brand-navy/40 mb-8">Your name and handle help businesses and friends recognise you</p>
       <div className="w-full space-y-3 text-left">
@@ -2350,7 +2307,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                     {statModal === 'members' && memberRows.map(({ uid, prof, totalStamps, cycles }) => (
                       <div key={uid} className="flex items-center gap-3 p-3 rounded-2xl bg-brand-bg">
                         <div className="w-9 h-9 rounded-full overflow-hidden bg-brand-navy/10 shrink-0 flex items-center justify-center">
-                          {prof?.photoURL ? <img src={prof.photoURL} alt="" className="w-full h-full object-cover" /> : <Users size={16} className="text-brand-navy/30" />}
+                          <img src={avatarSrc(prof?.gender)} alt="" className="w-full h-full object-cover" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-bold text-sm truncate">{prof?.name || 'Unknown'}</p>
@@ -2369,7 +2326,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                       return (
                         <div key={card.id} className="flex items-center gap-3 p-3 rounded-2xl bg-brand-bg">
                           <div className="w-9 h-9 rounded-full overflow-hidden bg-brand-navy/10 shrink-0 flex items-center justify-center">
-                            {prof?.photoURL ? <img src={prof.photoURL} alt="" className="w-full h-full object-cover" /> : <Users size={16} className="text-brand-navy/30" />}
+                            <img src={avatarSrc(prof?.gender)} alt="" className="w-full h-full object-cover" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-bold text-sm truncate">{prof?.name || 'Unknown'}</p>
@@ -2388,7 +2345,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                       return (
                         <div key={card.id} className="flex items-center gap-3 p-3 rounded-2xl bg-brand-bg">
                           <div className="w-9 h-9 rounded-full overflow-hidden bg-brand-navy/10 shrink-0 flex items-center justify-center">
-                            {prof?.photoURL ? <img src={prof.photoURL} alt="" className="w-full h-full object-cover" /> : <Users size={16} className="text-brand-navy/30" />}
+                            <img src={avatarSrc(prof?.gender)} alt="" className="w-full h-full object-cover" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-bold text-sm truncate">{prof?.name || 'Unknown'}</p>
@@ -3164,7 +3121,7 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser }: { s
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-full overflow-hidden border border-brand-navy/5">
-                      <img src={u.photoURL} alt="" className="w-full h-full object-cover" />
+                      <img src={avatarSrc(u.gender)} alt="" className="w-full h-full object-cover" />
                     </div>
                     <div>
                       <p className="font-bold text-sm">@{u.email?.split('@')[0] || u.name}</p>
@@ -3892,7 +3849,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                   <div key={item.data.id} className="glass-card p-5 rounded-[2rem] space-y-3">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full overflow-hidden border border-brand-navy/5 shrink-0">
-                        <img src={item.data.authorPhoto || `https://i.pravatar.cc/40?u=${item.data.authorUid}`} alt="" className="w-full h-full object-cover" />
+                        <img src={avatarSrc()} alt="" className="w-full h-full object-cover" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm leading-snug">
@@ -3948,7 +3905,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                 <div className="space-y-2">
                   {(followModalTab === 'following' ? following : followers).map(u => (
                     <div key={u.uid} className="flex items-center gap-3 p-3 rounded-2xl bg-brand-bg cursor-pointer" onClick={() => { onViewUser(u); setShowFollowModal(false); }}>
-                      <div className="w-10 h-10 rounded-2xl overflow-hidden border border-brand-navy/5 shrink-0"><img src={u.photoURL || `https://i.pravatar.cc/40?u=${u.uid}`} alt="" className="w-full h-full object-cover" /></div>
+                      <div className="w-10 h-10 rounded-2xl overflow-hidden border border-brand-navy/5 shrink-0"><img src={avatarSrc(u.gender)} alt="" className="w-full h-full object-cover" /></div>
                       <div><p className="font-bold text-sm">{u.name}</p><p className="text-[10px] text-brand-navy/40 font-bold uppercase">@{u.email?.split('@')[0]}</p></div>
                     </div>
                   ))}
@@ -3971,7 +3928,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           <Settings size={18} className="text-brand-navy/60" />
         </button>
         <div className="w-32 h-32 rounded-[2.5rem] overflow-hidden border-4 border-white mx-auto mb-4 shadow-xl">
-          <img src={avatarSrc(profile.photoURL, profile.gender)} alt="" className="w-full h-full object-cover" />
+          <img src={avatarSrc(profile.gender)} alt="" className="w-full h-full object-cover" />
         </div>
         <h2 className="font-display text-3xl font-bold">{profile.name}</h2>
         <p className="text-brand-gold font-bold text-xs uppercase tracking-[0.2em]">@{profile.handle || user.email?.split('@')[0]}</p>
@@ -4188,7 +4145,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                       onClick={() => { onViewUser(u); setShowFollowModal(false); }}
                     >
                       <div className="w-10 h-10 rounded-2xl overflow-hidden border border-brand-navy/5 shrink-0">
-                        <img src={u.photoURL || `https://i.pravatar.cc/40?u=${u.uid}`} alt="" className="w-full h-full object-cover" />
+                        <img src={avatarSrc(u.gender)} alt="" className="w-full h-full object-cover" />
                       </div>
                       <div>
                         <p className="font-bold text-sm group-hover:text-brand-gold transition-colors">{u.name}</p>
@@ -4249,8 +4206,7 @@ function ToggleSwitch({ on, onChange }: { on: boolean; onChange: (v: boolean) =>
 function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccount }: { profile: UserProfile, user: FirebaseUser, onClose: () => void, onLogout: () => void, onDeleteAccount: () => Promise<void> }) {
   const [name, setName] = useState(profile.name || '');
   const [handle, setHandle] = useState(profile.handle || user.email?.split('@')[0] || '');
-  const [photoURL, setPhotoURL] = useState(profile.photoURL || '');
-  const photoFileRef = useRef<HTMLInputElement>(null);
+  const [gender, setGender] = useState(profile.gender || '');
   const [store, setStore] = useState<StoreProfile | null>(null);
   const [storeName, setStoreName] = useState('');
   const [storeReward, setStoreReward] = useState('');
@@ -4286,7 +4242,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
   const handleSave = async () => {
     setSaving(true);
     try {
-      const profileUpdates: any = { name, ...(photoURL !== profile.photoURL ? { photoURL } : {}) };
+      const profileUpdates: any = { name, ...(gender ? { gender } : {}) };
       await updateDoc(doc(db, 'users', profile.uid), profileUpdates);
 
       if (profile.role === 'vendor' && store) {
@@ -4331,27 +4287,24 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
 
       <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 pb-12">
 
-        {/* Avatar */}
-        <div className="flex justify-center">
-          <input
-            ref={photoFileRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={async e => {
-              const file = e.target.files?.[0];
-              if (file) setPhotoURL(await compressImage(file));
-              e.target.value = '';
-            }}
-          />
-          <button type="button" onClick={() => photoFileRef.current?.click()} className="relative">
-            <div className="w-24 h-24 rounded-[2rem] overflow-hidden border-4 border-white shadow-xl">
-              <img src={avatarSrc(photoURL, profile.gender)} alt="" className="w-full h-full object-cover" />
-            </div>
-            <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-brand-gold rounded-xl flex items-center justify-center shadow">
-              <Edit3 size={14} className="text-brand-navy" />
-            </div>
-          </button>
+        {/* Avatar picker */}
+        <div className="space-y-3">
+          <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">Avatar</label>
+          <div className="flex gap-3 justify-center">
+            {(['Male', 'Female', 'Non-binary'] as const).map(g => (
+              <button
+                key={g}
+                type="button"
+                onClick={() => setGender(g)}
+                className={`flex flex-col items-center gap-1.5 p-2 rounded-2xl transition-all ${gender === g ? 'ring-2 ring-brand-gold bg-brand-gold/5' : 'opacity-50 hover:opacity-80'}`}
+              >
+                <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-white shadow">
+                  <img src={avatarSrc(g)} alt={g} className="w-full h-full object-cover" />
+                </div>
+                <span className="text-[10px] font-bold text-brand-navy/60">{g}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Name */}
@@ -5133,16 +5086,16 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
   const [newComment, setNewComment] = useState('');
   const [isCommenting, setIsCommenting] = useState(false);
   const [reportSent, setReportSent] = useState(false);
-  const [authorProfile, setAuthorProfile] = useState<{ name: string; photoURL: string } | null>(null);
+  const [authorProfile, setAuthorProfile] = useState<{ name: string; logoUrl?: string; gender?: string } | null>(null);
 
   useEffect(() => {
     if (post.authorRole === 'vendor' && post.storeId) {
       return onSnapshot(doc(db, 'stores', post.storeId), (snap) => {
-        if (snap.exists()) setAuthorProfile({ name: snap.data().name, photoURL: snap.data().logoUrl || '' });
+        if (snap.exists()) setAuthorProfile({ name: snap.data().name, logoUrl: snap.data().logoUrl || '' });
       }, () => {});
     }
     return onSnapshot(doc(db, 'users', post.authorUid), (snap) => {
-      if (snap.exists()) setAuthorProfile({ name: snap.data().name, photoURL: snap.data().photoURL });
+      if (snap.exists()) setAuthorProfile({ name: snap.data().name, gender: snap.data().gender });
     }, () => {});
   }, [post.authorUid, post.storeId, post.authorRole]);
 
@@ -5247,7 +5200,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
       <div className="px-5 pt-5 pb-3 space-y-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full overflow-hidden border border-black/5 cursor-pointer shrink-0" onClick={handleAvatarClick}>
-            <img src={authorProfile?.photoURL || (post.authorRole !== 'vendor' ? post.authorPhoto : '') || `https://i.pravatar.cc/40?u=${post.authorUid}`} alt="" className="w-full h-full object-cover" />
+            <img src={post.authorRole === 'vendor' ? (authorProfile?.logoUrl || post.authorPhoto || '') : avatarSrc(authorProfile?.gender)} alt="" className="w-full h-full object-cover" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
@@ -5458,7 +5411,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
               <div key={comment.id} className="flex gap-2.5">
                 <button onClick={() => handleViewCommentAuthor(comment.fromUid)} className="shrink-0 mt-0.5 hover:opacity-80 transition-opacity">
                   <div className="w-7 h-7 rounded-full overflow-hidden border border-black/5">
-                    <img src={comment.fromPhoto || `https://i.pravatar.cc/28?u=${comment.fromUid}`} alt="" className="w-full h-full object-cover" />
+                    <img src={avatarSrc()} alt="" className="w-full h-full object-cover" />
                   </div>
                 </button>
                 <div className="flex-1 min-w-0">
@@ -5499,7 +5452,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
       {currentUser && (
         <div className="px-5 pb-4 border-t border-black/5 pt-3 flex gap-2">
           <div className="w-7 h-7 rounded-full overflow-hidden border border-black/5 shrink-0">
-            <img src={currentProfile?.photoURL || currentUser.photoURL || `https://i.pravatar.cc/28?u=${currentUser.uid}`} alt="" className="w-full h-full object-cover" />
+            <img src={avatarSrc(currentProfile?.gender)} alt="" className="w-full h-full object-cover" />
           </div>
           <div className="flex-1 flex gap-2">
             <input
@@ -5621,7 +5574,7 @@ function CreatePostModal({ onClose, user, profile }: { onClose: () => void, user
 
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-brand-navy/10">
-            <img src={profile?.photoURL || user.photoURL || ''} alt="" className="w-full h-full object-cover" />
+            <img src={avatarSrc(profile?.gender)} alt="" className="w-full h-full object-cover" />
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
@@ -6459,7 +6412,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
           </button>
           <div className="flex items-center gap-3 flex-1">
             <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-sm cursor-pointer" onClick={() => onViewUser(chatPartner)}>
-              <img src={chatPartner.photoURL} alt="" className="w-full h-full object-cover" />
+              <img src={avatarSrc(chatPartner.gender)} alt="" className="w-full h-full object-cover" />
             </div>
             <div>
               <h3 className="font-bold text-sm leading-tight">{chatPartner.name}</h3>
@@ -6567,7 +6520,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
               className="w-full bg-white p-4 rounded-2xl flex items-center gap-4 border border-brand-navy/5 hover:border-brand-gold/20 transition-all text-left"
             >
               <div className="w-14 h-14 rounded-2xl overflow-hidden border border-brand-navy/5">
-                <img src={customer.photoURL} alt="" className="w-full h-full object-cover" />
+                <img src={avatarSrc(customer.gender)} alt="" className="w-full h-full object-cover" />
               </div>
               <div className="flex-1 min-w-0">
                 <h4 className="font-bold text-sm truncate">{customer.name}</h4>
@@ -6644,7 +6597,7 @@ function ChatListItem({ chat, currentUser, onClick }: { chat: Chat, currentUser:
       className="w-full bg-white p-4 rounded-2xl flex items-center gap-4 border border-brand-navy/5 hover:border-brand-gold/20 transition-all text-left"
     >
       <div className="w-14 h-14 rounded-2xl overflow-hidden border border-brand-navy/5">
-        <img src={partner.photoURL} alt="" className="w-full h-full object-cover" />
+        <img src={avatarSrc(partner.gender)} alt="" className="w-full h-full object-cover" />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-center mb-1">
@@ -6733,8 +6686,8 @@ function CommunityScreen({ onViewUser, currentUser }: { onViewUser: (u: UserProf
               <div className="bg-brand-navy p-6 rounded-[2.5rem] text-white flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-brand-gold shrink-0">
-                    {users[0]?.photoURL
-                      ? <img src={users[0].photoURL} alt="" className="w-full h-full object-cover" />
+                    {users[0]
+                      ? <img src={avatarSrc(users[0].gender)} alt="" className="w-full h-full object-cover" />
                       : <div className="w-full h-full bg-brand-gold flex items-center justify-center"><Trophy className="w-6 h-6 text-brand-navy" /></div>}
                   </div>
                   <div>
@@ -6757,7 +6710,7 @@ function CommunityScreen({ onViewUser, currentUser }: { onViewUser: (u: UserProf
                   >
                     <div className="w-8 font-display font-bold text-brand-navy/20">#{i + 1}</div>
                     <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-navy/5">
-                      <img src={u.photoURL} alt="" className="w-full h-full object-cover" />
+                      <img src={avatarSrc(u.gender)} alt="" className="w-full h-full object-cover" />
                     </div>
                     <div className="flex-1">
                       <p className="font-bold text-sm">{u.name}</p>
@@ -6793,7 +6746,7 @@ function CommunityScreen({ onViewUser, currentUser }: { onViewUser: (u: UserProf
                   return (
                     <div key={u.uid} className="glass-card p-4 rounded-2xl flex items-center gap-4">
                       <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-navy/5 cursor-pointer" onClick={() => onViewUser(u)}>
-                        <img src={u.photoURL} alt="" className="w-full h-full object-cover" />
+                        <img src={avatarSrc(u.gender)} alt="" className="w-full h-full object-cover" />
                       </div>
                       <div className="flex-1 cursor-pointer" onClick={() => onViewUser(u)}>
                         <p className="font-bold text-sm">{u.name}</p>
@@ -7211,7 +7164,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
           {leaderboard.map((entry, index) => {
             const lbProfile = leaderboardProfiles.get(entry.user_id);
             const displayName = lbProfile?.name || entry.userName || 'Loyal Customer';
-            const displayPhoto = lbProfile?.photoURL || entry.userPhoto || `https://i.pravatar.cc/150?u=${entry.user_id}`;
+            const displayPhoto = avatarSrc(lbProfile?.gender);
             return (
               <div
                 key={`lb-${entry.id}`}
@@ -7293,7 +7246,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                 />
               ) : (() => {
                 const isOwnerPost = item.data.authorUid === store.ownerUid;
-                const displayPhoto = isOwnerPost ? (store.logoUrl || '') : (item.data.authorPhoto || `https://i.pravatar.cc/40?u=${item.data.authorUid}`);
+                const displayPhoto = isOwnerPost ? (store.logoUrl || '') : avatarSrc();
                 const displayName = isOwnerPost ? store.name : item.data.authorName;
                 return (
                   <div key={item.data.id} className="glass-card p-5 rounded-[2rem] space-y-3">
@@ -7379,7 +7332,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
             <div key={review.id} className="glass-card p-5 rounded-[2rem] space-y-2">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full overflow-hidden border border-brand-navy/5 shrink-0">
-                  <img src={review.authorPhoto || `https://i.pravatar.cc/40?u=${review.authorUid}`} alt="" className="w-full h-full object-cover" />
+                  <img src={avatarSrc()} alt="" className="w-full h-full object-cover" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-sm">{review.authorName}</p>
@@ -7640,7 +7593,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
         <div className="absolute top-0 left-0 right-0 h-24 bg-brand-gold/10" />
         <div className="relative z-10">
           <div className="w-24 h-24 rounded-[2.5rem] border-4 border-white overflow-hidden mx-auto mb-4 shadow-xl">
-            <img src={avatarSrc(targetUser.photoURL, targetUser.gender)} alt="" className="w-full h-full object-cover" />
+            <img src={avatarSrc(targetUser.gender)} alt="" className="w-full h-full object-cover" />
           </div>
           <h2 className="text-2xl font-bold">{targetUser.name}</h2>
           <p className="text-brand-gold font-bold text-xs uppercase tracking-[0.2em]">@{targetUser.handle || targetUser.email?.split('@')[0]}</p>
