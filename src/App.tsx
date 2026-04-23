@@ -6789,13 +6789,11 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
 
   // Fetch current user profiles for leaderboard display whenever the card list changes
   useEffect(() => {
-    const uids: string[] = [...new Set<string>(allStoreCards.filter(c => !c.isArchived).map(c => c.user_id))];
+    const uids = [...new Set<string>(allStoreCards.filter(c => !c.isArchived).map(c => c.user_id))];
     if (uids.length === 0) return;
-    const chunks: string[][] = [];
-    for (let i = 0; i < uids.length; i += 10) chunks.push(uids.slice(i, i + 10));
-    Promise.all(chunks.map(chunk => getDocs(query(collection(db, 'users'), where('uid', 'in', chunk))))).then(results => {
+    Promise.all(uids.map(uid => getDoc(doc(db, 'users', uid)))).then(snaps => {
       const map = new Map<string, UserProfile>();
-      results.forEach(snap => snap.docs.forEach(d => map.set(d.id, { uid: d.id, ...d.data() } as UserProfile)));
+      snaps.filter(s => s.exists()).forEach(s => map.set(s.id, { uid: s.id, ...s.data() } as UserProfile));
       setLeaderboardProfiles(map);
     });
   }, [allStoreCards]);
