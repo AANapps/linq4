@@ -2022,9 +2022,11 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   const returnRate = totalMembers > 0 ? Math.round((returningUsers / totalMembers) * 100) : 0;
   const totalCompletedCycles = storeCards.reduce((sum, c) => sum + (c.total_completed_cycles || 0), 0);
   const redemptionRate = Math.round((totalCompletedCycles / Math.max(1, totalStampsGiven / stampsPerReward)) * 100);
+  // Use highest observed tiersCompleted across all store cards (same store, so tiers should be uniform)
+  const storeTiersVendor = Math.max(...storeCards.map(c => c.tiersCompleted || 0), 1);
   const vendorRewardsGiven = Math.max(
-    storeCards.filter(c => !c.isArchived).reduce((sum, c) => sum + ((c.total_completed_cycles || 0) * (c.tiersCompleted || 1)), 0),
-    storeCards.filter(c => c.isArchived && c.isRedeemed).reduce((sum, c) => sum + (c.tiersCompleted || 1), 0),
+    storeCards.filter(c => !c.isArchived).reduce((sum, c) => sum + (c.total_completed_cycles || 0), 0) * storeTiersVendor,
+    storeCards.filter(c => c.isArchived && c.isRedeemed).length * storeTiersVendor,
     store?.rewardsGiven || 0
   );
 
@@ -3700,15 +3702,22 @@ function ProfileScreen({ profile, userCards, onLogout, onDeleteAccount, onViewUs
     profile.totalStamps || 0,
     userCards.reduce((acc, c) => acc + (c.current_stamps || 0), 0)
   );
-  // Each archived reward doc (isRedeemed=true) = 1 completed cycle = tiersCompleted rewards.
-  // total_completed_cycles on archived docs is a cumulative snapshot, not a per-doc delta, so we use tiersCompleted alone.
-  const archivedDocRewards = userCards
-    .filter(c => c.isArchived && c.isRedeemed)
-    .reduce((sum, c) => sum + (c.tiersCompleted || 1), 0);
+  // Build best-known tiersCompleted per store from ALL cards (archived docs are most reliable
+  // since handleArchive always sets tiersCompleted from the live store at redemption time).
+  const tiersByStore = new Map<string, number>();
+  userCards.forEach(c => {
+    if ((c.tiersCompleted || 0) > (tiersByStore.get(c.store_id) || 0))
+      tiersByStore.set(c.store_id, c.tiersCompleted as number);
+  });
+  const stagesFor = (sid: string) => tiersByStore.get(sid) || 1;
+  // Formula: for each active card → cycles × stages. For each archived reward doc → 1 cycle × stages.
   const activeCardRewards = userCards
     .filter(c => !c.isArchived)
-    .reduce((sum, c) => sum + ((c.total_completed_cycles || 0) * (c.tiersCompleted || 1)), 0);
-  const archivedCardsCount = Math.max(archivedDocRewards, activeCardRewards, profile.totalRedeemed || 0);
+    .reduce((sum, c) => sum + (c.total_completed_cycles || 0) * stagesFor(c.store_id), 0);
+  const archivedDocRewards = userCards
+    .filter(c => c.isArchived && c.isRedeemed)
+    .reduce((sum, c) => sum + stagesFor(c.store_id), 0);
+  const archivedCardsCount = Math.max(activeCardRewards, archivedDocRewards, profile.totalRedeemed || 0);
   const activeCardsCount = userCards.filter(c => !c.isArchived).length;
 
   // Vendor stats
@@ -3718,9 +3727,10 @@ function ProfileScreen({ profile, userCards, onLogout, onDeleteAccount, onViewUs
   const activeStoreCards = storeCards.filter(c => !c.isArchived).length;
   const returningUsers = storeCards.filter(c => (c.total_completed_cycles || 0) > 0).length;
   const returnRate = totalMembers > 0 ? Math.round((returningUsers / totalMembers) * 100) : 0;
+  const storeTiersProfile = Math.max(...storeCards.map(c => c.tiersCompleted || 0), 1);
   const profileRewardsGiven = Math.max(
-    storeCards.filter(c => !c.isArchived).reduce((sum, c) => sum + ((c.total_completed_cycles || 0) * (c.tiersCompleted || 1)), 0),
-    storeCards.filter(c => c.isArchived && c.isRedeemed).reduce((sum, c) => sum + (c.tiersCompleted || 1), 0),
+    storeCards.filter(c => !c.isArchived).reduce((sum, c) => sum + (c.total_completed_cycles || 0), 0) * storeTiersProfile,
+    storeCards.filter(c => c.isArchived && c.isRedeemed).length * storeTiersProfile,
     vendorStore?.rewardsGiven || 0
   );
   const vis = vendorStore?.visibilitySettings;
@@ -6990,9 +7000,10 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
   const returningUsers = allStoreCards.filter(c => (c.total_completed_cycles || 0) > 0).length;
   const returnRate = totalMembers > 0 ? Math.round((returningUsers / totalMembers) * 100) : 0;
   const showStats = vis ? Object.values(vis).some(Boolean) : true;
+  const storeTiersPublic = Math.max(...allStoreCards.map(c => c.tiersCompleted || 0), 1);
   const publicStoreRewards = Math.max(
-    allStoreCards.filter(c => !c.isArchived).reduce((sum, c) => sum + ((c.total_completed_cycles || 0) * (c.tiersCompleted || 1)), 0),
-    allStoreCards.filter(c => c.isArchived && c.isRedeemed).reduce((sum, c) => sum + (c.tiersCompleted || 1), 0),
+    allStoreCards.filter(c => !c.isArchived).reduce((sum, c) => sum + (c.total_completed_cycles || 0), 0) * storeTiersPublic,
+    allStoreCards.filter(c => c.isArchived && c.isRedeemed).length * storeTiersPublic,
     store.rewardsGiven || 0
   );
 
@@ -7524,9 +7535,15 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
     }
   };
 
+  const pubTiersByStore = new Map<string, number>();
+  allCards.forEach(c => {
+    if ((c.tiersCompleted || 0) > (pubTiersByStore.get(c.store_id) || 0))
+      pubTiersByStore.set(c.store_id, c.tiersCompleted as number);
+  });
+  const pubStagesFor = (sid: string) => pubTiersByStore.get(sid) || 1;
   const publicUserRewards = Math.max(
-    allCards.filter(c => !c.isArchived).reduce((sum, c) => sum + ((c.total_completed_cycles || 0) * (c.tiersCompleted || 1)), 0),
-    allCards.filter(c => c.isArchived && c.isRedeemed).reduce((sum, c) => sum + (c.tiersCompleted || 1), 0),
+    allCards.filter(c => !c.isArchived).reduce((sum, c) => sum + (c.total_completed_cycles || 0) * pubStagesFor(c.store_id), 0),
+    allCards.filter(c => c.isArchived && c.isRedeemed).reduce((sum, c) => sum + pubStagesFor(c.store_id), 0),
     targetUser.totalRedeemed || 0
   );
   const publicUserStamps = Math.max(
