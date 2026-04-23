@@ -6764,6 +6764,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
   const [reviewText, setReviewText] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   // leaderboard computed from allStoreCards — no separate query needed
+  const [leaderboardProfiles, setLeaderboardProfiles] = useState<Map<string, UserProfile>>(new Map());
   const [newPost, setNewPost] = useState('');
   const [isPosting, setIsPosting] = useState(false);
   const [card, setCard] = useState<Card | null>(null);
@@ -6785,6 +6786,19 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
     const q = query(collection(db, 'cards'), where('store_id', '==', store.id));
     return onSnapshot(q, snap => setAllStoreCards(snap.docs.map(d => ({ id: d.id, ...d.data() } as Card))), () => {});
   }, [store.id]);
+
+  // Fetch current user profiles for leaderboard display whenever the card list changes
+  useEffect(() => {
+    const uids: string[] = [...new Set<string>(allStoreCards.filter(c => !c.isArchived).map(c => c.user_id))];
+    if (uids.length === 0) return;
+    const chunks: string[][] = [];
+    for (let i = 0; i < uids.length; i += 10) chunks.push(uids.slice(i, i + 10));
+    Promise.all(chunks.map(chunk => getDocs(query(collection(db, 'users'), where('uid', 'in', chunk))))).then(results => {
+      const map = new Map<string, UserProfile>();
+      results.forEach(snap => snap.docs.forEach(d => map.set(d.id, { uid: d.id, ...d.data() } as UserProfile)));
+      setLeaderboardProfiles(map);
+    });
+  }, [allStoreCards]);
 
 
   useEffect(() => {
@@ -7127,35 +7141,34 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
           <Trophy size={18} className="text-brand-gold" />
         </div>
         <div className="space-y-3">
-          {leaderboard.map((entry, index) => (
-            <div 
-              key={`lb-${entry.id}`} 
-              onClick={async () => {
-                const uq = query(collection(db, 'users'), where('uid', '==', entry.user_id));
-                const usnap = await getDocs(uq);
-                if (!usnap.empty) {
-                  onViewUser({ uid: usnap.docs[0].id, ...usnap.docs[0].data() } as UserProfile);
-                }
-              }}
-              className="flex items-center justify-between p-3 rounded-2xl hover:bg-brand-bg transition-colors cursor-pointer group"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-6 h-6 flex items-center justify-center font-bold text-xs text-brand-navy/40">
-                  #{index + 1}
+          {leaderboard.map((entry, index) => {
+            const lbProfile = leaderboardProfiles.get(entry.user_id);
+            const displayName = lbProfile?.name || entry.userName || 'Loyal Customer';
+            const displayPhoto = lbProfile?.photoURL || entry.userPhoto || `https://i.pravatar.cc/150?u=${entry.user_id}`;
+            return (
+              <div
+                key={`lb-${entry.id}`}
+                onClick={() => lbProfile && onViewUser(lbProfile)}
+                className="flex items-center justify-between p-3 rounded-2xl hover:bg-brand-bg transition-colors cursor-pointer group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-6 h-6 flex items-center justify-center font-bold text-xs text-brand-navy/40">
+                    #{index + 1}
+                  </div>
+                  <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-navy/5">
+                    <img src={displayPhoto} alt="" className="w-full h-full object-cover" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm group-hover:text-brand-gold transition-colors">{displayName}</p>
+                    <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest">{entry.total_completed_cycles || 0} Rewards Earned</p>
+                  </div>
                 </div>
-                <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-navy/5">
-                  <img src={entry.userPhoto || `https://i.pravatar.cc/150?u=${entry.user_id}`} alt="" className="w-full h-full object-cover" />
-                </div>
-                <div>
-                  <p className="font-bold text-sm group-hover:text-brand-gold transition-colors">{entry.userName || 'Loyal Customer'}</p>
-                  <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest">{entry.total_completed_cycles || 0} Rewards Earned</p>
+                <div className="text-right">
+                  <p className="text-sm font-bold text-brand-navy">{entry.lifetimeStamps} Stamps</p>
                 </div>
               </div>
-              <div className="text-right">
-                <p className="text-sm font-bold text-brand-navy">{entry.lifetimeStamps} Stamps</p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
           {leaderboard.length === 0 && (
             <p className="text-center py-4 text-xs text-brand-navy/40 font-bold uppercase tracking-widest">No collectors yet</p>
           )}
