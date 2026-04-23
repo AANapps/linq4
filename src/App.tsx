@@ -159,12 +159,46 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 type UserRole = 'consumer' | 'vendor';
 type Category = 'Food' | 'Beauty' | 'Barber' | 'Gym' | 'Parking' | 'Retail';
 
+// ─── Default gender-specific SVG avatars (no external URL, no data cost) ────
+const AVATAR_SVGS: Record<string, string> = {
+  Male: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#1e3a5f"/><circle cx="50" cy="36" r="19" fill="#7da5c8"/><rect x="28" y="57" width="44" height="6" rx="3" fill="#5a8aaa"/><path d="M14 100 Q14 66 50 66 Q86 66 86 100Z" fill="#7da5c8"/></svg>`,
+  Female: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#1e3a5f"/><ellipse cx="50" cy="34" rx="17" ry="20" fill="#e8a8bf"/><path d="M33 22 Q33 8 50 8 Q67 8 67 22" fill="#c47899"/><path d="M14 100 Q14 66 50 66 Q86 66 86 100Z" fill="#e8a8bf"/></svg>`,
+  'Non-binary': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#1e3a5f"/><circle cx="50" cy="36" r="19" fill="#a08fc4"/><path d="M14 100 Q14 66 50 66 Q86 66 86 100Z" fill="#a08fc4"/></svg>`,
+  default: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#1e3a5f"/><circle cx="50" cy="36" r="19" fill="#8fafc4"/><path d="M14 100 Q14 66 50 66 Q86 66 86 100Z" fill="#8fafc4"/></svg>`,
+};
+
+function avatarSrc(photoURL?: string | null, gender?: string): string {
+  if (photoURL) return photoURL;
+  const key = gender && AVATAR_SVGS[gender] ? gender : 'default';
+  return `data:image/svg+xml;base64,${btoa(AVATAR_SVGS[key])}`;
+}
+
+async function compressImage(file: File, size = 200): Promise<string> {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = size; canvas.height = size;
+        const ctx = canvas.getContext('2d')!;
+        const min = Math.min(img.width, img.height);
+        ctx.drawImage(img, (img.width - min) / 2, (img.height - min) / 2, min, min, 0, 0, size, size);
+        resolve(canvas.toDataURL('image/jpeg', 0.78));
+      };
+      img.src = e.target!.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 interface ConsumerOnboardingData {
   type: 'consumer';
   name: string;
   handle: string;
   gender: string;
   birthday: string;
+  photoURL?: string;
   location: { lat: number; lng: number; city?: string } | null;
 }
 
@@ -877,7 +911,7 @@ export default function App() {
         name: data.name,
         handle: data.handle,
         email: user.email || '',
-        photoURL: user.photoURL || '',
+        photoURL: (data as ConsumerOnboardingData).photoURL || user.photoURL || '',
         role: 'consumer',
         onboardingComplete: true,
         ...(data.gender ? { gender: data.gender } : {}),
@@ -1454,6 +1488,8 @@ function OnboardingScreen({ user, onComplete }: {
   const [handleChecking, setHandleChecking] = React.useState(false);
   const [gender, setGender] = React.useState('');
   const [birthday, setBirthday] = React.useState('');
+  const [onboardingPhoto, setOnboardingPhoto] = React.useState('');
+  const onboardingFileRef = React.useRef<HTMLInputElement>(null);
 
   // Vendor fields
   const [businessName, setBusinessName] = React.useState('');
@@ -1527,16 +1563,36 @@ function OnboardingScreen({ user, onComplete }: {
     if (isVendor) {
       await onComplete({ type: 'vendor', businessName, category, address, phone, description, location: locationData });
     } else {
-      await onComplete({ type: 'consumer', name: fullName.trim(), handle, gender, birthday, location: locationData });
+      await onComplete({ type: 'consumer', name: fullName.trim(), handle, gender, birthday, photoURL: onboardingPhoto, location: locationData });
     }
   };
 
   const consumerSteps = [
-    // Step 0 — Identity (name + handle)
+    // Step 0 — Identity (name + handle + optional photo)
     <>
-      <div className="w-14 h-14 bg-brand-gold/10 rounded-full flex items-center justify-center mx-auto mb-4">
-        <UserCheck className="w-7 h-7 text-brand-gold" />
-      </div>
+      <input
+        ref={onboardingFileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={async e => {
+          const file = e.target.files?.[0];
+          if (file) setOnboardingPhoto(await compressImage(file));
+          e.target.value = '';
+        }}
+      />
+      <button
+        type="button"
+        onClick={() => onboardingFileRef.current?.click()}
+        className="relative mx-auto mb-6 block"
+      >
+        <div className="w-24 h-24 rounded-[2rem] overflow-hidden border-4 border-white shadow-xl mx-auto">
+          <img src={avatarSrc(onboardingPhoto, gender)} alt="" className="w-full h-full object-cover" />
+        </div>
+        <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-brand-gold rounded-xl flex items-center justify-center shadow">
+          <Edit3 size={14} className="text-brand-navy" />
+        </div>
+      </button>
       <h2 className="font-display font-bold text-2xl text-brand-navy mb-1">Set up your profile</h2>
       <p className="text-sm text-brand-navy/40 mb-8">Your name and handle help businesses and friends recognise you</p>
       <div className="w-full space-y-3 text-left">
@@ -3915,7 +3971,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           <Settings size={18} className="text-brand-navy/60" />
         </button>
         <div className="w-32 h-32 rounded-[2.5rem] overflow-hidden border-4 border-white mx-auto mb-4 shadow-xl">
-          <img src={profile.photoURL} alt="" className="w-full h-full object-cover" />
+          <img src={avatarSrc(profile.photoURL, profile.gender)} alt="" className="w-full h-full object-cover" />
         </div>
         <h2 className="font-display text-3xl font-bold">{profile.name}</h2>
         <p className="text-brand-gold font-bold text-xs uppercase tracking-[0.2em]">@{profile.handle || user.email?.split('@')[0]}</p>
@@ -4193,6 +4249,8 @@ function ToggleSwitch({ on, onChange }: { on: boolean; onChange: (v: boolean) =>
 function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccount }: { profile: UserProfile, user: FirebaseUser, onClose: () => void, onLogout: () => void, onDeleteAccount: () => Promise<void> }) {
   const [name, setName] = useState(profile.name || '');
   const [handle, setHandle] = useState(profile.handle || user.email?.split('@')[0] || '');
+  const [photoURL, setPhotoURL] = useState(profile.photoURL || '');
+  const photoFileRef = useRef<HTMLInputElement>(null);
   const [store, setStore] = useState<StoreProfile | null>(null);
   const [storeName, setStoreName] = useState('');
   const [storeReward, setStoreReward] = useState('');
@@ -4228,7 +4286,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
   const handleSave = async () => {
     setSaving(true);
     try {
-      const profileUpdates: any = { name };
+      const profileUpdates: any = { name, ...(photoURL !== profile.photoURL ? { photoURL } : {}) };
       await updateDoc(doc(db, 'users', profile.uid), profileUpdates);
 
       if (profile.role === 'vendor' && store) {
@@ -4275,14 +4333,25 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
 
         {/* Avatar */}
         <div className="flex justify-center">
-          <div className="relative">
+          <input
+            ref={photoFileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={async e => {
+              const file = e.target.files?.[0];
+              if (file) setPhotoURL(await compressImage(file));
+              e.target.value = '';
+            }}
+          />
+          <button type="button" onClick={() => photoFileRef.current?.click()} className="relative">
             <div className="w-24 h-24 rounded-[2rem] overflow-hidden border-4 border-white shadow-xl">
-              <img src={profile.photoURL} alt="" className="w-full h-full object-cover" />
+              <img src={avatarSrc(photoURL, profile.gender)} alt="" className="w-full h-full object-cover" />
             </div>
             <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-brand-gold rounded-xl flex items-center justify-center shadow">
               <Edit3 size={14} className="text-brand-navy" />
             </div>
-          </div>
+          </button>
         </div>
 
         {/* Name */}
@@ -7571,7 +7640,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
         <div className="absolute top-0 left-0 right-0 h-24 bg-brand-gold/10" />
         <div className="relative z-10">
           <div className="w-24 h-24 rounded-[2.5rem] border-4 border-white overflow-hidden mx-auto mb-4 shadow-xl">
-            <img src={targetUser.photoURL} alt="" className="w-full h-full object-cover" />
+            <img src={avatarSrc(targetUser.photoURL, targetUser.gender)} alt="" className="w-full h-full object-cover" />
           </div>
           <h2 className="text-2xl font-bold">{targetUser.name}</h2>
           <p className="text-brand-gold font-bold text-xs uppercase tracking-[0.2em]">@{targetUser.handle || targetUser.email?.split('@')[0]}</p>
