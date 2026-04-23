@@ -2022,6 +2022,11 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   const returnRate = totalMembers > 0 ? Math.round((returningUsers / totalMembers) * 100) : 0;
   const totalCompletedCycles = storeCards.reduce((sum, c) => sum + (c.total_completed_cycles || 0), 0);
   const redemptionRate = Math.round((totalCompletedCycles / Math.max(1, totalStampsGiven / stampsPerReward)) * 100);
+  const vendorRewardsGiven = Math.max(
+    storeCards.filter(c => !c.isArchived).reduce((sum, c) => sum + ((c.total_completed_cycles || 0) * (c.tiersCompleted || 1)), 0),
+    storeCards.filter(c => c.isArchived && c.isRedeemed).reduce((sum, c) => sum + (c.tiersCompleted || 1), 0),
+    store?.rewardsGiven || 0
+  );
 
   const openStatModal = async (type: 'members' | 'stamps' | 'activeCards') => {
     setStatModal(type);
@@ -2239,7 +2244,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
             </div>
             <StatSquare icon={<RefreshCw className="text-orange-500" />} label="Return Rate" value={`${returnRate}%`} />
             <StatSquare icon={<Award className="text-brand-gold" />} label="Redemption Rate" value={`${redemptionRate}%`} />
-            <StatSquare icon={<Gift className="text-pink-500" />} label="Rewards Given" value={String(Math.max(storeCards.filter(c => !c.isArchived).reduce((sum, c) => sum + ((c.total_completed_cycles || 0) * (c.tiersCompleted || 1)), 0), store?.rewardsGiven || 0))} />
+            <StatSquare icon={<Gift className="text-pink-500" />} label="Rewards Given" value={String(vendorRewardsGiven)} />
           </div>
 
           <AnimatePresence>
@@ -3691,11 +3696,19 @@ function ProfileScreen({ profile, userCards, onLogout, onDeleteAccount, onViewUs
 
   if (!profile) return null;
 
-  const lifetimeStamps = userCards.reduce((acc, c) => acc + (c.current_stamps || 0), 0) || profile.totalStamps || 0;
-  const archivedCardsCount = Math.max(
-    userCards.filter(c => !c.isArchived).reduce((sum, c) => sum + ((c.total_completed_cycles || 0) * (c.tiersCompleted || 1)), 0),
-    profile.totalRedeemed || 0
+  const lifetimeStamps = Math.max(
+    profile.totalStamps || 0,
+    userCards.reduce((acc, c) => acc + (c.current_stamps || 0), 0)
   );
+  // Each archived reward doc (isRedeemed=true) = 1 completed cycle = tiersCompleted rewards.
+  // total_completed_cycles on archived docs is a cumulative snapshot, not a per-doc delta, so we use tiersCompleted alone.
+  const archivedDocRewards = userCards
+    .filter(c => c.isArchived && c.isRedeemed)
+    .reduce((sum, c) => sum + (c.tiersCompleted || 1), 0);
+  const activeCardRewards = userCards
+    .filter(c => !c.isArchived)
+    .reduce((sum, c) => sum + ((c.total_completed_cycles || 0) * (c.tiersCompleted || 1)), 0);
+  const archivedCardsCount = Math.max(archivedDocRewards, activeCardRewards, profile.totalRedeemed || 0);
   const activeCardsCount = userCards.filter(c => !c.isArchived).length;
 
   // Vendor stats
@@ -3705,6 +3718,11 @@ function ProfileScreen({ profile, userCards, onLogout, onDeleteAccount, onViewUs
   const activeStoreCards = storeCards.filter(c => !c.isArchived).length;
   const returningUsers = storeCards.filter(c => (c.total_completed_cycles || 0) > 0).length;
   const returnRate = totalMembers > 0 ? Math.round((returningUsers / totalMembers) * 100) : 0;
+  const profileRewardsGiven = Math.max(
+    storeCards.filter(c => !c.isArchived).reduce((sum, c) => sum + ((c.total_completed_cycles || 0) * (c.tiersCompleted || 1)), 0),
+    storeCards.filter(c => c.isArchived && c.isRedeemed).reduce((sum, c) => sum + (c.tiersCompleted || 1), 0),
+    vendorStore?.rewardsGiven || 0
+  );
   const vis = vendorStore?.visibilitySettings;
 
   const settingsModal = (
@@ -3771,7 +3789,7 @@ function ProfileScreen({ profile, userCards, onLogout, onDeleteAccount, onViewUs
         {/* Business stats */}
         <div className="grid grid-cols-2 gap-4">
           <StatSquare icon={<TrendingUp className="text-green-500" />} label="Stamps Given" value={String(totalStampsGiven)} />
-          <StatSquare icon={<Gift className="text-pink-500" />} label="Rewards Given" value={String(Math.max(storeCards.filter(c => !c.isArchived).reduce((sum, c) => sum + ((c.total_completed_cycles || 0) * (c.tiersCompleted || 1)), 0), vendorStore?.rewardsGiven || 0))} />
+          <StatSquare icon={<Gift className="text-pink-500" />} label="Rewards Given" value={String(profileRewardsGiven)} />
         </div>
 
         {/* Posts */}
@@ -6972,6 +6990,11 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
   const returningUsers = allStoreCards.filter(c => (c.total_completed_cycles || 0) > 0).length;
   const returnRate = totalMembers > 0 ? Math.round((returningUsers / totalMembers) * 100) : 0;
   const showStats = vis ? Object.values(vis).some(Boolean) : true;
+  const publicStoreRewards = Math.max(
+    allStoreCards.filter(c => !c.isArchived).reduce((sum, c) => sum + ((c.total_completed_cycles || 0) * (c.tiersCompleted || 1)), 0),
+    allStoreCards.filter(c => c.isArchived && c.isRedeemed).reduce((sum, c) => sum + (c.tiersCompleted || 1), 0),
+    store.rewardsGiven || 0
+  );
 
   return (
     <motion.div
@@ -7092,7 +7115,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
             </div>
           )}
           <div className="glass-card p-4 rounded-3xl text-center">
-            <p className="text-lg font-bold text-brand-navy">{Math.max(allStoreCards.filter(c => !c.isArchived).reduce((sum, c) => sum + ((c.total_completed_cycles || 0) * (c.tiersCompleted || 1)), 0), store.rewardsGiven || 0)}</p>
+            <p className="text-lg font-bold text-brand-navy">{publicStoreRewards}</p>
             <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest mt-0.5">Rewards</p>
           </div>
         </div>
@@ -7501,6 +7524,16 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
     }
   };
 
+  const publicUserRewards = Math.max(
+    allCards.filter(c => !c.isArchived).reduce((sum, c) => sum + ((c.total_completed_cycles || 0) * (c.tiersCompleted || 1)), 0),
+    allCards.filter(c => c.isArchived && c.isRedeemed).reduce((sum, c) => sum + (c.tiersCompleted || 1), 0),
+    targetUser.totalRedeemed || 0
+  );
+  const publicUserStamps = Math.max(
+    targetUser.totalStamps || 0,
+    allCards.reduce((acc, c) => acc + (c.current_stamps || 0), 0)
+  );
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -7567,9 +7600,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
 
           <div className="grid grid-cols-3 gap-3 max-w-xs mx-auto">
             <div className="text-center">
-              <p className="text-lg font-bold">
-                {allCards.reduce((acc, c) => acc + (c.current_stamps || 0), 0) || targetUser.totalStamps || 0}
-              </p>
+              <p className="text-lg font-bold">{publicUserStamps}</p>
               <p className="text-[10px] text-brand-navy/40 font-bold uppercase">Stamps</p>
             </div>
             <div className="text-center border-x border-brand-navy/5">
@@ -7577,7 +7608,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
               <p className="text-[10px] text-brand-navy/40 font-bold uppercase">Active</p>
             </div>
             <div className="text-center">
-              <p className="text-lg font-bold">{Math.max(allCards.filter(c => !c.isArchived).reduce((sum, c) => sum + ((c.total_completed_cycles || 0) * (c.tiersCompleted || 1)), 0), targetUser.totalRedeemed || 0)}</p>
+              <p className="text-lg font-bold">{publicUserRewards}</p>
               <p className="text-[10px] text-brand-navy/40 font-bold uppercase">Rewards</p>
             </div>
           </div>
