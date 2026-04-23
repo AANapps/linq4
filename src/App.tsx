@@ -6763,7 +6763,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewText, setReviewText] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
-  const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  // leaderboard computed from allStoreCards — no separate query needed
   const [newPost, setNewPost] = useState('');
   const [isPosting, setIsPosting] = useState(false);
   const [card, setCard] = useState<Card | null>(null);
@@ -6786,29 +6786,6 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
     return onSnapshot(q, snap => setAllStoreCards(snap.docs.map(d => ({ id: d.id, ...d.data() } as Card))), () => {});
   }, [store.id]);
 
-  useEffect(() => {
-    const q = query(
-      collection(db, 'cards'),
-      where('store_id', '==', store.id),
-      where('isArchived', '==', false),
-      orderBy('current_stamps', 'desc'),
-      limit(5)
-    );
-    return onSnapshot(q, async (snap) => {
-      const cards = snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
-      const enriched = await Promise.all(cards.map(async (card) => {
-        if (card.user_id) {
-          const usnap = await getDoc(doc(db, 'users', card.user_id));
-          if (usnap.exists()) {
-            const u = usnap.data() as UserProfile;
-            return { ...card, userName: u.name || card.userName, userPhoto: u.photoURL || card.userPhoto };
-          }
-        }
-        return card;
-      }));
-      setLeaderboard(enriched);
-    }, (err) => console.error("Store leaderboard listener:", err));
-  }, [store.id]);
 
   useEffect(() => {
     const q = query(collection(db, 'stores', store.id, 'posts'), orderBy('createdAt', 'desc'));
@@ -7005,6 +6982,13 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
   const returningUsers = allStoreCards.filter(c => (c.total_completed_cycles || 0) > 0).length;
   const returnRate = totalMembers > 0 ? Math.round((returningUsers / totalMembers) * 100) : 0;
   const showStats = vis ? Object.values(vis).some(Boolean) : true;
+  // Leaderboard: lifetime stamps per customer = current progress + completed cycles × stamps required.
+  // Sorted client-side so redemptions don't knock customers off the board.
+  const leaderboard = allStoreCards
+    .filter(c => !c.isArchived)
+    .map(c => ({ ...c, lifetimeStamps: (c.current_stamps || 0) + (c.total_completed_cycles || 0) * stampsReq }))
+    .sort((a, b) => b.lifetimeStamps - a.lifetimeStamps)
+    .slice(0, 5);
   const storeTiersPublic = store.rewardTiers?.length || Math.max(...allStoreCards.map(c => c.tiersCompleted || 0), 1);
   const publicStoreRewards = Math.max(
     allStoreCards.filter(c => !c.isArchived).reduce((sum, c) => sum + (c.total_completed_cycles || 0), 0) * storeTiersPublic,
@@ -7168,7 +7152,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-sm font-bold text-brand-navy">{entry.current_stamps} Stamps</p>
+                <p className="text-sm font-bold text-brand-navy">{entry.lifetimeStamps} Stamps</p>
               </div>
             </div>
           ))}
