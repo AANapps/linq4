@@ -1923,14 +1923,19 @@ function NavButton({ active, onClick, icon, label, badgeCount }: { active: boole
 
 // --- Collectible sticker awarding (called after stamp issue) ---
 
-async function awardCollectibleStickers(customerUid: string, customerName: string, qty: number) {
-  // Single-field query avoids needing a composite Firestore index; filter status client-side
-  const snap = await getDocs(
-    query(collection(db, 'challenges'), where('type', '==', 'collectible'))
-  );
-  for (const cDoc of snap.docs) {
+async function awardCollectibleStickers(customerUid: string, customerName: string, qty: number): Promise<string> {
+  // Read ALL challenges (no where clause = no index needed at all), filter client-side
+  const snap = await getDocs(collection(db, 'challenges'));
+  const collectible = snap.docs.filter(d => {
+    const ch = d.data() as Challenge;
+    return ch.type === 'collectible' && ch.status === 'active';
+  });
+
+  if (collectible.length === 0) return `0 stickers — no active Monopoly challenge found (${snap.docs.length} challenges total)`;
+
+  let awarded = 0;
+  for (const cDoc of collectible) {
     const ch = cDoc.data() as Challenge;
-    if (ch.status !== 'active') continue;
     if (!(ch.participantUids || []).includes(customerUid)) continue;
 
     const newStickers: CollectibleSticker[] = Array.from({ length: qty }, () => ({
@@ -1944,11 +1949,7 @@ async function awardCollectibleStickers(customerUid: string, customerName: strin
     const entrySnap = await getDoc(entryRef);
 
     if (entrySnap.exists()) {
-      const prev = entrySnap.data() as ChallengeEntry;
-      await updateDoc(entryRef, {
-        stickers: [...prev.stickers, ...newStickers],
-        userName: customerName,
-      });
+      await updateDoc(entryRef, { stickers: arrayUnion(...newStickers), userName: customerName });
     } else {
       await setDoc(entryRef, {
         challengeId: cDoc.id,
@@ -1960,7 +1961,11 @@ async function awardCollectibleStickers(customerUid: string, customerName: strin
         completed: false,
       });
     }
+    awarded += qty;
   }
+
+  if (awarded === 0) return `0 stickers — customer hasn't joined any active Monopoly challenge`;
+  return `+${awarded} sticker${awarded > 1 ? 's' : ''} added to Monopoly challenge!`;
 }
 
 // --- Sticker Card (flip reveal) ---
@@ -2879,6 +2884,20 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       await updateDoc(doc(db, 'challenges', challengeId), {
         participantUids: arrayUnion(user.uid)
       });
+      // Pre-create entry so myEntries listener picks it up immediately
+      const entryRef = doc(db, 'challenge_entries', `${challengeId}_${user.uid}`);
+      const entrySnap = await getDoc(entryRef);
+      if (!entrySnap.exists()) {
+        await setDoc(entryRef, {
+          challengeId,
+          userId: user.uid,
+          userName: profile?.name || '',
+          stickers: [],
+          revealedIds: [],
+          uniqueTiers: [],
+          completed: false,
+        });
+      }
     } catch (e) {
       console.error('Failed to join challenge', e);
     } finally {
@@ -3316,10 +3335,15 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
           totalStamps: increment(qty)
         });
 
-        // Award collectible stickers for any active Monopoly challenge the customer has joined
-        awardCollectibleStickers(customer.uid, customer.name, qty).catch(e => console.error('Sticker award failed:', e));
+        // Award collectible stickers — await so we can show the result
+        let stickerMsg = '';
+        try {
+          stickerMsg = await awardCollectibleStickers(customer.uid, customer.name, qty);
+        } catch (e: any) {
+          stickerMsg = `Sticker error: ${e?.message || e}`;
+        }
 
-        setIssueStatus({ type: 'success', message: `${qty} stamp(s) issued to ${customer.name}!` });
+        setIssueStatus({ type: 'success', message: `${qty} stamp(s) issued to ${customer.name}! ${stickerMsg}` });
         setCustomerHandle('');
         setStampQuantity(1);
       }
