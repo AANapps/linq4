@@ -1924,14 +1924,14 @@ function NavButton({ active, onClick, icon, label, badgeCount }: { active: boole
 // --- Collectible sticker awarding (called after stamp issue) ---
 
 async function awardCollectibleStickers(customerUid: string, customerName: string, qty: number): Promise<string> {
-  // Read ALL challenges (no where clause = no index needed at all), filter client-side
+  // Read ALL challenges (no where clause = no compound index needed), filter client-side.
   const snap = await getDocs(collection(db, 'challenges'));
   const collectible = snap.docs.filter(d => {
     const ch = d.data() as Challenge;
     return ch.type === 'collectible' && ch.status === 'active';
   });
 
-  if (collectible.length === 0) return `0 stickers — no active Monopoly challenge found (${snap.docs.length} challenges total)`;
+  if (collectible.length === 0) return `0 stickers — no active Monopoly challenge found`;
 
   let awarded = 0;
   for (const cDoc of collectible) {
@@ -1951,6 +1951,7 @@ async function awardCollectibleStickers(customerUid: string, customerName: strin
     if (entrySnap.exists()) {
       await updateDoc(entryRef, { stickers: arrayUnion(...newStickers), userName: customerName });
     } else {
+      // Entry missing despite being a participant — create it now.
       await setDoc(entryRef, {
         challengeId: cDoc.id,
         userId: customerUid,
