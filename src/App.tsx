@@ -1924,49 +1924,24 @@ function NavButton({ active, onClick, icon, label, badgeCount }: { active: boole
 // --- Collectible sticker awarding (called after stamp issue) ---
 
 async function awardCollectibleStickers(customerUid: string, customerName: string, qty: number): Promise<string> {
-  // Read ALL challenges (no where clause = no compound index needed), filter client-side.
-  const snap = await getDocs(collection(db, 'challenges'));
-  const collectible = snap.docs.filter(d => {
-    const ch = d.data() as Challenge;
-    return ch.type === 'collectible' && ch.status === 'active';
-  });
+  const newStickers: CollectibleSticker[] = Array.from({ length: qty }, () => ({
+    id: Math.random().toString(36).slice(2),
+    tier: rollStickerTier(),
+    earnedAt: new Date().toISOString(),
+  }));
 
-  if (collectible.length === 0) return `0 stickers — no active Monopoly challenge found`;
+  // Find all challenge entries for this customer and append stickers directly.
+  const entriesSnap = await getDocs(
+    query(collection(db, 'challenge_entries'), where('userId', '==', customerUid))
+  );
 
-  let awarded = 0;
-  for (const cDoc of collectible) {
-    const ch = cDoc.data() as Challenge;
-    if (!(ch.participantUids || []).includes(customerUid)) continue;
+  if (entriesSnap.empty) return `no challenge entries found for uid=${customerUid}`;
 
-    const newStickers: CollectibleSticker[] = Array.from({ length: qty }, () => ({
-      id: Math.random().toString(36).slice(2),
-      tier: rollStickerTier(),
-      earnedAt: new Date().toISOString(),
-    }));
-
-    const entryId = `${cDoc.id}_${customerUid}`;
-    const entryRef = doc(db, 'challenge_entries', entryId);
-    const entrySnap = await getDoc(entryRef);
-
-    if (entrySnap.exists()) {
-      await updateDoc(entryRef, { stickers: arrayUnion(...newStickers), userName: customerName });
-    } else {
-      // Entry missing despite being a participant — create it now.
-      await setDoc(entryRef, {
-        challengeId: cDoc.id,
-        userId: customerUid,
-        userName: customerName,
-        stickers: newStickers,
-        revealedIds: [],
-        uniqueTiers: [],
-        completed: false,
-      });
-    }
-    awarded += qty;
+  for (const entryDoc of entriesSnap.docs) {
+    await updateDoc(entryDoc.ref, { stickers: arrayUnion(...newStickers), userName: customerName });
   }
 
-  if (awarded === 0) return `0 stickers — customer hasn't joined any active Monopoly challenge`;
-  return `+${awarded} sticker${awarded > 1 ? 's' : ''} added to Monopoly challenge!`;
+  return `+${qty} sticker${qty > 1 ? 's' : ''} added to ${entriesSnap.size} challenge${entriesSnap.size > 1 ? 's' : ''}`;
 }
 
 // --- Sticker Card (flip reveal) ---
