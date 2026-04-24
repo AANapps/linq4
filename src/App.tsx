@@ -96,7 +96,12 @@ import {
   EyeOff,
   AlertCircle,
   RefreshCw,
-  Award
+  Award,
+  Utensils,
+  Scissors,
+  Dumbbell,
+  Car,
+  ShoppingBag
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
@@ -158,6 +163,21 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 
 type UserRole = 'consumer' | 'vendor';
 type Category = 'Food' | 'Beauty' | 'Barber' | 'Gym' | 'Parking' | 'Retail';
+
+const CATEGORY_ICON_MAP: Record<string, React.ElementType> = {
+  Food: Utensils,
+  Beauty: Sparkles,
+  Barber: Scissors,
+  Gym: Dumbbell,
+  Parking: Car,
+  Retail: ShoppingBag,
+};
+
+function StoreCategoryIcon({ category, size = 12, className }: { category?: string; size?: number; className?: string }) {
+  const Icon = category ? CATEGORY_ICON_MAP[category] : null;
+  if (!Icon) return null;
+  return <Icon size={size} className={className} />;
+}
 
 // ─── Default gender-specific SVG avatars (no external URL, no data cost) ────
 const AVATAR_SVGS: Record<string, string> = {
@@ -330,6 +350,20 @@ interface GlobalPost {
   createdAt: any;
   likesCount: number;
   likedBy?: string[];
+}
+
+const ADMIN_EMAIL = 'info@adastranetwork.co.uk';
+
+interface Challenge {
+  id: string;
+  title: string;
+  description: string;
+  reward: string;
+  goal: number;
+  unit: string;
+  endsAt?: any;
+  createdAt: any;
+  participantUids?: string[];
 }
 
 // --- Main App Component ---
@@ -1114,7 +1148,7 @@ export default function App() {
           active={activeTab === 'home'} 
           onClick={() => { setActiveTab('home'); setViewingStore(null); setViewingUser(null); }}
           icon={profile?.role === 'consumer' ? <Wallet /> : <LayoutDashboard />}
-          label={profile?.role === 'consumer' ? 'Stamps' : 'Dashboard'}
+          label={profile?.role === 'consumer' ? 'Wallet' : 'Dashboard'}
         />
         <NavButton 
           active={activeTab === 'discover'} 
@@ -1846,10 +1880,204 @@ function NavButton({ active, onClick, icon, label, badgeCount }: { active: boole
   );
 }
 
+// --- Admin Challenges Panel ---
+
+function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [form, setForm] = useState({ title: '', description: '', reward: '', goal: '', unit: '' });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const q = query(collection(db, 'challenges'), orderBy('createdAt', 'desc'));
+    return onSnapshot(q, snap => {
+      setChallenges(snap.docs.map(d => ({ id: d.id, ...d.data() } as Challenge)));
+    });
+  }, []);
+
+  const resetForm = () => {
+    setForm({ title: '', description: '', reward: '', goal: '', unit: '' });
+    setEditingId(null);
+  };
+
+  const handleSave = async () => {
+    if (!form.title.trim() || !form.goal) return;
+    setIsSaving(true);
+    try {
+      const data = {
+        title: form.title.trim(),
+        description: form.description.trim(),
+        reward: form.reward.trim(),
+        goal: parseInt(form.goal) || 1,
+        unit: form.unit.trim() || 'visits',
+      };
+      if (editingId) {
+        await updateDoc(doc(db, 'challenges', editingId), data);
+      } else {
+        await addDoc(collection(db, 'challenges'), { ...data, createdAt: serverTimestamp(), participantUids: [] });
+      }
+      resetForm();
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleEdit = (c: Challenge) => {
+    setEditingId(c.id);
+    setForm({ title: c.title, description: c.description, reward: c.reward, goal: String(c.goal), unit: c.unit });
+  };
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    await deleteDoc(doc(db, 'challenges', id));
+    setDeletingId(null);
+  };
+
+  const handleDuplicate = async (c: Challenge) => {
+    await addDoc(collection(db, 'challenges'), {
+      title: `${c.title} (Copy)`,
+      description: c.description,
+      reward: c.reward,
+      goal: c.goal,
+      unit: c.unit,
+      createdAt: serverTimestamp(),
+      participantUids: [],
+    });
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex flex-col max-w-md mx-auto"
+    >
+      <div className="flex-1 overflow-y-auto bg-brand-bg">
+        {/* Header */}
+        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm px-5 pt-5 pb-4 border-b border-black/5 z-10">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-display text-2xl font-bold text-brand-navy">Admin Panel</h2>
+              <p className="text-xs text-brand-navy/50 mt-0.5">Manage challenges</p>
+            </div>
+            <button onClick={onClose} className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm active:scale-95 transition-all">
+              <X size={18} className="text-brand-navy/60" />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-5 space-y-6">
+          {/* Create / Edit form */}
+          <div className="glass-card p-5 rounded-3xl space-y-3">
+            <h3 className="font-bold text-brand-navy text-sm">{editingId ? 'Edit Challenge' : 'New Challenge'}</h3>
+            <input
+              value={form.title}
+              onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+              placeholder="Title"
+              className="w-full px-4 py-3 rounded-2xl bg-brand-bg border border-black/5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+            />
+            <textarea
+              value={form.description}
+              onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+              placeholder="Description"
+              rows={2}
+              className="w-full px-4 py-3 rounded-2xl bg-brand-bg border border-black/5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/30 resize-none"
+            />
+            <input
+              value={form.reward}
+              onChange={e => setForm(f => ({ ...f, reward: e.target.value }))}
+              placeholder="Reward (e.g. Free coffee)"
+              className="w-full px-4 py-3 rounded-2xl bg-brand-bg border border-black/5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+            />
+            <div className="flex gap-2">
+              <input
+                value={form.goal}
+                onChange={e => setForm(f => ({ ...f, goal: e.target.value }))}
+                placeholder="Goal (e.g. 10)"
+                type="number"
+                min="1"
+                className="flex-1 px-4 py-3 rounded-2xl bg-brand-bg border border-black/5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+              />
+              <input
+                value={form.unit}
+                onChange={e => setForm(f => ({ ...f, unit: e.target.value }))}
+                placeholder="Unit (e.g. visits)"
+                className="flex-1 px-4 py-3 rounded-2xl bg-brand-bg border border-black/5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleSave}
+                disabled={isSaving || !form.title.trim()}
+                className="flex-1 bg-brand-navy text-white py-3 rounded-2xl font-bold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <Save size={14} /> {isSaving ? 'Saving...' : editingId ? 'Update' : 'Create'}
+              </button>
+              {editingId && (
+                <button onClick={resetForm} className="px-4 py-3 rounded-2xl bg-brand-navy/10 text-brand-navy/60 text-sm font-bold">
+                  Cancel
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Challenges list */}
+          {challenges.length === 0 ? (
+            <p className="text-center text-brand-navy/40 text-sm py-8">No challenges yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {challenges.map(c => (
+                <div key={c.id} className="glass-card p-4 rounded-3xl">
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-brand-navy text-sm truncate">{c.title}</p>
+                      <p className="text-xs text-brand-navy/50 mt-0.5 line-clamp-2">{c.description}</p>
+                    </div>
+                    <div className="flex gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => handleEdit(c)}
+                        className="p-2 rounded-xl bg-brand-navy/5 text-brand-navy/60 hover:bg-brand-navy/10 active:scale-95 transition-all"
+                      >
+                        <Edit3 size={13} />
+                      </button>
+                      <button
+                        onClick={() => handleDuplicate(c)}
+                        className="p-2 rounded-xl bg-brand-navy/5 text-brand-navy/60 hover:bg-brand-navy/10 active:scale-95 transition-all"
+                      >
+                        <RefreshCw size={13} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(c.id)}
+                        disabled={deletingId === c.id}
+                        className="p-2 rounded-xl bg-brand-rose/10 text-brand-rose hover:bg-brand-rose/20 active:scale-95 transition-all disabled:opacity-50"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 text-[11px]">
+                    <span className="bg-brand-gold/10 text-brand-gold font-semibold px-2 py-0.5 rounded-full">🎁 {c.reward}</span>
+                    <span className="bg-brand-navy/5 text-brand-navy/50 px-2 py-0.5 rounded-full">Goal: {c.goal} {c.unit}</span>
+                    <span className="bg-brand-rose/10 text-brand-rose px-2 py-0.5 rounded-full">{c.participantUids?.length ?? 0} joined</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 // --- Consumer App ---
 
 function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onViewUser, cards: initialCards, notifications, activeChatId, setActiveChatId, onLogout, onDeleteAccount }: { activeTab: string, setActiveTab: (tab: string) => void, profile: UserProfile | null, user: FirebaseUser, onViewStore: (s: StoreProfile) => void, onViewUser: (u: UserProfile) => void, cards: Card[], notifications: Notification[], activeChatId: string | null, setActiveChatId: (id: string | null) => void, onLogout: () => void, onDeleteAccount: () => Promise<void>, key?: React.Key }) {
   const [stores, setStores] = useState<StoreProfile[]>([]);
+  const [walletSubTab, setWalletSubTab] = useState<'stamps' | 'challenges'>('stamps');
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [joiningChallengeId, setJoiningChallengeId] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'stores'), (snapshot) => {
@@ -1859,6 +2087,34 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
     });
     return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    const q = query(collection(db, 'challenges'), orderBy('createdAt', 'desc'));
+    return onSnapshot(q, (snap) => {
+      setChallenges(snap.docs.map(d => ({ id: d.id, ...d.data() } as Challenge)));
+    });
+  }, []);
+
+  const handleJoinChallenge = async (challengeId: string) => {
+    if (!user) return;
+    setJoiningChallengeId(challengeId);
+    try {
+      await updateDoc(doc(db, 'challenges', challengeId), {
+        participantUids: arrayUnion(user.uid)
+      });
+    } catch (e) {
+      console.error('Failed to join challenge', e);
+    } finally {
+      setJoiningChallengeId(null);
+    }
+  };
+
+  const handleLeaveChallenge = async (challengeId: string) => {
+    if (!user) return;
+    await updateDoc(doc(db, 'challenges', challengeId), {
+      participantUids: arrayRemove(user.uid)
+    });
+  };
 
   const handleJoinStore = async (store: StoreProfile) => {
     if (!user) return;
@@ -1911,33 +2167,118 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       )}
 
       {activeTab === 'home' && (
-        <div className="space-y-8">
+        <div className="space-y-6">
           <header>
-            <h2 className="font-display text-3xl font-bold mb-1">My Passes</h2>
-            <p className="text-brand-navy/60">You have {activeCards.length} active loyalty cards.</p>
+            <h2 className="font-display text-3xl font-bold mb-1">Wallet</h2>
           </header>
 
-          <div className="space-y-4">
-            {activeCards.length > 0 ? (
-              activeCards.map(card => {
-                const store = stores.find(s => s.id === card.store_id);
-                return <LoyaltyCard key={card.id} card={card} store={store} onViewStore={onViewStore} />;
-              })
-            ) : (
-              <div className="glass-card p-10 rounded-[2.5rem] border-2 border-dashed border-brand-rose/40 text-center">
-                <div className="w-16 h-16 bg-brand-bg rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Wallet className="w-8 h-8 text-brand-navy/20" />
-                </div>
-                <p className="text-brand-navy/60 mb-6">Your wallet is empty.</p>
-                <button 
-                  onClick={() => setActiveTab('discover')}
-                  className="bg-brand-navy text-white px-8 py-3 rounded-xl font-bold text-sm"
-                >
-                  Find Stores
-                </button>
-              </div>
-            )}
+          {/* Sub-tabs */}
+          <div className="flex bg-brand-bg rounded-2xl p-1 gap-1">
+            <button
+              onClick={() => setWalletSubTab('stamps')}
+              className={cn(
+                'flex-1 py-2.5 rounded-xl text-sm font-bold transition-all',
+                walletSubTab === 'stamps'
+                  ? 'bg-white text-brand-navy shadow-sm'
+                  : 'text-brand-navy/50'
+              )}
+            >
+              Stamps
+            </button>
+            <button
+              onClick={() => setWalletSubTab('challenges')}
+              className={cn(
+                'flex-1 py-2.5 rounded-xl text-sm font-bold transition-all',
+                walletSubTab === 'challenges'
+                  ? 'bg-white text-brand-navy shadow-sm'
+                  : 'text-brand-navy/50'
+              )}
+            >
+              Challenges
+            </button>
           </div>
+
+          {/* Stamps sub-tab */}
+          {walletSubTab === 'stamps' && (
+            <div className="space-y-4">
+              <p className="text-brand-navy/60 text-sm">You have {activeCards.length} active loyalty card{activeCards.length !== 1 ? 's' : ''}.</p>
+              {activeCards.length > 0 ? (
+                activeCards.map(card => {
+                  const store = stores.find(s => s.id === card.store_id);
+                  return <LoyaltyCard key={card.id} card={card} store={store} onViewStore={onViewStore} />;
+                })
+              ) : (
+                <div className="glass-card p-10 rounded-[2.5rem] border-2 border-dashed border-brand-rose/40 text-center">
+                  <div className="w-16 h-16 bg-brand-bg rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Wallet className="w-8 h-8 text-brand-navy/20" />
+                  </div>
+                  <p className="text-brand-navy/60 mb-6">Your wallet is empty.</p>
+                  <button
+                    onClick={() => setActiveTab('discover')}
+                    className="bg-brand-navy text-white px-8 py-3 rounded-xl font-bold text-sm"
+                  >
+                    Find Stores
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Challenges sub-tab */}
+          {walletSubTab === 'challenges' && (
+            <div className="space-y-4">
+              {challenges.length === 0 ? (
+                <div className="glass-card p-10 rounded-[2.5rem] border-2 border-dashed border-brand-rose/40 text-center">
+                  <div className="w-16 h-16 bg-brand-bg rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Trophy className="w-8 h-8 text-brand-navy/20" />
+                  </div>
+                  <p className="text-brand-navy/60 text-sm">No challenges yet. Check back soon!</p>
+                </div>
+              ) : (
+                challenges.map(challenge => {
+                  const hasJoined = challenge.participantUids?.includes(user.uid);
+                  return (
+                    <div key={challenge.id} className="glass-card p-5 rounded-3xl">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Trophy className="w-4 h-4 text-brand-gold flex-shrink-0" />
+                            <h3 className="font-bold text-brand-navy truncate">{challenge.title}</h3>
+                          </div>
+                          <p className="text-brand-navy/60 text-sm mb-2">{challenge.description}</p>
+                          <div className="flex flex-wrap gap-2 text-xs">
+                            <span className="bg-brand-gold/10 text-brand-gold font-semibold px-2.5 py-1 rounded-full">
+                              🎁 {challenge.reward}
+                            </span>
+                            <span className="bg-brand-navy/5 text-brand-navy/60 font-medium px-2.5 py-1 rounded-full">
+                              Goal: {challenge.goal} {challenge.unit}
+                            </span>
+                            {(challenge.participantUids?.length ?? 0) > 0 && (
+                              <span className="bg-brand-rose/10 text-brand-rose font-medium px-2.5 py-1 rounded-full">
+                                {challenge.participantUids!.length} joined
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => hasJoined ? handleLeaveChallenge(challenge.id) : handleJoinChallenge(challenge.id)}
+                          disabled={joiningChallengeId === challenge.id}
+                          className={cn(
+                            'flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all',
+                            hasJoined
+                              ? 'bg-brand-navy/10 text-brand-navy/50'
+                              : 'bg-brand-navy text-white'
+                          )}
+                        >
+                          {joiningChallengeId === challenge.id ? '...' : hasJoined ? 'Joined ✓' : 'Join'}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -2959,7 +3300,10 @@ function StoreCard({ store, card, onJoin, onClick }: { store: StoreProfile, card
           <h4 className="font-bold truncate">{store.name}</h4>
           {store.isVerified && <CheckCircle2 size={14} className="text-blue-500 fill-blue-500/10" />}
         </div>
-        <p className="text-xs text-brand-navy/40 mb-2">{store.category} • 1.2km away</p>
+        <p className="text-xs text-brand-navy/40 mb-2 flex items-center gap-1">
+            <StoreCategoryIcon category={store.category} size={11} />
+            {store.category} • 1.2km away
+          </p>
         
         {card ? (
           <div className="space-y-2">
@@ -3566,6 +3910,8 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
 function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, onViewUser, user }: { profile: UserProfile | null, userCards: Card[], stores?: StoreProfile[], onLogout: () => void, onDeleteAccount: () => Promise<void>, onViewUser: (u: UserProfile) => void, user: FirebaseUser }) {
   const [activeSubTab, setActiveSubTab] = useState<'posts' | 'interactions'>('posts');
   const [showProfileSettings, setShowProfileSettings] = useState(false);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const isAdmin = user.email === ADMIN_EMAIL;
   const profileLastDocRef = useRef<any>(null);
   const [profileHasMore, setProfileHasMore] = useState(true);
   const [profileLoadingMore, setProfileLoadingMore] = useState(false);
@@ -3758,6 +4104,9 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
       {showProfileSettings && (
         <ProfileSettingsModal profile={profile} user={user} onClose={() => setShowProfileSettings(false)} onLogout={onLogout} onDeleteAccount={onDeleteAccount} />
       )}
+      {showAdminPanel && (
+        <ChallengesAdminPanel onClose={() => setShowAdminPanel(false)} />
+      )}
     </AnimatePresence>
   );
 
@@ -3785,7 +4134,10 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                 <h2 className="font-display text-2xl font-bold text-white leading-tight">{vendorStore?.name || profile.name}</h2>
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                   {vendorStore?.category && (
-                    <span className="text-[10px] font-bold uppercase tracking-widest bg-white/20 text-white px-2 py-1 rounded-lg">{vendorStore.category}</span>
+                    <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest bg-white/20 text-white px-2 py-1 rounded-lg">
+                        <StoreCategoryIcon category={vendorStore.category} size={10} />
+                        {vendorStore.category}
+                      </span>
                   )}
                   {vendorStore?.location && (
                     <span className="flex items-center gap-1 text-[10px] text-white/70 font-medium">
@@ -3927,6 +4279,12 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           className="absolute right-0 top-0 p-2 rounded-2xl bg-white border border-brand-navy/10 shadow-sm active:scale-95 transition-all">
           <Settings size={18} className="text-brand-navy/60" />
         </button>
+        {isAdmin && (
+          <button onClick={() => setShowAdminPanel(true)}
+            className="absolute left-0 top-0 p-2 rounded-2xl bg-brand-gold/10 border border-brand-gold/30 shadow-sm active:scale-95 transition-all">
+            <Flag size={18} className="text-brand-gold" />
+          </button>
+        )}
         <div className="w-32 h-32 rounded-[2.5rem] overflow-hidden border-4 border-white mx-auto mb-4 shadow-xl">
           <img src={avatarSrc(profile.gender)} alt="" className="w-full h-full object-cover" />
         </div>

@@ -148,6 +148,12 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && resource.data.followerUid == request.auth.uid;
     }
 
+    match /challenges/{challengeId} {
+      allow read: if isAuthenticated();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participantUids']));
+    }
+
     match /reports/{reportId} {
       allow create: if isAuthenticated();
     }
