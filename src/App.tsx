@@ -1924,13 +1924,13 @@ function NavButton({ active, onClick, icon, label, badgeCount }: { active: boole
 // --- Collectible sticker awarding (called after stamp issue) ---
 
 async function awardCollectibleStickers(customerUid: string, customerName: string, qty: number) {
+  // Single-field query avoids needing a composite Firestore index; filter status client-side
   const snap = await getDocs(
-    query(collection(db, 'challenges'),
-      where('type', '==', 'collectible'),
-      where('status', '==', 'active'))
+    query(collection(db, 'challenges'), where('type', '==', 'collectible'))
   );
   for (const cDoc of snap.docs) {
     const ch = cDoc.data() as Challenge;
+    if (ch.status !== 'active') continue;
     if (!(ch.participantUids || []).includes(customerUid)) continue;
 
     const newStickers: CollectibleSticker[] = Array.from({ length: qty }, () => ({
