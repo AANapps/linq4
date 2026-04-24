@@ -3335,15 +3335,12 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
           totalStamps: increment(qty)
         });
 
-        // Award collectible stickers — await so we can show the result
-        let stickerMsg = '';
-        try {
-          stickerMsg = await awardCollectibleStickers(customer.uid, customer.name, qty);
-        } catch (e: any) {
-          stickerMsg = `Sticker error: ${e?.message || e}`;
-        }
+        setIssueStatus({ type: 'success', message: `${qty} stamp(s) issued to ${customer.name}!` });
 
-        setIssueStatus({ type: 'success', message: `${qty} stamp(s) issued to ${customer.name}! ${stickerMsg}` });
+        // Award stickers in background — never blocks the stamp flow
+        awardCollectibleStickers(customer.uid, customer.name, qty)
+          .then(msg => console.log('[Stickers]', msg))
+          .catch(e => console.error('[Stickers] error:', e));
         setCustomerHandle('');
         setStampQuantity(1);
       }
