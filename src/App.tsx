@@ -3026,16 +3026,18 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
 
   useEffect(() => {
     const q = query(collection(db, 'challenges'), orderBy('createdAt', 'desc'));
-    return onSnapshot(q, (snap) => {
-      setChallenges(snap.docs.map(d => ({ id: d.id, ...d.data() } as Challenge)));
-    });
+    return onSnapshot(q,
+      snap => { setChallenges(snap.docs.map(d => ({ id: d.id, ...d.data() } as Challenge))); },
+      err => console.error('[challenges snapshot]', err)
+    );
   }, []);
 
   useEffect(() => {
     const q = query(collection(db, 'challenge_entries'), where('userId', '==', user.uid));
-    return onSnapshot(q, snap => {
-      setMyEntries(snap.docs.map(d => ({ id: d.id, ...d.data() } as ChallengeEntry)));
-    });
+    return onSnapshot(q,
+      snap => { setMyEntries(snap.docs.map(d => ({ id: d.id, ...d.data() } as ChallengeEntry))); },
+      err => console.error('[myEntries snapshot]', err)
+    );
   }, [user.uid]);
 
   const handleJoinChallenge = async (challengeId: string) => {
@@ -3130,30 +3132,37 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           </header>
 
           {/* Sub-tabs */}
-          <div className="flex bg-brand-bg rounded-2xl p-1 gap-1">
-            <button
-              onClick={() => setWalletSubTab('stamps')}
-              className={cn(
-                'flex-1 py-2.5 rounded-xl text-sm font-bold transition-all',
-                walletSubTab === 'stamps'
-                  ? 'bg-white text-brand-navy shadow-sm'
-                  : 'text-brand-navy/50'
-              )}
-            >
-              Stamps
-            </button>
-            <button
-              onClick={() => setWalletSubTab('challenges')}
-              className={cn(
-                'flex-1 py-2.5 rounded-xl text-sm font-bold transition-all',
-                walletSubTab === 'challenges'
-                  ? 'bg-white text-brand-navy shadow-sm'
-                  : 'text-brand-navy/50'
-              )}
-            >
-              Challenges
-            </button>
-          </div>
+          {(() => {
+            const totalUnrevealed = myEntries.reduce((n, e) =>
+              n + e.stickers.filter(s => !(e.revealedIds || []).includes(s.id)).length, 0);
+            return (
+              <div className="flex bg-brand-bg rounded-2xl p-1 gap-1">
+                <button
+                  onClick={() => setWalletSubTab('stamps')}
+                  className={cn(
+                    'flex-1 py-2.5 rounded-xl text-sm font-bold transition-all',
+                    walletSubTab === 'stamps' ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/50'
+                  )}
+                >
+                  Stamps
+                </button>
+                <button
+                  onClick={() => setWalletSubTab('challenges')}
+                  className={cn(
+                    'flex-1 py-2.5 rounded-xl text-sm font-bold transition-all relative',
+                    walletSubTab === 'challenges' ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/50'
+                  )}
+                >
+                  Challenges
+                  {totalUnrevealed > 0 && (
+                    <span className="absolute top-1 right-3 w-4 h-4 bg-brand-rose text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                      {totalUnrevealed > 9 ? '9+' : totalUnrevealed}
+                    </span>
+                  )}
+                </button>
+              </div>
+            );
+          })()}
 
           {/* Stamps sub-tab */}
           {walletSubTab === 'stamps' && (
@@ -3500,8 +3509,14 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
 
         // Award stickers in background — never blocks the stamp flow
         awardCollectibleStickers(customer.uid, customer.name, qty)
-          .then(msg => console.log('[Stickers]', msg))
-          .catch(e => console.error('[Stickers] error:', e));
+          .then(msg => {
+            console.log('[Stickers]', msg);
+            setIssueStatus(prev => prev ? { ...prev, message: prev.message + ` · ${msg}` } : null);
+          })
+          .catch(e => {
+            console.error('[Stickers] error:', e);
+            setIssueStatus(prev => prev ? { ...prev, message: prev.message + ` · Sticker error: ${e?.message || e}` } : null);
+          });
         setCustomerHandle('');
         setStampQuantity(1);
       }
