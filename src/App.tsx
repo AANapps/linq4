@@ -2133,7 +2133,7 @@ function CollectibleChallengeModal({ challenge, entry, userId, onJoin, onLeave, 
     const newRevealedIds = [...(entry.revealedIds || []), stickerId];
     const revealedStickers = entry.stickers.filter(s => newRevealedIds.includes(s.id));
     const uniqueTiers = [...new Set(revealedStickers.map(s => s.tier))] as StickerTier[];
-    const completed = uniqueTiers.length >= 5;
+    const completed = uniqueTiers.length >= (challenge.goal ?? 5);
     await updateDoc(entryRef, {
       revealedIds: arrayUnion(stickerId),
       uniqueTiers,
@@ -2201,7 +2201,7 @@ function CollectibleChallengeModal({ challenge, entry, userId, onJoin, onLeave, 
             {/* 5 Unique Tier Slots */}
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-3">
-                Collect all 5 unique tiers to win {challenge.reward}
+                Collect {challenge.goal ?? 5} unique tier{(challenge.goal ?? 5) > 1 ? 's' : ''} to win {challenge.reward}
               </p>
               <div className="grid grid-cols-5 gap-2">
                 {STICKER_ORDER.map(tier => {
@@ -2226,7 +2226,7 @@ function CollectibleChallengeModal({ challenge, entry, userId, onJoin, onLeave, 
                   );
                 })}
               </div>
-              {myUnique.size >= 5 && (
+              {myUnique.size >= (challenge.goal ?? 5) && (
                 <div className="mt-3 p-4 rounded-2xl text-center" style={{ background: '#FEF9C3', border: '2px solid #FDE68A' }}>
                   <p className="font-bold text-amber-700">🎉 You completed the set!</p>
                   <p className="text-sm text-amber-600 mt-0.5">Claim your {challenge.reward} prize</p>
@@ -2277,7 +2277,8 @@ function CollectibleChallengeModal({ challenge, entry, userId, onJoin, onLeave, 
                 <div className="space-y-1.5">
                   {leaderboard.slice(0, 10).map((e, i) => {
                     const isMe = e.userId === userId;
-                    const pct = (e.uniqueTiers.length / 5) * 100;
+                    const goal = challenge.goal ?? 5;
+                    const pct = (e.uniqueTiers.length / goal) * 100;
                     return (
                       <div key={e.id} className={cn('flex items-center gap-2.5 px-3 py-2.5 rounded-2xl', isMe ? 'bg-brand-gold/10' : 'bg-brand-bg')}>
                         <span className={cn('text-xs font-black w-5 text-center flex-shrink-0',
@@ -2287,7 +2288,7 @@ function CollectibleChallengeModal({ challenge, entry, userId, onJoin, onLeave, 
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-1">
                             <p className="text-xs font-bold text-brand-navy truncate">{isMe ? 'You' : (e.userName || 'Player')}</p>
-                            <p className="text-[10px] text-brand-navy/50 ml-2 flex-shrink-0">{e.uniqueTiers.length}/5</p>
+                            <p className="text-[10px] text-brand-navy/50 ml-2 flex-shrink-0">{e.uniqueTiers.length}/{goal}</p>
                           </div>
                           <div className="h-1.5 bg-brand-navy/10 rounded-full overflow-hidden">
                             <motion.div className="h-full rounded-full bg-brand-gold" animate={{ width: `${pct}%` }} />
@@ -2302,10 +2303,10 @@ function CollectibleChallengeModal({ challenge, entry, userId, onJoin, onLeave, 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
                           <p className="text-xs font-bold text-brand-navy">You</p>
-                          <p className="text-[10px] text-brand-navy/50">{entry.uniqueTiers.length}/5</p>
+                          <p className="text-[10px] text-brand-navy/50">{entry.uniqueTiers.length}/{challenge.goal ?? 5}</p>
                         </div>
                         <div className="h-1.5 bg-brand-navy/10 rounded-full overflow-hidden">
-                          <div className="h-full rounded-full bg-brand-gold" style={{ width: `${(entry.uniqueTiers.length / 5) * 100}%` }} />
+                          <div className="h-full rounded-full bg-brand-gold" style={{ width: `${(entry.uniqueTiers.length / (challenge.goal ?? 5)) * 100}%` }} />
                         </div>
                       </div>
                     </div>
@@ -2413,7 +2414,7 @@ function CollectibleChallengeCard({ challenge, userId, onJoin, onLeave, joining 
               })}
               {hasJoined && entry && (
                 <span className="ml-1 text-xs text-brand-navy/40 self-center">
-                  {myUnique.size}/5
+                  {myUnique.size}/{challenge.goal ?? 5}
                 </span>
               )}
             </div>
@@ -2453,7 +2454,7 @@ function CollectibleChallengeCard({ challenge, userId, onJoin, onLeave, joining 
               {/* 5 sticker slots */}
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-3">
-                  Collect all 5 to win {challenge.reward}
+                  Collect {challenge.goal ?? 5} unique tier{(challenge.goal ?? 5) > 1 ? 's' : ''} to win {challenge.reward}
                 </p>
                 <div className="grid grid-cols-5 gap-2">
                   {STICKER_ORDER.map(tier => {
@@ -2488,7 +2489,7 @@ function CollectibleChallengeCard({ challenge, userId, onJoin, onLeave, joining 
                     );
                   })}
                 </div>
-                {myUnique.size >= 5 && (
+                {myUnique.size >= (challenge.goal ?? 5) && (
                   <div className="mt-3 p-3 rounded-2xl text-center" style={{ background: '#FEF9C3', border: '1px solid #FDE68A' }}>
                     <p className="font-bold text-amber-700 text-sm">🎉 You completed the set! Claim {challenge.reward}</p>
                   </div>
@@ -2555,7 +2556,8 @@ function CollectibleChallengeCard({ challenge, userId, onJoin, onLeave, joining 
                   <div className="space-y-1.5">
                     {leaderboard.slice(0, 10).map((e, i) => {
                       const isMe = e.userId === userId;
-                      const pct = (e.uniqueTiers.length / 5) * 100;
+                      const goal = challenge.goal ?? 5;
+                      const pct = (e.uniqueTiers.length / goal) * 100;
                       return (
                         <div key={e.id} className={cn('flex items-center gap-2.5 px-3 py-2 rounded-xl', isMe ? 'bg-brand-gold/10' : 'bg-brand-bg')}>
                           <span className={cn('text-xs font-black w-5 text-center flex-shrink-0', i === 0 ? 'text-brand-gold' : i === 1 ? 'text-slate-400' : i === 2 ? 'text-amber-600' : 'text-brand-navy/30')}>
@@ -2564,7 +2566,7 @@ function CollectibleChallengeCard({ challenge, userId, onJoin, onLeave, joining 
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between mb-0.5">
                               <p className="text-xs font-bold text-brand-navy truncate">{isMe ? 'You' : (e.userName || 'Player')}</p>
-                              <p className="text-[10px] text-brand-navy/50 flex-shrink-0 ml-2">{e.uniqueTiers.length}/5</p>
+                              <p className="text-[10px] text-brand-navy/50 flex-shrink-0 ml-2">{e.uniqueTiers.length}/{goal}</p>
                             </div>
                             <div className="h-1.5 bg-brand-navy/10 rounded-full overflow-hidden">
                               <div className="h-full rounded-full bg-brand-gold transition-all" style={{ width: `${pct}%` }} />
@@ -2579,10 +2581,10 @@ function CollectibleChallengeCard({ challenge, userId, onJoin, onLeave, joining 
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-0.5">
                             <p className="text-xs font-bold text-brand-navy">You</p>
-                            <p className="text-[10px] text-brand-navy/50">{entry?.uniqueTiers.length ?? 0}/5</p>
+                            <p className="text-[10px] text-brand-navy/50">{entry?.uniqueTiers.length ?? 0}/{challenge.goal ?? 5}</p>
                           </div>
                           <div className="h-1.5 bg-brand-navy/10 rounded-full overflow-hidden">
-                            <div className="h-full rounded-full bg-brand-gold" style={{ width: `${((entry?.uniqueTiers.length ?? 0) / 5) * 100}%` }} />
+                            <div className="h-full rounded-full bg-brand-gold" style={{ width: `${((entry?.uniqueTiers.length ?? 0) / (challenge.goal ?? 5)) * 100}%` }} />
                           </div>
                         </div>
                       </div>
@@ -2614,6 +2616,22 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
   const [restartingId, setRestartingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmRestart, setConfirmRestart] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [expandedPlayers, setExpandedPlayers] = useState<string | null>(null);
+  const [playerProfiles, setPlayerProfiles] = useState<Map<string, UserProfile>>(new Map());
+  const [loadingPlayers, setLoadingPlayers] = useState(false);
+
+  // Collectible form state
+  const [colTitle, setColTitle] = useState('Monopoly Collect-All');
+  const [colReward, setColReward] = useState('$5,000');
+  const [colGoal, setColGoal] = useState(5);
+
+  // Standard form state
+  const [stdTitle, setStdTitle] = useState('');
+  const [stdDesc, setStdDesc] = useState('');
+  const [stdGoal, setStdGoal] = useState('');
+  const [stdUnit, setStdUnit] = useState('');
+  const [stdReward, setStdReward] = useState('');
 
   useEffect(() => {
     const q = query(collection(db, 'challenges'), orderBy('createdAt', 'desc'));
@@ -2622,20 +2640,43 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
     });
   }, []);
 
-  const handleDeployMonopoly = async () => {
+  const handleDeployCollectible = async () => {
+    if (!colTitle.trim() || !colReward.trim()) return;
     setDeploying(true);
     try {
       await addDoc(collection(db, 'challenges'), {
-        title: 'Monopoly Collect-All',
-        description: 'Collect every stamp, earn a sticker. Get all 5 unique tiers — Common, Uncommon, Rare, Epic, and Legendary — to claim the grand prize.',
-        reward: '$5,000',
+        title: colTitle.trim(),
+        description: `Collect every stamp, earn a sticker. Get ${colGoal} unique tier${colGoal > 1 ? 's' : ''} — Common, Uncommon, Rare, Epic, and Legendary — to claim the grand prize.`,
+        reward: colReward.trim(),
         type: 'collectible',
         status: 'active',
-        goal: 5,
+        goal: colGoal,
         unit: 'unique stickers',
         participantUids: [],
         createdAt: serverTimestamp(),
       });
+    } finally {
+      setDeploying(false);
+    }
+  };
+
+  const handleDeployStandard = async () => {
+    const g = parseInt(stdGoal);
+    if (!stdTitle.trim() || !stdReward.trim() || !stdUnit.trim() || isNaN(g) || g < 1) return;
+    setDeploying(true);
+    try {
+      await addDoc(collection(db, 'challenges'), {
+        title: stdTitle.trim(),
+        description: stdDesc.trim() || `Reach ${g} ${stdUnit} to win.`,
+        reward: stdReward.trim(),
+        type: 'standard',
+        status: 'active',
+        goal: g,
+        unit: stdUnit.trim(),
+        participantUids: [],
+        createdAt: serverTimestamp(),
+      });
+      setStdTitle(''); setStdDesc(''); setStdGoal(''); setStdUnit(''); setStdReward('');
     } finally {
       setDeploying(false);
     }
@@ -2650,14 +2691,9 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
 
   const handleRestart = async (challengeId: string) => {
     setRestartingId(challengeId);
-    // Delete all entries for this challenge
     const entriesSnap = await getDocs(query(collection(db, 'challenge_entries'), where('challengeId', '==', challengeId)));
     await Promise.all(entriesSnap.docs.map(d => deleteDoc(d.ref)));
-    // Reset participants and reactivate
-    await updateDoc(doc(db, 'challenges', challengeId), {
-      participantUids: [],
-      status: 'active',
-    });
+    await updateDoc(doc(db, 'challenges', challengeId), { participantUids: [], status: 'active' });
     setRestartingId(null);
     setConfirmRestart(null);
   };
@@ -2668,10 +2704,176 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
     await Promise.all(entriesSnap.docs.map(d => deleteDoc(d.ref)));
     await deleteDoc(doc(db, 'challenges', id));
     setDeletingId(null);
+    setConfirmDelete(null);
+    if (expandedPlayers === id) setExpandedPlayers(null);
+  };
+
+  const handleTogglePlayers = async (c: Challenge) => {
+    if (expandedPlayers === c.id) { setExpandedPlayers(null); return; }
+    setExpandedPlayers(c.id);
+    const uids = (c.participantUids || []).filter(uid => !playerProfiles.has(uid));
+    if (uids.length === 0) return;
+    setLoadingPlayers(true);
+    try {
+      const chunks: string[][] = [];
+      for (let i = 0; i < uids.length; i += 10) chunks.push(uids.slice(i, i + 10));
+      const results = await Promise.all(
+        chunks.map(chunk => getDocs(query(collection(db, 'users'), where('uid', 'in', chunk))))
+      );
+      const updated = new Map(playerProfiles);
+      results.forEach(snap => snap.docs.forEach(d => updated.set(d.id, { uid: d.id, ...d.data() } as UserProfile)));
+      setPlayerProfiles(updated);
+    } finally {
+      setLoadingPlayers(false);
+    }
   };
 
   const collectible = challenges.filter(c => c.type === 'collectible');
   const standard = challenges.filter(c => c.type !== 'collectible');
+
+  const inputCls = 'w-full px-3 py-2 rounded-xl bg-white border border-brand-navy/10 text-sm text-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-gold/40 placeholder:text-brand-navy/30';
+
+  const ChallengeCard = ({ c, isCollectible }: { c: Challenge; isCollectible: boolean; key?: React.Key }) => {
+    const isActive = c.status === 'active';
+    const playerCount = c.participantUids?.length ?? 0;
+    const showPlayers = expandedPlayers === c.id;
+    return (
+      <div className="glass-card rounded-3xl overflow-hidden">
+        <div className="p-4 space-y-3">
+          {/* Title row */}
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-brand-navy text-sm truncate">{c.title}</p>
+              <div className="flex gap-1.5 mt-1 flex-wrap text-[10px]">
+                <span className={cn('px-1.5 py-0.5 rounded-full font-bold uppercase',
+                  isActive ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600')}>
+                  {c.status || 'active'}
+                </span>
+                <span className="bg-brand-navy/5 text-brand-navy/50 px-1.5 py-0.5 rounded-full">
+                  {playerCount} player{playerCount !== 1 ? 's' : ''}
+                </span>
+                <span className="bg-brand-gold/10 text-brand-gold font-semibold px-1.5 py-0.5 rounded-full">
+                  🎁 {c.reward}
+                </span>
+                {isCollectible && (
+                  <span className="bg-brand-navy/5 text-brand-navy/40 px-1.5 py-0.5 rounded-full">
+                    {c.goal ?? 5} tiers
+                  </span>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={() => setConfirmDelete(c.id)}
+              disabled={deletingId === c.id}
+              className="p-2 rounded-xl bg-brand-rose/10 text-brand-rose active:scale-95 transition-all disabled:opacity-50 flex-shrink-0"
+            >
+              <Trash2 size={13} />
+            </button>
+          </div>
+
+          {/* Controls */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleToggleStatus(c)}
+              disabled={togglingId === c.id}
+              className={cn(
+                'flex-1 py-2.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all',
+                isActive ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-green-50 text-green-700 border border-green-200'
+              )}
+            >
+              {togglingId === c.id ? '...' : isActive ? <><Archive size={12} /> Pause</> : <><Zap size={12} /> Resume</>}
+            </button>
+            <button
+              onClick={() => setConfirmRestart(c.id)}
+              disabled={restartingId === c.id}
+              className="flex-1 py-2.5 rounded-2xl text-xs font-bold bg-brand-navy/5 text-brand-navy/60 border border-brand-navy/10 flex items-center justify-center gap-1.5 active:scale-95 transition-all disabled:opacity-50"
+            >
+              <RefreshCw size={12} /> Restart
+            </button>
+            <button
+              onClick={() => handleTogglePlayers(c)}
+              className={cn(
+                'flex-1 py-2.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all border',
+                showPlayers ? 'bg-brand-navy text-white border-brand-navy' : 'bg-brand-navy/5 text-brand-navy/60 border-brand-navy/10'
+              )}
+            >
+              <Users size={12} /> Players
+            </button>
+          </div>
+
+          {/* Players list */}
+          <AnimatePresence>
+            {showPlayers && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="overflow-hidden"
+              >
+                <div className="pt-1 space-y-1.5 max-h-48 overflow-y-auto">
+                  {playerCount === 0 ? (
+                    <p className="text-xs text-brand-navy/40 text-center py-3">No players yet.</p>
+                  ) : loadingPlayers ? (
+                    <p className="text-xs text-brand-navy/40 text-center py-3">Loading...</p>
+                  ) : (
+                    (c.participantUids || []).map(uid => {
+                      const p = playerProfiles.get(uid);
+                      return (
+                        <div key={uid} className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-brand-bg">
+                          <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 bg-brand-navy/10">
+                            {p?.photoURL ? <img src={p.photoURL} alt="" className="w-full h-full object-cover" /> : null}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-brand-navy truncate">{p?.name || 'Player'}</p>
+                            {p?.handle && <p className="text-[10px] text-brand-navy/40">@{p.handle}</p>}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Restart confirmation */}
+          {confirmRestart === c.id && (
+            <div className="rounded-2xl bg-brand-rose/10 border border-brand-rose/20 p-3 space-y-2">
+              <p className="text-xs font-bold text-brand-rose text-center">Restart will erase ALL player progress. Continue?</p>
+              <div className="flex gap-2">
+                <button onClick={() => setConfirmRestart(null)} className="flex-1 py-2 rounded-xl bg-white text-brand-navy/60 text-xs font-bold border border-brand-navy/10">Cancel</button>
+                <button
+                  onClick={() => handleRestart(c.id)}
+                  disabled={restartingId === c.id}
+                  className="flex-1 py-2 rounded-xl bg-brand-rose text-white text-xs font-bold disabled:opacity-50"
+                >
+                  {restartingId === c.id ? 'Restarting...' : 'Yes, Restart'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Delete confirmation */}
+          {confirmDelete === c.id && (
+            <div className="rounded-2xl bg-brand-rose/10 border border-brand-rose/20 p-3 space-y-2">
+              <p className="text-xs font-bold text-brand-rose text-center">Delete will permanently remove this challenge and all entries.</p>
+              <div className="flex gap-2">
+                <button onClick={() => setConfirmDelete(null)} className="flex-1 py-2 rounded-xl bg-white text-brand-navy/60 text-xs font-bold border border-brand-navy/10">Cancel</button>
+                <button
+                  onClick={() => handleDelete(c.id)}
+                  disabled={deletingId === c.id}
+                  className="flex-1 py-2 rounded-xl bg-brand-rose text-white text-xs font-bold disabled:opacity-50"
+                >
+                  {deletingId === c.id ? 'Deleting...' : 'Yes, Delete'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <motion.div
@@ -2696,18 +2898,17 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
 
         <div className="p-5 space-y-6">
 
-          {/* Deploy Monopoly */}
+          {/* Deploy Collectible (Monopoly) */}
           <div className="rounded-3xl overflow-hidden border-2 border-dashed border-brand-gold/40 p-5 space-y-3"
             style={{ background: 'linear-gradient(135deg, #FFFBEB, #FEF3C7)' }}>
             <div className="flex items-center gap-2">
               <Trophy className="w-5 h-5 text-brand-gold" />
-              <h3 className="font-bold text-amber-800 text-sm">Monopoly Collect-All</h3>
+              <h3 className="font-bold text-amber-800 text-sm">Sticker Collect-All Challenge</h3>
             </div>
             <p className="text-xs text-amber-700/70">
-              Deploy the sticker collecting game. Every stamp earns a random sticker (5 tiers).
-              First to collect all 5 unique tiers wins <strong>$5,000</strong>.
+              Every stamp earns a random sticker. Players collect unique tiers to win the prize.
             </p>
-            <div className="grid grid-cols-5 gap-1">
+            <div className="grid grid-cols-5 gap-1 mb-1">
               {STICKER_ORDER.map(tier => {
                 const cfg = STICKER_CONFIG[tier];
                 return (
@@ -2721,90 +2922,69 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
                 );
               })}
             </div>
+            <input
+              value={colTitle}
+              onChange={e => setColTitle(e.target.value)}
+              placeholder="Challenge name"
+              className={inputCls}
+            />
+            <div className="flex gap-2">
+              <input
+                value={colReward}
+                onChange={e => setColReward(e.target.value)}
+                placeholder="Prize (e.g. $5,000)"
+                className={cn(inputCls, 'flex-1')}
+              />
+              <div className="flex items-center gap-1.5 bg-white border border-brand-navy/10 rounded-xl px-3">
+                <span className="text-xs text-brand-navy/50 whitespace-nowrap">Tiers to win</span>
+                <select
+                  value={colGoal}
+                  onChange={e => setColGoal(Number(e.target.value))}
+                  className="bg-transparent text-sm font-bold text-brand-navy focus:outline-none py-2"
+                >
+                  {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}
+                </select>
+              </div>
+            </div>
             <button
-              onClick={handleDeployMonopoly}
-              disabled={deploying}
+              onClick={handleDeployCollectible}
+              disabled={deploying || !colTitle.trim() || !colReward.trim()}
               className="w-full bg-brand-gold text-white font-bold py-3 rounded-2xl text-sm flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
             >
-              <Zap size={15} /> {deploying ? 'Deploying...' : 'Deploy New Challenge'}
+              <Zap size={15} /> {deploying ? 'Deploying...' : 'Deploy Challenge'}
+            </button>
+          </div>
+
+          {/* Deploy Standard */}
+          <div className="rounded-3xl overflow-hidden border-2 border-dashed border-brand-navy/20 p-5 space-y-3 bg-white">
+            <div className="flex items-center gap-2">
+              <Star className="w-5 h-5 text-brand-navy/50" />
+              <h3 className="font-bold text-brand-navy text-sm">Standard Challenge</h3>
+            </div>
+            <p className="text-xs text-brand-navy/50">
+              Goal-based challenge — players track progress toward a target number.
+            </p>
+            <input value={stdTitle} onChange={e => setStdTitle(e.target.value)} placeholder="Challenge name" className={inputCls} />
+            <input value={stdDesc} onChange={e => setStdDesc(e.target.value)} placeholder="Description (optional)" className={inputCls} />
+            <div className="flex gap-2">
+              <input value={stdGoal} onChange={e => setStdGoal(e.target.value)} placeholder="Goal (e.g. 10)" type="number" min="1" className={cn(inputCls, 'w-24 flex-shrink-0')} />
+              <input value={stdUnit} onChange={e => setStdUnit(e.target.value)} placeholder="Unit (e.g. stamps)" className={cn(inputCls, 'flex-1')} />
+            </div>
+            <input value={stdReward} onChange={e => setStdReward(e.target.value)} placeholder="Prize (e.g. Free coffee)" className={inputCls} />
+            <button
+              onClick={handleDeployStandard}
+              disabled={deploying || !stdTitle.trim() || !stdReward.trim() || !stdUnit.trim() || !stdGoal}
+              className="w-full bg-brand-navy text-white font-bold py-3 rounded-2xl text-sm flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
+            >
+              <Zap size={15} /> {deploying ? 'Deploying...' : 'Deploy Challenge'}
             </button>
           </div>
 
           {/* Collectible challenges */}
           {collectible.length > 0 && (
             <div className="space-y-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Monopoly Challenges</p>
-              {collectible.map(c => {
-                const isActive = c.status === 'active';
-                return (
-                  <div key={c.id} className="glass-card p-4 rounded-3xl space-y-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold text-brand-navy text-sm truncate">{c.title}</p>
-                        <div className="flex gap-1.5 mt-1 flex-wrap text-[10px]">
-                          <span className={cn('px-1.5 py-0.5 rounded-full font-bold uppercase',
-                            isActive ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600')}>
-                            {c.status || 'active'}
-                          </span>
-                          <span className="bg-brand-navy/5 text-brand-navy/50 px-1.5 py-0.5 rounded-full">
-                            {c.participantUids?.length ?? 0} players
-                          </span>
-                          <span className="bg-brand-gold/10 text-brand-gold font-semibold px-1.5 py-0.5 rounded-full">
-                            🎁 {c.reward}
-                          </span>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleDelete(c.id)}
-                        disabled={deletingId === c.id}
-                        className="p-2 rounded-xl bg-brand-rose/10 text-brand-rose active:scale-95 transition-all disabled:opacity-50 flex-shrink-0"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-
-                    {/* Controls */}
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleToggleStatus(c)}
-                        disabled={togglingId === c.id}
-                        className={cn(
-                          'flex-1 py-2.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all',
-                          isActive
-                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                            : 'bg-green-50 text-green-700 border border-green-200'
-                        )}
-                      >
-                        {togglingId === c.id ? '...' : isActive ? <><Archive size={12} /> Pause</> : <><Zap size={12} /> Resume</>}
-                      </button>
-                      <button
-                        onClick={() => setConfirmRestart(c.id)}
-                        disabled={restartingId === c.id}
-                        className="flex-1 py-2.5 rounded-2xl text-xs font-bold bg-brand-navy/5 text-brand-navy/60 border border-brand-navy/10 flex items-center justify-center gap-1.5 active:scale-95 transition-all disabled:opacity-50"
-                      >
-                        <RefreshCw size={12} /> Restart
-                      </button>
-                    </div>
-
-                    {/* Restart confirmation */}
-                    {confirmRestart === c.id && (
-                      <div className="rounded-2xl bg-brand-rose/10 border border-brand-rose/20 p-3 space-y-2">
-                        <p className="text-xs font-bold text-brand-rose text-center">Restart will erase ALL player progress and entries. Continue?</p>
-                        <div className="flex gap-2">
-                          <button onClick={() => setConfirmRestart(null)} className="flex-1 py-2 rounded-xl bg-white text-brand-navy/60 text-xs font-bold border border-brand-navy/10">Cancel</button>
-                          <button
-                            onClick={() => handleRestart(c.id)}
-                            disabled={restartingId === c.id}
-                            className="flex-1 py-2 rounded-xl bg-brand-rose text-white text-xs font-bold disabled:opacity-50"
-                          >
-                            {restartingId === c.id ? 'Restarting...' : 'Yes, Restart'}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Sticker Challenges</p>
+              {collectible.map(c => <ChallengeCard key={c.id} c={c} isCollectible={true} />)}
             </div>
           )}
 
@@ -2812,27 +2992,7 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
           {standard.length > 0 && (
             <div className="space-y-3">
               <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Standard Challenges</p>
-              {standard.map(c => (
-                <div key={c.id} className="glass-card p-4 rounded-3xl">
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-brand-navy text-sm truncate">{c.title}</p>
-                      <p className="text-xs text-brand-navy/50 mt-0.5 line-clamp-2">{c.description}</p>
-                    </div>
-                    <button
-                      onClick={() => handleDelete(c.id)}
-                      disabled={deletingId === c.id}
-                      className="p-2 rounded-xl bg-brand-rose/10 text-brand-rose active:scale-95 transition-all disabled:opacity-50"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5 text-[11px]">
-                    <span className="bg-brand-gold/10 text-brand-gold font-semibold px-2 py-0.5 rounded-full">🎁 {c.reward}</span>
-                    <span className="bg-brand-rose/10 text-brand-rose px-2 py-0.5 rounded-full">{c.participantUids?.length ?? 0} joined</span>
-                  </div>
-                </div>
-              ))}
+              {standard.map(c => <ChallengeCard key={c.id} c={c} isCollectible={false} />)}
             </div>
           )}
 
@@ -3091,7 +3251,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                               </div>
                             );
                           })}
-                          <span className="ml-auto text-xs text-brand-navy/40 font-medium">{myUnique.size}/5</span>
+                          <span className="ml-auto text-xs text-brand-navy/40 font-medium">{myUnique.size}/{challenge.goal ?? 5}</span>
                         </div>
                       )}
                     </button>
