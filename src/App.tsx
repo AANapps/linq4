@@ -2210,7 +2210,7 @@ function CollectibleChallengeModal({ challenge, entry, userId, onJoin, onLeave, 
             </div>
 
             {/* Unrevealed cards */}
-            {hasJoined && (
+            {(hasJoined || (entry?.stickers.length ?? 0) > 0) && (
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">
@@ -2724,6 +2724,10 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
           stickers: [newSticker], revealedIds: [], uniqueTiers: [], completed: false,
         });
       }
+      // Ensure they're in participantUids so the modal shows their cards
+      await updateDoc(doc(db, 'challenges', challengeId), {
+        participantUids: arrayUnion(uid),
+      });
       setAwardResults(prev => { const m = new Map(prev); m.set(challengeId, `✓ Sticker given to ${name}`); return m; });
       setTimeout(() => setAwardResults(prev => { const m = new Map(prev); m.delete(challengeId); return m; }), 3000);
     } catch (e: any) {
