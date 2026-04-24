@@ -354,6 +354,44 @@ interface GlobalPost {
 
 const ADMIN_EMAIL = 'info@adastranetwork.co.uk';
 
+type StickerTier = 'yellow' | 'orange' | 'blue' | 'purple' | 'gold';
+
+const STICKER_ORDER: StickerTier[] = ['yellow', 'orange', 'blue', 'purple', 'gold'];
+
+const STICKER_CONFIG: Record<StickerTier, { color: string; bg: string; border: string; label: string; chance: string }> = {
+  yellow: { color: '#D97706', bg: '#FEF3C7', border: '#FDE68A', label: 'Common',    chance: '50%'    },
+  orange: { color: '#EA580C', bg: '#FFEDD5', border: '#FED7AA', label: 'Uncommon',  chance: '30%'    },
+  blue:   { color: '#2563EB', bg: '#DBEAFE', border: '#BFDBFE', label: 'Rare',      chance: '15%'    },
+  purple: { color: '#7C3AED', bg: '#EDE9FE', border: '#DDD6FE', label: 'Epic',      chance: '4.99%'  },
+  gold:   { color: '#92400E', bg: '#FEF9C3', border: '#FDE68A', label: 'Legendary', chance: '0.01%'  },
+};
+
+function rollStickerTier(): StickerTier {
+  const r = Math.random();
+  if (r < 0.0001) return 'gold';
+  if (r < 0.05)   return 'purple';
+  if (r < 0.20)   return 'blue';
+  if (r < 0.50)   return 'orange';
+  return 'yellow';
+}
+
+interface CollectibleSticker {
+  id: string;
+  tier: StickerTier;
+  earnedAt: string;
+}
+
+interface ChallengeEntry {
+  id: string;
+  challengeId: string;
+  userId: string;
+  userName?: string;
+  stickers: CollectibleSticker[];
+  uniqueTiers: StickerTier[];
+  completed: boolean;
+  completedAt?: any;
+}
+
 interface Challenge {
   id: string;
   title: string;
@@ -364,6 +402,8 @@ interface Challenge {
   endsAt?: any;
   createdAt: any;
   participantUids?: string[];
+  type?: 'standard' | 'collectible';
+  status?: 'active' | 'paused' | 'ended';
 }
 
 // --- Main App Component ---
@@ -1880,14 +1920,339 @@ function NavButton({ active, onClick, icon, label, badgeCount }: { active: boole
   );
 }
 
+// --- Collectible sticker awarding (called after stamp issue) ---
+
+async function awardCollectibleStickers(customerUid: string, customerName: string, qty: number) {
+  const snap = await getDocs(
+    query(collection(db, 'challenges'),
+      where('type', '==', 'collectible'),
+      where('status', '==', 'active'))
+  );
+  for (const cDoc of snap.docs) {
+    const ch = cDoc.data() as Challenge;
+    if (!(ch.participantUids || []).includes(customerUid)) continue;
+
+    const newStickers: CollectibleSticker[] = Array.from({ length: qty }, () => ({
+      id: Math.random().toString(36).slice(2),
+      tier: rollStickerTier(),
+      earnedAt: new Date().toISOString(),
+    }));
+
+    const entryId = `${cDoc.id}_${customerUid}`;
+    const entryRef = doc(db, 'challenge_entries', entryId);
+    const entrySnap = await getDoc(entryRef);
+
+    if (entrySnap.exists()) {
+      const prev = entrySnap.data() as ChallengeEntry;
+      const allStickers = [...prev.stickers, ...newStickers];
+      const uniqueTiers = [...new Set(allStickers.map(s => s.tier))] as StickerTier[];
+      const completed = uniqueTiers.length >= 5;
+      await updateDoc(entryRef, {
+        stickers: allStickers,
+        uniqueTiers,
+        completed,
+        userName: customerName,
+        ...(completed && !prev.completed ? { completedAt: serverTimestamp() } : {}),
+      });
+    } else {
+      const uniqueTiers = [...new Set(newStickers.map(s => s.tier))] as StickerTier[];
+      const completed = uniqueTiers.length >= 5;
+      await setDoc(entryRef, {
+        challengeId: cDoc.id,
+        userId: customerUid,
+        userName: customerName,
+        stickers: newStickers,
+        uniqueTiers,
+        completed,
+        ...(completed ? { completedAt: serverTimestamp() } : {}),
+      });
+    }
+  }
+}
+
+// --- CollectibleChallengeCard ---
+
+function CollectibleChallengeCard({ challenge, userId, onJoin, onLeave, joining }: {
+  challenge: Challenge;
+  userId: string;
+  onJoin: () => void;
+  onLeave: () => void;
+  joining: boolean;
+  key?: React.Key;
+}) {
+  const hasJoined = challenge.participantUids?.includes(userId);
+  const isActive = challenge.status === 'active';
+  const [expanded, setExpanded] = useState(false);
+  const [entry, setEntry] = useState<ChallengeEntry | null>(null);
+  const [showMyCards, setShowMyCards] = useState(false);
+  const [leaderboard, setLeaderboard] = useState<ChallengeEntry[]>([]);
+
+  useEffect(() => {
+    if (!expanded) return;
+    const entryRef = doc(db, 'challenge_entries', `${challenge.id}_${userId}`);
+    return onSnapshot(entryRef, snap => {
+      setEntry(snap.exists() ? ({ id: snap.id, ...snap.data() } as ChallengeEntry) : null);
+    });
+  }, [expanded, challenge.id, userId]);
+
+  useEffect(() => {
+    if (!expanded) return;
+    const q = query(collection(db, 'challenge_entries'), where('challengeId', '==', challenge.id));
+    return onSnapshot(q, snap => {
+      const entries = snap.docs.map(d => ({ id: d.id, ...d.data() } as ChallengeEntry));
+      entries.sort((a, b) => {
+        if (b.uniqueTiers.length !== a.uniqueTiers.length) return b.uniqueTiers.length - a.uniqueTiers.length;
+        return b.stickers.length - a.stickers.length;
+      });
+      setLeaderboard(entries);
+    });
+  }, [expanded, challenge.id]);
+
+  const myUnique = new Set(entry?.uniqueTiers || []);
+  const myRank = leaderboard.findIndex(e => e.userId === userId) + 1;
+
+  const statusColor = challenge.status === 'active'
+    ? 'text-green-600 bg-green-50'
+    : challenge.status === 'paused'
+    ? 'text-amber-600 bg-amber-50'
+    : 'text-brand-navy/40 bg-brand-navy/5';
+
+  return (
+    <div className="glass-card rounded-3xl overflow-hidden">
+      {/* Header row */}
+      <button onClick={() => setExpanded(e => !e)} className="w-full p-5 text-left">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <Trophy className="w-4 h-4 text-brand-gold flex-shrink-0" />
+              <h3 className="font-bold text-brand-navy truncate">{challenge.title}</h3>
+              {challenge.status && (
+                <span className={cn('text-[10px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide', statusColor)}>
+                  {challenge.status}
+                </span>
+              )}
+            </div>
+            <p className="text-brand-navy/60 text-xs mb-2">{challenge.description}</p>
+            {/* Mini slot preview */}
+            <div className="flex gap-1.5">
+              {STICKER_ORDER.map(tier => {
+                const cfg = STICKER_CONFIG[tier];
+                const lit = myUnique.has(tier);
+                return (
+                  <div
+                    key={tier}
+                    className="w-7 h-7 rounded-lg border-2 flex items-center justify-center text-[10px] font-black transition-all"
+                    style={lit
+                      ? { background: cfg.bg, borderColor: cfg.border, color: cfg.color }
+                      : { background: '#F1F5F9', borderColor: '#E2E8F0', color: '#CBD5E1' }}
+                  >
+                    {lit ? tier[0].toUpperCase() : '?'}
+                  </div>
+                );
+              })}
+              {hasJoined && entry && (
+                <span className="ml-1 text-xs text-brand-navy/40 self-center">
+                  {myUnique.size}/5
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-col items-end gap-2 flex-shrink-0">
+            {hasJoined && isActive ? (
+              <span className="text-xs font-bold text-brand-gold bg-brand-gold/10 px-2.5 py-1 rounded-full">Joined ✓</span>
+            ) : !hasJoined && isActive ? (
+              <button
+                onClick={e => { e.stopPropagation(); onJoin(); }}
+                disabled={joining}
+                className="bg-brand-navy text-white px-3 py-1.5 rounded-xl text-xs font-bold active:scale-95 transition-all"
+              >
+                {joining ? '...' : 'Join'}
+              </button>
+            ) : null}
+            <ChevronDown
+              size={16}
+              className={cn('text-brand-navy/30 transition-transform', expanded && 'rotate-180')}
+            />
+          </div>
+        </div>
+      </button>
+
+      {/* Expanded content */}
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="px-5 pb-5 space-y-5 border-t border-black/5 pt-4">
+
+              {/* 5 sticker slots */}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-3">
+                  Collect all 5 to win {challenge.reward}
+                </p>
+                <div className="grid grid-cols-5 gap-2">
+                  {STICKER_ORDER.map(tier => {
+                    const cfg = STICKER_CONFIG[tier];
+                    const lit = myUnique.has(tier);
+                    const count = entry?.stickers.filter(s => s.tier === tier).length ?? 0;
+                    return (
+                      <div key={tier} className="flex flex-col items-center gap-1">
+                        <div
+                          className="w-full aspect-square rounded-2xl border-2 flex flex-col items-center justify-center transition-all"
+                          style={lit
+                            ? { background: `${cfg.bg}`, borderColor: cfg.border, boxShadow: `0 0 12px ${cfg.color}33` }
+                            : { background: '#F1F5F9', borderColor: '#E2E8F0' }}
+                        >
+                          {lit ? (
+                            <span className="text-2xl font-black" style={{ color: cfg.color }}>
+                              {tier === 'gold' ? '★' : tier[0].toUpperCase()}
+                            </span>
+                          ) : (
+                            <span className="text-xl text-slate-300">?</span>
+                          )}
+                          {count > 1 && (
+                            <span className="text-[9px] font-bold" style={{ color: cfg.color }}>×{count}</span>
+                          )}
+                        </div>
+                        <span className="text-[9px] font-bold text-center leading-tight"
+                          style={{ color: lit ? cfg.color : '#94A3B8' }}>
+                          {cfg.label}
+                        </span>
+                        <span className="text-[8px] text-brand-navy/30">{cfg.chance}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                {myUnique.size >= 5 && (
+                  <div className="mt-3 p-3 rounded-2xl text-center" style={{ background: '#FEF9C3', border: '1px solid #FDE68A' }}>
+                    <p className="font-bold text-amber-700 text-sm">🎉 You completed the set! Claim {challenge.reward}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* My Cards toggle */}
+              {hasJoined && (
+                <div>
+                  <button
+                    onClick={() => setShowMyCards(v => !v)}
+                    className="flex items-center justify-between w-full py-2.5 px-3 rounded-2xl bg-brand-bg hover:bg-brand-navy/5 transition-all"
+                  >
+                    <span className="text-sm font-bold text-brand-navy">
+                      My Cards ({entry?.stickers.length ?? 0})
+                    </span>
+                    <ChevronDown size={14} className={cn('text-brand-navy/40 transition-transform', showMyCards && 'rotate-180')} />
+                  </button>
+                  <AnimatePresence>
+                    {showMyCards && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.15 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="mt-2 space-y-1.5 max-h-52 overflow-y-auto">
+                          {(entry?.stickers.length ?? 0) === 0 ? (
+                            <p className="text-xs text-brand-navy/40 text-center py-3">No stickers yet. Collect stamps to earn some!</p>
+                          ) : (
+                            [...(entry?.stickers ?? [])].reverse().map(s => {
+                              const cfg = STICKER_CONFIG[s.tier];
+                              return (
+                                <div key={s.id} className="flex items-center gap-2.5 px-3 py-2 rounded-xl"
+                                  style={{ background: cfg.bg }}>
+                                  <div className="w-7 h-7 rounded-lg border flex items-center justify-center font-black text-sm flex-shrink-0"
+                                    style={{ borderColor: cfg.border, color: cfg.color, background: 'white' }}>
+                                    {s.tier === 'gold' ? '★' : s.tier[0].toUpperCase()}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-bold" style={{ color: cfg.color }}>{cfg.label}</p>
+                                    <p className="text-[10px] text-brand-navy/40">
+                                      {new Date(s.earnedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                    </p>
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+
+              {/* Leaderboard */}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2">Leaderboard</p>
+                {leaderboard.length === 0 ? (
+                  <p className="text-xs text-brand-navy/40 text-center py-3">No players yet.</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {leaderboard.slice(0, 10).map((e, i) => {
+                      const isMe = e.userId === userId;
+                      const pct = (e.uniqueTiers.length / 5) * 100;
+                      return (
+                        <div key={e.id} className={cn('flex items-center gap-2.5 px-3 py-2 rounded-xl', isMe ? 'bg-brand-gold/10' : 'bg-brand-bg')}>
+                          <span className={cn('text-xs font-black w-5 text-center flex-shrink-0', i === 0 ? 'text-brand-gold' : i === 1 ? 'text-slate-400' : i === 2 ? 'text-amber-600' : 'text-brand-navy/30')}>
+                            {i + 1}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-0.5">
+                              <p className="text-xs font-bold text-brand-navy truncate">{isMe ? 'You' : (e.userName || 'Player')}</p>
+                              <p className="text-[10px] text-brand-navy/50 flex-shrink-0 ml-2">{e.uniqueTiers.length}/5</p>
+                            </div>
+                            <div className="h-1.5 bg-brand-navy/10 rounded-full overflow-hidden">
+                              <div className="h-full rounded-full bg-brand-gold transition-all" style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {myRank > 10 && (
+                      <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-brand-gold/10">
+                        <span className="text-xs font-black w-5 text-center text-brand-navy/30">{myRank}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-0.5">
+                            <p className="text-xs font-bold text-brand-navy">You</p>
+                            <p className="text-[10px] text-brand-navy/50">{entry?.uniqueTiers.length ?? 0}/5</p>
+                          </div>
+                          <div className="h-1.5 bg-brand-navy/10 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full bg-brand-gold" style={{ width: `${((entry?.uniqueTiers.length ?? 0) / 5) * 100}%` }} />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Leave button */}
+              {hasJoined && isActive && (
+                <button onClick={onLeave} className="text-xs text-brand-navy/30 underline underline-offset-2 w-full text-center">
+                  Leave challenge
+                </button>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 // --- Admin Challenges Panel ---
 
 function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
   const [challenges, setChallenges] = useState<Challenge[]>([]);
-  const [form, setForm] = useState({ title: '', description: '', reward: '', goal: '', unit: '' });
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const [deploying, setDeploying] = useState(false);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [restartingId, setRestartingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmRestart, setConfirmRestart] = useState<string | null>(null);
 
   useEffect(() => {
     const q = query(collection(db, 'challenges'), orderBy('createdAt', 'desc'));
@@ -1896,55 +2261,56 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
     });
   }, []);
 
-  const resetForm = () => {
-    setForm({ title: '', description: '', reward: '', goal: '', unit: '' });
-    setEditingId(null);
-  };
-
-  const handleSave = async () => {
-    if (!form.title.trim() || !form.goal) return;
-    setIsSaving(true);
+  const handleDeployMonopoly = async () => {
+    setDeploying(true);
     try {
-      const data = {
-        title: form.title.trim(),
-        description: form.description.trim(),
-        reward: form.reward.trim(),
-        goal: parseInt(form.goal) || 1,
-        unit: form.unit.trim() || 'visits',
-      };
-      if (editingId) {
-        await updateDoc(doc(db, 'challenges', editingId), data);
-      } else {
-        await addDoc(collection(db, 'challenges'), { ...data, createdAt: serverTimestamp(), participantUids: [] });
-      }
-      resetForm();
+      await addDoc(collection(db, 'challenges'), {
+        title: 'Monopoly Collect-All',
+        description: 'Collect every stamp, earn a sticker. Get all 5 unique tiers — Common, Uncommon, Rare, Epic, and Legendary — to claim the grand prize.',
+        reward: '$5,000',
+        type: 'collectible',
+        status: 'active',
+        goal: 5,
+        unit: 'unique stickers',
+        participantUids: [],
+        createdAt: serverTimestamp(),
+      });
     } finally {
-      setIsSaving(false);
+      setDeploying(false);
     }
   };
 
-  const handleEdit = (c: Challenge) => {
-    setEditingId(c.id);
-    setForm({ title: c.title, description: c.description, reward: c.reward, goal: String(c.goal), unit: c.unit });
+  const handleToggleStatus = async (c: Challenge) => {
+    setTogglingId(c.id);
+    const next = c.status === 'active' ? 'paused' : 'active';
+    await updateDoc(doc(db, 'challenges', c.id), { status: next });
+    setTogglingId(null);
+  };
+
+  const handleRestart = async (challengeId: string) => {
+    setRestartingId(challengeId);
+    // Delete all entries for this challenge
+    const entriesSnap = await getDocs(query(collection(db, 'challenge_entries'), where('challengeId', '==', challengeId)));
+    await Promise.all(entriesSnap.docs.map(d => deleteDoc(d.ref)));
+    // Reset participants and reactivate
+    await updateDoc(doc(db, 'challenges', challengeId), {
+      participantUids: [],
+      status: 'active',
+    });
+    setRestartingId(null);
+    setConfirmRestart(null);
   };
 
   const handleDelete = async (id: string) => {
     setDeletingId(id);
+    const entriesSnap = await getDocs(query(collection(db, 'challenge_entries'), where('challengeId', '==', id)));
+    await Promise.all(entriesSnap.docs.map(d => deleteDoc(d.ref)));
     await deleteDoc(doc(db, 'challenges', id));
     setDeletingId(null);
   };
 
-  const handleDuplicate = async (c: Challenge) => {
-    await addDoc(collection(db, 'challenges'), {
-      title: `${c.title} (Copy)`,
-      description: c.description,
-      reward: c.reward,
-      goal: c.goal,
-      unit: c.unit,
-      createdAt: serverTimestamp(),
-      participantUids: [],
-    });
-  };
+  const collectible = challenges.filter(c => c.type === 'collectible');
+  const standard = challenges.filter(c => c.type !== 'collectible');
 
   return (
     <motion.div
@@ -1968,102 +2334,149 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="p-5 space-y-6">
-          {/* Create / Edit form */}
-          <div className="glass-card p-5 rounded-3xl space-y-3">
-            <h3 className="font-bold text-brand-navy text-sm">{editingId ? 'Edit Challenge' : 'New Challenge'}</h3>
-            <input
-              value={form.title}
-              onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-              placeholder="Title"
-              className="w-full px-4 py-3 rounded-2xl bg-brand-bg border border-black/5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
-            />
-            <textarea
-              value={form.description}
-              onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-              placeholder="Description"
-              rows={2}
-              className="w-full px-4 py-3 rounded-2xl bg-brand-bg border border-black/5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/30 resize-none"
-            />
-            <input
-              value={form.reward}
-              onChange={e => setForm(f => ({ ...f, reward: e.target.value }))}
-              placeholder="Reward (e.g. Free coffee)"
-              className="w-full px-4 py-3 rounded-2xl bg-brand-bg border border-black/5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
-            />
-            <div className="flex gap-2">
-              <input
-                value={form.goal}
-                onChange={e => setForm(f => ({ ...f, goal: e.target.value }))}
-                placeholder="Goal (e.g. 10)"
-                type="number"
-                min="1"
-                className="flex-1 px-4 py-3 rounded-2xl bg-brand-bg border border-black/5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
-              />
-              <input
-                value={form.unit}
-                onChange={e => setForm(f => ({ ...f, unit: e.target.value }))}
-                placeholder="Unit (e.g. visits)"
-                className="flex-1 px-4 py-3 rounded-2xl bg-brand-bg border border-black/5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
-              />
+
+          {/* Deploy Monopoly */}
+          <div className="rounded-3xl overflow-hidden border-2 border-dashed border-brand-gold/40 p-5 space-y-3"
+            style={{ background: 'linear-gradient(135deg, #FFFBEB, #FEF3C7)' }}>
+            <div className="flex items-center gap-2">
+              <Trophy className="w-5 h-5 text-brand-gold" />
+              <h3 className="font-bold text-amber-800 text-sm">Monopoly Collect-All</h3>
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={handleSave}
-                disabled={isSaving || !form.title.trim()}
-                className="flex-1 bg-brand-navy text-white py-3 rounded-2xl font-bold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                <Save size={14} /> {isSaving ? 'Saving...' : editingId ? 'Update' : 'Create'}
-              </button>
-              {editingId && (
-                <button onClick={resetForm} className="px-4 py-3 rounded-2xl bg-brand-navy/10 text-brand-navy/60 text-sm font-bold">
-                  Cancel
-                </button>
-              )}
+            <p className="text-xs text-amber-700/70">
+              Deploy the sticker collecting game. Every stamp earns a random sticker (5 tiers).
+              First to collect all 5 unique tiers wins <strong>$5,000</strong>.
+            </p>
+            <div className="grid grid-cols-5 gap-1">
+              {STICKER_ORDER.map(tier => {
+                const cfg = STICKER_CONFIG[tier];
+                return (
+                  <div key={tier} className="flex flex-col items-center gap-0.5">
+                    <div className="w-full aspect-square rounded-xl border flex items-center justify-center text-sm font-black"
+                      style={{ background: cfg.bg, borderColor: cfg.border, color: cfg.color }}>
+                      {tier === 'gold' ? '★' : tier[0].toUpperCase()}
+                    </div>
+                    <span className="text-[8px] text-amber-700/60 text-center leading-tight">{cfg.chance}</span>
+                  </div>
+                );
+              })}
             </div>
+            <button
+              onClick={handleDeployMonopoly}
+              disabled={deploying}
+              className="w-full bg-brand-gold text-white font-bold py-3 rounded-2xl text-sm flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
+            >
+              <Zap size={15} /> {deploying ? 'Deploying...' : 'Deploy New Challenge'}
+            </button>
           </div>
 
-          {/* Challenges list */}
-          {challenges.length === 0 ? (
-            <p className="text-center text-brand-navy/40 text-sm py-8">No challenges yet.</p>
-          ) : (
+          {/* Collectible challenges */}
+          {collectible.length > 0 && (
             <div className="space-y-3">
-              {challenges.map(c => (
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Monopoly Challenges</p>
+              {collectible.map(c => {
+                const isActive = c.status === 'active';
+                return (
+                  <div key={c.id} className="glass-card p-4 rounded-3xl space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-brand-navy text-sm truncate">{c.title}</p>
+                        <div className="flex gap-1.5 mt-1 flex-wrap text-[10px]">
+                          <span className={cn('px-1.5 py-0.5 rounded-full font-bold uppercase',
+                            isActive ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600')}>
+                            {c.status || 'active'}
+                          </span>
+                          <span className="bg-brand-navy/5 text-brand-navy/50 px-1.5 py-0.5 rounded-full">
+                            {c.participantUids?.length ?? 0} players
+                          </span>
+                          <span className="bg-brand-gold/10 text-brand-gold font-semibold px-1.5 py-0.5 rounded-full">
+                            🎁 {c.reward}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleDelete(c.id)}
+                        disabled={deletingId === c.id}
+                        className="p-2 rounded-xl bg-brand-rose/10 text-brand-rose active:scale-95 transition-all disabled:opacity-50 flex-shrink-0"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+
+                    {/* Controls */}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleToggleStatus(c)}
+                        disabled={togglingId === c.id}
+                        className={cn(
+                          'flex-1 py-2.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all',
+                          isActive
+                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                            : 'bg-green-50 text-green-700 border border-green-200'
+                        )}
+                      >
+                        {togglingId === c.id ? '...' : isActive ? <><Archive size={12} /> Pause</> : <><Zap size={12} /> Resume</>}
+                      </button>
+                      <button
+                        onClick={() => setConfirmRestart(c.id)}
+                        disabled={restartingId === c.id}
+                        className="flex-1 py-2.5 rounded-2xl text-xs font-bold bg-brand-navy/5 text-brand-navy/60 border border-brand-navy/10 flex items-center justify-center gap-1.5 active:scale-95 transition-all disabled:opacity-50"
+                      >
+                        <RefreshCw size={12} /> Restart
+                      </button>
+                    </div>
+
+                    {/* Restart confirmation */}
+                    {confirmRestart === c.id && (
+                      <div className="rounded-2xl bg-brand-rose/10 border border-brand-rose/20 p-3 space-y-2">
+                        <p className="text-xs font-bold text-brand-rose text-center">Restart will erase ALL player progress and entries. Continue?</p>
+                        <div className="flex gap-2">
+                          <button onClick={() => setConfirmRestart(null)} className="flex-1 py-2 rounded-xl bg-white text-brand-navy/60 text-xs font-bold border border-brand-navy/10">Cancel</button>
+                          <button
+                            onClick={() => handleRestart(c.id)}
+                            disabled={restartingId === c.id}
+                            className="flex-1 py-2 rounded-xl bg-brand-rose text-white text-xs font-bold disabled:opacity-50"
+                          >
+                            {restartingId === c.id ? 'Restarting...' : 'Yes, Restart'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Standard challenges */}
+          {standard.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Standard Challenges</p>
+              {standard.map(c => (
                 <div key={c.id} className="glass-card p-4 rounded-3xl">
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-brand-navy text-sm truncate">{c.title}</p>
                       <p className="text-xs text-brand-navy/50 mt-0.5 line-clamp-2">{c.description}</p>
                     </div>
-                    <div className="flex gap-1 flex-shrink-0">
-                      <button
-                        onClick={() => handleEdit(c)}
-                        className="p-2 rounded-xl bg-brand-navy/5 text-brand-navy/60 hover:bg-brand-navy/10 active:scale-95 transition-all"
-                      >
-                        <Edit3 size={13} />
-                      </button>
-                      <button
-                        onClick={() => handleDuplicate(c)}
-                        className="p-2 rounded-xl bg-brand-navy/5 text-brand-navy/60 hover:bg-brand-navy/10 active:scale-95 transition-all"
-                      >
-                        <RefreshCw size={13} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(c.id)}
-                        disabled={deletingId === c.id}
-                        className="p-2 rounded-xl bg-brand-rose/10 text-brand-rose hover:bg-brand-rose/20 active:scale-95 transition-all disabled:opacity-50"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => handleDelete(c.id)}
+                      disabled={deletingId === c.id}
+                      className="p-2 rounded-xl bg-brand-rose/10 text-brand-rose active:scale-95 transition-all disabled:opacity-50"
+                    >
+                      <Trash2 size={13} />
+                    </button>
                   </div>
                   <div className="flex flex-wrap gap-1.5 text-[11px]">
                     <span className="bg-brand-gold/10 text-brand-gold font-semibold px-2 py-0.5 rounded-full">🎁 {c.reward}</span>
-                    <span className="bg-brand-navy/5 text-brand-navy/50 px-2 py-0.5 rounded-full">Goal: {c.goal} {c.unit}</span>
                     <span className="bg-brand-rose/10 text-brand-rose px-2 py-0.5 rounded-full">{c.participantUids?.length ?? 0} joined</span>
                   </div>
                 </div>
               ))}
             </div>
+          )}
+
+          {challenges.length === 0 && (
+            <p className="text-center text-brand-navy/40 text-sm py-8">No challenges yet. Deploy one above.</p>
           )}
         </div>
       </div>
@@ -2227,7 +2640,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           {/* Challenges sub-tab */}
           {walletSubTab === 'challenges' && (
             <div className="space-y-4">
-              {challenges.length === 0 ? (
+              {challenges.filter(c => c.status !== 'ended').length === 0 ? (
                 <div className="glass-card p-10 rounded-[2.5rem] border-2 border-dashed border-brand-rose/40 text-center">
                   <div className="w-16 h-16 bg-brand-bg rounded-full flex items-center justify-center mx-auto mb-4">
                     <Trophy className="w-8 h-8 text-brand-navy/20" />
@@ -2235,47 +2648,53 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                   <p className="text-brand-navy/60 text-sm">No challenges yet. Check back soon!</p>
                 </div>
               ) : (
-                challenges.map(challenge => {
-                  const hasJoined = challenge.participantUids?.includes(user.uid);
-                  return (
-                    <div key={challenge.id} className="glass-card p-5 rounded-3xl">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Trophy className="w-4 h-4 text-brand-gold flex-shrink-0" />
-                            <h3 className="font-bold text-brand-navy truncate">{challenge.title}</h3>
+                challenges
+                  .filter(c => c.status !== 'ended')
+                  .map(challenge => {
+                    if (challenge.type === 'collectible') {
+                      return (
+                        <CollectibleChallengeCard
+                          key={challenge.id}
+                          challenge={challenge}
+                          userId={user.uid}
+                          onJoin={() => handleJoinChallenge(challenge.id)}
+                          onLeave={() => handleLeaveChallenge(challenge.id)}
+                          joining={joiningChallengeId === challenge.id}
+                        />
+                      );
+                    }
+                    // Standard challenge card
+                    const hasJoined = challenge.participantUids?.includes(user.uid);
+                    return (
+                      <div key={challenge.id} className="glass-card p-5 rounded-3xl">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Trophy className="w-4 h-4 text-brand-gold flex-shrink-0" />
+                              <h3 className="font-bold text-brand-navy truncate">{challenge.title}</h3>
+                            </div>
+                            <p className="text-brand-navy/60 text-sm mb-2">{challenge.description}</p>
+                            <div className="flex flex-wrap gap-2 text-xs">
+                              <span className="bg-brand-gold/10 text-brand-gold font-semibold px-2.5 py-1 rounded-full">🎁 {challenge.reward}</span>
+                              {(challenge.participantUids?.length ?? 0) > 0 && (
+                                <span className="bg-brand-rose/10 text-brand-rose font-medium px-2.5 py-1 rounded-full">
+                                  {challenge.participantUids!.length} joined
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <p className="text-brand-navy/60 text-sm mb-2">{challenge.description}</p>
-                          <div className="flex flex-wrap gap-2 text-xs">
-                            <span className="bg-brand-gold/10 text-brand-gold font-semibold px-2.5 py-1 rounded-full">
-                              🎁 {challenge.reward}
-                            </span>
-                            <span className="bg-brand-navy/5 text-brand-navy/60 font-medium px-2.5 py-1 rounded-full">
-                              Goal: {challenge.goal} {challenge.unit}
-                            </span>
-                            {(challenge.participantUids?.length ?? 0) > 0 && (
-                              <span className="bg-brand-rose/10 text-brand-rose font-medium px-2.5 py-1 rounded-full">
-                                {challenge.participantUids!.length} joined
-                              </span>
-                            )}
-                          </div>
+                          <button
+                            onClick={() => hasJoined ? handleLeaveChallenge(challenge.id) : handleJoinChallenge(challenge.id)}
+                            disabled={joiningChallengeId === challenge.id}
+                            className={cn('flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all',
+                              hasJoined ? 'bg-brand-navy/10 text-brand-navy/50' : 'bg-brand-navy text-white')}
+                          >
+                            {joiningChallengeId === challenge.id ? '...' : hasJoined ? 'Joined ✓' : 'Join'}
+                          </button>
                         </div>
-                        <button
-                          onClick={() => hasJoined ? handleLeaveChallenge(challenge.id) : handleJoinChallenge(challenge.id)}
-                          disabled={joiningChallengeId === challenge.id}
-                          className={cn(
-                            'flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all',
-                            hasJoined
-                              ? 'bg-brand-navy/10 text-brand-navy/50'
-                              : 'bg-brand-navy text-white'
-                          )}
-                        >
-                          {joiningChallengeId === challenge.id ? '...' : hasJoined ? 'Joined ✓' : 'Join'}
-                        </button>
                       </div>
-                    </div>
-                  );
-                })
+                    );
+                  })
               )}
             </div>
           )}
@@ -2493,6 +2912,9 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
         await updateDoc(doc(db, 'users', customer.uid), {
           totalStamps: increment(qty)
         });
+
+        // Award collectible stickers for any active Monopoly challenge the customer has joined
+        awardCollectibleStickers(customer.uid, customer.name, qty).catch(e => console.error('Sticker award failed:', e));
 
         setIssueStatus({ type: 'success', message: `${qty} stamp(s) issued to ${customer.name}!` });
         setCustomerHandle('');
