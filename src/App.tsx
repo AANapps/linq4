@@ -2595,6 +2595,9 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
   const [expandedPlayers, setExpandedPlayers] = useState<string | null>(null);
   const [playerProfiles, setPlayerProfiles] = useState<Map<string, UserProfile>>(new Map());
   const [loadingPlayers, setLoadingPlayers] = useState(false);
+  const [awardHandle, setAwardHandle] = useState('');
+  const [awardingFor, setAwardingFor] = useState<{ challengeId: string; uid: string } | null>(null);
+  const [awardResults, setAwardResults] = useState<Map<string, string>>(new Map());
 
   // Collectible form state
   const [colTitle, setColTitle] = useState('Monopoly Collect-All');
@@ -2703,6 +2706,53 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
     }
   };
 
+  const handleAwardSticker = async (challengeId: string, uid: string, name: string) => {
+    setAwardingFor({ challengeId, uid });
+    try {
+      const newSticker: CollectibleSticker = {
+        id: Math.random().toString(36).slice(2),
+        tier: rollStickerTier(),
+        earnedAt: new Date().toISOString(),
+      };
+      const entryRef = doc(db, 'challenge_entries', `${challengeId}_${uid}`);
+      const entrySnap = await getDoc(entryRef);
+      if (entrySnap.exists()) {
+        await updateDoc(entryRef, { stickers: arrayUnion(newSticker), userName: name });
+      } else {
+        await setDoc(entryRef, {
+          challengeId, userId: uid, userName: name,
+          stickers: [newSticker], revealedIds: [], uniqueTiers: [], completed: false,
+        });
+      }
+      setAwardResults(prev => { const m = new Map(prev); m.set(challengeId, `✓ Sticker given to ${name}`); return m; });
+      setTimeout(() => setAwardResults(prev => { const m = new Map(prev); m.delete(challengeId); return m; }), 3000);
+    } catch (e: any) {
+      setAwardResults(prev => { const m = new Map(prev); m.set(challengeId, `Error: ${e?.message || e}`); return m; });
+    } finally {
+      setAwardingFor(null);
+    }
+  };
+
+  const handleAwardByHandle = async (challengeId: string) => {
+    const clean = awardHandle.replace(/^@/, '').toLowerCase().trim();
+    if (!clean) return;
+    setAwardingFor({ challengeId, uid: '__handle__' });
+    try {
+      const snap = await getDocs(query(collection(db, 'users'), where('handle', '==', clean)));
+      if (snap.empty) {
+        setAwardResults(prev => { const m = new Map(prev); m.set(challengeId, `User @${clean} not found`); return m; });
+        setAwardingFor(null);
+        return;
+      }
+      const u = { uid: snap.docs[0].id, ...snap.docs[0].data() } as UserProfile;
+      await handleAwardSticker(challengeId, u.uid, u.name);
+      setAwardHandle('');
+    } catch (e: any) {
+      setAwardResults(prev => { const m = new Map(prev); m.set(challengeId, `Error: ${e?.message || e}`); return m; });
+      setAwardingFor(null);
+    }
+  };
+
   const collectible = challenges.filter(c => c.type === 'collectible');
   const standard = challenges.filter(c => c.type !== 'collectible');
 
@@ -2794,6 +2844,7 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
                   ) : (
                     (c.participantUids || []).map(uid => {
                       const p = playerProfiles.get(uid);
+                      const isAwarding = awardingFor?.challengeId === c.id && awardingFor?.uid === uid;
                       return (
                         <div key={uid} className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-brand-bg">
                           <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 bg-brand-navy/10">
@@ -2803,6 +2854,15 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
                             <p className="text-xs font-bold text-brand-navy truncate">{p?.name || 'Player'}</p>
                             {p?.handle && <p className="text-[10px] text-brand-navy/40">@{p.handle}</p>}
                           </div>
+                          {isCollectible && (
+                            <button
+                              onClick={() => handleAwardSticker(c.id, uid, p?.name || 'Player')}
+                              disabled={!!awardingFor}
+                              className="flex-shrink-0 px-2.5 py-1 rounded-lg bg-brand-gold text-white text-[10px] font-bold active:scale-95 transition-all disabled:opacity-40"
+                            >
+                              {isAwarding ? '…' : '+1'}
+                            </button>
+                          )}
                         </div>
                       );
                     })
@@ -2811,6 +2871,32 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Give Sticker by handle */}
+          {isCollectible && (
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">Give Sticker</p>
+              <div className="flex gap-2">
+                <input
+                  value={awardHandle}
+                  onChange={e => setAwardHandle(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleAwardByHandle(c.id)}
+                  placeholder="@handle or username"
+                  className="flex-1 px-3 py-2 rounded-xl bg-white border border-brand-navy/10 text-sm text-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-gold/40 placeholder:text-brand-navy/30"
+                />
+                <button
+                  onClick={() => handleAwardByHandle(c.id)}
+                  disabled={!awardHandle.trim() || !!awardingFor}
+                  className="px-4 py-2 rounded-xl bg-brand-gold text-white text-xs font-bold active:scale-95 transition-all disabled:opacity-40"
+                >
+                  {awardingFor?.challengeId === c.id && awardingFor?.uid === '__handle__' ? '…' : 'Award'}
+                </button>
+              </div>
+              {awardResults.get(c.id) && (
+                <p className="text-xs font-bold text-brand-navy/60">{awardResults.get(c.id)}</p>
+              )}
+            </div>
+          )}
 
           {/* Restart confirmation */}
           {confirmRestart === c.id && (
