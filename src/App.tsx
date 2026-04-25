@@ -1937,18 +1937,40 @@ async function awardCollectibleStickers(customerUid: string, customerName: strin
     earnedAt: new Date().toISOString(),
   }));
 
-  // Only award to challenges the user has explicitly joined (entries exist = joined)
-  const entriesSnap = await getDocs(
-    query(collection(db, 'challenge_entries'), where('userId', '==', customerUid))
-  );
+  // Fetch all challenges and filter in JS — no composite index required
+  const allSnap = await getDocs(collection(db, 'challenges'));
+  const active = allSnap.docs.filter(d => {
+    const data = d.data();
+    return data.type === 'collectible' && data.status === 'active';
+  });
 
-  if (entriesSnap.empty) return 'user has not joined any challenges';
+  if (active.length === 0) return 'no active collectible challenges';
 
-  for (const entryDoc of entriesSnap.docs) {
-    await updateDoc(entryDoc.ref, { stickers: arrayUnion(...newStickers), userName: customerName });
+  let count = 0;
+  for (const challengeDoc of active) {
+    const challengeId = challengeDoc.id;
+    const entryRef = doc(db, 'challenge_entries', `${challengeId}_${customerUid}`);
+    const entrySnap = await getDoc(entryRef);
+
+    if (!entrySnap.exists()) {
+      // Auto-enroll: mirrors how a stamp card is created on first stamp
+      await setDoc(entryRef, {
+        challengeId,
+        userId: customerUid,
+        userName: customerName,
+        stickers: newStickers,
+        revealedIds: [],
+        uniqueTiers: [],
+        completed: false,
+      });
+      await updateDoc(doc(db, 'challenges', challengeId), { participantUids: arrayUnion(customerUid) });
+    } else {
+      await updateDoc(entryRef, { stickers: arrayUnion(...newStickers), userName: customerName });
+    }
+    count++;
   }
 
-  return `+${qty} sticker${qty > 1 ? 's' : ''} added to ${entriesSnap.size} challenge${entriesSnap.size > 1 ? 's' : ''}`;
+  return `+${qty} sticker${qty > 1 ? 's' : ''} added to ${count} challenge${count !== 1 ? 's' : ''}`;
 }
 
 // --- Sticker Card (flip reveal) ---
@@ -3658,18 +3680,14 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
           totalStamps: increment(qty)
         });
 
-        setIssueStatus({ type: 'success', message: `${qty} stamp(s) issued to ${customer.name}!` });
-
-        // Award stickers in background — never blocks the stamp flow
-        awardCollectibleStickers(customer.uid, customer.name, qty)
-          .then(msg => {
-            console.log('[Stickers]', msg);
-            setIssueStatus(prev => prev ? { ...prev, message: prev.message + ` · ${msg}` } : null);
-          })
-          .catch(e => {
-            console.error('[Stickers] error:', e);
-            setIssueStatus(prev => prev ? { ...prev, message: prev.message + ` · Sticker error: ${e?.message || e}` } : null);
-          });
+        let stickerMsg = '';
+        try {
+          stickerMsg = await awardCollectibleStickers(customer.uid, customer.name, qty);
+        } catch (e: any) {
+          stickerMsg = `Sticker error: ${e?.message || e}`;
+          console.error('[Stickers]', e);
+        }
+        setIssueStatus({ type: 'success', message: `${qty} stamp(s) issued to ${customer.name}! · ${stickerMsg}` });
         setCustomerHandle('');
         setStampQuantity(1);
       }
