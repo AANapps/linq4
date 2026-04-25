@@ -393,6 +393,13 @@ interface ChallengeEntry {
   completedAt?: any;
 }
 
+interface StickerWallet {
+  stickers: CollectibleSticker[];
+  revealedIds: string[];
+  uniqueTiers: StickerTier[];
+  userName?: string;
+}
+
 interface Challenge {
   id: string;
   title: string;
@@ -1930,37 +1937,24 @@ async function awardCollectibleStickers(customerUid: string, customerName: strin
     earnedAt: new Date().toISOString(),
   }));
 
-  // Find all active collectible challenges — auto-enroll the customer if not yet joined.
-  const challengesSnap = await getDocs(
-    query(collection(db, 'challenges'), where('type', '==', 'collectible'), where('status', '==', 'active'))
-  );
+  const walletRef = doc(db, 'sticker_wallets', customerUid);
+  const walletSnap = await getDoc(walletRef);
 
-  if (challengesSnap.empty) return 'no active collectible challenges';
-
-  let count = 0;
-  for (const challengeDoc of challengesSnap.docs) {
-    const challengeId = challengeDoc.id;
-    const entryRef = doc(db, 'challenge_entries', `${challengeId}_${customerUid}`);
-    const entrySnap = await getDoc(entryRef);
-
-    if (!entrySnap.exists()) {
-      await setDoc(entryRef, {
-        challengeId,
-        userId: customerUid,
-        userName: customerName,
-        stickers: newStickers,
-        revealedIds: [],
-        uniqueTiers: [],
-        completed: false,
-      });
-      await updateDoc(doc(db, 'challenges', challengeId), { participantUids: arrayUnion(customerUid) });
-    } else {
-      await updateDoc(entryRef, { stickers: arrayUnion(...newStickers), userName: customerName });
-    }
-    count++;
+  if (!walletSnap.exists()) {
+    await setDoc(walletRef, {
+      stickers: newStickers,
+      revealedIds: [],
+      uniqueTiers: [],
+      userName: customerName,
+    });
+  } else {
+    await updateDoc(walletRef, {
+      stickers: arrayUnion(...newStickers),
+      userName: customerName,
+    });
   }
 
-  return `+${qty} sticker${qty > 1 ? 's' : ''} added across ${count} challenge${count !== 1 ? 's' : ''}`;
+  return `+${qty} sticker${qty > 1 ? 's' : ''} added to wallet`;
 }
 
 // --- Sticker Card (flip reveal) ---
@@ -2028,13 +2022,13 @@ function StickerCard({ sticker, isRevealed, onReveal, size = 'md' }: {
 
 // --- All Cards Modal ---
 
-function AllCardsModal({ entry, onReveal, onClose }: {
-  entry: ChallengeEntry;
+function AllCardsModal({ wallet, onReveal, onClose }: {
+  wallet: StickerWallet;
   onReveal: (stickerId: string) => void;
   onClose: () => void;
 }) {
-  const unrevealed = entry.stickers.filter(s => !(entry.revealedIds || []).includes(s.id));
-  const revealed = entry.stickers.filter(s => (entry.revealedIds || []).includes(s.id));
+  const unrevealed = wallet.stickers.filter(s => !(wallet.revealedIds || []).includes(s.id));
+  const revealed = wallet.stickers.filter(s => (wallet.revealedIds || []).includes(s.id));
   return (
     <motion.div
       initial={{ opacity: 0, y: 40 }}
@@ -2047,7 +2041,7 @@ function AllCardsModal({ entry, onReveal, onClose }: {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-display text-xl font-bold text-brand-navy">My Collection</h3>
-              <p className="text-xs text-brand-navy/50">{entry.stickers.length} cards total</p>
+              <p className="text-xs text-brand-navy/50">{wallet.stickers.length} cards total</p>
             </div>
             <button onClick={onClose} className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm">
               <X size={18} className="text-brand-navy/60" />
@@ -2079,7 +2073,7 @@ function AllCardsModal({ entry, onReveal, onClose }: {
               </div>
             </div>
           )}
-          {entry.stickers.length === 0 && (
+          {wallet.stickers.length === 0 && (
             <p className="text-sm text-brand-navy/40 text-center py-10">No cards yet. Collect stamps to earn some!</p>
           )}
         </div>
@@ -2090,10 +2084,11 @@ function AllCardsModal({ entry, onReveal, onClose }: {
 
 // --- Collectible Challenge Modal ---
 
-function CollectibleChallengeModal({ challenge, entry, userId, onJoin, onLeave, joining, onClose }: {
+function CollectibleChallengeModal({ challenge, stickerWallet, userId, userName, onJoin, onLeave, joining, onClose }: {
   challenge: Challenge;
-  entry: ChallengeEntry | null;
+  stickerWallet: StickerWallet | null;
   userId: string;
+  userName: string;
   onJoin: () => void;
   onLeave: () => void;
   joining: boolean;
@@ -2107,47 +2102,50 @@ function CollectibleChallengeModal({ challenge, entry, userId, onJoin, onLeave, 
     const q = query(collection(db, 'challenge_entries'), where('challengeId', '==', challenge.id));
     return onSnapshot(q, snap => {
       const entries = snap.docs.map(d => ({ id: d.id, ...d.data() } as ChallengeEntry));
-      entries.sort((a, b) => {
-        if (b.uniqueTiers.length !== a.uniqueTiers.length) return b.uniqueTiers.length - a.uniqueTiers.length;
-        return b.stickers.length - a.stickers.length;
-      });
+      entries.sort((a, b) => b.uniqueTiers.length - a.uniqueTiers.length);
       setLeaderboard(entries);
     });
   }, [challenge.id]);
 
   const hasJoined = challenge.participantUids?.includes(userId);
   const isActive = challenge.status === 'active';
-  const myUnique = new Set(entry?.uniqueTiers || []);
-  const unrevealed = (entry?.stickers || []).filter(s => !(entry?.revealedIds || []).includes(s.id));
+  const myUnique = new Set(stickerWallet?.uniqueTiers || []);
+  const unrevealed = (stickerWallet?.stickers || []).filter(s => !(stickerWallet?.revealedIds || []).includes(s.id));
   const myRank = leaderboard.findIndex(e => e.userId === userId) + 1;
 
-  // First revealed sticker of each tier = the one that "fills" the slot above
+  // New Cards: all unrevealed + revealed duplicates (not the first of their tier)
   const representativeIdByTier = new Map<string, string>();
-  for (const s of (entry?.stickers || [])) {
-    if ((entry?.revealedIds || []).includes(s.id) && !representativeIdByTier.has(s.tier)) {
+  for (const s of (stickerWallet?.stickers || [])) {
+    if ((stickerWallet?.revealedIds || []).includes(s.id) && !representativeIdByTier.has(s.tier)) {
       representativeIdByTier.set(s.tier, s.id);
     }
   }
-  // New Cards shows: all unrevealed + revealed duplicates (not the first of their tier)
-  const cardsToShow = (entry?.stickers || []).filter(s => {
-    const isRevealed = (entry?.revealedIds || []).includes(s.id);
+  const cardsToShow = (stickerWallet?.stickers || []).filter(s => {
+    const isRevealed = (stickerWallet?.revealedIds || []).includes(s.id);
     if (!isRevealed) return true;
     return representativeIdByTier.get(s.tier) !== s.id;
   });
 
   const handleReveal = async (stickerId: string) => {
-    if (!entry) return;
-    const entryRef = doc(db, 'challenge_entries', `${challenge.id}_${userId}`);
-    const newRevealedIds = [...(entry.revealedIds || []), stickerId];
-    const revealedStickers = entry.stickers.filter(s => newRevealedIds.includes(s.id));
+    if (!stickerWallet) return;
+    const walletRef = doc(db, 'sticker_wallets', userId);
+    const newRevealedIds = [...(stickerWallet.revealedIds || []), stickerId];
+    const revealedStickers = stickerWallet.stickers.filter(s => newRevealedIds.includes(s.id));
     const uniqueTiers = [...new Set(revealedStickers.map(s => s.tier))] as StickerTier[];
     const completed = uniqueTiers.length >= (challenge.goal ?? 5);
-    await updateDoc(entryRef, {
-      revealedIds: arrayUnion(stickerId),
+    await updateDoc(walletRef, { revealedIds: arrayUnion(stickerId), uniqueTiers });
+    // Sync to challenge_entries for leaderboard
+    const entryRef = doc(db, 'challenge_entries', `${challenge.id}_${userId}`);
+    await setDoc(entryRef, {
+      challengeId: challenge.id,
+      userId,
+      userName,
+      stickers: [],
+      revealedIds: newRevealedIds,
       uniqueTiers,
       completed,
-      ...(completed && !entry.completed ? { completedAt: serverTimestamp() } : {}),
-    });
+      ...(completed ? { completedAt: serverTimestamp() } : {}),
+    }, { merge: true });
   };
 
   const statusColor = challenge.status === 'active'
@@ -2215,7 +2213,7 @@ function CollectibleChallengeModal({ challenge, entry, userId, onJoin, onLeave, 
                 {STICKER_ORDER.map(tier => {
                   const cfg = STICKER_CONFIG[tier];
                   const lit = myUnique.has(tier);
-                  const count = (entry?.stickers || []).filter(s => (entry?.revealedIds || []).includes(s.id) && s.tier === tier).length;
+                  const count = (stickerWallet?.stickers || []).filter(s => (stickerWallet?.revealedIds || []).includes(s.id) && s.tier === tier).length;
                   return (
                     <div key={tier} className="flex flex-col items-center gap-1">
                       <div className="w-full aspect-square rounded-2xl border-2 flex flex-col items-center justify-center transition-all"
@@ -2243,7 +2241,7 @@ function CollectibleChallengeModal({ challenge, entry, userId, onJoin, onLeave, 
             </div>
 
             {/* New Cards */}
-            {(hasJoined || (entry?.stickers.length ?? 0) > 0) && (
+            {((stickerWallet?.stickers.length ?? 0) > 0) && (
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">
@@ -2253,7 +2251,7 @@ function CollectibleChallengeModal({ challenge, entry, userId, onJoin, onLeave, 
                     onClick={() => setShowAllCards(true)}
                     className="text-[10px] font-bold text-brand-navy/40 underline underline-offset-2"
                   >
-                    All cards ({entry?.stickers.length ?? 0})
+                    All cards ({stickerWallet?.stickers.length ?? 0})
                   </button>
                 </div>
                 {cardsToShow.length === 0 ? (
@@ -2263,7 +2261,7 @@ function CollectibleChallengeModal({ challenge, entry, userId, onJoin, onLeave, 
                 ) : (
                   <div className="flex gap-3 overflow-x-auto pb-2">
                     {cardsToShow.map(s => {
-                      const isRevealed = (entry?.revealedIds || []).includes(s.id);
+                      const isRevealed = (stickerWallet?.revealedIds || []).includes(s.id);
                       return (
                         <StickerCard
                           key={s.id}
@@ -2308,16 +2306,16 @@ function CollectibleChallengeModal({ challenge, entry, userId, onJoin, onLeave, 
                       </div>
                     );
                   })}
-                  {myRank > 10 && entry && (
+                  {myRank > 10 && stickerWallet && (
                     <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-2xl bg-brand-gold/10 border border-brand-gold/20">
                       <span className="text-xs font-black w-5 text-center text-brand-navy/30">{myRank}</span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
                           <p className="text-xs font-bold text-brand-navy">You</p>
-                          <p className="text-[10px] text-brand-navy/50">{entry.uniqueTiers.length}/{challenge.goal ?? 5}</p>
+                          <p className="text-[10px] text-brand-navy/50">{stickerWallet.uniqueTiers.length}/{challenge.goal ?? 5}</p>
                         </div>
                         <div className="h-1.5 bg-brand-navy/10 rounded-full overflow-hidden">
-                          <div className="h-full rounded-full bg-brand-gold" style={{ width: `${(entry.uniqueTiers.length / (challenge.goal ?? 5)) * 100}%` }} />
+                          <div className="h-full rounded-full bg-brand-gold" style={{ width: `${(stickerWallet.uniqueTiers.length / (challenge.goal ?? 5)) * 100}%` }} />
                         </div>
                       </div>
                     </div>
@@ -2331,9 +2329,9 @@ function CollectibleChallengeModal({ challenge, entry, userId, onJoin, onLeave, 
 
       {/* All Cards popup nested */}
       <AnimatePresence>
-        {showAllCards && entry && (
+        {showAllCards && stickerWallet && (
           <AllCardsModal
-            entry={entry}
+            wallet={stickerWallet}
             onReveal={handleReveal}
             onClose={() => setShowAllCards(false)}
           />
@@ -2771,32 +2769,14 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
     }
   };
 
-  const handleAwardSticker = async (challengeId: string, uid: string, name: string) => {
-    setAwardingFor({ challengeId, uid });
+  const handleAwardSticker = async (_challengeId: string, uid: string, name: string) => {
+    setAwardingFor({ challengeId: _challengeId, uid });
     try {
-      const newSticker: CollectibleSticker = {
-        id: Math.random().toString(36).slice(2),
-        tier: rollStickerTier(),
-        earnedAt: new Date().toISOString(),
-      };
-      const entryRef = doc(db, 'challenge_entries', `${challengeId}_${uid}`);
-      const entrySnap = await getDoc(entryRef);
-      if (entrySnap.exists()) {
-        await updateDoc(entryRef, { stickers: arrayUnion(newSticker), userName: name });
-      } else {
-        await setDoc(entryRef, {
-          challengeId, userId: uid, userName: name,
-          stickers: [newSticker], revealedIds: [], uniqueTiers: [], completed: false,
-        });
-      }
-      // Ensure they're in participantUids so the modal shows their cards
-      await updateDoc(doc(db, 'challenges', challengeId), {
-        participantUids: arrayUnion(uid),
-      });
-      setAwardResults(prev => { const m = new Map(prev); m.set(challengeId, `✓ Sticker given to ${name}`); return m; });
-      setTimeout(() => setAwardResults(prev => { const m = new Map(prev); m.delete(challengeId); return m; }), 3000);
+      const result = await awardCollectibleStickers(uid, name, 1);
+      setAwardResults(prev => { const m = new Map(prev); m.set(_challengeId, `✓ ${result}`); return m; });
+      setTimeout(() => setAwardResults(prev => { const m = new Map(prev); m.delete(_challengeId); return m; }), 3000);
     } catch (e: any) {
-      setAwardResults(prev => { const m = new Map(prev); m.set(challengeId, `Error: ${e?.message || e}`); return m; });
+      setAwardResults(prev => { const m = new Map(prev); m.set(_challengeId, `Error: ${e?.message || e}`); return m; });
     } finally {
       setAwardingFor(null);
     }
@@ -3195,7 +3175,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const [walletSubTab, setWalletSubTab] = useState<'stamps' | 'challenges'>('stamps');
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [joiningChallengeId, setJoiningChallengeId] = useState<string | null>(null);
-  const [myEntries, setMyEntries] = useState<ChallengeEntry[]>([]);
+  const [stickerWallet, setStickerWallet] = useState<StickerWallet | null>(null);
   const [openChallengeId, setOpenChallengeId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -3216,10 +3196,9 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   }, []);
 
   useEffect(() => {
-    const q = query(collection(db, 'challenge_entries'), where('userId', '==', user.uid));
-    return onSnapshot(q,
-      snap => { setMyEntries(snap.docs.map(d => ({ id: d.id, ...d.data() } as ChallengeEntry))); },
-      err => console.error('[myEntries snapshot]', err)
+    return onSnapshot(doc(db, 'sticker_wallets', user.uid),
+      snap => { setStickerWallet(snap.exists() ? (snap.data() as StickerWallet) : null); },
+      err => console.error('[stickerWallet snapshot]', err)
     );
   }, [user.uid]);
 
@@ -3230,20 +3209,6 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       await updateDoc(doc(db, 'challenges', challengeId), {
         participantUids: arrayUnion(user.uid)
       });
-      // Pre-create entry so myEntries listener picks it up immediately
-      const entryRef = doc(db, 'challenge_entries', `${challengeId}_${user.uid}`);
-      const entrySnap = await getDoc(entryRef);
-      if (!entrySnap.exists()) {
-        await setDoc(entryRef, {
-          challengeId,
-          userId: user.uid,
-          userName: profile?.name || '',
-          stickers: [],
-          revealedIds: [],
-          uniqueTiers: [],
-          completed: false,
-        });
-      }
     } catch (e) {
       console.error('Failed to join challenge', e);
     } finally {
@@ -3316,8 +3281,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
 
           {/* Sub-tabs */}
           {(() => {
-            const totalUnrevealed = myEntries.reduce((n, e) =>
-              n + e.stickers.filter(s => !(e.revealedIds || []).includes(s.id)).length, 0);
+            const totalUnrevealed = (stickerWallet?.stickers || []).filter(s => !(stickerWallet?.revealedIds || []).includes(s.id)).length;
             return (
               <div className="flex bg-brand-bg rounded-2xl p-1 gap-1">
                 <button
@@ -3386,9 +3350,8 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
               ) : (
                 challenges.filter(c => c.status !== 'ended').map(challenge => {
                   const hasJoined = challenge.participantUids?.includes(user.uid);
-                  const myEntry = myEntries.find(e => e.challengeId === challenge.id);
-                  const unrevealed = (myEntry?.stickers || []).filter(s => !(myEntry?.revealedIds || []).includes(s.id));
-                  const myUnique = new Set(myEntry?.uniqueTiers || []);
+                  const unrevealed = (stickerWallet?.stickers || []).filter(s => !(stickerWallet?.revealedIds || []).includes(s.id));
+                  const myUnique = new Set(stickerWallet?.uniqueTiers || []);
                   const isCollectible = challenge.type === 'collectible';
                   const statusColor = challenge.status === 'active'
                     ? { bg: '#F0FDF4', text: '#16A34A' }
@@ -3475,13 +3438,13 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         {openChallengeId && (() => {
           const challenge = challenges.find(c => c.id === openChallengeId);
           if (!challenge || challenge.type !== 'collectible') return null;
-          const entry = myEntries.find(e => e.challengeId === openChallengeId) || null;
           return (
             <CollectibleChallengeModal
               key={openChallengeId}
               challenge={challenge}
-              entry={entry}
+              stickerWallet={stickerWallet}
               userId={user.uid}
+              userName={profile?.name || user.displayName || ''}
               onJoin={() => handleJoinChallenge(openChallengeId)}
               onLeave={() => handleLeaveChallenge(openChallengeId)}
               joining={joiningChallengeId === openChallengeId}

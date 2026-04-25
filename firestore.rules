@@ -161,6 +161,12 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    match /sticker_wallets/{userId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
     match /reports/{reportId} {
       allow create: if isAuthenticated();
     }
