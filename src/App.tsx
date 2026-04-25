@@ -1937,24 +1937,18 @@ async function awardCollectibleStickers(customerUid: string, customerName: strin
     earnedAt: new Date().toISOString(),
   }));
 
-  const walletRef = doc(db, 'sticker_wallets', customerUid);
-  const walletSnap = await getDoc(walletRef);
+  // Only award to challenges the user has explicitly joined (entries exist = joined)
+  const entriesSnap = await getDocs(
+    query(collection(db, 'challenge_entries'), where('userId', '==', customerUid))
+  );
 
-  if (!walletSnap.exists()) {
-    await setDoc(walletRef, {
-      stickers: newStickers,
-      revealedIds: [],
-      uniqueTiers: [],
-      userName: customerName,
-    });
-  } else {
-    await updateDoc(walletRef, {
-      stickers: arrayUnion(...newStickers),
-      userName: customerName,
-    });
+  if (entriesSnap.empty) return 'user has not joined any challenges';
+
+  for (const entryDoc of entriesSnap.docs) {
+    await updateDoc(entryDoc.ref, { stickers: arrayUnion(...newStickers), userName: customerName });
   }
 
-  return `+${qty} sticker${qty > 1 ? 's' : ''} added to wallet`;
+  return `+${qty} sticker${qty > 1 ? 's' : ''} added to ${entriesSnap.size} challenge${entriesSnap.size > 1 ? 's' : ''}`;
 }
 
 // --- Sticker Card (flip reveal) ---
@@ -2022,13 +2016,13 @@ function StickerCard({ sticker, isRevealed, onReveal, size = 'md' }: {
 
 // --- All Cards Modal ---
 
-function AllCardsModal({ wallet, onReveal, onClose }: {
-  wallet: StickerWallet;
+function AllCardsModal({ entry, onReveal, onClose }: {
+  entry: ChallengeEntry;
   onReveal: (stickerId: string) => void;
   onClose: () => void;
 }) {
-  const unrevealed = wallet.stickers.filter(s => !(wallet.revealedIds || []).includes(s.id));
-  const revealed = wallet.stickers.filter(s => (wallet.revealedIds || []).includes(s.id));
+  const unrevealed = entry.stickers.filter(s => !(entry.revealedIds || []).includes(s.id));
+  const revealed = entry.stickers.filter(s => (entry.revealedIds || []).includes(s.id));
   return (
     <motion.div
       initial={{ opacity: 0, y: 40 }}
@@ -2041,7 +2035,7 @@ function AllCardsModal({ wallet, onReveal, onClose }: {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-display text-xl font-bold text-brand-navy">My Collection</h3>
-              <p className="text-xs text-brand-navy/50">{wallet.stickers.length} cards total</p>
+              <p className="text-xs text-brand-navy/50">{entry.stickers.length} cards total</p>
             </div>
             <button onClick={onClose} className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm">
               <X size={18} className="text-brand-navy/60" />
@@ -2073,7 +2067,7 @@ function AllCardsModal({ wallet, onReveal, onClose }: {
               </div>
             </div>
           )}
-          {wallet.stickers.length === 0 && (
+          {entry.stickers.length === 0 && (
             <p className="text-sm text-brand-navy/40 text-center py-10">No cards yet. Collect stamps to earn some!</p>
           )}
         </div>
@@ -2084,11 +2078,10 @@ function AllCardsModal({ wallet, onReveal, onClose }: {
 
 // --- Collectible Challenge Modal ---
 
-function CollectibleChallengeModal({ challenge, stickerWallet, userId, userName, onJoin, onLeave, joining, onClose }: {
+function CollectibleChallengeModal({ challenge, entry, userId, onJoin, onLeave, joining, onClose }: {
   challenge: Challenge;
-  stickerWallet: StickerWallet | null;
+  entry: ChallengeEntry | null;
   userId: string;
-  userName: string;
   onJoin: () => void;
   onLeave: () => void;
   joining: boolean;
@@ -2109,43 +2102,36 @@ function CollectibleChallengeModal({ challenge, stickerWallet, userId, userName,
 
   const hasJoined = challenge.participantUids?.includes(userId);
   const isActive = challenge.status === 'active';
-  const myUnique = new Set(stickerWallet?.uniqueTiers || []);
-  const unrevealed = (stickerWallet?.stickers || []).filter(s => !(stickerWallet?.revealedIds || []).includes(s.id));
+  const myUnique = new Set(entry?.uniqueTiers || []);
+  const unrevealed = (entry?.stickers || []).filter(s => !(entry?.revealedIds || []).includes(s.id));
   const myRank = leaderboard.findIndex(e => e.userId === userId) + 1;
 
   // New Cards: all unrevealed + revealed duplicates (not the first of their tier)
   const representativeIdByTier = new Map<string, string>();
-  for (const s of (stickerWallet?.stickers || [])) {
-    if ((stickerWallet?.revealedIds || []).includes(s.id) && !representativeIdByTier.has(s.tier)) {
+  for (const s of (entry?.stickers || [])) {
+    if ((entry?.revealedIds || []).includes(s.id) && !representativeIdByTier.has(s.tier)) {
       representativeIdByTier.set(s.tier, s.id);
     }
   }
-  const cardsToShow = (stickerWallet?.stickers || []).filter(s => {
-    const isRevealed = (stickerWallet?.revealedIds || []).includes(s.id);
+  const cardsToShow = (entry?.stickers || []).filter(s => {
+    const isRevealed = (entry?.revealedIds || []).includes(s.id);
     if (!isRevealed) return true;
     return representativeIdByTier.get(s.tier) !== s.id;
   });
 
   const handleReveal = async (stickerId: string) => {
-    if (!stickerWallet) return;
-    const walletRef = doc(db, 'sticker_wallets', userId);
-    const newRevealedIds = [...(stickerWallet.revealedIds || []), stickerId];
-    const revealedStickers = stickerWallet.stickers.filter(s => newRevealedIds.includes(s.id));
+    if (!entry) return;
+    const entryRef = doc(db, 'challenge_entries', `${challenge.id}_${userId}`);
+    const newRevealedIds = [...(entry.revealedIds || []), stickerId];
+    const revealedStickers = entry.stickers.filter(s => newRevealedIds.includes(s.id));
     const uniqueTiers = [...new Set(revealedStickers.map(s => s.tier))] as StickerTier[];
     const completed = uniqueTiers.length >= (challenge.goal ?? 5);
-    await updateDoc(walletRef, { revealedIds: arrayUnion(stickerId), uniqueTiers });
-    // Sync to challenge_entries for leaderboard
-    const entryRef = doc(db, 'challenge_entries', `${challenge.id}_${userId}`);
-    await setDoc(entryRef, {
-      challengeId: challenge.id,
-      userId,
-      userName,
-      stickers: [],
-      revealedIds: newRevealedIds,
+    await updateDoc(entryRef, {
+      revealedIds: arrayUnion(stickerId),
       uniqueTiers,
       completed,
-      ...(completed ? { completedAt: serverTimestamp() } : {}),
-    }, { merge: true });
+      ...(completed && !entry.completed ? { completedAt: serverTimestamp() } : {}),
+    });
   };
 
   const statusColor = challenge.status === 'active'
@@ -2213,7 +2199,7 @@ function CollectibleChallengeModal({ challenge, stickerWallet, userId, userName,
                 {STICKER_ORDER.map(tier => {
                   const cfg = STICKER_CONFIG[tier];
                   const lit = myUnique.has(tier);
-                  const count = (stickerWallet?.stickers || []).filter(s => (stickerWallet?.revealedIds || []).includes(s.id) && s.tier === tier).length;
+                  const count = (entry?.stickers || []).filter(s => (entry?.revealedIds || []).includes(s.id) && s.tier === tier).length;
                   return (
                     <div key={tier} className="flex flex-col items-center gap-1">
                       <div className="w-full aspect-square rounded-2xl border-2 flex flex-col items-center justify-center transition-all"
@@ -2240,28 +2226,34 @@ function CollectibleChallengeModal({ challenge, stickerWallet, userId, userName,
               )}
             </div>
 
-            {/* New Cards */}
-            {((stickerWallet?.stickers.length ?? 0) > 0) && (
+            {/* New Cards — shown once joined */}
+            {hasJoined && (
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">
-                    New Cards {unrevealed.length > 0 && <span className="text-brand-rose">({unrevealed.length} to reveal!)</span>}
+                    My Cards {unrevealed.length > 0 && <span className="text-brand-rose">({unrevealed.length} to reveal!)</span>}
                   </p>
-                  <button
-                    onClick={() => setShowAllCards(true)}
-                    className="text-[10px] font-bold text-brand-navy/40 underline underline-offset-2"
-                  >
-                    All cards ({stickerWallet?.stickers.length ?? 0})
-                  </button>
+                  {(entry?.stickers.length ?? 0) > 0 && (
+                    <button
+                      onClick={() => setShowAllCards(true)}
+                      className="text-[10px] font-bold text-brand-navy/40 underline underline-offset-2"
+                    >
+                      All cards ({entry?.stickers.length ?? 0})
+                    </button>
+                  )}
                 </div>
                 {cardsToShow.length === 0 ? (
-                  <p className="text-xs text-brand-navy/40 text-center py-4 bg-brand-bg rounded-2xl">
-                    No new cards. Collect stamps to earn more!
-                  </p>
+                  <div className="flex gap-3">
+                    {/* Mystery placeholder — collect a stamp to reveal */}
+                    <div style={{ width: 80, height: 108, flexShrink: 0, background: 'linear-gradient(135deg,#F8FAFC,#E2E8F0)', border: '2px dashed #CBD5E1', borderRadius: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 32, fontWeight: 900, color: '#CBD5E1' }}>?</span>
+                      <span style={{ fontSize: 8, color: '#CBD5E1', fontWeight: 600, textAlign: 'center', lineHeight: 1.3, padding: '0 8px' }}>Collect a stamp</span>
+                    </div>
+                  </div>
                 ) : (
                   <div className="flex gap-3 overflow-x-auto pb-2">
                     {cardsToShow.map(s => {
-                      const isRevealed = (stickerWallet?.revealedIds || []).includes(s.id);
+                      const isRevealed = (entry?.revealedIds || []).includes(s.id);
                       return (
                         <StickerCard
                           key={s.id}
@@ -2306,16 +2298,16 @@ function CollectibleChallengeModal({ challenge, stickerWallet, userId, userName,
                       </div>
                     );
                   })}
-                  {myRank > 10 && stickerWallet && (
+                  {myRank > 10 && entry && (
                     <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-2xl bg-brand-gold/10 border border-brand-gold/20">
                       <span className="text-xs font-black w-5 text-center text-brand-navy/30">{myRank}</span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
                           <p className="text-xs font-bold text-brand-navy">You</p>
-                          <p className="text-[10px] text-brand-navy/50">{stickerWallet.uniqueTiers.length}/{challenge.goal ?? 5}</p>
+                          <p className="text-[10px] text-brand-navy/50">{entry.uniqueTiers.length}/{challenge.goal ?? 5}</p>
                         </div>
                         <div className="h-1.5 bg-brand-navy/10 rounded-full overflow-hidden">
-                          <div className="h-full rounded-full bg-brand-gold" style={{ width: `${(stickerWallet.uniqueTiers.length / (challenge.goal ?? 5)) * 100}%` }} />
+                          <div className="h-full rounded-full bg-brand-gold" style={{ width: `${(entry.uniqueTiers.length / (challenge.goal ?? 5)) * 100}%` }} />
                         </div>
                       </div>
                     </div>
@@ -2329,9 +2321,9 @@ function CollectibleChallengeModal({ challenge, stickerWallet, userId, userName,
 
       {/* All Cards popup nested */}
       <AnimatePresence>
-        {showAllCards && stickerWallet && (
+        {showAllCards && entry && (
           <AllCardsModal
-            wallet={stickerWallet}
+            entry={entry}
             onReveal={handleReveal}
             onClose={() => setShowAllCards(false)}
           />
@@ -3175,7 +3167,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const [walletSubTab, setWalletSubTab] = useState<'stamps' | 'challenges'>('stamps');
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [joiningChallengeId, setJoiningChallengeId] = useState<string | null>(null);
-  const [stickerWallet, setStickerWallet] = useState<StickerWallet | null>(null);
+  const [myEntries, setMyEntries] = useState<ChallengeEntry[]>([]);
   const [openChallengeId, setOpenChallengeId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -3196,9 +3188,10 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   }, []);
 
   useEffect(() => {
-    return onSnapshot(doc(db, 'sticker_wallets', user.uid),
-      snap => { setStickerWallet(snap.exists() ? (snap.data() as StickerWallet) : null); },
-      err => console.error('[stickerWallet snapshot]', err)
+    const q = query(collection(db, 'challenge_entries'), where('userId', '==', user.uid));
+    return onSnapshot(q,
+      snap => { setMyEntries(snap.docs.map(d => ({ id: d.id, ...d.data() } as ChallengeEntry))); },
+      err => console.error('[myEntries snapshot]', err)
     );
   }, [user.uid]);
 
@@ -3209,6 +3202,19 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       await updateDoc(doc(db, 'challenges', challengeId), {
         participantUids: arrayUnion(user.uid)
       });
+      const entryRef = doc(db, 'challenge_entries', `${challengeId}_${user.uid}`);
+      const entrySnap = await getDoc(entryRef);
+      if (!entrySnap.exists()) {
+        await setDoc(entryRef, {
+          challengeId,
+          userId: user.uid,
+          userName: profile?.name || '',
+          stickers: [],
+          revealedIds: [],
+          uniqueTiers: [],
+          completed: false,
+        });
+      }
     } catch (e) {
       console.error('Failed to join challenge', e);
     } finally {
@@ -3281,7 +3287,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
 
           {/* Sub-tabs */}
           {(() => {
-            const totalUnrevealed = (stickerWallet?.stickers || []).filter(s => !(stickerWallet?.revealedIds || []).includes(s.id)).length;
+            const totalUnrevealed = myEntries.reduce((n, e) => n + e.stickers.filter(s => !(e.revealedIds || []).includes(s.id)).length, 0);
             return (
               <div className="flex bg-brand-bg rounded-2xl p-1 gap-1">
                 <button
@@ -3350,8 +3356,9 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
               ) : (
                 challenges.filter(c => c.status !== 'ended').map(challenge => {
                   const hasJoined = challenge.participantUids?.includes(user.uid);
-                  const unrevealed = (stickerWallet?.stickers || []).filter(s => !(stickerWallet?.revealedIds || []).includes(s.id));
-                  const myUnique = new Set(stickerWallet?.uniqueTiers || []);
+                  const myEntry = myEntries.find(e => e.challengeId === challenge.id);
+                  const unrevealed = (myEntry?.stickers || []).filter(s => !(myEntry?.revealedIds || []).includes(s.id));
+                  const myUnique = new Set(myEntry?.uniqueTiers || []);
                   const isCollectible = challenge.type === 'collectible';
                   const statusColor = challenge.status === 'active'
                     ? { bg: '#F0FDF4', text: '#16A34A' }
@@ -3392,37 +3399,22 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
 
                       {/* Mini slot strip for collectible */}
                       {isCollectible && (
-                        <>
-                          <div className="flex gap-1.5 items-center mb-3">
-                            {STICKER_ORDER.map(tier => {
-                              const cfg = STICKER_CONFIG[tier];
-                              const lit = myUnique.has(tier);
-                              return (
-                                <div key={tier}
-                                  className="w-8 h-8 rounded-xl border-2 flex items-center justify-center text-xs font-black transition-all"
-                                  style={lit
-                                    ? { background: cfg.bg, borderColor: cfg.border, color: cfg.color }
-                                    : { background: '#F1F5F9', borderColor: '#E2E8F0', color: '#CBD5E1' }}>
-                                  {lit ? (tier === 'gold' ? '★' : tier[0].toUpperCase()) : '?'}
-                                </div>
-                              );
-                            })}
-                            <span className="ml-auto text-xs text-brand-navy/40 font-medium">{myUnique.size}/{challenge.goal ?? 5}</span>
-                          </div>
-                          {/* Card preview strip */}
-                          <div className="flex gap-2 overflow-x-auto pb-1">
-                            {unrevealed.length > 0 ? (
-                              unrevealed.slice(0, 4).map(s => (
-                                <StickerCard key={s.id} sticker={s} isRevealed={false} size="sm" />
-                              ))
-                            ) : (
-                              <div style={{ width: 60, height: 80, flexShrink: 0, background: 'linear-gradient(135deg,#F8FAFC,#E2E8F0)', border: '2px dashed #CBD5E1', borderRadius: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                                <span style={{ fontSize: 22, fontWeight: 900, color: '#CBD5E1' }}>?</span>
-                                <span style={{ fontSize: 7, color: '#CBD5E1', fontWeight: 600, textAlign: 'center', lineHeight: 1.2, padding: '0 4px' }}>Collect a stamp</span>
+                        <div className="flex gap-1.5 items-center">
+                          {STICKER_ORDER.map(tier => {
+                            const cfg = STICKER_CONFIG[tier];
+                            const lit = myUnique.has(tier);
+                            return (
+                              <div key={tier}
+                                className="w-8 h-8 rounded-xl border-2 flex items-center justify-center text-xs font-black transition-all"
+                                style={lit
+                                  ? { background: cfg.bg, borderColor: cfg.border, color: cfg.color }
+                                  : { background: '#F1F5F9', borderColor: '#E2E8F0', color: '#CBD5E1' }}>
+                                {lit ? (tier === 'gold' ? '★' : tier[0].toUpperCase()) : '?'}
                               </div>
-                            )}
-                          </div>
-                        </>
+                            );
+                          })}
+                          <span className="ml-auto text-xs text-brand-navy/40 font-medium">{myUnique.size}/{challenge.goal ?? 5}</span>
+                        </div>
                       )}
                     </button>
                   );
@@ -3438,13 +3430,13 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         {openChallengeId && (() => {
           const challenge = challenges.find(c => c.id === openChallengeId);
           if (!challenge || challenge.type !== 'collectible') return null;
+          const entry = myEntries.find(e => e.challengeId === openChallengeId) || null;
           return (
             <CollectibleChallengeModal
               key={openChallengeId}
               challenge={challenge}
-              stickerWallet={stickerWallet}
+              entry={entry}
               userId={user.uid}
-              userName={profile?.name || user.displayName || ''}
               onJoin={() => handleJoinChallenge(openChallengeId)}
               onLeave={() => handleLeaveChallenge(openChallengeId)}
               joining={joiningChallengeId === openChallengeId}
