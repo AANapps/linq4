@@ -1930,18 +1930,37 @@ async function awardCollectibleStickers(customerUid: string, customerName: strin
     earnedAt: new Date().toISOString(),
   }));
 
-  // Find all challenge entries for this customer and append stickers directly.
-  const entriesSnap = await getDocs(
-    query(collection(db, 'challenge_entries'), where('userId', '==', customerUid))
+  // Find all active collectible challenges — auto-enroll the customer if not yet joined.
+  const challengesSnap = await getDocs(
+    query(collection(db, 'challenges'), where('type', '==', 'collectible'), where('status', '==', 'active'))
   );
 
-  if (entriesSnap.empty) return `no challenge entries found for uid=${customerUid}`;
+  if (challengesSnap.empty) return 'no active collectible challenges';
 
-  for (const entryDoc of entriesSnap.docs) {
-    await updateDoc(entryDoc.ref, { stickers: arrayUnion(...newStickers), userName: customerName });
+  let count = 0;
+  for (const challengeDoc of challengesSnap.docs) {
+    const challengeId = challengeDoc.id;
+    const entryRef = doc(db, 'challenge_entries', `${challengeId}_${customerUid}`);
+    const entrySnap = await getDoc(entryRef);
+
+    if (!entrySnap.exists()) {
+      await setDoc(entryRef, {
+        challengeId,
+        userId: customerUid,
+        userName: customerName,
+        stickers: newStickers,
+        revealedIds: [],
+        uniqueTiers: [],
+        completed: false,
+      });
+      await updateDoc(doc(db, 'challenges', challengeId), { participantUids: arrayUnion(customerUid) });
+    } else {
+      await updateDoc(entryRef, { stickers: arrayUnion(...newStickers), userName: customerName });
+    }
+    count++;
   }
 
-  return `+${qty} sticker${qty > 1 ? 's' : ''} added to ${entriesSnap.size} challenge${entriesSnap.size > 1 ? 's' : ''}`;
+  return `+${qty} sticker${qty > 1 ? 's' : ''} added across ${count} challenge${count !== 1 ? 's' : ''}`;
 }
 
 // --- Sticker Card (flip reveal) ---
@@ -2102,6 +2121,20 @@ function CollectibleChallengeModal({ challenge, entry, userId, onJoin, onLeave, 
   const unrevealed = (entry?.stickers || []).filter(s => !(entry?.revealedIds || []).includes(s.id));
   const myRank = leaderboard.findIndex(e => e.userId === userId) + 1;
 
+  // First revealed sticker of each tier = the one that "fills" the slot above
+  const representativeIdByTier = new Map<string, string>();
+  for (const s of (entry?.stickers || [])) {
+    if ((entry?.revealedIds || []).includes(s.id) && !representativeIdByTier.has(s.tier)) {
+      representativeIdByTier.set(s.tier, s.id);
+    }
+  }
+  // New Cards shows: all unrevealed + revealed duplicates (not the first of their tier)
+  const cardsToShow = (entry?.stickers || []).filter(s => {
+    const isRevealed = (entry?.revealedIds || []).includes(s.id);
+    if (!isRevealed) return true;
+    return representativeIdByTier.get(s.tier) !== s.id;
+  });
+
   const handleReveal = async (stickerId: string) => {
     if (!entry) return;
     const entryRef = doc(db, 'challenge_entries', `${challenge.id}_${userId}`);
@@ -2209,7 +2242,7 @@ function CollectibleChallengeModal({ challenge, entry, userId, onJoin, onLeave, 
               )}
             </div>
 
-            {/* Unrevealed cards */}
+            {/* New Cards */}
             {(hasJoined || (entry?.stickers.length ?? 0) > 0) && (
               <div>
                 <div className="flex items-center justify-between mb-3">
@@ -2223,21 +2256,24 @@ function CollectibleChallengeModal({ challenge, entry, userId, onJoin, onLeave, 
                     All cards ({entry?.stickers.length ?? 0})
                   </button>
                 </div>
-                {unrevealed.length === 0 ? (
+                {cardsToShow.length === 0 ? (
                   <p className="text-xs text-brand-navy/40 text-center py-4 bg-brand-bg rounded-2xl">
                     No new cards. Collect stamps to earn more!
                   </p>
                 ) : (
                   <div className="flex gap-3 overflow-x-auto pb-2">
-                    {unrevealed.map(s => (
-                      <StickerCard
-                        key={s.id}
-                        sticker={s}
-                        isRevealed={false}
-                        onReveal={() => handleReveal(s.id)}
-                        size="md"
-                      />
-                    ))}
+                    {cardsToShow.map(s => {
+                      const isRevealed = (entry?.revealedIds || []).includes(s.id);
+                      return (
+                        <StickerCard
+                          key={s.id}
+                          sticker={s}
+                          isRevealed={isRevealed}
+                          onReveal={isRevealed ? undefined : () => handleReveal(s.id)}
+                          size="md"
+                        />
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -2598,6 +2634,10 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
   const [awardHandle, setAwardHandle] = useState('');
   const [awardingFor, setAwardingFor] = useState<{ challengeId: string; uid: string } | null>(null);
   const [awardResults, setAwardResults] = useState<Map<string, string>>(new Map());
+  const [walletEntries, setWalletEntries] = useState<Map<string, ChallengeEntry[]>>(new Map());
+  const [loadingWallet, setLoadingWallet] = useState(false);
+  const [confirmWinner, setConfirmWinner] = useState<string | null>(null);
+  const [declaringWinner, setDeclaringWinner] = useState<string | null>(null);
 
   // Collectible form state
   const [colTitle, setColTitle] = useState('Monopoly Collect-All');
@@ -2689,20 +2729,45 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
   const handleTogglePlayers = async (c: Challenge) => {
     if (expandedPlayers === c.id) { setExpandedPlayers(null); return; }
     setExpandedPlayers(c.id);
-    const uids = (c.participantUids || []).filter(uid => !playerProfiles.has(uid));
-    if (uids.length === 0) return;
-    setLoadingPlayers(true);
+    setLoadingWallet(true);
     try {
-      const chunks: string[][] = [];
-      for (let i = 0; i < uids.length; i += 10) chunks.push(uids.slice(i, i + 10));
-      const results = await Promise.all(
-        chunks.map(chunk => getDocs(query(collection(db, 'users'), where('uid', 'in', chunk))))
-      );
-      const updated = new Map(playerProfiles);
-      results.forEach(snap => snap.docs.forEach(d => updated.set(d.id, { uid: d.id, ...d.data() } as UserProfile)));
-      setPlayerProfiles(updated);
+      const uids = (c.participantUids || []).filter(uid => !playerProfiles.has(uid));
+      const [entriesSnap, ...profileResults] = await Promise.all([
+        getDocs(query(collection(db, 'challenge_entries'), where('challengeId', '==', c.id))),
+        ...(uids.length > 0
+          ? (() => { const chunks: string[][] = []; for (let i = 0; i < uids.length; i += 10) chunks.push(uids.slice(i, i + 10)); return chunks; })()
+            .map(chunk => getDocs(query(collection(db, 'users'), where('uid', 'in', chunk))))
+          : []),
+      ]);
+      const entries = entriesSnap.docs.map(d => ({ id: d.id, ...d.data() } as ChallengeEntry));
+      setWalletEntries(prev => new Map(prev).set(c.id, entries));
+      if (uids.length > 0) {
+        const updated = new Map(playerProfiles);
+        profileResults.forEach((snap: any) => snap.docs.forEach((d: any) => updated.set(d.id, { uid: d.id, ...d.data() } as UserProfile)));
+        setPlayerProfiles(updated);
+      }
     } finally {
-      setLoadingPlayers(false);
+      setLoadingWallet(false);
+    }
+  };
+
+  const handleDeclareWinner = async (challengeId: string) => {
+    setDeclaringWinner(challengeId);
+    try {
+      const snap = await getDocs(query(collection(db, 'challenge_entries'), where('challengeId', '==', challengeId)));
+      const finalPlayers = snap.docs.map(d => d.data());
+      await updateDoc(doc(db, 'challenges', challengeId), {
+        status: 'ended',
+        finalResults: { players: finalPlayers, closedAt: new Date().toISOString() },
+      });
+      await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+      setConfirmWinner(null);
+      setExpandedPlayers(null);
+      setWalletEntries(prev => { const m = new Map(prev); m.delete(challengeId); return m; });
+    } catch (e: any) {
+      console.error('Declare winner error', e);
+    } finally {
+      setDeclaringWinner(null);
     }
   };
 
@@ -2826,11 +2891,11 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
                 showPlayers ? 'bg-brand-navy text-white border-brand-navy' : 'bg-brand-navy/5 text-brand-navy/60 border-brand-navy/10'
               )}
             >
-              <Users size={12} /> Players
+              <Users size={12} /> Wallet
             </button>
           </div>
 
-          {/* Players list */}
+          {/* Challenge Wallet Table */}
           <AnimatePresence>
             {showPlayers && (
               <motion.div
@@ -2840,38 +2905,74 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
                 transition={{ duration: 0.15 }}
                 className="overflow-hidden"
               >
-                <div className="pt-1 space-y-1.5 max-h-48 overflow-y-auto">
+                <div className="pt-1 space-y-1.5 max-h-60 overflow-y-auto">
                   {playerCount === 0 ? (
                     <p className="text-xs text-brand-navy/40 text-center py-3">No players yet.</p>
-                  ) : loadingPlayers ? (
-                    <p className="text-xs text-brand-navy/40 text-center py-3">Loading...</p>
+                  ) : loadingWallet ? (
+                    <p className="text-xs text-brand-navy/40 text-center py-3">Loading wallet...</p>
                   ) : (
                     (c.participantUids || []).map(uid => {
                       const p = playerProfiles.get(uid);
+                      const entryForPlayer = (walletEntries.get(c.id) || []).find(e => e.userId === uid);
                       const isAwarding = awardingFor?.challengeId === c.id && awardingFor?.uid === uid;
+                      const stickerCount = entryForPlayer?.stickers.length ?? 0;
+                      const uniqueTiers = entryForPlayer?.uniqueTiers || [];
+                      const isWinner = entryForPlayer?.completed;
                       return (
-                        <div key={uid} className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-brand-bg">
-                          <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 bg-brand-navy/10">
-                            {p?.photoURL ? <img src={p.photoURL} alt="" className="w-full h-full object-cover" /> : null}
+                        <div key={uid} className={cn('px-3 py-2.5 rounded-xl', isWinner ? 'bg-amber-50 border border-amber-200' : 'bg-brand-bg')}>
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 bg-brand-navy/10">
+                              {p?.photoURL ? <img src={p.photoURL} alt="" className="w-full h-full object-cover" /> : null}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <p className="text-xs font-bold text-brand-navy truncate">{p?.name || 'Player'}</p>
+                                {isWinner && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-400 text-white">WINNER</span>}
+                              </div>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                {p?.handle && <p className="text-[10px] text-brand-navy/40">@{p.handle}</p>}
+                                <p className="text-[10px] text-brand-navy/40">{stickerCount} sticker{stickerCount !== 1 ? 's' : ''}</p>
+                              </div>
+                            </div>
+                            {isCollectible && (
+                              <button
+                                onClick={() => handleAwardSticker(c.id, uid, p?.name || 'Player')}
+                                disabled={!!awardingFor}
+                                className="flex-shrink-0 px-2.5 py-1 rounded-lg bg-brand-gold text-white text-[10px] font-bold active:scale-95 transition-all disabled:opacity-40"
+                              >
+                                {isAwarding ? '…' : '+1'}
+                              </button>
+                            )}
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-bold text-brand-navy truncate">{p?.name || 'Player'}</p>
-                            {p?.handle && <p className="text-[10px] text-brand-navy/40">@{p.handle}</p>}
-                          </div>
-                          {isCollectible && (
-                            <button
-                              onClick={() => handleAwardSticker(c.id, uid, p?.name || 'Player')}
-                              disabled={!!awardingFor}
-                              className="flex-shrink-0 px-2.5 py-1 rounded-lg bg-brand-gold text-white text-[10px] font-bold active:scale-95 transition-all disabled:opacity-40"
-                            >
-                              {isAwarding ? '…' : '+1'}
-                            </button>
+                          {isCollectible && uniqueTiers.length > 0 && (
+                            <div className="flex gap-1 mt-1.5 pl-9">
+                              {STICKER_ORDER.map(tier => {
+                                const hasIt = uniqueTiers.includes(tier);
+                                const cfg = STICKER_CONFIG[tier];
+                                return (
+                                  <span key={tier} className="w-3.5 h-3.5 rounded-full border-[1.5px] flex items-center justify-center"
+                                    style={hasIt ? { background: cfg.bg, borderColor: cfg.border } : { background: '#F1F5F9', borderColor: '#E2E8F0' }}>
+                                    {hasIt && <span className="text-[7px] font-black leading-none" style={{ color: cfg.color }}>{tier === 'gold' ? '★' : tier[0].toUpperCase()}</span>}
+                                  </span>
+                                );
+                              })}
+                            </div>
                           )}
                         </div>
                       );
                     })
                   )}
                 </div>
+
+                {/* Declare Winner */}
+                {playerCount > 0 && confirmWinner !== c.id && (
+                  <button
+                    onClick={() => setConfirmWinner(c.id)}
+                    className="w-full mt-2 py-2.5 rounded-2xl text-xs font-bold bg-amber-400 text-white flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+                  >
+                    <Trophy size={13} /> Declare Winner & Close
+                  </button>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -2899,6 +3000,23 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
               {awardResults.get(c.id) && (
                 <p className="text-xs font-bold text-brand-navy/60">{awardResults.get(c.id)}</p>
               )}
+            </div>
+          )}
+
+          {/* Declare Winner confirmation */}
+          {confirmWinner === c.id && (
+            <div className="rounded-2xl bg-amber-50 border border-amber-200 p-3 space-y-2">
+              <p className="text-xs font-bold text-amber-800 text-center">This will save all player data to the challenge and delete all wallets. Cannot be undone.</p>
+              <div className="flex gap-2">
+                <button onClick={() => setConfirmWinner(null)} className="flex-1 py-2 rounded-xl bg-white text-brand-navy/60 text-xs font-bold border border-brand-navy/10">Cancel</button>
+                <button
+                  onClick={() => handleDeclareWinner(c.id)}
+                  disabled={declaringWinner === c.id}
+                  className="flex-1 py-2 rounded-xl bg-amber-400 text-white text-xs font-bold disabled:opacity-50"
+                >
+                  {declaringWinner === c.id ? 'Closing...' : 'Yes, Close Challenge'}
+                </button>
+              </div>
             </div>
           )}
 
@@ -3311,22 +3429,37 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
 
                       {/* Mini slot strip for collectible */}
                       {isCollectible && (
-                        <div className="flex gap-1.5 items-center">
-                          {STICKER_ORDER.map(tier => {
-                            const cfg = STICKER_CONFIG[tier];
-                            const lit = myUnique.has(tier);
-                            return (
-                              <div key={tier}
-                                className="w-8 h-8 rounded-xl border-2 flex items-center justify-center text-xs font-black transition-all"
-                                style={lit
-                                  ? { background: cfg.bg, borderColor: cfg.border, color: cfg.color }
-                                  : { background: '#F1F5F9', borderColor: '#E2E8F0', color: '#CBD5E1' }}>
-                                {lit ? (tier === 'gold' ? '★' : tier[0].toUpperCase()) : '?'}
+                        <>
+                          <div className="flex gap-1.5 items-center mb-3">
+                            {STICKER_ORDER.map(tier => {
+                              const cfg = STICKER_CONFIG[tier];
+                              const lit = myUnique.has(tier);
+                              return (
+                                <div key={tier}
+                                  className="w-8 h-8 rounded-xl border-2 flex items-center justify-center text-xs font-black transition-all"
+                                  style={lit
+                                    ? { background: cfg.bg, borderColor: cfg.border, color: cfg.color }
+                                    : { background: '#F1F5F9', borderColor: '#E2E8F0', color: '#CBD5E1' }}>
+                                  {lit ? (tier === 'gold' ? '★' : tier[0].toUpperCase()) : '?'}
+                                </div>
+                              );
+                            })}
+                            <span className="ml-auto text-xs text-brand-navy/40 font-medium">{myUnique.size}/{challenge.goal ?? 5}</span>
+                          </div>
+                          {/* Card preview strip */}
+                          <div className="flex gap-2 overflow-x-auto pb-1">
+                            {unrevealed.length > 0 ? (
+                              unrevealed.slice(0, 4).map(s => (
+                                <StickerCard key={s.id} sticker={s} isRevealed={false} size="sm" />
+                              ))
+                            ) : (
+                              <div style={{ width: 60, height: 80, flexShrink: 0, background: 'linear-gradient(135deg,#F8FAFC,#E2E8F0)', border: '2px dashed #CBD5E1', borderRadius: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                                <span style={{ fontSize: 22, fontWeight: 900, color: '#CBD5E1' }}>?</span>
+                                <span style={{ fontSize: 7, color: '#CBD5E1', fontWeight: 600, textAlign: 'center', lineHeight: 1.2, padding: '0 4px' }}>Collect a stamp</span>
                               </div>
-                            );
-                          })}
-                          <span className="ml-auto text-xs text-brand-navy/40 font-medium">{myUnique.size}/{challenge.goal ?? 5}</span>
-                        </div>
+                            )}
+                          </div>
+                        </>
                       )}
                     </button>
                   );
@@ -4013,6 +4146,9 @@ function LoyaltyCard({ card, store, onViewStore }: { card: Card, store?: StorePr
       await updateDoc(doc(db, 'users', auth.currentUser.uid), {
         totalStamps: increment(qty)
       });
+
+      const customerName = auth.currentUser.displayName || auth.currentUser.email?.split('@')[0] || 'Customer';
+      awardCollectibleStickers(auth.currentUser.uid, customerName, qty).catch(console.error);
 
       if (newStamps >= limit) {
         setShowQR(false);
