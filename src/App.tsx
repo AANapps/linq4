@@ -1928,26 +1928,10 @@ async function issueStickersToCard(customerUid: string, userName: string, qty: n
     tier: rollStickerTier(),
     earnedAt: new Date().toISOString(),
   }));
-  const allSnap = await getDocs(collection(db, 'challenges'));
-  const activeProgs = allSnap.docs.filter(d => {
-    const data = d.data();
-    return data.type === 'collectible' && data.status === 'active';
-  });
-  for (const progDoc of activeProgs) {
-    const cardRef = doc(db, 'sticker_cards', `${progDoc.id}_${customerUid}`);
-    const cardSnap = await getDoc(cardRef);
-    if (!cardSnap.exists()) {
-      await setDoc(cardRef, {
-        user_id: customerUid,
-        programme_id: progDoc.id,
-        stickers: newStickers,
-        revealedIds: [],
-        uniqueTiers: [],
-        userName,
-      });
-    } else {
-      await updateDoc(cardRef, { stickers: arrayUnion(...newStickers), userName });
-    }
+  // Only award stickers for programmes the user has already joined (doc must exist)
+  const joinedSnap = await getDocs(query(collection(db, 'sticker_cards'), where('user_id', '==', customerUid)));
+  for (const cardDoc of joinedSnap.docs) {
+    await updateDoc(cardDoc.ref, { stickers: arrayUnion(...newStickers), userName });
   }
 }
 
@@ -2540,6 +2524,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const [myStickerCards, setMyStickerCards] = useState<StickerCardDoc[]>([]);
   const [openStickerCardId, setOpenStickerCardId] = useState<string | null>(null);
   const [activePrograms, setActivePrograms] = useState<Challenge[]>([]);
+  const [joiningProgramId, setJoiningProgramId] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'stores'), (snapshot) => {
@@ -2586,6 +2571,25 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       await updateDoc(doc(db, 'users', user.uid), { total_cards_held: increment(1) });
       setActiveTab('home');
     }
+  };
+
+  const handleJoinProgramme = async (prog: Challenge) => {
+    if (!user) return;
+    setJoiningProgramId(prog.id);
+    try {
+      const cardId = `${prog.id}_${user.uid}`;
+      const userName = profile?.name || user.displayName || user.email?.split('@')[0] || 'Player';
+      await setDoc(doc(db, 'sticker_cards', cardId), {
+        user_id: user.uid,
+        programme_id: prog.id,
+        stickers: [],
+        revealedIds: [],
+        uniqueTiers: [],
+        userName,
+      });
+      await updateDoc(doc(db, 'challenges', prog.id), { participantUids: arrayUnion(user.uid) });
+    } catch (err) { console.error(err); }
+    setJoiningProgramId(null);
   };
 
   const activeCards = initialCards.filter(c => !c.isArchived);
@@ -2687,6 +2691,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
               ) : (
                 activePrograms.map(prog => {
                   const sc = myStickerCards.find(s => s.programme_id === prog.id);
+                  const joined = !!sc;
                   const myUnique = new Set(sc?.uniqueTiers || []);
                   const unrevealed = (sc?.stickers || []).filter(s => !(sc?.revealedIds || []).includes(s.id));
                   const totalCollected = sc?.stickers.length || 0;
@@ -2699,79 +2704,96 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                           <p className="text-[10px] font-bold uppercase tracking-widest text-white/50">Monopoly Challenge</p>
                           <h3 className="font-display text-lg font-bold text-white leading-tight">{prog.title}</h3>
                         </div>
-                        {unrevealed.length > 0 && (
+                        {joined && unrevealed.length > 0 && (
                           <span className="text-[10px] font-bold text-white bg-brand-rose px-2.5 py-1 rounded-full animate-pulse">
                             {unrevealed.length} new!
                           </span>
                         )}
                       </div>
 
-                      {/* Monopoly property strip board */}
-                      <div className="bg-white px-4 py-5">
-                        <div className="flex gap-2 mb-4">
-                          {STICKER_ORDER.map(tier => {
-                            const cfg = STICKER_CONFIG[tier];
-                            const lit = myUnique.has(tier);
-                            const count = (sc?.stickers || []).filter(s => s.tier === tier).length;
-                            return (
-                              <div key={tier} className="flex-1 flex flex-col items-center gap-1.5">
-                                {/* Property colour strip */}
-                                <div
-                                  className="w-full rounded-t-xl rounded-b-sm transition-all"
-                                  style={{
-                                    height: 36,
-                                    background: lit ? cfg.solid : '#E2E8F0',
-                                    boxShadow: lit ? `0 2px 8px ${cfg.color}44` : 'none',
-                                  }}
-                                />
-                                {/* White property body */}
-                                <div
-                                  className="w-full rounded-b-xl flex flex-col items-center justify-center py-2 border-x border-b"
-                                  style={{
-                                    borderColor: lit ? cfg.border : '#E2E8F0',
-                                    background: lit ? cfg.bg : '#F8FAFC',
-                                    minHeight: 44,
-                                  }}
-                                >
-                                  <span className="text-[10px] font-black leading-tight text-center"
-                                    style={{ color: lit ? cfg.color : '#CBD5E1' }}>
-                                    {cfg.label}
-                                  </span>
-                                  {count > 0 && (
-                                    <span className="text-[9px] font-bold mt-0.5" style={{ color: cfg.color }}>×{count}</span>
-                                  )}
-                                  {!lit && <span className="text-base text-slate-300 mt-0.5">?</span>}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-xs text-brand-navy/40">
-                              {myUnique.size}/5 tiers · {totalCollected} sticker{totalCollected !== 1 ? 's' : ''}
-                            </p>
-                            {isComplete && (
-                              <p className="text-xs font-bold text-amber-600">Full set! Claim: {prog.reward}</p>
-                            )}
+                      {!joined ? (
+                        /* Not joined — invite card */
+                        <div className="bg-white px-5 py-6 flex flex-col items-center gap-4 text-center">
+                          <div className="flex gap-1.5">
+                            {STICKER_ORDER.map(tier => (
+                              <div key={tier} className="w-8 h-8 rounded-xl" style={{ background: STICKER_CONFIG[tier].solid, opacity: 0.35 }} />
+                            ))}
                           </div>
-                          {sc && (
+                          <div>
+                            <p className="text-sm font-bold text-brand-navy">Collect all 5 tiers to win</p>
+                            <p className="text-xs text-brand-navy/50 mt-0.5">Every stamp you collect earns a random sticker.</p>
+                          </div>
+                          <button
+                            onClick={() => handleJoinProgramme(prog)}
+                            disabled={joiningProgramId === prog.id}
+                            className="w-full bg-brand-navy text-white font-bold py-3 rounded-2xl text-sm flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
+                          >
+                            {joiningProgramId === prog.id ? 'Joining...' : 'Join Game'}
+                          </button>
+                        </div>
+                      ) : (
+                        /* Joined — Monopoly property strip board */
+                        <div className="bg-white px-4 py-5">
+                          <div className="flex gap-2 mb-4">
+                            {STICKER_ORDER.map(tier => {
+                              const cfg = STICKER_CONFIG[tier];
+                              const lit = myUnique.has(tier);
+                              const count = (sc?.stickers || []).filter(s => s.tier === tier).length;
+                              return (
+                                <div key={tier} className="flex-1 flex flex-col items-center gap-1.5">
+                                  <div
+                                    className="w-full rounded-t-xl rounded-b-sm transition-all"
+                                    style={{
+                                      height: 36,
+                                      background: lit ? cfg.solid : '#E2E8F0',
+                                      boxShadow: lit ? `0 2px 8px ${cfg.color}44` : 'none',
+                                    }}
+                                  />
+                                  <div
+                                    className="w-full rounded-b-xl flex flex-col items-center justify-center py-2 border-x border-b"
+                                    style={{
+                                      borderColor: lit ? cfg.border : '#E2E8F0',
+                                      background: lit ? cfg.bg : '#F8FAFC',
+                                      minHeight: 44,
+                                    }}
+                                  >
+                                    <span className="text-[10px] font-black leading-tight text-center"
+                                      style={{ color: lit ? cfg.color : '#CBD5E1' }}>
+                                      {cfg.label}
+                                    </span>
+                                    {count > 0 && (
+                                      <span className="text-[9px] font-bold mt-0.5" style={{ color: cfg.color }}>×{count}</span>
+                                    )}
+                                    {!lit && <span className="text-base text-slate-300 mt-0.5">?</span>}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-xs text-brand-navy/40">
+                                {myUnique.size}/5 tiers · {totalCollected} sticker{totalCollected !== 1 ? 's' : ''}
+                              </p>
+                              {isComplete && (
+                                <p className="text-xs font-bold text-amber-600">Full set! Claim: {prog.reward}</p>
+                              )}
+                            </div>
                             <button
-                              onClick={() => setOpenStickerCardId(sc.id)}
+                              onClick={() => setOpenStickerCardId(sc!.id)}
                               className="px-4 py-2 rounded-2xl bg-brand-navy text-white text-xs font-bold active:scale-95 transition-all"
                             >
                               {unrevealed.length > 0 ? 'Reveal' : 'View'}
                             </button>
-                          )}
+                          </div>
                         </div>
-                      </div>
+                      )}
 
                       {/* Prize banner */}
                       <div className="bg-amber-50 border-t border-amber-100 px-5 py-3 flex items-center gap-2">
                         <span className="text-base">🏆</span>
                         <p className="text-xs text-amber-800 font-semibold flex-1">Full set reward: <span className="font-bold">{prog.reward}</span></p>
-                        <p className="text-[10px] text-amber-600 font-bold">{isComplete ? '✓ Earned' : `${5 - myUnique.size} left`}</p>
+                        {joined && <p className="text-[10px] text-amber-600 font-bold">{isComplete ? '✓ Earned' : `${5 - myUnique.size} left`}</p>}
                       </div>
                     </div>
                   );
