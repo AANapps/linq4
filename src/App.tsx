@@ -2544,8 +2544,10 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   }, [user.uid]);
 
   useEffect(() => {
-    const q = query(collection(db, 'challenges'), where('type', '==', 'collectible'), where('status', '==', 'active'));
-    return onSnapshot(q, snap => setActivePrograms(snap.docs.map(d => ({ id: d.id, ...d.data() } as Challenge))));
+    const q = query(collection(db, 'challenges'), where('type', '==', 'collectible'));
+    return onSnapshot(q, snap =>
+      setActivePrograms(snap.docs.map(d => ({ id: d.id, ...d.data() } as Challenge)).filter(c => c.status === 'active'))
+    );
   }, []);
 
   const handleJoinStore = async (store: StoreProfile) => {
