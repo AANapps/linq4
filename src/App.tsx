@@ -296,11 +296,15 @@ interface Card {
 interface Notification {
   id: string;
   toUid: string;
-  fromUid: string;
-  fromName: string;
-  fromPhoto: string;
-  type: 'follow' | 'system' | 'like' | 'comment' | 'message';
+  fromUid?: string;
+  fromName?: string;
+  fromPhoto?: string;
+  type: 'follow' | 'system' | 'like' | 'comment' | 'message' | 'broadcast';
+  title?: string;
   message: string;
+  storeId?: string;
+  storeName?: string;
+  storeLogoUrl?: string;
   isRead: boolean;
   createdAt: any;
 }
@@ -7669,22 +7673,36 @@ function NotificationsPanel({ notifications, onClose }: { notifications: Notific
               )}
             >
               <div className="w-11 h-11 rounded-xl overflow-hidden border border-brand-navy/5 relative bg-brand-gold/10 flex items-center justify-center shrink-0">
-                {notif.fromPhoto ? (
+                {notif.type === 'broadcast' ? (
+                  notif.storeLogoUrl
+                    ? <img src={notif.storeLogoUrl} alt="" className="w-full h-full object-cover" />
+                    : <Store size={18} className="text-brand-navy/60" />
+                ) : notif.fromPhoto ? (
                   <img src={notif.fromPhoto} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <Sparkles size={18} className="text-brand-gold" />
                 )}
-                <div className={cn("absolute -bottom-1 -right-1 p-1 rounded-md border-2 border-white", notif.type === 'like' ? "bg-red-400" : notif.type === 'comment' ? "bg-blue-400" : notif.type === 'message' ? "bg-brand-navy" : "bg-brand-gold")}>
-                  {notif.type === 'follow' ? <UserPlus size={9} className="text-white" /> : notif.type === 'like' ? <Heart size={9} className="text-white fill-white" /> : notif.type === 'comment' || notif.type === 'message' ? <MessageCircle size={9} className="text-white" /> : <Bell size={9} className="text-white" />}
+                <div className={cn("absolute -bottom-1 -right-1 p-1 rounded-md border-2 border-white", notif.type === 'like' ? "bg-red-400" : notif.type === 'comment' ? "bg-blue-400" : notif.type === 'message' ? "bg-brand-navy" : notif.type === 'broadcast' ? "bg-brand-navy" : "bg-brand-gold")}>
+                  {notif.type === 'follow' ? <UserPlus size={9} className="text-white" /> : notif.type === 'like' ? <Heart size={9} className="text-white fill-white" /> : notif.type === 'comment' || notif.type === 'message' ? <MessageCircle size={9} className="text-white" /> : notif.type === 'broadcast' ? <Send size={9} className="text-white" /> : <Bell size={9} className="text-white" />}
                 </div>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm line-clamp-2 leading-snug">
-                  {notif.type === 'system'
-                    ? notif.message
-                    : <><span className="font-bold">{notif.fromName}</span> {notif.type === 'follow' ? 'started following you!' : notif.message}</>
-                  }
-                </p>
+                {notif.type === 'broadcast' ? (
+                  <>
+                    <p className="text-sm leading-snug">
+                      <span className="font-bold">{notif.storeName}</span>
+                      {notif.title && <span className="text-brand-navy/70"> · {notif.title}</span>}
+                    </p>
+                    {notif.message && <p className="text-xs text-brand-navy/50 line-clamp-2 mt-0.5">{notif.message}</p>}
+                  </>
+                ) : (
+                  <p className="text-sm line-clamp-2 leading-snug">
+                    {notif.type === 'system'
+                      ? notif.message
+                      : <><span className="font-bold">{notif.fromName}</span> {notif.type === 'follow' ? 'started following you!' : notif.message}</>
+                    }
+                  </p>
+                )}
                 <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest mt-0.5">
                   {notif.createdAt ? format(notif.createdAt.toDate(), 'MMM d, h:mm a') : 'Just now'}
                 </p>
