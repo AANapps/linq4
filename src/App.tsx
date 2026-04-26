@@ -389,12 +389,16 @@ const STICKER_CONFIG: Record<StickerTier, { color: string; solid: string; bg: st
   gold:     { color: '#92400E', solid: '#F5C518', bg: '#FFFBEB', border: '#FDE68A', label: 'Legendary', chance: '1%'   },
 };
 
-function rollStickerTier(): StickerTier {
-  const r = Math.random();
-  if (r < 0.01) return 'gold';
-  if (r < 0.08) return 'blue';
-  if (r < 0.22) return 'red';
-  if (r < 0.50) return 'lightblue';
+const DEFAULT_TIER_CHANCES = { brown: 50, lightblue: 28, red: 14, blue: 7, gold: 1 };
+
+function rollStickerTier(chances?: { brown: number; lightblue: number; red: number; blue: number; gold: number }): StickerTier {
+  const c = chances ?? DEFAULT_TIER_CHANCES;
+  const r = Math.random() * 100;
+  let cum = 0;
+  for (const tier of STICKER_ORDER) {
+    cum += c[tier] ?? 0;
+    if (r < cum) return tier;
+  }
   return 'brown';
 }
 
@@ -427,6 +431,7 @@ interface Challenge {
   participantUids?: string[];
   type?: 'standard' | 'collectible';
   status?: 'active' | 'paused' | 'ended';
+  tierChances?: { brown: number; lightblue: number; red: number; blue: number; gold: number };
 }
 
 // --- Main App Component ---
@@ -1946,14 +1951,21 @@ function NavButton({ active, onClick, icon, label, badgeCount }: { active: boole
 // --- Sticker issuance (triggered by stamp collection — 1 stamp = 1 sticker per active programme) ---
 
 async function issueStickersToCard(customerUid: string, userName: string, qty: number): Promise<void> {
-  const newStickers: CollectibleSticker[] = Array.from({ length: qty }, () => ({
-    id: Math.random().toString(36).slice(2),
-    tier: rollStickerTier(),
-    earnedAt: new Date().toISOString(),
-  }));
-  // Only award stickers for programmes the user has already joined (doc must exist)
   const joinedSnap = await getDocs(query(collection(db, 'sticker_cards'), where('user_id', '==', customerUid)));
+  if (joinedSnap.empty) return;
+  const programmeIds = [...new Set(joinedSnap.docs.map(d => d.data().programme_id as string))];
+  const chancesMap = new Map<string, { brown: number; lightblue: number; red: number; blue: number; gold: number } | undefined>();
+  await Promise.all(programmeIds.map(async pid => {
+    const snap = await getDoc(doc(db, 'challenges', pid));
+    chancesMap.set(pid, snap.exists() ? snap.data().tierChances : undefined);
+  }));
   for (const cardDoc of joinedSnap.docs) {
+    const chances = chancesMap.get(cardDoc.data().programme_id);
+    const newStickers: CollectibleSticker[] = Array.from({ length: qty }, () => ({
+      id: Math.random().toString(36).slice(2),
+      tier: rollStickerTier(chances),
+      earnedAt: new Date().toISOString(),
+    }));
     await updateDoc(cardDoc.ref, { stickers: arrayUnion(...newStickers), userName });
   }
 }
@@ -2164,6 +2176,46 @@ function StickerCollectionModal({ stickerCard, programme, onClose }: {
 
 // --- Admin Challenges Panel ---
 
+type TierChances = { brown: number; lightblue: number; red: number; blue: number; gold: number };
+const sumChances = (c: TierChances) => STICKER_ORDER.reduce((s, t) => s + (c[t] ?? 0), 0);
+
+function ChanceEditor({ chances, onSave }: { chances: TierChances; onSave: (c: TierChances) => void }) {
+  const [local, setLocal] = useState<TierChances>({ ...chances });
+  const total = Math.round(sumChances(local));
+  const valid = total === 100;
+  return (
+    <div className="pt-2 border-t border-amber-100 space-y-1.5">
+      <div className="flex items-center justify-between">
+        <p className="text-[9px] font-bold uppercase tracking-widest text-amber-700/50">Drop %</p>
+        <span className={cn('text-[9px] font-bold', valid ? 'text-green-600' : 'text-red-500')}>{total}% {valid ? '✓' : '≠ 100'}</span>
+      </div>
+      {STICKER_ORDER.map(tier => {
+        const cfg = STICKER_CONFIG[tier];
+        return (
+          <div key={tier} className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: cfg.solid }} />
+            <span className="text-[9px] font-bold flex-1" style={{ color: cfg.color }}>{cfg.label}</span>
+            <input
+              type="number" min={0} max={100} step={1}
+              value={local[tier]}
+              onChange={e => setLocal(prev => ({ ...prev, [tier]: Math.max(0, parseFloat(e.target.value) || 0) }))}
+              className="w-12 px-1.5 py-0.5 rounded-lg bg-amber-50 border border-amber-200 text-[9px] text-right text-amber-800 focus:outline-none"
+            />
+            <span className="text-[9px] text-amber-600/50 w-3">%</span>
+          </div>
+        );
+      })}
+      <button
+        onClick={() => valid && onSave(local)}
+        disabled={!valid}
+        className="w-full py-1.5 rounded-xl bg-amber-500 text-white text-[9px] font-bold disabled:opacity-40 active:scale-95 transition-all"
+      >
+        Save
+      </button>
+    </div>
+  );
+}
+
 function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [collectibles, setCollectibles] = useState<Challenge[]>([]);
@@ -2194,6 +2246,7 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
   const [colReward, setColReward] = useState('');
   const [colEndsAt, setColEndsAt] = useState('');
   const [stdEndsAt, setStdEndsAt] = useState('');
+  const [colChances, setColChances] = useState<{ brown: number; lightblue: number; red: number; blue: number; gold: number }>({ ...DEFAULT_TIER_CHANCES });
 
   useEffect(() => {
     const q = query(collection(db, 'challenges'), orderBy('createdAt', 'desc'));
@@ -2228,7 +2281,8 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
   };
 
   const handleDeployCollectible = async () => {
-    if (!colTitle.trim() || !colReward.trim()) return;
+    const total = sumChances(colChances);
+    if (!colTitle.trim() || !colReward.trim() || Math.round(total) !== 100) return;
     setDeployingCollectible(true);
     try {
       await addDoc(collection(db, 'challenges'), {
@@ -2237,10 +2291,11 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
         type: 'collectible',
         status: 'active',
         participantUids: [],
+        tierChances: colChances,
         createdAt: serverTimestamp(),
         ...(colEndsAt ? { endsAt: Timestamp.fromDate(new Date(colEndsAt)) } : {}),
       });
-      setColTitle(''); setColReward(''); setColEndsAt('');
+      setColTitle(''); setColReward(''); setColEndsAt(''); setColChances({ ...DEFAULT_TIER_CHANCES });
     } finally {
       setDeployingCollectible(false);
     }
@@ -2252,6 +2307,10 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
     } else {
       await updateDoc(doc(db, 'challenges', id), { endsAt: Timestamp.fromDate(new Date(value)) });
     }
+  };
+
+  const handleUpdateChances = async (id: string, chances: { brown: number; lightblue: number; red: number; blue: number; gold: number }) => {
+    await updateDoc(doc(db, 'challenges', id), { tierChances: chances });
   };
 
   const handleToggleStatus = async (c: Challenge) => {
@@ -2552,9 +2611,34 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
               <label className="text-xs text-amber-700/60 flex-shrink-0">End date</label>
               <input type="datetime-local" value={colEndsAt} onChange={e => setColEndsAt(e.target.value)} className={cn(inputCls, 'flex-1 text-xs')} />
             </div>
+            {/* Tier drop chances */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-bold text-amber-700/60 uppercase tracking-widest">Drop chances</p>
+                <span className={cn('text-[10px] font-bold', Math.round(sumChances(colChances)) === 100 ? 'text-green-600' : 'text-red-500')}>
+                  {sumChances(colChances)}% {Math.round(sumChances(colChances)) === 100 ? '✓' : '≠ 100'}
+                </span>
+              </div>
+              {STICKER_ORDER.map(tier => {
+                const cfg = STICKER_CONFIG[tier];
+                return (
+                  <div key={tier} className="flex items-center gap-2">
+                    <div className="w-3.5 h-3.5 rounded-sm flex-shrink-0" style={{ background: cfg.solid }} />
+                    <span className="text-[10px] font-bold flex-1" style={{ color: cfg.color }}>{cfg.label}</span>
+                    <input
+                      type="number" min={0} max={100} step={1}
+                      value={colChances[tier]}
+                      onChange={e => setColChances(prev => ({ ...prev, [tier]: Math.max(0, parseFloat(e.target.value) || 0) }))}
+                      className="w-16 px-2 py-1 rounded-lg bg-white border border-amber-200 text-xs text-right text-amber-800 focus:outline-none"
+                    />
+                    <span className="text-[10px] text-amber-700/50 w-4">%</span>
+                  </div>
+                );
+              })}
+            </div>
             <button
               onClick={handleDeployCollectible}
-              disabled={deployingCollectible || !colTitle.trim() || !colReward.trim()}
+              disabled={deployingCollectible || !colTitle.trim() || !colReward.trim() || Math.round(sumChances(colChances)) !== 100}
               className="w-full bg-amber-500 text-white font-bold py-3 rounded-2xl text-sm flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
             >
               <Star size={15} /> {deployingCollectible ? 'Launching...' : 'Launch Programme'}
@@ -2625,45 +2709,52 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
                             transition={{ duration: 0.15 }}
                             className="overflow-hidden"
                           >
-                            <div className="px-3 pb-3 space-y-1.5 max-h-64 overflow-y-auto border-t border-amber-100">
-                              {loadingProgramme && !programmePlayerData.has(c.id) ? (
-                                <p className="text-[10px] text-amber-700/50 text-center py-3">Loading...</p>
-                              ) : progPlayers.length === 0 ? (
-                                <p className="text-[10px] text-amber-700/50 text-center py-3">No players yet.</p>
-                              ) : (
-                                progPlayers.map(({ uid, profile: p, card: sc }) => {
-                                  const uniqueCount = sc.uniqueTiers?.length ?? 0;
-                                  const total = sc.stickers?.length ?? 0;
-                                  const complete = uniqueCount >= 5;
-                                  return (
-                                    <div key={uid} className="flex items-center gap-2 py-2">
-                                      <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0 bg-amber-100">
-                                        {p?.photoURL ? <img src={p.photoURL} alt="" className="w-full h-full object-cover" /> : null}
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <p className="text-[11px] font-bold text-amber-900 truncate">{p?.name || sc.userName || 'Player'}</p>
-                                        <div className="flex gap-0.5 mt-0.5">
-                                          {STICKER_ORDER.map(tier => {
-                                            const lit = sc.uniqueTiers?.includes(tier);
-                                            return (
-                                              <div
-                                                key={tier}
-                                                className="w-3 h-3 rounded-sm"
-                                                style={{ background: lit ? STICKER_CONFIG[tier].solid : '#E2E8F0' }}
-                                              />
-                                            );
-                                          })}
+                            <div className="px-3 pb-3 space-y-1.5 border-t border-amber-100">
+                              <div className="max-h-48 overflow-y-auto space-y-1.5 pt-1.5">
+                                {loadingProgramme && !programmePlayerData.has(c.id) ? (
+                                  <p className="text-[10px] text-amber-700/50 text-center py-3">Loading...</p>
+                                ) : progPlayers.length === 0 ? (
+                                  <p className="text-[10px] text-amber-700/50 text-center py-3">No players yet.</p>
+                                ) : (
+                                  progPlayers.map(({ uid, profile: p, card: sc }) => {
+                                    const uniqueCount = sc.uniqueTiers?.length ?? 0;
+                                    const total = sc.stickers?.length ?? 0;
+                                    const complete = uniqueCount >= 5;
+                                    return (
+                                      <div key={uid} className="flex items-center gap-2 py-2">
+                                        <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0 bg-amber-100">
+                                          {p?.photoURL ? <img src={p.photoURL} alt="" className="w-full h-full object-cover" /> : null}
                                         </div>
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-[11px] font-bold text-amber-900 truncate">{p?.name || sc.userName || 'Player'}</p>
+                                          <div className="flex gap-0.5 mt-0.5">
+                                            {STICKER_ORDER.map(tier => {
+                                              const lit = sc.uniqueTiers?.includes(tier);
+                                              return (
+                                                <div
+                                                  key={tier}
+                                                  className="w-3 h-3 rounded-sm"
+                                                  style={{ background: lit ? STICKER_CONFIG[tier].solid : '#E2E8F0' }}
+                                                />
+                                              );
+                                            })}
+                                          </div>
+                                        </div>
+                                        <div className="text-right flex-shrink-0">
+                                          <p className="text-[10px] font-bold text-amber-700">{uniqueCount}/5</p>
+                                          <p className="text-[9px] text-amber-600/60">{total} sticker{total !== 1 ? 's' : ''}</p>
+                                        </div>
+                                        {complete && <span className="text-[9px] font-black text-amber-600 flex-shrink-0">★</span>}
                                       </div>
-                                      <div className="text-right flex-shrink-0">
-                                        <p className="text-[10px] font-bold text-amber-700">{uniqueCount}/5</p>
-                                        <p className="text-[9px] text-amber-600/60">{total} sticker{total !== 1 ? 's' : ''}</p>
-                                      </div>
-                                      {complete && <span className="text-[9px] font-black text-amber-600 flex-shrink-0">★</span>}
-                                    </div>
-                                  );
-                                })
-                              )}
+                                    );
+                                  })
+                                )}
+                              </div>
+                              {/* Inline tier chance editor */}
+                              <ChanceEditor
+                                chances={c.tierChances ?? { ...DEFAULT_TIER_CHANCES }}
+                                onSave={chances => handleUpdateChances(c.id, chances)}
+                              />
                             </div>
                           </motion.div>
                         )}
@@ -2918,33 +3009,30 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                   const unrevealed = (sc?.stickers || []).filter(s => !(sc?.revealedIds || []).includes(s.id));
                   const totalCollected = sc?.stickers.length || 0;
                   const isComplete = myUnique.size >= 5;
-                  const showLeaderboard = expandedProgId === prog.id;
+                  const isExpanded = expandedProgId === prog.id;
                   const topPlayers = leaderboardData.get(prog.id) || [];
                   return (
                     <div key={prog.id} className="rounded-[2rem] overflow-hidden shadow-lg border border-black/5">
-                      {/* Board header */}
-                      <div className="bg-brand-navy px-5 py-4">
+                      {/* Tappable board header */}
+                      <button
+                        onClick={() => handleToggleLeaderboard(prog)}
+                        className="w-full bg-brand-navy px-5 py-4 text-left active:opacity-90 transition-opacity"
+                      >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
                             <p className="text-[10px] font-bold uppercase tracking-widest text-white/50">Monopoly Challenge</p>
                             <h3 className="font-display text-lg font-bold text-white leading-tight">{prog.title}</h3>
                           </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
+                          <div className="flex items-center gap-2 flex-shrink-0 mt-1">
                             {joined && unrevealed.length > 0 && (
                               <span className="text-[10px] font-bold text-white bg-brand-rose px-2.5 py-1 rounded-full animate-pulse">
                                 {unrevealed.length} new!
                               </span>
                             )}
-                            <button
-                              onClick={() => handleToggleLeaderboard(prog)}
-                              className={cn(
-                                'flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all',
-                                showLeaderboard ? 'bg-white/20 text-white' : 'bg-white/10 text-white/60'
-                              )}
-                            >
-                              <Trophy size={11} />
-                              Top 5
-                            </button>
+                            <ChevronDown
+                              size={16}
+                              className={cn('text-white/60 transition-transform duration-200', isExpanded && 'rotate-180')}
+                            />
                           </div>
                         </div>
                         {prog.endsAt && (
@@ -2953,45 +3041,63 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                             <CountdownTimer endsAt={prog.endsAt} />
                           </div>
                         )}
-                      </div>
+                      </button>
 
-                      {/* Leaderboard expand */}
+                      {/* Expanded: leaderboard + rarity guide */}
                       <AnimatePresence>
-                        {showLeaderboard && (
+                        {isExpanded && (
                           <motion.div
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: 'auto', opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.15 }}
+                            transition={{ duration: 0.18 }}
                             className="overflow-hidden bg-brand-navy/95"
                           >
-                            <div className="px-5 py-3 space-y-2">
-                              <p className="text-[9px] font-bold uppercase tracking-widest text-white/40 mb-1">Leaderboard</p>
-                              {loadingLeaderboard && !leaderboardData.has(prog.id) ? (
-                                <p className="text-[10px] text-white/40 text-center py-2">Loading...</p>
-                              ) : topPlayers.length === 0 ? (
-                                <p className="text-[10px] text-white/40 text-center py-2">No players yet.</p>
-                              ) : (
-                                topPlayers.map((p, i) => (
-                                  <div key={p.uid} className="flex items-center gap-2.5">
-                                    <span className="text-[10px] font-black text-white/30 w-4 text-center">{i + 1}</span>
-                                    <div className="w-6 h-6 rounded-full overflow-hidden bg-white/10 flex-shrink-0">
-                                      {p.userPhoto ? <img src={p.userPhoto} alt="" className="w-full h-full object-cover" /> : null}
+                            <div className="px-5 pt-3 pb-4 space-y-3">
+                              {/* Leaderboard */}
+                              <div className="space-y-2">
+                                <p className="text-[9px] font-bold uppercase tracking-widest text-white/40">Top Players</p>
+                                {loadingLeaderboard && !leaderboardData.has(prog.id) ? (
+                                  <p className="text-[10px] text-white/40 text-center py-2">Loading...</p>
+                                ) : topPlayers.length === 0 ? (
+                                  <p className="text-[10px] text-white/40 text-center py-2">No players yet — be the first!</p>
+                                ) : (
+                                  topPlayers.map((p, i) => (
+                                    <div key={p.uid} className="flex items-center gap-2.5">
+                                      <span className="text-[10px] font-black text-white/30 w-4 text-center shrink-0">{i + 1}</span>
+                                      <div className="w-6 h-6 rounded-full overflow-hidden bg-white/10 shrink-0">
+                                        {p.userPhoto ? <img src={p.userPhoto} alt="" className="w-full h-full object-cover" /> : null}
+                                      </div>
+                                      <p className="text-[11px] font-bold text-white flex-1 truncate">{p.userName || 'Player'}</p>
+                                      <div className="flex gap-0.5">
+                                        {STICKER_ORDER.map(tier => (
+                                          <div
+                                            key={tier}
+                                            className="w-3 h-3 rounded-sm"
+                                            style={{ background: p.uniqueTiers.includes(tier) ? STICKER_CONFIG[tier].solid : 'rgba(255,255,255,0.1)' }}
+                                          />
+                                        ))}
+                                      </div>
+                                      <span className="text-[10px] font-bold text-white/60 shrink-0">{p.uniqueTiers.length}/5</span>
                                     </div>
-                                    <p className="text-[11px] font-bold text-white flex-1 truncate">{p.userName || 'Player'}</p>
-                                    <div className="flex gap-0.5">
-                                      {STICKER_ORDER.map(tier => (
-                                        <div
-                                          key={tier}
-                                          className="w-3 h-3 rounded-sm"
-                                          style={{ background: p.uniqueTiers.includes(tier) ? STICKER_CONFIG[tier].solid : 'rgba(255,255,255,0.1)' }}
-                                        />
-                                      ))}
+                                  ))
+                                )}
+                              </div>
+                              {/* Rarity guide — shows actual programme chances */}
+                              <div className="pt-2 border-t border-white/10 space-y-1.5">
+                                <p className="text-[9px] font-bold uppercase tracking-widest text-white/40">Card Rarity</p>
+                                {STICKER_ORDER.map(tier => {
+                                  const cfg = STICKER_CONFIG[tier];
+                                  const pct = prog.tierChances ? prog.tierChances[tier] : DEFAULT_TIER_CHANCES[tier];
+                                  return (
+                                    <div key={tier} className="flex items-center gap-2">
+                                      <div className="w-4 h-4 rounded-sm shrink-0" style={{ background: cfg.solid }} />
+                                      <span className="text-[10px] font-bold flex-1" style={{ color: cfg.solid }}>{cfg.label}</span>
+                                      <span className="text-[10px] font-bold text-white/50">{pct}%</span>
                                     </div>
-                                    <span className="text-[10px] font-bold text-white/60 flex-shrink-0">{p.uniqueTiers.length}/5</span>
-                                  </div>
-                                ))
-                              )}
+                                  );
+                                })}
+                              </div>
                             </div>
                           </motion.div>
                         )}
@@ -3089,24 +3195,6 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                 })
               )}
 
-              {/* Rarity legend */}
-              {activePrograms.length > 0 && (
-                <div className="glass-card p-4 rounded-3xl">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-3">Rarity Guide</p>
-                  <div className="space-y-2">
-                    {STICKER_ORDER.map(tier => {
-                      const cfg = STICKER_CONFIG[tier];
-                      return (
-                        <div key={tier} className="flex items-center gap-3">
-                          <div className="w-6 h-6 rounded-lg flex-shrink-0" style={{ background: cfg.solid }} />
-                          <span className="text-xs font-bold flex-1" style={{ color: cfg.color }}>{cfg.label}</span>
-                          <span className="text-[10px] text-brand-navy/40">{cfg.chance} chance</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </div>
