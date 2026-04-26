@@ -1980,6 +1980,7 @@ function StickerCard({ sticker, isRevealed, onReveal, size = 'md' }: {
   key?: React.Key;
 }) {
   const [localRevealed, setLocalRevealed] = useState(isRevealed);
+  const [animating, setAnimating] = useState(false);
   const cfg = STICKER_CONFIG[sticker.tier];
 
   useEffect(() => { if (isRevealed) setLocalRevealed(true); }, [isRevealed]);
@@ -1987,20 +1988,28 @@ function StickerCard({ sticker, isRevealed, onReveal, size = 'md' }: {
   const dims = size === 'sm' ? { w: 60, h: 80 } : { w: 80, h: 108 };
 
   const handleTap = () => {
-    if (localRevealed || !onReveal) return;
-    setLocalRevealed(true);
-    onReveal();
+    if (localRevealed || !onReveal || animating) return;
+    setAnimating(true);
   };
 
   return (
-    <button
+    <motion.div
       onClick={handleTap}
-      style={{ width: dims.w, height: dims.h, perspective: '800px', flexShrink: 0 }}
+      animate={animating ? { scale: [1, 1.22, 0.83, 1.1, 1] } : { scale: 1 }}
+      transition={{ duration: 0.4 }}
+      onAnimationComplete={() => {
+        if (animating) {
+          setAnimating(false);
+          setLocalRevealed(true);
+          onReveal?.();
+        }
+      }}
+      style={{ width: dims.w, height: dims.h, perspective: '800px', flexShrink: 0, cursor: localRevealed ? 'default' : 'pointer' }}
       className="relative"
     >
       <motion.div
         animate={{ rotateY: localRevealed ? 180 : 0 }}
-        transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+        transition={{ duration: 0.55, ease: [0.23, 1, 0.32, 1] }}
         style={{ transformStyle: 'preserve-3d', width: '100%', height: '100%', position: 'relative' }}
       >
         {/* Front — grey mystery */}
@@ -2033,7 +2042,7 @@ function StickerCard({ sticker, isRevealed, onReveal, size = 'md' }: {
           </div>
         </div>
       </motion.div>
-    </button>
+    </motion.div>
   );
 }
 
@@ -2048,6 +2057,29 @@ function StickerCollectionModal({ stickerCard, programme, onClose }: {
   const unrevealed = stickerCard.stickers.filter(s => !(stickerCard.revealedIds || []).includes(s.id));
   const revealed = stickerCard.stickers.filter(s => (stickerCard.revealedIds || []).includes(s.id));
   const myUnique = new Set(stickerCard.uniqueTiers || []);
+  const [showAllRevealed, setShowAllRevealed] = useState(false);
+  const [topPlayers, setTopPlayers] = useState<{ uid: string; userName?: string; userPhoto?: string; uniqueTiers: StickerTier[] }[]>([]);
+
+  useEffect(() => {
+    if (!programme?.id) return;
+    getDocs(query(collection(db, 'sticker_cards'), where('programme_id', '==', programme.id))).then(snap => {
+      const entries = snap.docs.map(d => {
+        const data = d.data();
+        return {
+          uid: data.user_id as string,
+          userName: data.userName as string | undefined,
+          userPhoto: data.userPhoto as string | undefined,
+          uniqueTiers: (data.uniqueTiers || []) as StickerTier[],
+          stickers: ((data.stickers || []) as any[]).length,
+        };
+      });
+      entries.sort((a, b) => b.uniqueTiers.length !== a.uniqueTiers.length ? b.uniqueTiers.length - a.uniqueTiers.length : b.stickers - a.stickers);
+      setTopPlayers(entries.slice(0, 5));
+    });
+  }, [programme?.id]);
+
+  const reversedRevealed = [...revealed].reverse();
+  const displayedRevealed = showAllRevealed ? reversedRevealed : reversedRevealed.slice(0, 5);
 
   const handleReveal = async (stickerId: string) => {
     const cardRef = doc(db, 'sticker_cards', stickerCard.id);
@@ -2143,16 +2175,49 @@ function StickerCollectionModal({ stickerCard, programme, onClose }: {
               </div>
             )}
 
+            {topPlayers.length > 0 && (
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-3">
+                  Top Players
+                </p>
+                <div className="space-y-2">
+                  {topPlayers.map((p, i) => (
+                    <div key={p.uid} className="flex items-center gap-2.5 bg-brand-navy/5 rounded-2xl px-3 py-2">
+                      <span className="text-[10px] font-black text-brand-navy/30 w-4 text-center shrink-0">{i + 1}</span>
+                      <div className="w-6 h-6 rounded-full overflow-hidden bg-brand-navy/10 shrink-0">
+                        {p.userPhoto ? <img src={p.userPhoto} alt="" className="w-full h-full object-cover" /> : null}
+                      </div>
+                      <p className="text-[11px] font-bold text-brand-navy flex-1 truncate">{p.userName || 'Player'}</p>
+                      <div className="flex gap-0.5">
+                        {STICKER_ORDER.map(tier => (
+                          <div key={tier} className="w-3 h-3 rounded-sm" style={{ background: p.uniqueTiers.includes(tier) ? STICKER_CONFIG[tier].solid : '#E2E8F0' }} />
+                        ))}
+                      </div>
+                      <span className="text-[10px] font-bold text-brand-navy/60 shrink-0">{p.uniqueTiers.length}/5</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {revealed.length > 0 && (
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-3">
                   Revealed ({revealed.length})
                 </p>
                 <div className="flex flex-wrap gap-3">
-                  {[...revealed].reverse().map(s => (
+                  {displayedRevealed.map(s => (
                     <StickerCard key={s.id} sticker={s} isRevealed={true} size="md" />
                   ))}
                 </div>
+                {revealed.length > 5 && !showAllRevealed && (
+                  <button
+                    onClick={() => setShowAllRevealed(true)}
+                    className="mt-3 w-full py-2.5 rounded-2xl bg-brand-navy/5 text-brand-navy/60 text-xs font-bold active:bg-brand-navy/10 transition-colors"
+                  >
+                    Show all ({revealed.length})
+                  </button>
+                )}
               </div>
             )}
 
@@ -2794,6 +2859,162 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
+// --- Programme Detail Modal (challenge popup) ---
+
+function ProgrammeDetailModal({ prog, sc, onJoin, onView, onClose, joiningProgramId, joinError }: {
+  prog: Challenge;
+  sc?: StickerCardDoc;
+  onJoin: () => void;
+  onView: () => void;
+  onClose: () => void;
+  joiningProgramId: string | null;
+  joinError: string | null;
+  key?: React.Key;
+}) {
+  const [topPlayers, setTopPlayers] = useState<{ uid: string; userName?: string; userPhoto?: string; uniqueTiers: StickerTier[]; stickers: number }[]>([]);
+  const [loadingPlayers, setLoadingPlayers] = useState(true);
+
+  const joined = !!sc;
+  const myUnique = new Set(sc?.uniqueTiers || []);
+  const unrevealed = (sc?.stickers || []).filter(s => !(sc?.revealedIds || []).includes(s.id));
+  const isComplete = myUnique.size >= 5;
+
+  useEffect(() => {
+    getDocs(query(collection(db, 'sticker_cards'), where('programme_id', '==', prog.id))).then(snap => {
+      const entries = snap.docs.map(d => {
+        const data = d.data();
+        return {
+          uid: data.user_id as string,
+          userName: data.userName as string | undefined,
+          userPhoto: data.userPhoto as string | undefined,
+          uniqueTiers: (data.uniqueTiers || []) as StickerTier[],
+          stickers: ((data.stickers || []) as any[]).length,
+        };
+      });
+      entries.sort((a, b) => b.uniqueTiers.length !== a.uniqueTiers.length ? b.uniqueTiers.length - a.uniqueTiers.length : b.stickers - a.stickers);
+      setTopPlayers(entries.slice(0, 5));
+    }).finally(() => setLoadingPlayers(false));
+  }, [prog.id]);
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0, y: '100%' }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: '100%' }}
+        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+        className="fixed inset-0 z-[150] flex flex-col max-w-md mx-auto"
+      >
+        <button onClick={onClose} className="flex-shrink-0 h-16 w-full" />
+        <div className="flex-1 overflow-y-auto bg-brand-navy rounded-t-[2.5rem] shadow-2xl">
+          <div className="sticky top-0 bg-brand-navy px-5 pt-5 pb-4 z-10 border-b border-white/5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">Monopoly Challenge</p>
+                <h2 className="font-display text-xl font-bold text-white leading-tight">{prog.title}</h2>
+              </div>
+              <button onClick={onClose} className="p-2 rounded-2xl bg-white/10 flex-shrink-0">
+                <X size={18} className="text-white/60" />
+              </button>
+            </div>
+            {prog.endsAt && (
+              <div className="mt-2 flex items-center gap-1.5 text-white/60 text-[10px] font-bold">
+                <Clock size={10} />
+                <CountdownTimer endsAt={prog.endsAt} />
+              </div>
+            )}
+          </div>
+
+          <div className="p-5 space-y-6">
+            {/* Leaderboard */}
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-white/40 mb-3">Top Players</p>
+              {loadingPlayers ? (
+                <p className="text-[10px] text-white/40 text-center py-4">Loading...</p>
+              ) : topPlayers.length === 0 ? (
+                <p className="text-[10px] text-white/40 text-center py-4">No players yet — be the first!</p>
+              ) : (
+                <div className="space-y-2.5">
+                  {topPlayers.map((p, i) => (
+                    <div key={p.uid} className="flex items-center gap-2.5 bg-white/5 rounded-2xl px-3 py-2.5">
+                      <span className="text-[10px] font-black text-white/30 w-4 text-center shrink-0">{i + 1}</span>
+                      <div className="w-7 h-7 rounded-full overflow-hidden bg-white/10 shrink-0">
+                        {p.userPhoto ? <img src={p.userPhoto} alt="" className="w-full h-full object-cover" /> : null}
+                      </div>
+                      <p className="text-[11px] font-bold text-white flex-1 truncate">{p.userName || 'Player'}</p>
+                      <div className="flex gap-0.5">
+                        {STICKER_ORDER.map(tier => (
+                          <div key={tier} className="w-3.5 h-3.5 rounded-sm" style={{ background: p.uniqueTiers.includes(tier) ? STICKER_CONFIG[tier].solid : 'rgba(255,255,255,0.1)' }} />
+                        ))}
+                      </div>
+                      <span className="text-[10px] font-bold text-white/60 shrink-0">{p.uniqueTiers.length}/5</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Rarity guide */}
+            <div className="pt-4 border-t border-white/10 space-y-2">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-white/40">Card Rarity</p>
+              {STICKER_ORDER.map(tier => {
+                const cfg = STICKER_CONFIG[tier];
+                const pct = prog.tierChances ? prog.tierChances[tier] : DEFAULT_TIER_CHANCES[tier];
+                return (
+                  <div key={tier} className="flex items-center gap-2.5">
+                    <div className="w-5 h-5 rounded-md shrink-0" style={{ background: cfg.solid }} />
+                    <span className="text-[11px] font-bold flex-1" style={{ color: cfg.solid }}>{cfg.label}</span>
+                    <span className="text-[11px] font-bold text-white/50">{pct}%</span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Prize */}
+            <div className="bg-amber-500/20 border border-amber-400/30 rounded-2xl px-4 py-3 flex items-center gap-2">
+              <span className="text-lg">🏆</span>
+              <div className="flex-1">
+                <p className="text-xs font-bold text-amber-300">Full set reward</p>
+                <p className="text-sm font-black text-white">{prog.reward}</p>
+              </div>
+              {joined && (
+                <p className="text-[10px] text-amber-300 font-bold">{isComplete ? '✓ Earned' : `${5 - myUnique.size} left`}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="px-5 pb-10 pt-2">
+            {!joined ? (
+              <button
+                onClick={onJoin}
+                disabled={joiningProgramId === prog.id}
+                className="w-full bg-white text-brand-navy font-bold py-4 rounded-2xl text-sm active:scale-95 transition-all disabled:opacity-50"
+              >
+                {joiningProgramId === prog.id ? 'Joining...' : 'Join Game'}
+              </button>
+            ) : (
+              <button
+                onClick={onView}
+                className="w-full bg-white text-brand-navy font-bold py-4 rounded-2xl text-sm flex items-center justify-center gap-2 active:scale-95 transition-all"
+              >
+                {unrevealed.length > 0 ? `Reveal ${unrevealed.length} Card${unrevealed.length !== 1 ? 's' : ''}` : 'View My Collection'}
+              </button>
+            )}
+            {joinError && <p className="text-xs text-red-400 text-center mt-2">{joinError}</p>}
+          </div>
+        </div>
+      </motion.div>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 0.6 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black z-[149]"
+        onClick={onClose}
+      />
+    </>
+  );
+}
+
 // --- Consumer App ---
 
 function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onViewUser, cards: initialCards, notifications, activeChatId, setActiveChatId, onLogout, onDeleteAccount }: { activeTab: string, setActiveTab: (tab: string) => void, profile: UserProfile | null, user: FirebaseUser, onViewStore: (s: StoreProfile) => void, onViewUser: (u: UserProfile) => void, cards: Card[], notifications: Notification[], activeChatId: string | null, setActiveChatId: (id: string | null) => void, onLogout: () => void, onDeleteAccount: () => Promise<void>, key?: React.Key }) {
@@ -2804,9 +3025,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const [activePrograms, setActivePrograms] = useState<Challenge[]>([]);
   const [joiningProgramId, setJoiningProgramId] = useState<string | null>(null);
   const [joinError, setJoinError] = useState<string | null>(null);
-  const [expandedProgId, setExpandedProgId] = useState<string | null>(null);
-  const [leaderboardData, setLeaderboardData] = useState<Map<string, { uid: string; userName?: string; userPhoto?: string; uniqueTiers: StickerTier[]; stickers: number }[]>>(new Map());
-  const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
+  const [openProgrammeId, setOpenProgrammeId] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'stores'), (snapshot) => {
@@ -2879,31 +3098,6 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
     setJoiningProgramId(null);
   };
 
-  const handleToggleLeaderboard = async (prog: Challenge) => {
-    if (expandedProgId === prog.id) { setExpandedProgId(null); return; }
-    setExpandedProgId(prog.id);
-    if (leaderboardData.has(prog.id)) return;
-    setLoadingLeaderboard(true);
-    try {
-      const snap = await getDocs(query(collection(db, 'sticker_cards'), where('programme_id', '==', prog.id)));
-      const entries = snap.docs.map(d => {
-        const data = d.data();
-        return {
-          uid: data.user_id as string,
-          userName: data.userName as string | undefined,
-          userPhoto: data.userPhoto as string | undefined,
-          uniqueTiers: (data.uniqueTiers || []) as StickerTier[],
-          stickers: ((data.stickers || []) as any[]).length,
-        };
-      });
-      entries.sort((a, b) => b.uniqueTiers.length !== a.uniqueTiers.length ? b.uniqueTiers.length - a.uniqueTiers.length : b.stickers - a.stickers);
-      setLeaderboardData((prev: Map<string, { uid: string; userName?: string; userPhoto?: string; uniqueTiers: StickerTier[]; stickers: number }[]>) => {
-        const m = new Map(prev); m.set(prog.id, entries.slice(0, 5)); return m;
-      });
-    } finally {
-      setLoadingLeaderboard(false);
-    }
-  };
 
   const activeCards = initialCards.filter(c => !c.isArchived);
 
@@ -3009,13 +3203,11 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                   const unrevealed = (sc?.stickers || []).filter(s => !(sc?.revealedIds || []).includes(s.id));
                   const totalCollected = sc?.stickers.length || 0;
                   const isComplete = myUnique.size >= 5;
-                  const isExpanded = expandedProgId === prog.id;
-                  const topPlayers = leaderboardData.get(prog.id) || [];
                   return (
                     <div key={prog.id} className="rounded-[2rem] overflow-hidden shadow-lg border border-black/5">
-                      {/* Tappable board header */}
+                      {/* Tappable header — opens popup modal */}
                       <button
-                        onClick={() => handleToggleLeaderboard(prog)}
+                        onClick={() => setOpenProgrammeId(prog.id)}
                         className="w-full bg-brand-navy px-5 py-4 text-left active:opacity-90 transition-opacity"
                       >
                         <div className="flex items-start justify-between gap-2">
@@ -3029,10 +3221,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                                 {unrevealed.length} new!
                               </span>
                             )}
-                            <ChevronDown
-                              size={16}
-                              className={cn('text-white/60 transition-transform duration-200', isExpanded && 'rotate-180')}
-                            />
+                            <Users size={14} className="text-white/40" />
                           </div>
                         </div>
                         {prog.endsAt && (
@@ -3043,90 +3232,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                         )}
                       </button>
 
-                      {/* Expanded: leaderboard + rarity guide */}
-                      <AnimatePresence>
-                        {isExpanded && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.18 }}
-                            className="overflow-hidden bg-brand-navy/95"
-                          >
-                            <div className="px-5 pt-3 pb-4 space-y-3">
-                              {/* Leaderboard */}
-                              <div className="space-y-2">
-                                <p className="text-[9px] font-bold uppercase tracking-widest text-white/40">Top Players</p>
-                                {loadingLeaderboard && !leaderboardData.has(prog.id) ? (
-                                  <p className="text-[10px] text-white/40 text-center py-2">Loading...</p>
-                                ) : topPlayers.length === 0 ? (
-                                  <p className="text-[10px] text-white/40 text-center py-2">No players yet — be the first!</p>
-                                ) : (
-                                  topPlayers.map((p, i) => (
-                                    <div key={p.uid} className="flex items-center gap-2.5">
-                                      <span className="text-[10px] font-black text-white/30 w-4 text-center shrink-0">{i + 1}</span>
-                                      <div className="w-6 h-6 rounded-full overflow-hidden bg-white/10 shrink-0">
-                                        {p.userPhoto ? <img src={p.userPhoto} alt="" className="w-full h-full object-cover" /> : null}
-                                      </div>
-                                      <p className="text-[11px] font-bold text-white flex-1 truncate">{p.userName || 'Player'}</p>
-                                      <div className="flex gap-0.5">
-                                        {STICKER_ORDER.map(tier => (
-                                          <div
-                                            key={tier}
-                                            className="w-3 h-3 rounded-sm"
-                                            style={{ background: p.uniqueTiers.includes(tier) ? STICKER_CONFIG[tier].solid : 'rgba(255,255,255,0.1)' }}
-                                          />
-                                        ))}
-                                      </div>
-                                      <span className="text-[10px] font-bold text-white/60 shrink-0">{p.uniqueTiers.length}/5</span>
-                                    </div>
-                                  ))
-                                )}
-                              </div>
-                              {/* Rarity guide — shows actual programme chances */}
-                              <div className="pt-2 border-t border-white/10 space-y-1.5">
-                                <p className="text-[9px] font-bold uppercase tracking-widest text-white/40">Card Rarity</p>
-                                {STICKER_ORDER.map(tier => {
-                                  const cfg = STICKER_CONFIG[tier];
-                                  const pct = prog.tierChances ? prog.tierChances[tier] : DEFAULT_TIER_CHANCES[tier];
-                                  return (
-                                    <div key={tier} className="flex items-center gap-2">
-                                      <div className="w-4 h-4 rounded-sm shrink-0" style={{ background: cfg.solid }} />
-                                      <span className="text-[10px] font-bold flex-1" style={{ color: cfg.solid }}>{cfg.label}</span>
-                                      <span className="text-[10px] font-bold text-white/50">{pct}%</span>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-
-                      {!joined ? (
-                        /* Not joined — invite card */
-                        <div className="bg-white px-5 py-6 flex flex-col items-center gap-4 text-center">
-                          <div className="flex gap-1.5">
-                            {STICKER_ORDER.map(tier => (
-                              <div key={tier} className="w-8 h-8 rounded-xl" style={{ background: STICKER_CONFIG[tier].solid, opacity: 0.35 }} />
-                            ))}
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-brand-navy">Collect all 5 tiers to win</p>
-                            <p className="text-xs text-brand-navy/50 mt-0.5">Every stamp you collect earns a random sticker.</p>
-                          </div>
-                          <button
-                            onClick={() => handleJoinProgramme(prog)}
-                            disabled={joiningProgramId === prog.id}
-                            className="w-full bg-brand-navy text-white font-bold py-3 rounded-2xl text-sm flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
-                          >
-                            {joiningProgramId === prog.id ? 'Joining...' : 'Join Game'}
-                          </button>
-                          {joinError && (
-                            <p className="text-xs text-brand-rose text-center">{joinError}</p>
-                          )}
-                        </div>
-                      ) : (
+                      {joined ? (
                         /* Joined — Monopoly property strip board */
                         <div className="bg-white px-4 py-5">
                           <div className="flex gap-2 mb-4">
@@ -3182,6 +3288,21 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                             </button>
                           </div>
                         </div>
+                      ) : (
+                        /* Not joined */
+                        <div className="bg-white px-5 py-4 flex items-center justify-between gap-3">
+                          <div className="flex gap-1">
+                            {STICKER_ORDER.map(tier => (
+                              <div key={tier} className="w-5 h-5 rounded-md" style={{ background: STICKER_CONFIG[tier].solid, opacity: 0.4 }} />
+                            ))}
+                          </div>
+                          <button
+                            onClick={() => setOpenProgrammeId(prog.id)}
+                            className="px-4 py-2 rounded-2xl bg-brand-navy text-white text-xs font-bold active:scale-95 transition-all shrink-0"
+                          >
+                            View &amp; Join
+                          </button>
+                        </div>
                       )}
 
                       {/* Prize banner */}
@@ -3212,6 +3333,34 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
               stickerCard={sc}
               programme={programme}
               onClose={() => setOpenStickerCardId(null)}
+            />
+          );
+        })()}
+      </AnimatePresence>
+
+      {/* Programme Detail Modal */}
+      <AnimatePresence>
+        {openProgrammeId && (() => {
+          const prog = activePrograms.find(p => p.id === openProgrammeId);
+          if (!prog) return null;
+          const sc = myStickerCards.find(s => s.programme_id === openProgrammeId);
+          return (
+            <ProgrammeDetailModal
+              key={openProgrammeId}
+              prog={prog}
+              sc={sc}
+              onJoin={() => {
+                handleJoinProgramme(prog);
+              }}
+              onView={() => {
+                if (sc) {
+                  setOpenProgrammeId(null);
+                  setOpenStickerCardId(sc.id);
+                }
+              }}
+              onClose={() => setOpenProgrammeId(null)}
+              joiningProgramId={joiningProgramId}
+              joinError={joinError}
             />
           );
         })()}
