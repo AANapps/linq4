@@ -36,7 +36,8 @@ import {
   collectionGroup,
   arrayUnion,
   arrayRemove,
-  startAfter
+  startAfter,
+  Timestamp
 } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { cn } from './lib/utils';
@@ -186,6 +187,28 @@ const AVATAR_SVGS: Record<string, string> = {
   'Non-binary': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#1e3a5f"/><circle cx="50" cy="36" r="19" fill="#a08fc4"/><path d="M14 100 Q14 66 50 66 Q86 66 86 100Z" fill="#a08fc4"/></svg>`,
   default: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#1e3a5f"/><circle cx="50" cy="36" r="19" fill="#8fafc4"/><path d="M14 100 Q14 66 50 66 Q86 66 86 100Z" fill="#8fafc4"/></svg>`,
 };
+
+function CountdownTimer({ endsAt }: { endsAt: any }) {
+  const [label, setLabel] = useState('');
+  useEffect(() => {
+    const tick = () => {
+      const end = endsAt?.toDate ? endsAt.toDate() : new Date(endsAt);
+      const diff = end.getTime() - Date.now();
+      if (diff <= 0) { setLabel('Ended'); return; }
+      const d = Math.floor(diff / 86400000);
+      const h = Math.floor((diff % 86400000) / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      if (d > 0) setLabel(`${d}d ${h}h ${m}m`);
+      else if (h > 0) setLabel(`${h}h ${m}m ${s}s`);
+      else setLabel(`${m}m ${s}s`);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [endsAt]);
+  return <>{label}</>;
+}
 
 function avatarSrc(gender?: string | null): string {
   const key = gender && AVATAR_SVGS[gender] ? gender : 'default';
@@ -2169,6 +2192,8 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
   // Collectible programme form state
   const [colTitle, setColTitle] = useState('');
   const [colReward, setColReward] = useState('');
+  const [colEndsAt, setColEndsAt] = useState('');
+  const [stdEndsAt, setStdEndsAt] = useState('');
 
   useEffect(() => {
     const q = query(collection(db, 'challenges'), orderBy('createdAt', 'desc'));
@@ -2194,8 +2219,9 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
         unit: stdUnit.trim(),
         participantUids: [],
         createdAt: serverTimestamp(),
+        ...(stdEndsAt ? { endsAt: Timestamp.fromDate(new Date(stdEndsAt)) } : {}),
       });
-      setStdTitle(''); setStdDesc(''); setStdGoal(''); setStdUnit(''); setStdReward('');
+      setStdTitle(''); setStdDesc(''); setStdGoal(''); setStdUnit(''); setStdReward(''); setStdEndsAt('');
     } finally {
       setDeploying(false);
     }
@@ -2212,10 +2238,19 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
         status: 'active',
         participantUids: [],
         createdAt: serverTimestamp(),
+        ...(colEndsAt ? { endsAt: Timestamp.fromDate(new Date(colEndsAt)) } : {}),
       });
-      setColTitle(''); setColReward('');
+      setColTitle(''); setColReward(''); setColEndsAt('');
     } finally {
       setDeployingCollectible(false);
+    }
+  };
+
+  const handleSetEndsAt = async (id: string, value: string) => {
+    if (!value) {
+      await updateDoc(doc(db, 'challenges', id), { endsAt: null });
+    } else {
+      await updateDoc(doc(db, 'challenges', id), { endsAt: Timestamp.fromDate(new Date(value)) });
     }
   };
 
@@ -2355,6 +2390,21 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
             </button>
           </div>
 
+          <div className="flex items-center gap-1.5 px-1">
+            <Clock size={11} className="text-brand-navy/30 flex-shrink-0" />
+            <input
+              type="datetime-local"
+              defaultValue={c.endsAt?.toDate ? c.endsAt.toDate().toISOString().slice(0, 16) : ''}
+              onChange={e => handleSetEndsAt(c.id, e.target.value)}
+              className="flex-1 text-[10px] text-brand-navy/50 bg-transparent border-none outline-none"
+            />
+            {c.endsAt && (
+              <span className="text-[10px] font-bold text-brand-navy/40 flex-shrink-0">
+                <CountdownTimer endsAt={c.endsAt} />
+              </span>
+            )}
+          </div>
+
           <AnimatePresence>
             {showPlayers && (
               <motion.div
@@ -2474,6 +2524,10 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
               <input value={stdUnit} onChange={e => setStdUnit(e.target.value)} placeholder="Unit (e.g. stamps)" className={cn(inputCls, 'flex-1')} />
             </div>
             <input value={stdReward} onChange={e => setStdReward(e.target.value)} placeholder="Prize (e.g. Free coffee)" className={inputCls} />
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-brand-navy/50 flex-shrink-0">End date</label>
+              <input type="datetime-local" value={stdEndsAt} onChange={e => setStdEndsAt(e.target.value)} className={cn(inputCls, 'flex-1 text-xs')} />
+            </div>
             <button
               onClick={handleDeployStandard}
               disabled={deploying || !stdTitle.trim() || !stdReward.trim() || !stdUnit.trim() || !stdGoal}
@@ -2494,6 +2548,10 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
             </p>
             <input value={colTitle} onChange={e => setColTitle(e.target.value)} placeholder="Programme name (e.g. Season 1)" className={inputCls} />
             <input value={colReward} onChange={e => setColReward(e.target.value)} placeholder="Full-set reward (e.g. £50 voucher)" className={inputCls} />
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-amber-700/60 flex-shrink-0">End date</label>
+              <input type="datetime-local" value={colEndsAt} onChange={e => setColEndsAt(e.target.value)} className={cn(inputCls, 'flex-1 text-xs')} />
+            </div>
             <button
               onClick={handleDeployCollectible}
               disabled={deployingCollectible || !colTitle.trim() || !colReward.trim()}
@@ -2509,37 +2567,53 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
                   const progPlayers: { uid: string; profile?: UserProfile; card: StickerCardDoc }[] = programmePlayerData.get(c.id) || [];
                   return (
                     <div key={c.id} className="rounded-2xl bg-white border border-amber-200 overflow-hidden">
-                      <div className="p-3 flex items-center gap-2">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-bold text-amber-800 text-xs truncate">{c.title}</p>
-                          <p className="text-[10px] text-amber-700/60">🎁 {c.reward}</p>
+                      <div className="p-3 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-amber-800 text-xs truncate">{c.title}</p>
+                            <p className="text-[10px] text-amber-700/60">🎁 {c.reward}</p>
+                          </div>
+                          <button
+                            onClick={() => handleToggleStatus(c)}
+                            disabled={togglingId === c.id}
+                            className={cn(
+                              'px-2.5 py-1.5 rounded-xl text-[10px] font-bold flex-shrink-0',
+                              c.status === 'active' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
+                            )}
+                          >
+                            {togglingId === c.id ? '...' : c.status === 'active' ? 'Pause' : 'Resume'}
+                          </button>
+                          <button
+                            onClick={() => handleToggleProgramme(c)}
+                            className={cn(
+                              'p-1.5 rounded-xl flex-shrink-0 transition-all',
+                              showProg ? 'bg-amber-500 text-white' : 'bg-amber-50 text-amber-600'
+                            )}
+                          >
+                            <Users size={12} />
+                          </button>
+                          <button
+                            onClick={() => setConfirmDelete(c.id)}
+                            disabled={deletingId === c.id}
+                            className="p-1.5 rounded-xl bg-red-50 text-brand-rose flex-shrink-0"
+                          >
+                            <Trash2 size={12} />
+                          </button>
                         </div>
-                        <button
-                          onClick={() => handleToggleStatus(c)}
-                          disabled={togglingId === c.id}
-                          className={cn(
-                            'px-2.5 py-1.5 rounded-xl text-[10px] font-bold flex-shrink-0',
-                            c.status === 'active' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
+                        <div className="flex items-center gap-1.5">
+                          <Clock size={10} className="text-amber-600/50 flex-shrink-0" />
+                          <input
+                            type="datetime-local"
+                            defaultValue={c.endsAt?.toDate ? c.endsAt.toDate().toISOString().slice(0, 16) : ''}
+                            onChange={e => handleSetEndsAt(c.id, e.target.value)}
+                            className="flex-1 text-[10px] text-amber-800 bg-transparent border-none outline-none"
+                          />
+                          {c.endsAt && (
+                            <span className="text-[9px] font-bold text-amber-600 flex-shrink-0">
+                              <CountdownTimer endsAt={c.endsAt} />
+                            </span>
                           )}
-                        >
-                          {togglingId === c.id ? '...' : c.status === 'active' ? 'Pause' : 'Resume'}
-                        </button>
-                        <button
-                          onClick={() => handleToggleProgramme(c)}
-                          className={cn(
-                            'p-1.5 rounded-xl flex-shrink-0 transition-all',
-                            showProg ? 'bg-amber-500 text-white' : 'bg-amber-50 text-amber-600'
-                          )}
-                        >
-                          <Users size={12} />
-                        </button>
-                        <button
-                          onClick={() => setConfirmDelete(c.id)}
-                          disabled={deletingId === c.id}
-                          className="p-1.5 rounded-xl bg-red-50 text-brand-rose flex-shrink-0"
-                        >
-                          <Trash2 size={12} />
-                        </button>
+                        </div>
                       </div>
 
                       <AnimatePresence>
@@ -2639,6 +2713,9 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const [activePrograms, setActivePrograms] = useState<Challenge[]>([]);
   const [joiningProgramId, setJoiningProgramId] = useState<string | null>(null);
   const [joinError, setJoinError] = useState<string | null>(null);
+  const [expandedProgId, setExpandedProgId] = useState<string | null>(null);
+  const [leaderboardData, setLeaderboardData] = useState<Map<string, { uid: string; userName?: string; userPhoto?: string; uniqueTiers: StickerTier[]; stickers: number }[]>>(new Map());
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'stores'), (snapshot) => {
@@ -2709,6 +2786,32 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       setJoinError(err?.message || 'Failed to join. Try again.');
     }
     setJoiningProgramId(null);
+  };
+
+  const handleToggleLeaderboard = async (prog: Challenge) => {
+    if (expandedProgId === prog.id) { setExpandedProgId(null); return; }
+    setExpandedProgId(prog.id);
+    if (leaderboardData.has(prog.id)) return;
+    setLoadingLeaderboard(true);
+    try {
+      const snap = await getDocs(query(collection(db, 'sticker_cards'), where('programme_id', '==', prog.id)));
+      const entries = snap.docs.map(d => {
+        const data = d.data();
+        return {
+          uid: data.user_id as string,
+          userName: data.userName as string | undefined,
+          userPhoto: data.userPhoto as string | undefined,
+          uniqueTiers: (data.uniqueTiers || []) as StickerTier[],
+          stickers: ((data.stickers || []) as any[]).length,
+        };
+      });
+      entries.sort((a, b) => b.uniqueTiers.length !== a.uniqueTiers.length ? b.uniqueTiers.length - a.uniqueTiers.length : b.stickers - a.stickers);
+      setLeaderboardData((prev: Map<string, { uid: string; userName?: string; userPhoto?: string; uniqueTiers: StickerTier[]; stickers: number }[]>) => {
+        const m = new Map(prev); m.set(prog.id, entries.slice(0, 5)); return m;
+      });
+    } finally {
+      setLoadingLeaderboard(false);
+    }
   };
 
   const activeCards = initialCards.filter(c => !c.isArchived);
@@ -2815,20 +2918,84 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                   const unrevealed = (sc?.stickers || []).filter(s => !(sc?.revealedIds || []).includes(s.id));
                   const totalCollected = sc?.stickers.length || 0;
                   const isComplete = myUnique.size >= 5;
+                  const showLeaderboard = expandedProgId === prog.id;
+                  const topPlayers = leaderboardData.get(prog.id) || [];
                   return (
                     <div key={prog.id} className="rounded-[2rem] overflow-hidden shadow-lg border border-black/5">
                       {/* Board header */}
-                      <div className="bg-brand-navy px-5 py-4 flex items-center justify-between">
-                        <div>
-                          <p className="text-[10px] font-bold uppercase tracking-widest text-white/50">Monopoly Challenge</p>
-                          <h3 className="font-display text-lg font-bold text-white leading-tight">{prog.title}</h3>
+                      <div className="bg-brand-navy px-5 py-4">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-white/50">Monopoly Challenge</p>
+                            <h3 className="font-display text-lg font-bold text-white leading-tight">{prog.title}</h3>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {joined && unrevealed.length > 0 && (
+                              <span className="text-[10px] font-bold text-white bg-brand-rose px-2.5 py-1 rounded-full animate-pulse">
+                                {unrevealed.length} new!
+                              </span>
+                            )}
+                            <button
+                              onClick={() => handleToggleLeaderboard(prog)}
+                              className={cn(
+                                'flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all',
+                                showLeaderboard ? 'bg-white/20 text-white' : 'bg-white/10 text-white/60'
+                              )}
+                            >
+                              <Trophy size={11} />
+                              Top 5
+                            </button>
+                          </div>
                         </div>
-                        {joined && unrevealed.length > 0 && (
-                          <span className="text-[10px] font-bold text-white bg-brand-rose px-2.5 py-1 rounded-full animate-pulse">
-                            {unrevealed.length} new!
-                          </span>
+                        {prog.endsAt && (
+                          <div className="mt-2 flex items-center gap-1.5 text-white/60 text-[10px] font-bold">
+                            <Clock size={10} />
+                            <CountdownTimer endsAt={prog.endsAt} />
+                          </div>
                         )}
                       </div>
+
+                      {/* Leaderboard expand */}
+                      <AnimatePresence>
+                        {showLeaderboard && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.15 }}
+                            className="overflow-hidden bg-brand-navy/95"
+                          >
+                            <div className="px-5 py-3 space-y-2">
+                              <p className="text-[9px] font-bold uppercase tracking-widest text-white/40 mb-1">Leaderboard</p>
+                              {loadingLeaderboard && !leaderboardData.has(prog.id) ? (
+                                <p className="text-[10px] text-white/40 text-center py-2">Loading...</p>
+                              ) : topPlayers.length === 0 ? (
+                                <p className="text-[10px] text-white/40 text-center py-2">No players yet.</p>
+                              ) : (
+                                topPlayers.map((p, i) => (
+                                  <div key={p.uid} className="flex items-center gap-2.5">
+                                    <span className="text-[10px] font-black text-white/30 w-4 text-center">{i + 1}</span>
+                                    <div className="w-6 h-6 rounded-full overflow-hidden bg-white/10 flex-shrink-0">
+                                      {p.userPhoto ? <img src={p.userPhoto} alt="" className="w-full h-full object-cover" /> : null}
+                                    </div>
+                                    <p className="text-[11px] font-bold text-white flex-1 truncate">{p.userName || 'Player'}</p>
+                                    <div className="flex gap-0.5">
+                                      {STICKER_ORDER.map(tier => (
+                                        <div
+                                          key={tier}
+                                          className="w-3 h-3 rounded-sm"
+                                          style={{ background: p.uniqueTiers.includes(tier) ? STICKER_CONFIG[tier].solid : 'rgba(255,255,255,0.1)' }}
+                                        />
+                                      ))}
+                                    </div>
+                                    <span className="text-[10px] font-bold text-white/60 flex-shrink-0">{p.uniqueTiers.length}/5</span>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
 
                       {!joined ? (
                         /* Not joined — invite card */
