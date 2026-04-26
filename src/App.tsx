@@ -2525,6 +2525,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const [openStickerCardId, setOpenStickerCardId] = useState<string | null>(null);
   const [activePrograms, setActivePrograms] = useState<Challenge[]>([]);
   const [joiningProgramId, setJoiningProgramId] = useState<string | null>(null);
+  const [joinError, setJoinError] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'stores'), (snapshot) => {
@@ -2578,6 +2579,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const handleJoinProgramme = async (prog: Challenge) => {
     if (!user) return;
     setJoiningProgramId(prog.id);
+    setJoinError(null);
     try {
       const cardId = `${prog.id}_${user.uid}`;
       const userName = profile?.name || user.displayName || user.email?.split('@')[0] || 'Player';
@@ -2589,8 +2591,10 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         uniqueTiers: [],
         userName,
       });
-      await updateDoc(doc(db, 'challenges', prog.id), { participantUids: arrayUnion(user.uid) });
-    } catch (err) { console.error(err); }
+    } catch (err: any) {
+      console.error('join programme failed:', err);
+      setJoinError(err?.message || 'Failed to join. Try again.');
+    }
     setJoiningProgramId(null);
   };
 
@@ -2732,6 +2736,9 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                           >
                             {joiningProgramId === prog.id ? 'Joining...' : 'Join Game'}
                           </button>
+                          {joinError && (
+                            <p className="text-xs text-brand-rose text-center">{joinError}</p>
+                          )}
                         </div>
                       ) : (
                         /* Joined — Monopoly property strip board */
