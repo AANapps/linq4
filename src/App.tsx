@@ -354,25 +354,25 @@ interface GlobalPost {
 
 const ADMIN_EMAIL = 'info@adastranetwork.co.uk';
 
-type StickerTier = 'yellow' | 'orange' | 'blue' | 'purple' | 'gold';
+type StickerTier = 'brown' | 'lightblue' | 'red' | 'blue' | 'gold';
 
-const STICKER_ORDER: StickerTier[] = ['yellow', 'orange', 'blue', 'purple', 'gold'];
+const STICKER_ORDER: StickerTier[] = ['brown', 'lightblue', 'red', 'blue', 'gold'];
 
-const STICKER_CONFIG: Record<StickerTier, { color: string; bg: string; border: string; label: string; chance: string }> = {
-  yellow: { color: '#D97706', bg: '#FEF3C7', border: '#FDE68A', label: 'Common',    chance: '50%'    },
-  orange: { color: '#EA580C', bg: '#FFEDD5', border: '#FED7AA', label: 'Uncommon',  chance: '30%'    },
-  blue:   { color: '#2563EB', bg: '#DBEAFE', border: '#BFDBFE', label: 'Rare',      chance: '15%'    },
-  purple: { color: '#7C3AED', bg: '#EDE9FE', border: '#DDD6FE', label: 'Epic',      chance: '4.99%'  },
-  gold:   { color: '#92400E', bg: '#FEF9C3', border: '#FDE68A', label: 'Legendary', chance: '0.01%'  },
+const STICKER_CONFIG: Record<StickerTier, { color: string; solid: string; bg: string; border: string; label: string; chance: string }> = {
+  brown:    { color: '#6B3A2A', solid: '#955436', bg: '#F5E6D3', border: '#C4845C', label: 'Common',    chance: '50%'  },
+  lightblue:{ color: '#0369A1', solid: '#AAE0FA', bg: '#E0F2FE', border: '#7DD3FC', label: 'Uncommon',  chance: '28%'  },
+  red:      { color: '#B91C1C', solid: '#D21B17', bg: '#FEE2E2', border: '#FCA5A5', label: 'Rare',      chance: '14%'  },
+  blue:     { color: '#1D4ED8', solid: '#0072BB', bg: '#DBEAFE', border: '#93C5FD', label: 'Epic',      chance: '7%'   },
+  gold:     { color: '#92400E', solid: '#F5C518', bg: '#FFFBEB', border: '#FDE68A', label: 'Legendary', chance: '1%'   },
 };
 
 function rollStickerTier(): StickerTier {
   const r = Math.random();
-  if (r < 0.0001) return 'gold';
-  if (r < 0.05)   return 'purple';
-  if (r < 0.20)   return 'blue';
-  if (r < 0.50)   return 'orange';
-  return 'yellow';
+  if (r < 0.01) return 'gold';
+  if (r < 0.08) return 'blue';
+  if (r < 0.22) return 'red';
+  if (r < 0.50) return 'lightblue';
+  return 'brown';
 }
 
 interface CollectibleSticker {
@@ -384,7 +384,7 @@ interface CollectibleSticker {
 interface StickerCardDoc {
   id: string;
   user_id: string;
-  store_id: string;
+  programme_id: string;
   stickers: CollectibleSticker[];
   revealedIds: string[];
   uniqueTiers: StickerTier[];
@@ -1920,27 +1920,34 @@ function NavButton({ active, onClick, icon, label, badgeCount }: { active: boole
   );
 }
 
-// --- Sticker card issuance (triggered by stamp collection, mirrors stamp card infrastructure) ---
+// --- Sticker issuance (triggered by stamp collection — 1 stamp = 1 sticker per active programme) ---
 
-async function issueStickersToCard(customerUid: string, storeId: string, userName: string, qty: number): Promise<void> {
+async function issueStickersToCard(customerUid: string, userName: string, qty: number): Promise<void> {
   const newStickers: CollectibleSticker[] = Array.from({ length: qty }, () => ({
     id: Math.random().toString(36).slice(2),
     tier: rollStickerTier(),
     earnedAt: new Date().toISOString(),
   }));
-  const cardRef = doc(db, 'sticker_cards', `${customerUid}_${storeId}`);
-  const cardSnap = await getDoc(cardRef);
-  if (!cardSnap.exists()) {
-    await setDoc(cardRef, {
-      user_id: customerUid,
-      store_id: storeId,
-      stickers: newStickers,
-      revealedIds: [],
-      uniqueTiers: [],
-      userName,
-    });
-  } else {
-    await updateDoc(cardRef, { stickers: arrayUnion(...newStickers), userName });
+  const allSnap = await getDocs(collection(db, 'challenges'));
+  const activeProgs = allSnap.docs.filter(d => {
+    const data = d.data();
+    return data.type === 'collectible' && data.status === 'active';
+  });
+  for (const progDoc of activeProgs) {
+    const cardRef = doc(db, 'sticker_cards', `${progDoc.id}_${customerUid}`);
+    const cardSnap = await getDoc(cardRef);
+    if (!cardSnap.exists()) {
+      await setDoc(cardRef, {
+        user_id: customerUid,
+        programme_id: progDoc.id,
+        stickers: newStickers,
+        revealedIds: [],
+        uniqueTiers: [],
+        userName,
+      });
+    } else {
+      await updateDoc(cardRef, { stickers: arrayUnion(...newStickers), userName });
+    }
   }
 }
 
@@ -1987,20 +1994,24 @@ function StickerCard({ sticker, isRevealed, onReveal, size = 'md' }: {
           <span style={{ fontSize: 30, fontWeight: 900, color: '#94A3B8' }}>?</span>
           {!localRevealed && <span style={{ fontSize: 8, color: '#94A3B8', fontWeight: 600 }}>Tap to reveal</span>}
         </div>
-        {/* Back — coloured tier */}
+        {/* Back — Monopoly property card style */}
         <div style={{
           position: 'absolute', inset: 0, backfaceVisibility: 'hidden',
           transform: 'rotateY(180deg)',
-          background: `linear-gradient(135deg, ${cfg.bg}, white)`,
+          background: 'white',
           border: `2px solid ${cfg.border}`, borderRadius: 16,
-          boxShadow: `0 4px 20px ${cfg.color}44`,
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
+          boxShadow: `0 4px 20px ${cfg.color}33`,
+          display: 'flex', flexDirection: 'column', overflow: 'hidden',
         }}>
-          <span style={{ fontSize: 28, fontWeight: 900, color: cfg.color }}>
-            {sticker.tier === 'gold' ? '★' : sticker.tier[0].toUpperCase()}
-          </span>
-          <span style={{ fontSize: 9, fontWeight: 700, color: cfg.color }}>{cfg.label}</span>
-          <span style={{ fontSize: 8, color: `${cfg.color}99` }}>{cfg.chance}</span>
+          <div style={{ background: cfg.solid, height: '38%', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontSize: 22, fontWeight: 900, color: 'white', textShadow: '0 1px 3px rgba(0,0,0,0.4)' }}>
+              {sticker.tier === 'gold' ? '★' : sticker.tier[0].toUpperCase()}
+            </span>
+          </div>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+            <span style={{ fontSize: 9, fontWeight: 800, color: cfg.color, textAlign: 'center', lineHeight: 1.2 }}>{cfg.label}</span>
+            <span style={{ fontSize: 7, color: '#94A3B8' }}>{cfg.chance}</span>
+          </div>
         </div>
       </motion.div>
     </button>
@@ -2009,9 +2020,9 @@ function StickerCard({ sticker, isRevealed, onReveal, size = 'md' }: {
 
 // --- Sticker Collection Modal (per-store sticker card, mirrors loyalty card modal) ---
 
-function StickerCollectionModal({ stickerCard, store, onClose }: {
+function StickerCollectionModal({ stickerCard, programme, onClose }: {
   stickerCard: StickerCardDoc;
-  store?: StoreProfile;
+  programme?: Challenge;
   onClose: () => void;
   key?: React.Key;
 }) {
@@ -2042,7 +2053,7 @@ function StickerCollectionModal({ stickerCard, store, onClose }: {
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
                 <h2 className="font-display text-xl font-bold text-brand-navy">
-                  {store?.name || 'Sticker Collection'}
+                  {programme?.title || 'Sticker Collection'}
                 </h2>
                 <p className="text-xs text-brand-navy/50 mt-0.5">
                   {stickerCard.stickers.length} sticker{stickerCard.stickers.length !== 1 ? 's' : ''} collected
@@ -2148,7 +2159,9 @@ function StickerCollectionModal({ stickerCard, store, onClose }: {
 
 function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
   const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [collectibles, setCollectibles] = useState<Challenge[]>([]);
   const [deploying, setDeploying] = useState(false);
+  const [deployingCollectible, setDeployingCollectible] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [restartingId, setRestartingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -2165,10 +2178,16 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
   const [stdUnit, setStdUnit] = useState('');
   const [stdReward, setStdReward] = useState('');
 
+  // Collectible programme form state
+  const [colTitle, setColTitle] = useState('');
+  const [colReward, setColReward] = useState('');
+
   useEffect(() => {
     const q = query(collection(db, 'challenges'), orderBy('createdAt', 'desc'));
     return onSnapshot(q, snap => {
-      setChallenges(snap.docs.map(d => ({ id: d.id, ...d.data() } as Challenge)).filter(c => c.type !== 'collectible'));
+      const all = snap.docs.map(d => ({ id: d.id, ...d.data() } as Challenge));
+      setChallenges(all.filter(c => c.type !== 'collectible'));
+      setCollectibles(all.filter(c => c.type === 'collectible'));
     });
   }, []);
 
@@ -2191,6 +2210,24 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
       setStdTitle(''); setStdDesc(''); setStdGoal(''); setStdUnit(''); setStdReward('');
     } finally {
       setDeploying(false);
+    }
+  };
+
+  const handleDeployCollectible = async () => {
+    if (!colTitle.trim() || !colReward.trim()) return;
+    setDeployingCollectible(true);
+    try {
+      await addDoc(collection(db, 'challenges'), {
+        title: colTitle.trim(),
+        reward: colReward.trim(),
+        type: 'collectible',
+        status: 'active',
+        participantUids: [],
+        createdAt: serverTimestamp(),
+      });
+      setColTitle(''); setColReward('');
+    } finally {
+      setDeployingCollectible(false);
     }
   };
 
@@ -2418,14 +2455,75 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
             </button>
           </div>
 
+          {/* Collectible Sticker Programme */}
+          <div className="rounded-3xl overflow-hidden border-2 border-dashed border-amber-300 p-5 space-y-3 bg-amber-50">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">★</span>
+              <h3 className="font-bold text-amber-800 text-sm">Monopoly Sticker Programme</h3>
+            </div>
+            <p className="text-xs text-amber-700/70">
+              Platform-wide collectible game — 5 tiers (Brown → Gold). Every stamp issued awards 1 random sticker.
+            </p>
+            <input value={colTitle} onChange={e => setColTitle(e.target.value)} placeholder="Programme name (e.g. Season 1)" className={inputCls} />
+            <input value={colReward} onChange={e => setColReward(e.target.value)} placeholder="Full-set reward (e.g. £50 voucher)" className={inputCls} />
+            <button
+              onClick={handleDeployCollectible}
+              disabled={deployingCollectible || !colTitle.trim() || !colReward.trim()}
+              className="w-full bg-amber-500 text-white font-bold py-3 rounded-2xl text-sm flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
+            >
+              <Star size={15} /> {deployingCollectible ? 'Launching...' : 'Launch Programme'}
+            </button>
+            {collectibles.length > 0 && (
+              <div className="space-y-2 pt-1">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-amber-700/50">Programmes</p>
+                {collectibles.map(c => (
+                  <div key={c.id} className="rounded-2xl bg-white border border-amber-200 p-3 flex items-center gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-amber-800 text-xs truncate">{c.title}</p>
+                      <p className="text-[10px] text-amber-700/60">🎁 {c.reward}</p>
+                    </div>
+                    <button
+                      onClick={() => handleToggleStatus(c)}
+                      disabled={togglingId === c.id}
+                      className={cn(
+                        'px-2.5 py-1.5 rounded-xl text-[10px] font-bold flex-shrink-0',
+                        c.status === 'active' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
+                      )}
+                    >
+                      {togglingId === c.id ? '...' : c.status === 'active' ? 'Pause' : 'Resume'}
+                    </button>
+                    <button
+                      onClick={() => setConfirmDelete(c.id)}
+                      disabled={deletingId === c.id}
+                      className="p-1.5 rounded-xl bg-red-50 text-brand-rose flex-shrink-0"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                    {confirmDelete === c.id && (
+                      <div className="absolute inset-x-5 rounded-2xl bg-white border border-brand-rose/30 p-3 space-y-2 z-10 shadow-lg">
+                        <p className="text-xs font-bold text-brand-rose text-center">Delete programme and all sticker cards?</p>
+                        <div className="flex gap-2">
+                          <button onClick={() => setConfirmDelete(null)} className="flex-1 py-2 rounded-xl bg-white text-brand-navy/60 text-xs font-bold border border-brand-navy/10">Cancel</button>
+                          <button onClick={() => handleDelete(c.id)} disabled={deletingId === c.id} className="flex-1 py-2 rounded-xl bg-brand-rose text-white text-xs font-bold disabled:opacity-50">
+                            {deletingId === c.id ? 'Deleting...' : 'Delete'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {challenges.length > 0 && (
             <div className="space-y-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Active Challenges</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Standard Challenges</p>
               {challenges.map(c => <ChallengeCard key={c.id} c={c} />)}
             </div>
           )}
 
-          {challenges.length === 0 && (
+          {challenges.length === 0 && collectibles.length === 0 && (
             <p className="text-center text-brand-navy/40 text-sm py-8">No challenges yet. Deploy one above.</p>
           )}
         </div>
@@ -2441,6 +2539,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const [walletSubTab, setWalletSubTab] = useState<'stamps' | 'challenges'>('stamps');
   const [myStickerCards, setMyStickerCards] = useState<StickerCardDoc[]>([]);
   const [openStickerCardId, setOpenStickerCardId] = useState<string | null>(null);
+  const [activePrograms, setActivePrograms] = useState<Challenge[]>([]);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'stores'), (snapshot) => {
@@ -2458,6 +2557,11 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       err => console.error('[sticker_cards snapshot]', err)
     );
   }, [user.uid]);
+
+  useEffect(() => {
+    const q = query(collection(db, 'challenges'), where('type', '==', 'collectible'), where('status', '==', 'active'));
+    return onSnapshot(q, snap => setActivePrograms(snap.docs.map(d => ({ id: d.id, ...d.data() } as Challenge))));
+  }, []);
 
   const handleJoinStore = async (store: StoreProfile) => {
     if (!user) return;
@@ -2479,15 +2583,6 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         userName,
         userPhoto,
       });
-      await setDoc(doc(db, 'sticker_cards', cardId), {
-        user_id: user.uid,
-        store_id: store.id,
-        stickers: [],
-        revealedIds: [],
-        uniqueTiers: [],
-        userName,
-        userPhoto,
-      }, { merge: true });
       await updateDoc(doc(db, 'users', user.uid), { total_cards_held: increment(1) });
       setActiveTab('home');
     }
@@ -2533,7 +2628,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                     walletSubTab === 'stamps' ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/50'
                   )}
                 >
-                  Stamps
+                  Wallet
                 </button>
                 <button
                   onClick={() => setWalletSubTab('challenges')}
@@ -2542,7 +2637,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                     walletSubTab === 'challenges' ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/50'
                   )}
                 >
-                  Stickers
+                  Challenges
                   {totalUnrevealed > 0 && (
                     <span className="absolute top-1 right-3 w-4 h-4 bg-brand-rose text-white text-[9px] font-black rounded-full flex items-center justify-center">
                       {totalUnrevealed > 9 ? '9+' : totalUnrevealed}
@@ -2579,68 +2674,126 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
             </div>
           )}
 
-          {/* Stickers sub-tab — one sticker card per loyalty programme */}
+          {/* Challenges sub-tab — Monopoly sticker programme */}
           {walletSubTab === 'challenges' && (
-            <div className="space-y-4">
-              <p className="text-brand-navy/60 text-sm">You have {myStickerCards.length} sticker collection{myStickerCards.length !== 1 ? 's' : ''}.</p>
-              {myStickerCards.length > 0 ? (
-                myStickerCards.map(sc => {
-                  const store = stores.find(s => s.id === sc.store_id);
-                  const unrevealed = sc.stickers.filter(s => !(sc.revealedIds || []).includes(s.id));
-                  const myUnique = new Set(sc.uniqueTiers || []);
+            <div className="space-y-6">
+              {activePrograms.length === 0 ? (
+                <div className="glass-card p-10 rounded-[2.5rem] border-2 border-dashed border-amber-300/60 text-center">
+                  <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Trophy className="w-8 h-8 text-amber-300" />
+                  </div>
+                  <p className="text-brand-navy/60">No active sticker programmes right now. Check back soon!</p>
+                </div>
+              ) : (
+                activePrograms.map(prog => {
+                  const sc = myStickerCards.find(s => s.programme_id === prog.id);
+                  const myUnique = new Set(sc?.uniqueTiers || []);
+                  const unrevealed = (sc?.stickers || []).filter(s => !(sc?.revealedIds || []).includes(s.id));
+                  const totalCollected = sc?.stickers.length || 0;
+                  const isComplete = myUnique.size >= 5;
                   return (
-                    <button
-                      key={sc.id}
-                      onClick={() => setOpenStickerCardId(sc.id)}
-                      className="w-full glass-card p-4 rounded-3xl text-left active:scale-[0.98] transition-all"
-                    >
-                      <div className="flex items-start justify-between gap-3 mb-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap mb-1">
-                            {store?.logoURL
-                              ? <img src={store.logoURL} alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
-                              : <div className="w-5 h-5 rounded-full bg-brand-navy/10 flex-shrink-0" />}
-                            <span className="font-bold text-brand-navy text-sm truncate">{store?.name || 'Loyalty Programme'}</span>
-                          </div>
-                          <p className="text-brand-navy/50 text-xs">{sc.stickers.length} sticker{sc.stickers.length !== 1 ? 's' : ''} collected</p>
+                    <div key={prog.id} className="rounded-[2rem] overflow-hidden shadow-lg border border-black/5">
+                      {/* Board header */}
+                      <div className="bg-brand-navy px-5 py-4 flex items-center justify-between">
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-white/50">Monopoly Challenge</p>
+                          <h3 className="font-display text-lg font-bold text-white leading-tight">{prog.title}</h3>
                         </div>
                         {unrevealed.length > 0 && (
-                          <span className="text-[10px] font-bold text-white bg-brand-rose px-2 py-0.5 rounded-full animate-pulse flex-shrink-0">
+                          <span className="text-[10px] font-bold text-white bg-brand-rose px-2.5 py-1 rounded-full animate-pulse">
                             {unrevealed.length} new!
                           </span>
                         )}
                       </div>
-                      <div className="flex gap-1.5 items-center">
-                        {STICKER_ORDER.map(tier => {
-                          const cfg = STICKER_CONFIG[tier];
-                          const lit = myUnique.has(tier);
-                          return (
-                            <div key={tier}
-                              className="w-8 h-8 rounded-xl border-2 flex items-center justify-center text-xs font-black transition-all"
-                              style={lit
-                                ? { background: cfg.bg, borderColor: cfg.border, color: cfg.color }
-                                : { background: '#F1F5F9', borderColor: '#E2E8F0', color: '#CBD5E1' }}>
-                              {lit ? (tier === 'gold' ? '★' : tier[0].toUpperCase()) : '?'}
-                            </div>
-                          );
-                        })}
-                        <span className="ml-auto text-xs text-brand-navy/40 font-medium">{myUnique.size}/5</span>
+
+                      {/* Monopoly property strip board */}
+                      <div className="bg-white px-4 py-5">
+                        <div className="flex gap-2 mb-4">
+                          {STICKER_ORDER.map(tier => {
+                            const cfg = STICKER_CONFIG[tier];
+                            const lit = myUnique.has(tier);
+                            const count = (sc?.stickers || []).filter(s => s.tier === tier).length;
+                            return (
+                              <div key={tier} className="flex-1 flex flex-col items-center gap-1.5">
+                                {/* Property colour strip */}
+                                <div
+                                  className="w-full rounded-t-xl rounded-b-sm transition-all"
+                                  style={{
+                                    height: 36,
+                                    background: lit ? cfg.solid : '#E2E8F0',
+                                    boxShadow: lit ? `0 2px 8px ${cfg.color}44` : 'none',
+                                  }}
+                                />
+                                {/* White property body */}
+                                <div
+                                  className="w-full rounded-b-xl flex flex-col items-center justify-center py-2 border-x border-b"
+                                  style={{
+                                    borderColor: lit ? cfg.border : '#E2E8F0',
+                                    background: lit ? cfg.bg : '#F8FAFC',
+                                    minHeight: 44,
+                                  }}
+                                >
+                                  <span className="text-[10px] font-black leading-tight text-center"
+                                    style={{ color: lit ? cfg.color : '#CBD5E1' }}>
+                                    {cfg.label}
+                                  </span>
+                                  {count > 0 && (
+                                    <span className="text-[9px] font-bold mt-0.5" style={{ color: cfg.color }}>×{count}</span>
+                                  )}
+                                  {!lit && <span className="text-base text-slate-300 mt-0.5">?</span>}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs text-brand-navy/40">
+                              {myUnique.size}/5 tiers · {totalCollected} sticker{totalCollected !== 1 ? 's' : ''}
+                            </p>
+                            {isComplete && (
+                              <p className="text-xs font-bold text-amber-600">Full set! Claim: {prog.reward}</p>
+                            )}
+                          </div>
+                          {sc && (
+                            <button
+                              onClick={() => setOpenStickerCardId(sc.id)}
+                              className="px-4 py-2 rounded-2xl bg-brand-navy text-white text-xs font-bold active:scale-95 transition-all"
+                            >
+                              {unrevealed.length > 0 ? 'Reveal' : 'View'}
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </button>
+
+                      {/* Prize banner */}
+                      <div className="bg-amber-50 border-t border-amber-100 px-5 py-3 flex items-center gap-2">
+                        <span className="text-base">🏆</span>
+                        <p className="text-xs text-amber-800 font-semibold flex-1">Full set reward: <span className="font-bold">{prog.reward}</span></p>
+                        <p className="text-[10px] text-amber-600 font-bold">{isComplete ? '✓ Earned' : `${5 - myUnique.size} left`}</p>
+                      </div>
+                    </div>
                   );
                 })
-              ) : (
-                <div className="glass-card p-10 rounded-[2.5rem] border-2 border-dashed border-brand-rose/40 text-center">
-                  <div className="w-16 h-16 bg-brand-bg rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Trophy className="w-8 h-8 text-brand-navy/20" />
+              )}
+
+              {/* Rarity legend */}
+              {activePrograms.length > 0 && (
+                <div className="glass-card p-4 rounded-3xl">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-3">Rarity Guide</p>
+                  <div className="space-y-2">
+                    {STICKER_ORDER.map(tier => {
+                      const cfg = STICKER_CONFIG[tier];
+                      return (
+                        <div key={tier} className="flex items-center gap-3">
+                          <div className="w-6 h-6 rounded-lg flex-shrink-0" style={{ background: cfg.solid }} />
+                          <span className="text-xs font-bold flex-1" style={{ color: cfg.color }}>{cfg.label}</span>
+                          <span className="text-[10px] text-brand-navy/40">{cfg.chance} chance</span>
+                        </div>
+                      );
+                    })}
                   </div>
-                  <p className="text-brand-navy/60 mb-6">Join a loyalty programme to start collecting stickers.</p>
-                  <button
-                    onClick={() => setActiveTab('discover')}
-                    className="bg-brand-navy text-white px-8 py-3 rounded-xl font-bold text-sm"
-                  >
-                    Find Stores
-                  </button>
                 </div>
               )}
             </div>
@@ -2653,12 +2806,12 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         {openStickerCardId && (() => {
           const sc = myStickerCards.find(s => s.id === openStickerCardId);
           if (!sc) return null;
-          const store = stores.find(s => s.id === sc.store_id);
+          const programme = activePrograms.find(p => p.id === sc.programme_id);
           return (
             <StickerCollectionModal
               key={openStickerCardId}
               stickerCard={sc}
-              store={store}
+              programme={programme}
               onClose={() => setOpenStickerCardId(null)}
             />
           );
@@ -2877,7 +3030,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
           totalStamps: increment(qty)
         });
 
-        issueStickersToCard(customer.uid, store.id, customer.name, qty).catch(console.error);
+        issueStickersToCard(customer.uid, customer.name, qty).catch(console.error);
         setIssueStatus({ type: 'success', message: `${qty} stamp(s) issued to ${customer.name}!` });
         setCustomerHandle('');
         setStampQuantity(1);
@@ -3312,7 +3465,7 @@ function LoyaltyCard({ card, store, onViewStore }: { card: Card, store?: StorePr
       });
 
       const customerName = auth.currentUser.displayName || auth.currentUser.email?.split('@')[0] || 'Customer';
-      issueStickersToCard(auth.currentUser.uid, store.id, customerName, qty).catch(console.error);
+      issueStickersToCard(auth.currentUser.uid, customerName, qty).catch(console.error);
 
       if (newStamps >= limit) {
         setShowQR(false);
@@ -6684,15 +6837,6 @@ function ForYouScreen({ onViewUser, onViewStore, currentUser, currentProfile, us
           userName,
           userPhoto,
         });
-        await setDoc(doc(db, 'sticker_cards', cardId), {
-          user_id: currentUser.uid,
-          store_id: store.id,
-          stickers: [],
-          revealedIds: [],
-          uniqueTiers: [],
-          userName,
-          userPhoto,
-        }, { merge: true });
         await updateDoc(doc(db, 'users', currentUser.uid), { total_cards_held: increment(1) });
       }
       if (onViewStore) onViewStore(store);
@@ -7658,15 +7802,6 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
       userName,
       userPhoto,
     });
-    await setDoc(doc(db, 'sticker_cards', cardId), {
-      user_id: user.uid,
-      store_id: store.id,
-      stickers: [],
-      revealedIds: [],
-      uniqueTiers: [],
-      userName,
-      userPhoto,
-    }, { merge: true });
     await updateDoc(doc(db, 'users', user.uid), { total_cards_held: increment(1) });
   };
 
