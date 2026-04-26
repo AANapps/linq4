@@ -3386,12 +3386,14 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       </AnimatePresence>
 
       {activeTab === 'discover' && (
-        <DiscoveryScreen 
-          stores={stores} 
-          cards={initialCards} 
-          onJoin={handleJoinStore} 
-          onViewStore={onViewStore} 
-          onViewUser={onViewUser} 
+        <DiscoveryScreen
+          stores={stores}
+          cards={initialCards}
+          onJoin={handleJoinStore}
+          onViewStore={onViewStore}
+          onViewUser={onViewUser}
+          currentUser={user}
+          currentProfile={profile}
         />
       )}
 
@@ -4971,34 +4973,74 @@ function StoreCard({ store, card, onJoin, onClick }: { store: StoreProfile, card
   );
 }
 
-function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser }: { stores: StoreProfile[], cards: Card[], onJoin: (s: StoreProfile) => void, onViewStore: (s: StoreProfile) => void, onViewUser: (u: UserProfile) => void }) {
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, currentUser, currentProfile }: {
+  stores: StoreProfile[];
+  cards: Card[];
+  onJoin: (s: StoreProfile) => void;
+  onViewStore: (s: StoreProfile) => void;
+  onViewUser: (u: UserProfile) => void;
+  currentUser: FirebaseUser;
+  currentProfile: UserProfile | null;
+}) {
   const [search, setSearch] = useState('');
   const [searchType, setSearchType] = useState<'stores' | 'users'>('stores');
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [activeCategory, setActiveCategory] = useState('All');
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        pos => setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => {}
+      );
+    }
+  }, []);
 
   useEffect(() => {
     if (searchType === 'users') {
       setLoadingUsers(true);
       const q = query(collection(db, 'users'), where('role', '==', 'consumer'), limit(50));
       getDocs(q).then(snap => {
-        setUsers(snap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile)));
+        const fetched = snap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile));
+        // Ensure current user appears even if not in query results
+        if (currentProfile && !fetched.some(u => u.uid === currentProfile.uid)) {
+          fetched.unshift(currentProfile);
+        }
+        setUsers(fetched);
         setLoadingUsers(false);
       });
     }
-  }, [searchType]);
+  }, [searchType, currentProfile]);
 
-  const filteredStores = stores.filter(s => {
-    const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase()) || 
-                          s.category.toLowerCase().includes(search.toLowerCase());
-    const matchesCat = activeCategory === 'All' || s.category === activeCategory;
-    const notJoined = !cards.some(c => c.store_id === s.id && !c.isArchived);
-    return matchesSearch && matchesCat && notJoined;
-  });
+  const filteredStores = (() => {
+    const matched = stores.filter(s => {
+      const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase()) ||
+                            s.category.toLowerCase().includes(search.toLowerCase());
+      const matchesCat = activeCategory === 'All' || s.category === activeCategory;
+      const notJoined = !cards.some(c => c.store_id === s.id && !c.isArchived);
+      return matchesSearch && matchesCat && notJoined;
+    });
+    if (!userCoords) return matched;
+    return [...matched].sort((a, b) => {
+      const distA = (a.lat != null && a.lng != null) ? haversineKm(userCoords.lat, userCoords.lng, a.lat, a.lng) : Infinity;
+      const distB = (b.lat != null && b.lng != null) ? haversineKm(userCoords.lat, userCoords.lng, b.lat, b.lng) : Infinity;
+      return distA - distB;
+    });
+  })();
 
-  const filteredUsers = users.filter(u => 
-    (u.name || '').toLowerCase().includes(search.toLowerCase()) || 
+  const filteredUsers = users.filter(u =>
+    (u.name || '').toLowerCase().includes(search.toLowerCase()) ||
+    (u.handle || '').toLowerCase().includes(search.toLowerCase()) ||
     (u.email || '').toLowerCase().includes(search.toLowerCase())
   );
 
@@ -5100,8 +5142,8 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser }: { s
                       <img src={avatarSrc(u.gender)} alt="" className="w-full h-full object-cover" />
                     </div>
                     <div>
-                      <p className="font-bold text-sm">@{u.email?.split('@')[0] || u.name}</p>
-                      <p className="text-xs text-brand-navy/40">{u.name}</p>
+                      <p className="font-bold text-sm">{u.name || u.handle || u.email?.split('@')[0]}</p>
+                      <p className="text-xs text-brand-navy/40">{u.handle ? `@${u.handle}` : u.email?.split('@')[0]}</p>
                     </div>
                   </div>
                   <div className="text-right">
