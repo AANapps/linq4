@@ -434,6 +434,21 @@ interface Challenge {
   tierChances?: { brown: number; lightblue: number; red: number; blue: number; gold: number };
 }
 
+interface StoreAutomation {
+  id: string;
+  storeId: string;
+  storeName?: string;
+  type: 'birthday' | 'scheduled';
+  title: string;
+  message: string;
+  daysBefore?: number;
+  scheduledAt?: any;
+  recurring?: 'none' | 'yearly';
+  status: 'active' | 'paused';
+  createdAt: any;
+  lastFiredDate?: string;
+}
+
 // --- Main App Component ---
 
 export default function App() {
@@ -3391,6 +3406,445 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   );
 }
 
+// --- Vendor Broadcast: Add Automation Modal ---
+
+function AddAutomationModal({ store, onClose }: { store: StoreProfile; onClose: () => void }) {
+  const [type, setType] = useState<'birthday' | 'scheduled'>('birthday');
+  const [title, setTitle] = useState('');
+  const [message, setMessage] = useState('');
+  const [daysBefore, setDaysBefore] = useState(0);
+  const [scheduledAt, setScheduledAt] = useState('');
+  const [recurring, setRecurring] = useState<'none' | 'yearly'>('none');
+  const [saving, setSaving] = useState(false);
+
+  const valid = title.trim() && message.trim() && (type === 'birthday' || !!scheduledAt);
+
+  const handleSave = async () => {
+    if (!valid) return;
+    setSaving(true);
+    try {
+      const data: any = {
+        storeId: store.id,
+        storeName: store.name,
+        type,
+        title: title.trim(),
+        message: message.trim(),
+        status: 'active',
+        createdAt: serverTimestamp(),
+      };
+      if (type === 'birthday') {
+        data.daysBefore = daysBefore;
+      } else {
+        data.scheduledAt = Timestamp.fromDate(new Date(scheduledAt));
+        data.recurring = recurring;
+      }
+      await addDoc(collection(db, 'store_automations'), data);
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        transition={{ type: 'spring', damping: 30, stiffness: 350 }}
+        className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[160] max-w-sm mx-auto bg-white rounded-[2rem] shadow-2xl p-6 space-y-5"
+      >
+        <div className="flex items-center justify-between">
+          <h3 className="font-display text-lg font-bold text-brand-navy">New Automation</h3>
+          <button onClick={onClose} className="p-2 rounded-xl bg-brand-navy/5">
+            <X size={16} className="text-brand-navy/50" />
+          </button>
+        </div>
+
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2">Type</p>
+          <div className="flex gap-2">
+            {(['birthday', 'scheduled'] as const).map(t => (
+              <button
+                key={t}
+                onClick={() => setType(t)}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all',
+                  type === t ? 'bg-brand-navy text-white' : 'bg-brand-navy/5 text-brand-navy/50'
+                )}
+              >
+                {t === 'birthday' ? <><Gift size={12} /> Birthday</> : <><Calendar size={12} /> Scheduled</>}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {type === 'birthday' && (
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2">When to send</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => setDaysBefore(0)}
+                className={cn(
+                  'px-3 py-2 rounded-xl text-xs font-bold transition-all',
+                  daysBefore === 0 ? 'bg-brand-navy text-white' : 'bg-brand-navy/5 text-brand-navy/50'
+                )}
+              >
+                On birthday
+              </button>
+              <span className="text-brand-navy/30 text-xs">or</span>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  min={1}
+                  max={30}
+                  value={daysBefore > 0 ? daysBefore : ''}
+                  onChange={e => setDaysBefore(Math.max(1, parseInt(e.target.value) || 1))}
+                  onFocus={() => { if (daysBefore === 0) setDaysBefore(7); }}
+                  placeholder="7"
+                  className="w-14 px-2 py-2 rounded-xl border border-black/10 text-xs text-center font-bold focus:outline-none focus:ring-2 focus:ring-brand-navy/20"
+                />
+                <span className="text-xs text-brand-navy/50 whitespace-nowrap">days before</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {type === 'scheduled' && (
+          <div className="space-y-3">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2">Date &amp; Time</p>
+              <input
+                type="datetime-local"
+                value={scheduledAt}
+                onChange={e => setScheduledAt(e.target.value)}
+                className="w-full px-4 py-3 rounded-2xl border border-black/10 text-sm text-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-navy/20"
+              />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2">Repeat</p>
+              <div className="flex gap-2">
+                {(['none', 'yearly'] as const).map(r => (
+                  <button
+                    key={r}
+                    onClick={() => setRecurring(r)}
+                    className={cn(
+                      'flex-1 py-2 rounded-xl text-xs font-bold transition-all',
+                      recurring === r ? 'bg-brand-navy text-white' : 'bg-brand-navy/5 text-brand-navy/50'
+                    )}
+                  >
+                    {r === 'none' ? 'Once' : 'Yearly'}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-2.5">
+          <input
+            type="text"
+            placeholder="Notification title"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            maxLength={80}
+            className="w-full px-4 py-3 rounded-2xl border border-black/10 text-sm font-bold text-brand-navy placeholder:text-brand-navy/30 focus:outline-none focus:ring-2 focus:ring-brand-navy/20"
+          />
+          <textarea
+            placeholder="Message body..."
+            value={message}
+            onChange={e => setMessage(e.target.value)}
+            rows={3}
+            maxLength={500}
+            className="w-full px-4 py-3 rounded-2xl border border-black/10 text-sm text-brand-navy placeholder:text-brand-navy/30 focus:outline-none focus:ring-2 focus:ring-brand-navy/20 resize-none"
+          />
+        </div>
+
+        <button
+          onClick={handleSave}
+          disabled={!valid || saving}
+          className="w-full bg-brand-navy text-white font-bold py-3.5 rounded-2xl text-sm active:scale-95 transition-all disabled:opacity-40"
+        >
+          {saving ? 'Saving...' : 'Save Automation'}
+        </button>
+      </motion.div>
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 0.4 }} exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black z-[159]"
+        onClick={onClose}
+      />
+    </>
+  );
+}
+
+// --- Vendor Broadcast Panel ---
+
+function VendorBroadcastPanel({ store, storeCards, onClose }: {
+  store: StoreProfile;
+  storeCards: Card[];
+  onClose: () => void;
+}) {
+  const [subTab, setSubTab] = useState<'mass' | 'automations'>('mass');
+
+  // Mass message
+  const [filter, setFilter] = useState<'cardholders' | 'followers' | 'both'>('cardholders');
+  const [msgTitle, setMsgTitle] = useState('');
+  const [msgBody, setMsgBody] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sentCount, setSentCount] = useState<number | null>(null);
+  const [followerUids, setFollowerUids] = useState<string[]>([]);
+  const [loadingFollowers, setLoadingFollowers] = useState(true);
+
+  const cardHolderUids = [...new Set(storeCards.filter(c => !c.isArchived).map(c => c.user_id))];
+
+  useEffect(() => {
+    getDocs(query(collection(db, 'store_follows'), where('storeId', '==', store.id)))
+      .then(snap => setFollowerUids(snap.docs.map(d => d.data().followerUid as string)))
+      .finally(() => setLoadingFollowers(false));
+  }, [store.id]);
+
+  const recipientUids = (() => {
+    const s = new Set<string>();
+    if (filter === 'cardholders' || filter === 'both') cardHolderUids.forEach(u => s.add(u));
+    if (filter === 'followers' || filter === 'both') followerUids.forEach(u => s.add(u));
+    return [...s];
+  })();
+
+  const handleSend = async () => {
+    if (!msgTitle.trim() || !msgBody.trim() || recipientUids.length === 0) return;
+    setSending(true);
+    setSentCount(null);
+    try {
+      for (let i = 0; i < recipientUids.length; i += 400) {
+        await Promise.all(recipientUids.slice(i, i + 400).map(uid =>
+          addDoc(collection(db, 'notifications'), {
+            toUid: uid,
+            type: 'broadcast',
+            title: msgTitle.trim(),
+            message: msgBody.trim(),
+            storeId: store.id,
+            storeName: store.name,
+            storeLogoUrl: store.logoUrl || '',
+            createdAt: serverTimestamp(),
+            isRead: false,
+          })
+        ));
+      }
+      setSentCount(recipientUids.length);
+      setMsgTitle('');
+      setMsgBody('');
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // Automations
+  const [automations, setAutomations] = useState<StoreAutomation[]>([]);
+  const [showAdd, setShowAdd] = useState(false);
+
+  useEffect(() => {
+    return onSnapshot(
+      query(collection(db, 'store_automations'), where('storeId', '==', store.id)),
+      snap => setAutomations(snap.docs.map(d => ({ id: d.id, ...d.data() } as StoreAutomation)))
+    );
+  }, [store.id]);
+
+  const toggleStatus = async (a: StoreAutomation) => {
+    await updateDoc(doc(db, 'store_automations', a.id), {
+      status: a.status === 'active' ? 'paused' : 'active',
+    });
+  };
+
+  const deleteAutomation = async (id: string) => {
+    await deleteDoc(doc(db, 'store_automations', id));
+  };
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0, y: '100%' }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: '100%' }}
+        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+        className="fixed inset-0 z-[150] flex flex-col max-w-md mx-auto"
+      >
+        <button onClick={onClose} className="flex-shrink-0 h-8 w-full" />
+        <div className="flex-1 flex flex-col overflow-hidden bg-brand-bg rounded-t-[2.5rem] shadow-2xl">
+          <div className="flex-shrink-0 px-5 pt-5 pb-4 border-b border-black/5">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="font-display text-xl font-bold text-brand-navy">Broadcast</h2>
+                <p className="text-xs text-brand-navy/40">{store.name}</p>
+              </div>
+              <button onClick={onClose} className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm">
+                <X size={18} className="text-brand-navy/60" />
+              </button>
+            </div>
+            <div className="flex gap-2">
+              {(['mass', 'automations'] as const).map(t => (
+                <button
+                  key={t}
+                  onClick={() => setSubTab(t)}
+                  className={cn(
+                    'flex-1 py-2.5 rounded-xl text-xs font-bold transition-all',
+                    subTab === t ? 'bg-brand-navy text-white' : 'bg-brand-navy/5 text-brand-navy/50'
+                  )}
+                >
+                  {t === 'mass' ? 'Mass Message' : 'Automations'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-5">
+            {subTab === 'mass' && (
+              <div className="space-y-5">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2">Send To</p>
+                  <div className="flex gap-2">
+                    {(['cardholders', 'followers', 'both'] as const).map(f => (
+                      <button
+                        key={f}
+                        onClick={() => { setFilter(f); setSentCount(null); }}
+                        className={cn(
+                          'flex-1 py-2.5 rounded-xl text-xs font-bold transition-all',
+                          filter === f ? 'bg-brand-navy text-white' : 'bg-brand-navy/5 text-brand-navy/50'
+                        )}
+                      >
+                        {f === 'cardholders' ? 'Card Holders' : f === 'followers' ? 'Followers' : 'Both'}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-brand-navy/40 mt-2 text-center">
+                    {loadingFollowers
+                      ? 'Loading...'
+                      : `${recipientUids.length} recipient${recipientUids.length !== 1 ? 's' : ''}`}
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    placeholder="Message title"
+                    value={msgTitle}
+                    onChange={e => { setMsgTitle(e.target.value); setSentCount(null); }}
+                    maxLength={80}
+                    className="w-full px-4 py-3 rounded-2xl bg-white border border-black/8 text-sm font-bold text-brand-navy placeholder:text-brand-navy/30 focus:outline-none focus:ring-2 focus:ring-brand-navy/20"
+                  />
+                  <textarea
+                    placeholder="Write your message..."
+                    value={msgBody}
+                    onChange={e => { setMsgBody(e.target.value); setSentCount(null); }}
+                    rows={5}
+                    maxLength={500}
+                    className="w-full px-4 py-3 rounded-2xl bg-white border border-black/8 text-sm text-brand-navy placeholder:text-brand-navy/30 focus:outline-none focus:ring-2 focus:ring-brand-navy/20 resize-none"
+                  />
+                  <p className="text-[10px] text-brand-navy/30 text-right">{msgBody.length}/500</p>
+                </div>
+
+                {sentCount !== null && (
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-2xl text-center">
+                    <p className="text-sm font-bold text-green-700">
+                      ✓ Sent to {sentCount} {sentCount === 1 ? 'person' : 'people'}
+                    </p>
+                  </div>
+                )}
+
+                <button
+                  onClick={handleSend}
+                  disabled={sending || !msgTitle.trim() || !msgBody.trim() || recipientUids.length === 0}
+                  className="w-full bg-brand-navy text-white font-bold py-4 rounded-2xl text-sm flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-40"
+                >
+                  <Send size={16} />
+                  {sending ? 'Sending...' : `Send to ${recipientUids.length} recipient${recipientUids.length !== 1 ? 's' : ''}`}
+                </button>
+              </div>
+            )}
+
+            {subTab === 'automations' && (
+              <div className="space-y-4">
+                <button
+                  onClick={() => setShowAdd(true)}
+                  className="w-full border-2 border-dashed border-brand-navy/20 rounded-2xl py-4 flex items-center justify-center gap-2 text-brand-navy/40 font-bold text-sm active:bg-brand-navy/5 transition-colors"
+                >
+                  <Plus size={18} />
+                  Add Automation
+                </button>
+
+                {automations.length === 0 && (
+                  <p className="text-center text-sm text-brand-navy/30 py-6">
+                    No automations yet. Automate birthday messages, holiday deals, and more.
+                  </p>
+                )}
+
+                {automations.map(a => (
+                  <div key={a.id} className="bg-white rounded-2xl border border-black/5 shadow-sm p-4">
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                        <div className={cn(
+                          'w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0',
+                          a.type === 'birthday' ? 'bg-pink-50' : 'bg-blue-50'
+                        )}>
+                          {a.type === 'birthday'
+                            ? <Gift size={16} className="text-pink-500" />
+                            : <Calendar size={16} className="text-blue-500" />}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-brand-navy truncate">{a.title}</p>
+                          <p className="text-[10px] text-brand-navy/40">
+                            {a.type === 'birthday'
+                              ? (a.daysBefore === 0 ? 'On birthday' : `${a.daysBefore} days before birthday`)
+                              : a.scheduledAt
+                                ? new Date(a.scheduledAt.toDate?.() ?? a.scheduledAt).toLocaleDateString('en-GB', {
+                                    day: 'numeric', month: 'short', year: 'numeric',
+                                  })
+                                : 'Scheduled'}
+                            {a.recurring === 'yearly' ? ' · Yearly' : ''}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <button
+                          onClick={() => toggleStatus(a)}
+                          className={cn(
+                            'text-[10px] font-bold px-2.5 py-1 rounded-full transition-colors',
+                            a.status === 'active'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-brand-navy/8 text-brand-navy/40'
+                          )}
+                        >
+                          {a.status === 'active' ? 'Active' : 'Paused'}
+                        </button>
+                        <button
+                          onClick={() => deleteAutomation(a.id)}
+                          className="p-1.5 rounded-xl text-brand-navy/20 active:text-red-400 transition-colors"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-xs text-brand-navy/50 line-clamp-2 ml-11">{a.message}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </motion.div>
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 0.5 }} exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black z-[149]"
+        onClick={onClose}
+      />
+      <AnimatePresence>
+        {showAdd && <AddAutomationModal store={store} onClose={() => setShowAdd(false)} />}
+      </AnimatePresence>
+    </>
+  );
+}
+
 // --- Vendor App ---
 
 function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notifications, activeChatId, setActiveChatId, onLogout, onDeleteAccount }: { activeTab: string, setActiveTab: (tab: string) => void, profile: UserProfile | null, user: FirebaseUser, onViewUser: (u: UserProfile) => void, notifications: Notification[], activeChatId: string | null, setActiveChatId: (id: string | null) => void, onLogout: () => void, onDeleteAccount: () => Promise<void>, key?: React.Key }) {
@@ -3418,6 +3872,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   const [statModal, setStatModal] = useState<null | 'members' | 'stamps' | 'activeCards'>(null);
   const [statModalSearch, setStatModalSearch] = useState('');
   const [memberProfiles, setMemberProfiles] = useState<Map<string, UserProfile>>(new Map());
+  const [showBroadcast, setShowBroadcast] = useState(false);
 
   useEffect(() => {
     if (!store) return;
@@ -3453,6 +3908,68 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
     return onSnapshot(q, snap => setStoreCards(snap.docs.map(d => ({ id: d.id, ...d.data() } as Card))), () => {});
   }, [store?.id]);
 
+  // Run automations once when store + cards are ready
+  useEffect(() => {
+    if (!store || storeCards.length === 0) return;
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const cardHolderUids: string[] = [...new Set<string>(storeCards.filter((c: Card) => !c.isArchived).map((c: Card) => c.user_id))];
+
+    getDocs(query(collection(db, 'store_automations'), where('storeId', '==', store.id), where('status', '==', 'active')))
+      .then(async snap => {
+        for (const autoDoc of snap.docs) {
+          const a = { id: autoDoc.id, ...autoDoc.data() } as StoreAutomation;
+          if (a.lastFiredDate === todayStr) continue;
+
+          const sendNotifs = async (uids: string[]) => {
+            if (uids.length === 0) return;
+            for (let i = 0; i < uids.length; i += 400) {
+              await Promise.all(uids.slice(i, i + 400).map(uid =>
+                addDoc(collection(db, 'notifications'), {
+                  toUid: uid, type: 'broadcast',
+                  title: a.title, message: a.message,
+                  storeId: store.id, storeName: store.name,
+                  createdAt: serverTimestamp(), isRead: false,
+                })
+              ));
+            }
+          };
+
+          if (a.type === 'birthday' && cardHolderUids.length > 0) {
+            const target = new Date();
+            target.setDate(target.getDate() + (a.daysBefore || 0));
+            const targetMD = `${String(target.getMonth() + 1).padStart(2, '0')}-${String(target.getDate()).padStart(2, '0')}`;
+            const recipients: string[] = [];
+            const chunks: string[][] = [];
+            for (let i = 0; i < cardHolderUids.length; i += 10) chunks.push(cardHolderUids.slice(i, i + 10));
+            for (const chunk of chunks) {
+              const pSnap = await getDocs(query(collection(db, 'users'), where('uid', 'in', chunk)));
+              pSnap.docs.forEach(d => {
+                const b = (d.data() as UserProfile).birthday;
+                if (b && b.slice(5) === targetMD) recipients.push(d.data().uid);
+              });
+            }
+            await sendNotifs(recipients);
+            await updateDoc(autoDoc.ref, { lastFiredDate: todayStr });
+          }
+
+          if (a.type === 'scheduled' && a.scheduledAt) {
+            const scheduledDate = a.scheduledAt.toDate ? a.scheduledAt.toDate() : new Date(a.scheduledAt);
+            if (scheduledDate <= new Date()) {
+              await sendNotifs(cardHolderUids);
+              if (a.recurring === 'yearly') {
+                const next = new Date(scheduledDate);
+                next.setFullYear(next.getFullYear() + 1);
+                await updateDoc(autoDoc.ref, { scheduledAt: Timestamp.fromDate(next), lastFiredDate: todayStr });
+              } else {
+                await updateDoc(autoDoc.ref, { status: 'paused', lastFiredDate: todayStr });
+              }
+            }
+          }
+        }
+      })
+      .catch(console.error);
+  }, [store?.id, storeCards.length]);
+
   const totalMembers = new Set(storeCards.map(c => c.user_id)).size;
   const stampsPerReward = store?.stamps_required_for_reward || 10;
   const totalStampsGiven = storeCards.reduce((sum, c) => sum + (c.current_stamps || 0) + ((c.total_completed_cycles || 0) * stampsPerReward), 0);
@@ -3471,7 +3988,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   const openStatModal = async (type: 'members' | 'stamps' | 'activeCards') => {
     setStatModal(type);
     setStatModalSearch('');
-    const uids = [...new Set(storeCards.map(c => c.user_id))];
+    const uids: string[] = [...new Set<string>(storeCards.map((c: Card) => c.user_id))];
     const missing = uids.filter(uid => !memberProfiles.has(uid));
     if (missing.length === 0) return;
     const chunks: string[][] = [];
@@ -3798,6 +4315,22 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
             })()}
           </AnimatePresence>
 
+          {store && (
+            <button
+              onClick={() => setShowBroadcast(true)}
+              className="w-full flex items-center gap-4 p-5 rounded-[2rem] bg-white border border-black/5 shadow-sm active:scale-95 transition-transform"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-brand-navy/5 flex items-center justify-center flex-shrink-0">
+                <Send size={20} className="text-brand-navy/60" />
+              </div>
+              <div className="text-left flex-1 min-w-0">
+                <p className="font-bold text-brand-navy">Broadcast</p>
+                <p className="text-xs text-brand-navy/40">Send messages & manage automations</p>
+              </div>
+              <ChevronRight size={18} className="text-brand-navy/20 flex-shrink-0" />
+            </button>
+          )}
+
           <div className="bg-brand-navy p-8 rounded-[2.5rem] text-white text-center">
             <h3 className="font-display text-xl font-bold mb-4">Issue a Stamp</h3>
             <p className="text-white/60 text-sm mb-8">Scan a customer's QR code or enter their handle to issue a loyalty stamp.</p>
@@ -3891,6 +4424,13 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
           user={user}
         />
       )}
+
+      {/* Broadcast Panel */}
+      <AnimatePresence>
+        {showBroadcast && store && (
+          <VendorBroadcastPanel store={store} storeCards={storeCards} onClose={() => setShowBroadcast(false)} />
+        )}
+      </AnimatePresence>
 
       {/* Scanner Modal Simulation */}
       <AnimatePresence>
