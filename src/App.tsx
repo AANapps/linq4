@@ -2154,6 +2154,10 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
   const [expandedPlayers, setExpandedPlayers] = useState<string | null>(null);
   const [playerProfiles, setPlayerProfiles] = useState<Map<string, UserProfile>>(new Map());
   const [loadingPlayers, setLoadingPlayers] = useState(false);
+  const [challengeEntries, setChallengeEntries] = useState<Map<string, { uid: string; count: number }[]>>(new Map());
+  const [expandedProgramme, setExpandedProgramme] = useState<string | null>(null);
+  const [programmePlayerData, setProgrammePlayerData] = useState<Map<string, { uid: string; profile?: UserProfile; card: StickerCardDoc }[]>>(new Map());
+  const [loadingProgramme, setLoadingProgramme] = useState(false);
 
   // Standard form state
   const [stdTitle, setStdTitle] = useState('');
@@ -2255,8 +2259,36 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
         results.forEach(snap => snap.docs.forEach(d => updated.set(d.id, { uid: d.id, ...d.data() } as UserProfile)));
         setPlayerProfiles(updated);
       }
+      if (!challengeEntries.has(c.id)) {
+        const entriesSnap = await getDocs(query(collection(db, 'challenge_entries'), where('challengeId', '==', c.id)));
+        const entries = entriesSnap.docs.map(d => ({ uid: d.data().uid as string, count: (d.data().count as number) || 0 }));
+        setChallengeEntries(prev => { const m = new Map<string, { uid: string; count: number }[]>(prev); m.set(c.id, entries); return m; });
+      }
     } finally {
       setLoadingPlayers(false);
+    }
+  };
+
+  const handleToggleProgramme = async (c: Challenge) => {
+    if (expandedProgramme === c.id) { setExpandedProgramme(null); return; }
+    setExpandedProgramme(c.id);
+    if (programmePlayerData.has(c.id)) return;
+    setLoadingProgramme(true);
+    try {
+      const cardsSnap = await getDocs(query(collection(db, 'sticker_cards'), where('programme_id', '==', c.id)));
+      const cards = cardsSnap.docs.map(d => ({ id: d.id, ...d.data() } as StickerCardDoc));
+      const uids = cards.map(card => card.user_id).filter(Boolean);
+      const profileMap = new Map<string, UserProfile>();
+      if (uids.length > 0) {
+        const chunks: string[][] = [];
+        for (let i = 0; i < uids.length; i += 10) chunks.push(uids.slice(i, i + 10));
+        const results = await Promise.all(chunks.map(chunk => getDocs(query(collection(db, 'users'), where('uid', 'in', chunk)))));
+        results.forEach(snap => snap.docs.forEach(d => profileMap.set(d.id, { uid: d.id, ...d.data() } as UserProfile)));
+      }
+      const playerEntries = cards.map(card => ({ uid: card.user_id, profile: profileMap.get(card.user_id), card }));
+      setProgrammePlayerData((prev: Map<string, { uid: string; profile?: UserProfile; card: StickerCardDoc }[]>) => { const m = new Map(prev); m.set(c.id, playerEntries); return m; });
+    } finally {
+      setLoadingProgramme(false);
     }
   };
 
@@ -2340,6 +2372,9 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
                   ) : (
                     (c.participantUids || []).map(uid => {
                       const p = playerProfiles.get(uid);
+                      const entry = challengeEntries.get(c.id)?.find((e: { uid: string; count: number }) => e.uid === uid);
+                      const count = entry?.count ?? 0;
+                      const pct = c.goal ? Math.min(100, Math.round((count / c.goal) * 100)) : 0;
                       return (
                         <div key={uid} className="px-3 py-2.5 rounded-xl bg-brand-bg flex items-center gap-2.5">
                           <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 bg-brand-navy/10">
@@ -2348,7 +2383,16 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-bold text-brand-navy truncate">{p?.name || 'Player'}</p>
                             {p?.handle && <p className="text-[10px] text-brand-navy/40">@{p.handle}</p>}
+                            {c.goal && (
+                              <div className="mt-1.5 space-y-0.5">
+                                <div className="h-1 rounded-full bg-brand-navy/10 overflow-hidden">
+                                  <div className="h-full rounded-full bg-brand-navy/40 transition-all" style={{ width: `${pct}%` }} />
+                                </div>
+                                <p className="text-[10px] text-brand-navy/40">{count}/{c.goal} {c.unit}</p>
+                              </div>
+                            )}
                           </div>
+                          {pct >= 100 && <span className="text-[10px] font-bold text-green-600 flex-shrink-0">Done!</span>}
                         </div>
                       );
                     })
@@ -2460,42 +2504,111 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
             {collectibles.length > 0 && (
               <div className="space-y-2 pt-1">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-amber-700/50">Programmes</p>
-                {collectibles.map(c => (
-                  <div key={c.id} className="rounded-2xl bg-white border border-amber-200 p-3 flex items-center gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-amber-800 text-xs truncate">{c.title}</p>
-                      <p className="text-[10px] text-amber-700/60">🎁 {c.reward}</p>
-                    </div>
-                    <button
-                      onClick={() => handleToggleStatus(c)}
-                      disabled={togglingId === c.id}
-                      className={cn(
-                        'px-2.5 py-1.5 rounded-xl text-[10px] font-bold flex-shrink-0',
-                        c.status === 'active' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
-                      )}
-                    >
-                      {togglingId === c.id ? '...' : c.status === 'active' ? 'Pause' : 'Resume'}
-                    </button>
-                    <button
-                      onClick={() => setConfirmDelete(c.id)}
-                      disabled={deletingId === c.id}
-                      className="p-1.5 rounded-xl bg-red-50 text-brand-rose flex-shrink-0"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                    {confirmDelete === c.id && (
-                      <div className="absolute inset-x-5 rounded-2xl bg-white border border-brand-rose/30 p-3 space-y-2 z-10 shadow-lg">
-                        <p className="text-xs font-bold text-brand-rose text-center">Delete programme and all sticker cards?</p>
-                        <div className="flex gap-2">
-                          <button onClick={() => setConfirmDelete(null)} className="flex-1 py-2 rounded-xl bg-white text-brand-navy/60 text-xs font-bold border border-brand-navy/10">Cancel</button>
-                          <button onClick={() => handleDelete(c.id)} disabled={deletingId === c.id} className="flex-1 py-2 rounded-xl bg-brand-rose text-white text-xs font-bold disabled:opacity-50">
-                            {deletingId === c.id ? 'Deleting...' : 'Delete'}
-                          </button>
+                {collectibles.map(c => {
+                  const showProg = expandedProgramme === c.id;
+                  const progPlayers: { uid: string; profile?: UserProfile; card: StickerCardDoc }[] = programmePlayerData.get(c.id) || [];
+                  return (
+                    <div key={c.id} className="rounded-2xl bg-white border border-amber-200 overflow-hidden">
+                      <div className="p-3 flex items-center gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-amber-800 text-xs truncate">{c.title}</p>
+                          <p className="text-[10px] text-amber-700/60">🎁 {c.reward}</p>
                         </div>
+                        <button
+                          onClick={() => handleToggleStatus(c)}
+                          disabled={togglingId === c.id}
+                          className={cn(
+                            'px-2.5 py-1.5 rounded-xl text-[10px] font-bold flex-shrink-0',
+                            c.status === 'active' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
+                          )}
+                        >
+                          {togglingId === c.id ? '...' : c.status === 'active' ? 'Pause' : 'Resume'}
+                        </button>
+                        <button
+                          onClick={() => handleToggleProgramme(c)}
+                          className={cn(
+                            'p-1.5 rounded-xl flex-shrink-0 transition-all',
+                            showProg ? 'bg-amber-500 text-white' : 'bg-amber-50 text-amber-600'
+                          )}
+                        >
+                          <Users size={12} />
+                        </button>
+                        <button
+                          onClick={() => setConfirmDelete(c.id)}
+                          disabled={deletingId === c.id}
+                          className="p-1.5 rounded-xl bg-red-50 text-brand-rose flex-shrink-0"
+                        >
+                          <Trash2 size={12} />
+                        </button>
                       </div>
-                    )}
-                  </div>
-                ))}
+
+                      <AnimatePresence>
+                        {showProg && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.15 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="px-3 pb-3 space-y-1.5 max-h-64 overflow-y-auto border-t border-amber-100">
+                              {loadingProgramme && !programmePlayerData.has(c.id) ? (
+                                <p className="text-[10px] text-amber-700/50 text-center py-3">Loading...</p>
+                              ) : progPlayers.length === 0 ? (
+                                <p className="text-[10px] text-amber-700/50 text-center py-3">No players yet.</p>
+                              ) : (
+                                progPlayers.map(({ uid, profile: p, card: sc }) => {
+                                  const uniqueCount = sc.uniqueTiers?.length ?? 0;
+                                  const total = sc.stickers?.length ?? 0;
+                                  const complete = uniqueCount >= 5;
+                                  return (
+                                    <div key={uid} className="flex items-center gap-2 py-2">
+                                      <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0 bg-amber-100">
+                                        {p?.photoURL ? <img src={p.photoURL} alt="" className="w-full h-full object-cover" /> : null}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-[11px] font-bold text-amber-900 truncate">{p?.name || sc.userName || 'Player'}</p>
+                                        <div className="flex gap-0.5 mt-0.5">
+                                          {STICKER_ORDER.map(tier => {
+                                            const lit = sc.uniqueTiers?.includes(tier);
+                                            return (
+                                              <div
+                                                key={tier}
+                                                className="w-3 h-3 rounded-sm"
+                                                style={{ background: lit ? STICKER_CONFIG[tier].solid : '#E2E8F0' }}
+                                              />
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                      <div className="text-right flex-shrink-0">
+                                        <p className="text-[10px] font-bold text-amber-700">{uniqueCount}/5</p>
+                                        <p className="text-[9px] text-amber-600/60">{total} sticker{total !== 1 ? 's' : ''}</p>
+                                      </div>
+                                      {complete && <span className="text-[9px] font-black text-amber-600 flex-shrink-0">★</span>}
+                                    </div>
+                                  );
+                                })
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
+                      {confirmDelete === c.id && (
+                        <div className="mx-3 mb-3 rounded-2xl bg-white border border-brand-rose/30 p-3 space-y-2 shadow-lg">
+                          <p className="text-xs font-bold text-brand-rose text-center">Delete programme and all sticker cards?</p>
+                          <div className="flex gap-2">
+                            <button onClick={() => setConfirmDelete(null)} className="flex-1 py-2 rounded-xl bg-white text-brand-navy/60 text-xs font-bold border border-brand-navy/10">Cancel</button>
+                            <button onClick={() => handleDelete(c.id)} disabled={deletingId === c.id} className="flex-1 py-2 rounded-xl bg-brand-rose text-white text-xs font-bold disabled:opacity-50">
+                              {deletingId === c.id ? 'Deleting...' : 'Delete'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -4515,12 +4628,10 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
   const [followers, setFollowers] = useState<UserProfile[]>([]);
   const [showFollowModal, setShowFollowModal] = useState(false);
   const [followModalTab, setFollowModalTab] = useState<'following' | 'followers'>('following');
-  const [wallPosts, setWallPosts] = useState<any[]>([]);
   const [myGlobalPosts, setMyGlobalPosts] = useState<GlobalPost[]>([]);
   const [likedPosts, setLikedPosts] = useState<GlobalPost[]>([]);
   const [allPostsForVotes, setAllPostsForVotes] = useState<GlobalPost[]>([]);
   const [newPost, setNewPost] = useState('');
-  const [rating, setRating] = useState(5);
   const [isPosting, setIsPosting] = useState(false);
 
   useEffect(() => {
@@ -4548,11 +4659,6 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
       }
     );
 
-    const pq = query(collection(db, 'user_reviews'), where('toUid', '==', profile.uid), orderBy('createdAt', 'desc'));
-    const unsubWall = onSnapshot(pq, (snap) => {
-      setWallPosts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
-
     getDocs(query(collection(db, 'global_posts'), where('authorUid', '==', profile.uid), orderBy('createdAt', 'desc'), limit(PROFILE_PAGE_SIZE))).then(snap => {
       setMyGlobalPosts(snap.docs.map(d => ({ id: d.id, ...d.data() } as GlobalPost)));
       profileLastDocRef.current = snap.docs[snap.docs.length - 1] ?? null;
@@ -4573,7 +4679,6 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
     return () => {
       unsubFollowing();
       unsubFollowers();
-      unsubWall();
       unsubGlobalPosts();
       unsubLiked();
       unsubAllPolls();
@@ -4608,18 +4713,18 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
     if (!newPost.trim() || !profile) return;
     setIsPosting(true);
     try {
-      await addDoc(collection(db, 'user_reviews'), {
-        fromUid: user.uid,
-        fromName: profile.name || user.displayName || 'Me',
-        fromPhoto: profile.photoURL || user.photoURL || '',
-        toUid: profile.uid,
-        content: newPost,
-        rating,
+      await addDoc(collection(db, 'global_posts'), {
+        authorUid: user.uid,
+        authorName: profile.name || user.displayName || 'User',
+        authorPhoto: profile.photoURL || user.photoURL || '',
+        authorRole: profile.role || 'consumer',
+        content: newPost.trim(),
+        postType: 'post',
+        createdAt: serverTimestamp(),
         likesCount: 0,
-        createdAt: serverTimestamp()
+        likedBy: []
       });
       setNewPost('');
-      setRating(5);
     } catch (error) {
       console.error(error);
     } finally {
@@ -4898,31 +5003,29 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
 
       {activeSubTab === 'posts' && (
         <div className="space-y-6">
-          {/* Write to wall — always at top */}
+          {/* Post composer */}
           <div className="glass-card p-5 rounded-[2rem] space-y-4">
-            <h3 className="font-bold text-sm px-1">Post to Wall</h3>
-            <textarea
-              value={newPost}
-              onChange={(e) => setNewPost(e.target.value)}
-              placeholder="What's on your mind?"
-              className="w-full p-4 rounded-2xl bg-brand-bg border-none focus:ring-2 focus:ring-brand-gold/20 text-sm h-20 resize-none"
-            />
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-brand-navy/10">
+                <img src={profile?.photoURL || avatarSrc(profile?.gender)} alt="" className="w-full h-full object-cover" />
+              </div>
+              <textarea
+                value={newPost}
+                onChange={(e) => setNewPost(e.target.value)}
+                placeholder="What's on your mind?"
+                className="flex-1 p-3 rounded-2xl bg-brand-bg border-none focus:ring-2 focus:ring-brand-gold/20 text-sm h-20 resize-none"
+              />
+            </div>
             <button
               onClick={handlePostOnWall}
               disabled={isPosting || !newPost.trim()}
               className="w-full bg-brand-navy text-white py-3 rounded-2xl font-bold flex items-center justify-center gap-2 disabled:opacity-50 text-sm"
             >
-              <Plus size={16} /> Post
+              <Plus size={16} /> {isPosting ? 'Posting...' : 'Post'}
             </button>
           </div>
 
-          <div className="space-y-3">
-            {wallPosts.map(post => (
-              <WallPostItem key={post.id} post={post} currentUser={user} wallOwnerUid={profile?.uid} onViewUser={onViewUser} />
-            ))}
-          </div>
-
-          {/* Global feed posts */}
+          {/* Posts feed */}
           {myGlobalPosts.length > 0 && (
             <div className="space-y-4">
               {myGlobalPosts.map(post => (
@@ -4962,7 +5065,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
             </div>
           )}
 
-          {myGlobalPosts.length === 0 && wallPosts.length === 0 && (
+          {myGlobalPosts.length === 0 && (
             <div className="py-20 text-center text-brand-navy/20">
               <MessageSquare size={64} className="mx-auto mb-4 opacity-5" />
               <p className="font-bold">Nothing posted yet</p>
