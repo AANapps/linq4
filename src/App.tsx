@@ -381,23 +381,15 @@ interface CollectibleSticker {
   earnedAt: string;
 }
 
-interface ChallengeEntry {
+interface StickerCardDoc {
   id: string;
-  challengeId: string;
-  userId: string;
-  userName?: string;
-  stickers: CollectibleSticker[];
-  revealedIds: string[];
-  uniqueTiers: StickerTier[];
-  completed: boolean;
-  completedAt?: any;
-}
-
-interface StickerWallet {
+  user_id: string;
+  store_id: string;
   stickers: CollectibleSticker[];
   revealedIds: string[];
   uniqueTiers: StickerTier[];
   userName?: string;
+  userPhoto?: string;
 }
 
 interface Challenge {
@@ -1928,49 +1920,28 @@ function NavButton({ active, onClick, icon, label, badgeCount }: { active: boole
   );
 }
 
-// --- Collectible sticker awarding (called after stamp issue) ---
+// --- Sticker card issuance (triggered by stamp collection, mirrors stamp card infrastructure) ---
 
-async function awardCollectibleStickers(customerUid: string, customerName: string, qty: number): Promise<string> {
+async function issueStickersToCard(customerUid: string, storeId: string, userName: string, qty: number): Promise<void> {
   const newStickers: CollectibleSticker[] = Array.from({ length: qty }, () => ({
     id: Math.random().toString(36).slice(2),
     tier: rollStickerTier(),
     earnedAt: new Date().toISOString(),
   }));
-
-  // Fetch all challenges and filter in JS — no composite index required
-  const allSnap = await getDocs(collection(db, 'challenges'));
-  const active = allSnap.docs.filter(d => {
-    const data = d.data();
-    return data.type === 'collectible' && data.status === 'active';
-  });
-
-  if (active.length === 0) return 'no active collectible challenges';
-
-  let count = 0;
-  for (const challengeDoc of active) {
-    const challengeId = challengeDoc.id;
-    const entryRef = doc(db, 'challenge_entries', `${challengeId}_${customerUid}`);
-    const entrySnap = await getDoc(entryRef);
-
-    if (!entrySnap.exists()) {
-      // Auto-enroll: mirrors how a stamp card is created on first stamp
-      await setDoc(entryRef, {
-        challengeId,
-        userId: customerUid,
-        userName: customerName,
-        stickers: newStickers,
-        revealedIds: [],
-        uniqueTiers: [],
-        completed: false,
-      });
-      await updateDoc(doc(db, 'challenges', challengeId), { participantUids: arrayUnion(customerUid) });
-    } else {
-      await updateDoc(entryRef, { stickers: arrayUnion(...newStickers), userName: customerName });
-    }
-    count++;
+  const cardRef = doc(db, 'sticker_cards', `${customerUid}_${storeId}`);
+  const cardSnap = await getDoc(cardRef);
+  if (!cardSnap.exists()) {
+    await setDoc(cardRef, {
+      user_id: customerUid,
+      store_id: storeId,
+      stickers: newStickers,
+      revealedIds: [],
+      uniqueTiers: [],
+      userName,
+    });
+  } else {
+    await updateDoc(cardRef, { stickers: arrayUnion(...newStickers), userName });
   }
-
-  return `+${qty} sticker${qty > 1 ? 's' : ''} added to ${count} challenge${count !== 1 ? 's' : ''}`;
 }
 
 // --- Sticker Card (flip reveal) ---
@@ -2036,131 +2007,25 @@ function StickerCard({ sticker, isRevealed, onReveal, size = 'md' }: {
   );
 }
 
-// --- All Cards Modal ---
+// --- Sticker Collection Modal (per-store sticker card, mirrors loyalty card modal) ---
 
-function AllCardsModal({ entry, onReveal, onClose }: {
-  entry: ChallengeEntry;
-  onReveal: (stickerId: string) => void;
-  onClose: () => void;
-}) {
-  const unrevealed = entry.stickers.filter(s => !(entry.revealedIds || []).includes(s.id));
-  const revealed = entry.stickers.filter(s => (entry.revealedIds || []).includes(s.id));
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 40 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 40 }}
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[200] flex flex-col max-w-md mx-auto"
-    >
-      <div className="flex-1 overflow-y-auto bg-brand-bg rounded-t-[2.5rem] mt-20">
-        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm px-5 pt-5 pb-4 border-b border-black/5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-display text-xl font-bold text-brand-navy">My Collection</h3>
-              <p className="text-xs text-brand-navy/50">{entry.stickers.length} cards total</p>
-            </div>
-            <button onClick={onClose} className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm">
-              <X size={18} className="text-brand-navy/60" />
-            </button>
-          </div>
-        </div>
-        <div className="p-5 space-y-6">
-          {unrevealed.length > 0 && (
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-3">
-                Unrevealed ({unrevealed.length})
-              </p>
-              <div className="flex flex-wrap gap-3">
-                {unrevealed.map(s => (
-                  <StickerCard key={s.id} sticker={s} isRevealed={false} onReveal={() => onReveal(s.id)} size="md" />
-                ))}
-              </div>
-            </div>
-          )}
-          {revealed.length > 0 && (
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-3">
-                Revealed ({revealed.length})
-              </p>
-              <div className="flex flex-wrap gap-3">
-                {[...revealed].reverse().map(s => (
-                  <StickerCard key={s.id} sticker={s} isRevealed={true} size="md" />
-                ))}
-              </div>
-            </div>
-          )}
-          {entry.stickers.length === 0 && (
-            <p className="text-sm text-brand-navy/40 text-center py-10">No cards yet. Collect stamps to earn some!</p>
-          )}
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-// --- Collectible Challenge Modal ---
-
-function CollectibleChallengeModal({ challenge, entry, userId, onJoin, onLeave, joining, onClose }: {
-  challenge: Challenge;
-  entry: ChallengeEntry | null;
-  userId: string;
-  onJoin: () => void;
-  onLeave: () => void;
-  joining: boolean;
+function StickerCollectionModal({ stickerCard, store, onClose }: {
+  stickerCard: StickerCardDoc;
+  store?: StoreProfile;
   onClose: () => void;
   key?: React.Key;
 }) {
-  const [leaderboard, setLeaderboard] = useState<ChallengeEntry[]>([]);
-  const [showAllCards, setShowAllCards] = useState(false);
-
-  useEffect(() => {
-    const q = query(collection(db, 'challenge_entries'), where('challengeId', '==', challenge.id));
-    return onSnapshot(q, snap => {
-      const entries = snap.docs.map(d => ({ id: d.id, ...d.data() } as ChallengeEntry));
-      entries.sort((a, b) => b.uniqueTiers.length - a.uniqueTiers.length);
-      setLeaderboard(entries);
-    });
-  }, [challenge.id]);
-
-  const hasJoined = challenge.participantUids?.includes(userId);
-  const isActive = challenge.status === 'active';
-  const myUnique = new Set(entry?.uniqueTiers || []);
-  const unrevealed = (entry?.stickers || []).filter(s => !(entry?.revealedIds || []).includes(s.id));
-  const myRank = leaderboard.findIndex(e => e.userId === userId) + 1;
-
-  // New Cards: all unrevealed + revealed duplicates (not the first of their tier)
-  const representativeIdByTier = new Map<string, string>();
-  for (const s of (entry?.stickers || [])) {
-    if ((entry?.revealedIds || []).includes(s.id) && !representativeIdByTier.has(s.tier)) {
-      representativeIdByTier.set(s.tier, s.id);
-    }
-  }
-  const cardsToShow = (entry?.stickers || []).filter(s => {
-    const isRevealed = (entry?.revealedIds || []).includes(s.id);
-    if (!isRevealed) return true;
-    return representativeIdByTier.get(s.tier) !== s.id;
-  });
+  const unrevealed = stickerCard.stickers.filter(s => !(stickerCard.revealedIds || []).includes(s.id));
+  const revealed = stickerCard.stickers.filter(s => (stickerCard.revealedIds || []).includes(s.id));
+  const myUnique = new Set(stickerCard.uniqueTiers || []);
 
   const handleReveal = async (stickerId: string) => {
-    if (!entry) return;
-    const entryRef = doc(db, 'challenge_entries', `${challenge.id}_${userId}`);
-    const newRevealedIds = [...(entry.revealedIds || []), stickerId];
-    const revealedStickers = entry.stickers.filter(s => newRevealedIds.includes(s.id));
+    const cardRef = doc(db, 'sticker_cards', stickerCard.id);
+    const newRevealedIds = [...(stickerCard.revealedIds || []), stickerId];
+    const revealedStickers = stickerCard.stickers.filter(s => newRevealedIds.includes(s.id));
     const uniqueTiers = [...new Set(revealedStickers.map(s => s.tier))] as StickerTier[];
-    const completed = uniqueTiers.length >= (challenge.goal ?? 5);
-    await updateDoc(entryRef, {
-      revealedIds: arrayUnion(stickerId),
-      uniqueTiers,
-      completed,
-      ...(completed && !entry.completed ? { completedAt: serverTimestamp() } : {}),
-    });
+    await updateDoc(cardRef, { revealedIds: arrayUnion(stickerId), uniqueTiers });
   };
-
-  const statusColor = challenge.status === 'active'
-    ? { bg: '#F0FDF4', text: '#16A34A' }
-    : challenge.status === 'paused'
-    ? { bg: '#FFFBEB', text: '#D97706' }
-    : { bg: '#F1F5F9', text: '#94A3B8' };
 
   return (
     <>
@@ -2171,464 +2036,113 @@ function CollectibleChallengeModal({ challenge, entry, userId, onJoin, onLeave, 
         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
         className="fixed inset-0 z-[150] flex flex-col max-w-md mx-auto"
       >
-        {/* Tap outside to close */}
         <button onClick={onClose} className="flex-shrink-0 h-16 w-full" />
         <div className="flex-1 overflow-y-auto bg-brand-bg rounded-t-[2.5rem] shadow-2xl">
-          {/* Header */}
           <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm px-5 pt-5 pb-4 border-b border-black/5 z-10">
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="font-display text-xl font-bold text-brand-navy">{challenge.title}</h2>
-                  {challenge.status && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase"
-                      style={{ background: statusColor.bg, color: statusColor.text }}>
-                      {challenge.status}
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-brand-navy/50 mt-0.5">{challenge.description}</p>
+                <h2 className="font-display text-xl font-bold text-brand-navy">
+                  {store?.name || 'Sticker Collection'}
+                </h2>
+                <p className="text-xs text-brand-navy/50 mt-0.5">
+                  {stickerCard.stickers.length} sticker{stickerCard.stickers.length !== 1 ? 's' : ''} collected
+                </p>
               </div>
               <button onClick={onClose} className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm flex-shrink-0">
                 <X size={18} className="text-brand-navy/60" />
               </button>
             </div>
-            {/* Join / Leave */}
-            {isActive && (
-              <div className="mt-3">
-                {hasJoined ? (
-                  <button onClick={onLeave}
-                    className="text-xs text-brand-navy/40 underline underline-offset-2">
-                    Leave challenge
-                  </button>
-                ) : (
-                  <button onClick={onJoin} disabled={joining}
-                    className="bg-brand-navy text-white px-5 py-2.5 rounded-2xl text-sm font-bold active:scale-95 transition-all disabled:opacity-50">
-                    {joining ? 'Joining...' : 'Join Challenge'}
-                  </button>
-                )}
-              </div>
-            )}
           </div>
 
           <div className="p-5 space-y-7">
-            {/* 5 Unique Tier Slots */}
+            {/* 5 Tier Slots */}
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-3">
-                Collect {challenge.goal ?? 5} unique tier{(challenge.goal ?? 5) > 1 ? 's' : ''} to win {challenge.reward}
+                Collect all 5 tiers
               </p>
               <div className="grid grid-cols-5 gap-2">
                 {STICKER_ORDER.map(tier => {
                   const cfg = STICKER_CONFIG[tier];
                   const lit = myUnique.has(tier);
-                  const count = (entry?.stickers || []).filter(s => (entry?.revealedIds || []).includes(s.id) && s.tier === tier).length;
+                  const count = stickerCard.stickers.filter(s => s.tier === tier).length;
                   return (
                     <div key={tier} className="flex flex-col items-center gap-1">
-                      <div className="w-full aspect-square rounded-2xl border-2 flex flex-col items-center justify-center transition-all"
+                      <div
+                        className="w-full aspect-square rounded-2xl border-2 flex flex-col items-center justify-center transition-all"
                         style={lit
-                          ? { background: cfg.bg, borderColor: cfg.border, boxShadow: `0 0 16px ${cfg.color}44` }
-                          : { background: '#F1F5F9', borderColor: '#E2E8F0' }}>
-                        {lit
-                          ? <span className="text-2xl font-black" style={{ color: cfg.color }}>{tier === 'gold' ? '★' : tier[0].toUpperCase()}</span>
-                          : <span className="text-xl font-black text-slate-200">?</span>
-                        }
-                        {count > 1 && <span className="text-[8px] font-bold" style={{ color: cfg.color }}>×{count}</span>}
+                          ? { background: cfg.bg, borderColor: cfg.border, boxShadow: `0 0 12px ${cfg.color}33` }
+                          : { background: '#F1F5F9', borderColor: '#E2E8F0' }}
+                      >
+                        {lit ? (
+                          <span className="text-2xl font-black" style={{ color: cfg.color }}>
+                            {tier === 'gold' ? '★' : tier[0].toUpperCase()}
+                          </span>
+                        ) : (
+                          <span className="text-xl text-slate-300">?</span>
+                        )}
+                        {count > 1 && (
+                          <span className="text-[9px] font-bold" style={{ color: cfg.color }}>×{count}</span>
+                        )}
                       </div>
-                      <span className="text-[9px] font-bold leading-tight text-center"
-                        style={{ color: lit ? cfg.color : '#CBD5E1' }}>{cfg.label}</span>
+                      <span className="text-[9px] font-bold text-center leading-tight"
+                        style={{ color: lit ? cfg.color : '#94A3B8' }}>
+                        {cfg.label}
+                      </span>
+                      <span className="text-[8px] text-brand-navy/30">{cfg.chance}</span>
                     </div>
                   );
                 })}
               </div>
-              {myUnique.size >= (challenge.goal ?? 5) && (
-                <div className="mt-3 p-4 rounded-2xl text-center" style={{ background: '#FEF9C3', border: '2px solid #FDE68A' }}>
-                  <p className="font-bold text-amber-700">🎉 You completed the set!</p>
-                  <p className="text-sm text-amber-600 mt-0.5">Claim your {challenge.reward} prize</p>
+              {myUnique.size >= 5 && (
+                <div className="mt-3 p-3 rounded-2xl text-center" style={{ background: '#FEF9C3', border: '1px solid #FDE68A' }}>
+                  <p className="font-bold text-amber-700 text-sm">🎉 Full set collected!</p>
                 </div>
               )}
             </div>
 
-            {/* New Cards — shown once joined */}
-            {hasJoined && (
+            {unrevealed.length > 0 && (
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">
-                    My Cards {unrevealed.length > 0 && <span className="text-brand-rose">({unrevealed.length} to reveal!)</span>}
-                  </p>
-                  {(entry?.stickers.length ?? 0) > 0 && (
-                    <button
-                      onClick={() => setShowAllCards(true)}
-                      className="text-[10px] font-bold text-brand-navy/40 underline underline-offset-2"
-                    >
-                      All cards ({entry?.stickers.length ?? 0})
-                    </button>
-                  )}
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-3">
+                  Unrevealed ({unrevealed.length})
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  {unrevealed.map(s => (
+                    <StickerCard key={s.id} sticker={s} isRevealed={false} onReveal={() => handleReveal(s.id)} size="md" />
+                  ))}
                 </div>
-                {cardsToShow.length === 0 ? (
-                  <div className="flex gap-3">
-                    {/* Mystery placeholder — collect a stamp to reveal */}
-                    <div style={{ width: 80, height: 108, flexShrink: 0, background: 'linear-gradient(135deg,#F8FAFC,#E2E8F0)', border: '2px dashed #CBD5E1', borderRadius: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 32, fontWeight: 900, color: '#CBD5E1' }}>?</span>
-                      <span style={{ fontSize: 8, color: '#CBD5E1', fontWeight: 600, textAlign: 'center', lineHeight: 1.3, padding: '0 8px' }}>Collect a stamp</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex gap-3 overflow-x-auto pb-2">
-                    {cardsToShow.map(s => {
-                      const isRevealed = (entry?.revealedIds || []).includes(s.id);
-                      return (
-                        <StickerCard
-                          key={s.id}
-                          sticker={s}
-                          isRevealed={isRevealed}
-                          onReveal={isRevealed ? undefined : () => handleReveal(s.id)}
-                          size="md"
-                        />
-                      );
-                    })}
-                  </div>
-                )}
               </div>
             )}
 
-            {/* Leaderboard */}
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2">Leaderboard</p>
-              {leaderboard.length === 0 ? (
-                <p className="text-xs text-brand-navy/40 text-center py-4">No players yet.</p>
-              ) : (
-                <div className="space-y-1.5">
-                  {leaderboard.slice(0, 10).map((e, i) => {
-                    const isMe = e.userId === userId;
-                    const goal = challenge.goal ?? 5;
-                    const pct = (e.uniqueTiers.length / goal) * 100;
-                    return (
-                      <div key={e.id} className={cn('flex items-center gap-2.5 px-3 py-2.5 rounded-2xl', isMe ? 'bg-brand-gold/10' : 'bg-brand-bg')}>
-                        <span className={cn('text-xs font-black w-5 text-center flex-shrink-0',
-                          i === 0 ? 'text-brand-gold' : i === 1 ? 'text-slate-400' : i === 2 ? 'text-amber-600' : 'text-brand-navy/30')}>
-                          {i + 1}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-1">
-                            <p className="text-xs font-bold text-brand-navy truncate">{isMe ? 'You' : (e.userName || 'Player')}</p>
-                            <p className="text-[10px] text-brand-navy/50 ml-2 flex-shrink-0">{e.uniqueTiers.length}/{goal}</p>
-                          </div>
-                          <div className="h-1.5 bg-brand-navy/10 rounded-full overflow-hidden">
-                            <motion.div className="h-full rounded-full bg-brand-gold" animate={{ width: `${pct}%` }} />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {myRank > 10 && entry && (
-                    <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-2xl bg-brand-gold/10 border border-brand-gold/20">
-                      <span className="text-xs font-black w-5 text-center text-brand-navy/30">{myRank}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="text-xs font-bold text-brand-navy">You</p>
-                          <p className="text-[10px] text-brand-navy/50">{entry.uniqueTiers.length}/{challenge.goal ?? 5}</p>
-                        </div>
-                        <div className="h-1.5 bg-brand-navy/10 rounded-full overflow-hidden">
-                          <div className="h-full rounded-full bg-brand-gold" style={{ width: `${(entry.uniqueTiers.length / (challenge.goal ?? 5)) * 100}%` }} />
-                        </div>
-                      </div>
-                    </div>
-                  )}
+            {revealed.length > 0 && (
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-3">
+                  Revealed ({revealed.length})
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  {[...revealed].reverse().map(s => (
+                    <StickerCard key={s.id} sticker={s} isRevealed={true} size="md" />
+                  ))}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+
+            {stickerCard.stickers.length === 0 && (
+              <p className="text-sm text-brand-navy/40 text-center py-10">No stickers yet. Collect stamps to earn some!</p>
+            )}
           </div>
         </div>
       </motion.div>
-
-      {/* All Cards popup nested */}
-      <AnimatePresence>
-        {showAllCards && entry && (
-          <AllCardsModal
-            entry={entry}
-            onReveal={handleReveal}
-            onClose={() => setShowAllCards(false)}
-          />
-        )}
-      </AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 0.6 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black z-[149]"
+        onClick={onClose}
+      />
     </>
   );
 }
 
-// --- Old CollectibleChallengeCard (stub to satisfy reference, replaced by modal flow) ---
-
-function CollectibleChallengeCard({ challenge, userId, onJoin, onLeave, joining }: {
-  challenge: Challenge;
-  userId: string;
-  onJoin: () => void;
-  onLeave: () => void;
-  joining: boolean;
-  key?: React.Key;
-}) {
-  const hasJoined = challenge.participantUids?.includes(userId);
-  const isActive = challenge.status === 'active';
-  const [expanded, setExpanded] = useState(false);
-  const [entry, setEntry] = useState<ChallengeEntry | null>(null);
-  const [showMyCards, setShowMyCards] = useState(false);
-  const [leaderboard, setLeaderboard] = useState<ChallengeEntry[]>([]);
-
-  useEffect(() => {
-    if (!expanded) return;
-    const entryRef = doc(db, 'challenge_entries', `${challenge.id}_${userId}`);
-    return onSnapshot(entryRef, snap => {
-      setEntry(snap.exists() ? ({ id: snap.id, ...snap.data() } as ChallengeEntry) : null);
-    });
-  }, [expanded, challenge.id, userId]);
-
-  useEffect(() => {
-    if (!expanded) return;
-    const q = query(collection(db, 'challenge_entries'), where('challengeId', '==', challenge.id));
-    return onSnapshot(q, snap => {
-      const entries = snap.docs.map(d => ({ id: d.id, ...d.data() } as ChallengeEntry));
-      entries.sort((a, b) => {
-        if (b.uniqueTiers.length !== a.uniqueTiers.length) return b.uniqueTiers.length - a.uniqueTiers.length;
-        return b.stickers.length - a.stickers.length;
-      });
-      setLeaderboard(entries);
-    });
-  }, [expanded, challenge.id]);
-
-  const myUnique = new Set(entry?.uniqueTiers || []);
-  const myRank = leaderboard.findIndex(e => e.userId === userId) + 1;
-
-  const statusColor = challenge.status === 'active'
-    ? 'text-green-600 bg-green-50'
-    : challenge.status === 'paused'
-    ? 'text-amber-600 bg-amber-50'
-    : 'text-brand-navy/40 bg-brand-navy/5';
-
-  return (
-    <div className="glass-card rounded-3xl overflow-hidden">
-      {/* Header row */}
-      <button onClick={() => setExpanded(e => !e)} className="w-full p-5 text-left">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <Trophy className="w-4 h-4 text-brand-gold flex-shrink-0" />
-              <h3 className="font-bold text-brand-navy truncate">{challenge.title}</h3>
-              {challenge.status && (
-                <span className={cn('text-[10px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide', statusColor)}>
-                  {challenge.status}
-                </span>
-              )}
-            </div>
-            <p className="text-brand-navy/60 text-xs mb-2">{challenge.description}</p>
-            {/* Mini slot preview */}
-            <div className="flex gap-1.5">
-              {STICKER_ORDER.map(tier => {
-                const cfg = STICKER_CONFIG[tier];
-                const lit = myUnique.has(tier);
-                return (
-                  <div
-                    key={tier}
-                    className="w-7 h-7 rounded-lg border-2 flex items-center justify-center text-[10px] font-black transition-all"
-                    style={lit
-                      ? { background: cfg.bg, borderColor: cfg.border, color: cfg.color }
-                      : { background: '#F1F5F9', borderColor: '#E2E8F0', color: '#CBD5E1' }}
-                  >
-                    {lit ? tier[0].toUpperCase() : '?'}
-                  </div>
-                );
-              })}
-              {hasJoined && entry && (
-                <span className="ml-1 text-xs text-brand-navy/40 self-center">
-                  {myUnique.size}/{challenge.goal ?? 5}
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="flex flex-col items-end gap-2 flex-shrink-0">
-            {hasJoined && isActive ? (
-              <span className="text-xs font-bold text-brand-gold bg-brand-gold/10 px-2.5 py-1 rounded-full">Joined ✓</span>
-            ) : !hasJoined && isActive ? (
-              <button
-                onClick={e => { e.stopPropagation(); onJoin(); }}
-                disabled={joining}
-                className="bg-brand-navy text-white px-3 py-1.5 rounded-xl text-xs font-bold active:scale-95 transition-all"
-              >
-                {joining ? '...' : 'Join'}
-              </button>
-            ) : null}
-            <ChevronDown
-              size={16}
-              className={cn('text-brand-navy/30 transition-transform', expanded && 'rotate-180')}
-            />
-          </div>
-        </div>
-      </button>
-
-      {/* Expanded content */}
-      <AnimatePresence>
-        {expanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden"
-          >
-            <div className="px-5 pb-5 space-y-5 border-t border-black/5 pt-4">
-
-              {/* 5 sticker slots */}
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-3">
-                  Collect {challenge.goal ?? 5} unique tier{(challenge.goal ?? 5) > 1 ? 's' : ''} to win {challenge.reward}
-                </p>
-                <div className="grid grid-cols-5 gap-2">
-                  {STICKER_ORDER.map(tier => {
-                    const cfg = STICKER_CONFIG[tier];
-                    const lit = myUnique.has(tier);
-                    const count = entry?.stickers.filter(s => s.tier === tier).length ?? 0;
-                    return (
-                      <div key={tier} className="flex flex-col items-center gap-1">
-                        <div
-                          className="w-full aspect-square rounded-2xl border-2 flex flex-col items-center justify-center transition-all"
-                          style={lit
-                            ? { background: `${cfg.bg}`, borderColor: cfg.border, boxShadow: `0 0 12px ${cfg.color}33` }
-                            : { background: '#F1F5F9', borderColor: '#E2E8F0' }}
-                        >
-                          {lit ? (
-                            <span className="text-2xl font-black" style={{ color: cfg.color }}>
-                              {tier === 'gold' ? '★' : tier[0].toUpperCase()}
-                            </span>
-                          ) : (
-                            <span className="text-xl text-slate-300">?</span>
-                          )}
-                          {count > 1 && (
-                            <span className="text-[9px] font-bold" style={{ color: cfg.color }}>×{count}</span>
-                          )}
-                        </div>
-                        <span className="text-[9px] font-bold text-center leading-tight"
-                          style={{ color: lit ? cfg.color : '#94A3B8' }}>
-                          {cfg.label}
-                        </span>
-                        <span className="text-[8px] text-brand-navy/30">{cfg.chance}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-                {myUnique.size >= (challenge.goal ?? 5) && (
-                  <div className="mt-3 p-3 rounded-2xl text-center" style={{ background: '#FEF9C3', border: '1px solid #FDE68A' }}>
-                    <p className="font-bold text-amber-700 text-sm">🎉 You completed the set! Claim {challenge.reward}</p>
-                  </div>
-                )}
-              </div>
-
-              {/* My Cards toggle */}
-              {hasJoined && (
-                <div>
-                  <button
-                    onClick={() => setShowMyCards(v => !v)}
-                    className="flex items-center justify-between w-full py-2.5 px-3 rounded-2xl bg-brand-bg hover:bg-brand-navy/5 transition-all"
-                  >
-                    <span className="text-sm font-bold text-brand-navy">
-                      My Cards ({entry?.stickers.length ?? 0})
-                    </span>
-                    <ChevronDown size={14} className={cn('text-brand-navy/40 transition-transform', showMyCards && 'rotate-180')} />
-                  </button>
-                  <AnimatePresence>
-                    {showMyCards && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.15 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="mt-2 space-y-1.5 max-h-52 overflow-y-auto">
-                          {(entry?.stickers.length ?? 0) === 0 ? (
-                            <p className="text-xs text-brand-navy/40 text-center py-3">No stickers yet. Collect stamps to earn some!</p>
-                          ) : (
-                            [...(entry?.stickers ?? [])].reverse().map(s => {
-                              const cfg = STICKER_CONFIG[s.tier];
-                              return (
-                                <div key={s.id} className="flex items-center gap-2.5 px-3 py-2 rounded-xl"
-                                  style={{ background: cfg.bg }}>
-                                  <div className="w-7 h-7 rounded-lg border flex items-center justify-center font-black text-sm flex-shrink-0"
-                                    style={{ borderColor: cfg.border, color: cfg.color, background: 'white' }}>
-                                    {s.tier === 'gold' ? '★' : s.tier[0].toUpperCase()}
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-bold" style={{ color: cfg.color }}>{cfg.label}</p>
-                                    <p className="text-[10px] text-brand-navy/40">
-                                      {new Date(s.earnedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                                    </p>
-                                  </div>
-                                </div>
-                              );
-                            })
-                          )}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              )}
-
-              {/* Leaderboard */}
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2">Leaderboard</p>
-                {leaderboard.length === 0 ? (
-                  <p className="text-xs text-brand-navy/40 text-center py-3">No players yet.</p>
-                ) : (
-                  <div className="space-y-1.5">
-                    {leaderboard.slice(0, 10).map((e, i) => {
-                      const isMe = e.userId === userId;
-                      const goal = challenge.goal ?? 5;
-                      const pct = (e.uniqueTiers.length / goal) * 100;
-                      return (
-                        <div key={e.id} className={cn('flex items-center gap-2.5 px-3 py-2 rounded-xl', isMe ? 'bg-brand-gold/10' : 'bg-brand-bg')}>
-                          <span className={cn('text-xs font-black w-5 text-center flex-shrink-0', i === 0 ? 'text-brand-gold' : i === 1 ? 'text-slate-400' : i === 2 ? 'text-amber-600' : 'text-brand-navy/30')}>
-                            {i + 1}
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between mb-0.5">
-                              <p className="text-xs font-bold text-brand-navy truncate">{isMe ? 'You' : (e.userName || 'Player')}</p>
-                              <p className="text-[10px] text-brand-navy/50 flex-shrink-0 ml-2">{e.uniqueTiers.length}/{goal}</p>
-                            </div>
-                            <div className="h-1.5 bg-brand-navy/10 rounded-full overflow-hidden">
-                              <div className="h-full rounded-full bg-brand-gold transition-all" style={{ width: `${pct}%` }} />
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    {myRank > 10 && (
-                      <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-brand-gold/10">
-                        <span className="text-xs font-black w-5 text-center text-brand-navy/30">{myRank}</span>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-0.5">
-                            <p className="text-xs font-bold text-brand-navy">You</p>
-                            <p className="text-[10px] text-brand-navy/50">{entry?.uniqueTiers.length ?? 0}/{challenge.goal ?? 5}</p>
-                          </div>
-                          <div className="h-1.5 bg-brand-navy/10 rounded-full overflow-hidden">
-                            <div className="h-full rounded-full bg-brand-gold" style={{ width: `${((entry?.uniqueTiers.length ?? 0) / (challenge.goal ?? 5)) * 100}%` }} />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Leave button */}
-              {hasJoined && isActive && (
-                <button onClick={onLeave} className="text-xs text-brand-navy/30 underline underline-offset-2 w-full text-center">
-                  Leave challenge
-                </button>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
 
 // --- Admin Challenges Panel ---
 
@@ -2643,18 +2157,6 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
   const [expandedPlayers, setExpandedPlayers] = useState<string | null>(null);
   const [playerProfiles, setPlayerProfiles] = useState<Map<string, UserProfile>>(new Map());
   const [loadingPlayers, setLoadingPlayers] = useState(false);
-  const [awardHandle, setAwardHandle] = useState('');
-  const [awardingFor, setAwardingFor] = useState<{ challengeId: string; uid: string } | null>(null);
-  const [awardResults, setAwardResults] = useState<Map<string, string>>(new Map());
-  const [walletEntries, setWalletEntries] = useState<Map<string, ChallengeEntry[]>>(new Map());
-  const [loadingWallet, setLoadingWallet] = useState(false);
-  const [confirmWinner, setConfirmWinner] = useState<string | null>(null);
-  const [declaringWinner, setDeclaringWinner] = useState<string | null>(null);
-
-  // Collectible form state
-  const [colTitle, setColTitle] = useState('Monopoly Collect-All');
-  const [colReward, setColReward] = useState('$5,000');
-  const [colGoal, setColGoal] = useState(5);
 
   // Standard form state
   const [stdTitle, setStdTitle] = useState('');
@@ -2666,29 +2168,9 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     const q = query(collection(db, 'challenges'), orderBy('createdAt', 'desc'));
     return onSnapshot(q, snap => {
-      setChallenges(snap.docs.map(d => ({ id: d.id, ...d.data() } as Challenge)));
+      setChallenges(snap.docs.map(d => ({ id: d.id, ...d.data() } as Challenge)).filter(c => c.type !== 'collectible'));
     });
   }, []);
-
-  const handleDeployCollectible = async () => {
-    if (!colTitle.trim() || !colReward.trim()) return;
-    setDeploying(true);
-    try {
-      await addDoc(collection(db, 'challenges'), {
-        title: colTitle.trim(),
-        description: `Collect every stamp, earn a sticker. Get ${colGoal} unique tier${colGoal > 1 ? 's' : ''} — Common, Uncommon, Rare, Epic, and Legendary — to claim the grand prize.`,
-        reward: colReward.trim(),
-        type: 'collectible',
-        status: 'active',
-        goal: colGoal,
-        unit: 'unique stickers',
-        participantUids: [],
-        createdAt: serverTimestamp(),
-      });
-    } finally {
-      setDeploying(false);
-    }
-  };
 
   const handleDeployStandard = async () => {
     const g = parseInt(stdGoal);
@@ -2741,94 +2223,31 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
   const handleTogglePlayers = async (c: Challenge) => {
     if (expandedPlayers === c.id) { setExpandedPlayers(null); return; }
     setExpandedPlayers(c.id);
-    setLoadingWallet(true);
+    setLoadingPlayers(true);
     try {
       const uids = (c.participantUids || []).filter(uid => !playerProfiles.has(uid));
-      const [entriesSnap, ...profileResults] = await Promise.all([
-        getDocs(query(collection(db, 'challenge_entries'), where('challengeId', '==', c.id))),
-        ...(uids.length > 0
-          ? (() => { const chunks: string[][] = []; for (let i = 0; i < uids.length; i += 10) chunks.push(uids.slice(i, i + 10)); return chunks; })()
-            .map(chunk => getDocs(query(collection(db, 'users'), where('uid', 'in', chunk))))
-          : []),
-      ]);
-      const entries = entriesSnap.docs.map(d => ({ id: d.id, ...d.data() } as ChallengeEntry));
-      setWalletEntries(prev => new Map(prev).set(c.id, entries));
       if (uids.length > 0) {
+        const chunks: string[][] = [];
+        for (let i = 0; i < uids.length; i += 10) chunks.push(uids.slice(i, i + 10));
+        const results = await Promise.all(chunks.map(chunk => getDocs(query(collection(db, 'users'), where('uid', 'in', chunk)))));
         const updated = new Map(playerProfiles);
-        profileResults.forEach((snap: any) => snap.docs.forEach((d: any) => updated.set(d.id, { uid: d.id, ...d.data() } as UserProfile)));
+        results.forEach(snap => snap.docs.forEach(d => updated.set(d.id, { uid: d.id, ...d.data() } as UserProfile)));
         setPlayerProfiles(updated);
       }
     } finally {
-      setLoadingWallet(false);
+      setLoadingPlayers(false);
     }
   };
-
-  const handleDeclareWinner = async (challengeId: string) => {
-    setDeclaringWinner(challengeId);
-    try {
-      const snap = await getDocs(query(collection(db, 'challenge_entries'), where('challengeId', '==', challengeId)));
-      const finalPlayers = snap.docs.map(d => d.data());
-      await updateDoc(doc(db, 'challenges', challengeId), {
-        status: 'ended',
-        finalResults: { players: finalPlayers, closedAt: new Date().toISOString() },
-      });
-      await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
-      setConfirmWinner(null);
-      setExpandedPlayers(null);
-      setWalletEntries(prev => { const m = new Map(prev); m.delete(challengeId); return m; });
-    } catch (e: any) {
-      console.error('Declare winner error', e);
-    } finally {
-      setDeclaringWinner(null);
-    }
-  };
-
-  const handleAwardSticker = async (_challengeId: string, uid: string, name: string) => {
-    setAwardingFor({ challengeId: _challengeId, uid });
-    try {
-      const result = await awardCollectibleStickers(uid, name, 1);
-      setAwardResults(prev => { const m = new Map(prev); m.set(_challengeId, `✓ ${result}`); return m; });
-      setTimeout(() => setAwardResults(prev => { const m = new Map(prev); m.delete(_challengeId); return m; }), 3000);
-    } catch (e: any) {
-      setAwardResults(prev => { const m = new Map(prev); m.set(_challengeId, `Error: ${e?.message || e}`); return m; });
-    } finally {
-      setAwardingFor(null);
-    }
-  };
-
-  const handleAwardByHandle = async (challengeId: string) => {
-    const clean = awardHandle.replace(/^@/, '').toLowerCase().trim();
-    if (!clean) return;
-    setAwardingFor({ challengeId, uid: '__handle__' });
-    try {
-      const snap = await getDocs(query(collection(db, 'users'), where('handle', '==', clean)));
-      if (snap.empty) {
-        setAwardResults(prev => { const m = new Map(prev); m.set(challengeId, `User @${clean} not found`); return m; });
-        setAwardingFor(null);
-        return;
-      }
-      const u = { uid: snap.docs[0].id, ...snap.docs[0].data() } as UserProfile;
-      await handleAwardSticker(challengeId, u.uid, u.name);
-      setAwardHandle('');
-    } catch (e: any) {
-      setAwardResults(prev => { const m = new Map(prev); m.set(challengeId, `Error: ${e?.message || e}`); return m; });
-      setAwardingFor(null);
-    }
-  };
-
-  const collectible = challenges.filter(c => c.type === 'collectible');
-  const standard = challenges.filter(c => c.type !== 'collectible');
 
   const inputCls = 'w-full px-3 py-2 rounded-xl bg-white border border-brand-navy/10 text-sm text-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-gold/40 placeholder:text-brand-navy/30';
 
-  const ChallengeCard = ({ c, isCollectible }: { c: Challenge; isCollectible: boolean; key?: React.Key }) => {
+  const ChallengeCard = ({ c }: { c: Challenge; key?: React.Key }) => {
     const isActive = c.status === 'active';
     const playerCount = c.participantUids?.length ?? 0;
     const showPlayers = expandedPlayers === c.id;
     return (
       <div className="glass-card rounded-3xl overflow-hidden">
         <div className="p-4 space-y-3">
-          {/* Title row */}
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
               <p className="font-bold text-brand-navy text-sm truncate">{c.title}</p>
@@ -2843,11 +2262,6 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
                 <span className="bg-brand-gold/10 text-brand-gold font-semibold px-1.5 py-0.5 rounded-full">
                   🎁 {c.reward}
                 </span>
-                {isCollectible && (
-                  <span className="bg-brand-navy/5 text-brand-navy/40 px-1.5 py-0.5 rounded-full">
-                    {c.goal ?? 5} tiers
-                  </span>
-                )}
               </div>
             </div>
             <button
@@ -2859,7 +2273,6 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
             </button>
           </div>
 
-          {/* Controls */}
           <div className="flex gap-2">
             <button
               onClick={() => handleToggleStatus(c)}
@@ -2885,11 +2298,10 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
                 showPlayers ? 'bg-brand-navy text-white border-brand-navy' : 'bg-brand-navy/5 text-brand-navy/60 border-brand-navy/10'
               )}
             >
-              <Users size={12} /> Wallet
+              <Users size={12} /> Players
             </button>
           </div>
 
-          {/* Challenge Wallet Table */}
           <AnimatePresence>
             {showPlayers && (
               <motion.div
@@ -2902,119 +2314,29 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
                 <div className="pt-1 space-y-1.5 max-h-60 overflow-y-auto">
                   {playerCount === 0 ? (
                     <p className="text-xs text-brand-navy/40 text-center py-3">No players yet.</p>
-                  ) : loadingWallet ? (
-                    <p className="text-xs text-brand-navy/40 text-center py-3">Loading wallet...</p>
+                  ) : loadingPlayers ? (
+                    <p className="text-xs text-brand-navy/40 text-center py-3">Loading...</p>
                   ) : (
                     (c.participantUids || []).map(uid => {
                       const p = playerProfiles.get(uid);
-                      const entryForPlayer = (walletEntries.get(c.id) || []).find(e => e.userId === uid);
-                      const isAwarding = awardingFor?.challengeId === c.id && awardingFor?.uid === uid;
-                      const stickerCount = entryForPlayer?.stickers.length ?? 0;
-                      const uniqueTiers = entryForPlayer?.uniqueTiers || [];
-                      const isWinner = entryForPlayer?.completed;
                       return (
-                        <div key={uid} className={cn('px-3 py-2.5 rounded-xl', isWinner ? 'bg-amber-50 border border-amber-200' : 'bg-brand-bg')}>
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 bg-brand-navy/10">
-                              {p?.photoURL ? <img src={p.photoURL} alt="" className="w-full h-full object-cover" /> : null}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                <p className="text-xs font-bold text-brand-navy truncate">{p?.name || 'Player'}</p>
-                                {isWinner && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-400 text-white">WINNER</span>}
-                              </div>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                {p?.handle && <p className="text-[10px] text-brand-navy/40">@{p.handle}</p>}
-                                <p className="text-[10px] text-brand-navy/40">{stickerCount} sticker{stickerCount !== 1 ? 's' : ''}</p>
-                              </div>
-                            </div>
-                            {isCollectible && (
-                              <button
-                                onClick={() => handleAwardSticker(c.id, uid, p?.name || 'Player')}
-                                disabled={!!awardingFor}
-                                className="flex-shrink-0 px-2.5 py-1 rounded-lg bg-brand-gold text-white text-[10px] font-bold active:scale-95 transition-all disabled:opacity-40"
-                              >
-                                {isAwarding ? '…' : '+1'}
-                              </button>
-                            )}
+                        <div key={uid} className="px-3 py-2.5 rounded-xl bg-brand-bg flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 bg-brand-navy/10">
+                            {p?.photoURL ? <img src={p.photoURL} alt="" className="w-full h-full object-cover" /> : null}
                           </div>
-                          {isCollectible && uniqueTiers.length > 0 && (
-                            <div className="flex gap-1 mt-1.5 pl-9">
-                              {STICKER_ORDER.map(tier => {
-                                const hasIt = uniqueTiers.includes(tier);
-                                const cfg = STICKER_CONFIG[tier];
-                                return (
-                                  <span key={tier} className="w-3.5 h-3.5 rounded-full border-[1.5px] flex items-center justify-center"
-                                    style={hasIt ? { background: cfg.bg, borderColor: cfg.border } : { background: '#F1F5F9', borderColor: '#E2E8F0' }}>
-                                    {hasIt && <span className="text-[7px] font-black leading-none" style={{ color: cfg.color }}>{tier === 'gold' ? '★' : tier[0].toUpperCase()}</span>}
-                                  </span>
-                                );
-                              })}
-                            </div>
-                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-brand-navy truncate">{p?.name || 'Player'}</p>
+                            {p?.handle && <p className="text-[10px] text-brand-navy/40">@{p.handle}</p>}
+                          </div>
                         </div>
                       );
                     })
                   )}
                 </div>
-
-                {/* Declare Winner */}
-                {playerCount > 0 && confirmWinner !== c.id && (
-                  <button
-                    onClick={() => setConfirmWinner(c.id)}
-                    className="w-full mt-2 py-2.5 rounded-2xl text-xs font-bold bg-amber-400 text-white flex items-center justify-center gap-1.5 active:scale-95 transition-all"
-                  >
-                    <Trophy size={13} /> Declare Winner & Close
-                  </button>
-                )}
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* Give Sticker by handle */}
-          {isCollectible && (
-            <div className="space-y-1.5">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">Give Sticker</p>
-              <div className="flex gap-2">
-                <input
-                  value={awardHandle}
-                  onChange={e => setAwardHandle(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleAwardByHandle(c.id)}
-                  placeholder="@handle or username"
-                  className="flex-1 px-3 py-2 rounded-xl bg-white border border-brand-navy/10 text-sm text-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-gold/40 placeholder:text-brand-navy/30"
-                />
-                <button
-                  onClick={() => handleAwardByHandle(c.id)}
-                  disabled={!awardHandle.trim() || !!awardingFor}
-                  className="px-4 py-2 rounded-xl bg-brand-gold text-white text-xs font-bold active:scale-95 transition-all disabled:opacity-40"
-                >
-                  {awardingFor?.challengeId === c.id && awardingFor?.uid === '__handle__' ? '…' : 'Award'}
-                </button>
-              </div>
-              {awardResults.get(c.id) && (
-                <p className="text-xs font-bold text-brand-navy/60">{awardResults.get(c.id)}</p>
-              )}
-            </div>
-          )}
-
-          {/* Declare Winner confirmation */}
-          {confirmWinner === c.id && (
-            <div className="rounded-2xl bg-amber-50 border border-amber-200 p-3 space-y-2">
-              <p className="text-xs font-bold text-amber-800 text-center">This will save all player data to the challenge and delete all wallets. Cannot be undone.</p>
-              <div className="flex gap-2">
-                <button onClick={() => setConfirmWinner(null)} className="flex-1 py-2 rounded-xl bg-white text-brand-navy/60 text-xs font-bold border border-brand-navy/10">Cancel</button>
-                <button
-                  onClick={() => handleDeclareWinner(c.id)}
-                  disabled={declaringWinner === c.id}
-                  className="flex-1 py-2 rounded-xl bg-amber-400 text-white text-xs font-bold disabled:opacity-50"
-                >
-                  {declaringWinner === c.id ? 'Closing...' : 'Yes, Close Challenge'}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Restart confirmation */}
           {confirmRestart === c.id && (
             <div className="rounded-2xl bg-brand-rose/10 border border-brand-rose/20 p-3 space-y-2">
               <p className="text-xs font-bold text-brand-rose text-center">Restart will erase ALL player progress. Continue?</p>
@@ -3031,7 +2353,6 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          {/* Delete confirmation */}
           {confirmDelete === c.id && (
             <div className="rounded-2xl bg-brand-rose/10 border border-brand-rose/20 p-3 space-y-2">
               <p className="text-xs font-bold text-brand-rose text-center">Delete will permanently remove this challenge and all entries.</p>
@@ -3060,7 +2381,6 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
       className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex flex-col max-w-md mx-auto"
     >
       <div className="flex-1 overflow-y-auto bg-brand-bg">
-        {/* Header */}
         <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm px-5 pt-5 pb-4 border-b border-black/5 z-10">
           <div className="flex items-center justify-between">
             <div>
@@ -3074,65 +2394,6 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="p-5 space-y-6">
-
-          {/* Deploy Collectible (Monopoly) */}
-          <div className="rounded-3xl overflow-hidden border-2 border-dashed border-brand-gold/40 p-5 space-y-3"
-            style={{ background: 'linear-gradient(135deg, #FFFBEB, #FEF3C7)' }}>
-            <div className="flex items-center gap-2">
-              <Trophy className="w-5 h-5 text-brand-gold" />
-              <h3 className="font-bold text-amber-800 text-sm">Sticker Collect-All Challenge</h3>
-            </div>
-            <p className="text-xs text-amber-700/70">
-              Every stamp earns a random sticker. Players collect unique tiers to win the prize.
-            </p>
-            <div className="grid grid-cols-5 gap-1 mb-1">
-              {STICKER_ORDER.map(tier => {
-                const cfg = STICKER_CONFIG[tier];
-                return (
-                  <div key={tier} className="flex flex-col items-center gap-0.5">
-                    <div className="w-full aspect-square rounded-xl border flex items-center justify-center text-sm font-black"
-                      style={{ background: cfg.bg, borderColor: cfg.border, color: cfg.color }}>
-                      {tier === 'gold' ? '★' : tier[0].toUpperCase()}
-                    </div>
-                    <span className="text-[8px] text-amber-700/60 text-center leading-tight">{cfg.chance}</span>
-                  </div>
-                );
-              })}
-            </div>
-            <input
-              value={colTitle}
-              onChange={e => setColTitle(e.target.value)}
-              placeholder="Challenge name"
-              className={inputCls}
-            />
-            <div className="flex gap-2">
-              <input
-                value={colReward}
-                onChange={e => setColReward(e.target.value)}
-                placeholder="Prize (e.g. $5,000)"
-                className={cn(inputCls, 'flex-1')}
-              />
-              <div className="flex items-center gap-1.5 bg-white border border-brand-navy/10 rounded-xl px-3">
-                <span className="text-xs text-brand-navy/50 whitespace-nowrap">Tiers to win</span>
-                <select
-                  value={colGoal}
-                  onChange={e => setColGoal(Number(e.target.value))}
-                  className="bg-transparent text-sm font-bold text-brand-navy focus:outline-none py-2"
-                >
-                  {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}
-                </select>
-              </div>
-            </div>
-            <button
-              onClick={handleDeployCollectible}
-              disabled={deploying || !colTitle.trim() || !colReward.trim()}
-              className="w-full bg-brand-gold text-white font-bold py-3 rounded-2xl text-sm flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
-            >
-              <Zap size={15} /> {deploying ? 'Deploying...' : 'Deploy Challenge'}
-            </button>
-          </div>
-
-          {/* Deploy Standard */}
           <div className="rounded-3xl overflow-hidden border-2 border-dashed border-brand-navy/20 p-5 space-y-3 bg-white">
             <div className="flex items-center gap-2">
               <Star className="w-5 h-5 text-brand-navy/50" />
@@ -3157,19 +2418,10 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
             </button>
           </div>
 
-          {/* Collectible challenges */}
-          {collectible.length > 0 && (
+          {challenges.length > 0 && (
             <div className="space-y-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Sticker Challenges</p>
-              {collectible.map(c => <ChallengeCard key={c.id} c={c} isCollectible={true} />)}
-            </div>
-          )}
-
-          {/* Standard challenges */}
-          {standard.length > 0 && (
-            <div className="space-y-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Standard Challenges</p>
-              {standard.map(c => <ChallengeCard key={c.id} c={c} isCollectible={false} />)}
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Active Challenges</p>
+              {challenges.map(c => <ChallengeCard key={c.id} c={c} />)}
             </div>
           )}
 
@@ -3187,10 +2439,8 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
 function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onViewUser, cards: initialCards, notifications, activeChatId, setActiveChatId, onLogout, onDeleteAccount }: { activeTab: string, setActiveTab: (tab: string) => void, profile: UserProfile | null, user: FirebaseUser, onViewStore: (s: StoreProfile) => void, onViewUser: (u: UserProfile) => void, cards: Card[], notifications: Notification[], activeChatId: string | null, setActiveChatId: (id: string | null) => void, onLogout: () => void, onDeleteAccount: () => Promise<void>, key?: React.Key }) {
   const [stores, setStores] = useState<StoreProfile[]>([]);
   const [walletSubTab, setWalletSubTab] = useState<'stamps' | 'challenges'>('stamps');
-  const [challenges, setChallenges] = useState<Challenge[]>([]);
-  const [joiningChallengeId, setJoiningChallengeId] = useState<string | null>(null);
-  const [myEntries, setMyEntries] = useState<ChallengeEntry[]>([]);
-  const [openChallengeId, setOpenChallengeId] = useState<string | null>(null);
+  const [myStickerCards, setMyStickerCards] = useState<StickerCardDoc[]>([]);
+  const [openStickerCardId, setOpenStickerCardId] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'stores'), (snapshot) => {
@@ -3202,54 +2452,12 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   }, []);
 
   useEffect(() => {
-    const q = query(collection(db, 'challenges'), orderBy('createdAt', 'desc'));
+    const q = query(collection(db, 'sticker_cards'), where('user_id', '==', user.uid));
     return onSnapshot(q,
-      snap => { setChallenges(snap.docs.map(d => ({ id: d.id, ...d.data() } as Challenge))); },
-      err => console.error('[challenges snapshot]', err)
-    );
-  }, []);
-
-  useEffect(() => {
-    const q = query(collection(db, 'challenge_entries'), where('userId', '==', user.uid));
-    return onSnapshot(q,
-      snap => { setMyEntries(snap.docs.map(d => ({ id: d.id, ...d.data() } as ChallengeEntry))); },
-      err => console.error('[myEntries snapshot]', err)
+      snap => { setMyStickerCards(snap.docs.map(d => ({ id: d.id, ...d.data() } as StickerCardDoc))); },
+      err => console.error('[sticker_cards snapshot]', err)
     );
   }, [user.uid]);
-
-  const handleJoinChallenge = async (challengeId: string) => {
-    if (!user) return;
-    setJoiningChallengeId(challengeId);
-    try {
-      await updateDoc(doc(db, 'challenges', challengeId), {
-        participantUids: arrayUnion(user.uid)
-      });
-      const entryRef = doc(db, 'challenge_entries', `${challengeId}_${user.uid}`);
-      const entrySnap = await getDoc(entryRef);
-      if (!entrySnap.exists()) {
-        await setDoc(entryRef, {
-          challengeId,
-          userId: user.uid,
-          userName: profile?.name || '',
-          stickers: [],
-          revealedIds: [],
-          uniqueTiers: [],
-          completed: false,
-        });
-      }
-    } catch (e) {
-      console.error('Failed to join challenge', e);
-    } finally {
-      setJoiningChallengeId(null);
-    }
-  };
-
-  const handleLeaveChallenge = async (challengeId: string) => {
-    if (!user) return;
-    await updateDoc(doc(db, 'challenges', challengeId), {
-      participantUids: arrayRemove(user.uid)
-    });
-  };
 
   const handleJoinStore = async (store: StoreProfile) => {
     if (!user) return;
@@ -3257,6 +2465,8 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
     const cardRef = doc(db, 'cards', cardId);
     const cardSnap = await getDoc(cardRef);
     if (!cardSnap.exists() || cardSnap.data()?.isArchived) {
+      const userName = profile?.name || user.displayName || user.email?.split('@')[0] || 'Loyal Customer';
+      const userPhoto = profile?.photoURL || user.photoURL || '';
       await setDoc(cardRef, {
         user_id: user.uid,
         store_id: store.id,
@@ -3266,15 +2476,19 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         last_tap_timestamp: serverTimestamp(),
         isArchived: false,
         isRedeemed: false,
-        userName: user.displayName || user.email?.split('@')[0] || 'Loyal Customer',
-        userPhoto: user.photoURL || ''
+        userName,
+        userPhoto,
       });
-      
-      // Update user total_cards_held
-      await updateDoc(doc(db, 'users', user.uid), {
-        total_cards_held: increment(1)
-      });
-
+      await setDoc(doc(db, 'sticker_cards', cardId), {
+        user_id: user.uid,
+        store_id: store.id,
+        stickers: [],
+        revealedIds: [],
+        uniqueTiers: [],
+        userName,
+        userPhoto,
+      }, { merge: true });
+      await updateDoc(doc(db, 'users', user.uid), { total_cards_held: increment(1) });
       setActiveTab('home');
     }
   };
@@ -3309,7 +2523,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
 
           {/* Sub-tabs */}
           {(() => {
-            const totalUnrevealed = myEntries.reduce((n, e) => n + e.stickers.filter(s => !(e.revealedIds || []).includes(s.id)).length, 0);
+            const totalUnrevealed = myStickerCards.reduce((n, sc) => n + sc.stickers.filter(s => !(sc.revealedIds || []).includes(s.id)).length, 0);
             return (
               <div className="flex bg-brand-bg rounded-2xl p-1 gap-1">
                 <button
@@ -3328,7 +2542,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                     walletSubTab === 'challenges' ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/50'
                   )}
                 >
-                  Challenges
+                  Stickers
                   {totalUnrevealed > 0 && (
                     <span className="absolute top-1 right-3 w-4 h-4 bg-brand-rose text-white text-[9px] font-black rounded-full flex items-center justify-center">
                       {totalUnrevealed > 9 ? '9+' : totalUnrevealed}
@@ -3365,104 +2579,87 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
             </div>
           )}
 
-          {/* Challenges sub-tab */}
+          {/* Stickers sub-tab — one sticker card per loyalty programme */}
           {walletSubTab === 'challenges' && (
-            <div className="space-y-3">
-              {challenges.filter(c => c.status !== 'ended').length === 0 ? (
-                <div className="glass-card p-10 rounded-[2.5rem] border-2 border-dashed border-brand-rose/40 text-center">
-                  <div className="w-16 h-16 bg-brand-bg rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Trophy className="w-8 h-8 text-brand-navy/20" />
-                  </div>
-                  <p className="text-brand-navy/60 text-sm">No challenges yet. Check back soon!</p>
-                </div>
-              ) : (
-                challenges.filter(c => c.status !== 'ended').map(challenge => {
-                  const hasJoined = challenge.participantUids?.includes(user.uid);
-                  const myEntry = myEntries.find(e => e.challengeId === challenge.id);
-                  const unrevealed = (myEntry?.stickers || []).filter(s => !(myEntry?.revealedIds || []).includes(s.id));
-                  const myUnique = new Set(myEntry?.uniqueTiers || []);
-                  const isCollectible = challenge.type === 'collectible';
-                  const statusColor = challenge.status === 'active'
-                    ? { bg: '#F0FDF4', text: '#16A34A' }
-                    : { bg: '#FFFBEB', text: '#D97706' };
-
+            <div className="space-y-4">
+              <p className="text-brand-navy/60 text-sm">You have {myStickerCards.length} sticker collection{myStickerCards.length !== 1 ? 's' : ''}.</p>
+              {myStickerCards.length > 0 ? (
+                myStickerCards.map(sc => {
+                  const store = stores.find(s => s.id === sc.store_id);
+                  const unrevealed = sc.stickers.filter(s => !(sc.revealedIds || []).includes(s.id));
+                  const myUnique = new Set(sc.uniqueTiers || []);
                   return (
                     <button
-                      key={challenge.id}
-                      onClick={() => setOpenChallengeId(challenge.id)}
+                      key={sc.id}
+                      onClick={() => setOpenStickerCardId(sc.id)}
                       className="w-full glass-card p-4 rounded-3xl text-left active:scale-[0.98] transition-all"
                     >
                       <div className="flex items-start justify-between gap-3 mb-3">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap mb-1">
-                            <Trophy className="w-4 h-4 text-brand-gold flex-shrink-0" />
-                            <span className="font-bold text-brand-navy text-sm truncate">{challenge.title}</span>
-                            {challenge.status && (
-                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase"
-                                style={{ background: statusColor.bg, color: statusColor.text }}>
-                                {challenge.status}
-                              </span>
-                            )}
+                            {store?.logoURL
+                              ? <img src={store.logoURL} alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
+                              : <div className="w-5 h-5 rounded-full bg-brand-navy/10 flex-shrink-0" />}
+                            <span className="font-bold text-brand-navy text-sm truncate">{store?.name || 'Loyalty Programme'}</span>
                           </div>
-                          <p className="text-brand-navy/50 text-xs line-clamp-1">{challenge.description}</p>
+                          <p className="text-brand-navy/50 text-xs">{sc.stickers.length} sticker{sc.stickers.length !== 1 ? 's' : ''} collected</p>
                         </div>
-                        <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                          {hasJoined
-                            ? <span className="text-[10px] font-bold text-brand-gold bg-brand-gold/10 px-2 py-0.5 rounded-full">Joined ✓</span>
-                            : <span className="text-[10px] font-bold text-brand-navy bg-brand-navy/5 px-2 py-0.5 rounded-full">Tap to join</span>
-                          }
-                          {unrevealed.length > 0 && (
-                            <span className="text-[10px] font-bold text-white bg-brand-rose px-2 py-0.5 rounded-full animate-pulse">
-                              {unrevealed.length} new!
-                            </span>
-                          )}
-                        </div>
+                        {unrevealed.length > 0 && (
+                          <span className="text-[10px] font-bold text-white bg-brand-rose px-2 py-0.5 rounded-full animate-pulse flex-shrink-0">
+                            {unrevealed.length} new!
+                          </span>
+                        )}
                       </div>
-
-                      {/* Mini slot strip for collectible */}
-                      {isCollectible && (
-                        <div className="flex gap-1.5 items-center">
-                          {STICKER_ORDER.map(tier => {
-                            const cfg = STICKER_CONFIG[tier];
-                            const lit = myUnique.has(tier);
-                            return (
-                              <div key={tier}
-                                className="w-8 h-8 rounded-xl border-2 flex items-center justify-center text-xs font-black transition-all"
-                                style={lit
-                                  ? { background: cfg.bg, borderColor: cfg.border, color: cfg.color }
-                                  : { background: '#F1F5F9', borderColor: '#E2E8F0', color: '#CBD5E1' }}>
-                                {lit ? (tier === 'gold' ? '★' : tier[0].toUpperCase()) : '?'}
-                              </div>
-                            );
-                          })}
-                          <span className="ml-auto text-xs text-brand-navy/40 font-medium">{myUnique.size}/{challenge.goal ?? 5}</span>
-                        </div>
-                      )}
+                      <div className="flex gap-1.5 items-center">
+                        {STICKER_ORDER.map(tier => {
+                          const cfg = STICKER_CONFIG[tier];
+                          const lit = myUnique.has(tier);
+                          return (
+                            <div key={tier}
+                              className="w-8 h-8 rounded-xl border-2 flex items-center justify-center text-xs font-black transition-all"
+                              style={lit
+                                ? { background: cfg.bg, borderColor: cfg.border, color: cfg.color }
+                                : { background: '#F1F5F9', borderColor: '#E2E8F0', color: '#CBD5E1' }}>
+                              {lit ? (tier === 'gold' ? '★' : tier[0].toUpperCase()) : '?'}
+                            </div>
+                          );
+                        })}
+                        <span className="ml-auto text-xs text-brand-navy/40 font-medium">{myUnique.size}/5</span>
+                      </div>
                     </button>
                   );
                 })
+              ) : (
+                <div className="glass-card p-10 rounded-[2.5rem] border-2 border-dashed border-brand-rose/40 text-center">
+                  <div className="w-16 h-16 bg-brand-bg rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Trophy className="w-8 h-8 text-brand-navy/20" />
+                  </div>
+                  <p className="text-brand-navy/60 mb-6">Join a loyalty programme to start collecting stickers.</p>
+                  <button
+                    onClick={() => setActiveTab('discover')}
+                    className="bg-brand-navy text-white px-8 py-3 rounded-xl font-bold text-sm"
+                  >
+                    Find Stores
+                  </button>
+                </div>
               )}
             </div>
           )}
         </div>
       )}
 
-      {/* Collectible Challenge Modal */}
+      {/* Sticker Collection Modal */}
       <AnimatePresence>
-        {openChallengeId && (() => {
-          const challenge = challenges.find(c => c.id === openChallengeId);
-          if (!challenge || challenge.type !== 'collectible') return null;
-          const entry = myEntries.find(e => e.challengeId === openChallengeId) || null;
+        {openStickerCardId && (() => {
+          const sc = myStickerCards.find(s => s.id === openStickerCardId);
+          if (!sc) return null;
+          const store = stores.find(s => s.id === sc.store_id);
           return (
-            <CollectibleChallengeModal
-              key={openChallengeId}
-              challenge={challenge}
-              entry={entry}
-              userId={user.uid}
-              onJoin={() => handleJoinChallenge(openChallengeId)}
-              onLeave={() => handleLeaveChallenge(openChallengeId)}
-              joining={joiningChallengeId === openChallengeId}
-              onClose={() => setOpenChallengeId(null)}
+            <StickerCollectionModal
+              key={openStickerCardId}
+              stickerCard={sc}
+              store={store}
+              onClose={() => setOpenStickerCardId(null)}
             />
           );
         })()}
@@ -3680,14 +2877,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
           totalStamps: increment(qty)
         });
 
-        let stickerMsg = '';
-        try {
-          stickerMsg = await awardCollectibleStickers(customer.uid, customer.name, qty);
-        } catch (e: any) {
-          stickerMsg = `Sticker error: ${e?.message || e}`;
-          console.error('[Stickers]', e);
-        }
-        setIssueStatus({ type: 'success', message: `${qty} stamp(s) issued to ${customer.name}! · ${stickerMsg}` });
+        issueStickersToCard(customer.uid, store.id, customer.name, qty).catch(console.error);
+        setIssueStatus({ type: 'success', message: `${qty} stamp(s) issued to ${customer.name}!` });
         setCustomerHandle('');
         setStampQuantity(1);
       }
@@ -4121,7 +3312,7 @@ function LoyaltyCard({ card, store, onViewStore }: { card: Card, store?: StorePr
       });
 
       const customerName = auth.currentUser.displayName || auth.currentUser.email?.split('@')[0] || 'Customer';
-      awardCollectibleStickers(auth.currentUser.uid, customerName, qty).catch(console.error);
+      issueStickersToCard(auth.currentUser.uid, store.id, customerName, qty).catch(console.error);
 
       if (newStamps >= limit) {
         setShowQR(false);
@@ -7479,6 +6670,8 @@ function ForYouScreen({ onViewUser, onViewStore, currentUser, currentProfile, us
       const cardRef = doc(db, 'cards', cardId);
       const cardSnap = await getDoc(cardRef);
       if (!cardSnap.exists() || cardSnap.data()?.isArchived) {
+        const userName = currentProfile?.name || currentUser.displayName || 'Loyal Customer';
+        const userPhoto = currentProfile?.photoURL || currentUser.photoURL || '';
         await setDoc(cardRef, {
           user_id: currentUser.uid,
           store_id: store.id,
@@ -7488,9 +6681,18 @@ function ForYouScreen({ onViewUser, onViewStore, currentUser, currentProfile, us
           last_tap_timestamp: serverTimestamp(),
           isArchived: false,
           isRedeemed: false,
-          userName: currentProfile?.name || currentUser.displayName || 'Loyal Customer',
-          userPhoto: currentProfile?.photoURL || currentUser.photoURL || ''
+          userName,
+          userPhoto,
         });
+        await setDoc(doc(db, 'sticker_cards', cardId), {
+          user_id: currentUser.uid,
+          store_id: store.id,
+          stickers: [],
+          revealedIds: [],
+          uniqueTiers: [],
+          userName,
+          userPhoto,
+        }, { merge: true });
         await updateDoc(doc(db, 'users', currentUser.uid), { total_cards_held: increment(1) });
       }
       if (onViewStore) onViewStore(store);
@@ -8443,20 +7645,29 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
 
   const handleJoinStore = async () => {
     const cardId = `${user.uid}_${store.id}`;
-    const cardRef = doc(db, 'cards', cardId);
-    await setDoc(cardRef, {
+    const userName = profile?.name || user.displayName || user.email?.split('@')[0] || 'Loyal Customer';
+    const userPhoto = profile?.photoURL || user.photoURL || '';
+    await setDoc(doc(db, 'cards', cardId), {
       user_id: user.uid,
       store_id: store.id,
       current_stamps: 0,
       total_completed_cycles: 0,
       stamps_required: store.stamps_required_for_reward || 10,
       last_tap_timestamp: serverTimestamp(),
-      isArchived: false
+      isArchived: false,
+      userName,
+      userPhoto,
     });
-    
-    await updateDoc(doc(db, 'users', user.uid), {
-      total_cards_held: increment(1)
-    });
+    await setDoc(doc(db, 'sticker_cards', cardId), {
+      user_id: user.uid,
+      store_id: store.id,
+      stickers: [],
+      revealedIds: [],
+      uniqueTiers: [],
+      userName,
+      userPhoto,
+    }, { merge: true });
+    await updateDoc(doc(db, 'users', user.uid), { total_cards_held: increment(1) });
   };
 
   const handleCreatePost = async () => {
