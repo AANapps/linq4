@@ -3047,6 +3047,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const [myStickerCards, setMyStickerCards] = useState<StickerCardDoc[]>([]);
   const [openStickerCardId, setOpenStickerCardId] = useState<string | null>(null);
   const [activePrograms, setActivePrograms] = useState<Challenge[]>([]);
+  const [activeStandardChallenges, setActiveStandardChallenges] = useState<Challenge[]>([]);
   const [joiningProgramId, setJoiningProgramId] = useState<string | null>(null);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [openProgrammeId, setOpenProgrammeId] = useState<string | null>(null);
@@ -3072,6 +3073,13 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
     const q = query(collection(db, 'challenges'), where('type', '==', 'collectible'));
     return onSnapshot(q, snap =>
       setActivePrograms(snap.docs.map(d => ({ id: d.id, ...d.data() } as Challenge)).filter(c => c.status === 'active'))
+    );
+  }, []);
+
+  useEffect(() => {
+    const q = query(collection(db, 'challenges'), where('type', '==', 'standard'), where('status', '==', 'active'));
+    return onSnapshot(q, snap =>
+      setActiveStandardChallenges(snap.docs.map(d => ({ id: d.id, ...d.data() } as Challenge)))
     );
   }, []);
 
@@ -3338,6 +3346,69 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                     </div>
                   );
                 })
+              )}
+
+              {/* Standard challenges */}
+              {activeStandardChallenges.length > 0 && (
+                <div className="space-y-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Challenges</p>
+                  {activeStandardChallenges.map(c => {
+                    const joined = (c.participantUids || []).includes(user.uid);
+                    return (
+                      <div key={c.id} className="bg-white rounded-[2rem] border border-black/5 shadow-sm overflow-hidden">
+                        <div className="p-5 space-y-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold text-brand-navy text-base leading-tight">{c.title}</p>
+                              {c.description && <p className="text-xs text-brand-navy/50 mt-1">{c.description}</p>}
+                            </div>
+                            <div className="w-10 h-10 rounded-2xl bg-brand-gold/10 flex items-center justify-center shrink-0">
+                              <Trophy size={18} className="text-brand-gold" />
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {c.goal && c.unit && (
+                              <span className="text-[10px] font-bold bg-brand-navy/5 text-brand-navy/60 px-2.5 py-1 rounded-full">
+                                Goal: {c.goal} {c.unit}
+                              </span>
+                            )}
+                            <span className="text-[10px] font-bold bg-brand-gold/10 text-brand-gold px-2.5 py-1 rounded-full">
+                              🎁 {c.reward}
+                            </span>
+                            {c.endsAt && (
+                              <span className="text-[10px] font-bold bg-brand-navy/5 text-brand-navy/50 px-2.5 py-1 rounded-full flex items-center gap-1">
+                                <Clock size={9} /> <CountdownTimer endsAt={c.endsAt} />
+                              </span>
+                            )}
+                          </div>
+                          <button
+                            disabled={joined}
+                            onClick={async () => {
+                              if (joined) return;
+                              await updateDoc(doc(db, 'challenges', c.id), {
+                                participantUids: arrayUnion(user.uid),
+                              });
+                              await addDoc(collection(db, 'challenge_entries'), {
+                                challengeId: c.id,
+                                uid: user.uid,
+                                count: 0,
+                                createdAt: serverTimestamp(),
+                              });
+                            }}
+                            className={cn(
+                              'w-full py-3 rounded-2xl text-sm font-bold transition-all active:scale-95',
+                              joined
+                                ? 'bg-green-50 text-green-600 border border-green-200'
+                                : 'bg-brand-navy text-white'
+                            )}
+                          >
+                            {joined ? '✓ Joined' : 'Join Challenge'}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
 
             </div>
@@ -3647,7 +3718,8 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
       for (let i = 0; i < recipientUids.length; i += 50) {
         await Promise.all(recipientUids.slice(i, i + 50).map(async uid => {
           const chatId = `broadcast_${store.id}_${uid}`;
-          await setDoc(doc(db, 'chats', chatId), {
+          const chatRef = doc(db, 'chats', chatId);
+          await setDoc(chatRef, {
             uids: [store.ownerUid, uid],
             isBroadcast: true,
             storeId: store.id,
@@ -3655,8 +3727,8 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
             storeLogoUrl: store.logoUrl || '',
             lastMessage: msgBody.trim(),
             lastActivity: serverTimestamp(),
-            unreadCount: { [uid]: increment(1) },
           }, { merge: true });
+          await updateDoc(chatRef, { [`unreadCount.${uid}`]: increment(1) });
           await addDoc(collection(db, 'chats', chatId, 'messages'), {
             chatId,
             senderUid: store.ownerUid,
