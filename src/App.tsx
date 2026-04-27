@@ -102,7 +102,9 @@ import {
   Scissors,
   Dumbbell,
   Car,
-  ShoppingBag
+  ShoppingBag,
+  Wifi,
+  Smartphone
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
@@ -3052,6 +3054,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const [joiningProgramId, setJoiningProgramId] = useState<string | null>(null);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [openProgrammeId, setOpenProgrammeId] = useState<string | null>(null);
+  const [showNFCStamp, setShowNFCStamp] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'stores'), (snapshot) => {
@@ -3204,7 +3207,16 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           {/* Stamps sub-tab */}
           {walletSubTab === 'stamps' && (
             <div className="space-y-4">
-              <p className="text-brand-navy/60 text-sm">You have {activeCards.length} active loyalty card{activeCards.length !== 1 ? 's' : ''}.</p>
+              <div className="flex items-center justify-between">
+                <p className="text-brand-navy/60 text-sm">You have {activeCards.length} active loyalty card{activeCards.length !== 1 ? 's' : ''}.</p>
+                <button
+                  onClick={() => setShowNFCStamp(true)}
+                  className="flex items-center gap-2 bg-brand-navy text-white px-4 py-2 rounded-xl font-bold text-xs"
+                >
+                  <Wifi size={14} />
+                  Tap to Stamp
+                </button>
+              </div>
               {activeCards.length > 0 ? (
                 activeCards.map(card => {
                   const store = stores.find(s => s.id === card.store_id);
@@ -3513,6 +3525,17 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         })()}
       </AnimatePresence>
 
+      {/* NFC Stamp Modal */}
+      <AnimatePresence>
+        {showNFCStamp && (
+          <NFCStampModal
+            user={user}
+            profile={profile}
+            onClose={() => setShowNFCStamp(false)}
+          />
+        )}
+      </AnimatePresence>
+
       {activeTab === 'discover' && (
         <DiscoveryScreen
           stores={stores}
@@ -3536,6 +3559,262 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           user={user}
         />
       )}
+    </motion.div>
+  );
+}
+
+// --- NFC Stamp Modal ---
+
+function NFCStampModal({ user, profile, onClose }: {
+  user: FirebaseUser;
+  profile: UserProfile | null;
+  onClose: () => void;
+}) {
+  type NFCState = 'scanning' | 'processing' | 'success' | 'error' | 'unsupported';
+  const [nfcState, setNfcState] = useState<NFCState>('scanning');
+  const [statusMsg, setStatusMsg] = useState('Hold your phone near the store NFC tag');
+  const [storeName, setStoreName] = useState('');
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (!('NDEFReader' in window)) {
+      setNfcState('unsupported');
+      setStatusMsg('NFC is not supported on this device. Use Chrome on Android.');
+      return;
+    }
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    const startScan = async () => {
+      try {
+        const reader = new (window as any).NDEFReader();
+        await reader.scan({ signal: controller.signal });
+
+        reader.onreadingerror = () => {
+          setNfcState('error');
+          setStatusMsg('Could not read NFC tag. Try again.');
+        };
+
+        reader.onreading = async (event: any) => {
+          controller.abort();
+          setNfcState('processing');
+          setStatusMsg('Reading tag...');
+
+          try {
+            let storeId: string | null = null;
+            for (const record of event.message.records) {
+              if (record.recordType === 'text') {
+                const decoder = new TextDecoder(record.encoding || 'utf-8');
+                const text = decoder.decode(record.data);
+                if (text.startsWith('linq4:')) {
+                  storeId = text.slice(6).trim();
+                  break;
+                }
+              }
+            }
+
+            if (!storeId) {
+              setNfcState('error');
+              setStatusMsg('This tag is not a valid linq4 store tag.');
+              return;
+            }
+
+            const storeSnap = await getDoc(doc(db, 'stores', storeId));
+            if (!storeSnap.exists()) {
+              setNfcState('error');
+              setStatusMsg('Store not found. Please try a different tag.');
+              return;
+            }
+
+            const store = { id: storeSnap.id, ...storeSnap.data() } as StoreProfile;
+            setStoreName(store.name);
+            const limit = store.stamps_required_for_reward || 10;
+            const cardId = `${user.uid}_${store.id}`;
+            const cardRef = doc(db, 'cards', cardId);
+            const cardSnap = await getDoc(cardRef);
+
+            // Rate limiting: 30 min cooldown
+            if (cardSnap.exists()) {
+              const ts = cardSnap.data()?.last_tap_timestamp;
+              if (ts) {
+                const lastTap = ts.toDate ? ts.toDate() : new Date(ts);
+                const diffMins = (Date.now() - lastTap.getTime()) / 60000;
+                if (diffMins < 30) {
+                  const waitMins = Math.ceil(30 - diffMins);
+                  setNfcState('error');
+                  setStatusMsg(`You already stamped at ${store.name} recently. Try again in ${waitMins} min.`);
+                  return;
+                }
+              }
+            }
+
+            const userName = profile?.name || user.displayName || user.email?.split('@')[0] || 'Customer';
+            const userPhoto = profile?.photoURL || user.photoURL || '';
+
+            let newStamps: number;
+            let newCycles: number;
+
+            if (!cardSnap.exists() || cardSnap.data()?.isArchived) {
+              newStamps = 1;
+              newCycles = 0;
+              await setDoc(cardRef, {
+                user_id: user.uid,
+                store_id: store.id,
+                current_stamps: newStamps,
+                total_completed_cycles: newCycles,
+                stamps_required: limit,
+                last_tap_timestamp: serverTimestamp(),
+                isArchived: false,
+                isRedeemed: false,
+                userName,
+                userPhoto,
+              });
+              await updateDoc(doc(db, 'users', user.uid), { total_cards_held: increment(1) });
+            } else {
+              const current = cardSnap.data()?.current_stamps || 0;
+              newCycles = cardSnap.data()?.total_completed_cycles || 0;
+              newStamps = current + 1;
+
+              if (newStamps >= limit) {
+                newCycles += 1;
+                if (newStamps > limit) newStamps = limit;
+                await addDoc(collection(db, 'transactions'), {
+                  user_id: user.uid,
+                  store_id: store.id,
+                  completed_at: serverTimestamp(),
+                  stamps_at_completion: limit,
+                  reward_claimed: false,
+                });
+              }
+
+              await updateDoc(cardRef, {
+                current_stamps: newStamps,
+                total_completed_cycles: newCycles,
+                last_tap_timestamp: serverTimestamp(),
+              });
+            }
+
+            await updateDoc(doc(db, 'users', user.uid), { totalStamps: increment(1) });
+            issueStickersToCard(user.uid, userName, 1).catch(console.error);
+
+            setNfcState('success');
+            setStatusMsg(`Stamp added at ${store.name}!`);
+          } catch (err: any) {
+            console.error('NFC stamp error:', err);
+            setNfcState('error');
+            setStatusMsg(err?.message || 'Something went wrong. Please try again.');
+          }
+        };
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          console.error('NFC scan failed:', err);
+          setNfcState('error');
+          setStatusMsg(err?.message || 'Could not start NFC scan. Check permissions.');
+        }
+      }
+    };
+
+    startScan();
+    return () => { abortRef.current?.abort(); };
+  }, []);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end justify-center"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ y: 80, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 80, opacity: 0 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        className="bg-white rounded-t-[2rem] w-full max-w-md p-8 pb-12 text-center"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="w-1 h-1 bg-brand-navy/20 rounded-full mx-auto mb-6" style={{ width: 40, height: 4 }} />
+
+        {nfcState === 'scanning' && (
+          <>
+            <div className="w-24 h-24 rounded-full bg-brand-navy/5 flex items-center justify-center mx-auto mb-6 relative">
+              <Wifi size={40} className="text-brand-navy" />
+              <motion.div
+                className="absolute inset-0 rounded-full border-2 border-brand-navy/30"
+                animate={{ scale: [1, 1.4, 1], opacity: [0.8, 0, 0.8] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              />
+            </div>
+            <h2 className="font-display text-2xl font-bold text-brand-navy mb-2">Ready to Scan</h2>
+            <p className="text-brand-navy/60 text-sm">{statusMsg}</p>
+          </>
+        )}
+
+        {nfcState === 'processing' && (
+          <>
+            <div className="w-24 h-24 rounded-full bg-brand-navy/5 flex items-center justify-center mx-auto mb-6">
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+              >
+                <Wifi size={40} className="text-brand-navy" />
+              </motion.div>
+            </div>
+            <h2 className="font-display text-2xl font-bold text-brand-navy mb-2">Processing...</h2>
+            <p className="text-brand-navy/60 text-sm">{statusMsg}</p>
+          </>
+        )}
+
+        {nfcState === 'success' && (
+          <>
+            <div className="w-24 h-24 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-6">
+              <CheckCircle2 size={48} className="text-green-500" />
+            </div>
+            <h2 className="font-display text-2xl font-bold text-brand-navy mb-2">Stamp Added!</h2>
+            <p className="text-brand-navy/60 text-sm mb-6">{statusMsg}</p>
+            <button
+              onClick={onClose}
+              className="bg-brand-navy text-white px-8 py-3 rounded-xl font-bold text-sm w-full"
+            >
+              Done
+            </button>
+          </>
+        )}
+
+        {nfcState === 'error' && (
+          <>
+            <div className="w-24 h-24 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-6">
+              <X size={48} className="text-red-400" />
+            </div>
+            <h2 className="font-display text-2xl font-bold text-brand-navy mb-2">Oops</h2>
+            <p className="text-brand-navy/60 text-sm mb-6">{statusMsg}</p>
+            <button
+              onClick={onClose}
+              className="bg-brand-navy text-white px-8 py-3 rounded-xl font-bold text-sm w-full"
+            >
+              Close
+            </button>
+          </>
+        )}
+
+        {nfcState === 'unsupported' && (
+          <>
+            <div className="w-24 h-24 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-6">
+              <Smartphone size={48} className="text-amber-400" />
+            </div>
+            <h2 className="font-display text-2xl font-bold text-brand-navy mb-2">NFC Not Available</h2>
+            <p className="text-brand-navy/60 text-sm mb-6">{statusMsg}</p>
+            <button
+              onClick={onClose}
+              className="bg-brand-navy text-white px-8 py-3 rounded-xl font-bold text-sm w-full"
+            >
+              Close
+            </button>
+          </>
+        )}
+      </motion.div>
     </motion.div>
   );
 }
