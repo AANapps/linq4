@@ -3598,15 +3598,32 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
   const [msgBody, setMsgBody] = useState('');
   const [sending, setSending] = useState(false);
   const [sentCount, setSentCount] = useState<number | null>(null);
-  const [followerUids, setFollowerUids] = useState<string[]>([]);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [storeFollowerUids, setStoreFollowerUids] = useState<string[]>([]);
+  const [userFollowerUids, setUserFollowerUids] = useState<string[]>([]);
   const [loadingFollowers, setLoadingFollowers] = useState(true);
+  const [broadcastHistory, setBroadcastHistory] = useState<any[]>([]);
 
   const cardHolderUids = [...new Set(storeCards.filter(c => !c.isArchived).map(c => c.user_id))];
+  const followerUids = [...new Set([...storeFollowerUids, ...userFollowerUids])];
 
   useEffect(() => {
+    let done = 0;
+    const finish = () => { if (++done === 2) setLoadingFollowers(false); };
     getDocs(query(collection(db, 'store_follows'), where('storeId', '==', store.id)))
-      .then(snap => setFollowerUids(snap.docs.map(d => d.data().followerUid as string)))
-      .finally(() => setLoadingFollowers(false));
+      .then(snap => setStoreFollowerUids(snap.docs.map(d => d.data().followerUid as string)))
+      .catch(console.error)
+      .finally(finish);
+    getDocs(query(collection(db, 'follows'), where('followingUid', '==', store.ownerUid)))
+      .then(snap => setUserFollowerUids(snap.docs.map(d => d.data().followerUid as string)))
+      .catch(console.error)
+      .finally(finish);
+  }, [store.id, store.ownerUid]);
+
+  useEffect(() => {
+    getDocs(query(collection(db, 'stores', store.id, 'broadcasts'), orderBy('sentAt', 'desc'), limit(20)))
+      .then(snap => setBroadcastHistory(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
+      .catch(() => {});
   }, [store.id]);
 
   const recipientUids = (() => {
@@ -3620,6 +3637,7 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
     if (!msgTitle.trim() || !msgBody.trim() || recipientUids.length === 0) return;
     setSending(true);
     setSentCount(null);
+    setSendError(null);
     try {
       for (let i = 0; i < recipientUids.length; i += 400) {
         await Promise.all(recipientUids.slice(i, i + 400).map(uid =>
@@ -3636,11 +3654,22 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
           })
         ));
       }
+      const record = {
+        title: msgTitle.trim(),
+        message: msgBody.trim(),
+        filter,
+        recipientCount: recipientUids.length,
+        sentAt: serverTimestamp(),
+      };
+      await addDoc(collection(db, 'stores', store.id, 'broadcasts'), record);
+      const histSnap = await getDocs(query(collection(db, 'stores', store.id, 'broadcasts'), orderBy('sentAt', 'desc'), limit(20)));
+      setBroadcastHistory(histSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       setSentCount(recipientUids.length);
       setMsgTitle('');
       setMsgBody('');
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setSendError(err?.message || 'Failed to send. Please try again.');
     } finally {
       setSending(false);
     }
@@ -3713,7 +3742,7 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
                     {(['cardholders', 'followers', 'both'] as const).map(f => (
                       <button
                         key={f}
-                        onClick={() => { setFilter(f); setSentCount(null); }}
+                        onClick={() => { setFilter(f); setSentCount(null); setSendError(null); }}
                         className={cn(
                           'flex-1 py-2.5 rounded-xl text-xs font-bold transition-all',
                           filter === f ? 'bg-brand-navy text-white' : 'bg-brand-navy/5 text-brand-navy/50'
@@ -3735,14 +3764,14 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
                     type="text"
                     placeholder="Message title"
                     value={msgTitle}
-                    onChange={e => { setMsgTitle(e.target.value); setSentCount(null); }}
+                    onChange={e => { setMsgTitle(e.target.value); setSentCount(null); setSendError(null); }}
                     maxLength={80}
                     className="w-full px-4 py-3 rounded-2xl bg-white border border-black/8 text-sm font-bold text-brand-navy placeholder:text-brand-navy/30 focus:outline-none focus:ring-2 focus:ring-brand-navy/20"
                   />
                   <textarea
                     placeholder="Write your message..."
                     value={msgBody}
-                    onChange={e => { setMsgBody(e.target.value); setSentCount(null); }}
+                    onChange={e => { setMsgBody(e.target.value); setSentCount(null); setSendError(null); }}
                     rows={5}
                     maxLength={500}
                     className="w-full px-4 py-3 rounded-2xl bg-white border border-black/8 text-sm text-brand-navy placeholder:text-brand-navy/30 focus:outline-none focus:ring-2 focus:ring-brand-navy/20 resize-none"
@@ -3758,6 +3787,12 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
                   </div>
                 )}
 
+                {sendError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-2xl text-center">
+                    <p className="text-sm font-bold text-red-700">✕ {sendError}</p>
+                  </div>
+                )}
+
                 <button
                   onClick={handleSend}
                   disabled={sending || !msgTitle.trim() || !msgBody.trim() || recipientUids.length === 0}
@@ -3766,6 +3801,33 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
                   <Send size={16} />
                   {sending ? 'Sending...' : `Send to ${recipientUids.length} recipient${recipientUids.length !== 1 ? 's' : ''}`}
                 </button>
+
+                {broadcastHistory.length > 0 && (
+                  <div className="pt-2">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-3">Previously Sent</p>
+                    <div className="space-y-3">
+                      {broadcastHistory.map((b: any) => (
+                        <div key={b.id} className="bg-white rounded-2xl p-4 border border-black/5 shadow-sm">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold text-sm text-brand-navy truncate">{b.title}</p>
+                              <p className="text-xs text-brand-navy/60 line-clamp-2 mt-0.5">{b.message}</p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="text-[10px] font-bold text-brand-navy">{b.recipientCount} sent</p>
+                              <p className="text-[10px] text-brand-navy/30 mt-0.5">
+                                {b.sentAt?.toDate ? format(b.sentAt.toDate(), 'MMM d, h:mm a') : ''}
+                              </p>
+                            </div>
+                          </div>
+                          <span className="inline-block mt-2 text-[9px] font-bold uppercase tracking-widest bg-brand-navy/5 text-brand-navy/40 px-2 py-0.5 rounded-full">
+                            {b.filter === 'cardholders' ? 'Card Holders' : b.filter === 'followers' ? 'Followers' : 'Both'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -5614,8 +5676,16 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
     const q = query(collection(db, 'stores', vendorStore.id, 'posts'), orderBy('createdAt', 'desc'), limit(30));
     return onSnapshot(q, snap => setStoreWallPosts(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
   }, [vendorStore?.id]);
+
+  useEffect(() => {
+    if (!vendorStore) return;
+    getDocs(query(collection(db, 'store_follows'), where('storeId', '==', vendorStore.id)))
+      .then(snap => setStoreFollowerCount(snap.size))
+      .catch(() => {});
+  }, [vendorStore?.id]);
   const [following, setFollowing] = useState<UserProfile[]>([]);
   const [followers, setFollowers] = useState<UserProfile[]>([]);
+  const [storeFollowerCount, setStoreFollowerCount] = useState(0);
   const [showFollowModal, setShowFollowModal] = useState(false);
   const [followModalTab, setFollowModalTab] = useState<'following' | 'followers'>('following');
   const [myGlobalPosts, setMyGlobalPosts] = useState<GlobalPost[]>([]);
@@ -5826,7 +5896,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
             </button>
             <span className="text-brand-navy/20">•</span>
             <button onClick={() => { setFollowModalTab('followers'); setShowFollowModal(true); }} className="flex items-center gap-1 font-bold hover:text-brand-gold transition-colors">
-              <span>{followers.length}</span>
+              <span>{followers.length + storeFollowerCount}</span>
               <span className="text-brand-navy/40 font-normal">Followers</span>
             </button>
           </div>

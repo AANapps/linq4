@@ -58,6 +58,11 @@ service cloud.firestore {
         allow create: if isAuthenticated() || isAdmin();
         allow update, delete: if isAuthenticated() && (resource.data.authorUid == request.auth.uid || isStoreOwner(storeId) || isAdmin());
       }
+
+      match /broadcasts/{broadcastId} {
+        allow read, create: if isAuthenticated() && isStoreOwner(storeId);
+        allow delete: if isAuthenticated() && isStoreOwner(storeId);
+      }
     }
 
     // Support collectionGroup queries for posts
@@ -176,6 +181,12 @@ service cloud.firestore {
 
     match /reports/{reportId} {
       allow create: if isAuthenticated();
+    }
+
+    match /store_automations/{automationId} {
+      allow read: if isAuthenticated() && (isStoreOwner(resource.data.storeId) || isAdmin());
+      allow create: if isAuthenticated() && isStoreOwner(request.resource.data.storeId);
+      allow update, delete: if isAuthenticated() && (isStoreOwner(resource.data.storeId) || isAdmin());
     }
 
     match /notifications/{notificationId} {
