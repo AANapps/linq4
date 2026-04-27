@@ -324,6 +324,10 @@ interface Chat {
   lastMessage: string;
   lastActivity: any;
   unreadCount?: { [uid: string]: number };
+  isBroadcast?: boolean;
+  storeId?: string;
+  storeName?: string;
+  storeLogoUrl?: string;
 }
 
 interface ChatMessage {
@@ -332,6 +336,7 @@ interface ChatMessage {
   senderUid: string;
   senderName: string;
   text: string;
+  title?: string;
   createdAt: any;
 }
 
@@ -3639,20 +3644,28 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
     setSentCount(null);
     setSendError(null);
     try {
-      for (let i = 0; i < recipientUids.length; i += 400) {
-        await Promise.all(recipientUids.slice(i, i + 400).map(uid =>
-          addDoc(collection(db, 'notifications'), {
-            toUid: uid,
-            type: 'broadcast',
-            title: msgTitle.trim(),
-            message: msgBody.trim(),
+      for (let i = 0; i < recipientUids.length; i += 50) {
+        await Promise.all(recipientUids.slice(i, i + 50).map(async uid => {
+          const chatId = `broadcast_${store.id}_${uid}`;
+          await setDoc(doc(db, 'chats', chatId), {
+            uids: [store.ownerUid, uid],
+            isBroadcast: true,
             storeId: store.id,
             storeName: store.name,
             storeLogoUrl: store.logoUrl || '',
+            lastMessage: msgBody.trim(),
+            lastActivity: serverTimestamp(),
+            unreadCount: { [uid]: increment(1) },
+          }, { merge: true });
+          await addDoc(collection(db, 'chats', chatId, 'messages'), {
+            chatId,
+            senderUid: store.ownerUid,
+            senderName: store.name,
+            title: msgTitle.trim(),
+            text: msgBody.trim(),
             createdAt: serverTimestamp(),
-            isRead: false,
-          })
-        ));
+          });
+        }));
       }
       const record = {
         title: msgTitle.trim(),
@@ -8320,6 +8333,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
   const msgLoadingMoreRef = useRef(false);
   const [newMessage, setNewMessage] = useState('');
   const [chatPartner, setChatPartner] = useState<UserProfile | null>(null);
+  const [activeBroadcastChat, setActiveBroadcastChat] = useState<{ storeName: string; storeLogoUrl: string } | null>(null);
   const [selectedMsgId, setSelectedMsgId] = useState<string | null>(null);
   const [showCustomerPicker, setShowCustomerPicker] = useState(false);
   const [storeCustomers, setStoreCustomers] = useState<UserProfile[]>([]);
@@ -8344,11 +8358,13 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
       setMsgHasMore(false);
       msgLastDocRef.current = null;
       setChatPartner(null);
+      setActiveBroadcastChat(null);
       return;
     }
     setOlderMessages([]);
     setMsgHasMore(false);
     msgLastDocRef.current = null;
+    setActiveBroadcastChat(null);
 
     // Fetch partner — poll briefly if doc not yet created (race with background creation)
     const loadPartner = async (retries = 5) => {
@@ -8358,14 +8374,19 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
           if (retries > 0) { setTimeout(() => loadPartner(retries - 1), 600); }
           return;
         }
-        const partnerUid = (chatSnap.data().uids as string[]).find(id => id !== currentUser.uid);
-        if (!partnerUid) return;
-        const userSnap = await getDoc(doc(db, 'users', partnerUid));
-        if (userSnap.exists()) setChatPartner({ uid: userSnap.id, ...userSnap.data() } as UserProfile);
-        const unreadCount = chatSnap.data().unreadCount || {};
+        const chatData = chatSnap.data();
+        const unreadCount = chatData.unreadCount || {};
         if (unreadCount[currentUser.uid]) {
           updateDoc(doc(db, 'chats', activeChatId), { [`unreadCount.${currentUser.uid}`]: 0 }).catch(() => {});
         }
+        if (chatData.isBroadcast) {
+          setActiveBroadcastChat({ storeName: chatData.storeName || 'Business', storeLogoUrl: chatData.storeLogoUrl || '' });
+          return;
+        }
+        const partnerUid = (chatData.uids as string[]).find(id => id !== currentUser.uid);
+        if (!partnerUid) return;
+        const userSnap = await getDoc(doc(db, 'users', partnerUid));
+        if (userSnap.exists()) setChatPartner({ uid: userSnap.id, ...userSnap.data() } as UserProfile);
       } catch { /* ignore permission errors on retry */ }
     };
     loadPartner();
@@ -8507,9 +8528,60 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
     }
   };
 
+  if (activeChatId && activeBroadcastChat) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        className="fixed inset-0 bg-brand-bg z-[100] flex flex-col max-w-md mx-auto"
+      >
+        <header className="glass-panel px-6 py-4 flex items-center gap-4">
+          <button onClick={() => setActiveChatId(null)} className="p-2 -ml-2 text-brand-navy/60">
+            <ArrowLeft size={24} />
+          </button>
+          <div className="flex items-center gap-3 flex-1">
+            <div className="w-10 h-10 rounded-xl overflow-hidden border-2 border-white shadow-sm bg-brand-navy/5 flex items-center justify-center shrink-0">
+              {activeBroadcastChat.storeLogoUrl
+                ? <img src={activeBroadcastChat.storeLogoUrl} alt="" className="w-full h-full object-cover" />
+                : <Store size={18} className="text-brand-navy/50" />}
+            </div>
+            <div>
+              <h3 className="font-bold text-sm leading-tight">{activeBroadcastChat.storeName}</h3>
+              <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest">Broadcast</p>
+            </div>
+          </div>
+        </header>
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto py-4 space-y-3 px-4" onScroll={handleMsgScroll}>
+          {msgLoadingMore && (
+            <div className="flex justify-center py-2">
+              <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}>
+                <Sparkles className="w-4 h-4 text-brand-gold/50" />
+              </motion.div>
+            </div>
+          )}
+          {[...olderMessages, ...messages].map(msg => (
+            <div key={msg.id} className="bg-white rounded-2xl p-4 border border-black/5 shadow-sm">
+              {msg.title && <p className="font-bold text-sm text-brand-navy mb-1">{msg.title}</p>}
+              <p className="text-sm text-brand-navy/80 leading-relaxed">{msg.text}</p>
+              <p className="text-[10px] text-brand-navy/30 mt-2 font-bold uppercase tracking-widest">
+                {msg.createdAt?.toDate ? format(msg.createdAt.toDate(), 'MMM d, h:mm a') : 'Just now'}
+              </p>
+            </div>
+          ))}
+          {messages.length === 0 && (
+            <div className="text-center py-16 text-brand-navy/30">
+              <Send size={32} className="mx-auto mb-3 opacity-20" />
+              <p className="text-sm font-bold">No messages yet</p>
+            </div>
+          )}
+        </div>
+      </motion.div>
+    );
+  }
+
   if (activeChatId && chatPartner) {
     return (
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         className="fixed inset-0 bg-brand-bg z-[100] flex flex-col max-w-md mx-auto"
@@ -8661,7 +8733,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
       </header>
 
       <div className="space-y-3">
-        {chats.map(chat => (
+        {chats.filter(c => !(c.isBroadcast && vendorStore && c.storeId === vendorStore.id)).map(chat => (
           <ChatListItem
             key={chat.id}
             chat={chat}
@@ -8688,7 +8760,8 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
 
 function ChatListItem({ chat, currentUser, onClick }: { chat: Chat, currentUser: FirebaseUser, onClick: () => void, key?: React.Key }) {
   const [partner, setPartner] = useState<UserProfile | null>(null);
-  const partnerUid = chat.uids.find(id => id !== currentUser.uid);
+  const partnerUid = chat.isBroadcast ? null : chat.uids.find(id => id !== currentUser.uid);
+  const unread = (chat.unreadCount?.[currentUser.uid] || 0);
 
   useEffect(() => {
     if (!partnerUid) return;
@@ -8697,24 +8770,37 @@ function ChatListItem({ chat, currentUser, onClick }: { chat: Chat, currentUser:
     });
   }, [partnerUid]);
 
-  if (!partner) return null;
+  if (!chat.isBroadcast && !partner) return null;
+
+  const displayName = chat.isBroadcast ? (chat.storeName || 'Business') : (partner?.name || '');
 
   return (
-    <button 
+    <button
       onClick={onClick}
       className="w-full bg-white p-4 rounded-2xl flex items-center gap-4 border border-brand-navy/5 hover:border-brand-gold/20 transition-all text-left"
     >
-      <div className="w-14 h-14 rounded-2xl overflow-hidden border border-brand-navy/5">
-        <img src={avatarSrc(partner.gender)} alt="" className="w-full h-full object-cover" />
+      <div className="w-14 h-14 rounded-2xl overflow-hidden border border-brand-navy/5 bg-brand-navy/5 flex items-center justify-center shrink-0">
+        {chat.isBroadcast
+          ? (chat.storeLogoUrl
+              ? <img src={chat.storeLogoUrl} alt="" className="w-full h-full object-cover" />
+              : <Store size={22} className="text-brand-navy/40" />)
+          : <img src={avatarSrc(partner?.gender)} alt="" className="w-full h-full object-cover" />}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-center mb-1">
-          <h4 className="font-bold text-sm truncate">{partner.name}</h4>
-          <span className="text-[10px] text-brand-navy/40 uppercase font-bold">
-            {chat.lastActivity?.toDate ? format(chat.lastActivity.toDate(), 'HH:mm') : '...'}
-          </span>
+          <h4 className="font-bold text-sm truncate">{displayName}</h4>
+          <div className="flex items-center gap-2 shrink-0">
+            {unread > 0 && (
+              <span className="w-5 h-5 rounded-full bg-brand-gold text-brand-navy text-[10px] font-bold flex items-center justify-center">
+                {unread}
+              </span>
+            )}
+            <span className="text-[10px] text-brand-navy/40 uppercase font-bold">
+              {chat.lastActivity?.toDate ? format(chat.lastActivity.toDate(), 'HH:mm') : '...'}
+            </span>
+          </div>
         </div>
-        <p className="text-xs text-brand-navy/60 truncate">{chat.lastMessage || 'Start a conversation'}</p>
+        <p className="text-xs text-brand-navy/60 truncate">{chat.lastMessage || 'Tap to view'}</p>
       </div>
     </button>
   );
