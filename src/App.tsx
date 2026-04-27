@@ -3048,6 +3048,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const [openStickerCardId, setOpenStickerCardId] = useState<string | null>(null);
   const [activePrograms, setActivePrograms] = useState<Challenge[]>([]);
   const [activeStandardChallenges, setActiveStandardChallenges] = useState<Challenge[]>([]);
+  const [myStandardEntries, setMyStandardEntries] = useState<Map<string, any>>(new Map());
   const [joiningProgramId, setJoiningProgramId] = useState<string | null>(null);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [openProgrammeId, setOpenProgrammeId] = useState<string | null>(null);
@@ -3082,6 +3083,15 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       setActiveStandardChallenges(snap.docs.map(d => ({ id: d.id, ...d.data() } as Challenge)))
     );
   }, []);
+
+  useEffect(() => {
+    const q = query(collection(db, 'challenge_entries'), where('uid', '==', user.uid));
+    return onSnapshot(q, snap => {
+      const m = new Map<string, any>();
+      snap.docs.forEach(d => m.set(d.data().challengeId, { id: d.id, ...d.data() }));
+      setMyStandardEntries(m);
+    });
+  }, [user.uid]);
 
   const handleJoinStore = async (store: StoreProfile) => {
     if (!user) return;
@@ -3337,6 +3347,24 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                         </div>
                       )}
 
+                      {/* Progress bar */}
+                      {joined && (
+                        <div className="px-5 pt-3 pb-1 bg-white">
+                          <div className="flex justify-between items-center mb-1.5">
+                            <p className="text-[10px] font-bold text-brand-navy/50">{myUnique.size} / 5 unique tiles</p>
+                            <p className="text-[10px] font-bold text-brand-navy/40">{Math.round((myUnique.size / 5) * 100)}%</p>
+                          </div>
+                          <div className="h-2 bg-brand-navy/5 rounded-full overflow-hidden">
+                            <motion.div
+                              className={cn("h-full rounded-full", isComplete ? 'bg-green-400' : 'bg-brand-gold')}
+                              initial={{ width: 0 }}
+                              animate={{ width: `${Math.round((myUnique.size / 5) * 100)}%` }}
+                              transition={{ duration: 0.6, ease: 'easeOut' }}
+                            />
+                          </div>
+                        </div>
+                      )}
+
                       {/* Prize banner */}
                       <div className="bg-amber-50 border-t border-amber-100 px-5 py-3 flex items-center gap-2">
                         <span className="text-base">🏆</span>
@@ -3354,6 +3382,12 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                   <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Challenges</p>
                   {activeStandardChallenges.map(c => {
                     const joined = (c.participantUids || []).includes(user.uid);
+                    const entry = myStandardEntries.get(c.id);
+                    const stampsProgress = joined && entry
+                      ? Math.max(0, Math.min(c.goal, (profile?.totalStamps || 0) - (entry.totalStampsAtJoin || 0)))
+                      : 0;
+                    const progressPct = c.goal > 0 ? Math.min(100, Math.round((stampsProgress / c.goal) * 100)) : 0;
+                    const isComplete = progressPct >= 100;
                     return (
                       <div key={c.id} className="bg-white rounded-[2rem] border border-black/5 shadow-sm overflow-hidden">
                         <div className="p-5 space-y-3">
@@ -3362,16 +3396,12 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                               <p className="font-bold text-brand-navy text-base leading-tight">{c.title}</p>
                               {c.description && <p className="text-xs text-brand-navy/50 mt-1">{c.description}</p>}
                             </div>
-                            <div className="w-10 h-10 rounded-2xl bg-brand-gold/10 flex items-center justify-center shrink-0">
-                              <Trophy size={18} className="text-brand-gold" />
+                            <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center shrink-0", isComplete ? 'bg-green-100' : 'bg-brand-gold/10')}>
+                              <Trophy size={18} className={isComplete ? 'text-green-500' : 'text-brand-gold'} />
                             </div>
                           </div>
+
                           <div className="flex items-center gap-2 flex-wrap">
-                            {c.goal && c.unit && (
-                              <span className="text-[10px] font-bold bg-brand-navy/5 text-brand-navy/60 px-2.5 py-1 rounded-full">
-                                Goal: {c.goal} {c.unit}
-                              </span>
-                            )}
                             <span className="text-[10px] font-bold bg-brand-gold/10 text-brand-gold px-2.5 py-1 rounded-full">
                               🎁 {c.reward}
                             </span>
@@ -3381,25 +3411,47 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                               </span>
                             )}
                           </div>
+
+                          {joined && (
+                            <div className="space-y-1.5">
+                              <div className="flex justify-between items-center">
+                                <p className="text-xs font-bold text-brand-navy/60">
+                                  {stampsProgress} / {c.goal} {c.unit}
+                                </p>
+                                <p className="text-xs font-bold text-brand-navy/40">{progressPct}%</p>
+                              </div>
+                              <div className="h-2.5 bg-brand-navy/5 rounded-full overflow-hidden">
+                                <motion.div
+                                  className={cn("h-full rounded-full", isComplete ? 'bg-green-400' : 'bg-brand-gold')}
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${progressPct}%` }}
+                                  transition={{ duration: 0.6, ease: 'easeOut' }}
+                                />
+                              </div>
+                              {isComplete && (
+                                <p className="text-[10px] font-bold text-green-600 text-center">
+                                  ✓ Goal reached! Claim your reward.
+                                </p>
+                              )}
+                            </div>
+                          )}
+
                           <button
                             disabled={joined}
                             onClick={async () => {
                               if (joined) return;
-                              await updateDoc(doc(db, 'challenges', c.id), {
-                                participantUids: arrayUnion(user.uid),
-                              });
+                              await updateDoc(doc(db, 'challenges', c.id), { participantUids: arrayUnion(user.uid) });
                               await addDoc(collection(db, 'challenge_entries'), {
                                 challengeId: c.id,
                                 uid: user.uid,
                                 count: 0,
+                                totalStampsAtJoin: profile?.totalStamps || 0,
                                 createdAt: serverTimestamp(),
                               });
                             }}
                             className={cn(
                               'w-full py-3 rounded-2xl text-sm font-bold transition-all active:scale-95',
-                              joined
-                                ? 'bg-green-50 text-green-600 border border-green-200'
-                                : 'bg-brand-navy text-white'
+                              joined ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-brand-navy text-white'
                             )}
                           >
                             {joined ? '✓ Joined' : 'Join Challenge'}
