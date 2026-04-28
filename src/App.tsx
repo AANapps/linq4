@@ -3209,6 +3209,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const [myStandardEntries, setMyStandardEntries] = useState<Map<string, any>>(new Map());
   const [joiningProgramId, setJoiningProgramId] = useState<string | null>(null);
   const [joinError, setJoinError] = useState<string | null>(null);
+  const [highlightedChallengeId, setHighlightedChallengeId] = useState<string | null>(null);
   const [openProgrammeId, setOpenProgrammeId] = useState<string | null>(null);
   const [showNFCStamp, setShowNFCStamp] = useState(false);
   const [autoNFCStoreId, setAutoNFCStoreId] = useState<string | null>(null);
@@ -3220,6 +3221,15 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       onClearPendingNFC?.();
     }
   }, [pendingNFCStoreId]);
+
+  useEffect(() => {
+    if (!highlightedChallengeId) return;
+    const timer = setTimeout(() => {
+      document.getElementById(`challenge-${highlightedChallengeId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+    const clear = setTimeout(() => setHighlightedChallengeId(null), 3000);
+    return () => { clearTimeout(timer); clearTimeout(clear); };
+  }, [highlightedChallengeId]);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'stores'), (snapshot) => {
@@ -3344,6 +3354,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           currentProfile={profile}
           onViewStore={onViewStore}
           userCards={initialCards}
+          onViewChallenge={(c) => { setActiveTab('home'); setWalletSubTab('challenges'); setHighlightedChallengeId(c.id); }}
         />
       )}
 
@@ -3588,8 +3599,9 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                     }
                     const progressPct = c.goal > 0 ? Math.min(100, Math.round((stampsProgress / c.goal) * 100)) : 0;
                     const isComplete = progressPct >= 100;
+                    const isHighlighted = highlightedChallengeId === c.id;
                     return (
-                      <div key={c.id} className="bg-white rounded-[2rem] border border-black/5 shadow-sm overflow-hidden">
+                      <div key={c.id} id={`challenge-${c.id}`} className={cn("bg-white rounded-[2rem] border shadow-sm overflow-hidden transition-all duration-500", isHighlighted ? 'border-brand-gold ring-2 ring-brand-gold/30' : 'border-black/5')}>
                         <div className="p-5 space-y-3">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1 min-w-0">
@@ -8526,8 +8538,8 @@ const REWARD_TAG_COLORS: Record<string, string[]> = {
   product: ['#065F46', '#064E3B'],
 };
 
-function DealSliderSection({ title, icon, challenges, onViewStore, stores, showAll, onToggleAll }: {
-  title: string; icon: React.ReactNode; challenges: Challenge[]; onViewStore?: (s: StoreProfile) => void; stores?: StoreProfile[]; showAll: boolean; onToggleAll: () => void;
+function DealSliderSection({ title, icon, challenges, onViewStore, onViewChallenge, stores, showAll, onToggleAll }: {
+  title: string; icon: React.ReactNode; challenges: Challenge[]; onViewStore?: (s: StoreProfile) => void; onViewChallenge?: (c: Challenge) => void; stores?: StoreProfile[]; showAll: boolean; onToggleAll: () => void;
 }) {
   if (challenges.length === 0) return null;
   const visible = showAll ? challenges : challenges.slice(0, 8);
@@ -8554,6 +8566,7 @@ function DealSliderSection({ title, icon, challenges, onViewStore, stores, showA
               transition={{ delay: i * 0.04 }}
               className={cn('rounded-[1.5rem] overflow-hidden flex flex-col relative cursor-pointer active:scale-[0.97] transition-transform', showAll ? '' : 'shrink-0 w-36')}
               style={{ background: `linear-gradient(145deg, ${colors[0]}dd, ${colors[1]}bb)`, backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)', border: '1px solid rgba(255,255,255,0.18)', height: '160px' }}
+              onClick={() => onViewChallenge?.(c)}
             >
               <div className="relative z-10 flex flex-col h-full p-3">
                 <div className="w-8 h-8 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center mb-2 shrink-0">
@@ -8638,8 +8651,8 @@ function StoreDealsSection({ stores, onViewStore, showAll, onToggleAll }: {
   );
 }
 
-function DealsScreen({ currentUser, currentProfile, onViewStore, userCards = [] }: {
-  currentUser?: FirebaseUser; currentProfile?: UserProfile | null; onViewStore?: (s: StoreProfile) => void; userCards?: Card[];
+function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge, userCards = [] }: {
+  currentUser?: FirebaseUser; currentProfile?: UserProfile | null; onViewStore?: (s: StoreProfile) => void; onViewChallenge?: (c: Challenge) => void; userCards?: Card[];
 }) {
   const [allStores, setAllStores] = useState<StoreProfile[]>([]);
   const [challenges, setChallenges] = useState<Challenge[]>([]);
@@ -8685,6 +8698,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, userCards = [] 
         icon={<Star size={15} className="text-purple-500" />}
         challenges={experiences}
         stores={allStores}
+        onViewChallenge={onViewChallenge}
         showAll={showAllExp}
         onToggleAll={() => setShowAllExp(v => !v)}
       />
@@ -8694,6 +8708,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, userCards = [] 
         icon={<Tag size={15} className="text-sky-500" />}
         challenges={services}
         stores={allStores}
+        onViewChallenge={onViewChallenge}
         showAll={showAllSvc}
         onToggleAll={() => setShowAllSvc(v => !v)}
       />
@@ -8703,6 +8718,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, userCards = [] 
         icon={<Package size={15} className="text-emerald-500" />}
         challenges={products}
         stores={allStores}
+        onViewChallenge={onViewChallenge}
         showAll={showAllProd}
         onToggleAll={() => setShowAllProd(v => !v)}
       />
