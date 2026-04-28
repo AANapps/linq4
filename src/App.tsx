@@ -8797,8 +8797,22 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
         }
         const partnerUid = (chatData.uids as string[]).find(id => id !== currentUser.uid);
         if (!partnerUid) return;
-        const userSnap = await getDoc(doc(db, 'users', partnerUid));
-        if (userSnap.exists()) setChatPartner({ uid: userSnap.id, ...userSnap.data() } as UserProfile);
+        let userSnap = await getDoc(doc(db, 'users', partnerUid));
+        if (!userSnap.exists()) userSnap = await getDoc(doc(db, 'vendors', partnerUid));
+        if (userSnap.exists()) {
+          const partnerData = { uid: userSnap.id, ...userSnap.data() } as UserProfile;
+          setChatPartner(partnerData);
+          // Backfill businessName for existing chats where partner is a vendor
+          if (partnerData.role === 'vendor' && !chatData.businessName) {
+            const storeSnap = await getDocs(query(collection(db, 'stores'), where('ownerUid', '==', partnerUid)));
+            if (!storeSnap.empty) {
+              const store = storeSnap.docs[0].data();
+              const biz = { businessName: store.name as string, businessLogoUrl: (store.logoUrl || '') as string };
+              setActiveChatBusinessInfo(biz);
+              updateDoc(doc(db, 'chats', activeChatId), biz).catch(() => {});
+            }
+          }
+        }
       } catch { /* ignore permission errors on retry */ }
     };
     loadPartner();
@@ -8995,7 +9009,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
     );
   }
 
-  if (activeChatId && chatPartner) {
+  if (activeChatId && (chatPartner || activeChatBusinessInfo)) {
     return (
       <motion.div
         initial={{ opacity: 0, x: 20 }}
@@ -9014,12 +9028,12 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
                   : <Store size={18} className="text-brand-navy/50" />}
               </div>
             ) : (
-              <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-sm cursor-pointer" onClick={() => onViewUser(chatPartner)}>
-                <img src={avatarSrc(chatPartner.gender)} alt="" className="w-full h-full object-cover" />
+              <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-sm cursor-pointer" onClick={() => chatPartner && onViewUser(chatPartner)}>
+                <img src={avatarSrc(chatPartner?.gender)} alt="" className="w-full h-full object-cover" />
               </div>
             )}
             <div>
-              <h3 className="font-bold text-sm leading-tight">{activeChatBusinessInfo ? activeChatBusinessInfo.businessName : chatPartner.name}</h3>
+              <h3 className="font-bold text-sm leading-tight">{activeChatBusinessInfo ? activeChatBusinessInfo.businessName : (chatPartner?.name ?? '')}</h3>
               <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest">{activeChatBusinessInfo ? 'Business' : 'Online'}</p>
             </div>
           </div>
@@ -9189,8 +9203,10 @@ function ChatListItem({ chat, currentUser, onClick }: { chat: Chat, currentUser:
 
   useEffect(() => {
     if (!partnerUid) return;
-    getDoc(doc(db, 'users', partnerUid)).then(snap => {
-      if (snap.exists()) setPartner({ uid: snap.id, ...snap.data() } as UserProfile);
+    getDoc(doc(db, 'users', partnerUid)).then(async snap => {
+      if (snap.exists()) { setPartner({ uid: snap.id, ...snap.data() } as UserProfile); return; }
+      const vsnap = await getDoc(doc(db, 'vendors', partnerUid));
+      if (vsnap.exists()) setPartner({ uid: vsnap.id, ...vsnap.data() } as UserProfile);
     });
   }, [partnerUid]);
 
