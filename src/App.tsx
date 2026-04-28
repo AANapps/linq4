@@ -445,6 +445,7 @@ interface Challenge {
   type?: 'standard' | 'collectible';
   status?: 'active' | 'paused' | 'ended';
   tierChances?: { brown: number; lightblue: number; red: number; blue: number; gold: number };
+  vendorIds?: string[];
 }
 
 interface StoreAutomation {
@@ -2351,6 +2352,22 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
   const [programmePlayerData, setProgrammePlayerData] = useState<Map<string, { uid: string; profile?: UserProfile; card: StickerCardDoc }[]>>(new Map());
   const [loadingProgramme, setLoadingProgramme] = useState(false);
 
+  // All stores for vendor picker
+  const [allStores, setAllStores] = useState<StoreProfile[]>([]);
+  const [vendorPickerOpen, setVendorPickerOpen] = useState(false);
+  const [stdVendorIds, setStdVendorIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    getDocs(collection(db, 'stores')).then(snap => {
+      setAllStores(snap.docs.map(d => ({ id: d.id, ...d.data() } as StoreProfile)));
+    });
+  }, []);
+
+  const toggleVendor = (id: string) =>
+    setStdVendorIds(prev => prev.includes(id) ? prev.filter(v => v !== id) : [...prev, id]);
+
+  const allSelected = allStores.length > 0 && stdVendorIds.length === allStores.length;
+
   // Standard form state
   const [stdTitle, setStdTitle] = useState('');
   const [stdDesc, setStdDesc] = useState('');
@@ -2390,8 +2407,9 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
         participantUids: [],
         createdAt: serverTimestamp(),
         ...(stdEndsAt ? { endsAt: Timestamp.fromDate(new Date(stdEndsAt)) } : {}),
+        ...(stdVendorIds.length > 0 ? { vendorIds: stdVendorIds } : {}),
       });
-      setStdTitle(''); setStdDesc(''); setStdGoal(''); setStdUnit(''); setStdReward(''); setStdEndsAt('');
+      setStdTitle(''); setStdDesc(''); setStdGoal(''); setStdUnit(''); setStdReward(''); setStdEndsAt(''); setStdVendorIds([]);
     } finally {
       setDeploying(false);
     }
@@ -2704,6 +2722,55 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
               <label className="text-xs text-brand-navy/50 flex-shrink-0">End date</label>
               <input type="datetime-local" value={stdEndsAt} onChange={e => setStdEndsAt(e.target.value)} className={cn(inputCls, 'flex-1 text-xs')} />
             </div>
+
+            {/* Vendor picker */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setVendorPickerOpen(p => !p)}
+                className={cn(inputCls, 'w-full flex items-center justify-between text-left')}
+              >
+                <span className={stdVendorIds.length === 0 ? 'text-brand-navy/40' : 'text-brand-navy'}>
+                  {stdVendorIds.length === 0
+                    ? 'Include vendors (default: all)'
+                    : allSelected
+                      ? 'All vendors'
+                      : `${stdVendorIds.length} vendor${stdVendorIds.length > 1 ? 's' : ''} selected`}
+                </span>
+                <ChevronDown size={14} className={cn('text-brand-navy/40 transition-transform', vendorPickerOpen && 'rotate-180')} />
+              </button>
+              {vendorPickerOpen && (
+                <div className="absolute z-20 top-full mt-1 left-0 right-0 bg-white border border-brand-navy/10 rounded-2xl shadow-lg overflow-hidden max-h-52 overflow-y-auto">
+                  {/* All option */}
+                  <label className="flex items-center gap-3 px-4 py-3 hover:bg-brand-navy/5 cursor-pointer border-b border-brand-navy/5">
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      onChange={() => setStdVendorIds(allSelected ? [] : allStores.map(s => s.id))}
+                      className="accent-brand-navy w-4 h-4"
+                    />
+                    <span className="text-sm font-bold text-brand-navy">All vendors</span>
+                  </label>
+                  {allStores.map(s => (
+                    <label key={s.id} className="flex items-center gap-3 px-4 py-3 hover:bg-brand-navy/5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={stdVendorIds.includes(s.id)}
+                        onChange={() => toggleVendor(s.id)}
+                        className="accent-brand-navy w-4 h-4"
+                      />
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        {s.logoUrl
+                          ? <img src={s.logoUrl} alt="" className="w-6 h-6 rounded-lg object-cover shrink-0" />
+                          : <div className="w-6 h-6 rounded-lg bg-brand-navy/10 shrink-0" />}
+                        <span className="text-sm text-brand-navy truncate">{s.name}</span>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <button
               onClick={handleDeployStandard}
               disabled={deploying || !stdTitle.trim() || !stdReward.trim() || !stdUnit.trim() || !stdGoal}
@@ -3430,9 +3497,23 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                   {activeStandardChallenges.map(c => {
                     const joined = (c.participantUids || []).includes(user.uid);
                     const entry = myStandardEntries.get(c.id);
-                    const stampsProgress = joined && entry
-                      ? Math.max(0, Math.min(c.goal, (profile?.totalStamps || 0) - (entry.totalStampsAtJoin || 0)))
-                      : 0;
+                    let stampsProgress = 0;
+                    if (joined && entry) {
+                      if (c.vendorIds?.length) {
+                        // Count only stamps collected from included stores after joining
+                        for (const vid of c.vendorIds) {
+                          const card = initialCards.find(cd => cd.store_id === vid);
+                          const currentTotal = card
+                            ? (card.total_completed_cycles || 0) * (card.stamps_required || 10) + (card.current_stamps || 0)
+                            : 0;
+                          const atJoin = (entry.stampsAtJoinPerStore?.[vid] || 0);
+                          stampsProgress += Math.max(0, currentTotal - atJoin);
+                        }
+                        stampsProgress = Math.min(c.goal, stampsProgress);
+                      } else {
+                        stampsProgress = Math.max(0, Math.min(c.goal, (profile?.totalStamps || 0) - (entry.totalStampsAtJoin || 0)));
+                      }
+                    }
                     const progressPct = c.goal > 0 ? Math.min(100, Math.round((stampsProgress / c.goal) * 100)) : 0;
                     const isComplete = progressPct >= 100;
                     return (
@@ -3458,6 +3539,25 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                               </span>
                             )}
                           </div>
+
+                          {c.vendorIds?.length ? (
+                            <div>
+                              <p className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest mb-1.5">Participating stores</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {c.vendorIds.map(vid => {
+                                  const s = stores.find(st => st.id === vid);
+                                  return s ? (
+                                    <div key={vid} className="flex items-center gap-1.5 bg-brand-navy/5 rounded-full px-2.5 py-1">
+                                      {s.logoUrl
+                                        ? <img src={s.logoUrl} alt="" className="w-4 h-4 rounded-full object-cover shrink-0" />
+                                        : <Store size={10} className="text-brand-navy/40 shrink-0" />}
+                                      <span className="text-[10px] font-bold text-brand-navy/70">{s.name}</span>
+                                    </div>
+                                  ) : null;
+                                })}
+                              </div>
+                            </div>
+                          ) : null}
 
                           {joined && (
                             <div className="space-y-1.5">
@@ -3488,11 +3588,23 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                             onClick={async () => {
                               if (joined) return;
                               await updateDoc(doc(db, 'challenges', c.id), { participantUids: arrayUnion(user.uid) });
+                              // Snapshot per-store stamps so progress only counts stamps earned after joining
+                              const stampsAtJoinPerStore: Record<string, number> = {};
+                              if (c.vendorIds?.length) {
+                                for (const vid of c.vendorIds) {
+                                  const card = initialCards.find(cd => cd.store_id === vid);
+                                  if (card) {
+                                    stampsAtJoinPerStore[vid] =
+                                      (card.total_completed_cycles || 0) * (card.stamps_required || 10) + (card.current_stamps || 0);
+                                  }
+                                }
+                              }
                               await addDoc(collection(db, 'challenge_entries'), {
                                 challengeId: c.id,
                                 uid: user.uid,
                                 count: 0,
                                 totalStampsAtJoin: profile?.totalStamps || 0,
+                                ...(c.vendorIds?.length ? { stampsAtJoinPerStore } : {}),
                                 createdAt: serverTimestamp(),
                               });
                             }}
