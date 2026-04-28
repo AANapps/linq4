@@ -8825,11 +8825,23 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
   };
 
   const [allStores, setAllStores] = useState<StoreProfile[]>([]);
+  const [storeMemberCounts, setStoreMemberCounts] = useState<Map<string, number>>(new Map());
 
   useEffect(() => {
     return onSnapshot(collection(db, 'stores'), (snap) => {
       setAllStores(snap.docs.map(d => ({ id: d.id, ...d.data() } as StoreProfile)));
     }, () => {});
+  }, []);
+
+  useEffect(() => {
+    getDocs(collection(db, 'cards')).then(snap => {
+      const counts = new Map<string, number>();
+      snap.docs.forEach(d => {
+        const sid = d.data().store_id;
+        if (sid && !d.data().isArchived) counts.set(sid, (counts.get(sid) || 0) + 1);
+      });
+      setStoreMemberCounts(counts);
+    });
   }, []);
 
   useEffect(() => {
@@ -9009,15 +9021,16 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
       ) : (
         <>
           {/* Hot Deals slider */}
-          {hotStores.length > 0 && (
+          {hotStores.filter(s => s.reward).length > 0 && (
             <div>
               <div className="flex items-center gap-1.5 mb-3 px-1">
                 <Flame size={15} className="text-orange-500" />
                 <h3 className="font-extrabold text-brand-navy text-sm">Hot Deals</h3>
               </div>
               <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                {hotStores.slice(0, 6).map((store, i) => {
+                {hotStores.filter(s => s.reward).slice(0, 6).map((store, i) => {
                   const dealColor = DEAL_COLORS[i % DEAL_COLORS.length];
+                  const memberCount = storeMemberCounts.get(store.id) || 0;
                   return (
                     <motion.div
                       key={store.id}
@@ -9034,24 +9047,34 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
                         </div>
                       )}
                       <div className="relative z-10 flex flex-col h-full p-3">
-                        <div className="w-9 h-9 rounded-xl overflow-hidden border-2 border-white/40 shadow-md bg-white/20 mb-2 shrink-0">
-                          {store.logoUrl
-                            ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
-                            : <div className="w-full h-full flex items-center justify-center"><Building2 size={14} className="text-white/70" /></div>}
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="w-9 h-9 rounded-xl overflow-hidden border-2 border-white/40 shadow-md bg-white/20 shrink-0">
+                            {store.logoUrl
+                              ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
+                              : <div className="w-full h-full flex items-center justify-center"><Building2 size={14} className="text-white/70" /></div>}
+                          </div>
+                          <motion.span
+                            animate={{ scale: [1, 1.3, 0.9, 1.2, 1], rotate: [-8, 8, -5, 6, 0] }}
+                            transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut', delay: i * 0.35 }}
+                            className="text-base leading-none"
+                          >🔥</motion.span>
                         </div>
-                        <p className="font-extrabold text-white text-xs leading-tight line-clamp-2 mb-1">
-                          {store.reward || `${store.stamps_required_for_reward} stamps`}
-                        </p>
+                        <p className="font-extrabold text-white text-xs leading-tight line-clamp-2 mb-1">{store.reward}</p>
                         <div className="mt-auto">
                           <p className="text-white/60 text-[9px] font-medium line-clamp-1">{store.name}</p>
-                          {storeDistances.has(store.id) && (
-                            <p className="text-white/40 text-[8px] font-medium mt-0.5 flex items-center gap-0.5">
-                              <MapPin size={7} className="shrink-0" />
-                              {storeDistances.get(store.id)! < 1
-                                ? `${(storeDistances.get(store.id)! * 1000).toFixed(0)} m`
-                                : `${storeDistances.get(store.id)!.toFixed(1)} km`}
-                            </p>
-                          )}
+                          <div className="flex items-center justify-between mt-0.5">
+                            {memberCount > 0 && (
+                              <p className="text-white/50 text-[8px] font-bold">{memberCount} players</p>
+                            )}
+                            {storeDistances.has(store.id) && (
+                              <p className="text-white/40 text-[8px] font-medium flex items-center gap-0.5">
+                                <MapPin size={7} className="shrink-0" />
+                                {storeDistances.get(store.id)! < 1
+                                  ? `${(storeDistances.get(store.id)! * 1000).toFixed(0)} m`
+                                  : `${storeDistances.get(store.id)!.toFixed(1)} km`}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </motion.div>
@@ -9102,13 +9125,20 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
                         style={{ background: `linear-gradient(135deg, ${color}dd, ${color}88)`, height: '80px' }}
                       >
                         <div className="relative z-10 flex flex-col h-full p-3 justify-between">
-                          <p className="font-extrabold text-white text-xs leading-tight line-clamp-2">{c.reward}</p>
+                          <div className="flex items-start justify-between gap-1">
+                            <p className="font-extrabold text-white text-xs leading-tight line-clamp-2 flex-1">{c.reward}</p>
+                            <motion.span
+                              animate={{ scale: [1, 1.3, 0.9, 1.2, 1], rotate: [-8, 8, -5, 6, 0] }}
+                              transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut', delay: i * 0.35 }}
+                              className="text-sm leading-none shrink-0"
+                            >🔥</motion.span>
+                          </div>
                           <div className="flex items-center justify-between">
                             <p className="text-white/60 text-[9px] font-medium line-clamp-1 flex-1 mr-1">{c.title}</p>
                             {joined
                               ? <span className="text-[8px] font-black text-white bg-white/25 rounded-full px-1.5 py-0.5 shrink-0">Joined</span>
                               : participants > 0
-                                ? <span className="text-[8px] font-black text-white bg-white/25 rounded-full px-1.5 py-0.5 shrink-0">{participants} in</span>
+                                ? <span className="text-[8px] font-black text-white bg-white/25 rounded-full px-1.5 py-0.5 shrink-0">{participants} players</span>
                                 : <span className="text-[8px] font-black text-white bg-white/25 rounded-full px-1.5 py-0.5 shrink-0">Join</span>}
                           </div>
                         </div>
