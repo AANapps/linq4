@@ -8487,7 +8487,7 @@ function NotificationsPanel({ notifications, onClose }: { notifications: Notific
   );
 }
 
-const DEAL_COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#F7A35C', '#DDA0DD', '#F7DC6F', '#A8E6CF'];
+const DEAL_COLORS = ['#B83232', '#147A74', '#1560A0', '#236B48', '#B86020', '#6E2E9A', '#9A7A08', '#156050'];
 
 function FeedVendorPostCard({ item }: { item: any }) {
   return (
@@ -8521,9 +8521,9 @@ function FeedLoadingSpinner() {
 
 // --- Deals Screen ---
 const REWARD_TAG_COLORS: Record<string, string[]> = {
-  experience: ['#8B5CF6', '#7C3AED'],
-  service: ['#0EA5E9', '#0284C7'],
-  product: ['#10B981', '#059669'],
+  experience: ['#5B21B6', '#4C1D95'],
+  service: ['#0369A1', '#075985'],
+  product: ['#065F46', '#064E3B'],
 };
 
 function DealSliderSection({ title, icon, challenges, onViewStore, stores, showAll, onToggleAll }: {
@@ -8553,7 +8553,7 @@ function DealSliderSection({ title, icon, challenges, onViewStore, stores, showA
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.04 }}
               className={cn('rounded-[1.5rem] overflow-hidden flex flex-col relative cursor-pointer active:scale-[0.97] transition-transform', showAll ? '' : 'shrink-0 w-36')}
-              style={{ background: `linear-gradient(145deg, ${colors[0]}ee, ${colors[1]}aa)`, height: '160px' }}
+              style={{ background: `linear-gradient(145deg, ${colors[0]}dd, ${colors[1]}bb)`, backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)', border: '1px solid rgba(255,255,255,0.18)', height: '160px' }}
             >
               <div className="relative z-10 flex flex-col h-full p-3">
                 <div className="w-8 h-8 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center mb-2 shrink-0">
@@ -8609,7 +8609,7 @@ function StoreDealsSection({ stores, onViewStore, showAll, onToggleAll }: {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.04 }}
               className={cn('rounded-[1.5rem] overflow-hidden flex flex-col relative cursor-pointer active:scale-[0.97] transition-transform', showAll ? '' : 'shrink-0 w-36')}
-              style={{ background: `linear-gradient(145deg, ${dealColor}ee, ${dealColor}88)`, height: '160px' }}
+              style={{ background: `linear-gradient(145deg, ${dealColor}dd, ${dealColor}99)`, backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)', border: '1px solid rgba(255,255,255,0.18)', height: '160px' }}
               onClick={() => onViewStore && onViewStore(store)}
             >
               {store.coverUrl && (
@@ -9032,7 +9032,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: i * 0.05 }}
                       className="shrink-0 w-36 rounded-[1.5rem] overflow-hidden cursor-pointer active:scale-[0.97] transition-transform flex flex-col relative"
-                      style={{ background: `linear-gradient(145deg, ${dealColor}ee, ${dealColor}88)`, height: '160px' }}
+                      style={{ background: `linear-gradient(145deg, ${dealColor}dd, ${dealColor}99)`, backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)', border: '1px solid rgba(255,255,255,0.18)', height: '160px' }}
                       onClick={() => onViewStore && onViewStore(store)}
                     >
                       {store.coverUrl && (
@@ -9114,7 +9114,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
                         transition={{ delay: i * 0.04 }}
                         onClick={() => onViewChallenges?.()}
                         className="shrink-0 w-40 rounded-2xl overflow-hidden flex flex-col relative cursor-pointer active:scale-[0.97] transition-transform"
-                        style={{ background: `linear-gradient(135deg, ${color}dd, ${color}88)`, height: '96px' }}
+                        style={{ background: `linear-gradient(135deg, ${color}cc, ${color}99)`, backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)', border: '1px solid rgba(255,255,255,0.18)', height: '96px' }}
                       >
                         <div className="relative z-10 flex flex-col h-full p-3 justify-between">
                           <div className="flex items-start justify-between gap-1">
@@ -9212,7 +9212,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: i * 0.04 }}
                     className="relative rounded-[1.75rem] overflow-hidden aspect-square flex flex-col cursor-pointer active:scale-[0.97] transition-transform"
-                    style={{ background: `linear-gradient(145deg, ${dealColor}ee, ${dealColor}88)` }}
+                    style={{ background: `linear-gradient(145deg, ${dealColor}dd, ${dealColor}99)`, backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)', border: '1px solid rgba(255,255,255,0.18)' }}
                     onClick={() => { onViewStore && onViewStore(store); setShowAllDeals(false); }}
                   >
                     {store.coverUrl && (
