@@ -104,7 +104,9 @@ import {
   Car,
   ShoppingBag,
   Wifi,
-  Smartphone
+  Smartphone,
+  Tag,
+  Package
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
@@ -446,6 +448,7 @@ interface Challenge {
   status?: 'active' | 'paused' | 'ended';
   tierChances?: { brown: number; lightblue: number; red: number; blue: number; gold: number };
   vendorIds?: string[];
+  rewardTag?: 'product' | 'experience' | 'service';
 }
 
 interface StoreAutomation {
@@ -1134,15 +1137,28 @@ export default function App() {
           </div>
           <h1 className="font-display font-bold text-xl tracking-tight"><span className="text-brand-gold">Li</span>nq</h1>
         </button>
-        <button
-          onClick={() => setShowNotifications(true)}
-          className="relative w-9 h-9 flex items-center justify-center text-brand-navy/60 hover:text-brand-navy transition-colors"
-        >
-          <Bell className="w-6 h-6" />
-          {notifications.filter(n => !n.isRead).length > 0 && (
-            <span className="absolute top-1 right-1 w-2 h-2 bg-brand-gold rounded-full border-2 border-white" />
+        <div className="flex items-center gap-0.5">
+          {profile?.role === 'consumer' && (
+            <button
+              onClick={() => setActiveTab('messages')}
+              className="relative w-9 h-9 flex items-center justify-center text-brand-navy/60 hover:text-brand-navy transition-colors"
+            >
+              <MessageCircle className="w-6 h-6" />
+              {unreadMessages > 0 && (
+                <span className="absolute top-1 right-1 w-2 h-2 bg-brand-rose rounded-full border-2 border-white" />
+              )}
+            </button>
           )}
-        </button>
+          <button
+            onClick={() => setShowNotifications(true)}
+            className="relative w-9 h-9 flex items-center justify-center text-brand-navy/60 hover:text-brand-navy transition-colors"
+          >
+            <Bell className="w-6 h-6" />
+            {notifications.filter(n => !n.isRead).length > 0 && (
+              <span className="absolute top-1 right-1 w-2 h-2 bg-brand-gold rounded-full border-2 border-white" />
+            )}
+          </button>
+        </div>
       </header>
 
       {/* Main Content */}
@@ -1258,13 +1274,22 @@ export default function App() {
           label="For You"
           badgeCount={notifications.filter(n => !n.isRead).length}
         />
-        <NavButton
-          active={activeTab === 'messages'}
-          onClick={() => { setActiveTab('messages'); setViewingStore(null); setViewingUser(null); }}
-          icon={<MessageCircle />}
-          label="Messages"
-          badgeCount={unreadMessages}
-        />
+        {profile?.role === 'consumer' ? (
+          <NavButton
+            active={activeTab === 'deals'}
+            onClick={() => { setActiveTab('deals'); setViewingStore(null); setViewingUser(null); }}
+            icon={<Tag />}
+            label="Deals"
+          />
+        ) : (
+          <NavButton
+            active={activeTab === 'messages'}
+            onClick={() => { setActiveTab('messages'); setViewingStore(null); setViewingUser(null); }}
+            icon={<MessageCircle />}
+            label="Messages"
+            badgeCount={unreadMessages}
+          />
+        )}
         <NavButton 
           active={activeTab === 'home'} 
           onClick={() => { setActiveTab('home'); setViewingStore(null); setViewingUser(null); }}
@@ -2400,6 +2425,7 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
   const [stdGoal, setStdGoal] = useState('');
   const [stdUnit, setStdUnit] = useState('');
   const [stdReward, setStdReward] = useState('');
+  const [stdRewardTag, setStdRewardTag] = useState<'product' | 'experience' | 'service' | ''>('');
 
   // Collectible programme form state
   const [colTitle, setColTitle] = useState('');
@@ -2434,8 +2460,9 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
         createdAt: serverTimestamp(),
         ...(stdEndsAt ? { endsAt: Timestamp.fromDate(new Date(stdEndsAt)) } : {}),
         ...(stdVendorIds.length > 0 ? { vendorIds: stdVendorIds } : {}),
+        ...(stdRewardTag ? { rewardTag: stdRewardTag } : {}),
       });
-      setStdTitle(''); setStdDesc(''); setStdGoal(''); setStdUnit(''); setStdReward(''); setStdEndsAt(''); setStdVendorIds([]);
+      setStdTitle(''); setStdDesc(''); setStdGoal(''); setStdUnit(''); setStdReward(''); setStdEndsAt(''); setStdVendorIds([]); setStdRewardTag('');
     } finally {
       setDeploying(false);
     }
@@ -2744,6 +2771,16 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
               <input value={stdUnit} onChange={e => setStdUnit(e.target.value)} placeholder="Unit (e.g. stamps)" className={cn(inputCls, 'flex-1')} />
             </div>
             <input value={stdReward} onChange={e => setStdReward(e.target.value)} placeholder="Prize (e.g. Free coffee)" className={inputCls} />
+            <select
+              value={stdRewardTag}
+              onChange={e => setStdRewardTag(e.target.value as typeof stdRewardTag)}
+              className={cn(inputCls, 'appearance-none')}
+            >
+              <option value="">Reward type (optional)</option>
+              <option value="product">Product</option>
+              <option value="experience">Experience</option>
+              <option value="service">Service</option>
+            </select>
             <div className="flex items-center gap-2">
               <label className="text-xs text-brand-navy/50 flex-shrink-0">End date</label>
               <input type="datetime-local" value={stdEndsAt} onChange={e => setStdEndsAt(e.target.value)} className={cn(inputCls, 'flex-1 text-xs')} />
@@ -3285,12 +3322,21 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       )}
 
       {activeTab === 'messages' && (
-        <MessagesScreen 
-          currentUser={user} 
-          currentProfile={profile} 
-          activeChatId={activeChatId} 
+        <MessagesScreen
+          currentUser={user}
+          currentProfile={profile}
+          activeChatId={activeChatId}
           setActiveChatId={setActiveChatId}
           onViewUser={onViewUser}
+        />
+      )}
+
+      {activeTab === 'deals' && (
+        <DealsScreen
+          currentUser={user}
+          currentProfile={profile}
+          onViewStore={onViewStore}
+          userCards={initialCards}
         />
       )}
 
@@ -3523,6 +3569,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                   {activeStandardChallenges.map(c => {
                     const joined = (c.participantUids || []).includes(user.uid);
                     const entry = myStandardEntries.get(c.id);
+                    const joinedCount = activeStandardChallenges.filter(ch => (ch.participantUids || []).includes(user.uid)).length;
                     let stampsProgress = 0;
                     if (joined && entry) {
                       if (c.vendorIds?.length) {
@@ -3601,38 +3648,57 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                             </div>
                           )}
 
-                          <button
-                            disabled={joined}
-                            onClick={async () => {
-                              if (joined) return;
-                              await updateDoc(doc(db, 'challenges', c.id), { participantUids: arrayUnion(user.uid) });
-                              // Snapshot per-store stamps so progress only counts stamps earned after joining
-                              const stampsAtJoinPerStore: Record<string, number> = {};
-                              if (c.vendorIds?.length) {
-                                for (const vid of c.vendorIds) {
-                                  const card = initialCards.find(cd => cd.store_id === vid);
-                                  if (card) {
-                                    stampsAtJoinPerStore[vid] =
-                                      (card.total_completed_cycles || 0) * (card.stamps_required || 10) + (card.current_stamps || 0);
+                          {joined ? (
+                            <button
+                              onClick={async () => {
+                                if (!entry) return;
+                                await updateDoc(doc(db, 'challenges', c.id), { participantUids: arrayRemove(user.uid) });
+                                await deleteDoc(doc(db, 'challenge_entries', entry.id));
+                              }}
+                              className="w-full py-3 rounded-2xl text-sm font-bold transition-all active:scale-95 bg-red-50 text-red-500 border border-red-200"
+                            >
+                              Leave Challenge
+                            </button>
+                          ) : (
+                            <>
+                              {joinedCount >= 5 && (
+                                <p className="text-[11px] text-center text-brand-rose font-semibold">
+                                  You're in 5 challenges — leave one to join this.
+                                </p>
+                              )}
+                              <button
+                                disabled={joinedCount >= 5}
+                                onClick={async () => {
+                                  if (joinedCount >= 5) return;
+                                  await updateDoc(doc(db, 'challenges', c.id), { participantUids: arrayUnion(user.uid) });
+                                  const stampsAtJoinPerStore: Record<string, number> = {};
+                                  if (c.vendorIds?.length) {
+                                    for (const vid of c.vendorIds) {
+                                      const card = initialCards.find(cd => cd.store_id === vid);
+                                      if (card) {
+                                        stampsAtJoinPerStore[vid] =
+                                          (card.total_completed_cycles || 0) * (card.stamps_required || 10) + (card.current_stamps || 0);
+                                      }
+                                    }
                                   }
-                                }
-                              }
-                              await addDoc(collection(db, 'challenge_entries'), {
-                                challengeId: c.id,
-                                uid: user.uid,
-                                count: 0,
-                                totalStampsAtJoin: profile?.totalStamps || 0,
-                                ...(c.vendorIds?.length ? { stampsAtJoinPerStore } : {}),
-                                createdAt: serverTimestamp(),
-                              });
-                            }}
-                            className={cn(
-                              'w-full py-3 rounded-2xl text-sm font-bold transition-all active:scale-95',
-                              joined ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-brand-navy text-white'
-                            )}
-                          >
-                            {joined ? '✓ Joined' : 'Join Challenge'}
-                          </button>
+                                  await addDoc(collection(db, 'challenge_entries'), {
+                                    challengeId: c.id,
+                                    uid: user.uid,
+                                    count: 0,
+                                    totalStampsAtJoin: profile?.totalStamps || 0,
+                                    ...(c.vendorIds?.length ? { stampsAtJoinPerStore } : {}),
+                                    createdAt: serverTimestamp(),
+                                  });
+                                }}
+                                className={cn(
+                                  'w-full py-3 rounded-2xl text-sm font-bold transition-all active:scale-95',
+                                  joinedCount >= 5 ? 'bg-brand-navy/20 text-brand-navy/40 cursor-not-allowed' : 'bg-brand-navy text-white'
+                                )}
+                              >
+                                Join Challenge
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
                     );
@@ -8438,6 +8504,202 @@ function FeedLoadingSpinner() {
   );
 }
 
+// --- Deals Screen ---
+const REWARD_TAG_COLORS: Record<string, string[]> = {
+  experience: ['#8B5CF6', '#7C3AED'],
+  service: ['#0EA5E9', '#0284C7'],
+  product: ['#10B981', '#059669'],
+};
+
+function DealSliderSection({ title, icon, challenges, onViewStore, stores, showAll, onToggleAll }: {
+  title: string; icon: React.ReactNode; challenges: Challenge[]; onViewStore?: (s: StoreProfile) => void; stores?: StoreProfile[]; showAll: boolean; onToggleAll: () => void;
+}) {
+  if (challenges.length === 0) return null;
+  const visible = showAll ? challenges : challenges.slice(0, 8);
+  return (
+    <div>
+      <div className="flex items-center gap-1.5 mb-3 px-1">
+        {icon}
+        <h3 className="font-extrabold text-brand-navy text-sm flex-1">{title}</h3>
+        {challenges.length > 5 && (
+          <button onClick={onToggleAll} className="text-[10px] font-bold text-brand-navy/40 flex items-center gap-0.5">
+            {showAll ? 'Less' : `All ${challenges.length}`} <ChevronDown size={10} className={cn('transition-transform', showAll && 'rotate-180')} />
+          </button>
+        )}
+      </div>
+      <div className={cn('pb-2', showAll ? 'grid grid-cols-2 gap-3' : 'flex gap-3 overflow-x-auto')} style={!showAll ? { scrollbarWidth: 'none', msOverflowStyle: 'none' } : {}}>
+        {visible.map((c, i) => {
+          const colors = REWARD_TAG_COLORS[c.rewardTag || 'product'];
+          const vendorStore = stores?.find(s => c.vendorIds?.[0] === s.id);
+          return (
+            <motion.div
+              key={c.id}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: i * 0.04 }}
+              className={cn('rounded-[1.5rem] overflow-hidden flex flex-col relative cursor-pointer active:scale-[0.97] transition-transform', showAll ? '' : 'shrink-0 w-36')}
+              style={{ background: `linear-gradient(145deg, ${colors[0]}ee, ${colors[1]}aa)`, height: '160px' }}
+            >
+              <div className="relative z-10 flex flex-col h-full p-3">
+                <div className="w-8 h-8 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center mb-2 shrink-0">
+                  {c.rewardTag === 'experience' ? <Star size={14} className="text-white" />
+                    : c.rewardTag === 'service' ? <Tag size={14} className="text-white" />
+                    : <Package size={14} className="text-white" />}
+                </div>
+                <p className="font-extrabold text-white text-xs leading-tight line-clamp-2 mb-1">{c.reward}</p>
+                <div className="mt-auto">
+                  <p className="text-white/60 text-[9px] font-medium line-clamp-1">{c.title}</p>
+                  {c.endsAt && (
+                    <p className="text-white/40 text-[8px] font-medium mt-0.5 flex items-center gap-0.5">
+                      <Clock size={7} className="shrink-0" />
+                      <CountdownTimer endsAt={c.endsAt} />
+                    </p>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function StoreDealsSection({ stores, onViewStore, showAll, onToggleAll }: {
+  stores: StoreProfile[]; onViewStore?: (s: StoreProfile) => void; showAll: boolean; onToggleAll: () => void;
+}) {
+  if (stores.length === 0) return null;
+  const visible = showAll ? stores : stores.slice(0, 8);
+  return (
+    <div>
+      <div className="flex items-center gap-1.5 mb-3 px-1">
+        <Gift size={15} className="text-brand-rose" />
+        <h3 className="font-extrabold text-brand-navy text-sm flex-1">Hot Deals</h3>
+        {stores.length > 5 && (
+          <button onClick={onToggleAll} className="text-[10px] font-bold text-brand-navy/40 flex items-center gap-0.5">
+            {showAll ? 'Less' : `All ${stores.length}`} <ChevronDown size={10} className={cn('transition-transform', showAll && 'rotate-180')} />
+          </button>
+        )}
+      </div>
+      <div className={cn('pb-2', showAll ? 'grid grid-cols-2 gap-3' : 'flex gap-3 overflow-x-auto')} style={!showAll ? { scrollbarWidth: 'none', msOverflowStyle: 'none' } : {}}>
+        {visible.map((store, i) => {
+          const dealColor = DEAL_COLORS[i % DEAL_COLORS.length];
+          return (
+            <motion.div
+              key={store.id}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: i * 0.04 }}
+              className={cn('rounded-[1.5rem] overflow-hidden flex flex-col relative cursor-pointer active:scale-[0.97] transition-transform', showAll ? '' : 'shrink-0 w-36')}
+              style={{ background: `linear-gradient(145deg, ${dealColor}ee, ${dealColor}88)`, height: '160px' }}
+              onClick={() => onViewStore && onViewStore(store)}
+            >
+              {store.coverUrl && (
+                <div className="absolute inset-0">
+                  <img src={store.coverUrl} alt="" className="w-full h-full object-cover opacity-15" />
+                </div>
+              )}
+              <div className="relative z-10 flex flex-col h-full p-3">
+                <div className="w-9 h-9 rounded-xl overflow-hidden border-2 border-white/40 shadow-md bg-white/20 mb-2 shrink-0">
+                  {store.logoUrl
+                    ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
+                    : <div className="w-full h-full flex items-center justify-center"><Building2 size={14} className="text-white/70" /></div>}
+                </div>
+                <p className="font-extrabold text-white text-xs leading-tight line-clamp-2 mb-1">
+                  {store.reward || `${store.stamps_required_for_reward} stamps reward`}
+                </p>
+                <div className="mt-auto">
+                  <p className="text-white/60 text-[9px] font-medium line-clamp-1">{store.name}</p>
+                </div>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function DealsScreen({ currentUser, currentProfile, onViewStore, userCards = [] }: {
+  currentUser?: FirebaseUser; currentProfile?: UserProfile | null; onViewStore?: (s: StoreProfile) => void; userCards?: Card[];
+}) {
+  const [allStores, setAllStores] = useState<StoreProfile[]>([]);
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [showAllHot, setShowAllHot] = useState(false);
+  const [showAllExp, setShowAllExp] = useState(false);
+  const [showAllSvc, setShowAllSvc] = useState(false);
+  const [showAllProd, setShowAllProd] = useState(false);
+
+  useEffect(() => {
+    return onSnapshot(collection(db, 'stores'), snap =>
+      setAllStores(snap.docs.map(d => ({ id: d.id, ...d.data() } as StoreProfile)))
+    , () => {});
+  }, []);
+
+  useEffect(() => {
+    const q = query(collection(db, 'challenges'), where('type', '==', 'standard'), where('status', '==', 'active'));
+    return onSnapshot(q, snap =>
+      setChallenges(snap.docs.map(d => ({ id: d.id, ...d.data() } as Challenge)))
+    , () => {});
+  }, []);
+
+  const storeDeals = allStores.filter(s => s.reward || s.stamps_required_for_reward);
+  const experiences = challenges.filter(c => c.rewardTag === 'experience');
+  const services = challenges.filter(c => c.rewardTag === 'service');
+  const products = challenges.filter(c => c.rewardTag === 'product');
+
+  return (
+    <div className="space-y-6 pb-6">
+      <div>
+        <h1 className="font-display font-bold text-2xl text-brand-navy">Deals</h1>
+        <p className="text-brand-navy/50 text-sm mt-0.5">Rewards waiting for you</p>
+      </div>
+
+      <StoreDealsSection
+        stores={storeDeals}
+        onViewStore={onViewStore}
+        showAll={showAllHot}
+        onToggleAll={() => setShowAllHot(v => !v)}
+      />
+
+      <DealSliderSection
+        title="Experiences"
+        icon={<Star size={15} className="text-purple-500" />}
+        challenges={experiences}
+        stores={allStores}
+        showAll={showAllExp}
+        onToggleAll={() => setShowAllExp(v => !v)}
+      />
+
+      <DealSliderSection
+        title="Services"
+        icon={<Tag size={15} className="text-sky-500" />}
+        challenges={services}
+        stores={allStores}
+        showAll={showAllSvc}
+        onToggleAll={() => setShowAllSvc(v => !v)}
+      />
+
+      <DealSliderSection
+        title="Products"
+        icon={<Package size={15} className="text-emerald-500" />}
+        challenges={products}
+        stores={allStores}
+        showAll={showAllProd}
+        onToggleAll={() => setShowAllProd(v => !v)}
+      />
+
+      {storeDeals.length === 0 && experiences.length === 0 && services.length === 0 && products.length === 0 && (
+        <div className="py-20 text-center text-brand-navy/20">
+          <Gift size={64} className="mx-auto mb-4 opacity-20" />
+          <p className="font-bold">No deals yet</p>
+          <p className="text-sm">Check back soon for rewards and challenges</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ForYouScreen({ onViewUser, onViewStore, currentUser, currentProfile, userCards = [] }: { onViewUser: (u: UserProfile) => void, onViewStore?: (s: StoreProfile) => void, currentUser?: FirebaseUser, currentProfile?: UserProfile | null, userCards?: Card[] }) {
   const [globalPosts, setGlobalPosts] = useState<GlobalPost[]>([]);
   const [vendorPosts, setVendorPosts] = useState<any[]>([]);
@@ -8451,6 +8713,7 @@ function ForYouScreen({ onViewUser, onViewStore, currentUser, currentProfile, us
   const [hasMore, setHasMore] = useState(true);
   const [activeSubTab, setActiveSubTab] = useState<'discovery' | 'following'>('discovery');
   const [showAllDeals, setShowAllDeals] = useState(false);
+  const [feedChallenges, setFeedChallenges] = useState<Challenge[]>([]);
   const lastDocRef = useRef<any>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -8552,6 +8815,13 @@ function ForYouScreen({ onViewUser, onViewStore, currentUser, currentProfile, us
     return onSnapshot(collection(db, 'stores'), (snap) => {
       setAllStores(snap.docs.map(d => ({ id: d.id, ...d.data() } as StoreProfile)));
     }, () => {});
+  }, []);
+
+  useEffect(() => {
+    const q = query(collection(db, 'challenges'), where('type', '==', 'standard'), where('status', '==', 'active'));
+    return onSnapshot(q, snap =>
+      setFeedChallenges(snap.docs.map(d => ({ id: d.id, ...d.data() } as Challenge)))
+    , () => {});
   }, []);
 
   useEffect(() => {
@@ -8768,6 +9038,43 @@ function ForYouScreen({ onViewUser, onViewStore, currentUser, currentProfile, us
                   <ChevronRight size={20} />
                   <span className="text-[10px] font-bold text-center leading-tight">See<br />More</span>
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* Challenges mini slider */}
+          {feedChallenges.length > 0 && (
+            <div>
+              <div className="flex items-center gap-1.5 mb-3 px-1">
+                <Trophy size={15} className="text-brand-gold" />
+                <h3 className="font-extrabold text-brand-navy text-sm flex-1">Active Challenges</h3>
+                <span className="text-[10px] text-brand-navy/40 font-semibold">Join & win</span>
+              </div>
+              <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                {feedChallenges.slice(0, 8).map((c, i) => {
+                  const joined = (c.participantUids || []).includes(currentUser?.uid || '');
+                  const color = DEAL_COLORS[(i + 2) % DEAL_COLORS.length];
+                  return (
+                    <motion.div
+                      key={c.id}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: i * 0.04 }}
+                      className="shrink-0 w-40 rounded-2xl overflow-hidden flex flex-col relative"
+                      style={{ background: `linear-gradient(135deg, ${color}dd, ${color}88)`, height: '80px' }}
+                    >
+                      <div className="relative z-10 flex flex-col h-full p-3 justify-between">
+                        <p className="font-extrabold text-white text-xs leading-tight line-clamp-2">{c.reward}</p>
+                        <div className="flex items-center justify-between">
+                          <p className="text-white/60 text-[9px] font-medium line-clamp-1 flex-1 mr-1">{c.title}</p>
+                          {joined
+                            ? <span className="text-[8px] font-black text-white bg-white/25 rounded-full px-1.5 py-0.5 shrink-0">Joined</span>
+                            : <span className="text-[8px] font-black text-white bg-white/25 rounded-full px-1.5 py-0.5 shrink-0">Join</span>}
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </div>
             </div>
           )}
