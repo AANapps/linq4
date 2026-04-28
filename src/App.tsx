@@ -6699,6 +6699,33 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
     }
   };
 
+  // Challenges + badges (consumer only)
+  const [profileChallenges, setProfileChallenges] = useState<Challenge[]>([]);
+  const [profileEntries, setProfileEntries] = useState<Map<string, any>>(new Map());
+  const [allBadges, setAllBadges] = useState<AppBadge[]>([]);
+
+  useEffect(() => {
+    if (profile?.role !== 'consumer') return;
+    const q = query(collection(db, 'challenges'), where('type', '==', 'standard'), where('status', '==', 'active'));
+    return onSnapshot(q, snap => setProfileChallenges(snap.docs.map(d => ({ id: d.id, ...d.data() } as Challenge))));
+  }, [profile?.role]);
+
+  useEffect(() => {
+    if (profile?.role !== 'consumer' || !user?.uid) return;
+    const q = query(collection(db, 'challenge_entries'), where('uid', '==', user.uid));
+    return onSnapshot(q, snap => {
+      const m = new Map<string, any>();
+      snap.docs.forEach(d => m.set(d.data().challengeId, { id: d.id, ...d.data() }));
+      setProfileEntries(m);
+    });
+  }, [profile?.role, user?.uid]);
+
+  useEffect(() => {
+    return onSnapshot(collection(db, 'badges'), snap =>
+      setAllBadges(snap.docs.map(d => ({ id: d.id, ...d.data() } as AppBadge)))
+    );
+  }, []);
+
   if (!profile) return null;
 
   const lifetimeStamps = Math.max(
@@ -6726,6 +6753,21 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
     .reduce((sum, c) => sum + stagesFor(c.store_id), 0);
   const archivedCardsCount = Math.max(activeCardRewards, archivedDocRewards, profile.totalRedeemed || 0);
   const activeCardsCount = userCards.filter(c => !c.isArchived).length;
+
+  // Challenges I'm in (consumer)
+  const myChallenges = profileChallenges.filter(c => (c.participantUids || []).includes(user.uid));
+
+  // Badge metric map
+  const badgeMetrics: Record<BadgeMetric, number> = {
+    stamps: lifetimeStamps,
+    cards_completed: archivedCardsCount,
+    challenges_joined: myChallenges.length,
+    memberships: activeCardsCount,
+    followers: followers.length,
+    following: following.length,
+    posts: myGlobalPosts.length,
+  };
+  const earnedBadges = allBadges.filter(b => (badgeMetrics[b.metric] ?? 0) >= b.threshold);
 
   // Vendor stats
   const totalMembers = storeCards.length > 0 ? new Set(storeCards.map(c => c.user_id)).size : 0;
@@ -6958,10 +7000,87 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
 
       {settingsModal}
 
-      <div className="grid grid-cols-2 gap-4">
-        <StatSquare icon={<CheckCircle2 className="text-brand-gold" />} label="Stamps" value={lifetimeStamps.toString()} />
-        <StatSquare icon={<Trophy className="text-brand-gold" />} label="Rewards" value={archivedCardsCount.toString()} />
+      {/* Compact stats */}
+      <div className="flex gap-2">
+        <div className="flex-1 glass-card rounded-2xl px-3 py-2.5 flex items-center gap-2.5">
+          <CheckCircle2 size={15} className="text-brand-gold shrink-0" />
+          <div>
+            <p className="font-bold text-brand-navy text-sm leading-none">{lifetimeStamps}</p>
+            <p className="text-[9px] text-brand-navy/40 font-bold uppercase tracking-wider mt-0.5">Stamps</p>
+          </div>
+        </div>
+        <div className="flex-1 glass-card rounded-2xl px-3 py-2.5 flex items-center gap-2.5">
+          <Trophy size={15} className="text-brand-gold shrink-0" />
+          <div>
+            <p className="font-bold text-brand-navy text-sm leading-none">{archivedCardsCount}</p>
+            <p className="text-[9px] text-brand-navy/40 font-bold uppercase tracking-wider mt-0.5">Rewards</p>
+          </div>
+        </div>
+        <div className="flex-1 glass-card rounded-2xl px-3 py-2.5 flex items-center gap-2.5">
+          <Store size={15} className="text-brand-navy/40 shrink-0" />
+          <div>
+            <p className="font-bold text-brand-navy text-sm leading-none">{activeCardsCount}</p>
+            <p className="text-[9px] text-brand-navy/40 font-bold uppercase tracking-wider mt-0.5">Cards</p>
+          </div>
+        </div>
       </div>
+
+      {/* Earned badges */}
+      {earnedBadges.length > 0 && (
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 px-1">Badges</p>
+          <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+            {earnedBadges.map(b => (
+              <div key={b.id} className="shrink-0 flex flex-col items-center gap-1">
+                <div
+                  className="w-11 h-11 rounded-[0.875rem] flex items-center justify-center text-xl shadow-sm"
+                  style={{ background: `linear-gradient(135deg, ${b.color}ee, ${b.color}99)` }}
+                >{b.icon}</div>
+                <p className="text-[8px] font-bold text-brand-navy/50 text-center max-w-[48px] leading-tight line-clamp-2">{b.name}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* My challenges */}
+      {myChallenges.length > 0 && (
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 px-1">Challenges</p>
+          <div className="space-y-2">
+            {myChallenges.map(c => {
+              const entry = profileEntries.get(c.id);
+              let progress = 0;
+              if (entry) {
+                if (c.vendorIds?.length) {
+                  progress = Math.min(c.goal, entry.count || 0);
+                } else {
+                  progress = Math.max(0, Math.min(c.goal, (profile.totalStamps || 0) - (entry.totalStampsAtJoin || 0)));
+                }
+              }
+              const pct = c.goal > 0 ? Math.min(100, Math.round((progress / c.goal) * 100)) : 0;
+              const done = pct >= 100;
+              return (
+                <div key={c.id} className="glass-card rounded-2xl px-4 py-3">
+                  <div className="flex items-center justify-between mb-1.5 gap-2">
+                    <p className="text-xs font-bold text-brand-navy leading-tight line-clamp-1 flex-1">{c.title}</p>
+                    <span className={cn('text-[10px] font-bold shrink-0', done ? 'text-green-500' : 'text-brand-gold')}>{done ? '✓ Done' : `${pct}%`}</span>
+                  </div>
+                  <div className="h-1.5 bg-brand-navy/5 rounded-full overflow-hidden">
+                    <motion.div
+                      className={cn('h-full rounded-full', done ? 'bg-green-400' : 'bg-brand-gold')}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${pct}%` }}
+                      transition={{ duration: 0.6, ease: 'easeOut' }}
+                    />
+                  </div>
+                  <p className="text-[9px] text-brand-navy/40 mt-1.5 font-medium">{progress} / {c.goal} {c.unit} · 🎁 {c.reward}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="flex p-1 glass-card rounded-2xl">
         <button
