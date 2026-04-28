@@ -5245,6 +5245,7 @@ function LoyaltyCard({ card, store, onViewStore }: { card: Card, store?: StorePr
 
       const customerName = auth.currentUser.displayName || auth.currentUser.email?.split('@')[0] || 'Customer';
       issueStickersToCard(auth.currentUser.uid, customerName, qty).catch(console.error);
+      updateChallengeProgress(auth.currentUser.uid, store.id, qty).catch(console.error);
 
       if (newStamps >= limit) {
         setShowQR(false);
