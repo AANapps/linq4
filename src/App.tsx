@@ -3615,19 +3615,26 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                           {c.vendorIds?.length ? (
                             <div>
                               <p className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest mb-1.5">Participating stores</p>
-                              <div className="flex flex-wrap gap-1.5">
-                                {c.vendorIds.map(vid => {
-                                  const s = stores.find(st => st.id === vid);
-                                  return s ? (
-                                    <div key={vid} className="flex items-center gap-1.5 bg-brand-navy/5 rounded-full px-2.5 py-1">
-                                      {s.logoUrl
-                                        ? <img src={s.logoUrl} alt="" className="w-4 h-4 rounded-full object-cover shrink-0" />
-                                        : <Store size={10} className="text-brand-navy/40 shrink-0" />}
-                                      <span className="text-[10px] font-bold text-brand-navy/70">{s.name}</span>
-                                    </div>
-                                  ) : null;
-                                })}
-                              </div>
+                              {stores.length > 0 && c.vendorIds.length >= stores.length ? (
+                                <div className="flex items-center gap-1.5 bg-brand-navy/5 rounded-full px-2.5 py-1 w-fit">
+                                  <Store size={10} className="text-brand-navy/40 shrink-0" />
+                                  <span className="text-[10px] font-bold text-brand-navy/70">All vendors</span>
+                                </div>
+                              ) : (
+                                <div className="flex flex-wrap gap-1.5">
+                                  {c.vendorIds.map(vid => {
+                                    const s = stores.find(st => st.id === vid);
+                                    return s ? (
+                                      <div key={vid} className="flex items-center gap-1.5 bg-brand-navy/5 rounded-full px-2.5 py-1">
+                                        {s.logoUrl
+                                          ? <img src={s.logoUrl} alt="" className="w-4 h-4 rounded-full object-cover shrink-0" />
+                                          : <Store size={10} className="text-brand-navy/40 shrink-0" />}
+                                        <span className="text-[10px] font-bold text-brand-navy/70">{s.name}</span>
+                                      </div>
+                                    ) : null;
+                                  })}
+                                </div>
+                              )}
                             </div>
                           ) : null}
 
@@ -8951,6 +8958,18 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
     return followingStoreIds.has(item.storeId || '');
   });
 
+  const totalActivePlayers = new Set(feedChallenges.flatMap(c => c.participantUids || [])).size;
+  const storeParticipantMap = new Map<string, number>();
+  for (const ch of feedChallenges) {
+    const sids = ch.vendorIds?.length ? ch.vendorIds : allStores.map(s => s.id);
+    const cnt = ch.participantUids?.length || 0;
+    for (const sid of sids) storeParticipantMap.set(sid, (storeParticipantMap.get(sid) || 0) + cnt);
+  }
+  const topVendors = [...allStores]
+    .filter(s => storeParticipantMap.has(s.id))
+    .sort((a, b) => (storeParticipantMap.get(b.id) || 0) - (storeParticipantMap.get(a.id) || 0))
+    .slice(0, 3);
+
   return (
     <div className="space-y-5 pb-20">
       {/* Tab bar */}
@@ -9053,38 +9072,67 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
           {/* Challenges mini slider */}
           {feedChallenges.length > 0 && (
             <div>
-              <div className="flex items-center gap-1.5 mb-3 px-1">
+              <div className="flex items-center gap-1.5 mb-1 px-1">
                 <Trophy size={15} className="text-brand-gold" />
                 <h3 className="font-extrabold text-brand-navy text-sm flex-1">Active Challenges</h3>
                 <span className="text-[10px] text-brand-navy/40 font-semibold">Join & win</span>
               </div>
+              {totalActivePlayers > 0 && (
+                <div className="flex items-center gap-1 mb-3 px-1">
+                  <Users size={9} className="text-brand-navy/30" />
+                  <span className="text-[10px] font-bold text-brand-navy/40">{totalActivePlayers.toLocaleString()}+ active players</span>
+                </div>
+              )}
               <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                {feedChallenges.slice(0, 8).map((c, i) => {
-                  const joined = (c.participantUids || []).includes(currentUser?.uid || '');
-                  const color = DEAL_COLORS[(i + 2) % DEAL_COLORS.length];
-                  return (
-                    <motion.div
-                      key={c.id}
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: i * 0.04 }}
-                      onClick={() => onViewChallenges?.()}
-                      className="shrink-0 w-40 rounded-2xl overflow-hidden flex flex-col relative cursor-pointer active:scale-[0.97] transition-transform"
-                      style={{ background: `linear-gradient(135deg, ${color}dd, ${color}88)`, height: '80px' }}
-                    >
-                      <div className="relative z-10 flex flex-col h-full p-3 justify-between">
-                        <p className="font-extrabold text-white text-xs leading-tight line-clamp-2">{c.reward}</p>
-                        <div className="flex items-center justify-between">
-                          <p className="text-white/60 text-[9px] font-medium line-clamp-1 flex-1 mr-1">{c.title}</p>
-                          {joined
-                            ? <span className="text-[8px] font-black text-white bg-white/25 rounded-full px-1.5 py-0.5 shrink-0">Joined</span>
-                            : <span className="text-[8px] font-black text-white bg-white/25 rounded-full px-1.5 py-0.5 shrink-0">Join</span>}
+                {[...feedChallenges]
+                  .sort((a, b) => (b.participantUids?.length || 0) - (a.participantUids?.length || 0))
+                  .slice(0, 8)
+                  .map((c, i) => {
+                    const joined = (c.participantUids || []).includes(currentUser?.uid || '');
+                    const participants = c.participantUids?.length || 0;
+                    const color = DEAL_COLORS[(i + 2) % DEAL_COLORS.length];
+                    return (
+                      <motion.div
+                        key={c.id}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: i * 0.04 }}
+                        onClick={() => onViewChallenges?.()}
+                        className="shrink-0 w-40 rounded-2xl overflow-hidden flex flex-col relative cursor-pointer active:scale-[0.97] transition-transform"
+                        style={{ background: `linear-gradient(135deg, ${color}dd, ${color}88)`, height: '80px' }}
+                      >
+                        <div className="relative z-10 flex flex-col h-full p-3 justify-between">
+                          <p className="font-extrabold text-white text-xs leading-tight line-clamp-2">{c.reward}</p>
+                          <div className="flex items-center justify-between">
+                            <p className="text-white/60 text-[9px] font-medium line-clamp-1 flex-1 mr-1">{c.title}</p>
+                            {joined
+                              ? <span className="text-[8px] font-black text-white bg-white/25 rounded-full px-1.5 py-0.5 shrink-0">Joined</span>
+                              : participants > 0
+                                ? <span className="text-[8px] font-black text-white bg-white/25 rounded-full px-1.5 py-0.5 shrink-0">{participants} in</span>
+                                : <span className="text-[8px] font-black text-white bg-white/25 rounded-full px-1.5 py-0.5 shrink-0">Join</span>}
+                          </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
+                      </motion.div>
+                    );
+                  })}
               </div>
+              {topVendors.length > 0 && (
+                <div className="flex gap-2 mt-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                  {topVendors.map(s => (
+                    <button
+                      key={s.id}
+                      onClick={() => onViewStore?.(s)}
+                      className="flex items-center gap-1.5 shrink-0 bg-white rounded-full px-3 py-1.5 border border-brand-navy/10 active:scale-95 transition-transform"
+                    >
+                      {s.logoUrl
+                        ? <img src={s.logoUrl} alt="" className="w-4 h-4 rounded-full object-cover shrink-0" />
+                        : <Building2 size={10} className="text-brand-navy/40 shrink-0" />}
+                      <span className="text-[10px] font-bold text-brand-navy/70">{s.name}</span>
+                      <span className="text-[9px] text-brand-navy/30 font-medium">{storeParticipantMap.get(s.id)} players</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
