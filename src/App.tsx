@@ -9139,23 +9139,6 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
                     );
                   })}
               </div>
-              {topVendors.length > 0 && (
-                <div className="flex gap-2 mt-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                  {topVendors.map(s => (
-                    <button
-                      key={s.id}
-                      onClick={() => onViewStore?.(s)}
-                      className="flex items-center gap-1.5 shrink-0 bg-white rounded-full px-3 py-1.5 border border-brand-navy/10 active:scale-95 transition-transform"
-                    >
-                      {s.logoUrl
-                        ? <img src={s.logoUrl} alt="" className="w-4 h-4 rounded-full object-cover shrink-0" />
-                        : <Building2 size={10} className="text-brand-navy/40 shrink-0" />}
-                      <span className="text-[10px] font-bold text-brand-navy/70">{s.name}</span>
-                      <span className="text-[9px] text-brand-navy/30 font-medium">{storeParticipantMap.get(s.id)} players</span>
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
           )}
 
