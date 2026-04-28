@@ -1980,25 +1980,22 @@ function OnboardingScreen({ user, onComplete }: {
 // Called from both NFC stamp and vendor manual stamp flows.
 async function updateChallengeProgress(customerUid: string, storeId: string, qty: number) {
   try {
-    // Fetch challenges and entries with single-field queries (no composite index needed)
-    const [challengesSnap, entriesSnap] = await Promise.all([
-      getDocs(query(collection(db, 'challenges'), where('type', '==', 'standard'))),
-      getDocs(query(collection(db, 'challenge_entries'), where('uid', '==', customerUid))),
-    ]);
+    // Fetch the user's entries first (single-field query, no index needed)
+    const entriesSnap = await getDocs(
+      query(collection(db, 'challenge_entries'), where('uid', '==', customerUid))
+    );
+    if (entriesSnap.empty) return;
 
-    // Build a map of challengeId → entry doc for fast lookup
-    const entryByChallenge = new Map<string, typeof entriesSnap.docs[0]>();
-    entriesSnap.docs.forEach(d => entryByChallenge.set(d.data().challengeId as string, d));
-
-    await Promise.all(challengesSnap.docs.map(async cDoc => {
-      const data = cDoc.data();
-      if (data.status !== 'active') return;
-      if (!(data.participantUids || []).includes(customerUid)) return;
-      if (data.vendorIds?.length && !data.vendorIds.includes(storeId)) return;
-      const entryDoc = entryByChallenge.get(cDoc.id);
-      if (entryDoc) {
-        await updateDoc(entryDoc.ref, { count: increment(qty) });
-      }
+    // For each entry, directly read the challenge doc by ID (avoids query cache staleness)
+    await Promise.all(entriesSnap.docs.map(async entryDoc => {
+      const { challengeId } = entryDoc.data() as { challengeId: string };
+      if (!challengeId) return;
+      const challengeSnap = await getDoc(doc(db, 'challenges', challengeId));
+      if (!challengeSnap.exists()) return;
+      const c = challengeSnap.data();
+      if (c.type !== 'standard' || c.status !== 'active') return;
+      if (c.vendorIds?.length && !c.vendorIds.includes(storeId)) return;
+      await updateDoc(entryDoc.ref, { count: increment(qty) });
     }));
   } catch (err) {
     console.error('updateChallengeProgress error:', err);
