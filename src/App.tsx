@@ -466,6 +466,18 @@ interface StoreAutomation {
   lastFiredDate?: string;
 }
 
+type BadgeMetric = 'stamps' | 'cards_completed' | 'challenges_joined' | 'memberships' | 'followers' | 'following' | 'posts';
+
+interface AppBadge {
+  id: string;
+  name: string;
+  color: string;
+  icon: string;
+  metric: BadgeMetric;
+  threshold: number;
+  createdAt: any;
+}
+
 // --- Main App Component ---
 
 export default function App() {
@@ -2382,6 +2394,242 @@ function ChanceEditor({ chances, onSave }: { chances: TierChances; onSave: (c: T
         Save
       </button>
     </div>
+  );
+}
+
+const BADGE_METRIC_LABELS: Record<BadgeMetric, string> = {
+  stamps: 'Total stamps collected',
+  cards_completed: 'Cards completed',
+  challenges_joined: 'Challenges joined',
+  memberships: 'Active memberships',
+  followers: 'Followers',
+  following: 'Following',
+  posts: 'Posts published',
+};
+
+const BADGE_COLORS = [
+  '#EF4444','#F97316','#EAB308','#22C55E','#14B8A6',
+  '#3B82F6','#8B5CF6','#EC4899','#6366F1','#0EA5E9',
+  '#10B981','#F59E0B','#84CC16','#06B6D4','#A855F7',
+  '#1E293B','#7C3AED','#BE123C','#0369A1','#166534',
+];
+
+const BADGE_ICONS = [
+  // faces
+  '😀','😎','🤩','🥳','😏','🤓','😇','🥸','🤠','👑',
+  // animals
+  '🦁','🐯','🦊','🐺','🦅','🦋','🐬','🦄','🐉','🦁',
+  '🐻','🦈','🦒','🐘','🦓','🐆','🦜','🦩','🦔','🐝',
+  // symbols / objects
+  '⭐','🏆','💎','🔥','⚡','🎯','🎖️','🛡️','⚔️','🗝️',
+  '🌟','💫','✨','🎪','🎨','🎭','🚀','🌈','💪','🧩',
+  // food/misc
+  '🍕','🎂','🍀','🌺','🌸','🌻','🍭','🎁','🪄','🎵',
+];
+
+function BadgesAdminPanel({ onClose }: { onClose: () => void }) {
+  const [badges, setBadges] = useState<AppBadge[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+
+  // Form state
+  const [name, setName] = useState('');
+  const [metric, setMetric] = useState<BadgeMetric>('stamps');
+  const [threshold, setThreshold] = useState('');
+  const [color, setColor] = useState(BADGE_COLORS[0]);
+  const [icon, setIcon] = useState(BADGE_ICONS[0]);
+
+  const inputCls = 'w-full bg-white border border-brand-navy/15 rounded-2xl px-4 py-3 text-sm text-brand-navy placeholder:text-brand-navy/30 focus:outline-none focus:ring-2 focus:ring-brand-gold/40';
+
+  useEffect(() => {
+    return onSnapshot(
+      query(collection(db, 'badges'), orderBy('createdAt', 'desc')),
+      snap => setBadges(snap.docs.map(d => ({ id: d.id, ...d.data() } as AppBadge)))
+    );
+  }, []);
+
+  const handleSave = async () => {
+    const t = parseInt(threshold);
+    if (!name.trim() || isNaN(t) || t < 1) return;
+    setSaving(true);
+    try {
+      await addDoc(collection(db, 'badges'), {
+        name: name.trim(), color, icon, metric, threshold: t, createdAt: serverTimestamp(),
+      });
+      setName(''); setThreshold(''); setMetric('stamps'); setColor(BADGE_COLORS[0]); setIcon(BADGE_ICONS[0]);
+    } finally { setSaving(false); }
+  };
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    try { await deleteDoc(doc(db, 'badges', id)); } finally { setDeletingId(null); setConfirmDelete(null); }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex flex-col max-w-md mx-auto"
+    >
+      <div className="flex-1 overflow-y-auto bg-brand-bg">
+        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm px-5 pt-5 pb-4 border-b border-black/5 z-10">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-display text-2xl font-bold text-brand-navy">Badges</h2>
+              <p className="text-xs text-brand-navy/50 mt-0.5">Create & manage achievement badges</p>
+            </div>
+            <button onClick={onClose} className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm active:scale-95 transition-all">
+              <X size={18} className="text-brand-navy/60" />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-5 space-y-6">
+          {/* Create form */}
+          <div className="rounded-3xl border-2 border-dashed border-brand-navy/20 p-5 space-y-4 bg-white">
+            <h3 className="font-bold text-brand-navy text-sm">New Badge</h3>
+
+            {/* Preview */}
+            <div className="flex justify-center">
+              <div
+                className="w-20 h-20 rounded-[1.75rem] flex items-center justify-center text-4xl shadow-lg border-4 border-white"
+                style={{ background: `linear-gradient(135deg, ${color}ee, ${color}99)` }}
+              >
+                {icon}
+              </div>
+            </div>
+
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="Badge name (e.g. Coffee Devotee)" className={inputCls} />
+
+            {/* Metric & threshold */}
+            <div className="flex gap-2">
+              <select value={metric} onChange={e => setMetric(e.target.value as BadgeMetric)} className={cn(inputCls, 'flex-1')}>
+                {(Object.entries(BADGE_METRIC_LABELS) as [BadgeMetric, string][]).map(([k, v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
+              </select>
+              <input value={threshold} onChange={e => setThreshold(e.target.value)} placeholder="Amount" type="number" min="1" className={cn(inputCls, 'w-24')} />
+            </div>
+
+            {/* Colour picker */}
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2">Colour</p>
+              <div className="flex flex-wrap gap-2">
+                {BADGE_COLORS.map(c => (
+                  <button key={c} onClick={() => setColor(c)}
+                    className={cn('w-7 h-7 rounded-full border-2 transition-transform active:scale-90', color === c ? 'border-brand-navy scale-110' : 'border-white')}
+                    style={{ background: c }} />
+                ))}
+              </div>
+            </div>
+
+            {/* Icon picker */}
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2">Icon</p>
+              <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
+                {BADGE_ICONS.map((ic, idx) => (
+                  <button key={idx} onClick={() => setIcon(ic)}
+                    className={cn('w-9 h-9 rounded-xl text-xl flex items-center justify-center transition-all active:scale-90', icon === ic ? 'bg-brand-navy/10 ring-2 ring-brand-navy/30' : 'bg-brand-navy/5 hover:bg-brand-navy/10')}
+                  >{ic}</button>
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={handleSave}
+              disabled={saving || !name.trim() || !threshold}
+              className="w-full py-3 rounded-2xl bg-brand-navy text-white font-bold text-sm disabled:opacity-40 active:scale-[0.98] transition-all"
+            >
+              {saving ? 'Saving…' : 'Create Badge'}
+            </button>
+          </div>
+
+          {/* Existing badges */}
+          {badges.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Active Badges ({badges.length})</p>
+              {badges.map(b => (
+                <div key={b.id} className="bg-white rounded-2xl border border-black/5 p-4 flex items-center gap-3">
+                  <div
+                    className="w-12 h-12 rounded-[1rem] flex items-center justify-center text-2xl shrink-0 shadow-sm"
+                    style={{ background: `linear-gradient(135deg, ${b.color}ee, ${b.color}99)` }}
+                  >{b.icon}</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-brand-navy text-sm leading-tight">{b.name}</p>
+                    <p className="text-xs text-brand-navy/50 mt-0.5">{BADGE_METRIC_LABELS[b.metric]} ≥ {b.threshold}</p>
+                  </div>
+                  {confirmDelete === b.id ? (
+                    <div className="flex gap-1.5">
+                      <button onClick={() => setConfirmDelete(null)} className="text-[10px] font-bold text-brand-navy/40 px-2 py-1 rounded-lg bg-brand-navy/5">Cancel</button>
+                      <button onClick={() => handleDelete(b.id)} disabled={deletingId === b.id} className="text-[10px] font-bold text-white px-2 py-1 rounded-lg bg-brand-rose disabled:opacity-50">
+                        {deletingId === b.id ? '…' : 'Delete'}
+                      </button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setConfirmDelete(b.id)} className="p-1.5 rounded-xl bg-brand-rose/10 active:scale-90 transition-transform">
+                      <Trash2 size={13} className="text-brand-rose" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex flex-col max-w-md mx-auto"
+    >
+      <div className="flex-1 overflow-y-auto bg-brand-bg">
+        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm px-5 pt-5 pb-4 border-b border-black/5 z-10">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-display text-2xl font-bold text-brand-navy">Admin</h2>
+              <p className="text-xs text-brand-navy/50 mt-0.5">Platform management</p>
+            </div>
+            <button onClick={onClose} className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm active:scale-95 transition-all">
+              <X size={18} className="text-brand-navy/60" />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-5 grid grid-cols-2 gap-4">
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={onOpenChallenges}
+            className="rounded-[2rem] bg-white border border-black/5 shadow-sm p-6 flex flex-col items-start gap-3 text-left active:bg-brand-navy/5 transition-colors"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-brand-gold/10 flex items-center justify-center">
+              <Trophy size={22} className="text-brand-gold" />
+            </div>
+            <div>
+              <p className="font-bold text-brand-navy text-sm">Challenges</p>
+              <p className="text-[11px] text-brand-navy/40 mt-0.5">Create & manage active challenges</p>
+            </div>
+          </motion.button>
+
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={onOpenBadges}
+            className="rounded-[2rem] bg-white border border-black/5 shadow-sm p-6 flex flex-col items-start gap-3 text-left active:bg-brand-navy/5 transition-colors"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-purple-100 flex items-center justify-center">
+              <Award size={22} className="text-purple-500" />
+            </div>
+            <div>
+              <p className="font-bold text-brand-navy text-sm">Badges</p>
+              <p className="text-[11px] text-brand-navy/40 mt-0.5">Design achievement badges</p>
+            </div>
+          </motion.button>
+        </div>
+      </div>
+    </motion.div>
   );
 }
 
@@ -6305,7 +6553,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
 function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, onViewUser, user }: { profile: UserProfile | null, userCards: Card[], stores?: StoreProfile[], onLogout: () => void, onDeleteAccount: () => Promise<void>, onViewUser: (u: UserProfile) => void, user: FirebaseUser }) {
   const [activeSubTab, setActiveSubTab] = useState<'posts' | 'interactions'>('posts');
   const [showProfileSettings, setShowProfileSettings] = useState(false);
-  const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges'>(null);
   const isAdmin = user.email === ADMIN_EMAIL;
   const profileLastDocRef = useRef<any>(null);
   const [profileHasMore, setProfileHasMore] = useState(true);
@@ -6499,8 +6747,18 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
       {showProfileSettings && (
         <ProfileSettingsModal profile={profile} user={user} onClose={() => setShowProfileSettings(false)} onLogout={onLogout} onDeleteAccount={onDeleteAccount} />
       )}
-      {showAdminPanel && (
-        <ChallengesAdminPanel onClose={() => setShowAdminPanel(false)} />
+      {adminView === 'menu' && (
+        <AdminMenuModal
+          onClose={() => setAdminView(null)}
+          onOpenChallenges={() => setAdminView('challenges')}
+          onOpenBadges={() => setAdminView('badges')}
+        />
+      )}
+      {adminView === 'challenges' && (
+        <ChallengesAdminPanel onClose={() => setAdminView('menu')} />
+      )}
+      {adminView === 'badges' && (
+        <BadgesAdminPanel onClose={() => setAdminView('menu')} />
       )}
     </AnimatePresence>
   );
@@ -6675,7 +6933,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           <Settings size={18} className="text-brand-navy/60" />
         </button>
         {isAdmin && (
-          <button onClick={() => setShowAdminPanel(true)}
+          <button onClick={() => setAdminView('menu')}
             className="absolute left-0 top-0 p-2 rounded-2xl bg-brand-gold/10 border border-brand-gold/30 shadow-sm active:scale-95 transition-all">
             <Flag size={18} className="text-brand-gold" />
           </button>
