@@ -1976,6 +1976,29 @@ function OnboardingScreen({ user, onComplete }: {
   );
 }
 
+// Increment challenge entry count for qualifying standard challenges when a stamp is issued.
+// Called from both NFC stamp and vendor manual stamp flows.
+async function updateChallengeProgress(customerUid: string, storeId: string, qty: number) {
+  try {
+    const challengesSnap = await getDocs(
+      query(collection(db, 'challenges'), where('type', '==', 'standard'), where('status', '==', 'active'))
+    );
+    await Promise.all(challengesSnap.docs.map(async cDoc => {
+      const data = cDoc.data();
+      if (!(data.participantUids || []).includes(customerUid)) return;
+      if (data.vendorIds?.length && !data.vendorIds.includes(storeId)) return;
+      const entrySnap = await getDocs(
+        query(collection(db, 'challenge_entries'), where('challengeId', '==', cDoc.id), where('uid', '==', customerUid))
+      );
+      if (!entrySnap.empty) {
+        await updateDoc(entrySnap.docs[0].ref, { count: increment(qty) });
+      }
+    }));
+  } catch (err) {
+    console.error('updateChallengeProgress error:', err);
+  }
+}
+
 function NavButton({ active, onClick, icon, label, badgeCount }: { active: boolean, onClick: () => void, icon: React.ReactNode, label: string, badgeCount?: number }) {
   return (
     <button 
@@ -3500,16 +3523,8 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                     let stampsProgress = 0;
                     if (joined && entry) {
                       if (c.vendorIds?.length) {
-                        // Count only stamps collected from included stores after joining
-                        for (const vid of c.vendorIds) {
-                          const card = initialCards.find(cd => cd.store_id === vid);
-                          const currentTotal = card
-                            ? (card.total_completed_cycles || 0) * (card.stamps_required || 10) + (card.current_stamps || 0)
-                            : 0;
-                          const atJoin = (entry.stampsAtJoinPerStore?.[vid] || 0);
-                          stampsProgress += Math.max(0, currentTotal - atJoin);
-                        }
-                        stampsProgress = Math.min(c.goal, stampsProgress);
+                        // Directly tracked via updateChallengeProgress at stamp time
+                        stampsProgress = Math.min(c.goal, entry.count || 0);
                       } else {
                         stampsProgress = Math.max(0, Math.min(c.goal, (profile?.totalStamps || 0) - (entry.totalStampsAtJoin || 0)));
                       }
@@ -3769,6 +3784,7 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
 
     await updateDoc(doc(db, 'users', user.uid), { totalStamps: increment(1) });
     issueStickersToCard(user.uid, userName, 1).catch(console.error);
+    updateChallengeProgress(user.uid, store.id, 1).catch(console.error);
     onStatus('success', `Stamp added at ${store.name}!`);
   } catch (err: any) {
     console.error('NFC stamp error:', err);
@@ -4694,6 +4710,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
         });
 
         issueStickersToCard(customer.uid, customer.name, qty).catch(console.error);
+        updateChallengeProgress(customer.uid, store.id, qty).catch(console.error);
         setIssueStatus({ type: 'success', message: `${qty} stamp(s) issued to ${customer.name}!` });
         setCustomerHandle('');
         setStampQuantity(1);
