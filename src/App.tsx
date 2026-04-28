@@ -9063,9 +9063,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
                         <div className="mt-auto">
                           <p className="text-white/60 text-[9px] font-medium line-clamp-1">{store.name}</p>
                           <div className="flex items-center justify-between mt-0.5">
-                            {memberCount > 0 && (
-                              <p className="text-white/50 text-[8px] font-bold">{memberCount} players</p>
-                            )}
+                            <p className="text-white/50 text-[8px] font-bold">{memberCount} players</p>
                             {storeDistances.has(store.id) && (
                               <p className="text-white/40 text-[8px] font-medium flex items-center gap-0.5">
                                 <MapPin size={7} className="shrink-0" />
@@ -9122,7 +9120,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
                         transition={{ delay: i * 0.04 }}
                         onClick={() => onViewChallenges?.()}
                         className="shrink-0 w-40 rounded-2xl overflow-hidden flex flex-col relative cursor-pointer active:scale-[0.97] transition-transform"
-                        style={{ background: `linear-gradient(135deg, ${color}dd, ${color}88)`, height: '80px' }}
+                        style={{ background: `linear-gradient(135deg, ${color}dd, ${color}88)`, height: '96px' }}
                       >
                         <div className="relative z-10 flex flex-col h-full p-3 justify-between">
                           <div className="flex items-start justify-between gap-1">
@@ -9133,13 +9131,14 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
                               className="text-sm leading-none shrink-0"
                             >🔥</motion.span>
                           </div>
-                          <div className="flex items-center justify-between">
-                            <p className="text-white/60 text-[9px] font-medium line-clamp-1 flex-1 mr-1">{c.title}</p>
-                            {joined
-                              ? <span className="text-[8px] font-black text-white bg-white/25 rounded-full px-1.5 py-0.5 shrink-0">Joined</span>
-                              : participants > 0
-                                ? <span className="text-[8px] font-black text-white bg-white/25 rounded-full px-1.5 py-0.5 shrink-0">{participants} players</span>
-                                : <span className="text-[8px] font-black text-white bg-white/25 rounded-full px-1.5 py-0.5 shrink-0">Join</span>}
+                          <div>
+                            <p className="text-white/50 text-[9px] font-bold mb-1">{participants} players</p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-white/60 text-[9px] font-medium line-clamp-1 flex-1 mr-1">{c.title}</p>
+                              <span className="text-[8px] font-black text-white bg-white/25 rounded-full px-1.5 py-0.5 shrink-0">
+                                {joined ? 'Joined' : 'Join'}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </motion.div>
