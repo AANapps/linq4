@@ -8825,23 +8825,11 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
   };
 
   const [allStores, setAllStores] = useState<StoreProfile[]>([]);
-  const [storeMemberCounts, setStoreMemberCounts] = useState<Map<string, number>>(new Map());
 
   useEffect(() => {
     return onSnapshot(collection(db, 'stores'), (snap) => {
       setAllStores(snap.docs.map(d => ({ id: d.id, ...d.data() } as StoreProfile)));
     }, () => {});
-  }, []);
-
-  useEffect(() => {
-    getDocs(collection(db, 'cards')).then(snap => {
-      const counts = new Map<string, number>();
-      snap.docs.forEach(d => {
-        const sid = d.data().store_id;
-        if (sid && !d.data().isArchived) counts.set(sid, (counts.get(sid) || 0) + 1);
-      });
-      setStoreMemberCounts(counts);
-    });
   }, []);
 
   useEffect(() => {
@@ -9021,16 +9009,16 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
       ) : (
         <>
           {/* Hot Deals slider */}
-          {hotStores.length > 0 && (
+          {allStores.length > 0 && (
             <div>
               <div className="flex items-center gap-1.5 mb-3 px-1">
                 <Flame size={15} className="text-orange-500" />
                 <h3 className="font-extrabold text-brand-navy text-sm">Hot Deals</h3>
               </div>
               <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                {hotStores.slice(0, 6).map((store, i) => {
+                {(hotStores.length > 0 ? hotStores : allStores).slice(0, 6).map((store, i) => {
                   const dealColor = DEAL_COLORS[i % DEAL_COLORS.length];
-                  const memberCount = storeMemberCounts.get(store.id) || 0;
+                  const memberCount = storeParticipantMap.get(store.id) || 0;
                   return (
                     <motion.div
                       key={store.id}
