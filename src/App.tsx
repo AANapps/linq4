@@ -1980,18 +1980,24 @@ function OnboardingScreen({ user, onComplete }: {
 // Called from both NFC stamp and vendor manual stamp flows.
 async function updateChallengeProgress(customerUid: string, storeId: string, qty: number) {
   try {
-    const challengesSnap = await getDocs(
-      query(collection(db, 'challenges'), where('type', '==', 'standard'), where('status', '==', 'active'))
-    );
+    // Fetch challenges and entries with single-field queries (no composite index needed)
+    const [challengesSnap, entriesSnap] = await Promise.all([
+      getDocs(query(collection(db, 'challenges'), where('type', '==', 'standard'))),
+      getDocs(query(collection(db, 'challenge_entries'), where('uid', '==', customerUid))),
+    ]);
+
+    // Build a map of challengeId → entry doc for fast lookup
+    const entryByChallenge = new Map<string, typeof entriesSnap.docs[0]>();
+    entriesSnap.docs.forEach(d => entryByChallenge.set(d.data().challengeId as string, d));
+
     await Promise.all(challengesSnap.docs.map(async cDoc => {
       const data = cDoc.data();
+      if (data.status !== 'active') return;
       if (!(data.participantUids || []).includes(customerUid)) return;
       if (data.vendorIds?.length && !data.vendorIds.includes(storeId)) return;
-      const entrySnap = await getDocs(
-        query(collection(db, 'challenge_entries'), where('challengeId', '==', cDoc.id), where('uid', '==', customerUid))
-      );
-      if (!entrySnap.empty) {
-        await updateDoc(entrySnap.docs[0].ref, { count: increment(qty) });
+      const entryDoc = entryByChallenge.get(cDoc.id);
+      if (entryDoc) {
+        await updateDoc(entryDoc.ref, { count: increment(qty) });
       }
     }));
   } catch (err) {
