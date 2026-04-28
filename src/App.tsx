@@ -3318,7 +3318,14 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       exit={{ opacity: 0, x: -20 }}
     >
       {activeTab === 'for-you' && (
-        <ForYouScreen onViewUser={onViewUser} onViewStore={onViewStore} currentUser={user} currentProfile={profile} userCards={initialCards} />
+        <ForYouScreen
+          onViewUser={onViewUser}
+          onViewStore={onViewStore}
+          onViewChallenges={() => { setActiveTab('home'); setWalletSubTab('challenges'); }}
+          currentUser={user}
+          currentProfile={profile}
+          userCards={initialCards}
+        />
       )}
 
       {activeTab === 'messages' && (
@@ -8700,7 +8707,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, userCards = [] 
   );
 }
 
-function ForYouScreen({ onViewUser, onViewStore, currentUser, currentProfile, userCards = [] }: { onViewUser: (u: UserProfile) => void, onViewStore?: (s: StoreProfile) => void, currentUser?: FirebaseUser, currentProfile?: UserProfile | null, userCards?: Card[] }) {
+function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, currentProfile, userCards = [] }: { onViewUser: (u: UserProfile) => void, onViewStore?: (s: StoreProfile) => void, onViewChallenges?: () => void, currentUser?: FirebaseUser, currentProfile?: UserProfile | null, userCards?: Card[] }) {
   const [globalPosts, setGlobalPosts] = useState<GlobalPost[]>([]);
   const [vendorPosts, setVendorPosts] = useState<any[]>([]);
   const [followingUids, setFollowingUids] = useState<Set<string>>(new Set());
@@ -8818,7 +8825,7 @@ function ForYouScreen({ onViewUser, onViewStore, currentUser, currentProfile, us
   }, []);
 
   useEffect(() => {
-    const q = query(collection(db, 'challenges'), where('type', '==', 'standard'), where('status', '==', 'active'));
+    const q = query(collection(db, 'challenges'), where('status', '==', 'active'));
     return onSnapshot(q, snap =>
       setFeedChallenges(snap.docs.map(d => ({ id: d.id, ...d.data() } as Challenge)))
     , () => {});
@@ -9060,7 +9067,8 @@ function ForYouScreen({ onViewUser, onViewStore, currentUser, currentProfile, us
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: i * 0.04 }}
-                      className="shrink-0 w-40 rounded-2xl overflow-hidden flex flex-col relative"
+                      onClick={() => onViewChallenges?.()}
+                      className="shrink-0 w-40 rounded-2xl overflow-hidden flex flex-col relative cursor-pointer active:scale-[0.97] transition-transform"
                       style={{ background: `linear-gradient(135deg, ${color}dd, ${color}88)`, height: '80px' }}
                     >
                       <div className="relative z-10 flex flex-col h-full p-3 justify-between">
