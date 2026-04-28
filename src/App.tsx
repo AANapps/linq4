@@ -9021,14 +9021,14 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
       ) : (
         <>
           {/* Hot Deals slider */}
-          {hotStores.filter(s => s.reward).length > 0 && (
+          {hotStores.length > 0 && (
             <div>
               <div className="flex items-center gap-1.5 mb-3 px-1">
                 <Flame size={15} className="text-orange-500" />
                 <h3 className="font-extrabold text-brand-navy text-sm">Hot Deals</h3>
               </div>
               <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                {hotStores.filter(s => s.reward).slice(0, 6).map((store, i) => {
+                {hotStores.slice(0, 6).map((store, i) => {
                   const dealColor = DEAL_COLORS[i % DEAL_COLORS.length];
                   const memberCount = storeMemberCounts.get(store.id) || 0;
                   return (
@@ -9059,7 +9059,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
                             className="text-base leading-none"
                           >🔥</motion.span>
                         </div>
-                        <p className="font-extrabold text-white text-xs leading-tight line-clamp-2 mb-1">{store.reward}</p>
+                        <p className="font-extrabold text-white text-xs leading-tight line-clamp-2 mb-1">{store.reward || `${store.stamps_required_for_reward} stamps`}</p>
                         <div className="mt-auto">
                           <p className="text-white/60 text-[9px] font-medium line-clamp-1">{store.name}</p>
                           <div className="flex items-center justify-between mt-0.5">
