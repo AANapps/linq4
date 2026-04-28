@@ -492,6 +492,7 @@ export default function App() {
     setViewingUser(targetUser);
   };
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [pendingNFCStoreId, setPendingNFCStoreId] = useState<string | null>(null);
   const [userCards, setUserCards] = useState<Card[]>([]);
   const [showSettings, setShowSettings] = useState(false);
   const [showCreatePost, setShowCreatePost] = useState(false);
@@ -831,6 +832,27 @@ export default function App() {
         console.error('Email verification failed:', err);
       });
   }, []);
+
+  // Handle ?stamp=STORE_ID URL opened by iOS NFC banner or shared link
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const storeId = params.get('stamp');
+    if (!storeId) return;
+    window.history.replaceState({}, document.title, window.location.pathname);
+    // Store in sessionStorage so it survives a login redirect
+    sessionStorage.setItem('pendingNFCStamp', storeId);
+    setPendingNFCStoreId(storeId);
+  }, []);
+
+  // Once user & profile are ready, re-check sessionStorage for a pending stamp
+  useEffect(() => {
+    if (!user || !profile || profile.role !== 'consumer') return;
+    const stored = sessionStorage.getItem('pendingNFCStamp');
+    if (stored) {
+      sessionStorage.removeItem('pendingNFCStamp');
+      setPendingNFCStoreId(stored);
+    }
+  }, [user?.uid, profile?.role]);
 
   const handleLogin = async (): Promise<string | null> => {
     const provider = new GoogleAuthProvider();
@@ -1172,6 +1194,8 @@ export default function App() {
               setActiveChatId={setActiveChatId}
               onLogout={handleLogout}
               onDeleteAccount={handleDeleteAccount}
+              pendingNFCStoreId={pendingNFCStoreId}
+              onClearPendingNFC={() => setPendingNFCStoreId(null)}
             />
           ) : (
             <VendorApp
@@ -3045,7 +3069,7 @@ function ProgrammeDetailModal({ prog, sc, onJoin, onView, onClose, joiningProgra
 
 // --- Consumer App ---
 
-function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onViewUser, cards: initialCards, notifications, activeChatId, setActiveChatId, onLogout, onDeleteAccount }: { activeTab: string, setActiveTab: (tab: string) => void, profile: UserProfile | null, user: FirebaseUser, onViewStore: (s: StoreProfile) => void, onViewUser: (u: UserProfile) => void, cards: Card[], notifications: Notification[], activeChatId: string | null, setActiveChatId: (id: string | null) => void, onLogout: () => void, onDeleteAccount: () => Promise<void>, key?: React.Key }) {
+function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onViewUser, cards: initialCards, notifications, activeChatId, setActiveChatId, onLogout, onDeleteAccount, pendingNFCStoreId, onClearPendingNFC }: { activeTab: string, setActiveTab: (tab: string) => void, profile: UserProfile | null, user: FirebaseUser, onViewStore: (s: StoreProfile) => void, onViewUser: (u: UserProfile) => void, cards: Card[], notifications: Notification[], activeChatId: string | null, setActiveChatId: (id: string | null) => void, onLogout: () => void, onDeleteAccount: () => Promise<void>, pendingNFCStoreId?: string | null, onClearPendingNFC?: () => void, key?: React.Key }) {
   const [stores, setStores] = useState<StoreProfile[]>([]);
   const [walletSubTab, setWalletSubTab] = useState<'stamps' | 'challenges'>('stamps');
   const [myStickerCards, setMyStickerCards] = useState<StickerCardDoc[]>([]);
@@ -3057,6 +3081,15 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const [joinError, setJoinError] = useState<string | null>(null);
   const [openProgrammeId, setOpenProgrammeId] = useState<string | null>(null);
   const [showNFCStamp, setShowNFCStamp] = useState(false);
+  const [autoNFCStoreId, setAutoNFCStoreId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (pendingNFCStoreId) {
+      setAutoNFCStoreId(pendingNFCStoreId);
+      setShowNFCStamp(true);
+      onClearPendingNFC?.();
+    }
+  }, [pendingNFCStoreId]);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'stores'), (snapshot) => {
@@ -3533,7 +3566,8 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           <NFCStampModal
             user={user}
             profile={profile}
-            onClose={() => setShowNFCStamp(false)}
+            autoStoreId={autoNFCStoreId}
+            onClose={() => { setShowNFCStamp(false); setAutoNFCStoreId(null); }}
           />
         )}
       </AnimatePresence>
@@ -3567,154 +3601,125 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
 
 // --- NFC Stamp Modal ---
 
-function NFCStampModal({ user, profile, onClose }: {
+async function processNFCStamp(storeId: string, user: FirebaseUser, profile: UserProfile | null,
+  onStatus: (state: 'processing' | 'success' | 'error', msg: string) => void) {
+  onStatus('processing', 'Verifying stamp...');
+  try {
+    const storeSnap = await getDoc(doc(db, 'stores', storeId));
+    if (!storeSnap.exists()) { onStatus('error', 'Store not found. Please try again.'); return; }
+
+    const store = { id: storeSnap.id, ...storeSnap.data() } as StoreProfile;
+    const limit = store.stamps_required_for_reward || 10;
+    const cardId = `${user.uid}_${store.id}`;
+    const cardRef = doc(db, 'cards', cardId);
+    const cardSnap = await getDoc(cardRef);
+
+    if (cardSnap.exists()) {
+      const ts = cardSnap.data()?.last_tap_timestamp;
+      if (ts) {
+        const lastTap = ts.toDate ? ts.toDate() : new Date(ts);
+        const diffMins = (Date.now() - lastTap.getTime()) / 60000;
+        if (diffMins < 30) {
+          const waitMins = Math.ceil(30 - diffMins);
+          onStatus('error', `Already stamped at ${store.name} recently. Try again in ${waitMins} min.`);
+          return;
+        }
+      }
+    }
+
+    const userName = profile?.name || user.displayName || user.email?.split('@')[0] || 'Customer';
+    const userPhoto = profile?.photoURL || user.photoURL || '';
+    let newStamps: number;
+    let newCycles: number;
+
+    if (!cardSnap.exists() || cardSnap.data()?.isArchived) {
+      newStamps = 1; newCycles = 0;
+      await setDoc(cardRef, {
+        user_id: user.uid, store_id: store.id, current_stamps: newStamps,
+        total_completed_cycles: newCycles, stamps_required: limit,
+        last_tap_timestamp: serverTimestamp(), isArchived: false, isRedeemed: false, userName, userPhoto,
+      });
+      await updateDoc(doc(db, 'users', user.uid), { total_cards_held: increment(1) });
+    } else {
+      const current = cardSnap.data()?.current_stamps || 0;
+      newCycles = cardSnap.data()?.total_completed_cycles || 0;
+      newStamps = current + 1;
+      if (newStamps >= limit) {
+        newCycles += 1;
+        if (newStamps > limit) newStamps = limit;
+        await addDoc(collection(db, 'transactions'), {
+          user_id: user.uid, store_id: store.id, completed_at: serverTimestamp(),
+          stamps_at_completion: limit, reward_claimed: false,
+        });
+      }
+      await updateDoc(cardRef, { current_stamps: newStamps, total_completed_cycles: newCycles, last_tap_timestamp: serverTimestamp() });
+    }
+
+    await updateDoc(doc(db, 'users', user.uid), { totalStamps: increment(1) });
+    issueStickersToCard(user.uid, userName, 1).catch(console.error);
+    onStatus('success', `Stamp added at ${store.name}!`);
+  } catch (err: any) {
+    console.error('NFC stamp error:', err);
+    onStatus('error', err?.message || 'Something went wrong. Please try again.');
+  }
+}
+
+function NFCStampModal({ user, profile, onClose, autoStoreId }: {
   user: FirebaseUser;
   profile: UserProfile | null;
   onClose: () => void;
+  autoStoreId?: string | null;
 }) {
-  type NFCState = 'scanning' | 'processing' | 'success' | 'error' | 'unsupported';
-  const [nfcState, setNfcState] = useState<NFCState>('scanning');
-  const [statusMsg, setStatusMsg] = useState('Hold your phone near the store NFC tag');
-  const [storeName, setStoreName] = useState('');
+  type NFCState = 'ios' | 'scanning' | 'processing' | 'success' | 'error';
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const hasNFC = 'NDEFReader' in window;
+
+  const initialState: NFCState = autoStoreId ? 'processing' : isIOS ? 'ios' : 'scanning';
+  const [nfcState, setNfcState] = useState<NFCState>(initialState);
+  const [statusMsg, setStatusMsg] = useState('');
   const abortRef = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    if (!('NDEFReader' in window)) {
-      setNfcState('unsupported');
-      setStatusMsg('NFC is not supported on this device. Use Chrome on Android.');
-      return;
-    }
+  const onStatus = (state: 'processing' | 'success' | 'error', msg: string) => {
+    setNfcState(state); setStatusMsg(msg);
+  };
 
+  // Auto-process stamp from URL (iOS NFC banner / shared link)
+  useEffect(() => {
+    if (!autoStoreId) return;
+    processNFCStamp(autoStoreId, user, profile, onStatus);
+  }, []);
+
+  // Android Web NFC scanning
+  useEffect(() => {
+    if (autoStoreId || isIOS || !hasNFC) return;
     const controller = new AbortController();
     abortRef.current = controller;
 
     const startScan = async () => {
       try {
         const reader = new (window as any).NDEFReader();
-
-        reader.onreadingerror = () => {
-          setNfcState('error');
-          setStatusMsg('Could not read NFC tag. Try again.');
-        };
-
+        reader.onreadingerror = () => onStatus('error', 'Could not read NFC tag. Try again.');
         reader.onreading = async (event: any) => {
           controller.abort();
           setNfcState('processing');
-          setStatusMsg('Reading tag...');
-
-          try {
-            let storeId: string | null = null;
-            for (const record of event.message.records) {
-              if (record.recordType === 'text') {
-                const decoder = new TextDecoder(record.encoding || 'utf-8');
-                const text = decoder.decode(record.data);
-                if (text.startsWith('linq4:')) {
-                  storeId = text.slice(6).trim();
-                  break;
-                }
-              }
+          let storeId: string | null = null;
+          for (const record of event.message.records) {
+            if (record.recordType === 'text') {
+              const text = new TextDecoder(record.encoding || 'utf-8').decode(record.data);
+              if (text.startsWith('linq4:')) { storeId = text.slice(6).trim(); break; }
             }
-
-            if (!storeId) {
-              setNfcState('error');
-              setStatusMsg('This tag is not a valid linq4 store tag.');
-              return;
+            if (record.recordType === 'url') {
+              const url = new TextDecoder().decode(record.data);
+              const m = url.match(/[?&]stamp=([^&]+)/);
+              if (m) { storeId = m[1]; break; }
             }
-
-            const storeSnap = await getDoc(doc(db, 'stores', storeId));
-            if (!storeSnap.exists()) {
-              setNfcState('error');
-              setStatusMsg('Store not found. Please try a different tag.');
-              return;
-            }
-
-            const store = { id: storeSnap.id, ...storeSnap.data() } as StoreProfile;
-            setStoreName(store.name);
-            const limit = store.stamps_required_for_reward || 10;
-            const cardId = `${user.uid}_${store.id}`;
-            const cardRef = doc(db, 'cards', cardId);
-            const cardSnap = await getDoc(cardRef);
-
-            // Rate limiting: 30 min cooldown
-            if (cardSnap.exists()) {
-              const ts = cardSnap.data()?.last_tap_timestamp;
-              if (ts) {
-                const lastTap = ts.toDate ? ts.toDate() : new Date(ts);
-                const diffMins = (Date.now() - lastTap.getTime()) / 60000;
-                if (diffMins < 30) {
-                  const waitMins = Math.ceil(30 - diffMins);
-                  setNfcState('error');
-                  setStatusMsg(`You already stamped at ${store.name} recently. Try again in ${waitMins} min.`);
-                  return;
-                }
-              }
-            }
-
-            const userName = profile?.name || user.displayName || user.email?.split('@')[0] || 'Customer';
-            const userPhoto = profile?.photoURL || user.photoURL || '';
-
-            let newStamps: number;
-            let newCycles: number;
-
-            if (!cardSnap.exists() || cardSnap.data()?.isArchived) {
-              newStamps = 1;
-              newCycles = 0;
-              await setDoc(cardRef, {
-                user_id: user.uid,
-                store_id: store.id,
-                current_stamps: newStamps,
-                total_completed_cycles: newCycles,
-                stamps_required: limit,
-                last_tap_timestamp: serverTimestamp(),
-                isArchived: false,
-                isRedeemed: false,
-                userName,
-                userPhoto,
-              });
-              await updateDoc(doc(db, 'users', user.uid), { total_cards_held: increment(1) });
-            } else {
-              const current = cardSnap.data()?.current_stamps || 0;
-              newCycles = cardSnap.data()?.total_completed_cycles || 0;
-              newStamps = current + 1;
-
-              if (newStamps >= limit) {
-                newCycles += 1;
-                if (newStamps > limit) newStamps = limit;
-                await addDoc(collection(db, 'transactions'), {
-                  user_id: user.uid,
-                  store_id: store.id,
-                  completed_at: serverTimestamp(),
-                  stamps_at_completion: limit,
-                  reward_claimed: false,
-                });
-              }
-
-              await updateDoc(cardRef, {
-                current_stamps: newStamps,
-                total_completed_cycles: newCycles,
-                last_tap_timestamp: serverTimestamp(),
-              });
-            }
-
-            await updateDoc(doc(db, 'users', user.uid), { totalStamps: increment(1) });
-            issueStickersToCard(user.uid, userName, 1).catch(console.error);
-
-            setNfcState('success');
-            setStatusMsg(`Stamp added at ${store.name}!`);
-          } catch (err: any) {
-            console.error('NFC stamp error:', err);
-            setNfcState('error');
-            setStatusMsg(err?.message || 'Something went wrong. Please try again.');
           }
+          if (!storeId) { onStatus('error', 'This tag is not a valid Linq store tag.'); return; }
+          await processNFCStamp(storeId, user, profile, onStatus);
         };
-
         await reader.scan({ signal: controller.signal });
       } catch (err: any) {
-        if (err.name !== 'AbortError') {
-          console.error('NFC scan failed:', err);
-          setNfcState('error');
-          setStatusMsg(err?.message || 'Could not start NFC scan. Check permissions.');
-        }
+        if (err.name !== 'AbortError') onStatus('error', err?.message || 'Could not start NFC scan. Check permissions.');
       }
     };
 
@@ -3738,7 +3743,30 @@ function NFCStampModal({ user, profile, onClose }: {
         className="bg-white rounded-t-[2rem] w-full max-w-md p-8 pb-12 text-center"
         onClick={e => e.stopPropagation()}
       >
-        <div className="w-1 h-1 bg-brand-navy/20 rounded-full mx-auto mb-6" style={{ width: 40, height: 4 }} />
+        <div className="bg-brand-navy/20 rounded-full mx-auto mb-6" style={{ width: 40, height: 4 }} />
+
+        {nfcState === 'ios' && (
+          <>
+            <div className="w-24 h-24 rounded-full bg-brand-navy/5 flex items-center justify-center mx-auto mb-6 relative">
+              <Smartphone size={36} className="text-brand-navy" />
+              <motion.div
+                className="absolute inset-0 rounded-full border-2 border-brand-navy/30"
+                animate={{ scale: [1, 1.5, 1], opacity: [0.7, 0, 0.7] }}
+                transition={{ duration: 1.8, repeat: Infinity }}
+              />
+              <motion.div
+                className="absolute inset-0 rounded-full border-2 border-brand-navy/15"
+                animate={{ scale: [1, 1.9, 1], opacity: [0.5, 0, 0.5] }}
+                transition={{ duration: 1.8, repeat: Infinity, delay: 0.4 }}
+              />
+            </div>
+            <h2 className="font-display text-2xl font-bold text-brand-navy mb-2">Hold to NFC Tag</h2>
+            <p className="text-brand-navy/60 text-sm mb-4 leading-relaxed">
+              Hold the top of your iPhone near the store's NFC tag. Your iPhone will show a notification — tap it to collect your stamp.
+            </p>
+            <p className="text-[11px] text-brand-navy/30 font-bold uppercase tracking-widest">iPhone reads NFC automatically</p>
+          </>
+        )}
 
         {nfcState === 'scanning' && (
           <>
@@ -3751,17 +3779,14 @@ function NFCStampModal({ user, profile, onClose }: {
               />
             </div>
             <h2 className="font-display text-2xl font-bold text-brand-navy mb-2">Ready to Scan</h2>
-            <p className="text-brand-navy/60 text-sm">{statusMsg}</p>
+            <p className="text-brand-navy/60 text-sm">Hold your phone near the store NFC tag</p>
           </>
         )}
 
         {nfcState === 'processing' && (
           <>
             <div className="w-24 h-24 rounded-full bg-brand-navy/5 flex items-center justify-center mx-auto mb-6">
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-              >
+              <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
                 <Wifi size={40} className="text-brand-navy" />
               </motion.div>
             </div>
@@ -3777,12 +3802,7 @@ function NFCStampModal({ user, profile, onClose }: {
             </div>
             <h2 className="font-display text-2xl font-bold text-brand-navy mb-2">Stamp Added!</h2>
             <p className="text-brand-navy/60 text-sm mb-6">{statusMsg}</p>
-            <button
-              onClick={onClose}
-              className="bg-brand-navy text-white px-8 py-3 rounded-xl font-bold text-sm w-full"
-            >
-              Done
-            </button>
+            <button onClick={onClose} className="bg-brand-navy text-white px-8 py-3 rounded-xl font-bold text-sm w-full">Done</button>
           </>
         )}
 
@@ -3793,28 +3813,7 @@ function NFCStampModal({ user, profile, onClose }: {
             </div>
             <h2 className="font-display text-2xl font-bold text-brand-navy mb-2">Oops</h2>
             <p className="text-brand-navy/60 text-sm mb-6">{statusMsg}</p>
-            <button
-              onClick={onClose}
-              className="bg-brand-navy text-white px-8 py-3 rounded-xl font-bold text-sm w-full"
-            >
-              Close
-            </button>
-          </>
-        )}
-
-        {nfcState === 'unsupported' && (
-          <>
-            <div className="w-24 h-24 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-6">
-              <Smartphone size={48} className="text-amber-400" />
-            </div>
-            <h2 className="font-display text-2xl font-bold text-brand-navy mb-2">NFC Not Available</h2>
-            <p className="text-brand-navy/60 text-sm mb-6">{statusMsg}</p>
-            <button
-              onClick={onClose}
-              className="bg-brand-navy text-white px-8 py-3 rounded-xl font-bold text-sm w-full"
-            >
-              Close
-            </button>
+            <button onClick={onClose} className="bg-brand-navy text-white px-8 py-3 rounded-xl font-bold text-sm w-full">Close</button>
           </>
         )}
       </motion.div>
@@ -6052,6 +6051,22 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
         </div>
 
         <p className="text-xs text-brand-navy/40">Existing cards finish their current cycle first. New cycles use these settings.</p>
+
+        {store && (
+          <div className="bg-brand-navy/5 rounded-2xl p-4 text-left">
+            <p className="text-xs font-bold text-brand-navy mb-1 flex items-center gap-1.5"><Wifi size={12} /> NFC Tag URL</p>
+            <p className="text-[10px] text-brand-navy/50 mb-2 leading-relaxed">Program this URL onto your NFC tags. Customers tap the tag to collect a stamp on any device.</p>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 text-[10px] bg-white rounded-xl px-3 py-2 text-brand-navy/70 truncate border border-brand-navy/10">
+                {`${window.location.origin}/?stamp=${store.id}`}
+              </code>
+              <button
+                onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/?stamp=${store.id}`)}
+                className="shrink-0 px-3 py-2 bg-brand-navy text-white text-[10px] font-bold rounded-xl"
+              >Copy</button>
+            </div>
+          </div>
+        )}
 
         <button onClick={handleSave} disabled={saving}
           className="w-full bg-brand-navy text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 disabled:opacity-50 transition-all">
