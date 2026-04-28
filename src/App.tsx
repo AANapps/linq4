@@ -8599,6 +8599,9 @@ function StoreDealsSection({ stores, onViewStore, showAll, onToggleAll }: {
       <div className={cn('pb-2', showAll ? 'grid grid-cols-2 gap-3' : 'flex gap-3 overflow-x-auto')} style={!showAll ? { scrollbarWidth: 'none', msOverflowStyle: 'none' } : {}}>
         {visible.map((store, i) => {
           const dealColor = DEAL_COLORS[i % DEAL_COLORS.length];
+          const finalReward = store.rewardTiers?.length
+            ? [...store.rewardTiers].sort((a, b) => b.stamps - a.stamps)[0]?.reward
+            : store.reward;
           return (
             <motion.div
               key={store.id}
@@ -8621,7 +8624,7 @@ function StoreDealsSection({ stores, onViewStore, showAll, onToggleAll }: {
                     : <div className="w-full h-full flex items-center justify-center"><Building2 size={14} className="text-white/70" /></div>}
                 </div>
                 <p className="font-extrabold text-white text-xs leading-tight line-clamp-2 mb-1">
-                  {store.reward || `${store.stamps_required_for_reward} stamps reward`}
+                  {finalReward || `${store.stamps_required_for_reward} stamps reward`}
                 </p>
                 <div className="mt-auto">
                   <p className="text-white/60 text-[9px] font-medium line-clamp-1">{store.name}</p>
@@ -9019,6 +9022,9 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
                 {(hotStores.length > 0 ? hotStores : allStores).slice(0, 6).map((store, i) => {
                   const dealColor = DEAL_COLORS[i % DEAL_COLORS.length];
                   const memberCount = storeParticipantMap.get(store.id) || 0;
+                  const finalReward = store.rewardTiers?.length
+                    ? [...store.rewardTiers].sort((a, b) => b.stamps - a.stamps)[0]?.reward
+                    : store.reward;
                   return (
                     <motion.div
                       key={store.id}
@@ -9047,7 +9053,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
                             className="text-base leading-none"
                           >🔥</motion.span>
                         </div>
-                        <p className="font-extrabold text-white text-xs leading-tight line-clamp-2 mb-1">{store.reward || `${store.stamps_required_for_reward} stamps`}</p>
+                        <p className="font-extrabold text-white text-xs leading-tight line-clamp-2 mb-1">{finalReward || `${store.stamps_required_for_reward} stamps`}</p>
                         <div className="mt-auto">
                           <p className="text-white/60 text-[9px] font-medium line-clamp-1">{store.name}</p>
                           <div className="flex items-center justify-between mt-0.5">
