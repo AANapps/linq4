@@ -330,6 +330,8 @@ interface Chat {
   storeId?: string;
   storeName?: string;
   storeLogoUrl?: string;
+  businessName?: string;
+  businessLogoUrl?: string;
 }
 
 interface ChatMessage {
@@ -3589,7 +3591,6 @@ function NFCStampModal({ user, profile, onClose }: {
     const startScan = async () => {
       try {
         const reader = new (window as any).NDEFReader();
-        await reader.scan({ signal: controller.signal });
 
         reader.onreadingerror = () => {
           setNfcState('error');
@@ -3706,6 +3707,8 @@ function NFCStampModal({ user, profile, onClose }: {
             setStatusMsg(err?.message || 'Something went wrong. Please try again.');
           }
         };
+
+        await reader.scan({ signal: controller.signal });
       } catch (err: any) {
         if (err.name !== 'AbortError') {
           console.error('NFC scan failed:', err);
@@ -8736,6 +8739,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
   const msgLoadingMoreRef = useRef(false);
   const [newMessage, setNewMessage] = useState('');
   const [chatPartner, setChatPartner] = useState<UserProfile | null>(null);
+  const [activeChatBusinessInfo, setActiveChatBusinessInfo] = useState<{ businessName: string; businessLogoUrl: string } | null>(null);
   const [activeBroadcastChat, setActiveBroadcastChat] = useState<{ storeName: string; storeLogoUrl: string } | null>(null);
   const [selectedMsgId, setSelectedMsgId] = useState<string | null>(null);
   const [showCustomerPicker, setShowCustomerPicker] = useState(false);
@@ -8761,12 +8765,14 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
       setMsgHasMore(false);
       msgLastDocRef.current = null;
       setChatPartner(null);
+      setActiveChatBusinessInfo(null);
       setActiveBroadcastChat(null);
       return;
     }
     setOlderMessages([]);
     setMsgHasMore(false);
     msgLastDocRef.current = null;
+    setActiveChatBusinessInfo(null);
     setActiveBroadcastChat(null);
 
     // Fetch partner — poll briefly if doc not yet created (race with background creation)
@@ -8785,6 +8791,9 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
         if (chatData.isBroadcast) {
           setActiveBroadcastChat({ storeName: chatData.storeName || 'Business', storeLogoUrl: chatData.storeLogoUrl || '' });
           return;
+        }
+        if (chatData.businessName) {
+          setActiveChatBusinessInfo({ businessName: chatData.businessName, businessLogoUrl: chatData.businessLogoUrl || '' });
         }
         const partnerUid = (chatData.uids as string[]).find(id => id !== currentUser.uid);
         if (!partnerUid) return;
@@ -8870,20 +8879,24 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
 
   const handleStartCustomerChat = async (customer: UserProfile) => {
     const chatId = [currentUser.uid, customer.uid].sort().join('_');
-    // Navigate immediately
     setShowCustomerPicker(false);
     setActiveChatId(chatId);
-    // Create chat doc in background if needed
     try {
       const chatRef = doc(db, 'chats', chatId);
       const chatSnap = await getDoc(chatRef);
+      const businessFields = vendorStore
+        ? { businessName: vendorStore.name, businessLogoUrl: vendorStore.logoUrl || '' }
+        : {};
       if (!chatSnap.exists()) {
         await setDoc(chatRef, {
           uids: [currentUser.uid, customer.uid],
           lastActivity: serverTimestamp(),
           lastMessage: '',
-          createdAt: serverTimestamp()
+          createdAt: serverTimestamp(),
+          ...businessFields,
         });
+      } else if (vendorStore && !chatSnap.data()?.businessName) {
+        await updateDoc(chatRef, businessFields);
       }
     } catch (err) {
       console.error('Chat create error:', err);
@@ -8994,12 +9007,20 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
             <ArrowLeft size={24} />
           </button>
           <div className="flex items-center gap-3 flex-1">
-            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-sm cursor-pointer" onClick={() => onViewUser(chatPartner)}>
-              <img src={avatarSrc(chatPartner.gender)} alt="" className="w-full h-full object-cover" />
-            </div>
+            {activeChatBusinessInfo ? (
+              <div className="w-10 h-10 rounded-xl overflow-hidden border-2 border-white shadow-sm bg-brand-navy/5 flex items-center justify-center shrink-0">
+                {activeChatBusinessInfo.businessLogoUrl
+                  ? <img src={activeChatBusinessInfo.businessLogoUrl} alt="" className="w-full h-full object-cover" />
+                  : <Store size={18} className="text-brand-navy/50" />}
+              </div>
+            ) : (
+              <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-sm cursor-pointer" onClick={() => onViewUser(chatPartner)}>
+                <img src={avatarSrc(chatPartner.gender)} alt="" className="w-full h-full object-cover" />
+              </div>
+            )}
             <div>
-              <h3 className="font-bold text-sm leading-tight">{chatPartner.name}</h3>
-              <p className="text-[10px] text-green-500 font-bold uppercase tracking-widest">Online</p>
+              <h3 className="font-bold text-sm leading-tight">{activeChatBusinessInfo ? activeChatBusinessInfo.businessName : chatPartner.name}</h3>
+              <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest">{activeChatBusinessInfo ? 'Business' : 'Online'}</p>
             </div>
           </div>
           <button className="p-2 text-brand-navy/60">
@@ -9173,19 +9194,26 @@ function ChatListItem({ chat, currentUser, onClick }: { chat: Chat, currentUser:
     });
   }, [partnerUid]);
 
-  if (!chat.isBroadcast && !partner) return null;
+  if (!chat.isBroadcast && !chat.businessName && !partner) return null;
 
-  const displayName = chat.isBroadcast ? (chat.storeName || 'Business') : (partner?.name || '');
+  const displayName = chat.isBroadcast
+    ? (chat.storeName || 'Business')
+    : chat.businessName
+      ? chat.businessName
+      : (partner?.name || '');
+
+  const isBusinessStyle = chat.isBroadcast || !!chat.businessName;
+  const businessLogo = chat.isBroadcast ? chat.storeLogoUrl : chat.businessLogoUrl;
 
   return (
     <button
       onClick={onClick}
       className="w-full bg-white p-4 rounded-2xl flex items-center gap-4 border border-brand-navy/5 hover:border-brand-gold/20 transition-all text-left"
     >
-      <div className="w-14 h-14 rounded-2xl overflow-hidden border border-brand-navy/5 bg-brand-navy/5 flex items-center justify-center shrink-0">
-        {chat.isBroadcast
-          ? (chat.storeLogoUrl
-              ? <img src={chat.storeLogoUrl} alt="" className="w-full h-full object-cover" />
+      <div className={cn("w-14 h-14 overflow-hidden border border-brand-navy/5 bg-brand-navy/5 flex items-center justify-center shrink-0", isBusinessStyle ? "rounded-2xl" : "rounded-full")}>
+        {isBusinessStyle
+          ? (businessLogo
+              ? <img src={businessLogo} alt="" className="w-full h-full object-cover" />
               : <Store size={22} className="text-brand-navy/40" />)
           : <img src={avatarSrc(partner?.gender)} alt="" className="w-full h-full object-cover" />}
       </div>
@@ -9476,8 +9504,12 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
           uids: [user.uid, store.ownerUid],
           lastActivity: serverTimestamp(),
           lastMessage: '',
-          createdAt: serverTimestamp()
+          createdAt: serverTimestamp(),
+          businessName: store.name,
+          businessLogoUrl: store.logoUrl || '',
         });
+      } else if (!chatSnap.data()?.businessName) {
+        await updateDoc(chatRef, { businessName: store.name, businessLogoUrl: store.logoUrl || '' });
       }
     } catch (err) {
       console.error('Chat create error:', err);
