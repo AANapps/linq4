@@ -4677,6 +4677,26 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
     }
 
     await updateDoc(doc(db, 'users', user.uid), { totalStamps: increment(1) });
+
+    // Update avatar mood on every stamp (food stores give a bigger boost)
+    if (store.category === 'Food') {
+      getDoc(doc(db, 'users', user.uid)).then(snap => {
+        const cur = (snap.data()?.avatar?.mood ?? 50) as number;
+        const today = new Date().toISOString().slice(0, 10);
+        updateDoc(doc(db, 'users', user.uid), {
+          'avatar.mood': Math.min(100, cur + 6),
+          'avatar.lastFoodStampDate': today,
+        }).catch(console.error);
+      }).catch(console.error);
+    } else {
+      getDoc(doc(db, 'users', user.uid)).then(snap => {
+        const cur = (snap.data()?.avatar?.mood ?? 50) as number;
+        updateDoc(doc(db, 'users', user.uid), {
+          'avatar.mood': Math.min(100, cur + 3),
+        }).catch(console.error);
+      }).catch(console.error);
+    }
+
     issueStickersToCard(user.uid, userName, 1).catch(console.error);
     updateChallengeProgress(user.uid, store.id, 1).catch(console.error);
     onStatus('success', `Stamp added at ${store.name}!`);

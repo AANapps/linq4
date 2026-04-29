@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Lock, ChevronRight, Dices } from 'lucide-react';
 import {
-  SKIN_TONES, HAIR_COLORS, AVATAR_ITEMS, WHEEL_SEGMENTS,
+  SKIN_TONES, HAIR_COLORS, AVATAR_ITEMS, WHEEL_SEGMENTS, FACIAL_HAIR_STYLES,
   STARTER_ITEMS, RARITY_LABEL, RARITY_COLOR,
   deriveAvatarFromUid,
   type UserAvatar, type SkinTone, type AvatarItemType, type AvatarItemDef,
@@ -95,66 +95,67 @@ function accessoryPixels(id: string, color: string): CR[] {
   }
 }
 
-function facePixels(
-  skin: string,
-  hairColor: string,
-  mood: number,
-): CR[] {
+function facePixels(skin: string, hairColor: string, mood: number): CR[] {
   const pixels: CR[] = [];
   const dark = '#1A1010';
   const white = '#FFFFFF';
   const pink = '#FFB6C1';
 
-  // eyebrows — sad mood shifts them toward centre
-  const sadMood = mood < 30;
+  const sadMood   = mood < 30;
   const happyMood = mood >= 60;
-  const grinMood = mood >= 85;
+  const grinMood  = mood >= 85;
+
+  // eyebrows — inward shift when sad
   const browLx = sadMood ? 5 : 4;
   const browRx = sadMood ? 8 : 9;
-  pixels.push(
-    px(browLx, 4, 3, 1, hairColor),
-    px(browRx, 4, 3, 1, hairColor),
-  );
+  pixels.push(px(browLx, 4, 3, 1, hairColor), px(browRx, 4, 3, 1, hairColor));
 
   // eye whites
-  pixels.push(
-    px(4, 5, 3, 2, white), px(9, 5, 3, 2, white),
-  );
-  // squint top half when happy
+  pixels.push(px(4, 5, 3, 2, white), px(9, 5, 3, 2, white));
   if (happyMood || grinMood) {
-    pixels.push(px(4, 5, 3, 1, skin), px(9, 5, 3, 1, skin));
+    pixels.push(px(4, 5, 3, 1, skin), px(9, 5, 3, 1, skin)); // squint
   }
-  // pupils — star/gold for grin
   const pupilCol = grinMood ? '#F59E0B' : dark;
   pixels.push(px(5, 6, 1, 1, pupilCol), px(10, 6, 1, 1, pupilCol));
 
-  // cheeks at happy / grin
+  // cheeks
   if (happyMood || grinMood) {
     pixels.push(px(3, 7, 2, 1, pink), px(11, 7, 2, 1, pink));
   }
 
-  // mouth
+  // mouth — narrowed to 4 px wide so it reads as a mouth, not a moustache
   if (grinMood) {
     pixels.push(
       px(4, 7, 8, 1, dark),
-      px(4, 8, 1, 1, dark), px(11, 8, 1, 1, dark),
-      px(5, 8, 6, 1, white), // teeth
+      px(4, 8, 2, 1, dark), px(10, 8, 2, 1, dark),
+      px(6, 8, 4, 1, white),
     );
   } else if (happyMood) {
-    pixels.push(
-      px(4, 7, 1, 1, dark), px(11, 7, 1, 1, dark),
-      px(5, 8, 6, 1, dark),
-    );
+    pixels.push(px(5, 7, 1, 1, dark), px(10, 7, 1, 1, dark), px(6, 8, 4, 1, dark));
   } else if (sadMood) {
-    pixels.push(
-      px(5, 7, 6, 1, dark),
-      px(4, 8, 1, 1, dark), px(11, 8, 1, 1, dark),
-    );
+    pixels.push(px(6, 7, 4, 1, dark), px(5, 8, 1, 1, dark), px(10, 8, 1, 1, dark));
   } else {
-    pixels.push(px(5, 8, 6, 1, dark));
+    pixels.push(px(6, 8, 4, 1, dark)); // neutral: narrow flat line
   }
 
   return pixels;
+}
+
+function facialHairPixels(style: string | null, color: string): CR[] {
+  if (!style) return [];
+  const p = (x: number, y: number, w: number, h: number) => px(x, y, w, h, color);
+  switch (style) {
+    case 'fh_stubble':
+      return [p(5, 9, 1, 1), p(7, 9, 1, 1), p(9, 9, 1, 1), p(11, 9, 1, 1)];
+    case 'fh_moustache':
+      return [p(5, 7, 3, 1), p(8, 7, 3, 1)];
+    case 'fh_goatee':
+      return [p(6, 9, 4, 1)];
+    case 'fh_beard':
+      return [p(5, 7, 3, 1), p(8, 7, 3, 1), p(3, 8, 2, 1), p(11, 8, 2, 1), p(3, 9, 10, 1)];
+    default:
+      return [];
+  }
 }
 
 // ─── PixelAvatar SVG component ────────────────────────────────────────────────
@@ -189,71 +190,63 @@ export function PixelAvatar({
   const shoC  = shoDef?.color  ?? '#F9FAFB';
   const shoC2 = shoDef?.color2;
 
-  // tall view extends legs from 3→8 rows and moves shoes down
-  const tall   = view === 'tall';
-  const legH   = tall ? 8 : 3;
-  const shoeY  = tall ? 25 : 20;
-  const shoeH  = tall ? 3 : 2;
+  // Grid: 16 × 24 (full) or 16 × 30 (tall)
+  // y=0-1 hair overflow · y=2-9 head · y=10 neck
+  // y=11-17 torso+arms · y=18 hands · y=19-21 legs · y=22-23 shoes (full)
+  // tall: legs y=19-26 · shoes y=27-29
+  const tall  = view === 'tall';
+  const legH  = tall ? 8 : 3;
+  const shoeY = tall ? 27 : 22;
+  const shoeH = tall ? 3 : 2;
 
   const pixels: CR[] = [];
 
   // ── Shoes ──
   pixels.push(px(2, shoeY, 6, shoeH, shoC), px(8, shoeY, 6, shoeH, shoC));
-  if (shoC2) {
-    pixels.push(px(2, shoeY, 6, 1, shoC2), px(8, shoeY, 6, 1, shoC2));
-  }
+  if (shoC2) pixels.push(px(2, shoeY, 6, 1, shoC2), px(8, shoeY, 6, 1, shoC2));
   pixels.push(px(7, shoeY, 1, 1, '#FFFFFF3A'), px(13, shoeY, 1, 1, '#FFFFFF3A'));
 
   // ── Legs / Bottom ──
   if (av.bottom === 'bottom_skirt') {
-    pixels.push(px(2, 17, 12, legH, botC));
+    pixels.push(px(2, 19, 12, legH, botC));
   } else {
-    pixels.push(px(3, 17, 4, legH, botC), px(9, 17, 4, legH, botC));
+    pixels.push(px(3, 19, 4, legH, botC), px(9, 19, 4, legH, botC));
   }
 
-  // ── Torso + Arms (top colour) ──
-  pixels.push(
-    px(2, 11, 12, 5, topC),
-    px(0, 11, 3, 5, topC),
-    px(13, 11, 3, 5, topC),
-  );
-  // Stripes
+  // ── Torso + Arms ──
+  pixels.push(px(2, 11, 12, 7, topC), px(0, 11, 3, 7, topC), px(13, 11, 3, 7, topC));
   if (topC2) {
-    [11, 13, 15].forEach(y => {
-      pixels.push(px(0, y, 3, 1, topC2), px(2, y, 12, 1, topC2), px(13, y, 3, 1, topC2));
-    });
+    [11, 13, 15, 17].forEach(y =>
+      pixels.push(px(0, y, 3, 1, topC2), px(2, y, 12, 1, topC2), px(13, y, 3, 1, topC2))
+    );
   }
-  // Tuxedo lapels
   if (av.top === 'top_tuxedo') {
-    pixels.push(px(6, 11, 4, 5, '#FFFFFF'), px(7, 11, 2, 5, topC));
+    pixels.push(px(6, 11, 4, 7, '#FFFFFF'), px(7, 11, 2, 7, topC));
   }
 
-  // ── Hands (skin) ──
-  pixels.push(px(0, 16, 3, 1, skin), px(13, 16, 3, 1, skin));
+  // ── Hands ──
+  pixels.push(px(0, 18, 3, 1, skin), px(13, 18, 3, 1, skin));
 
-  // ── Neck (skin) ──
+  // ── Neck ──
   pixels.push(px(6, 10, 4, 1, skin));
 
-  // ── Head (skin) ──
-  pixels.push(
-    px(3, 2, 10, 8, skin),
-    px(2, 4, 1, 3, skin),
-    px(13, 4, 1, 3, skin),
-  );
+  // ── Head ──
+  pixels.push(px(3, 2, 10, 8, skin), px(2, 4, 1, 3, skin), px(13, 4, 1, 3, skin));
 
-  // ── Face details ──
+  // ── Face ──
   facePixels(skin, hairCol, av.mood).forEach(p => pixels.push(p));
+
+  // ── Facial hair ──
+  facialHairPixels(av.facialHair ?? null, hairCol).forEach(p => pixels.push(p));
 
   // ── Hair ──
   hairPixels(av.hairStyle, hairCol).forEach(p => pixels.push(p));
 
   // ── Accessory ──
-  if (accDef) {
-    accessoryPixels(accDef.id, accDef.color).forEach(p => pixels.push(p));
-  }
+  if (accDef) accessoryPixels(accDef.id, accDef.color).forEach(p => pixels.push(p));
 
-  const vb = view === 'head' ? '1 0 14 12' : tall ? '0 0 16 28' : '0 0 16 22';
-  const h  = view === 'head' ? size : tall ? Math.round(size * 28 / 16) : Math.round(size * 22 / 16);
+  const vb = view === 'head' ? '1 0 14 12' : tall ? '0 0 16 30' : '0 0 16 24';
+  const h  = view === 'head' ? size : tall ? Math.round(size * 30 / 16) : Math.round(size * 24 / 16);
 
   return (
     <svg
@@ -284,6 +277,11 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'accessory', label: 'Access.' },
 ];
 
+// ensure draft always has facialHair even on old saved avatars
+function normaliseDraft(av: UserAvatar): UserAvatar {
+  return { facialHair: null, ...av };
+}
+
 interface AvatarCustomiserModalProps {
   avatar: UserAvatar;
   onSave: (updated: UserAvatar) => void;
@@ -291,7 +289,7 @@ interface AvatarCustomiserModalProps {
 }
 
 export function AvatarCustomiserModal({ avatar, onSave, onClose }: AvatarCustomiserModalProps) {
-  const [draft, setDraft] = useState<UserAvatar>({ ...avatar });
+  const [draft, setDraft] = useState<UserAvatar>(normaliseDraft(avatar));
   const [tab, setTab] = useState<Tab>('skin');
 
   const equip = (field: keyof UserAvatar, value: string | null) =>
@@ -437,11 +435,34 @@ export function AvatarCustomiserModal({ avatar, onSave, onClose }: AvatarCustomi
       {/* Item grid tabs */}
       {tab !== 'skin' && (
         <div className="px-4 pt-2 flex-1 overflow-y-auto">
-          {items.length === 0 && (
+          {/* Facial hair section inside the Hair tab */}
+          {tab === 'hair' && (
+            <div className="mb-4">
+              <p className="text-xs font-bold text-brand-navy/40 mb-2 uppercase tracking-widest">Facial Hair</p>
+              <div className="flex gap-2 flex-wrap">
+                {FACIAL_HAIR_STYLES.map(fh => (
+                  <button
+                    key={String(fh.id)}
+                    onClick={() => equip('facialHair', fh.id)}
+                    className={cn(
+                      'flex flex-col items-center gap-1 px-3 py-2 rounded-2xl border-2 transition-all',
+                      draft.facialHair === fh.id
+                        ? 'border-brand-gold bg-brand-gold/10'
+                        : 'border-transparent bg-white',
+                    )}
+                  >
+                    <span className="text-lg leading-none">{fh.emoji}</span>
+                    <span className="text-[9px] font-bold text-brand-navy">{fh.name}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs font-bold text-brand-navy/40 mt-4 mb-2 uppercase tracking-widest">Hairstyle</p>
+            </div>
+          )}
+          {items.length === 0 && tab !== 'hair' && (
             <p className="text-sm text-brand-navy/40 text-center mt-6">No items in this category yet.</p>
           )}
           <div className="grid grid-cols-4 gap-2">
-            {/* "None" option for accessory */}
             {tab === 'accessory' && (
               <button
                 onClick={() => equip('accessory', null)}
@@ -478,14 +499,14 @@ export function AvatarViewModal({ avatar, uid, onCustomise, onClose }: {
 }) {
   return (
     <motion.div
-      className="fixed inset-0 z-50 flex flex-col items-center justify-end bg-black/50"
+      className="fixed inset-0 z-[300] flex flex-col items-center justify-end bg-black/50"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <motion.div
-        className="bg-brand-bg w-full max-w-md rounded-t-[2.5rem] px-8 pt-8 pb-12 flex flex-col items-center gap-5"
+        className="bg-brand-bg w-full max-w-md rounded-t-[2.5rem] px-8 pt-8 pb-28 flex flex-col items-center gap-5"
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}

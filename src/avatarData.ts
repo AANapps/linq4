@@ -17,15 +17,24 @@ export interface UserAvatar {
   skinTone: SkinTone;
   hairStyle: string;
   hairColor: string;
+  facialHair: string | null;
   top: string;
   bottom: string;
   shoes: string;
   accessory: string | null;
-  mood: number; // 0-100; food stamps increase this, decays -5/day without food stamps
+  mood: number; // 0-100; stamps increase this, decays -5/day without stamps
   inventory: string[]; // owned item ids
   lastWheelSpin?: string;   // ISO date string YYYY-MM-DD
   lastFoodStampDate?: string; // ISO date string YYYY-MM-DD
 }
+
+export const FACIAL_HAIR_STYLES: { id: string | null; name: string; emoji: string }[] = [
+  { id: null,             name: 'Clean',      emoji: '😊' },
+  { id: 'fh_stubble',    name: 'Stubble',    emoji: '🧔' },
+  { id: 'fh_moustache',  name: 'Moustache',  emoji: '🥸' },
+  { id: 'fh_goatee',     name: 'Goatee',     emoji: '🧔' },
+  { id: 'fh_beard',      name: 'Beard',      emoji: '🧔' },
+];
 
 // ─── Skin & hair colour palettes ──────────────────────────────────────────────
 
@@ -156,6 +165,7 @@ export function deriveAvatarFromUid(uid: string): UserAvatar {
     skinTone:  skins[Math.floor(rng() * skins.length)],
     hairStyle: starterHairs[Math.floor(rng() * starterHairs.length)],
     hairColor: hairCols[Math.floor(rng() * hairCols.length)],
+    facialHair: null,
     top: 'top_plain', bottom: 'bottom_jeans', shoes: 'shoes_sneakers',
     accessory: null, mood: 50, inventory: [...STARTER_ITEMS],
   };
@@ -170,6 +180,7 @@ export function randomStarterAvatar(): UserAvatar {
     skinTone:  pick(skins),
     hairStyle: pick(starterHairs),
     hairColor: pick(hairCols),
+    facialHair: null,
     top: 'top_plain', bottom: 'bottom_jeans', shoes: 'shoes_sneakers',
     accessory: null, mood: 50, inventory: [...STARTER_ITEMS],
   };
