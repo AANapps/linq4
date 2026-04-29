@@ -7961,15 +7961,15 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
       {/* Compact stats — dark blue gradient, gold text */}
       <div className="flex gap-2">
         {[
-          { icon: <CheckCircle2 size={15} className="text-blue-400 shrink-0" />, val: lifetimeStamps,   label: 'Stamps'  },
-          { icon: <Trophy        size={15} className="text-blue-400 shrink-0" />, val: archivedCardsCount, label: 'Rewards' },
-          { icon: <Store        size={15} className="text-blue-400 shrink-0" />, val: activeCardsCount,  label: 'Cards'   },
+          { icon: <CheckCircle2 size={15} className="text-white/70 shrink-0" />, val: lifetimeStamps,   label: 'Stamps'  },
+          { icon: <Trophy        size={15} className="text-white/70 shrink-0" />, val: archivedCardsCount, label: 'Rewards' },
+          { icon: <Store        size={15} className="text-white/70 shrink-0" />, val: activeCardsCount,  label: 'Cards'   },
         ].map(s => (
-          <div key={s.label} className="flex-1 rounded-2xl px-3 py-2.5 flex items-center gap-2" style={{ background: 'linear-gradient(135deg, #dbeafe, #eff6ff)' }}>
+          <div key={s.label} className="flex-1 rounded-2xl px-3 py-2.5 flex items-center gap-2" style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #2563EB 50%, #3B82F6 100%)' }}>
             {s.icon}
             <div>
-              <p className="font-bold text-sm leading-none text-brand-navy">{s.val}</p>
-              <p className="text-[9px] font-bold uppercase tracking-wider mt-0.5 text-brand-navy/50">{s.label}</p>
+              <p className="font-bold text-sm leading-none text-white">{s.val}</p>
+              <p className="text-[9px] font-bold uppercase tracking-wider mt-0.5 text-white/60">{s.label}</p>
             </div>
           </div>
         ))}
@@ -7983,10 +7983,10 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
             {earnedBadges.map(b => (
               <button key={b.id} onClick={() => setSelectedBadge(b)} className="shrink-0 flex flex-col items-center gap-1 active:scale-95 transition-transform">
                 <div
-                  className="w-11 h-11 rounded-[0.875rem] flex items-center justify-center text-xl shadow-sm"
+                  className="w-14 h-14 rounded-[1.1rem] flex items-center justify-center text-2xl shadow-md"
                   style={{ background: `linear-gradient(135deg, ${b.color}ee, ${b.color}99)` }}
                 >{b.icon}</div>
-                <p className="text-[8px] font-bold text-brand-navy/50 text-center max-w-[48px] leading-tight line-clamp-2">{b.name}</p>
+                <p className="text-[9px] font-bold text-brand-navy/50 text-center max-w-[56px] leading-tight line-clamp-2">{b.name}</p>
               </button>
             ))}
           </div>
@@ -8044,20 +8044,22 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
               const pct = c.goal > 0 ? Math.min(100, Math.round((progress / c.goal) * 100)) : 0;
               const done = pct >= 100;
               return (
-                <div key={c.id} className="rounded-2xl px-4 py-3" style={{ background: 'linear-gradient(135deg, #fee2e2, #fef2f2)' }}>
+                <div key={c.id} className="rounded-2xl px-4 py-3 border border-white/80"
+                     style={{ background: 'linear-gradient(160deg, #ffffff 0%, #eff6ff 100%)', boxShadow: '0 4px 14px rgba(29,78,216,0.18), 0 1.5px 4px rgba(29,78,216,0.10), inset 0 1px 0 rgba(255,255,255,0.9)' }}>
                   <div className="flex items-center justify-between mb-1.5 gap-2">
-                    <p className="text-xs font-bold text-red-700 leading-tight line-clamp-1 flex-1">{c.title}</p>
-                    <span className={cn('text-[10px] font-bold shrink-0', done ? 'text-green-600' : 'text-red-400')}>{done ? '✓ Done' : `${pct}%`}</span>
+                    <p className="text-xs font-bold leading-tight line-clamp-1 flex-1" style={{ color: '#1D4ED8' }}>{c.title}</p>
+                    <span className={cn('text-[10px] font-bold shrink-0', done ? 'text-green-600' : '')} style={done ? {} : { color: '#2563EB' }}>{done ? '✓ Done' : `${pct}%`}</span>
                   </div>
-                  <div className="h-1.5 bg-red-200 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-blue-100 rounded-full overflow-hidden">
                     <motion.div
-                      className={cn('h-full rounded-full', done ? 'bg-green-500' : 'bg-red-400')}
+                      className={cn('h-full rounded-full', done ? 'bg-green-500' : '')}
+                      style={done ? {} : { background: 'linear-gradient(90deg, #1D4ED8, #3B82F6)' }}
                       initial={{ width: 0 }}
                       animate={{ width: `${pct}%` }}
                       transition={{ duration: 0.6, ease: 'easeOut' }}
                     />
                   </div>
-                  <p className="text-[9px] text-red-400 mt-1.5 font-medium">{progress} / {c.goal} {c.unit} · 🎁 {c.reward}</p>
+                  <p className="text-[9px] mt-1.5 font-medium" style={{ color: '#2563EB99' }}>{progress} / {c.goal} {c.unit} · 🎁 {c.reward}</p>
                 </div>
               );
             })}
@@ -12217,9 +12219,9 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
               { val: publicUserRewards, label: 'Rewards' },
             ].map(s => (
               <div key={s.label} className="flex-1 rounded-2xl px-3 py-2.5 flex flex-col items-center gap-0.5"
-                   style={{ background: 'linear-gradient(135deg, #dbeafe, #eff6ff)' }}>
-                <p className="font-bold text-sm leading-none text-brand-navy">{s.val}</p>
-                <p className="text-[9px] font-bold uppercase tracking-wider text-brand-navy/50">{s.label}</p>
+                   style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #2563EB 50%, #3B82F6 100%)' }}>
+                <p className="font-bold text-sm leading-none text-white">{s.val}</p>
+                <p className="text-[9px] font-bold uppercase tracking-wider text-white/60">{s.label}</p>
               </div>
             ))}
           </div>
@@ -12231,10 +12233,10 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
                 {earnedBadges.map(b => (
                   <button key={b.id} onClick={() => setSelectedBadge(b)} className="shrink-0 flex flex-col items-center gap-1 active:scale-95 transition-transform">
                     <div
-                      className="w-11 h-11 rounded-[0.875rem] flex items-center justify-center text-xl shadow-sm"
+                      className="w-14 h-14 rounded-[1.1rem] flex items-center justify-center text-2xl shadow-md"
                       style={{ background: `linear-gradient(135deg, ${b.color}ee, ${b.color}99)` }}
                     >{b.icon}</div>
-                    <p className="text-[8px] font-bold text-brand-navy/50 text-center max-w-[48px] leading-tight line-clamp-2">{b.name}</p>
+                    <p className="text-[9px] font-bold text-brand-navy/50 text-center max-w-[56px] leading-tight line-clamp-2">{b.name}</p>
                   </button>
                 ))}
               </div>
@@ -12354,20 +12356,22 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
               const pct = c.goal > 0 ? Math.min(100, Math.round((progress / c.goal) * 100)) : 0;
               const done = pct >= 100;
               return (
-                <div key={c.id} className="rounded-2xl px-4 py-3" style={{ background: 'linear-gradient(135deg, #fee2e2, #fef2f2)' }}>
+                <div key={c.id} className="rounded-2xl px-4 py-3 border border-white/80"
+                     style={{ background: 'linear-gradient(160deg, #ffffff 0%, #eff6ff 100%)', boxShadow: '0 4px 14px rgba(29,78,216,0.18), 0 1.5px 4px rgba(29,78,216,0.10), inset 0 1px 0 rgba(255,255,255,0.9)' }}>
                   <div className="flex items-center justify-between mb-1.5 gap-2">
-                    <p className="text-xs font-bold text-red-700 leading-tight line-clamp-1 flex-1">{c.title}</p>
-                    <span className={cn('text-[10px] font-bold shrink-0', done ? 'text-green-600' : 'text-red-400')}>{done ? '✓ Done' : `${pct}%`}</span>
+                    <p className="text-xs font-bold leading-tight line-clamp-1 flex-1" style={{ color: '#1D4ED8' }}>{c.title}</p>
+                    <span className={cn('text-[10px] font-bold shrink-0', done ? 'text-green-600' : '')} style={done ? {} : { color: '#2563EB' }}>{done ? '✓ Done' : `${pct}%`}</span>
                   </div>
-                  <div className="h-1.5 bg-red-200 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-blue-100 rounded-full overflow-hidden">
                     <motion.div
-                      className={cn('h-full rounded-full', done ? 'bg-green-500' : 'bg-red-400')}
+                      className={cn('h-full rounded-full', done ? 'bg-green-500' : '')}
+                      style={done ? {} : { background: 'linear-gradient(90deg, #1D4ED8, #3B82F6)' }}
                       initial={{ width: 0 }}
                       animate={{ width: `${pct}%` }}
                       transition={{ duration: 0.6, ease: 'easeOut' }}
                     />
                   </div>
-                  <p className="text-[9px] text-red-400 mt-1.5 font-medium">{progress} / {c.goal} {c.unit} · 🎁 {c.reward}</p>
+                  <p className="text-[9px] mt-1.5 font-medium" style={{ color: '#2563EB99' }}>{progress} / {c.goal} {c.unit} · 🎁 {c.reward}</p>
                 </div>
               );
             })}
