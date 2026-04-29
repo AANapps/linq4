@@ -11709,6 +11709,14 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
   const [userPosts, setUserPosts] = useState<GlobalPost[]>([]);
   const [targetFollowers, setTargetFollowers] = useState(0);
   const [targetFollowing, setTargetFollowing] = useState(0);
+  const [allBadges, setAllBadges] = useState<AppBadge[]>([]);
+  const [selectedBadge, setSelectedBadge] = useState<AppBadge | null>(null);
+
+  useEffect(() => {
+    return onSnapshot(collection(db, 'badges'), snap =>
+      setAllBadges(snap.docs.map(d => ({ id: d.id, ...d.data() } as AppBadge)))
+    );
+  }, []);
 
   useEffect(() => {
     // Listen to target user profile for real-time updates — check users then vendors
@@ -11916,6 +11924,17 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
     allCards.reduce((acc, c) => acc + (c.current_stamps || 0), 0)
   );
 
+  const pubBadgeMetrics: Record<BadgeMetric, number> = {
+    stamps: publicUserStamps,
+    cards_completed: publicUserRewards,
+    challenges_joined: 0,
+    memberships: cards.length,
+    followers: targetFollowers,
+    following: targetFollowing,
+    posts: userPosts.length,
+  };
+  const earnedBadges = allBadges.filter(b => (pubBadgeMetrics[b.metric] ?? 0) >= b.threshold);
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -11994,8 +12013,57 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
               <p className="text-[10px] text-brand-navy/40 font-bold uppercase">Rewards</p>
             </div>
           </div>
+
+          {earnedBadges.length > 0 && (
+            <div className="mt-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5">Badges</p>
+              <div className="flex gap-2 overflow-x-auto pb-1 justify-center" style={{ scrollbarWidth: 'none' }}>
+                {earnedBadges.map(b => (
+                  <button key={b.id} onClick={() => setSelectedBadge(b)} className="shrink-0 flex flex-col items-center gap-1 active:scale-95 transition-transform">
+                    <div
+                      className="w-11 h-11 rounded-[0.875rem] flex items-center justify-center text-xl shadow-sm"
+                      style={{ background: `linear-gradient(135deg, ${b.color}ee, ${b.color}99)` }}
+                    >{b.icon}</div>
+                    <p className="text-[8px] font-bold text-brand-navy/50 text-center max-w-[48px] leading-tight line-clamp-2">{b.name}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
+      <AnimatePresence>
+        {selectedBadge && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] flex items-end max-w-md mx-auto"
+            onClick={() => setSelectedBadge(null)}
+          >
+            <motion.div
+              initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+              className="w-full bg-brand-bg rounded-t-3xl p-6 pb-10 space-y-4"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-4">
+                <div
+                  className="w-16 h-16 rounded-[1.25rem] flex items-center justify-center text-3xl shadow-lg shrink-0"
+                  style={{ background: `linear-gradient(135deg, ${selectedBadge.color}ee, ${selectedBadge.color}99)` }}
+                >{selectedBadge.icon}</div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-brand-navy text-lg leading-tight">{selectedBadge.name}</p>
+                  <p className="text-xs text-brand-navy/50 mt-1">{BADGE_METRIC_LABELS[selectedBadge.metric]} ≥ {selectedBadge.threshold}</p>
+                </div>
+              </div>
+              {selectedBadge.description && (
+                <p className="text-sm text-brand-navy/70 leading-relaxed">{selectedBadge.description}</p>
+              )}
+              <button onClick={() => setSelectedBadge(null)} className="w-full py-3 rounded-2xl bg-brand-navy/8 text-brand-navy font-bold text-sm active:scale-[0.98] transition-all">Close</button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {targetUser.role === 'vendor' && vendorStore && (
         <div className="bg-brand-navy p-6 rounded-[2.5rem] text-white space-y-4 shadow-xl">
