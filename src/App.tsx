@@ -5,6 +5,12 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
+import { PixelAvatar, AvatarCustomiserModal, DailyWheelModal } from './PixelAvatar';
+import {
+  type UserAvatar,
+  AVATAR_ITEMS, STAMP_MILESTONE_REWARDS,
+  randomStarterAvatar, deriveAvatarFromUid,
+} from './avatarData';
 import {
   onAuthStateChanged,
   signInWithPopup,
@@ -254,6 +260,7 @@ interface UserProfile {
   total_cards_held: number;
   totalStamps: number;
   totalRedeemed: number;
+  avatar?: UserAvatar;
 }
 
 interface StoreProfile {
@@ -450,6 +457,8 @@ interface Challenge {
   tierChances?: { brown: number; lightblue: number; red: number; blue: number; gold: number };
   vendorIds?: string[];
   rewardTag?: 'product' | 'experience' | 'service';
+  isAvatarPrize?: boolean;
+  avatarPrizeItemId?: string;
 }
 
 interface StoreAutomation {
@@ -609,6 +618,29 @@ export default function App() {
       }
     }, (error) => console.error("Profile listener:", error));
   }, [user, profileCollection]);
+
+  // Decay avatar mood daily when no food stamps were collected — runs once per session
+  const moodDecayApplied = useRef(false);
+  useEffect(() => {
+    if (moodDecayApplied.current) return;
+    if (!user || !profile || profile.role !== 'consumer') return;
+    const av = profile.avatar;
+    if (!av) return;
+    moodDecayApplied.current = true;
+
+    const today = new Date().toISOString().slice(0, 10);
+    const last = av.lastFoodStampDate;
+    if (!last || last === today) return; // collected today, no decay
+
+    const msPerDay = 86_400_000;
+    const daysMissed = Math.floor((Date.parse(today) - Date.parse(last)) / msPerDay);
+    if (daysMissed <= 0) return;
+
+    const decayed = Math.max(0, av.mood - daysMissed * 5);
+    if (decayed === av.mood) return;
+
+    updateDoc(doc(db, 'users', user.uid), { 'avatar.mood': decayed }).catch(console.error);
+  }, [user, profile]);
   useEffect(() => {
     const seedDemoStores = async () => {
       try {
@@ -1080,7 +1112,8 @@ export default function App() {
         ...(data.location ? { location: data.location } : {}),
         total_cards_held: 0,
         totalStamps: 0,
-        totalRedeemed: 0
+        totalRedeemed: 0,
+        avatar: randomStarterAvatar(),
       });
       setProfileCollection('users');
     } else {
@@ -2027,26 +2060,38 @@ function OnboardingScreen({ user, onComplete }: {
   );
 }
 
+async function awardAvatarItem(uid: string, itemId: string): Promise<void> {
+  try {
+    await updateDoc(doc(db, 'users', uid), { 'avatar.inventory': arrayUnion(itemId) });
+  } catch (err) {
+    console.error('awardAvatarItem error:', err);
+  }
+}
+
 // Increment challenge entry count for qualifying standard challenges when a stamp is issued.
 // Called from both NFC stamp and vendor manual stamp flows.
 async function updateChallengeProgress(customerUid: string, storeId: string, qty: number) {
   try {
-    // Fetch the user's entries first (single-field query, no index needed)
     const entriesSnap = await getDocs(
       query(collection(db, 'challenge_entries'), where('uid', '==', customerUid))
     );
     if (entriesSnap.empty) return;
 
-    // For each entry, directly read the challenge doc by ID (avoids query cache staleness)
     await Promise.all(entriesSnap.docs.map(async entryDoc => {
-      const { challengeId } = entryDoc.data() as { challengeId: string };
+      const entryData = entryDoc.data() as { challengeId: string; count?: number };
+      const { challengeId } = entryData;
       if (!challengeId) return;
       const challengeSnap = await getDoc(doc(db, 'challenges', challengeId));
       if (!challengeSnap.exists()) return;
       const c = challengeSnap.data();
       if (c.type !== 'standard' || c.status !== 'active') return;
       if (c.vendorIds?.length && !c.vendorIds.includes(storeId)) return;
+      const prevCount = entryData.count ?? 0;
       await updateDoc(entryDoc.ref, { count: increment(qty) });
+      // Award avatar item prize on first completion
+      if (c.isAvatarPrize && c.avatarPrizeItemId && prevCount < c.goal && prevCount + qty >= c.goal) {
+        awardAvatarItem(customerUid, c.avatarPrizeItemId).catch(console.error);
+      }
     }));
   } catch (err) {
     console.error('updateChallengeProgress error:', err);
@@ -2804,6 +2849,8 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
   const [stdUnit, setStdUnit] = useState('');
   const [stdReward, setStdReward] = useState('');
   const [stdRewardTag, setStdRewardTag] = useState<'product' | 'experience' | 'service' | ''>('');
+  const [stdIsAvatarPrize, setStdIsAvatarPrize] = useState(false);
+  const [stdAvatarPrizeItemId, setStdAvatarPrizeItemId] = useState('');
 
   // Collectible programme form state
   const [colTitle, setColTitle] = useState('');
@@ -2839,8 +2886,9 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
         ...(stdEndsAt ? { endsAt: Timestamp.fromDate(new Date(stdEndsAt)) } : {}),
         ...(stdVendorIds.length > 0 ? { vendorIds: stdVendorIds } : {}),
         ...(stdRewardTag ? { rewardTag: stdRewardTag } : {}),
+        ...(stdIsAvatarPrize && stdAvatarPrizeItemId ? { isAvatarPrize: true, avatarPrizeItemId: stdAvatarPrizeItemId } : {}),
       });
-      setStdTitle(''); setStdDesc(''); setStdGoal(''); setStdUnit(''); setStdReward(''); setStdEndsAt(''); setStdVendorIds([]); setStdRewardTag('');
+      setStdTitle(''); setStdDesc(''); setStdGoal(''); setStdUnit(''); setStdReward(''); setStdEndsAt(''); setStdVendorIds([]); setStdRewardTag(''); setStdIsAvatarPrize(false); setStdAvatarPrizeItemId('');
     } finally {
       setDeploying(false);
     }
@@ -3212,9 +3260,32 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
               )}
             </div>
 
+            {/* Avatar item prize toggle */}
+            <label className="flex items-center gap-3 p-3 rounded-2xl bg-purple-50 border border-purple-200 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={stdIsAvatarPrize}
+                onChange={e => { setStdIsAvatarPrize(e.target.checked); if (!e.target.checked) setStdAvatarPrizeItemId(''); }}
+                className="accent-purple-600 w-4 h-4"
+              />
+              <span className="text-sm font-bold text-purple-800">🎨 Avatar item prize</span>
+            </label>
+            {stdIsAvatarPrize && (
+              <select
+                value={stdAvatarPrizeItemId}
+                onChange={e => setStdAvatarPrizeItemId(e.target.value)}
+                className="w-full bg-white border border-purple-200 rounded-2xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+              >
+                <option value="">Select avatar item prize…</option>
+                {AVATAR_ITEMS.filter(i => i.rarity !== 'starter').map(item => (
+                  <option key={item.id} value={item.id}>{item.name} ({item.type} · {item.rarity})</option>
+                ))}
+              </select>
+            )}
+
             <button
               onClick={handleDeployStandard}
-              disabled={deploying || !stdTitle.trim() || !stdReward.trim() || !stdUnit.trim() || !stdGoal}
+              disabled={deploying || !stdTitle.trim() || !stdReward.trim() || !stdUnit.trim() || !stdGoal || (stdIsAvatarPrize && !stdAvatarPrizeItemId)}
               className="w-full bg-brand-navy text-white font-bold py-3 rounded-2xl text-sm flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
             >
               <Zap size={15} /> {deploying ? 'Deploying...' : 'Deploy Challenge'}
@@ -5801,6 +5872,35 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
           totalStamps: increment(qty)
         });
 
+        // Food stamps increase avatar mood and record date
+        if (store.category === 'Food') {
+          (async () => {
+            try {
+              const snap = await getDoc(doc(db, 'users', customer.uid));
+              const cur = (snap.data()?.avatar?.mood ?? 50) as number;
+              const today = new Date().toISOString().slice(0, 10);
+              await updateDoc(doc(db, 'users', customer.uid), {
+                'avatar.mood': Math.min(100, cur + qty * 3),
+                'avatar.lastFoodStampDate': today,
+              });
+            } catch { /* non-fatal */ }
+          })();
+        }
+
+        // Check stamp milestone avatar rewards
+        (async () => {
+          try {
+            const snap = await getDoc(doc(db, 'users', customer.uid));
+            const newTotal = (snap.data()?.totalStamps ?? 0) as number;
+            for (const [milestone, itemId] of STAMP_MILESTONE_REWARDS) {
+              const prev = newTotal - qty;
+              if (prev < milestone && newTotal >= milestone) {
+                await awardAvatarItem(customer.uid, itemId);
+              }
+            }
+          } catch { /* non-fatal */ }
+        })();
+
         issueStickersToCard(customer.uid, customer.name, qty).catch(console.error);
         updateChallengeProgress(customer.uid, store.id, qty).catch(console.error);
         setIssueStatus({ type: 'success', message: `${qty} stamp(s) issued to ${customer.name}!` });
@@ -5956,8 +6056,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                   <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
                     {statModal === 'members' && memberRows.map(({ uid, prof, totalStamps, cycles }) => (
                       <div key={uid} className="flex items-center gap-3 p-3 rounded-2xl bg-brand-bg">
-                        <div className="w-9 h-9 rounded-full overflow-hidden bg-brand-navy/10 shrink-0 flex items-center justify-center">
-                          <img src={avatarSrc(prof?.gender)} alt="" className="w-full h-full object-cover" />
+                        <div className="w-9 h-9 rounded-full overflow-hidden bg-indigo-50 shrink-0 flex items-center justify-center">
+                          <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={36} view="head" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-bold text-sm truncate">{prof?.name || 'Unknown'}</p>
@@ -5975,8 +6075,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                       const total = (card.current_stamps || 0) + ((card.total_completed_cycles || 0) * stampsPerReward);
                       return (
                         <div key={card.id} className="flex items-center gap-3 p-3 rounded-2xl bg-brand-bg">
-                          <div className="w-9 h-9 rounded-full overflow-hidden bg-brand-navy/10 shrink-0 flex items-center justify-center">
-                            <img src={avatarSrc(prof?.gender)} alt="" className="w-full h-full object-cover" />
+                          <div className="w-9 h-9 rounded-full overflow-hidden bg-indigo-50 shrink-0 flex items-center justify-center">
+                            <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? card.user_id} size={36} view="head" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-bold text-sm truncate">{prof?.name || 'Unknown'}</p>
@@ -5994,8 +6094,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                       const prof = memberProfiles.get(card.user_id);
                       return (
                         <div key={card.id} className="flex items-center gap-3 p-3 rounded-2xl bg-brand-bg">
-                          <div className="w-9 h-9 rounded-full overflow-hidden bg-brand-navy/10 shrink-0 flex items-center justify-center">
-                            <img src={avatarSrc(prof?.gender)} alt="" className="w-full h-full object-cover" />
+                          <div className="w-9 h-9 rounded-full overflow-hidden bg-indigo-50 shrink-0 flex items-center justify-center">
+                            <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? card.user_id} size={36} view="head" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-bold text-sm truncate">{prof?.name || 'Unknown'}</p>
@@ -6840,8 +6940,8 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
                   onClick={() => onViewUser(u)}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full overflow-hidden border border-brand-navy/5">
-                      <img src={avatarSrc(u.gender)} alt="" className="w-full h-full object-cover" />
+                    <div className="w-12 h-12 rounded-full overflow-hidden border border-brand-navy/5 bg-indigo-50 flex items-center justify-center">
+                      <PixelAvatar config={u.avatar} uid={u.uid} size={48} view="head" />
                     </div>
                     <div>
                       <p className="font-bold text-sm">{u.name || u.handle || u.email?.split('@')[0]}</p>
@@ -7303,6 +7403,8 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
   const [activeSubTab, setActiveSubTab] = useState<'posts' | 'interactions'>('posts');
   const [showProfileSettings, setShowProfileSettings] = useState(false);
   const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges'>(null);
+  const [avatarCustomiserOpen, setAvatarCustomiserOpen] = useState(false);
+  const [dailyWheelOpen, setDailyWheelOpen] = useState(false);
   const isAdmin = user.email === ADMIN_EMAIL;
   const profileLastDocRef = useRef<any>(null);
   const [profileHasMore, setProfileHasMore] = useState(true);
@@ -7645,8 +7747,8 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                 ) : (
                   <div key={item.data.id} className="glass-card p-5 rounded-[2rem] space-y-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full overflow-hidden border border-brand-navy/5 shrink-0">
-                        <img src={avatarSrc()} alt="" className="w-full h-full object-cover" />
+                      <div className="w-9 h-9 rounded-full overflow-hidden border border-brand-navy/5 bg-indigo-50 shrink-0 flex items-center justify-center">
+                        <PixelAvatar uid={item.data.authorUid} size={36} view="head" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm leading-snug">
@@ -7702,7 +7804,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                 <div className="space-y-2">
                   {(followModalTab === 'following' ? following : followers).map(u => (
                     <div key={u.uid} className="flex items-center gap-3 p-3 rounded-2xl bg-brand-bg cursor-pointer" onClick={() => { onViewUser(u); setShowFollowModal(false); }}>
-                      <div className="w-10 h-10 rounded-2xl overflow-hidden border border-brand-navy/5 shrink-0"><img src={avatarSrc(u.gender)} alt="" className="w-full h-full object-cover" /></div>
+                      <div className="w-10 h-10 rounded-2xl overflow-hidden border border-brand-navy/5 shrink-0 bg-indigo-50 flex items-center justify-center"><PixelAvatar config={u.avatar} uid={u.uid} size={40} view="head" /></div>
                       <div><p className="font-bold text-sm">{u.name}</p><p className="text-[10px] text-brand-navy/40 font-bold uppercase">@{u.email?.split('@')[0]}</p></div>
                     </div>
                   ))}
@@ -7719,6 +7821,38 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
   // ── Consumer profile layout ──
   return (
     <div className="space-y-6 pb-20 text-brand-navy">
+      {/* Avatar customiser modal */}
+      <AnimatePresence>
+        {avatarCustomiserOpen && profile.avatar && (
+          <AvatarCustomiserModal
+            avatar={profile.avatar}
+            onClose={() => setAvatarCustomiserOpen(false)}
+            onSave={async (updated) => {
+              await updateDoc(doc(db, 'users', profile.uid), { avatar: updated });
+              setAvatarCustomiserOpen(false);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Daily wheel modal */}
+      <AnimatePresence>
+        {dailyWheelOpen && (
+          <DailyWheelModal
+            inventory={profile.avatar?.inventory ?? []}
+            lastSpin={profile.avatar?.lastWheelSpin}
+            onClose={() => setDailyWheelOpen(false)}
+            onWin={async (itemId) => {
+              const today = new Date().toISOString().slice(0, 10);
+              await updateDoc(doc(db, 'users', profile.uid), {
+                'avatar.inventory': arrayUnion(itemId),
+                'avatar.lastWheelSpin': today,
+              });
+            }}
+          />
+        )}
+      </AnimatePresence>
+
       <header className="text-center relative">
         <button onClick={() => setShowProfileSettings(true)}
           className="absolute right-0 top-0 p-2 rounded-2xl bg-white border border-brand-navy/10 shadow-sm active:scale-95 transition-all">
@@ -7730,9 +7864,34 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
             <Flag size={18} className="text-brand-gold" />
           </button>
         )}
-        <div className="w-32 h-32 rounded-[2.5rem] overflow-hidden border-4 border-white mx-auto mb-4 shadow-xl">
-          <img src={avatarSrc(profile.gender)} alt="" className="w-full h-full object-cover" />
+
+        {/* Pixel avatar — tap to customise */}
+        <div className="flex flex-col items-center mb-3">
+          <button
+            onClick={() => {
+              if (!profile.avatar) {
+                updateDoc(doc(db, 'users', profile.uid), { avatar: deriveAvatarFromUid(profile.uid) })
+                  .then(() => setAvatarCustomiserOpen(true));
+              } else {
+                setAvatarCustomiserOpen(true);
+              }
+            }}
+            className="bg-gradient-to-b from-indigo-50 to-purple-50 rounded-[2rem] p-3 border-4 border-white shadow-xl active:scale-95 transition-all"
+          >
+            <PixelAvatar config={profile.avatar} uid={profile.uid} size={72} view="full" />
+          </button>
+          <div className="flex items-center gap-2 mt-2">
+            <p className="text-[9px] text-brand-navy/40 font-bold uppercase tracking-wider">tap to customise</p>
+            <span className="text-brand-navy/20">·</span>
+            <button
+              onClick={() => setDailyWheelOpen(true)}
+              className="text-[9px] text-brand-gold font-bold uppercase tracking-wider"
+            >
+              🎡 Daily spin
+            </button>
+          </div>
         </div>
+
         <h2 className="font-display text-3xl font-bold">{profile.name}</h2>
         <p className="text-brand-gold font-bold text-xs uppercase tracking-[0.2em]">@{profile.handle || user.email?.split('@')[0]}</p>
         <div className="flex items-center justify-center gap-4 mt-2 text-sm">
@@ -7885,8 +8044,8 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           {/* Post composer */}
           <div className="glass-card p-5 rounded-[2rem] space-y-4">
             <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-brand-navy/10">
-                <img src={profile?.photoURL || avatarSrc(profile?.gender)} alt="" className="w-full h-full object-cover" />
+              <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-brand-navy/10 bg-indigo-50 flex items-center justify-center">
+                <PixelAvatar config={profile?.avatar} uid={profile?.uid} size={36} view="head" />
               </div>
               <textarea
                 value={newPost}
@@ -8055,8 +8214,8 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                       className="flex items-center gap-3 flex-1 cursor-pointer"
                       onClick={() => { onViewUser(u); setShowFollowModal(false); }}
                     >
-                      <div className="w-10 h-10 rounded-2xl overflow-hidden border border-brand-navy/5 shrink-0">
-                        <img src={avatarSrc(u.gender)} alt="" className="w-full h-full object-cover" />
+                      <div className="w-10 h-10 rounded-2xl overflow-hidden border border-brand-navy/5 shrink-0 bg-indigo-50 flex items-center justify-center">
+                        <PixelAvatar config={u.avatar} uid={u.uid} size={40} view="head" />
                       </div>
                       <div>
                         <p className="font-bold text-sm group-hover:text-brand-gold transition-colors">{u.name}</p>
@@ -8198,23 +8357,14 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
 
       <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 pb-12">
 
-        {/* Avatar picker */}
+        {/* Avatar preview (customiser is on Profile tab) */}
         <div className="space-y-3">
           <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">Avatar</label>
-          <div className="flex gap-3 justify-center">
-            {(['Male', 'Female', 'Non-binary'] as const).map(g => (
-              <button
-                key={g}
-                type="button"
-                onClick={() => setGender(g)}
-                className={`flex flex-col items-center gap-1.5 p-2 rounded-2xl transition-all ${gender === g ? 'ring-2 ring-brand-gold bg-brand-gold/5' : 'opacity-50 hover:opacity-80'}`}
-              >
-                <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-white shadow">
-                  <img src={avatarSrc(g)} alt={g} className="w-full h-full object-cover" />
-                </div>
-                <span className="text-[10px] font-bold text-brand-navy/60">{g}</span>
-              </button>
-            ))}
+          <div className="flex flex-col items-center gap-2 py-2">
+            <div className="bg-gradient-to-b from-indigo-50 to-purple-50 rounded-[1.5rem] p-3 shadow-inner">
+              <PixelAvatar config={profile.avatar} uid={profile.uid} size={64} view="full" />
+            </div>
+            <p className="text-xs text-brand-navy/40">Customise your avatar on the Profile tab</p>
           </div>
         </div>
 
@@ -9110,8 +9260,10 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
       {/* Post header */}
       <div className="px-5 pt-5 pb-3 space-y-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full overflow-hidden border border-black/5 cursor-pointer shrink-0" onClick={handleAvatarClick}>
-            <img src={post.authorRole === 'vendor' ? (authorProfile?.logoUrl || post.authorPhoto || '') : avatarSrc(authorProfile?.gender)} alt="" className="w-full h-full object-cover" />
+          <div className="w-10 h-10 rounded-full overflow-hidden border border-black/5 cursor-pointer shrink-0 bg-indigo-50 flex items-center justify-center" onClick={handleAvatarClick}>
+            {post.authorRole === 'vendor'
+              ? <img src={authorProfile?.logoUrl || post.authorPhoto || ''} alt="" className="w-full h-full object-cover" />
+              : <PixelAvatar config={authorProfile?.avatar} uid={post.authorUid} size={40} view="head" />}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
@@ -9321,8 +9473,8 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
             return (
               <div key={comment.id} className="flex gap-2.5">
                 <button onClick={() => handleViewCommentAuthor(comment.fromUid)} className="shrink-0 mt-0.5 hover:opacity-80 transition-opacity">
-                  <div className="w-7 h-7 rounded-full overflow-hidden border border-black/5">
-                    <img src={avatarSrc()} alt="" className="w-full h-full object-cover" />
+                  <div className="w-7 h-7 rounded-full overflow-hidden border border-black/5 bg-indigo-50 flex items-center justify-center">
+                    <PixelAvatar uid={comment.fromUid} size={28} view="head" />
                   </div>
                 </button>
                 <div className="flex-1 min-w-0">
@@ -9362,8 +9514,8 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
       {/* Comment input — always visible for logged-in users */}
       {currentUser && (
         <div className="px-5 pb-4 border-t border-black/5 pt-3 flex gap-2">
-          <div className="w-7 h-7 rounded-full overflow-hidden border border-black/5 shrink-0">
-            <img src={avatarSrc(currentProfile?.gender)} alt="" className="w-full h-full object-cover" />
+          <div className="w-7 h-7 rounded-full overflow-hidden border border-black/5 shrink-0 bg-indigo-50 flex items-center justify-center">
+            <PixelAvatar config={currentProfile?.avatar} uid={currentProfile?.uid ?? currentUser.uid} size={28} view="head" />
           </div>
           <div className="flex-1 flex gap-2">
             <input
@@ -9484,8 +9636,8 @@ function CreatePostModal({ onClose, user, profile }: { onClose: () => void, user
         </div>
 
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-brand-navy/10">
-            <img src={avatarSrc(profile?.gender)} alt="" className="w-full h-full object-cover" />
+          <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-brand-navy/10 bg-indigo-50 flex items-center justify-center">
+            <PixelAvatar config={profile?.avatar} uid={profile?.uid} size={40} view="head" />
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
@@ -10721,8 +10873,8 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
                   : <Store size={18} className="text-brand-navy/50" />}
               </div>
             ) : (
-              <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-sm cursor-pointer" onClick={() => chatPartner && onViewUser(chatPartner)}>
-                <img src={avatarSrc(chatPartner?.gender)} alt="" className="w-full h-full object-cover" />
+              <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-sm cursor-pointer bg-indigo-50 flex items-center justify-center" onClick={() => chatPartner && onViewUser(chatPartner)}>
+                <PixelAvatar config={chatPartner?.avatar} uid={chatPartner?.uid} size={40} view="head" />
               </div>
             )}
             <div>
@@ -10830,8 +10982,8 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
               onClick={() => handleStartCustomerChat(customer)}
               className="w-full bg-white p-4 rounded-2xl flex items-center gap-4 border border-brand-navy/5 hover:border-brand-gold/20 transition-all text-left"
             >
-              <div className="w-14 h-14 rounded-2xl overflow-hidden border border-brand-navy/5">
-                <img src={avatarSrc(customer.gender)} alt="" className="w-full h-full object-cover" />
+              <div className="w-14 h-14 rounded-2xl overflow-hidden border border-brand-navy/5 bg-indigo-50 flex items-center justify-center">
+                <PixelAvatar config={customer.avatar} uid={customer.uid} size={56} view="head" />
               </div>
               <div className="flex-1 min-w-0">
                 <h4 className="font-bold text-sm truncate">{customer.name}</h4>
@@ -10924,7 +11076,7 @@ function ChatListItem({ chat, currentUser, onClick }: { chat: Chat, currentUser:
           ? (businessLogo
               ? <img src={businessLogo} alt="" className="w-full h-full object-cover" />
               : <Store size={22} className="text-brand-navy/40" />)
-          : <img src={avatarSrc(partner?.gender)} alt="" className="w-full h-full object-cover" />}
+          : <PixelAvatar config={partner?.avatar} uid={partner?.uid} size={56} view="head" />}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-center mb-1">
@@ -11019,9 +11171,9 @@ function CommunityScreen({ onViewUser, currentUser }: { onViewUser: (u: UserProf
             <div className="space-y-4">
               <div className="bg-brand-navy p-6 rounded-[2.5rem] text-white flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-brand-gold shrink-0">
+                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-brand-gold shrink-0 bg-indigo-100 flex items-center justify-center">
                     {users[0]
-                      ? <img src={avatarSrc(users[0].gender)} alt="" className="w-full h-full object-cover" />
+                      ? <PixelAvatar config={users[0].avatar} uid={users[0].uid} size={48} view="head" />
                       : <div className="w-full h-full bg-brand-gold flex items-center justify-center"><Trophy className="w-6 h-6 text-brand-navy" /></div>}
                   </div>
                   <div>
@@ -11043,8 +11195,8 @@ function CommunityScreen({ onViewUser, currentUser }: { onViewUser: (u: UserProf
                     className="glass-card p-4 rounded-2xl flex items-center gap-4 hover:shadow-md transition-all cursor-pointer"
                   >
                     <div className="w-8 font-display font-bold text-brand-navy/20">#{i + 1}</div>
-                    <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-navy/5">
-                      <img src={avatarSrc(u.gender)} alt="" className="w-full h-full object-cover" />
+                    <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-navy/5 bg-indigo-50 flex items-center justify-center">
+                      <PixelAvatar config={u.avatar} uid={u.uid} size={40} view="head" />
                     </div>
                     <div className="flex-1">
                       <p className="font-bold text-sm">{u.name}</p>
@@ -11079,8 +11231,8 @@ function CommunityScreen({ onViewUser, currentUser }: { onViewUser: (u: UserProf
                   const isFollowing = followingUids.has(u.uid);
                   return (
                     <div key={u.uid} className="glass-card p-4 rounded-2xl flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-navy/5 cursor-pointer" onClick={() => onViewUser(u)}>
-                        <img src={avatarSrc(u.gender)} alt="" className="w-full h-full object-cover" />
+                      <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-navy/5 cursor-pointer bg-indigo-50 flex items-center justify-center" onClick={() => onViewUser(u)}>
+                        <PixelAvatar config={u.avatar} uid={u.uid} size={40} view="head" />
                       </div>
                       <div className="flex-1 cursor-pointer" onClick={() => onViewUser(u)}>
                         <p className="font-bold text-sm">{u.name}</p>
@@ -11502,7 +11654,6 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
           {leaderboard.map((entry, index) => {
             const lbProfile = leaderboardProfiles.get(entry.user_id);
             const displayName = lbProfile?.name || entry.userName || 'Loyal Customer';
-            const displayPhoto = avatarSrc(lbProfile?.gender);
             return (
               <div
                 key={`lb-${entry.id}`}
@@ -11513,8 +11664,8 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                   <div className="w-6 h-6 flex items-center justify-center font-bold text-xs text-brand-navy/40">
                     #{index + 1}
                   </div>
-                  <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-navy/5">
-                    <img src={displayPhoto} alt="" className="w-full h-full object-cover" />
+                  <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-navy/5 bg-indigo-50 flex items-center justify-center">
+                    <PixelAvatar config={lbProfile?.avatar} uid={lbProfile?.uid ?? entry.user_id} size={40} view="head" />
                   </div>
                   <div>
                     <p className="font-bold text-sm group-hover:text-brand-gold transition-colors">{displayName}</p>
@@ -11584,13 +11735,14 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                 />
               ) : (() => {
                 const isOwnerPost = item.data.authorUid === store.ownerUid;
-                const displayPhoto = isOwnerPost ? (store.logoUrl || '') : avatarSrc();
                 const displayName = isOwnerPost ? store.name : item.data.authorName;
                 return (
                   <div key={item.data.id} className="glass-card p-5 rounded-[2rem] space-y-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full overflow-hidden border border-brand-navy/5 shrink-0">
-                        <img src={displayPhoto} alt="" className="w-full h-full object-cover" />
+                      <div className="w-9 h-9 rounded-full overflow-hidden border border-brand-navy/5 shrink-0 bg-indigo-50 flex items-center justify-center">
+                        {isOwnerPost
+                          ? <img src={store.logoUrl || ''} alt="" className="w-full h-full object-cover" />
+                          : <PixelAvatar uid={item.data.authorUid} size={36} view="head" />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-sm">{displayName}</p>
@@ -11669,8 +11821,8 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
           {visibleReviews.map(review => (
             <div key={review.id} className="glass-card p-5 rounded-[2rem] space-y-2">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full overflow-hidden border border-brand-navy/5 shrink-0">
-                  <img src={avatarSrc()} alt="" className="w-full h-full object-cover" />
+                <div className="w-9 h-9 rounded-full overflow-hidden border border-brand-navy/5 shrink-0 bg-indigo-50 flex items-center justify-center">
+                  <PixelAvatar uid={review.authorUid || review.id} size={36} view="head" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-sm">{review.authorName}</p>
@@ -11949,8 +12101,10 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
       <div className="glass-card p-8 rounded-[3rem] text-center relative overflow-hidden">
         <div className="absolute top-0 left-0 right-0 h-24 bg-brand-gold/10" />
         <div className="relative z-10">
-          <div className="w-24 h-24 rounded-[2.5rem] border-4 border-white overflow-hidden mx-auto mb-4 shadow-xl">
-            <img src={avatarSrc(targetUser.gender)} alt="" className="w-full h-full object-cover" />
+          <div className="mx-auto mb-4 flex justify-center">
+            <div className="bg-gradient-to-b from-indigo-50 to-purple-50 rounded-[2rem] p-3 border-4 border-white shadow-xl">
+              <PixelAvatar config={targetUser.avatar} uid={targetUser.uid} size={72} view="full" />
+            </div>
           </div>
           <h2 className="text-2xl font-bold">{targetUser.name}</h2>
           <p className="text-brand-gold font-bold text-xs uppercase tracking-[0.2em]">@{targetUser.handle || targetUser.email?.split('@')[0]}</p>
