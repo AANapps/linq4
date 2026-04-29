@@ -7965,7 +7965,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           { icon: <Trophy        size={15} className="text-brand-gold shrink-0" />, val: archivedCardsCount, label: 'Rewards' },
           { icon: <Store        size={15} className="text-brand-gold shrink-0" />, val: activeCardsCount,  label: 'Cards'   },
         ].map(s => (
-          <div key={s.label} className="flex-1 rounded-2xl px-3 py-2.5 flex items-center gap-2" style={{ background: 'linear-gradient(135deg, #0f1f3d, #1a3463)' }}>
+          <div key={s.label} className="flex-1 rounded-2xl px-3 py-2.5 flex items-center gap-2" style={{ background: 'linear-gradient(135deg, #1e3a5f, #2d5a8e)' }}>
             {s.icon}
             <div>
               <p className="font-bold text-brand-gold text-sm leading-none">{s.val}</p>
@@ -8044,7 +8044,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
               const pct = c.goal > 0 ? Math.min(100, Math.round((progress / c.goal) * 100)) : 0;
               const done = pct >= 100;
               return (
-                <div key={c.id} className="rounded-2xl px-4 py-3" style={{ background: 'linear-gradient(135deg, #7f1d1d, #991b1b)' }}>
+                <div key={c.id} className="rounded-2xl px-4 py-3" style={{ background: 'linear-gradient(135deg, #b91c1c, #dc2626)' }}>
                   <div className="flex items-center justify-between mb-1.5 gap-2">
                     <p className="text-xs font-bold text-white leading-tight line-clamp-1 flex-1">{c.title}</p>
                     <span className={cn('text-[10px] font-bold shrink-0', done ? 'text-green-300' : 'text-amber-300')}>{done ? '✓ Done' : `${pct}%`}</span>
@@ -12217,7 +12217,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
               { val: publicUserRewards, label: 'Rewards' },
             ].map(s => (
               <div key={s.label} className="flex-1 rounded-2xl px-3 py-2.5 flex flex-col items-center gap-0.5"
-                   style={{ background: 'linear-gradient(135deg, #0f1f3d, #1a3463)' }}>
+                   style={{ background: 'linear-gradient(135deg, #1e3a5f, #2d5a8e)' }}>
                 <p className="font-bold text-brand-gold text-sm leading-none">{s.val}</p>
                 <p className="text-[9px] text-white/60 font-bold uppercase tracking-wider">{s.label}</p>
               </div>
@@ -12354,7 +12354,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
               const pct = c.goal > 0 ? Math.min(100, Math.round((progress / c.goal) * 100)) : 0;
               const done = pct >= 100;
               return (
-                <div key={c.id} className="rounded-2xl px-4 py-3" style={{ background: 'linear-gradient(135deg, #7f1d1d, #991b1b)' }}>
+                <div key={c.id} className="rounded-2xl px-4 py-3" style={{ background: 'linear-gradient(135deg, #b91c1c, #dc2626)' }}>
                   <div className="flex items-center justify-between mb-1.5 gap-2">
                     <p className="text-xs font-bold text-white leading-tight line-clamp-1 flex-1">{c.title}</p>
                     <span className={cn('text-[10px] font-bold shrink-0', done ? 'text-green-300' : 'text-amber-300')}>{done ? '✓ Done' : `${pct}%`}</span>
