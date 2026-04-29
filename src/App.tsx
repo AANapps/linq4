@@ -7956,29 +7956,21 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
 
       {settingsModal}
 
-      {/* Compact stats */}
+      {/* Compact stats — dark blue gradient, gold text */}
       <div className="flex gap-2">
-        <div className="flex-1 glass-card rounded-2xl px-3 py-2.5 flex items-center gap-2.5">
-          <CheckCircle2 size={15} className="text-brand-gold shrink-0" />
-          <div>
-            <p className="font-bold text-brand-navy text-sm leading-none">{lifetimeStamps}</p>
-            <p className="text-[9px] text-brand-navy/40 font-bold uppercase tracking-wider mt-0.5">Stamps</p>
+        {[
+          { icon: <CheckCircle2 size={15} className="text-brand-gold shrink-0" />, val: lifetimeStamps,   label: 'Stamps'  },
+          { icon: <Trophy        size={15} className="text-brand-gold shrink-0" />, val: archivedCardsCount, label: 'Rewards' },
+          { icon: <Store        size={15} className="text-brand-gold shrink-0" />, val: activeCardsCount,  label: 'Cards'   },
+        ].map(s => (
+          <div key={s.label} className="flex-1 rounded-2xl px-3 py-2.5 flex items-center gap-2" style={{ background: 'linear-gradient(135deg, #0f1f3d, #1a3463)' }}>
+            {s.icon}
+            <div>
+              <p className="font-bold text-brand-gold text-sm leading-none">{s.val}</p>
+              <p className="text-[9px] text-white/60 font-bold uppercase tracking-wider mt-0.5">{s.label}</p>
+            </div>
           </div>
-        </div>
-        <div className="flex-1 glass-card rounded-2xl px-3 py-2.5 flex items-center gap-2.5">
-          <Trophy size={15} className="text-brand-gold shrink-0" />
-          <div>
-            <p className="font-bold text-brand-navy text-sm leading-none">{archivedCardsCount}</p>
-            <p className="text-[9px] text-brand-navy/40 font-bold uppercase tracking-wider mt-0.5">Rewards</p>
-          </div>
-        </div>
-        <div className="flex-1 glass-card rounded-2xl px-3 py-2.5 flex items-center gap-2.5">
-          <Store size={15} className="text-brand-navy/40 shrink-0" />
-          <div>
-            <p className="font-bold text-brand-navy text-sm leading-none">{activeCardsCount}</p>
-            <p className="text-[9px] text-brand-navy/40 font-bold uppercase tracking-wider mt-0.5">Cards</p>
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* Earned badges */}
@@ -8050,20 +8042,20 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
               const pct = c.goal > 0 ? Math.min(100, Math.round((progress / c.goal) * 100)) : 0;
               const done = pct >= 100;
               return (
-                <div key={c.id} className="glass-card rounded-2xl px-4 py-3">
+                <div key={c.id} className="rounded-2xl px-4 py-3" style={{ background: 'linear-gradient(135deg, #7f1d1d, #991b1b)' }}>
                   <div className="flex items-center justify-between mb-1.5 gap-2">
-                    <p className="text-xs font-bold text-brand-navy leading-tight line-clamp-1 flex-1">{c.title}</p>
-                    <span className={cn('text-[10px] font-bold shrink-0', done ? 'text-green-500' : 'text-brand-gold')}>{done ? '✓ Done' : `${pct}%`}</span>
+                    <p className="text-xs font-bold text-white leading-tight line-clamp-1 flex-1">{c.title}</p>
+                    <span className={cn('text-[10px] font-bold shrink-0', done ? 'text-green-300' : 'text-amber-300')}>{done ? '✓ Done' : `${pct}%`}</span>
                   </div>
-                  <div className="h-1.5 bg-brand-navy/5 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
                     <motion.div
-                      className={cn('h-full rounded-full', done ? 'bg-green-400' : 'bg-brand-gold')}
+                      className={cn('h-full rounded-full', done ? 'bg-green-400' : 'bg-amber-400')}
                       initial={{ width: 0 }}
                       animate={{ width: `${pct}%` }}
                       transition={{ duration: 0.6, ease: 'easeOut' }}
                     />
                   </div>
-                  <p className="text-[9px] text-brand-navy/40 mt-1.5 font-medium">{progress} / {c.goal} {c.unit} · 🎁 {c.reward}</p>
+                  <p className="text-[9px] text-white/60 mt-1.5 font-medium">{progress} / {c.goal} {c.unit} · 🎁 {c.reward}</p>
                 </div>
               );
             })}
@@ -11910,12 +11902,28 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
   const [targetFollowing, setTargetFollowing] = useState(0);
   const [allBadges, setAllBadges] = useState<AppBadge[]>([]);
   const [selectedBadge, setSelectedBadge] = useState<AppBadge | null>(null);
+  const [publicChallenges, setPublicChallenges] = useState<Challenge[]>([]);
+  const [publicEntries, setPublicEntries] = useState<Map<string, any>>(new Map());
 
   useEffect(() => {
     return onSnapshot(collection(db, 'badges'), snap =>
       setAllBadges(snap.docs.map(d => ({ id: d.id, ...d.data() } as AppBadge)))
     );
   }, []);
+
+  useEffect(() => {
+    const q = query(collection(db, 'challenges'), where('type', '==', 'standard'), where('status', '==', 'active'));
+    return onSnapshot(q, snap => setPublicChallenges(snap.docs.map(d => ({ id: d.id, ...d.data() } as Challenge))));
+  }, []);
+
+  useEffect(() => {
+    const q = query(collection(db, 'challenge_entries'), where('uid', '==', initialTargetUser.uid));
+    return onSnapshot(q, snap => {
+      const m = new Map<string, any>();
+      snap.docs.forEach(d => m.set(d.data().challengeId, { id: d.id, ...d.data() }));
+      setPublicEntries(m);
+    });
+  }, [initialTargetUser.uid]);
 
   useEffect(() => {
     // Listen to target user profile for real-time updates — check users then vendors
@@ -12200,19 +12208,18 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
             </div>
           )}
 
-          <div className="grid grid-cols-3 gap-3 max-w-xs mx-auto">
-            <div className="text-center">
-              <p className="text-lg font-bold">{publicUserStamps}</p>
-              <p className="text-[10px] text-brand-navy/40 font-bold uppercase">Stamps</p>
-            </div>
-            <div className="text-center border-x border-brand-navy/5">
-              <p className="text-lg font-bold">{cards.length}</p>
-              <p className="text-[10px] text-brand-navy/40 font-bold uppercase">Active</p>
-            </div>
-            <div className="text-center">
-              <p className="text-lg font-bold">{publicUserRewards}</p>
-              <p className="text-[10px] text-brand-navy/40 font-bold uppercase">Rewards</p>
-            </div>
+          <div className="flex gap-2 max-w-xs mx-auto w-full">
+            {[
+              { val: publicUserStamps, label: 'Stamps' },
+              { val: cards.length,     label: 'Active' },
+              { val: publicUserRewards, label: 'Rewards' },
+            ].map(s => (
+              <div key={s.label} className="flex-1 rounded-2xl px-3 py-2.5 flex flex-col items-center gap-0.5"
+                   style={{ background: 'linear-gradient(135deg, #0f1f3d, #1a3463)' }}>
+                <p className="font-bold text-brand-gold text-sm leading-none">{s.val}</p>
+                <p className="text-[9px] text-white/60 font-bold uppercase tracking-wider">{s.label}</p>
+              </div>
+            ))}
           </div>
 
           {earnedBadges.length > 0 && (
@@ -12324,6 +12331,47 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
           )}
         </div>
       </div>
+
+      {/* Challenges */}
+      {(() => {
+        const theirChallenges = publicChallenges.filter(c => (c.participantUids || []).includes(initialTargetUser.uid));
+        if (theirChallenges.length === 0) return null;
+        return (
+          <div className="space-y-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Challenges</p>
+            {theirChallenges.map(c => {
+              const entry = publicEntries.get(c.id);
+              let progress = 0;
+              if (entry) {
+                if (c.vendorIds?.length) {
+                  progress = Math.min(c.goal, entry.count || 0);
+                } else {
+                  progress = Math.max(0, Math.min(c.goal, (targetUser.totalStamps || 0) - (entry.totalStampsAtJoin || 0)));
+                }
+              }
+              const pct = c.goal > 0 ? Math.min(100, Math.round((progress / c.goal) * 100)) : 0;
+              const done = pct >= 100;
+              return (
+                <div key={c.id} className="rounded-2xl px-4 py-3" style={{ background: 'linear-gradient(135deg, #7f1d1d, #991b1b)' }}>
+                  <div className="flex items-center justify-between mb-1.5 gap-2">
+                    <p className="text-xs font-bold text-white leading-tight line-clamp-1 flex-1">{c.title}</p>
+                    <span className={cn('text-[10px] font-bold shrink-0', done ? 'text-green-300' : 'text-amber-300')}>{done ? '✓ Done' : `${pct}%`}</span>
+                  </div>
+                  <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
+                    <motion.div
+                      className={cn('h-full rounded-full', done ? 'bg-green-400' : 'bg-amber-400')}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${pct}%` }}
+                      transition={{ duration: 0.6, ease: 'easeOut' }}
+                    />
+                  </div>
+                  <p className="text-[9px] text-white/60 mt-1.5 font-medium">{progress} / {c.goal} {c.unit} · 🎁 {c.reward}</p>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* Tab switcher */}
       <div className="flex p-1 glass-card rounded-2xl">
