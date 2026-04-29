@@ -2434,7 +2434,7 @@ function BadgesAdminPanel({ onClose }: { onClose: () => void }) {
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-  const [showList, setShowList] = useState(false);
+  const [showList, setShowList] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editSaving, setEditSaving] = useState(false);
 
@@ -2589,7 +2589,7 @@ function BadgesAdminPanel({ onClose }: { onClose: () => void }) {
                 onClick={() => setShowList(v => !v)}
                 className="w-full flex items-center justify-between bg-white rounded-2xl border border-black/5 px-4 py-3 active:scale-[0.98] transition-all"
               >
-                <span className="text-sm font-bold text-brand-navy">View all badges ({badges.length})</span>
+                <span className="text-sm font-bold text-brand-navy">{showList ? 'Hide badges' : `View all badges (${badges.length})`}</span>
                 <motion.div animate={{ rotate: showList ? 180 : 0 }} transition={{ duration: 0.2 }}>
                   <ChevronDown size={16} className="text-brand-navy/40" />
                 </motion.div>
