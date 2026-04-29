@@ -3574,6 +3574,40 @@ function ProgrammeDetailModal({ prog, sc, onJoin, onView, onClose, joiningProgra
   );
 }
 
+type CelebAnimType = 'confetti' | 'sparks' | 'fireworks' | 'sparkles' | 'burst';
+const CELEB_ANIM_TYPES: CelebAnimType[] = ['confetti', 'sparks', 'fireworks', 'sparkles', 'burst'];
+
+function fireCelebAnimation(type: CelebAnimType) {
+  switch (type) {
+    case 'confetti':
+      confetti({ particleCount: 120, spread: 70, origin: { y: 0.55 }, colors: ['#FFD700', '#FFA500', '#FF6B6B', '#4ECDC4', '#A78BFA'] });
+      break;
+    case 'sparks':
+      confetti({ particleCount: 70, spread: 40, startVelocity: 50, decay: 0.88, gravity: 1.4, scalar: 0.55, origin: { y: 0.55 }, colors: ['#FFD700', '#FF8C00', '#FF4500', '#FFF200', '#FF6B35'] });
+      break;
+    case 'fireworks':
+      [{ angle: 60, x: 0.2 }, { angle: 90, x: 0.5 }, { angle: 120, x: 0.8 }].forEach(({ angle, x }, i) =>
+        setTimeout(() => confetti({ particleCount: 60, angle, spread: 55, origin: { x, y: 0.65 }, colors: ['#FFD700', '#FF6B6B', '#4ECDC4', '#A78BFA', '#FFA500'] }), i * 150)
+      );
+      break;
+    case 'sparkles':
+      confetti({ particleCount: 90, spread: 100, startVelocity: 22, gravity: 0.5, scalar: 0.85, origin: { y: 0.55 }, colors: ['#FFD700', '#FFFFFF', '#FFF8DC', '#FFEAA7', '#FDCB6E'] });
+      break;
+    case 'burst':
+      confetti({ particleCount: 80, spread: 360, startVelocity: 18, decay: 0.93, gravity: 0.6, origin: { x: 0.5, y: 0.5 }, colors: ['#FFD700', '#FF6B6B', '#4ECDC4', '#A78BFA', '#FF8C00', '#00B894'] });
+      break;
+  }
+}
+
+interface StickerCelebData {
+  programmeName: string;
+  newCount: number;
+  totalStickers: number;
+  uniqueTiers: number;
+  animType: CelebAnimType;
+  stickerCardId: string;
+}
+
 function buildStampCelebrationPages(
   store: StoreProfile,
   card: Card,
@@ -3664,6 +3698,13 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const prevCardStampsRef = useRef<Map<string, number>>(new Map());
   const cardsInitializedRef = useRef(false);
 
+  // Sticker (monopoly) celebration
+  const [activeStickerCeleb, setActiveStickerCeleb] = useState<StickerCelebData | null>(null);
+  const [pendingStickerCeleb, setPendingStickerCeleb] = useState<StickerCelebData | null>(null);
+  const prevStickerCountRef = useRef<Map<string, number>>(new Map());
+  const stickerCardsInitRef = useRef(false);
+  const animCounterRef = useRef(0);
+
   useEffect(() => {
     const activeCards = initialCards.filter(c => !c.isArchived);
     if (activeCards.length === 0) return;
@@ -3684,6 +3725,44 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       prevCardStampsRef.current.set(card.id, card.current_stamps);
     });
   }, [initialCards]);
+
+  // Watch myStickerCards for new stickers
+  useEffect(() => {
+    if (myStickerCards.length === 0) return;
+    if (!stickerCardsInitRef.current) {
+      myStickerCards.forEach(sc => prevStickerCountRef.current.set(sc.id, sc.stickers.length));
+      stickerCardsInitRef.current = true;
+      return;
+    }
+    myStickerCards.forEach(sc => {
+      const prev = prevStickerCountRef.current.get(sc.id) ?? -1;
+      if (prev !== -1 && sc.stickers.length > prev) {
+        const programme = activePrograms.find(p => p.id === sc.programme_id);
+        const animType = CELEB_ANIM_TYPES[animCounterRef.current % CELEB_ANIM_TYPES.length];
+        animCounterRef.current++;
+        const celeb: StickerCelebData = {
+          programmeName: programme?.title || 'Monopoly Game',
+          newCount: sc.stickers.length - prev,
+          totalStickers: sc.stickers.length,
+          uniqueTiers: sc.uniqueTiers?.length || 0,
+          animType,
+          stickerCardId: sc.id,
+        };
+        // Queue behind stamp celebration if it's currently showing
+        if (celebrationPages) setPendingStickerCeleb(celeb);
+        else setActiveStickerCeleb(celeb);
+      }
+      prevStickerCountRef.current.set(sc.id, sc.stickers.length);
+    });
+  }, [myStickerCards]);
+
+  // When stamp celebration ends, show any queued sticker celebration
+  useEffect(() => {
+    if (!celebrationPages && pendingStickerCeleb) {
+      setActiveStickerCeleb(pendingStickerCeleb);
+      setPendingStickerCeleb(null);
+    }
+  }, [celebrationPages, pendingStickerCeleb]);
 
   // Badge notification system
   const [allBadgesGlobal, setAllBadgesGlobal] = useState<AppBadge[]>([]);
@@ -4362,6 +4441,17 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         )}
       </AnimatePresence>
 
+      {/* Sticker / monopoly celebration */}
+      <AnimatePresence>
+        {activeStickerCeleb && (
+          <StickerCelebrationModal
+            {...activeStickerCeleb}
+            onClose={() => setActiveStickerCeleb(null)}
+            onReveal={() => setOpenStickerCardId(activeStickerCeleb.stickerCardId)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Badge earned notification */}
       <AnimatePresence>
         {badgeNotifQueue.length > 0 && (() => {
@@ -4640,9 +4730,7 @@ function StampCelebrationModal({ pages, onClose }: { pages: CelebrationPage[]; o
   const circumference = 2 * Math.PI * 42;
 
   useEffect(() => {
-    if (page.type === 'stamp') {
-      confetti({ particleCount: 100, spread: 70, origin: { y: 0.55 }, colors: ['#FFD700', '#FFA500', '#FF6B6B', '#4ECDC4', '#A78BFA'] });
-    }
+    if (page.type === 'stamp') fireCelebAnimation('confetti');
   }, [pageIdx, page.type]);
 
   return (
@@ -4737,6 +4825,118 @@ function StampCelebrationModal({ pages, onClose }: { pages: CelebrationPage[]; o
             </button>
           </motion.div>
         </AnimatePresence>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+const MONOPOLY_EMOJIS = ['🎰', '🃏', '🎲', '🏆', '🎯', '⭐', '💎', '🌟', '🎪', '🎡'];
+
+function StickerCelebrationModal({ programmeName, newCount, totalStickers, uniqueTiers, animType, stickerCardId, onClose, onReveal }: {
+  programmeName: string;
+  newCount: number;
+  totalStickers: number;
+  uniqueTiers: number;
+  animType: CelebAnimType;
+  stickerCardId: string;
+  onClose: () => void;
+  onReveal: () => void;
+}) {
+  const emoji = MONOPOLY_EMOJIS[Math.floor(Math.random() * MONOPOLY_EMOJIS.length)];
+  const allTiers = uniqueTiers >= 5;
+
+  useEffect(() => { fireCelebAnimation(animType); }, []);
+
+  // Vary the enter animation style per animation type
+  const iconAnims: Record<CelebAnimType, object> = {
+    confetti: { scale: [0, 1.3, 0.9, 1], rotate: [0, -15, 10, 0] },
+    sparks:   { scale: [0, 1.4, 0.85, 1], y: [30, -10, 5, 0] },
+    fireworks:{ scale: [0, 1.5, 0.8, 1.1, 1], rotate: [0, 20, -15, 5, 0] },
+    sparkles: { scale: [0, 1.2, 1], rotate: [0, 360] },
+    burst:    { scale: [0, 2, 0.85, 1], opacity: [0, 1, 1, 1] },
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[210] flex items-end max-w-md mx-auto"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ y: 140, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 140, opacity: 0 }}
+        transition={{ type: 'spring', stiffness: 360, damping: 30 }}
+        className="w-full bg-brand-bg rounded-t-3xl p-6 pb-12 space-y-5"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Animated icon */}
+        <div className="flex justify-center">
+          <motion.div
+            animate={iconAnims[animType]}
+            transition={{ duration: 0.6, ease: 'easeOut', delay: 0.1 }}
+            className="w-28 h-28 rounded-[2rem] bg-brand-navy flex items-center justify-center text-6xl shadow-xl"
+          >
+            {emoji}
+          </motion.div>
+        </div>
+
+        {/* Header */}
+        <div className="text-center space-y-1">
+          <motion.p
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+            className="text-[10px] font-bold uppercase tracking-widest text-brand-gold"
+          >
+            {newCount === 1 ? '🎴 New Sticker Received!' : `🎴 ${newCount} New Stickers!`}
+          </motion.p>
+          <motion.h2
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+            className="font-display text-2xl font-bold text-brand-navy"
+          >
+            {programmeName}
+          </motion.h2>
+        </div>
+
+        {/* Stats row */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
+          className="flex gap-3"
+        >
+          <div className="flex-1 bg-white rounded-2xl p-3 text-center border border-black/5">
+            <p className="text-2xl font-display font-bold text-brand-navy">{totalStickers}</p>
+            <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-wider mt-0.5">Stickers</p>
+          </div>
+          <div className={cn('flex-1 rounded-2xl p-3 text-center border', allTiers ? 'bg-green-50 border-green-200' : 'bg-white border-black/5')}>
+            <p className={cn('text-2xl font-display font-bold', allTiers ? 'text-green-500' : 'text-brand-navy')}>{uniqueTiers}/5</p>
+            <p className={cn('text-[10px] font-bold uppercase tracking-wider mt-0.5', allTiers ? 'text-green-400' : 'text-brand-navy/40')}>Tiers</p>
+          </div>
+        </motion.div>
+
+        {/* Encouragement */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+          className={cn('rounded-2xl p-4 text-center', allTiers ? 'bg-green-50' : 'bg-brand-gold/10')}
+        >
+          <p className={cn('font-bold text-sm leading-snug', allTiers ? 'text-green-600' : 'text-brand-navy')}>
+            {allTiers
+              ? '🏆 You\'ve unlocked all 5 tiers! Incredible!'
+              : `${5 - uniqueTiers} more tier${5 - uniqueTiers === 1 ? '' : 's'} to collect — keep going!`}
+          </p>
+        </motion.div>
+
+        {/* Buttons */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
+          className="flex gap-2"
+        >
+          <button onClick={onClose} className="flex-1 py-3 rounded-2xl border border-brand-navy/15 text-brand-navy/60 font-bold text-sm active:scale-[0.98] transition-all">
+            Later
+          </button>
+          <button
+            onClick={() => { onClose(); onReveal(); }}
+            className="flex-1 py-3 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-[0.98] transition-all"
+          >
+            Reveal now! 🎴
+          </button>
+        </motion.div>
       </motion.div>
     </motion.div>
   );
