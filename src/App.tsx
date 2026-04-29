@@ -469,6 +469,17 @@ interface StoreAutomation {
 
 type BadgeMetric = 'stamps' | 'cards_completed' | 'challenges_joined' | 'memberships' | 'followers' | 'following' | 'posts';
 
+interface CelebrationPage {
+  type: 'stamp' | 'challenge';
+  storeName?: string;
+  challengeTitle?: string;
+  currentStamps: number;
+  totalStamps: number;
+  reward: string;
+  encouragement: string;
+  done: boolean;
+}
+
 interface AppBadge {
   id: string;
   name: string;
@@ -3563,6 +3574,74 @@ function ProgrammeDetailModal({ prog, sc, onJoin, onView, onClose, joiningProgra
   );
 }
 
+function buildStampCelebrationPages(
+  store: StoreProfile,
+  card: Card,
+  challenges: Challenge[],
+  entries: Map<string, any>,
+  profile: UserProfile | null,
+  user: FirebaseUser
+): CelebrationPage[] {
+  const pages: CelebrationPage[] = [];
+
+  // --- Stamp page ---
+  const tiers = store.rewardTiers?.length
+    ? [...store.rewardTiers].sort((a, b) => a.stamps - b.stamps)
+    : [{ stamps: store.stamps_required_for_reward || 10, reward: store.reward || 'Free Reward' }];
+
+  const nextTier = tiers.find(t => t.stamps > card.current_stamps);
+  const stampsLeft = nextTier ? nextTier.stamps - card.current_stamps : 0;
+  const done = stampsLeft === 0;
+
+  const enc = done
+    ? `🎁 Reward ready to claim at ${store.name}!`
+    : stampsLeft === 1
+      ? `Just 1 more stamp for ${nextTier!.reward}!`
+      : `${stampsLeft} more stamps for ${nextTier!.reward}!`;
+
+  pages.push({
+    type: 'stamp',
+    storeName: store.name,
+    currentStamps: card.current_stamps,
+    totalStamps: nextTier?.stamps || store.stamps_required_for_reward || 10,
+    reward: nextTier?.reward || store.reward || 'Free Reward',
+    encouragement: enc,
+    done,
+  });
+
+  // --- Challenge pages ---
+  const myActive = challenges.filter(c =>
+    (c.participantUids || []).includes(user.uid) &&
+    (!c.vendorIds?.length || c.vendorIds.includes(store.id!))
+  );
+
+  for (const c of myActive) {
+    const entry = entries.get(c.id);
+    const progress = c.vendorIds?.length
+      ? Math.min(c.goal, (entry?.count || 0) + 1)
+      : Math.min(c.goal, Math.max(0, ((profile?.totalStamps || 0) + 1) - (entry?.totalStampsAtJoin || 0)));
+    const left = Math.max(0, c.goal - progress);
+    const cdone = left === 0;
+    const cenc = cdone
+      ? `🏆 Challenge complete! Claim your ${c.reward}!`
+      : left === 1
+        ? `Just 1 more ${c.unit || 'stamp'} to claim ${c.reward}!`
+        : `${left} more ${c.unit || 'stamps'} to claim ${c.reward}!`;
+
+    pages.push({
+      type: 'challenge',
+      challengeTitle: c.title,
+      currentStamps: progress,
+      totalStamps: c.goal,
+      reward: c.reward,
+      encouragement: cenc,
+      done: cdone,
+    });
+  }
+
+  return pages;
+}
+
 // --- Consumer App ---
 
 function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onViewUser, cards: initialCards, notifications, activeChatId, setActiveChatId, onLogout, onDeleteAccount, pendingNFCStoreId, onClearPendingNFC }: { activeTab: string, setActiveTab: (tab: string) => void, profile: UserProfile | null, user: FirebaseUser, onViewStore: (s: StoreProfile) => void, onViewUser: (u: UserProfile) => void, cards: Card[], notifications: Notification[], activeChatId: string | null, setActiveChatId: (id: string | null) => void, onLogout: () => void, onDeleteAccount: () => Promise<void>, pendingNFCStoreId?: string | null, onClearPendingNFC?: () => void, key?: React.Key }) {
@@ -3579,6 +3658,32 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const [openProgrammeId, setOpenProgrammeId] = useState<string | null>(null);
   const [showNFCStamp, setShowNFCStamp] = useState(false);
   const [autoNFCStoreId, setAutoNFCStoreId] = useState<string | null>(null);
+
+  // Stamp celebration
+  const [celebrationPages, setCelebrationPages] = useState<CelebrationPage[] | null>(null);
+  const prevCardStampsRef = useRef<Map<string, number>>(new Map());
+  const cardsInitializedRef = useRef(false);
+
+  useEffect(() => {
+    const activeCards = initialCards.filter(c => !c.isArchived);
+    if (activeCards.length === 0) return;
+    if (!cardsInitializedRef.current) {
+      activeCards.forEach(c => prevCardStampsRef.current.set(c.id, c.current_stamps));
+      cardsInitializedRef.current = true;
+      return;
+    }
+    activeCards.forEach(card => {
+      const prev = prevCardStampsRef.current.get(card.id) ?? -1;
+      if (card.current_stamps > prev) {
+        const store = stores.find(s => s.id === card.store_id);
+        if (store) {
+          const pages = buildStampCelebrationPages(store, card, activeStandardChallenges, myStandardEntries, profile, user);
+          if (pages.length > 0) setCelebrationPages(pages);
+        }
+      }
+      prevCardStampsRef.current.set(card.id, card.current_stamps);
+    });
+  }, [initialCards]);
 
   // Badge notification system
   const [allBadgesGlobal, setAllBadgesGlobal] = useState<AppBadge[]>([]);
@@ -4250,6 +4355,13 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         />
       )}
 
+      {/* Stamp celebration */}
+      <AnimatePresence>
+        {celebrationPages && (
+          <StampCelebrationModal pages={celebrationPages} onClose={() => setCelebrationPages(null)} />
+        )}
+      </AnimatePresence>
+
       {/* Badge earned notification */}
       <AnimatePresence>
         {badgeNotifQueue.length > 0 && (() => {
@@ -4515,6 +4627,116 @@ function NFCStampModal({ user, profile, onClose, autoStoreId }: {
             <button onClick={onClose} className="bg-brand-navy text-white px-8 py-3 rounded-xl font-bold text-sm w-full">Close</button>
           </>
         )}
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function StampCelebrationModal({ pages, onClose }: { pages: CelebrationPage[]; onClose: () => void }) {
+  const [pageIdx, setPageIdx] = useState(0);
+  const page = pages[pageIdx];
+  const isLast = pageIdx === pages.length - 1;
+  const pct = Math.min(100, page.totalStamps > 0 ? Math.round((page.currentStamps / page.totalStamps) * 100) : 0);
+  const circumference = 2 * Math.PI * 42;
+
+  useEffect(() => {
+    if (page.type === 'stamp') {
+      confetti({ particleCount: 100, spread: 70, origin: { y: 0.55 }, colors: ['#FFD700', '#FFA500', '#FF6B6B', '#4ECDC4', '#A78BFA'] });
+    }
+  }, [pageIdx, page.type]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-end max-w-md mx-auto"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ y: 120, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 120, opacity: 0 }}
+        transition={{ type: 'spring', stiffness: 360, damping: 30 }}
+        className="w-full bg-brand-bg rounded-t-3xl overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={pageIdx}
+            initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -50, opacity: 0 }}
+            transition={{ duration: 0.22 }}
+            className="p-6 pb-12 space-y-5"
+          >
+            {/* Label + title */}
+            <div className="text-center space-y-0.5">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold">
+                {page.type === 'stamp' ? '🎉 Stamp Collected!' : '🏆 Challenge Update'}
+              </p>
+              <h2 className="font-display text-2xl font-bold text-brand-navy leading-tight">
+                {page.type === 'stamp' ? page.storeName : page.challengeTitle}
+              </h2>
+            </div>
+
+            {/* Progress ring */}
+            <div className="flex justify-center">
+              <div className="relative w-32 h-32">
+                <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="42" fill="none" strokeWidth="8" stroke="currentColor" className="text-brand-navy/8" />
+                  <motion.circle
+                    cx="50" cy="50" r="42" fill="none" strokeWidth="8" stroke="currentColor"
+                    className={page.done ? 'text-green-400' : 'text-brand-gold'}
+                    strokeLinecap="round"
+                    strokeDasharray={circumference}
+                    initial={{ strokeDashoffset: circumference }}
+                    animate={{ strokeDashoffset: circumference * (1 - pct / 100) }}
+                    transition={{ duration: 0.9, ease: 'easeOut' }}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-3xl font-display font-bold text-brand-navy leading-none">{page.currentStamps}</span>
+                  <span className="text-xs text-brand-navy/40 font-bold">/ {page.totalStamps}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Encouragement pill */}
+            <div className={cn('rounded-2xl p-4 text-center', page.done ? 'bg-green-50' : 'bg-brand-gold/10')}>
+              <p className={cn('font-bold text-sm leading-snug', page.done ? 'text-green-600' : 'text-brand-navy')}>
+                {page.encouragement}
+              </p>
+            </div>
+
+            {/* Progress bar */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-[10px] font-bold text-brand-navy/40">
+                <span className="truncate max-w-[70%]">{page.reward}</span>
+                <span>{pct}%</span>
+              </div>
+              <div className="h-2 bg-brand-navy/8 rounded-full overflow-hidden">
+                <motion.div
+                  className={cn('h-full rounded-full', page.done ? 'bg-green-400' : 'bg-brand-gold')}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${pct}%` }}
+                  transition={{ duration: 0.9, ease: 'easeOut' }}
+                />
+              </div>
+            </div>
+
+            {/* Page dots */}
+            {pages.length > 1 && (
+              <div className="flex justify-center gap-1.5">
+                {pages.map((_, i) => (
+                  <motion.div key={i} animate={{ width: i === pageIdx ? 16 : 6 }} className={cn('h-1.5 rounded-full transition-colors', i === pageIdx ? 'bg-brand-navy' : 'bg-brand-navy/20')} />
+                ))}
+              </div>
+            )}
+
+            {/* CTA */}
+            <button
+              onClick={isLast ? onClose : () => setPageIdx(i => i + 1)}
+              className="w-full py-3.5 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-[0.98] transition-all"
+            >
+              {isLast ? 'Keep it up! 💪' : 'Next →'}
+            </button>
+          </motion.div>
+        </AnimatePresence>
       </motion.div>
     </motion.div>
   );
