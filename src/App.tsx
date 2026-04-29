@@ -9854,7 +9854,7 @@ function NotificationsPanel({ notifications, onClose }: { notifications: Notific
   );
 }
 
-const DEAL_COLORS = ['#B83232', '#147A74', '#1560A0', '#236B48', '#B86020', '#6E2E9A', '#9A7A08', '#156050'];
+const DEAL_COLORS = ['#EF4444', '#14B8A6', '#3B82F6', '#22C55E', '#F97316', '#A855F7', '#EAB308', '#10B981'];
 
 function FeedVendorPostCard({ item }: { item: any }) {
   return (
@@ -12305,24 +12305,27 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
           {cards.map(card => {
             const store = stores.find(s => s.id === card.store_id);
             if (!store) return null;
+            const theme = store.theme || '#3a6fcc';
+            const filled = Math.round((card.current_stamps / store.stamps_required_for_reward) * 5);
             return (
-              <div 
-                key={card.id} 
+              <div
+                key={card.id}
                 onClick={() => onViewStore(store)}
-                className="glass-card p-4 rounded-2xl flex items-center justify-between cursor-pointer hover:shadow-md transition-all group"
+                className="p-4 rounded-2xl flex items-center justify-between cursor-pointer transition-all group"
+                style={{ background: `${theme}12`, border: `1.5px solid ${theme}30` }}
               >
                 <div className="flex items-center gap-3 overflow-hidden">
-                  <div className="w-10 h-10 rounded-xl overflow-hidden shadow-sm shrink-0">
+                  <div className="w-10 h-10 rounded-xl overflow-hidden shadow-sm shrink-0" style={{ borderColor: `${theme}40`, borderWidth: 2, borderStyle: 'solid' }}>
                     <img src={store.logoUrl} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-bold text-sm truncate group-hover:text-brand-gold transition-colors">{store.name}</p>
+                    <p className="font-bold text-sm truncate transition-colors" style={{ color: theme }}>{store.name}</p>
                     <p className="text-[10px] text-brand-navy/40 uppercase font-bold tracking-widest leading-none">{card.current_stamps} / {store.stamps_required_for_reward} Stamps</p>
                   </div>
                 </div>
                 <div className="flex gap-0.5 shrink-0 ml-2">
                   {Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className={cn("w-1.5 h-1.5 rounded-full", i < (card.current_stamps / store.stamps_required_for_reward) * 5 ? "bg-brand-gold" : "bg-brand-navy/10")} />
+                    <div key={i} className="w-1.5 h-1.5 rounded-full" style={{ background: i < filled ? theme : `${theme}25` }} />
                   ))}
                 </div>
               </div>
