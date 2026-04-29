@@ -470,9 +470,10 @@ interface StoreAutomation {
 type BadgeMetric = 'stamps' | 'cards_completed' | 'challenges_joined' | 'memberships' | 'followers' | 'following' | 'posts';
 
 interface CelebrationPage {
-  type: 'stamp' | 'challenge';
+  type: 'stamp' | 'challenge' | 'upsell';
   storeName?: string;
   challengeTitle?: string;
+  upsellTitle?: string;
   currentStamps: number;
   totalStamps: number;
   reward: string;
@@ -3608,6 +3609,19 @@ interface StickerCelebData {
   stickerCardId: string;
 }
 
+const STAMP_ENCOUR = [
+  (n: number, r: string) => `🔥 ${n} more stamp${n > 1 ? 's' : ''} and ${r} is yours!`,
+  (n: number, r: string) => `⭐ So close! Just ${n} more stamp${n > 1 ? 's' : ''} for ${r}!`,
+  (n: number, r: string) => `🚀 Keep it up! ${n} more stamp${n > 1 ? 's' : ''} to unlock ${r}!`,
+  (n: number, r: string) => `💪 You're crushing it! ${n} away from ${r}!`,
+];
+const CHALL_ENCOUR = [
+  (n: number, u: string, r: string) => `🏃 ${n} more ${u} and ${r} is yours — don't stop now!`,
+  (n: number, u: string, r: string) => `🔥 So close to ${r}! Just ${n} more ${u} to go!`,
+  (n: number, u: string, r: string) => `⚡ ${n} ${u} stand between you and ${r}. Let's go!`,
+  (n: number, u: string, r: string) => `💫 You're doing amazing! ${n} more ${u} wins you ${r}!`,
+];
+
 function buildStampCelebrationPages(
   store: StoreProfile,
   card: Card,
@@ -3617,6 +3631,7 @@ function buildStampCelebrationPages(
   user: FirebaseUser
 ): CelebrationPage[] {
   const pages: CelebrationPage[] = [];
+  const seed = card.current_stamps; // vary messages by stamp count
 
   // --- Stamp page ---
   const tiers = store.rewardTiers?.length
@@ -3626,12 +3641,11 @@ function buildStampCelebrationPages(
   const nextTier = tiers.find(t => t.stamps > card.current_stamps);
   const stampsLeft = nextTier ? nextTier.stamps - card.current_stamps : 0;
   const done = stampsLeft === 0;
-
   const enc = done
-    ? `🎁 Reward ready to claim at ${store.name}!`
+    ? `🎁 YES! Your reward is ready to claim at ${store.name}!`
     : stampsLeft === 1
-      ? `Just 1 more stamp for ${nextTier!.reward}!`
-      : `${stampsLeft} more stamps for ${nextTier!.reward}!`;
+      ? `🤩 ONE more stamp and ${nextTier!.reward} is yours!`
+      : STAMP_ENCOUR[seed % STAMP_ENCOUR.length](stampsLeft, nextTier!.reward);
 
   pages.push({
     type: 'stamp',
@@ -3643,33 +3657,43 @@ function buildStampCelebrationPages(
     done,
   });
 
-  // --- Challenge pages ---
-  const myActive = challenges.filter(c =>
+  // --- Challenge progress pages ---
+  const joined = challenges.filter(c =>
     (c.participantUids || []).includes(user.uid) &&
     (!c.vendorIds?.length || c.vendorIds.includes(store.id!))
   );
 
-  for (const c of myActive) {
+  for (const c of joined) {
     const entry = entries.get(c.id);
     const progress = c.vendorIds?.length
       ? Math.min(c.goal, (entry?.count || 0) + 1)
       : Math.min(c.goal, Math.max(0, ((profile?.totalStamps || 0) + 1) - (entry?.totalStampsAtJoin || 0)));
     const left = Math.max(0, c.goal - progress);
     const cdone = left === 0;
+    const unit = c.unit || 'stamps';
     const cenc = cdone
-      ? `🏆 Challenge complete! Claim your ${c.reward}!`
+      ? `🏆 CHALLENGE COMPLETE! Go claim your ${c.reward} — you've earned it!`
       : left === 1
-        ? `Just 1 more ${c.unit || 'stamp'} to claim ${c.reward}!`
-        : `${left} more ${c.unit || 'stamps'} to claim ${c.reward}!`;
+        ? `🤩 ONE more ${unit} and ${c.reward} is YOURS!`
+        : CHALL_ENCOUR[progress % CHALL_ENCOUR.length](left, unit, c.reward);
+    pages.push({ type: 'challenge', challengeTitle: c.title, currentStamps: progress, totalStamps: c.goal, reward: c.reward, encouragement: cenc, done: cdone });
+  }
 
+  // --- Upsell pages for unjoined challenges ---
+  const notJoined = challenges.filter(c =>
+    !(c.participantUids || []).includes(user.uid)
+  ).slice(0, 2);
+
+  for (const c of notJoined) {
     pages.push({
-      type: 'challenge',
+      type: 'upsell',
+      upsellTitle: c.title,
       challengeTitle: c.title,
-      currentStamps: progress,
+      currentStamps: 0,
       totalStamps: c.goal,
       reward: c.reward,
-      encouragement: cenc,
-      done: cdone,
+      encouragement: `🎯 Your stamps could be going towards ${c.reward}! Join this challenge and every stamp counts!`,
+      done: false,
     });
   }
 
@@ -4453,48 +4477,74 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       </AnimatePresence>
 
       {/* Badge earned notification */}
-      <AnimatePresence>
-        {badgeNotifQueue.length > 0 && (() => {
-          const b = badgeNotifQueue[0];
-          const dismiss = () => setBadgeNotifQueue(q => q.slice(1));
-          return (
-            <motion.div
-              key={b.id}
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[300] flex items-end max-w-md mx-auto"
-              onClick={dismiss}
-            >
-              <motion.div
-                initial={{ y: 120, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 120, opacity: 0 }}
-                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                className="w-full bg-brand-bg rounded-t-3xl px-6 pt-6 pb-12 space-y-4"
-                onClick={e => e.stopPropagation()}
-              >
-                <div className="flex justify-center">
-                  <motion.div
-                    initial={{ scale: 0.5, rotate: -15 }} animate={{ scale: 1, rotate: 0 }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 18, delay: 0.1 }}
-                    className="w-24 h-24 rounded-[2rem] flex items-center justify-center text-5xl shadow-xl"
-                    style={{ background: `linear-gradient(135deg, ${b.color}ee, ${b.color}99)` }}
-                  >{b.icon}</motion.div>
-                </div>
-                <div className="text-center space-y-1">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold">Badge Unlocked</p>
-                  <p className="font-display text-2xl font-bold text-brand-navy">{b.name}</p>
-                  {b.description ? <p className="text-sm text-brand-navy/60 leading-relaxed">{b.description}</p> : null}
-                  <p className="text-xs text-brand-navy/40 mt-1">{BADGE_METRIC_LABELS[b.metric]} ≥ {b.threshold}</p>
-                </div>
-                {badgeNotifQueue.length > 1 && (
-                  <p className="text-center text-[10px] text-brand-navy/30 font-medium">+{badgeNotifQueue.length - 1} more badge{badgeNotifQueue.length - 1 > 1 ? 's' : ''}</p>
-                )}
-                <button onClick={dismiss} className="w-full py-3.5 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-[0.98] transition-all">
-                  Awesome!
-                </button>
-              </motion.div>
-            </motion.div>
-          );
-        })()}
+      <AnimatePresence mode="wait">
+        {badgeNotifQueue.length > 0 && (
+          <BadgeNotifCard
+            badge={badgeNotifQueue[0]}
+            queueCount={badgeNotifQueue.length}
+            onDismiss={() => setBadgeNotifQueue(q => q.slice(1))}
+          />
+        )}
       </AnimatePresence>
+    </motion.div>
+  );
+}
+
+const BADGE_CELEB_LINES = [
+  'You\'ve earned it! 🎉',
+  'What a legend! 🌟',
+  'Achievement unlocked! 🔥',
+  'You\'re incredible! 💎',
+];
+
+function BadgeNotifCard({ badge, queueCount, onDismiss }: { badge: AppBadge; queueCount: number; onDismiss: () => void }) {
+  useEffect(() => { fireCelebAnimation('fireworks'); }, []);
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[300] flex items-end max-w-md mx-auto"
+      onClick={onDismiss}
+    >
+      <motion.div
+        initial={{ y: 120, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 120, opacity: 0 }}
+        transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+        className="w-full bg-brand-bg rounded-t-3xl px-6 pt-6 pb-12 space-y-4"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex justify-center">
+          <motion.div
+            initial={{ scale: 0, rotate: -20 }}
+            animate={{ scale: [0, 1.35, 0.9, 1.1, 1], rotate: [-20, 15, -8, 4, 0] }}
+            transition={{ duration: 0.7, ease: 'easeOut', delay: 0.1 }}
+            className="w-28 h-28 rounded-[2rem] flex items-center justify-center text-6xl shadow-2xl"
+            style={{ background: `linear-gradient(135deg, ${badge.color}ee, ${badge.color}99)` }}
+          >{badge.icon}</motion.div>
+        </div>
+        <div className="text-center space-y-1">
+          <motion.p initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+            className="text-[10px] font-bold uppercase tracking-widest text-brand-gold">
+            🏅 New Badge Earned!
+          </motion.p>
+          <motion.p initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
+            className="font-display text-2xl font-bold text-brand-navy">{badge.name}</motion.p>
+          {badge.description && (
+            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
+              className="text-sm text-brand-navy/60 leading-relaxed">{badge.description}</motion.p>
+          )}
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.45 }}
+            className="text-xs text-brand-navy/40">{BADGE_METRIC_LABELS[badge.metric]} ≥ {badge.threshold}</motion.p>
+        </div>
+        {queueCount > 1 && (
+          <p className="text-center text-[10px] text-brand-navy/30 font-medium">+{queueCount - 1} more badge{queueCount - 1 > 1 ? 's' : ''} unlocked!</p>
+        )}
+        <motion.button
+          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
+          onClick={onDismiss}
+          className="w-full py-3.5 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-[0.98] transition-all"
+        >
+          {BADGE_CELEB_LINES[Math.floor(Math.random() * BADGE_CELEB_LINES.length)]}
+        </motion.button>
+      </motion.div>
     </motion.div>
   );
 }
@@ -4722,16 +4772,26 @@ function NFCStampModal({ user, profile, onClose, autoStoreId }: {
   );
 }
 
+const PAGE_ICONS: Record<string, string> = { stamp: '⭐', challenge: '🏆', challenge_done: '🎉', upsell: '🎯' };
+const PAGE_ANIM: Record<string, CelebAnimType> = { stamp: 'confetti', challenge: 'sparkles', challenge_done: 'fireworks', upsell: 'burst' };
+const CTA_LABELS = ['Keep smashing it! 🚀', 'You\'re on fire! 🔥', 'Unstoppable! 💪', 'Legend! ⭐', 'Amazing work! 🎉'];
+
 function StampCelebrationModal({ pages, onClose }: { pages: CelebrationPage[]; onClose: () => void }) {
   const [pageIdx, setPageIdx] = useState(0);
   const page = pages[pageIdx];
   const isLast = pageIdx === pages.length - 1;
   const pct = Math.min(100, page.totalStamps > 0 ? Math.round((page.currentStamps / page.totalStamps) * 100) : 0);
   const circumference = 2 * Math.PI * 42;
+  const isUpsell = page.type === 'upsell';
+  const pageKey = page.type === 'challenge' && page.done ? 'challenge_done' : page.type;
 
   useEffect(() => {
-    if (page.type === 'stamp') fireCelebAnimation('confetti');
-  }, [pageIdx, page.type]);
+    fireCelebAnimation(PAGE_ANIM[pageKey] || 'sparkles');
+  }, [pageIdx]);
+
+  const ctaLabel = isLast
+    ? (isUpsell ? 'Join the challenge! 🎯' : CTA_LABELS[pageIdx % CTA_LABELS.length])
+    : 'Next 🎉';
 
   return (
     <motion.div
@@ -4749,63 +4809,99 @@ function StampCelebrationModal({ pages, onClose }: { pages: CelebrationPage[]; o
           <motion.div
             key={pageIdx}
             initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -50, opacity: 0 }}
-            transition={{ duration: 0.22 }}
+            transition={{ duration: 0.2 }}
             className="p-6 pb-12 space-y-5"
           >
-            {/* Label + title */}
-            <div className="text-center space-y-0.5">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold">
-                {page.type === 'stamp' ? '🎉 Stamp Collected!' : '🏆 Challenge Update'}
-              </p>
-              <h2 className="font-display text-2xl font-bold text-brand-navy leading-tight">
-                {page.type === 'stamp' ? page.storeName : page.challengeTitle}
-              </h2>
+            {/* Animated icon + label */}
+            <div className="text-center space-y-1">
+              <motion.div
+                initial={{ scale: 0, rotate: -20 }} animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: 'spring', stiffness: 350, damping: 15, delay: 0.05 }}
+                className="text-5xl mb-2"
+              >
+                {PAGE_ICONS[pageKey]}
+              </motion.div>
+              <motion.p
+                initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+                className="text-[10px] font-bold uppercase tracking-widest text-brand-gold"
+              >
+                {isUpsell ? '✨ Level up your stamps!' : page.type === 'stamp' ? '🎉 Stamp Collected!' : page.done ? '🏆 Challenge Complete!' : '🏃 Challenge Update'}
+              </motion.p>
+              <motion.h2
+                initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                className="font-display text-2xl font-bold text-brand-navy leading-tight"
+              >
+                {isUpsell ? page.upsellTitle : page.type === 'stamp' ? page.storeName : page.challengeTitle}
+              </motion.h2>
             </div>
 
-            {/* Progress ring */}
-            <div className="flex justify-center">
-              <div className="relative w-32 h-32">
-                <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r="42" fill="none" strokeWidth="8" stroke="currentColor" className="text-brand-navy/8" />
-                  <motion.circle
-                    cx="50" cy="50" r="42" fill="none" strokeWidth="8" stroke="currentColor"
-                    className={page.done ? 'text-green-400' : 'text-brand-gold'}
-                    strokeLinecap="round"
-                    strokeDasharray={circumference}
-                    initial={{ strokeDashoffset: circumference }}
-                    animate={{ strokeDashoffset: circumference * (1 - pct / 100) }}
-                    transition={{ duration: 0.9, ease: 'easeOut' }}
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-3xl font-display font-bold text-brand-navy leading-none">{page.currentStamps}</span>
-                  <span className="text-xs text-brand-navy/40 font-bold">/ {page.totalStamps}</span>
+            {isUpsell ? (
+              /* Upsell layout — no ring, just big prize highlight */
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }}
+                className="rounded-3xl bg-brand-navy p-5 text-center space-y-2"
+              >
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold/70">Prize</p>
+                <p className="font-display text-xl font-bold text-white leading-tight">{page.reward}</p>
+                <p className="text-xs text-white/60">Collect {page.totalStamps} stamps to win</p>
+              </motion.div>
+            ) : (
+              /* Progress ring */
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.15, type: 'spring', stiffness: 300 }}
+                className="flex justify-center"
+              >
+                <div className="relative w-32 h-32">
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="42" fill="none" strokeWidth="8" stroke="currentColor" className="text-brand-navy/8" />
+                    <motion.circle
+                      cx="50" cy="50" r="42" fill="none" strokeWidth="8" stroke="currentColor"
+                      className={page.done ? 'text-green-400' : 'text-brand-gold'}
+                      strokeLinecap="round"
+                      strokeDasharray={circumference}
+                      initial={{ strokeDashoffset: circumference }}
+                      animate={{ strokeDashoffset: circumference * (1 - pct / 100) }}
+                      transition={{ duration: 0.9, ease: 'easeOut' }}
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-3xl font-display font-bold text-brand-navy leading-none">{page.currentStamps}</span>
+                    <span className="text-xs text-brand-navy/40 font-bold">/ {page.totalStamps}</span>
+                  </div>
                 </div>
-              </div>
-            </div>
+              </motion.div>
+            )}
 
             {/* Encouragement pill */}
-            <div className={cn('rounded-2xl p-4 text-center', page.done ? 'bg-green-50' : 'bg-brand-gold/10')}>
+            <motion.div
+              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+              className={cn('rounded-2xl p-4 text-center', page.done ? 'bg-green-50' : isUpsell ? 'bg-brand-gold/15' : 'bg-brand-gold/10')}
+            >
               <p className={cn('font-bold text-sm leading-snug', page.done ? 'text-green-600' : 'text-brand-navy')}>
                 {page.encouragement}
               </p>
-            </div>
+            </motion.div>
 
-            {/* Progress bar */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-[10px] font-bold text-brand-navy/40">
-                <span className="truncate max-w-[70%]">{page.reward}</span>
-                <span>{pct}%</span>
-              </div>
-              <div className="h-2 bg-brand-navy/8 rounded-full overflow-hidden">
-                <motion.div
-                  className={cn('h-full rounded-full', page.done ? 'bg-green-400' : 'bg-brand-gold')}
-                  initial={{ width: 0 }}
-                  animate={{ width: `${pct}%` }}
-                  transition={{ duration: 0.9, ease: 'easeOut' }}
-                />
-              </div>
-            </div>
+            {/* Progress bar (skip for upsell) */}
+            {!isUpsell && (
+              <motion.div
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
+                className="space-y-1.5"
+              >
+                <div className="flex justify-between text-[10px] font-bold text-brand-navy/40">
+                  <span className="truncate max-w-[70%]">{page.reward}</span>
+                  <span>{pct}%</span>
+                </div>
+                <div className="h-2 bg-brand-navy/8 rounded-full overflow-hidden">
+                  <motion.div
+                    className={cn('h-full rounded-full', page.done ? 'bg-green-400' : 'bg-brand-gold')}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${pct}%` }}
+                    transition={{ duration: 0.9, ease: 'easeOut' }}
+                  />
+                </div>
+              </motion.div>
+            )}
 
             {/* Page dots */}
             {pages.length > 1 && (
@@ -4817,12 +4913,13 @@ function StampCelebrationModal({ pages, onClose }: { pages: CelebrationPage[]; o
             )}
 
             {/* CTA */}
-            <button
+            <motion.button
+              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
               onClick={isLast ? onClose : () => setPageIdx(i => i + 1)}
               className="w-full py-3.5 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-[0.98] transition-all"
             >
-              {isLast ? 'Keep it up! 💪' : 'Next →'}
-            </button>
+              {ctaLabel}
+            </motion.button>
           </motion.div>
         </AnimatePresence>
       </motion.div>
@@ -4885,7 +4982,7 @@ function StickerCelebrationModal({ programmeName, newCount, totalStickers, uniqu
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
             className="text-[10px] font-bold uppercase tracking-widest text-brand-gold"
           >
-            {newCount === 1 ? '🎴 New Sticker Received!' : `🎴 ${newCount} New Stickers!`}
+            {newCount === 1 ? '🎴 Ooh, a new sticker just dropped!' : `🎴 WOW — ${newCount} new stickers!`}
           </motion.p>
           <motion.h2
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
@@ -4917,8 +5014,10 @@ function StickerCelebrationModal({ programmeName, newCount, totalStickers, uniqu
         >
           <p className={cn('font-bold text-sm leading-snug', allTiers ? 'text-green-600' : 'text-brand-navy')}>
             {allTiers
-              ? '🏆 You\'ve unlocked all 5 tiers! Incredible!'
-              : `${5 - uniqueTiers} more tier${5 - uniqueTiers === 1 ? '' : 's'} to collect — keep going!`}
+              ? '🏆 ALL 5 TIERS UNLOCKED! You absolute legend!'
+              : uniqueTiers === 4
+                ? '🔥 One more tier and you\'ve got the full set — so close!'
+                : `✨ ${5 - uniqueTiers} more tier${5 - uniqueTiers > 1 ? 's' : ''} to go — keep collecting and win big!`}
           </p>
         </motion.div>
 
@@ -4928,13 +5027,13 @@ function StickerCelebrationModal({ programmeName, newCount, totalStickers, uniqu
           className="flex gap-2"
         >
           <button onClick={onClose} className="flex-1 py-3 rounded-2xl border border-brand-navy/15 text-brand-navy/60 font-bold text-sm active:scale-[0.98] transition-all">
-            Later
+            Save for later
           </button>
           <button
             onClick={() => { onClose(); onReveal(); }}
             className="flex-1 py-3 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-[0.98] transition-all"
           >
-            Reveal now! 🎴
+            Reveal it! 🎴
           </button>
         </motion.div>
       </motion.div>
