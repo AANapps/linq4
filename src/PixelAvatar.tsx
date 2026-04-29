@@ -163,8 +163,8 @@ export interface PixelAvatarProps {
   config?: UserAvatar | null;
   uid?: string;
   size?: number;
-  /** 'head' crops to face area (square). 'full' shows whole body. */
-  view?: 'head' | 'full';
+  /** 'head' crops to face. 'full' shows whole body. 'tall' shows body with extended legs. */
+  view?: 'head' | 'full' | 'tall';
   className?: string;
 }
 
@@ -189,22 +189,26 @@ export function PixelAvatar({
   const shoC  = shoDef?.color  ?? '#F9FAFB';
   const shoC2 = shoDef?.color2;
 
+  // tall view extends legs from 3→8 rows and moves shoes down
+  const tall   = view === 'tall';
+  const legH   = tall ? 8 : 3;
+  const shoeY  = tall ? 25 : 20;
+  const shoeH  = tall ? 3 : 2;
+
   const pixels: CR[] = [];
 
-  // ── Shoes (rendered bottom of stack, first) ──
-  pixels.push(px(2, 20, 6, 2, shoC), px(8, 20, 6, 2, shoC));
+  // ── Shoes ──
+  pixels.push(px(2, shoeY, 6, shoeH, shoC), px(8, shoeY, 6, shoeH, shoC));
   if (shoC2) {
-    pixels.push(px(2, 20, 6, 1, shoC2), px(8, 20, 6, 1, shoC2));
+    pixels.push(px(2, shoeY, 6, 1, shoC2), px(8, shoeY, 6, 1, shoC2));
   }
-  // toe highlight
-  pixels.push(px(7, 20, 1, 1, '#FFFFFF3A'), px(13, 20, 1, 1, '#FFFFFF3A'));
+  pixels.push(px(7, shoeY, 1, 1, '#FFFFFF3A'), px(13, shoeY, 1, 1, '#FFFFFF3A'));
 
   // ── Legs / Bottom ──
-  // For skirt: wider shape
   if (av.bottom === 'bottom_skirt') {
-    pixels.push(px(2, 17, 12, 3, botC));
+    pixels.push(px(2, 17, 12, legH, botC));
   } else {
-    pixels.push(px(3, 17, 4, 3, botC), px(9, 17, 4, 3, botC));
+    pixels.push(px(3, 17, 4, legH, botC), px(9, 17, 4, legH, botC));
   }
 
   // ── Torso + Arms (top colour) ──
@@ -233,24 +237,23 @@ export function PixelAvatar({
   // ── Head (skin) ──
   pixels.push(
     px(3, 2, 10, 8, skin),
-    px(2, 4, 1, 3, skin), // ear L
-    px(13, 4, 1, 3, skin), // ear R
+    px(2, 4, 1, 3, skin),
+    px(13, 4, 1, 3, skin),
   );
 
-  // ── Face details (brows, eyes, mouth, cheeks) ──
+  // ── Face details ──
   facePixels(skin, hairCol, av.mood).forEach(p => pixels.push(p));
 
-  // ── Hair (drawn over head edges) ──
+  // ── Hair ──
   hairPixels(av.hairStyle, hairCol).forEach(p => pixels.push(p));
 
-  // ── Accessory (drawn on top of everything) ──
+  // ── Accessory ──
   if (accDef) {
     accessoryPixels(accDef.id, accDef.color).forEach(p => pixels.push(p));
   }
 
-  // viewBox: head crop shows rows 0-11, full shows all 22 rows
-  const vb = view === 'head' ? '1 0 14 12' : '0 0 16 22';
-  const h  = view === 'head' ? size : Math.round(size * 22 / 16);
+  const vb = view === 'head' ? '1 0 14 12' : tall ? '0 0 16 28' : '0 0 16 22';
+  const h  = view === 'head' ? size : tall ? Math.round(size * 28 / 16) : Math.round(size * 22 / 16);
 
   return (
     <svg
@@ -299,20 +302,24 @@ export function AvatarCustomiserModal({ avatar, onSave, onClose }: AvatarCustomi
 
   const ItemBtn = ({ item }: { item: AvatarItemDef; key?: React.Key }) => {
     const isOwned = owned(item.id) || item.rarity === 'starter';
-    const typeKey = item.type === 'accessory' ? 'accessory' : item.type;
+    // 'hair' items map to the 'hairStyle' field on UserAvatar
+    const field: keyof UserAvatar =
+      item.type === 'hair' ? 'hairStyle' :
+      item.type === 'accessory' ? 'accessory' :
+      item.type as keyof UserAvatar;
     const equipped =
-      typeKey === 'accessory'
+      field === 'accessory'
         ? draft.accessory === item.id
-        : (draft as Record<string, unknown>)[typeKey] === item.id;
+        : (draft as Record<string, unknown>)[field] === item.id;
 
     return (
       <button
         onClick={() => {
           if (!isOwned) return;
-          if (typeKey === 'accessory') {
+          if (field === 'accessory') {
             equip('accessory', equipped ? null : item.id);
           } else {
-            equip(typeKey as keyof UserAvatar, item.id);
+            equip(field, item.id);
           }
         }}
         className={cn(
@@ -366,7 +373,7 @@ export function AvatarCustomiserModal({ avatar, onSave, onClose }: AvatarCustomi
       {/* Avatar preview */}
       <div className="flex flex-col items-center py-4">
         <div className="bg-gradient-to-b from-indigo-100 to-purple-50 rounded-[2rem] p-4 shadow-inner">
-          <PixelAvatar config={draft} size={80} view="full" />
+          <PixelAvatar config={draft} size={72} view="tall" />
         </div>
         <p className="text-xs text-brand-navy/40 mt-2 font-bold">
           Mood {Math.round(draft.mood)}% {draft.mood < 30 ? '😔' : draft.mood < 60 ? '😐' : draft.mood < 85 ? '😊' : '🤩'}
@@ -457,6 +464,44 @@ export function AvatarCustomiserModal({ avatar, onSave, onClose }: AvatarCustomi
           <div className="h-6" />
         </div>
       )}
+    </motion.div>
+  );
+}
+
+// ─── Avatar View Modal ────────────────────────────────────────────────────────
+
+export function AvatarViewModal({ avatar, uid, onCustomise, onClose }: {
+  avatar: UserAvatar | null | undefined;
+  uid: string;
+  onCustomise: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 flex flex-col items-center justify-end bg-black/50"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <motion.div
+        className="bg-brand-bg w-full max-w-md rounded-t-[2.5rem] px-8 pt-8 pb-12 flex flex-col items-center gap-5"
+        initial={{ y: '100%' }}
+        animate={{ y: 0 }}
+        exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+      >
+        <div className="w-10 h-1 rounded-full bg-brand-navy/10 mb-1" />
+        <div className="bg-gradient-to-b from-indigo-100 to-purple-50 rounded-[2rem] p-6 shadow-inner">
+          <PixelAvatar config={avatar ?? undefined} uid={uid} size={96} view="tall" />
+        </div>
+        <button
+          onClick={onCustomise}
+          className="w-full py-3 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-95 transition-all"
+        >
+          Customise Avatar
+        </button>
+      </motion.div>
     </motion.div>
   );
 }

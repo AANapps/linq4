@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
-import { PixelAvatar, AvatarCustomiserModal, DailyWheelModal } from './PixelAvatar';
+import { PixelAvatar, AvatarCustomiserModal, AvatarViewModal, DailyWheelModal } from './PixelAvatar';
 import {
   type UserAvatar,
   AVATAR_ITEMS, STAMP_MILESTONE_REWARDS,
@@ -7415,6 +7415,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
   const [activeSubTab, setActiveSubTab] = useState<'posts' | 'interactions'>('posts');
   const [showProfileSettings, setShowProfileSettings] = useState(false);
   const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges'>(null);
+  const [avatarViewOpen, setAvatarViewOpen] = useState(false);
   const [avatarCustomiserOpen, setAvatarCustomiserOpen] = useState(false);
   const [dailyWheelOpen, setDailyWheelOpen] = useState(false);
   const isAdmin = user.email === ADMIN_EMAIL;
@@ -7835,6 +7836,20 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
     <div className="space-y-6 pb-20 text-brand-navy">
       {/* Avatar customiser modal */}
       <AnimatePresence>
+        {avatarViewOpen && (
+          <AvatarViewModal
+            avatar={profile.avatar}
+            uid={profile.uid}
+            onClose={() => setAvatarViewOpen(false)}
+            onCustomise={() => {
+              setAvatarViewOpen(false);
+              setAvatarCustomiserOpen(true);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {avatarCustomiserOpen && profile.avatar && (
           <AvatarCustomiserModal
             avatar={profile.avatar}
@@ -7877,23 +7892,23 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           </button>
         )}
 
-        {/* Pixel avatar — tap to customise */}
+        {/* Pixel avatar — tap to view full body */}
         <div className="flex flex-col items-center mb-3">
           <button
             onClick={() => {
               if (!profile.avatar) {
                 updateDoc(doc(db, 'users', profile.uid), { avatar: deriveAvatarFromUid(profile.uid) })
-                  .then(() => setAvatarCustomiserOpen(true));
+                  .then(() => setAvatarViewOpen(true));
               } else {
-                setAvatarCustomiserOpen(true);
+                setAvatarViewOpen(true);
               }
             }}
-            className="bg-gradient-to-b from-indigo-50 to-purple-50 rounded-[2rem] p-3 border-4 border-white shadow-xl active:scale-95 transition-all"
+            className="bg-gradient-to-b from-indigo-50 to-purple-50 rounded-full p-2 border-4 border-white shadow-xl active:scale-95 transition-all"
           >
-            <PixelAvatar config={profile.avatar} uid={profile.uid} size={72} view="full" />
+            <PixelAvatar config={profile.avatar} uid={profile.uid} size={64} view="head" />
           </button>
           <div className="flex items-center gap-2 mt-2">
-            <p className="text-[9px] text-brand-navy/40 font-bold uppercase tracking-wider">tap to customise</p>
+            <p className="text-[9px] text-brand-navy/40 font-bold uppercase tracking-wider">tap to view</p>
             <span className="text-brand-navy/20">·</span>
             <button
               onClick={() => setDailyWheelOpen(true)}
