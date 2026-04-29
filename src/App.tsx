@@ -3580,6 +3580,16 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const [showNFCStamp, setShowNFCStamp] = useState(false);
   const [autoNFCStoreId, setAutoNFCStoreId] = useState<string | null>(null);
 
+  // Badge notification system
+  const [allBadgesGlobal, setAllBadgesGlobal] = useState<AppBadge[]>([]);
+  const [followersCountG, setFollowersCountG] = useState(0);
+  const [followingCountG, setFollowingCountG] = useState(0);
+  const [postsCountG, setPostsCountG] = useState(0);
+  const [badgeNotifQueue, setBadgeNotifQueue] = useState<AppBadge[]>([]);
+  const seenBadgeIdsRef = useRef<Set<string>>(new Set(JSON.parse(localStorage.getItem(`seenBadges_${user.uid}`) || '[]')));
+  // Delay detection until initial data has loaded to avoid false positives
+  const [badgeDetectionReady, setBadgeDetectionReady] = useState(false);
+
   useEffect(() => {
     if (pendingNFCStoreId) {
       setAutoNFCStoreId(pendingNFCStoreId);
@@ -3636,6 +3646,62 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       setMyStandardEntries(m);
     });
   }, [user.uid]);
+
+  // Badge notification listeners
+  useEffect(() => {
+    return onSnapshot(collection(db, 'badges'), snap =>
+      setAllBadgesGlobal(snap.docs.map(d => ({ id: d.id, ...d.data() } as AppBadge)))
+    );
+  }, []);
+  useEffect(() => {
+    const q = query(collection(db, 'follows'), where('followingUid', '==', user.uid));
+    return onSnapshot(q, snap => setFollowersCountG(snap.size));
+  }, [user.uid]);
+  useEffect(() => {
+    const q = query(collection(db, 'follows'), where('followerUid', '==', user.uid));
+    return onSnapshot(q, snap => setFollowingCountG(snap.size));
+  }, [user.uid]);
+  useEffect(() => {
+    const q = query(collection(db, 'global_posts'), where('authorUid', '==', user.uid));
+    return onSnapshot(q, snap => setPostsCountG(snap.size));
+  }, [user.uid]);
+  // Allow 2s for initial data to settle before detecting earnings
+  useEffect(() => {
+    const t = setTimeout(() => setBadgeDetectionReady(true), 2000);
+    return () => clearTimeout(t);
+  }, []);
+
+  // Detect newly earned badges
+  useEffect(() => {
+    if (!badgeDetectionReady || allBadgesGlobal.length === 0 || !profile) return;
+
+    const lifetimeStamps = Math.max(profile.totalStamps || 0, initialCards.reduce((acc, c) => acc + (c.current_stamps || 0), 0));
+    const metrics: Record<BadgeMetric, number> = {
+      stamps: lifetimeStamps,
+      cards_completed: Math.max(profile.totalRedeemed || 0, initialCards.filter(c => c.isArchived && c.isRedeemed).length),
+      challenges_joined: myStandardEntries.size,
+      memberships: initialCards.filter(c => !c.isArchived).length,
+      followers: followersCountG,
+      following: followingCountG,
+      posts: postsCountG,
+    };
+    const earned = allBadgesGlobal.filter(b => (metrics[b.metric] ?? 0) >= b.threshold);
+
+    const isFirstLoad = localStorage.getItem(`seenBadgesInit_${user.uid}`) !== 'true';
+    if (isFirstLoad) {
+      earned.forEach(b => seenBadgeIdsRef.current.add(b.id));
+      localStorage.setItem(`seenBadges_${user.uid}`, JSON.stringify([...seenBadgeIdsRef.current]));
+      localStorage.setItem(`seenBadgesInit_${user.uid}`, 'true');
+      return;
+    }
+
+    const newBadges = earned.filter(b => !seenBadgeIdsRef.current.has(b.id));
+    if (newBadges.length > 0) {
+      newBadges.forEach(b => seenBadgeIdsRef.current.add(b.id));
+      localStorage.setItem(`seenBadges_${user.uid}`, JSON.stringify([...seenBadgeIdsRef.current]));
+      setBadgeNotifQueue(q => [...q, ...newBadges]);
+    }
+  }, [badgeDetectionReady, allBadgesGlobal, initialCards, profile, followersCountG, followingCountG, postsCountG, myStandardEntries]);
 
   const handleJoinStore = async (store: StoreProfile) => {
     if (!user) return;
@@ -4183,6 +4249,50 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           user={user}
         />
       )}
+
+      {/* Badge earned notification */}
+      <AnimatePresence>
+        {badgeNotifQueue.length > 0 && (() => {
+          const b = badgeNotifQueue[0];
+          const dismiss = () => setBadgeNotifQueue(q => q.slice(1));
+          return (
+            <motion.div
+              key={b.id}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[300] flex items-end max-w-md mx-auto"
+              onClick={dismiss}
+            >
+              <motion.div
+                initial={{ y: 120, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 120, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                className="w-full bg-brand-bg rounded-t-3xl px-6 pt-6 pb-12 space-y-4"
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="flex justify-center">
+                  <motion.div
+                    initial={{ scale: 0.5, rotate: -15 }} animate={{ scale: 1, rotate: 0 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 18, delay: 0.1 }}
+                    className="w-24 h-24 rounded-[2rem] flex items-center justify-center text-5xl shadow-xl"
+                    style={{ background: `linear-gradient(135deg, ${b.color}ee, ${b.color}99)` }}
+                  >{b.icon}</motion.div>
+                </div>
+                <div className="text-center space-y-1">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold">Badge Unlocked</p>
+                  <p className="font-display text-2xl font-bold text-brand-navy">{b.name}</p>
+                  {b.description ? <p className="text-sm text-brand-navy/60 leading-relaxed">{b.description}</p> : null}
+                  <p className="text-xs text-brand-navy/40 mt-1">{BADGE_METRIC_LABELS[b.metric]} ≥ {b.threshold}</p>
+                </div>
+                {badgeNotifQueue.length > 1 && (
+                  <p className="text-center text-[10px] text-brand-navy/30 font-medium">+{badgeNotifQueue.length - 1} more badge{badgeNotifQueue.length - 1 > 1 ? 's' : ''}</p>
+                )}
+                <button onClick={dismiss} className="w-full py-3.5 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-[0.98] transition-all">
+                  Awesome!
+                </button>
+              </motion.div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
     </motion.div>
   );
 }
