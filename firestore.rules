@@ -179,6 +179,11 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    match /badges/{badgeId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
     match /reports/{reportId} {
       allow create: if isAuthenticated();
     }
