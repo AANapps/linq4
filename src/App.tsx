@@ -106,7 +106,8 @@ import {
   Wifi,
   Smartphone,
   Tag,
-  Package
+  Package,
+  Pencil
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
@@ -471,6 +472,7 @@ type BadgeMetric = 'stamps' | 'cards_completed' | 'challenges_joined' | 'members
 interface AppBadge {
   id: string;
   name: string;
+  description?: string;
   color: string;
   icon: string;
   metric: BadgeMetric;
@@ -2432,15 +2434,28 @@ function BadgesAdminPanel({ onClose }: { onClose: () => void }) {
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [showList, setShowList] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
 
-  // Form state
+  // Create form state
   const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
   const [metric, setMetric] = useState<BadgeMetric>('stamps');
   const [threshold, setThreshold] = useState('');
   const [color, setColor] = useState(BADGE_COLORS[0]);
   const [icon, setIcon] = useState(BADGE_ICONS[0]);
 
+  // Edit form state
+  const [editName, setEditName] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editMetric, setEditMetric] = useState<BadgeMetric>('stamps');
+  const [editThreshold, setEditThreshold] = useState('');
+  const [editColor, setEditColor] = useState(BADGE_COLORS[0]);
+  const [editIcon, setEditIcon] = useState(BADGE_ICONS[0]);
+
   const inputCls = 'w-full bg-white border border-brand-navy/15 rounded-2xl px-4 py-3 text-sm text-brand-navy placeholder:text-brand-navy/30 focus:outline-none focus:ring-2 focus:ring-brand-gold/40';
+  const editInputCls = 'w-full bg-brand-bg border border-brand-navy/10 rounded-2xl px-4 py-3 text-sm text-brand-navy placeholder:text-brand-navy/30 focus:outline-none focus:ring-2 focus:ring-brand-gold/40';
 
   useEffect(() => {
     return onSnapshot(
@@ -2455,10 +2470,32 @@ function BadgesAdminPanel({ onClose }: { onClose: () => void }) {
     setSaving(true);
     try {
       await addDoc(collection(db, 'badges'), {
-        name: name.trim(), color, icon, metric, threshold: t, createdAt: serverTimestamp(),
+        name: name.trim(), description: description.trim(), color, icon, metric, threshold: t, createdAt: serverTimestamp(),
       });
-      setName(''); setThreshold(''); setMetric('stamps'); setColor(BADGE_COLORS[0]); setIcon(BADGE_ICONS[0]);
+      setName(''); setDescription(''); setThreshold(''); setMetric('stamps'); setColor(BADGE_COLORS[0]); setIcon(BADGE_ICONS[0]);
     } finally { setSaving(false); }
+  };
+
+  const startEdit = (b: AppBadge) => {
+    setEditingId(b.id);
+    setEditName(b.name);
+    setEditDescription(b.description ?? '');
+    setEditMetric(b.metric);
+    setEditThreshold(String(b.threshold));
+    setEditColor(b.color);
+    setEditIcon(b.icon);
+  };
+
+  const handleUpdate = async () => {
+    const t = parseInt(editThreshold);
+    if (!editName.trim() || isNaN(t) || t < 1 || !editingId) return;
+    setEditSaving(true);
+    try {
+      await updateDoc(doc(db, 'badges', editingId), {
+        name: editName.trim(), description: editDescription.trim(), color: editColor, icon: editIcon, metric: editMetric, threshold: t,
+      });
+      setEditingId(null);
+    } finally { setEditSaving(false); }
   };
 
   const handleDelete = async (id: string) => {
@@ -2500,6 +2537,7 @@ function BadgesAdminPanel({ onClose }: { onClose: () => void }) {
             </div>
 
             <input value={name} onChange={e => setName(e.target.value)} placeholder="Badge name (e.g. Coffee Devotee)" className={inputCls} />
+            <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Description (optional, shown on profile)" rows={2} className={cn(inputCls, 'resize-none')} />
 
             {/* Metric & threshold */}
             <div className="flex gap-2">
@@ -2544,34 +2582,114 @@ function BadgesAdminPanel({ onClose }: { onClose: () => void }) {
             </button>
           </div>
 
-          {/* Existing badges */}
+          {/* Existing badges — collapsible */}
           {badges.length > 0 && (
             <div className="space-y-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Active Badges ({badges.length})</p>
-              {badges.map(b => (
-                <div key={b.id} className="bg-white rounded-2xl border border-black/5 p-4 flex items-center gap-3">
-                  <div
-                    className="w-12 h-12 rounded-[1rem] flex items-center justify-center text-2xl shrink-0 shadow-sm"
-                    style={{ background: `linear-gradient(135deg, ${b.color}ee, ${b.color}99)` }}
-                  >{b.icon}</div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-brand-navy text-sm leading-tight">{b.name}</p>
-                    <p className="text-xs text-brand-navy/50 mt-0.5">{BADGE_METRIC_LABELS[b.metric]} ≥ {b.threshold}</p>
-                  </div>
-                  {confirmDelete === b.id ? (
-                    <div className="flex gap-1.5">
-                      <button onClick={() => setConfirmDelete(null)} className="text-[10px] font-bold text-brand-navy/40 px-2 py-1 rounded-lg bg-brand-navy/5">Cancel</button>
-                      <button onClick={() => handleDelete(b.id)} disabled={deletingId === b.id} className="text-[10px] font-bold text-white px-2 py-1 rounded-lg bg-brand-rose disabled:opacity-50">
-                        {deletingId === b.id ? '…' : 'Delete'}
-                      </button>
-                    </div>
-                  ) : (
-                    <button onClick={() => setConfirmDelete(b.id)} className="p-1.5 rounded-xl bg-brand-rose/10 active:scale-90 transition-transform">
-                      <Trash2 size={13} className="text-brand-rose" />
-                    </button>
-                  )}
-                </div>
-              ))}
+              <button
+                onClick={() => setShowList(v => !v)}
+                className="w-full flex items-center justify-between bg-white rounded-2xl border border-black/5 px-4 py-3 active:scale-[0.98] transition-all"
+              >
+                <span className="text-sm font-bold text-brand-navy">View all badges ({badges.length})</span>
+                <motion.div animate={{ rotate: showList ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                  <ChevronDown size={16} className="text-brand-navy/40" />
+                </motion.div>
+              </button>
+
+              <AnimatePresence>
+                {showList && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-3 overflow-hidden"
+                  >
+                    {badges.map(b => (
+                      <div key={b.id} className="bg-white rounded-2xl border border-black/5 overflow-hidden">
+                        {/* Badge row */}
+                        <div className="p-4 flex items-center gap-3">
+                          <div
+                            className="w-12 h-12 rounded-[1rem] flex items-center justify-center text-2xl shrink-0 shadow-sm"
+                            style={{ background: `linear-gradient(135deg, ${editingId === b.id ? editColor : b.color}ee, ${editingId === b.id ? editColor : b.color}99)` }}
+                          >{editingId === b.id ? editIcon : b.icon}</div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-brand-navy text-sm leading-tight">{b.name}</p>
+                            <p className="text-xs text-brand-navy/50 mt-0.5">{BADGE_METRIC_LABELS[b.metric]} ≥ {b.threshold}</p>
+                            {b.description ? <p className="text-[10px] text-brand-navy/40 mt-0.5 line-clamp-1">{b.description}</p> : null}
+                          </div>
+                          <div className="flex gap-1.5 shrink-0">
+                            {editingId !== b.id && (
+                              <button onClick={() => startEdit(b)} className="p-1.5 rounded-xl bg-brand-navy/8 active:scale-90 transition-transform">
+                                <Pencil size={13} className="text-brand-navy/50" />
+                              </button>
+                            )}
+                            {confirmDelete === b.id ? (
+                              <div className="flex gap-1.5">
+                                <button onClick={() => setConfirmDelete(null)} className="text-[10px] font-bold text-brand-navy/40 px-2 py-1 rounded-lg bg-brand-navy/5">Cancel</button>
+                                <button onClick={() => handleDelete(b.id)} disabled={deletingId === b.id} className="text-[10px] font-bold text-white px-2 py-1 rounded-lg bg-brand-rose disabled:opacity-50">
+                                  {deletingId === b.id ? '…' : 'Delete'}
+                                </button>
+                              </div>
+                            ) : (
+                              <button onClick={() => setConfirmDelete(b.id)} className="p-1.5 rounded-xl bg-brand-rose/10 active:scale-90 transition-transform">
+                                <Trash2 size={13} className="text-brand-rose" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Inline edit form */}
+                        <AnimatePresence>
+                          {editingId === b.id && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="border-t border-brand-navy/8 bg-brand-bg/50 p-4 space-y-3 overflow-hidden"
+                            >
+                              <input value={editName} onChange={e => setEditName(e.target.value)} placeholder="Badge name" className={editInputCls} />
+                              <textarea value={editDescription} onChange={e => setEditDescription(e.target.value)} placeholder="Description (optional)" rows={2} className={cn(editInputCls, 'resize-none')} />
+                              <div className="flex gap-2">
+                                <select value={editMetric} onChange={e => setEditMetric(e.target.value as BadgeMetric)} className={cn(editInputCls, 'flex-1')}>
+                                  {(Object.entries(BADGE_METRIC_LABELS) as [BadgeMetric, string][]).map(([k, v]) => (
+                                    <option key={k} value={k}>{v}</option>
+                                  ))}
+                                </select>
+                                <input value={editThreshold} onChange={e => setEditThreshold(e.target.value)} placeholder="Amount" type="number" min="1" className={cn(editInputCls, 'w-24')} />
+                              </div>
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2">Colour</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {BADGE_COLORS.map(c => (
+                                    <button key={c} onClick={() => setEditColor(c)}
+                                      className={cn('w-7 h-7 rounded-full border-2 transition-transform active:scale-90', editColor === c ? 'border-brand-navy scale-110' : 'border-white')}
+                                      style={{ background: c }} />
+                                  ))}
+                                </div>
+                              </div>
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2">Icon</p>
+                                <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
+                                  {BADGE_ICONS.map((ic, idx) => (
+                                    <button key={idx} onClick={() => setEditIcon(ic)}
+                                      className={cn('w-9 h-9 rounded-xl text-xl flex items-center justify-center transition-all active:scale-90', editIcon === ic ? 'bg-brand-navy/10 ring-2 ring-brand-navy/30' : 'bg-brand-navy/5 hover:bg-brand-navy/10')}
+                                    >{ic}</button>
+                                  ))}
+                                </div>
+                              </div>
+                              <div className="flex gap-2">
+                                <button onClick={() => setEditingId(null)} className="flex-1 py-2.5 rounded-2xl border border-brand-navy/15 text-brand-navy/60 font-bold text-sm active:scale-[0.98] transition-all">Cancel</button>
+                                <button onClick={handleUpdate} disabled={editSaving || !editName.trim() || !editThreshold} className="flex-1 py-2.5 rounded-2xl bg-brand-navy text-white font-bold text-sm disabled:opacity-40 active:scale-[0.98] transition-all">
+                                  {editSaving ? 'Saving…' : 'Save changes'}
+                                </button>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )}
         </div>
@@ -6562,6 +6680,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
   const PROFILE_PAGE_SIZE = 10;
   const [vendorStore, setVendorStore] = useState<StoreProfile | null>(null);
   const [storeCards, setStoreCards] = useState<Card[]>([]);
+  const [selectedBadge, setSelectedBadge] = useState<AppBadge | null>(null);
 
   useEffect(() => {
     if (profile?.role !== 'vendor') return;
@@ -7031,17 +7150,50 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 px-1">Badges</p>
           <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
             {earnedBadges.map(b => (
-              <div key={b.id} className="shrink-0 flex flex-col items-center gap-1">
+              <button key={b.id} onClick={() => setSelectedBadge(b)} className="shrink-0 flex flex-col items-center gap-1 active:scale-95 transition-transform">
                 <div
                   className="w-11 h-11 rounded-[0.875rem] flex items-center justify-center text-xl shadow-sm"
                   style={{ background: `linear-gradient(135deg, ${b.color}ee, ${b.color}99)` }}
                 >{b.icon}</div>
                 <p className="text-[8px] font-bold text-brand-navy/50 text-center max-w-[48px] leading-tight line-clamp-2">{b.name}</p>
-              </div>
+              </button>
             ))}
           </div>
         </div>
       )}
+
+      {/* Badge detail sheet */}
+      <AnimatePresence>
+        {selectedBadge && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] flex items-end max-w-md mx-auto"
+            onClick={() => setSelectedBadge(null)}
+          >
+            <motion.div
+              initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+              className="w-full bg-brand-bg rounded-t-3xl p-6 pb-10 space-y-4"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-4">
+                <div
+                  className="w-16 h-16 rounded-[1.25rem] flex items-center justify-center text-3xl shadow-lg shrink-0"
+                  style={{ background: `linear-gradient(135deg, ${selectedBadge.color}ee, ${selectedBadge.color}99)` }}
+                >{selectedBadge.icon}</div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-brand-navy text-lg leading-tight">{selectedBadge.name}</p>
+                  <p className="text-xs text-brand-navy/50 mt-1">{BADGE_METRIC_LABELS[selectedBadge.metric]} ≥ {selectedBadge.threshold}</p>
+                </div>
+              </div>
+              {selectedBadge.description ? (
+                <p className="text-sm text-brand-navy/70 leading-relaxed">{selectedBadge.description}</p>
+              ) : null}
+              <button onClick={() => setSelectedBadge(null)} className="w-full py-3 rounded-2xl bg-brand-navy/8 text-brand-navy font-bold text-sm active:scale-[0.98] transition-all">Close</button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* My challenges */}
       {myChallenges.length > 0 && (
