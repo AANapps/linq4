@@ -3649,24 +3649,26 @@ function ProgrammeDetailModal({ prog, sc, onJoin, onView, onClose, joiningProgra
 type CelebAnimType = 'confetti' | 'sparks' | 'fireworks' | 'sparkles' | 'burst';
 const CELEB_ANIM_TYPES: CelebAnimType[] = ['confetti', 'sparks', 'fireworks', 'sparkles', 'burst'];
 
+const TOP_Z = 999999;
+
 function fireCelebAnimation(type: CelebAnimType) {
   switch (type) {
     case 'confetti':
-      confetti({ particleCount: 120, spread: 70, origin: { y: 0.55 }, colors: ['#FFD700', '#FFA500', '#FF6B6B', '#4ECDC4', '#A78BFA'] });
+      confetti({ particleCount: 120, spread: 70, origin: { y: 0.55 }, zIndex: TOP_Z, colors: ['#FFD700', '#FFA500', '#FF6B6B', '#4ECDC4', '#A78BFA'] });
       break;
     case 'sparks':
-      confetti({ particleCount: 70, spread: 40, startVelocity: 50, decay: 0.88, gravity: 1.4, scalar: 0.55, origin: { y: 0.55 }, colors: ['#FFD700', '#FF8C00', '#FF4500', '#FFF200', '#FF6B35'] });
+      confetti({ particleCount: 70, spread: 40, startVelocity: 50, decay: 0.88, gravity: 1.4, scalar: 0.55, origin: { y: 0.55 }, zIndex: TOP_Z, colors: ['#FFD700', '#FF8C00', '#FF4500', '#FFF200', '#FF6B35'] });
       break;
     case 'fireworks':
       [{ angle: 60, x: 0.2 }, { angle: 90, x: 0.5 }, { angle: 120, x: 0.8 }].forEach(({ angle, x }, i) =>
-        setTimeout(() => confetti({ particleCount: 60, angle, spread: 55, origin: { x, y: 0.65 }, colors: ['#FFD700', '#FF6B6B', '#4ECDC4', '#A78BFA', '#FFA500'] }), i * 150)
+        setTimeout(() => confetti({ particleCount: 60, angle, spread: 55, origin: { x, y: 0.65 }, zIndex: TOP_Z, colors: ['#FFD700', '#FF6B6B', '#4ECDC4', '#A78BFA', '#FFA500'] }), i * 150)
       );
       break;
     case 'sparkles':
-      confetti({ particleCount: 90, spread: 100, startVelocity: 22, gravity: 0.5, scalar: 0.85, origin: { y: 0.55 }, colors: ['#FFD700', '#FFFFFF', '#FFF8DC', '#FFEAA7', '#FDCB6E'] });
+      confetti({ particleCount: 90, spread: 100, startVelocity: 22, gravity: 0.5, scalar: 0.85, origin: { y: 0.55 }, zIndex: TOP_Z, colors: ['#FFD700', '#FFFFFF', '#FFF8DC', '#FFEAA7', '#FDCB6E'] });
       break;
     case 'burst':
-      confetti({ particleCount: 80, spread: 360, startVelocity: 18, decay: 0.93, gravity: 0.6, origin: { x: 0.5, y: 0.5 }, colors: ['#FFD700', '#FF6B6B', '#4ECDC4', '#A78BFA', '#FF8C00', '#00B894'] });
+      confetti({ particleCount: 80, spread: 360, startVelocity: 18, decay: 0.93, gravity: 0.6, origin: { x: 0.5, y: 0.5 }, zIndex: TOP_Z, colors: ['#FFD700', '#FF6B6B', '#4ECDC4', '#A78BFA', '#FF8C00', '#00B894'] });
       break;
   }
 }
@@ -6333,7 +6335,7 @@ function LoyaltyCard({ card, store, onViewStore }: { card: Card, store?: StorePr
     const hit = tiers.find(t => t.stamps > prev && t.stamps <= curr);
     if (hit) {
       setUnlockedReward(hit.reward);
-      confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 }, colors: ['#f5a623', '#ffffff', '#1e3a5f'] });
+      confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 }, zIndex: TOP_Z, colors: ['#f5a623', '#ffffff', '#1e3a5f'] });
       setTimeout(() => setUnlockedReward(null), 4000);
     }
   }, [card.current_stamps]);
@@ -9513,7 +9515,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
               <div key={comment.id} className="flex gap-2.5">
                 <button onClick={() => handleViewCommentAuthor(comment.fromUid)} className="shrink-0 mt-0.5 hover:opacity-80 transition-opacity">
                   <div className="w-7 h-7 rounded-full overflow-hidden border border-black/5 bg-indigo-50 flex items-center justify-center">
-                    <PixelAvatar uid={comment.fromUid} size={28} view="head" />
+                    <LivePixelAvatar uid={comment.fromUid} size={28} view="head" />
                   </div>
                 </button>
                 <div className="flex-1 min-w-0">
@@ -9554,7 +9556,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
       {currentUser && (
         <div className="px-5 pb-4 border-t border-black/5 pt-3 flex gap-2">
           <div className="w-7 h-7 rounded-full overflow-hidden border border-black/5 shrink-0 bg-indigo-50 flex items-center justify-center">
-            <PixelAvatar config={currentProfile?.avatar} uid={currentProfile?.uid ?? currentUser.uid} size={28} view="head" />
+            <LivePixelAvatar uid={currentUser.uid} size={28} view="head" />
           </div>
           <div className="flex-1 flex gap-2">
             <input
