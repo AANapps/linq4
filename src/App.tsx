@@ -7961,15 +7961,15 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
       {/* Compact stats — dark blue gradient, gold text */}
       <div className="flex gap-2">
         {[
-          { icon: <CheckCircle2 size={15} className="text-brand-gold shrink-0" />, val: lifetimeStamps,   label: 'Stamps'  },
-          { icon: <Trophy        size={15} className="text-brand-gold shrink-0" />, val: archivedCardsCount, label: 'Rewards' },
-          { icon: <Store        size={15} className="text-brand-gold shrink-0" />, val: activeCardsCount,  label: 'Cards'   },
+          { icon: <CheckCircle2 size={15} className="text-blue-400 shrink-0" />, val: lifetimeStamps,   label: 'Stamps'  },
+          { icon: <Trophy        size={15} className="text-blue-400 shrink-0" />, val: archivedCardsCount, label: 'Rewards' },
+          { icon: <Store        size={15} className="text-blue-400 shrink-0" />, val: activeCardsCount,  label: 'Cards'   },
         ].map(s => (
-          <div key={s.label} className="flex-1 rounded-2xl px-3 py-2.5 flex items-center gap-2" style={{ background: 'linear-gradient(135deg, #1e3a5f, #2d5a8e)' }}>
+          <div key={s.label} className="flex-1 rounded-2xl px-3 py-2.5 flex items-center gap-2" style={{ background: 'linear-gradient(135deg, #dbeafe, #eff6ff)' }}>
             {s.icon}
             <div>
-              <p className="font-bold text-sm leading-none" style={{ color: '#FBBF24' }}>{s.val}</p>
-              <p className="text-[9px] text-white/60 font-bold uppercase tracking-wider mt-0.5">{s.label}</p>
+              <p className="font-bold text-sm leading-none text-brand-navy">{s.val}</p>
+              <p className="text-[9px] font-bold uppercase tracking-wider mt-0.5 text-brand-navy/50">{s.label}</p>
             </div>
           </div>
         ))}
@@ -8044,20 +8044,20 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
               const pct = c.goal > 0 ? Math.min(100, Math.round((progress / c.goal) * 100)) : 0;
               const done = pct >= 100;
               return (
-                <div key={c.id} className="rounded-2xl px-4 py-3" style={{ background: 'linear-gradient(135deg, #e85555, #f47070)' }}>
+                <div key={c.id} className="rounded-2xl px-4 py-3" style={{ background: 'linear-gradient(135deg, #fee2e2, #fef2f2)' }}>
                   <div className="flex items-center justify-between mb-1.5 gap-2">
-                    <p className="text-xs font-bold text-white leading-tight line-clamp-1 flex-1">{c.title}</p>
-                    <span className={cn('text-[10px] font-bold shrink-0', done ? 'text-green-300' : 'text-amber-300')}>{done ? '✓ Done' : `${pct}%`}</span>
+                    <p className="text-xs font-bold text-red-700 leading-tight line-clamp-1 flex-1">{c.title}</p>
+                    <span className={cn('text-[10px] font-bold shrink-0', done ? 'text-green-600' : 'text-red-400')}>{done ? '✓ Done' : `${pct}%`}</span>
                   </div>
-                  <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-red-200 rounded-full overflow-hidden">
                     <motion.div
-                      className={cn('h-full rounded-full', done ? 'bg-green-400' : 'bg-amber-400')}
+                      className={cn('h-full rounded-full', done ? 'bg-green-500' : 'bg-red-400')}
                       initial={{ width: 0 }}
                       animate={{ width: `${pct}%` }}
                       transition={{ duration: 0.6, ease: 'easeOut' }}
                     />
                   </div>
-                  <p className="text-[9px] text-white/60 mt-1.5 font-medium">{progress} / {c.goal} {c.unit} · 🎁 {c.reward}</p>
+                  <p className="text-[9px] text-red-400 mt-1.5 font-medium">{progress} / {c.goal} {c.unit} · 🎁 {c.reward}</p>
                 </div>
               );
             })}
@@ -12217,9 +12217,9 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
               { val: publicUserRewards, label: 'Rewards' },
             ].map(s => (
               <div key={s.label} className="flex-1 rounded-2xl px-3 py-2.5 flex flex-col items-center gap-0.5"
-                   style={{ background: 'linear-gradient(135deg, #1e3a5f, #2d5a8e)' }}>
-                <p className="font-bold text-sm leading-none" style={{ color: '#FBBF24' }}>{s.val}</p>
-                <p className="text-[9px] text-white/60 font-bold uppercase tracking-wider">{s.label}</p>
+                   style={{ background: 'linear-gradient(135deg, #dbeafe, #eff6ff)' }}>
+                <p className="font-bold text-sm leading-none text-brand-navy">{s.val}</p>
+                <p className="text-[9px] font-bold uppercase tracking-wider text-brand-navy/50">{s.label}</p>
               </div>
             ))}
           </div>
@@ -12354,20 +12354,20 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
               const pct = c.goal > 0 ? Math.min(100, Math.round((progress / c.goal) * 100)) : 0;
               const done = pct >= 100;
               return (
-                <div key={c.id} className="rounded-2xl px-4 py-3" style={{ background: 'linear-gradient(135deg, #e85555, #f47070)' }}>
+                <div key={c.id} className="rounded-2xl px-4 py-3" style={{ background: 'linear-gradient(135deg, #fee2e2, #fef2f2)' }}>
                   <div className="flex items-center justify-between mb-1.5 gap-2">
-                    <p className="text-xs font-bold text-white leading-tight line-clamp-1 flex-1">{c.title}</p>
-                    <span className={cn('text-[10px] font-bold shrink-0', done ? 'text-green-300' : 'text-amber-300')}>{done ? '✓ Done' : `${pct}%`}</span>
+                    <p className="text-xs font-bold text-red-700 leading-tight line-clamp-1 flex-1">{c.title}</p>
+                    <span className={cn('text-[10px] font-bold shrink-0', done ? 'text-green-600' : 'text-red-400')}>{done ? '✓ Done' : `${pct}%`}</span>
                   </div>
-                  <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-red-200 rounded-full overflow-hidden">
                     <motion.div
-                      className={cn('h-full rounded-full', done ? 'bg-green-400' : 'bg-amber-400')}
+                      className={cn('h-full rounded-full', done ? 'bg-green-500' : 'bg-red-400')}
                       initial={{ width: 0 }}
                       animate={{ width: `${pct}%` }}
                       transition={{ duration: 0.6, ease: 'easeOut' }}
                     />
                   </div>
-                  <p className="text-[9px] text-white/60 mt-1.5 font-medium">{progress} / {c.goal} {c.unit} · 🎁 {c.reward}</p>
+                  <p className="text-[9px] text-red-400 mt-1.5 font-medium">{progress} / {c.goal} {c.unit} · 🎁 {c.reward}</p>
                 </div>
               );
             })}
