@@ -97,9 +97,10 @@ function accessoryPixels(id: string, color: string): CR[] {
 
 function facePixels(skin: string, hairColor: string, mood: number): CR[] {
   const pixels: CR[] = [];
-  const dark = '#1A1010';
+  const dark  = '#1A1010';
   const white = '#FFFFFF';
-  const pink = '#FFB6C1';
+  const blush = '#FFB6C1';
+  const lip   = '#E07090'; // pink lips
 
   const sadMood   = mood < 30;
   const happyMood = mood >= 60;
@@ -120,22 +121,25 @@ function facePixels(skin: string, hairColor: string, mood: number): CR[] {
 
   // cheeks
   if (happyMood || grinMood) {
-    pixels.push(px(3, 7, 2, 1, pink), px(11, 7, 2, 1, pink));
+    pixels.push(px(3, 7, 2, 1, blush), px(11, 7, 2, 1, blush));
   }
 
-  // mouth — narrowed to 4 px wide so it reads as a mouth, not a moustache
+  // mouth — pink lips, 4 px wide
   if (grinMood) {
     pixels.push(
-      px(4, 7, 8, 1, dark),
-      px(4, 8, 2, 1, dark), px(10, 8, 2, 1, dark),
-      px(6, 8, 4, 1, white),
+      px(4, 7, 8, 1, dark),           // top lip outline
+      px(4, 8, 2, 1, lip), px(10, 8, 2, 1, lip), // lip corners
+      px(6, 8, 4, 1, white),          // teeth
     );
   } else if (happyMood) {
-    pixels.push(px(5, 7, 1, 1, dark), px(10, 7, 1, 1, dark), px(6, 8, 4, 1, dark));
+    pixels.push(
+      px(5, 7, 1, 1, dark), px(10, 7, 1, 1, dark), // smile corners
+      px(6, 8, 4, 1, lip),
+    );
   } else if (sadMood) {
-    pixels.push(px(6, 7, 4, 1, dark), px(5, 8, 1, 1, dark), px(10, 8, 1, 1, dark));
+    pixels.push(px(6, 7, 4, 1, lip), px(5, 8, 1, 1, dark), px(10, 8, 1, 1, dark));
   } else {
-    pixels.push(px(6, 8, 4, 1, dark)); // neutral: narrow flat line
+    pixels.push(px(6, 8, 4, 1, lip)); // neutral: pink lip line
   }
 
   return pixels;
@@ -400,7 +404,7 @@ export function AvatarCustomiserModal({ avatar, onSave, onClose }: AvatarCustomi
       {tab === 'skin' && (
         <div className="px-4 pt-2 flex-1 overflow-y-auto">
           <p className="text-xs font-bold text-brand-navy/40 mb-3 uppercase tracking-widest">Skin Tone</p>
-          <div className="grid grid-cols-5 gap-3 mb-6">
+          <div className="grid grid-cols-5 gap-3">
             {(Object.entries(SKIN_TONES) as [SkinTone, string][]).map(([key, color]) => (
               <button
                 key={key}
@@ -413,31 +417,31 @@ export function AvatarCustomiserModal({ avatar, onSave, onClose }: AvatarCustomi
               />
             ))}
           </div>
-          <p className="text-xs font-bold text-brand-navy/40 mb-3 uppercase tracking-widest">Hair Colour</p>
-          <div className="grid grid-cols-4 gap-3">
-            {Object.entries(HAIR_COLORS).map(([key, color]) => (
-              <button
-                key={key}
-                onClick={() => equip('hairColor', key)}
-                className={cn(
-                  'flex flex-col items-center gap-1 p-2 rounded-2xl border-2 transition-all',
-                  draft.hairColor === key ? 'border-brand-gold' : 'border-transparent bg-white',
-                )}
-              >
-                <div className="w-8 h-8 rounded-full" style={{ background: color }} />
-                <span className="text-[9px] font-bold capitalize text-brand-navy/60">{key}</span>
-              </button>
-            ))}
-          </div>
         </div>
       )}
 
       {/* Item grid tabs */}
       {tab !== 'skin' && (
         <div className="px-4 pt-2 flex-1 overflow-y-auto">
-          {/* Facial hair section inside the Hair tab */}
+          {/* Hair colour + facial hair — both inside the Hair tab */}
           {tab === 'hair' && (
             <div className="mb-4">
+              <p className="text-xs font-bold text-brand-navy/40 mb-2 uppercase tracking-widest">Hair Colour</p>
+              <div className="flex gap-2 flex-wrap mb-4">
+                {Object.entries(HAIR_COLORS).map(([key, color]) => (
+                  <button
+                    key={key}
+                    onClick={() => equip('hairColor', key)}
+                    className={cn(
+                      'flex flex-col items-center gap-1 p-2 rounded-2xl border-2 transition-all',
+                      draft.hairColor === key ? 'border-brand-gold bg-brand-gold/10' : 'border-transparent bg-white',
+                    )}
+                  >
+                    <div className="w-7 h-7 rounded-full border border-black/10" style={{ background: color }} />
+                    <span className="text-[8px] font-bold capitalize text-brand-navy/60">{key}</span>
+                  </button>
+                ))}
+              </div>
               <p className="text-xs font-bold text-brand-navy/40 mb-2 uppercase tracking-widest">Facial Hair</p>
               <div className="flex gap-2 flex-wrap">
                 {FACIAL_HAIR_STYLES.map(fh => (
