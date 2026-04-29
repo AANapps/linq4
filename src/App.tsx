@@ -2359,8 +2359,8 @@ function StickerCollectionModal({ stickerCard, programme, onClose }: {
                   {topPlayers.map((p, i) => (
                     <div key={p.uid} className="flex items-center gap-2.5 bg-brand-navy/5 rounded-2xl px-3 py-2">
                       <span className="text-[10px] font-black text-brand-navy/30 w-4 text-center shrink-0">{i + 1}</span>
-                      <div className="w-6 h-6 rounded-full overflow-hidden bg-brand-navy/10 shrink-0">
-                        {p.userPhoto ? <img src={p.userPhoto} alt="" className="w-full h-full object-cover" /> : null}
+                      <div className="w-6 h-6 rounded-full overflow-hidden bg-brand-navy/10 shrink-0 flex items-center justify-center">
+                        <LivePixelAvatar uid={p.uid} size={24} view="head" />
                       </div>
                       <p className="text-[11px] font-bold text-brand-navy flex-1 truncate">{p.userName || 'Player'}</p>
                       <div className="flex gap-0.5">
@@ -3569,8 +3569,8 @@ function ProgrammeDetailModal({ prog, sc, onJoin, onView, onClose, joiningProgra
                   {topPlayers.map((p, i) => (
                     <div key={p.uid} className="flex items-center gap-2.5 bg-white/5 rounded-2xl px-3 py-2.5">
                       <span className="text-[10px] font-black text-white/30 w-4 text-center shrink-0">{i + 1}</span>
-                      <div className="w-7 h-7 rounded-full overflow-hidden bg-white/10 shrink-0">
-                        {p.userPhoto ? <img src={p.userPhoto} alt="" className="w-full h-full object-cover" /> : null}
+                      <div className="w-7 h-7 rounded-full overflow-hidden bg-white/10 shrink-0 flex items-center justify-center">
+                        <LivePixelAvatar uid={p.uid} size={28} view="head" />
                       </div>
                       <p className="text-[11px] font-bold text-white flex-1 truncate">{p.userName || 'Player'}</p>
                       <div className="flex gap-0.5">
@@ -6968,6 +6968,18 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
   );
 }
 
+function LivePixelAvatar({ uid, size, view }: { uid?: string; size: number; view: 'head' | 'full' }) {
+  const [avatarConfig, setAvatarConfig] = useState<UserAvatar | null>(null);
+  useEffect(() => {
+    if (!uid) return;
+    return onSnapshot(doc(db, 'users', uid), (snap) => {
+      setAvatarConfig(snap.exists() ? (snap.data().avatar ?? null) : null);
+    }, () => {});
+  }, [uid]);
+  if (!uid) return null;
+  return <PixelAvatar config={avatarConfig ?? undefined} uid={uid} size={size} view={view} />;
+}
+
 function WallPostItem({ post, currentUser, wallOwnerUid, onViewUser }: { post: any, currentUser: FirebaseUser, wallOwnerUid?: string, onViewUser?: (u: UserProfile) => void, key?: React.Key }) {
   const [likes, setLikes] = useState<string[]>([]);
   const [replies, setReplies] = useState<any[]>([]);
@@ -7068,8 +7080,8 @@ function WallPostItem({ post, currentUser, wallOwnerUid, onViewUser }: { post: a
           onClick={() => handleViewProfile(post.fromUid)}
           className="flex items-center gap-3 hover:opacity-80 transition-opacity text-left"
         >
-          <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-navy/5">
-            <img src={post.fromPhoto} alt="" className="w-full h-full object-cover" />
+          <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-navy/5 bg-indigo-50 flex items-center justify-center">
+            <LivePixelAvatar uid={post.fromUid} size={40} view="head" />
           </div>
           <div>
             <p className="font-bold text-sm text-brand-navy">{post.fromName}</p>
@@ -7115,8 +7127,8 @@ function WallPostItem({ post, currentUser, wallOwnerUid, onViewUser }: { post: a
           {replies.map(reply => (
             <div key={reply.id} className="flex gap-3">
               <button onClick={() => handleViewProfile(reply.fromUid)} className="shrink-0 hover:opacity-80 transition-opacity">
-                <div className="w-6 h-6 rounded-full overflow-hidden">
-                  <img src={reply.fromPhoto} alt="" className="w-full h-full object-cover" />
+                <div className="w-6 h-6 rounded-full overflow-hidden bg-indigo-50 flex items-center justify-center">
+                  <LivePixelAvatar uid={reply.fromUid} size={24} view="head" />
                 </div>
               </button>
               <div>
@@ -9147,7 +9159,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
   const [newComment, setNewComment] = useState('');
   const [isCommenting, setIsCommenting] = useState(false);
   const [reportSent, setReportSent] = useState(false);
-  const [authorProfile, setAuthorProfile] = useState<{ name: string; logoUrl?: string; gender?: string } | null>(null);
+  const [authorProfile, setAuthorProfile] = useState<{ name: string; logoUrl?: string; gender?: string; avatar?: UserAvatar } | null>(null);
 
   useEffect(() => {
     if (post.authorRole === 'vendor' && post.storeId) {
@@ -9156,7 +9168,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
       }, () => {});
     }
     return onSnapshot(doc(db, 'users', post.authorUid), (snap) => {
-      if (snap.exists()) setAuthorProfile({ name: snap.data().name, gender: snap.data().gender });
+      if (snap.exists()) setAuthorProfile({ name: snap.data().name, gender: snap.data().gender, avatar: snap.data().avatar });
     }, () => {});
   }, [post.authorUid, post.storeId, post.authorRole]);
 
@@ -9760,8 +9772,8 @@ function NotificationsPanel({ notifications, onClose }: { notifications: Notific
                   notif.storeLogoUrl
                     ? <img src={notif.storeLogoUrl} alt="" className="w-full h-full object-cover" />
                     : <Store size={18} className="text-brand-navy/60" />
-                ) : notif.fromPhoto ? (
-                  <img src={notif.fromPhoto} alt="" className="w-full h-full object-cover" />
+                ) : notif.fromUid ? (
+                  <LivePixelAvatar uid={notif.fromUid} size={44} view="head" />
                 ) : (
                   <Sparkles size={18} className="text-brand-gold" />
                 )}
