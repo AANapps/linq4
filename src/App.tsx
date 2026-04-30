@@ -564,6 +564,7 @@ export default function App() {
   const [pendingNFCStoreId, setPendingNFCStoreId] = useState<string | null>(null);
   const [userCards, setUserCards] = useState<Card[]>([]);
   const [showSettings, setShowSettings] = useState(false);
+  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges'>(null);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -1329,7 +1330,26 @@ export default function App() {
             onClose={() => setShowSettings(false)}
             profile={profile}
             userCards={userCards}
+            isAdmin={profile?.email === ADMIN_EMAIL}
+            onOpenAdmin={() => { setShowSettings(false); setAdminView('menu'); }}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Admin Panels */}
+      <AnimatePresence>
+        {adminView === 'menu' && (
+          <AdminMenuModal
+            onClose={() => setAdminView(null)}
+            onOpenChallenges={() => setAdminView('challenges')}
+            onOpenBadges={() => setAdminView('badges')}
+          />
+        )}
+        {adminView === 'challenges' && (
+          <ChallengesAdminPanel onClose={() => setAdminView('menu')} />
+        )}
+        {adminView === 'badges' && (
+          <BadgesAdminPanel onClose={() => setAdminView('menu')} />
         )}
       </AnimatePresence>
 
@@ -7692,11 +7712,9 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
 function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, onViewUser, user }: { profile: UserProfile | null, userCards: Card[], stores?: StoreProfile[], onLogout: () => void, onDeleteAccount: () => Promise<void>, onViewUser: (u: UserProfile) => void, user: FirebaseUser }) {
   const [activeSubTab, setActiveSubTab] = useState<'posts' | 'interactions'>('posts');
   const [showProfileSettings, setShowProfileSettings] = useState(false);
-  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges'>(null);
   const [avatarViewOpen, setAvatarViewOpen] = useState(false);
   const [avatarCustomiserOpen, setAvatarCustomiserOpen] = useState(false);
   const [dailyWheelOpen, setDailyWheelOpen] = useState(false);
-  const isAdmin = user.email === ADMIN_EMAIL;
   const profileLastDocRef = useRef<any>(null);
   const [profileHasMore, setProfileHasMore] = useState(true);
   const [profileLoadingMore, setProfileLoadingMore] = useState(false);
@@ -7935,19 +7953,6 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
       {showProfileSettings && (
         <ProfileSettingsModal profile={profile} user={user} onClose={() => setShowProfileSettings(false)} onLogout={onLogout} onDeleteAccount={onDeleteAccount} />
       )}
-      {adminView === 'menu' && (
-        <AdminMenuModal
-          onClose={() => setAdminView(null)}
-          onOpenChallenges={() => setAdminView('challenges')}
-          onOpenBadges={() => setAdminView('badges')}
-        />
-      )}
-      {adminView === 'challenges' && (
-        <ChallengesAdminPanel onClose={() => setAdminView('menu')} />
-      )}
-      {adminView === 'badges' && (
-        <BadgesAdminPanel onClose={() => setAdminView('menu')} />
-      )}
     </AnimatePresence>
   );
 
@@ -8165,78 +8170,69 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         )}
       </AnimatePresence>
 
-      <header className="text-center relative">
+      <header className="relative">
         <button onClick={() => setShowProfileSettings(true)}
           className="absolute right-0 top-0 p-2 rounded-2xl bg-white border border-brand-navy/10 shadow-sm active:scale-95 transition-all">
           <Settings size={18} className="text-brand-navy/60" />
         </button>
-        {isAdmin && (
-          <button onClick={() => setAdminView('menu')}
-            className="absolute left-0 top-0 p-2 rounded-2xl bg-brand-gold/10 border border-brand-gold/30 shadow-sm active:scale-95 transition-all">
-            <Flag size={18} className="text-brand-gold" />
-          </button>
-        )}
 
-        {/* Pixel avatar — tap to view full body */}
-        <div className="flex flex-col items-center mb-3">
-          <button
-            onClick={() => {
-              if (!profile.avatar) {
-                updateDoc(doc(db, 'users', profile.uid), { avatar: deriveAvatarFromUid(profile.uid) })
-                  .then(() => setAvatarViewOpen(true));
-              } else {
-                setAvatarViewOpen(true);
-              }
-            }}
-            className="bg-gradient-to-b from-indigo-50 to-purple-50 rounded-full p-2 border-4 border-white shadow-xl active:scale-95 transition-all"
-          >
-            <PixelAvatar config={profile.avatar} uid={profile.uid} size={64} view="head" />
-          </button>
-          <div className="flex items-center gap-2 mt-2">
-            <p className="text-[9px] text-brand-navy/40 font-bold uppercase tracking-wider">tap to view</p>
-            <span className="text-brand-navy/20">·</span>
+        <div className="flex items-start gap-4">
+          {/* Photo — top left */}
+          <div className="flex flex-col items-center shrink-0">
             <button
-              onClick={() => setDailyWheelOpen(true)}
-              className="text-[9px] text-brand-gold font-bold uppercase tracking-wider"
+              onClick={() => {
+                if (!profile.avatar) {
+                  updateDoc(doc(db, 'users', profile.uid), { avatar: deriveAvatarFromUid(profile.uid) })
+                    .then(() => setAvatarViewOpen(true));
+                } else {
+                  setAvatarViewOpen(true);
+                }
+              }}
+              className="bg-gradient-to-b from-indigo-50 to-purple-50 rounded-full p-2 border-4 border-white shadow-xl active:scale-95 transition-all"
             >
-              🎡 Daily spin
+              <PixelAvatar config={profile.avatar} uid={profile.uid} size={64} view="head" />
             </button>
+            <div className="flex items-center gap-1 mt-1.5">
+              <p className="text-[8px] text-brand-navy/40 font-bold uppercase tracking-wider">tap</p>
+              <span className="text-brand-navy/20">·</span>
+              <button onClick={() => setDailyWheelOpen(true)} className="text-[8px] text-brand-gold font-bold uppercase tracking-wider">🎡 spin</button>
+            </div>
           </div>
-        </div>
 
-        <div className="flex items-center justify-center gap-2">
-          <h2 className="font-display text-3xl font-bold">{profile.name}</h2>
-          <StreakBadge streak={profile.streak} size="lg" />
-        </div>
-        <p className="text-brand-gold font-bold text-xs uppercase tracking-[0.2em]">@{profile.handle || user.email?.split('@')[0]}</p>
-        <div className="flex items-center justify-center gap-4 mt-2 text-sm">
-          <button onClick={() => { setFollowModalTab('following'); setShowFollowModal(true); }} className="flex items-center gap-1 font-bold hover:text-brand-gold transition-colors">
-            <span>{following.length}</span>
-            <span className="text-brand-navy/40 font-normal">Following</span>
-          </button>
-          <span className="text-brand-navy/20">•</span>
-          <button onClick={() => { setFollowModalTab('followers'); setShowFollowModal(true); }} className="flex items-center gap-1 font-bold hover:text-brand-gold transition-colors">
-            <span>{followers.length}</span>
-            <span className="text-brand-navy/40 font-normal">Followers</span>
-          </button>
+          {/* Name, handle, followers — right of photo */}
+          <div className="flex-1 min-w-0 pt-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="font-display text-2xl font-bold">{profile.name}</h2>
+              <StreakBadge streak={profile.streak} size="lg" />
+            </div>
+            <p className="text-brand-gold font-bold text-xs uppercase tracking-[0.2em]">@{profile.handle || user.email?.split('@')[0]}</p>
+            <div className="flex items-center gap-3 mt-2 text-sm">
+              <button onClick={() => { setFollowModalTab('following'); setShowFollowModal(true); }} className="flex items-center gap-1 font-bold hover:text-brand-gold transition-colors">
+                <span>{following.length}</span>
+                <span className="text-brand-navy/40 font-normal">Following</span>
+              </button>
+              <span className="text-brand-navy/20">•</span>
+              <button onClick={() => { setFollowModalTab('followers'); setShowFollowModal(true); }} className="flex items-center gap-1 font-bold hover:text-brand-gold transition-colors">
+                <span>{followers.length}</span>
+                <span className="text-brand-navy/40 font-normal">Followers</span>
+              </button>
+            </div>
+          </div>
         </div>
       </header>
 
       {settingsModal}
 
-      {/* Compact stats — dark blue gradient, gold text */}
+      {/* Compact stats — centered text */}
       <div className="flex gap-2">
         {[
-          { icon: <CheckCircle2 size={15} className="text-white/70 shrink-0" />, val: lifetimeStamps,   label: 'Stamps'  },
-          { icon: <Trophy        size={15} className="text-white/70 shrink-0" />, val: archivedCardsCount, label: 'Rewards' },
-          { icon: <Store        size={15} className="text-white/70 shrink-0" />, val: activeCardsCount,  label: 'Cards'   },
+          { val: lifetimeStamps,    label: 'Stamps'  },
+          { val: archivedCardsCount, label: 'Rewards' },
+          { val: activeCardsCount,  label: 'Cards'   },
         ].map(s => (
-          <div key={s.label} className="flex-1 rounded-2xl px-3 py-2.5 flex items-center gap-2" style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #2563EB 50%, #3B82F6 100%)' }}>
-            {s.icon}
-            <div>
-              <p className="font-bold text-sm leading-none text-white">{s.val}</p>
-              <p className="text-[9px] font-bold uppercase tracking-wider mt-0.5 text-white/60">{s.label}</p>
-            </div>
+          <div key={s.label} className="flex-1 rounded-2xl px-3 py-2.5 flex flex-col items-center gap-0.5" style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #2563EB 50%, #3B82F6 100%)' }}>
+            <p className="font-bold text-sm leading-none text-white">{s.val}</p>
+            <p className="text-[9px] font-bold uppercase tracking-wider mt-0.5 text-white/60">{s.label}</p>
           </div>
         ))}
       </div>
@@ -8944,12 +8940,16 @@ function SettingsMenu({
   isOpen,
   onClose,
   profile,
-  userCards
+  userCards,
+  isAdmin,
+  onOpenAdmin,
 }: {
   isOpen: boolean,
   onClose: () => void,
   profile: UserProfile | null,
-  userCards: Card[]
+  userCards: Card[],
+  isAdmin?: boolean,
+  onOpenAdmin?: () => void,
 }) {
   const [showArchive, setShowArchive] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -9338,7 +9338,9 @@ function SettingsMenu({
           <MenuButton icon={<Clock />} label="Stamp History" sub="Timeline of collections" onClick={() => setShowHistory(true)} />
           <MenuButton icon={<Settings />} label="Settings" sub="Account preferences" />
           <MenuButton icon={<Sparkles />} label="Seed Sample Data" sub="Generate test users & stamps" onClick={seedData} disabled={isSeeding} />
-          
+          {isAdmin && (
+            <MenuButton icon={<Flag />} label="Admin Panel" sub="Challenges, badges & settings" onClick={onOpenAdmin} />
+          )}
         </div>
 
         <AnimatePresence>
@@ -12595,68 +12597,39 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
         Back
       </button>
 
-      <div className="glass-card p-8 rounded-[3rem] text-center relative overflow-hidden">
+      <div className="glass-card p-6 rounded-[3rem] relative overflow-hidden">
         <div className="absolute top-0 left-0 right-0 h-24 bg-brand-gold/10" />
         <div className="relative z-10">
-          <div className="mx-auto mb-4 flex justify-center">
-            <div className="bg-gradient-to-b from-indigo-50 to-purple-50 rounded-[2rem] p-3 border-4 border-white shadow-xl">
-              <PixelAvatar config={targetUser.avatar} uid={targetUser.uid} size={72} view="full" />
+          {/* Row: photo left, info right */}
+          <div className="flex items-start gap-4 mb-4">
+            <div className="bg-gradient-to-b from-indigo-50 to-purple-50 rounded-[1.5rem] p-3 border-4 border-white shadow-xl shrink-0">
+              <PixelAvatar config={targetUser.avatar} uid={targetUser.uid} size={64} view="full" />
+            </div>
+            <div className="flex-1 min-w-0 pt-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-xl font-bold leading-tight">{targetUser.name}</h2>
+                <StreakBadge streak={targetUser.streak} size="lg" />
+              </div>
+              <p className="text-brand-gold font-bold text-xs uppercase tracking-[0.2em]">@{targetUser.handle || targetUser.email?.split('@')[0]}</p>
+              <div className="flex items-center gap-3 mt-2 text-sm">
+                <span className="flex items-center gap-1 font-bold">
+                  <span>{targetFollowing}</span>
+                  <span className="text-brand-navy/40 font-normal">Following</span>
+                </span>
+                <span className="text-brand-navy/20">•</span>
+                <span className="flex items-center gap-1 font-bold">
+                  <span>{targetFollowers}</span>
+                  <span className="text-brand-navy/40 font-normal">Followers</span>
+                </span>
+              </div>
             </div>
           </div>
-          <div className="flex items-center justify-center gap-2">
-            <h2 className="text-2xl font-bold">{targetUser.name}</h2>
-            <StreakBadge streak={targetUser.streak} size="lg" />
-          </div>
-          <p className="text-brand-gold font-bold text-xs uppercase tracking-[0.2em]">@{targetUser.handle || targetUser.email?.split('@')[0]}</p>
-          <div className="flex items-center justify-center gap-4 mt-2 mb-4 text-sm">
-            <span className="flex items-center gap-1 font-bold">
-              <span>{targetFollowing}</span>
-              <span className="text-brand-navy/40 font-normal">Following</span>
-            </span>
-            <span className="text-brand-navy/20">•</span>
-            <span className="flex items-center gap-1 font-bold">
-              <span>{targetFollowers}</span>
-              <span className="text-brand-navy/40 font-normal">Followers</span>
-            </span>
-          </div>
 
-          {currentUser && currentUser.uid !== targetUser.uid && (
-            <div className="flex justify-center gap-2 mb-6">
-              <button
-                onClick={handleFollowClick}
-                className={cn(
-                  "flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm transition-all shadow-lg active:scale-95",
-                  isFollowing
-                    ? "bg-green-500 text-white hover:bg-red-400"
-                    : "bg-brand-gold text-brand-navy hover:bg-brand-gold/80"
-                )}
-              >
-                {isFollowing ? (
-                  <>
-                    <UserCheck size={18} />
-                    Following
-                  </>
-                ) : (
-                  <>
-                    <UserPlus size={18} />
-                    Follow
-                  </>
-                )}
-              </button>
-              <button 
-                onClick={handleMessageClick}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-brand-navy text-white font-bold text-sm transition-all shadow-lg active:scale-95"
-              >
-                <MessageCircle size={18} />
-                Message
-              </button>
-            </div>
-          )}
-
-          <div className="flex gap-2 max-w-xs mx-auto w-full">
+          {/* Stats — centered */}
+          <div className="flex gap-2">
             {[
-              { val: publicUserStamps, label: 'Stamps' },
-              { val: cards.length,     label: 'Active' },
+              { val: publicUserStamps,  label: 'Stamps'  },
+              { val: cards.length,      label: 'Cards'   },
               { val: publicUserRewards, label: 'Rewards' },
             ].map(s => (
               <div key={s.label} className="flex-1 rounded-2xl px-3 py-2.5 flex flex-col items-center gap-0.5"
@@ -12667,6 +12640,27 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
             ))}
           </div>
 
+          {/* Follow / Message buttons */}
+          {currentUser && currentUser.uid !== targetUser.uid && (
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={handleFollowClick}
+                className={cn(
+                  "flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm transition-all shadow-lg active:scale-95",
+                  isFollowing ? "bg-green-500 text-white hover:bg-red-400" : "bg-brand-gold text-brand-navy hover:bg-brand-gold/80"
+                )}
+              >
+                {isFollowing ? <><UserCheck size={18} />Following</> : <><UserPlus size={18} />Follow</>}
+              </button>
+              <button
+                onClick={handleMessageClick}
+                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-2xl gradient-red text-white font-bold text-sm transition-all shadow-lg active:scale-95"
+              >
+                <MessageCircle size={18} />
+                Message
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
