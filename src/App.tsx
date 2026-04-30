@@ -4191,7 +4191,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                 <p className="text-brand-navy/60 text-sm">You have {activeCards.length} active loyalty card{activeCards.length !== 1 ? 's' : ''}.</p>
                 <button
                   onClick={() => setShowNFCStamp(true)}
-                  className="flex items-center gap-2 bg-brand-navy text-white px-4 py-2 rounded-xl font-bold text-xs"
+                  className="flex items-center gap-2 gradient-red text-white px-4 py-2 rounded-xl font-bold text-xs"
                 >
                   <Wifi size={14} />
                   Tap to Stamp
@@ -4210,7 +4210,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                   <p className="text-brand-navy/60 mb-6">Your wallet is empty.</p>
                   <button
                     onClick={() => setActiveTab('discover')}
-                    className="bg-brand-navy text-white px-8 py-3 rounded-xl font-bold text-sm"
+                    className="gradient-red text-white px-8 py-3 rounded-xl font-bold text-sm"
                   >
                     Find Stores
                   </button>
@@ -4242,7 +4242,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                       {/* Tappable header — opens popup modal */}
                       <button
                         onClick={() => setOpenProgrammeId(prog.id)}
-                        className="w-full bg-brand-navy px-5 py-4 text-left active:opacity-90 transition-opacity"
+                        className="w-full gradient-red px-5 py-4 text-left active:opacity-90 transition-opacity"
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
@@ -7128,7 +7128,7 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
               onClick={() => setSearchType('stores')}
               className={cn(
                 "flex-1 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2",
-                searchType === 'stores' ? "bg-brand-navy text-white shadow-lg" : "text-brand-navy/40 hover:bg-brand-bg"
+                searchType === 'stores' ? "gradient-red text-white shadow-lg" : "text-brand-navy/40 hover:bg-brand-bg"
               )}
             >
               <Store size={18} />
@@ -7138,7 +7138,7 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
               onClick={() => setSearchType('users')}
               className={cn(
                 "flex-1 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2",
-                searchType === 'users' ? "bg-brand-navy text-white shadow-lg" : "text-brand-navy/40 hover:bg-brand-bg"
+                searchType === 'users' ? "gradient-red text-white shadow-lg" : "text-brand-navy/40 hover:bg-brand-bg"
               )}
             >
               <Users size={18} />
@@ -7167,7 +7167,7 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
                 onClick={() => setActiveCategory(cat)}
                 className={cn(
                   "px-6 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all",
-                  activeCategory === cat ? "bg-brand-navy text-white shadow-md" : "glass-card text-brand-navy/50 hover:text-brand-navy"
+                  activeCategory === cat ? "gradient-red text-white shadow-md" : "glass-card text-brand-navy/50 hover:text-brand-navy"
                 )}
               >
                 {cat}
@@ -10663,7 +10663,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
             onClick={() => setActiveSubTab(tab)}
             className={cn(
               "flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5",
-              activeSubTab === tab ? "bg-brand-navy text-white shadow-lg" : "text-brand-navy/40"
+              activeSubTab === tab ? "gradient-red text-white shadow-lg" : "text-brand-navy/40"
             )}
           >
             {tab === 'discovery' ? <Compass size={13} /> : <Users size={13} />}
@@ -10849,7 +10849,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
               <div>
                 <button
                   onClick={() => setShowLeaderboard(v => !v)}
-                  className="w-full flex items-center justify-between p-4 rounded-2xl bg-brand-navy text-white active:scale-[0.98] transition-transform"
+                  className="w-full flex items-center justify-between p-4 rounded-2xl gradient-red text-white active:scale-[0.98] transition-transform"
                 >
                   <div className="flex items-center gap-2">
                     <Trophy size={16} className="text-brand-gold" />
@@ -10866,7 +10866,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
                     <div className="flex gap-2 p-1 bg-white rounded-2xl border border-brand-navy/5">
                       {(['alltime', 'weekly'] as const).map(p => (
                         <button key={p} onClick={() => setLbPeriod(p)}
-                          className={cn('flex-1 py-2 rounded-xl text-xs font-bold transition-all', lbPeriod === p ? 'bg-brand-navy text-white shadow' : 'text-brand-navy/40')}>
+                          className={cn('flex-1 py-2 rounded-xl text-xs font-bold transition-all', lbPeriod === p ? 'gradient-red text-white shadow' : 'text-brand-navy/40')}>
                           {p === 'alltime' ? 'All Time' : 'This Week'}
                         </button>
                       ))}
@@ -10882,7 +10882,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
                         { key: 'monopoly', label: 'Monopoly', icon: '🎯' },
                       ] as const).map(({ key, label, icon }) => (
                         <button key={key} onClick={() => setLbCategory(key)}
-                          className={cn('shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold transition-all', lbCategory === key ? 'bg-brand-gold text-brand-navy shadow' : 'bg-white border border-brand-navy/10 text-brand-navy/50')}>
+                          className={cn('shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold transition-all', lbCategory === key ? 'gradient-red text-white shadow' : 'bg-white border border-brand-navy/10 text-brand-navy/50')}>
                           <span>{icon}</span>{label}
                         </button>
                       ))}
@@ -11386,7 +11386,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
                 >
                   <div className={cn(
                     "flex-1 px-4 py-3 rounded-2xl text-sm shadow-sm",
-                    isMe ? "bg-brand-navy text-white" : "glass-card text-brand-navy"
+                    isMe ? "gradient-red text-white" : "glass-card text-brand-navy"
                   )}>
                     {msg.text}
                   </div>
@@ -11425,7 +11425,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
             <button 
               onClick={handleSendMessage}
               disabled={!newMessage.trim()}
-              className="p-4 bg-brand-gold text-brand-navy rounded-2xl shadow-lg shadow-brand-gold/20 active:scale-95 transition-all disabled:opacity-50"
+              className="p-4 gradient-red text-white rounded-2xl shadow-lg shadow-blue-500/20 active:scale-95 transition-all disabled:opacity-50"
             >
               <Send size={20} />
             </button>
@@ -11485,7 +11485,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
         {vendorStore && (
           <button
             onClick={() => setShowCustomerPicker(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-brand-navy text-white rounded-2xl text-xs font-bold shadow-lg active:scale-95 transition-all"
+            className="flex items-center gap-2 px-4 py-2.5 gradient-red text-white rounded-2xl text-xs font-bold shadow-lg active:scale-95 transition-all"
           >
             <MessageCircle size={14} />
             New
