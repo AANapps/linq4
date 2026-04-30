@@ -10393,6 +10393,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
   const [lbUsers, setLbUsers] = useState<UserProfile[]>([]);
   const [challengeCounts, setChallengeCounts] = useState<Map<string, number>>(new Map());
   const [lbLoading, setLbLoading] = useState(false);
+  const [challengeIdx, setChallengeIdx] = useState(0);
   const lastDocRef = useRef<any>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -10502,6 +10503,12 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
       setFeedChallenges(snap.docs.map(d => ({ id: d.id, ...d.data() } as Challenge)))
     , () => {});
   }, []);
+
+  useEffect(() => {
+    if (feedChallenges.length <= 1) return;
+    const t = setInterval(() => setChallengeIdx(i => (i + 1) % feedChallenges.length), 2800);
+    return () => clearInterval(t);
+  }, [feedChallenges.length]);
 
   useEffect(() => {
     if (!showLeaderboard || lbUsers.length > 0) return;
@@ -10766,104 +10773,154 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
             </div>
           )}
 
-          {/* Challenges mini slider */}
-          {feedChallenges.length > 0 && (
-            <div>
-              <div className="flex items-center gap-1.5 mb-1 px-1">
-                <Trophy size={15} className="text-brand-gold" />
-                <h3 className="font-extrabold text-brand-navy text-sm flex-1">Active Challenges</h3>
-                <span className="text-[10px] text-brand-navy/40 font-semibold">Join & win</span>
-              </div>
-              {totalActivePlayers > 0 && (
-                <div className="flex items-center gap-1 mb-3 px-1">
-                  <Users size={9} className="text-brand-navy/30" />
-                  <span className="text-[10px] font-bold text-brand-navy/40">{totalActivePlayers.toLocaleString()}+ active players</span>
+          {/* Challenges card + Leaderboard button — side by side */}
+          {(feedChallenges.length > 0 || true) && (
+            <div className="flex gap-3 items-stretch">
+
+              {/* Single cycling challenges card with confetti */}
+              {feedChallenges.length > 0 && (
+                <div
+                  className="flex-1 relative rounded-[1.5rem] overflow-hidden cursor-pointer active:scale-[0.97] transition-transform"
+                  style={{ background: 'linear-gradient(135deg, #7C3AED 0%, #A855F7 55%, #C084FC 100%)', minHeight: '148px' }}
+                  onClick={() => onViewChallenges?.()}
+                >
+                  {/* Confetti particles */}
+                  {[
+                    { x: 8,  y: 18, color: '#FFD700', size: 6, delay: 0,   dur: 2.2 },
+                    { x: 28, y: 72, color: '#FF6B6B', size: 4, delay: 0.4, dur: 1.8 },
+                    { x: 50, y: 35, color: '#4ADE80', size: 5, delay: 0.8, dur: 2.5 },
+                    { x: 72, y: 62, color: '#60A5FA', size: 4, delay: 0.2, dur: 2.0 },
+                    { x: 88, y: 22, color: '#F9A8D4', size: 6, delay: 0.6, dur: 1.9 },
+                    { x: 62, y: 82, color: '#FFD700', size: 3, delay: 1.0, dur: 2.3 },
+                    { x: 18, y: 55, color: '#4ADE80', size: 4, delay: 1.2, dur: 2.1 },
+                    { x: 92, y: 48, color: '#FF6B6B', size: 5, delay: 0.5, dur: 1.7 },
+                    { x: 40, y: 88, color: '#60A5FA', size: 3, delay: 0.9, dur: 2.4 },
+                    { x: 78, y: 10, color: '#F9A8D4', size: 4, delay: 0.3, dur: 2.0 },
+                  ].map((p, i) => (
+                    <motion.div
+                      key={i}
+                      className="absolute rounded-sm pointer-events-none"
+                      style={{ left: `${p.x}%`, top: `${p.y}%`, width: p.size, height: p.size, background: p.color }}
+                      animate={{ y: [-4, -14, -4], rotate: [0, 180, 360], opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: p.dur, repeat: Infinity, delay: p.delay, ease: 'easeInOut' }}
+                    />
+                  ))}
+
+                  {/* Content */}
+                  <div className="relative z-10 p-4 h-full flex flex-col justify-between" style={{ minHeight: '148px' }}>
+                    <div>
+                      <p className="text-white/70 text-[9px] font-black uppercase tracking-widest mb-1.5">Win</p>
+                      <AnimatePresence mode="wait">
+                        <motion.div
+                          key={challengeIdx}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -8 }}
+                          transition={{ duration: 0.35 }}
+                        >
+                          <p className="text-white font-black text-base leading-snug line-clamp-2">
+                            {feedChallenges[challengeIdx % feedChallenges.length]?.reward}
+                          </p>
+                          <p className="text-white/50 text-[10px] mt-1 line-clamp-1">
+                            {feedChallenges[challengeIdx % feedChallenges.length]?.title}
+                          </p>
+                        </motion.div>
+                      </AnimatePresence>
+                    </div>
+                    {/* Dot indicators */}
+                    <div className="flex items-center justify-between mt-2">
+                      <p className="text-white/50 text-[9px] font-bold">{feedChallenges.length} prizes</p>
+                      <div className="flex gap-1 items-center">
+                        {feedChallenges.slice(0, Math.min(feedChallenges.length, 5)).map((_, i) => (
+                          <div key={i} className={cn('rounded-full transition-all duration-300', i === (challengeIdx % feedChallenges.length) ? 'w-3 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/30')} />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
-              <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                {[...feedChallenges]
-                  .sort((a, b) => (b.participantUids?.length || 0) - (a.participantUids?.length || 0))
-                  .slice(0, 8)
-                  .map((c, i) => {
-                    const joined = (c.participantUids || []).includes(currentUser?.uid || '');
-                    const participants = c.participantUids?.length || 0;
-                    const color = DEAL_COLORS[(i + 2) % DEAL_COLORS.length];
-                    return (
-                      <motion.div
-                        key={c.id}
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: i * 0.04 }}
-                        onClick={() => onViewChallenges?.()}
-                        className="shrink-0 w-40 rounded-2xl overflow-hidden flex flex-col relative cursor-pointer active:scale-[0.97] transition-transform"
-                        style={{ background: `linear-gradient(135deg, ${color}cc, ${color}99)`, backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)', border: '1px solid rgba(255,255,255,0.18)', height: '96px' }}
-                      >
-                        <div className="relative z-10 flex flex-col h-full p-3 justify-between">
-                          <div className="flex items-start justify-between gap-1">
-                            <p className="font-extrabold text-white text-xs leading-tight line-clamp-2 flex-1">{c.reward}</p>
-                            <motion.span
-                              animate={{ scale: [1, 1.3, 0.9, 1.2, 1], rotate: [-8, 8, -5, 6, 0] }}
-                              transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut', delay: i * 0.35 }}
-                              className="text-sm leading-none shrink-0"
-                            >🔥</motion.span>
-                          </div>
-                          <div>
-                            <p className="text-white/50 text-[9px] font-bold mb-1">{participants} players</p>
-                            <div className="flex items-center justify-between">
-                              <p className="text-white/60 text-[9px] font-medium line-clamp-1 flex-1 mr-1">{c.title}</p>
-                              <span className="text-[8px] font-black text-white bg-white/25 rounded-full px-1.5 py-0.5 shrink-0">
-                                {joined ? 'Joined' : 'Join'}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-              </div>
+
+              {/* Leaderboard square button */}
+              <button
+                onClick={() => setShowLeaderboard(true)}
+                className="relative rounded-[1.5rem] overflow-hidden active:scale-[0.97] transition-transform shrink-0"
+                style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #2563EB 50%, #3B82F6 100%)', width: feedChallenges.length > 0 ? '136px' : '100%', minHeight: '148px' }}
+              >
+                {/* Medal top-left */}
+                <div className="absolute top-3 left-3 text-lg leading-none">🥇</div>
+                {/* Rotating sparkle that fades in and out */}
+                <motion.div
+                  className="absolute top-3 right-3"
+                  animate={{ rotate: [0, 360], opacity: [0, 1, 1, 1, 0] }}
+                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 4, ease: 'easeInOut' }}
+                >
+                  <Sparkles size={13} className="text-yellow-300" />
+                </motion.div>
+
+                {/* Avatar + name + label */}
+                <div className="relative z-10 h-full flex flex-col items-center justify-center gap-1.5 px-2 py-4" style={{ minHeight: '148px' }}>
+                  <div className="w-12 h-12 rounded-xl overflow-hidden border-2 border-white/30 bg-indigo-50 flex items-center justify-center">
+                    <PixelAvatar config={currentProfile?.avatar} uid={currentProfile?.uid || ''} size={48} view="head" />
+                  </div>
+                  <p className="text-white font-bold text-[10px] text-center leading-tight line-clamp-2 w-full px-1">
+                    {currentProfile?.name || 'You'}
+                  </p>
+                  <p className="text-white/60 text-[8px] font-bold uppercase tracking-wider">Leaderboard</p>
+                </div>
+              </button>
             </div>
           )}
 
-          {/* Leaderboard section */}
-          {(() => {
-            const getLbScore = (u: UserProfile) => {
-              switch (lbCategory) {
-                case 'stamps': return u.totalStamps || 0;
-                case 'rewards': return u.totalRedeemed || 0;
-                case 'challenges': return challengeCounts.get(u.uid) || 0;
-                case 'streak': return u.streak || 0;
-                case 'monopoly': return u.total_cards_held || 0;
-              }
-            };
-            const lbCategoryLabel = { stamps: 'Stamps', rewards: 'Rewards', challenges: 'Challenges', streak: 'Streak', monopoly: 'Monopoly' }[lbCategory];
-            const lbCategoryUnit = { stamps: 'stamps', rewards: 'redeemed', challenges: 'entries', streak: 'day streak', monopoly: 'stores' }[lbCategory];
-            const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
-            const periodUsers = lbPeriod === 'weekly'
-              ? lbUsers.filter(u => u.lastStreakDate && u.lastStreakDate >= sevenDaysAgo)
-              : lbUsers;
-            const sorted = [...periodUsers].sort((a, b) => getLbScore(b) - getLbScore(a)).filter(u => getLbScore(u) > 0).slice(0, 20);
-            const podium = [sorted[1], sorted[0], sorted[2]]; // 2nd | 1st | 3rd
-            const podiumHeights = ['h-20', 'h-28', 'h-16'];
-            const podiumColors = ['bg-brand-navy/10', 'bg-brand-gold/30', 'bg-brand-navy/5'];
-            const podiumMedals = ['🥈', '🥇', '🥉'];
-            const podiumIndexes = [1, 0, 2]; // actual rank index for each column
-            return (
-              <div>
-                <button
-                  onClick={() => setShowLeaderboard(v => !v)}
-                  className="w-full flex items-center justify-between p-4 rounded-2xl gradient-red text-white active:scale-[0.98] transition-transform"
+          {/* Leaderboard popup modal */}
+          <AnimatePresence>
+            {showLeaderboard && (() => {
+              const getLbScore = (u: UserProfile) => {
+                switch (lbCategory) {
+                  case 'stamps': return u.totalStamps || 0;
+                  case 'rewards': return u.totalRedeemed || 0;
+                  case 'challenges': return challengeCounts.get(u.uid) || 0;
+                  case 'streak': return u.streak || 0;
+                  case 'monopoly': return u.total_cards_held || 0;
+                }
+              };
+              const lbCategoryLabel = { stamps: 'Stamps', rewards: 'Rewards', challenges: 'Challenges', streak: 'Streak', monopoly: 'Monopoly' }[lbCategory];
+              const lbCategoryUnit = { stamps: 'stamps', rewards: 'redeemed', challenges: 'entries', streak: 'day streak', monopoly: 'stores' }[lbCategory];
+              const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+              const periodUsers = lbPeriod === 'weekly'
+                ? lbUsers.filter(u => u.lastStreakDate && u.lastStreakDate >= sevenDaysAgo)
+                : lbUsers;
+              const sorted = [...periodUsers].sort((a, b) => getLbScore(b) - getLbScore(a)).filter(u => getLbScore(u) > 0).slice(0, 20);
+              const podium = [sorted[1], sorted[0], sorted[2]];
+              const podiumHeights = ['h-20', 'h-28', 'h-16'];
+              const podiumColors = ['bg-brand-navy/10', 'bg-brand-gold/30', 'bg-brand-navy/5'];
+              const podiumMedals = ['🥈', '🥇', '🥉'];
+              const podiumIndexes = [1, 0, 2];
+              return (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-end max-w-md mx-auto"
+                  onClick={() => setShowLeaderboard(false)}
                 >
-                  <div className="flex items-center gap-2">
-                    <Trophy size={16} className="text-brand-gold" />
-                    <span className="font-bold text-sm">Leaderboard</span>
-                  </div>
-                  <motion.div animate={{ rotate: showLeaderboard ? 90 : 0 }} transition={{ duration: 0.2 }}>
-                    <ChevronRight size={16} />
-                  </motion.div>
-                </button>
+                  <motion.div
+                    initial={{ y: '100%' }}
+                    animate={{ y: 0 }}
+                    exit={{ y: '100%' }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                    className="w-full bg-brand-bg rounded-t-[3rem] p-6 pb-12 space-y-4 max-h-[88vh] overflow-y-auto"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl">🏆</span>
+                        <h3 className="font-display font-bold text-xl">Leaderboard</h3>
+                      </div>
+                      <button onClick={() => setShowLeaderboard(false)} className="p-2 rounded-full bg-brand-navy/8 active:scale-95 transition-all">
+                        <X size={18} className="text-brand-navy" />
+                      </button>
+                    </div>
 
-                {showLeaderboard && (
-                  <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="mt-3 space-y-4">
                     {/* Period tabs */}
                     <div className="flex gap-2 p-1 bg-white rounded-2xl border border-brand-navy/5">
                       {(['alltime', 'weekly'] as const).map(p => (
@@ -10903,7 +10960,6 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
                       </div>
                     ) : (
                       <>
-                        {/* Podium */}
                         <div className="glass-card rounded-[2rem] p-4 pt-6">
                           <p className="text-center text-[10px] font-bold text-brand-navy/30 uppercase tracking-widest mb-4">{lbCategoryLabel} Leaders</p>
                           <div className="flex items-end justify-center gap-3 mb-2">
@@ -10911,7 +10967,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
                               const rank = podiumIndexes[col];
                               if (!u) return <div key={col} className="w-[30%]" />;
                               return (
-                                <div key={u.uid} className="flex flex-col items-center w-[30%]" onClick={() => onViewUser(u)} style={{ cursor: 'pointer' }}>
+                                <div key={u.uid} className="flex flex-col items-center w-[30%]" onClick={() => { setShowLeaderboard(false); onViewUser(u); }} style={{ cursor: 'pointer' }}>
                                   <span className="text-lg mb-0.5">{podiumMedals[col]}</span>
                                   <div className={cn('w-12 h-12 rounded-2xl overflow-hidden border-2 bg-indigo-50 flex items-center justify-center mb-1', rank === 0 ? 'border-brand-gold shadow-lg shadow-brand-gold/30' : 'border-brand-navy/10')}>
                                     <PixelAvatar config={u.avatar} uid={u.uid} size={48} view="head" />
@@ -10924,12 +10980,10 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
                             })}
                           </div>
                         </div>
-
-                        {/* Rest of list */}
                         {sorted.length > 3 && (
                           <div className="space-y-2">
                             {sorted.slice(3).map((u, i) => (
-                              <div key={u.uid} onClick={() => onViewUser(u)} className="glass-card p-3 rounded-2xl flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-transform">
+                              <div key={u.uid} onClick={() => { setShowLeaderboard(false); onViewUser(u); }} className="glass-card p-3 rounded-2xl flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-transform">
                                 <div className="w-6 font-display font-bold text-brand-navy/30 text-sm text-center">#{i + 4}</div>
                                 <div className="w-8 h-8 rounded-xl overflow-hidden bg-indigo-50 flex items-center justify-center shrink-0">
                                   <PixelAvatar config={u.avatar} uid={u.uid} size={32} view="head" />
@@ -10945,10 +10999,10 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
                       </>
                     )}
                   </motion.div>
-                )}
-              </div>
-            );
-          })()}
+                </motion.div>
+              );
+            })()}
+          </AnimatePresence>
 
           {/* Main mixed feed */}
           {loading ? <FeedLoadingSpinner /> : (
