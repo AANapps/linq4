@@ -12646,15 +12646,15 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
               <button
                 onClick={handleFollowClick}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm transition-all shadow-lg active:scale-95",
-                  isFollowing ? "bg-green-500 text-white hover:bg-red-400" : "bg-brand-gold text-brand-navy hover:bg-brand-gold/80"
+                  "flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm transition-all active:scale-95",
+                  isFollowing ? "bg-brand-navy/8 text-green-600 hover:bg-red-50 hover:text-red-500" : "bg-brand-navy/8 text-brand-gold hover:bg-brand-gold/10"
                 )}
               >
                 {isFollowing ? <><UserCheck size={18} />Following</> : <><UserPlus size={18} />Follow</>}
               </button>
               <button
                 onClick={handleMessageClick}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-2xl gradient-red text-white font-bold text-sm transition-all shadow-lg active:scale-95"
+                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-brand-navy/8 text-brand-gold font-bold text-sm transition-all active:scale-95 hover:bg-brand-gold/10"
               >
                 <MessageCircle size={18} />
                 Message
