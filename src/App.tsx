@@ -262,6 +262,8 @@ interface UserProfile {
   totalRedeemed: number;
   charityAnimals?: number;
   charityTrees?: number;
+  streak?: number;
+  lastStreakDate?: string;
   avatar?: UserAvatar;
 }
 
@@ -2094,6 +2096,33 @@ async function awardAvatarItem(uid: string, itemId: string): Promise<void> {
   } catch (err) {
     console.error('awardAvatarItem error:', err);
   }
+}
+
+// Bumps the user's daily streak by 1 (max once per day, resets if a day is missed).
+// Returns the current streak count so it can be denormalised into documents.
+async function bumpStreak(uid: string): Promise<number> {
+  const today = new Date().toISOString().slice(0, 10);
+  try {
+    const snap = await getDoc(doc(db, 'users', uid));
+    if (!snap.exists()) return 0;
+    const d = snap.data();
+    if (d.lastStreakDate === today) return d.streak || 0;
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const newStreak = d.lastStreakDate === yesterday ? (d.streak || 0) + 1 : 1;
+    await updateDoc(doc(db, 'users', uid), { streak: newStreak, lastStreakDate: today });
+    return newStreak;
+  } catch {
+    return 0;
+  }
+}
+
+function StreakBadge({ streak }: { streak?: number }) {
+  if (!streak || streak <= 0) return null;
+  return (
+    <span className="inline-flex items-center gap-0.5 text-[11px] font-bold text-orange-500 leading-none shrink-0">
+      🔥{streak}
+    </span>
+  );
 }
 
 // Increment challenge entry count for qualifying standard challenges when a stamp is issued.
@@ -4734,6 +4763,7 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
     }
 
     await updateDoc(doc(db, 'users', user.uid), { totalStamps: increment(1) });
+    bumpStreak(user.uid).catch(console.error);
 
     // Update avatar mood on every stamp (food stores give a bigger boost)
     if (store.category === 'Food') {
@@ -6114,6 +6144,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
         await updateDoc(doc(db, 'users', customer.uid), {
           totalStamps: increment(qty)
         });
+        bumpStreak(customer.uid).catch(console.error);
 
         // Food stamps increase avatar mood and record date
         if (store.category === 'Food') {
@@ -6303,7 +6334,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                           <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={36} view="head" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-bold text-sm truncate">{prof?.name || 'Unknown'}</p>
+                          <div className="flex items-center gap-1"><p className="font-bold text-sm truncate">{prof?.name || 'Unknown'}</p><StreakBadge streak={prof?.streak} /></div>
                           <p className="text-[11px] text-brand-navy/40">@{prof?.handle || uid.slice(0, 8)}</p>
                         </div>
                         <div className="text-right shrink-0">
@@ -6322,7 +6353,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                             <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? card.user_id} size={36} view="head" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="font-bold text-sm truncate">{prof?.name || 'Unknown'}</p>
+                            <div className="flex items-center gap-1"><p className="font-bold text-sm truncate">{prof?.name || 'Unknown'}</p><StreakBadge streak={prof?.streak} /></div>
                             <p className="text-[11px] text-brand-navy/40">@{prof?.handle || card.user_id.slice(0, 8)}</p>
                           </div>
                           <div className="text-right shrink-0">
@@ -6341,7 +6372,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                             <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? card.user_id} size={36} view="head" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="font-bold text-sm truncate">{prof?.name || 'Unknown'}</p>
+                            <div className="flex items-center gap-1"><p className="font-bold text-sm truncate">{prof?.name || 'Unknown'}</p><StreakBadge streak={prof?.streak} /></div>
                             <p className="text-[11px] text-brand-navy/40">@{prof?.handle || card.user_id.slice(0, 8)}</p>
                           </div>
                           <div className="text-right shrink-0">
@@ -6601,6 +6632,7 @@ function LoyaltyCard({ card, store, onViewStore }: { card: Card, store?: StorePr
       await updateDoc(doc(db, 'users', auth.currentUser.uid), {
         totalStamps: increment(qty)
       });
+      bumpStreak(auth.currentUser.uid).catch(console.error);
 
       const customerName = auth.currentUser.displayName || auth.currentUser.email?.split('@')[0] || 'Customer';
       issueStickersToCard(auth.currentUser.uid, customerName, qty).catch(console.error);
@@ -7184,7 +7216,7 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
                       <PixelAvatar config={u.avatar} uid={u.uid} size={48} view="head" />
                     </div>
                     <div>
-                      <p className="font-bold text-sm">{u.name || u.handle || u.email?.split('@')[0]}</p>
+                      <div className="flex items-center gap-1"><p className="font-bold text-sm">{u.name || u.handle || u.email?.split('@')[0]}</p><StreakBadge streak={u.streak} /></div>
                       <p className="text-xs text-brand-navy/40">{u.handle ? `@${u.handle}` : u.email?.split('@')[0]}</p>
                     </div>
                   </div>
@@ -7289,10 +7321,12 @@ function WallPostItem({ post, currentUser, wallOwnerUid, onViewUser }: { post: a
     if (!newReply.trim()) return;
     setIsReplying(true);
     try {
+      const replyStreak = await bumpStreak(currentUser.uid);
       await addDoc(collection(db, 'user_reviews', post.id, 'replies'), {
         fromUid: currentUser.uid,
         fromName: currentUser.displayName || currentUser.email?.split('@')[0] || 'Anonymous',
         fromPhoto: currentUser.photoURL || '',
+        fromStreak: replyStreak,
         content: newReply,
         createdAt: serverTimestamp()
       });
@@ -7324,7 +7358,10 @@ function WallPostItem({ post, currentUser, wallOwnerUid, onViewUser }: { post: a
             <LivePixelAvatar uid={post.fromUid} size={40} view="head" />
           </div>
           <div>
-            <p className="font-bold text-sm text-brand-navy">{post.fromName}</p>
+            <div className="flex items-center gap-1">
+              <p className="font-bold text-sm text-brand-navy">{post.fromName}</p>
+              <StreakBadge streak={post.fromStreak} />
+            </div>
             <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest">
               {post.createdAt ? format(post.createdAt.toDate(), 'MMM d, h:mm a') : 'Just now'}
             </p>
@@ -7372,8 +7409,9 @@ function WallPostItem({ post, currentUser, wallOwnerUid, onViewUser }: { post: a
                 </div>
               </button>
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <button onClick={() => handleViewProfile(reply.fromUid)} className="font-bold text-[10px] text-brand-navy hover:text-brand-gold transition-colors">{reply.fromName}</button>
+                  <StreakBadge streak={reply.fromStreak} />
                   <p className="text-[8px] text-brand-navy/40">{reply.createdAt ? format(reply.createdAt.toDate(), 'h:mm a') : ''}</p>
                 </div>
                 <p className="text-xs text-brand-navy/70">{reply.content}</p>
@@ -8061,7 +8099,10 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                   {(followModalTab === 'following' ? following : followers).map(u => (
                     <div key={u.uid} className="flex items-center gap-3 p-3 rounded-2xl bg-brand-bg cursor-pointer" onClick={() => { onViewUser(u); setShowFollowModal(false); }}>
                       <div className="w-10 h-10 rounded-2xl overflow-hidden border border-brand-navy/5 shrink-0 bg-indigo-50 flex items-center justify-center"><PixelAvatar config={u.avatar} uid={u.uid} size={40} view="head" /></div>
-                      <div><p className="font-bold text-sm">{u.name}</p><p className="text-[10px] text-brand-navy/40 font-bold uppercase">@{u.email?.split('@')[0]}</p></div>
+                      <div>
+                        <div className="flex items-center gap-1"><p className="font-bold text-sm">{u.name}</p><StreakBadge streak={u.streak} /></div>
+                        <p className="text-[10px] text-brand-navy/40 font-bold uppercase">@{u.email?.split('@')[0]}</p>
+                      </div>
                     </div>
                   ))}
                   {(followModalTab === 'following' ? following : followers).length === 0 && <p className="text-xs text-brand-navy/40 text-center py-8">{followModalTab === 'following' ? 'Not following anyone yet' : 'No followers yet'}</p>}
@@ -8118,6 +8159,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                 'avatar.inventory': arrayUnion(itemId),
                 'avatar.lastWheelSpin': today,
               });
+              bumpStreak(profile.uid).catch(console.error);
             }}
           />
         )}
@@ -8162,7 +8204,10 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           </div>
         </div>
 
-        <h2 className="font-display text-3xl font-bold">{profile.name}</h2>
+        <div className="flex items-center justify-center gap-2">
+          <h2 className="font-display text-3xl font-bold">{profile.name}</h2>
+          <StreakBadge streak={profile.streak} />
+        </div>
         <p className="text-brand-gold font-bold text-xs uppercase tracking-[0.2em]">@{profile.handle || user.email?.split('@')[0]}</p>
         <div className="flex items-center justify-center gap-4 mt-2 text-sm">
           <button onClick={() => { setFollowModalTab('following'); setShowFollowModal(true); }} className="flex items-center gap-1 font-bold hover:text-brand-gold transition-colors">
@@ -8482,7 +8527,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                         <PixelAvatar config={u.avatar} uid={u.uid} size={40} view="head" />
                       </div>
                       <div>
-                        <p className="font-bold text-sm group-hover:text-brand-gold transition-colors">{u.name}</p>
+                        <div className="flex items-center gap-1"><p className="font-bold text-sm group-hover:text-brand-gold transition-colors">{u.name}</p><StreakBadge streak={u.streak} /></div>
                         <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest">@{u.email?.split('@')[0]}</p>
                       </div>
                     </div>
@@ -9411,7 +9456,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
   const [newComment, setNewComment] = useState('');
   const [isCommenting, setIsCommenting] = useState(false);
   const [reportSent, setReportSent] = useState(false);
-  const [authorProfile, setAuthorProfile] = useState<{ name: string; logoUrl?: string; gender?: string; avatar?: UserAvatar } | null>(null);
+  const [authorProfile, setAuthorProfile] = useState<{ name: string; logoUrl?: string; gender?: string; avatar?: UserAvatar; streak?: number } | null>(null);
 
   useEffect(() => {
     if (post.authorRole === 'vendor' && post.storeId) {
@@ -9420,7 +9465,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
       }, () => {});
     }
     return onSnapshot(doc(db, 'users', post.authorUid), (snap) => {
-      if (snap.exists()) setAuthorProfile({ name: snap.data().name, gender: snap.data().gender, avatar: snap.data().avatar });
+      if (snap.exists()) setAuthorProfile({ name: snap.data().name, gender: snap.data().gender, avatar: snap.data().avatar, streak: snap.data().streak });
     }, () => {});
   }, [post.authorUid, post.storeId, post.authorRole]);
 
@@ -9470,8 +9515,11 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
     setIsCommenting(true);
     const text = newComment.trim();
     try {
-      // Fetch fresh sender profile so name/photo are always accurate
-      const senderSnap = await getDoc(doc(db, 'users', currentUser.uid)).catch(() => null);
+      // Fetch fresh sender profile so name/photo are always accurate; bump streak
+      const [senderSnap, commentStreak] = await Promise.all([
+        getDoc(doc(db, 'users', currentUser.uid)).catch(() => null),
+        bumpStreak(currentUser.uid),
+      ]);
       const senderData = senderSnap?.exists() ? senderSnap.data() : null;
       const fromName = senderData?.name || currentProfile?.name || currentUser.displayName || 'User';
       const fromPhoto = senderData?.photoURL || currentProfile?.photoURL || currentUser.photoURL || '';
@@ -9480,6 +9528,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
         fromUid: currentUser.uid,
         fromName,
         fromPhoto,
+        fromStreak: commentStreak,
         content: text,
         likesCount: 0,
         likedBy: [],
@@ -9533,11 +9582,14 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
             <div className="flex items-center gap-1.5 flex-wrap">
               {post.wallPost && post.storeName ? (
                 <p className="text-sm leading-snug">
-                  <span
-                    className="font-bold cursor-pointer hover:text-brand-gold transition-colors"
-                    onClick={handleAvatarClick}
-                  >
-                    {authorProfile?.name || post.authorName}
+                  <span className="inline-flex items-center gap-1 flex-wrap">
+                    <span
+                      className="font-bold cursor-pointer hover:text-brand-gold transition-colors"
+                      onClick={handleAvatarClick}
+                    >
+                      {authorProfile?.name || post.authorName}
+                    </span>
+                    <StreakBadge streak={authorProfile?.streak} />
                   </span>
                   <span className="text-brand-navy/30 mx-1">›</span>
                   <span
@@ -9553,11 +9605,14 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                 </p>
               ) : post.wallPost && post.toUid ? (
                 <p className="text-sm leading-snug">
-                  <span
-                    className="font-bold cursor-pointer hover:text-brand-gold transition-colors"
-                    onClick={handleAvatarClick}
-                  >
-                    {authorProfile?.name || post.authorName}
+                  <span className="inline-flex items-center gap-1">
+                    <span
+                      className="font-bold cursor-pointer hover:text-brand-gold transition-colors"
+                      onClick={handleAvatarClick}
+                    >
+                      {authorProfile?.name || post.authorName}
+                    </span>
+                    <StreakBadge streak={authorProfile?.streak} />
                   </span>
                   <span className="text-brand-navy/30 mx-1">›</span>
                   <span
@@ -9582,11 +9637,14 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                   {post.storeName}
                 </span>
               ) : (
-                <span
-                  className="font-bold text-sm cursor-pointer hover:text-brand-gold transition-colors"
-                  onClick={handleAvatarClick}
-                >
-                  {authorProfile?.name || post.authorName}
+                <span className="inline-flex items-center gap-1">
+                  <span
+                    className="font-bold text-sm cursor-pointer hover:text-brand-gold transition-colors"
+                    onClick={handleAvatarClick}
+                  >
+                    {authorProfile?.name || post.authorName}
+                  </span>
+                  <StreakBadge streak={authorProfile?.streak} />
                 </span>
               )}
             </div>
@@ -9743,7 +9801,10 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                 </button>
                 <div className="flex-1 min-w-0">
                   <div className="bg-brand-bg rounded-2xl px-3 py-2">
-                    <button onClick={() => handleViewCommentAuthor(comment.fromUid)} className="text-xs font-bold text-brand-navy mb-0.5 hover:text-brand-gold transition-colors block">{comment.fromName}</button>
+                    <div className="flex items-center gap-1 mb-0.5">
+                      <button onClick={() => handleViewCommentAuthor(comment.fromUid)} className="text-xs font-bold text-brand-navy hover:text-brand-gold transition-colors">{comment.fromName}</button>
+                      <StreakBadge streak={comment.fromStreak} />
+                    </div>
                     <p className="text-xs text-brand-navy/70 leading-relaxed">{comment.content}</p>
                   </div>
                   <div className="flex items-center gap-3 mt-1 px-1">
@@ -11463,7 +11524,7 @@ function CommunityScreen({ onViewUser, currentUser }: { onViewUser: (u: UserProf
                       <PixelAvatar config={u.avatar} uid={u.uid} size={40} view="head" />
                     </div>
                     <div className="flex-1">
-                      <p className="font-bold text-sm">{u.name}</p>
+                      <div className="flex items-center gap-1"><p className="font-bold text-sm">{u.name}</p><StreakBadge streak={u.streak} /></div>
                       <p className="text-xs text-brand-navy/40">{u.totalStamps} stamps</p>
                     </div>
                     {i < 3 && <Sparkles className="w-4 h-4 text-brand-gold" />}
@@ -11499,7 +11560,7 @@ function CommunityScreen({ onViewUser, currentUser }: { onViewUser: (u: UserProf
                         <PixelAvatar config={u.avatar} uid={u.uid} size={40} view="head" />
                       </div>
                       <div className="flex-1 cursor-pointer" onClick={() => onViewUser(u)}>
-                        <p className="font-bold text-sm">{u.name}</p>
+                        <div className="flex items-center gap-1"><p className="font-bold text-sm">{u.name}</p><StreakBadge streak={u.streak} /></div>
                         <p className="text-xs text-brand-navy/40">{u.role}</p>
                       </div>
                       <button
@@ -12389,7 +12450,10 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
               <PixelAvatar config={targetUser.avatar} uid={targetUser.uid} size={72} view="full" />
             </div>
           </div>
-          <h2 className="text-2xl font-bold">{targetUser.name}</h2>
+          <div className="flex items-center justify-center gap-2">
+            <h2 className="text-2xl font-bold">{targetUser.name}</h2>
+            <StreakBadge streak={targetUser.streak} />
+          </div>
           <p className="text-brand-gold font-bold text-xs uppercase tracking-[0.2em]">@{targetUser.handle || targetUser.email?.split('@')[0]}</p>
           <div className="flex items-center justify-center gap-4 mt-2 mb-4 text-sm">
             <span className="flex items-center gap-1 font-bold">
