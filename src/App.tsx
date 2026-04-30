@@ -260,6 +260,8 @@ interface UserProfile {
   total_cards_held: number;
   totalStamps: number;
   totalRedeemed: number;
+  charityAnimals?: number;
+  charityTrees?: number;
   avatar?: UserAvatar;
 }
 
@@ -476,10 +478,35 @@ interface StoreAutomation {
   lastFiredDate?: string;
 }
 
-type BadgeMetric = 'stamps' | 'cards_completed' | 'challenges_joined' | 'memberships' | 'followers' | 'following' | 'posts';
+type BadgeMetric = 'stamps' | 'cards_completed' | 'challenges_joined' | 'memberships' | 'followers' | 'following' | 'posts' | 'charity_animals' | 'charity_trees' | 'charity_total';
+
+interface EndangeredAnimal {
+  name: string;
+  emoji: string;
+  status: 'Critically Endangered' | 'Endangered';
+  fact: string;
+}
+
+const ENDANGERED_ANIMALS: EndangeredAnimal[] = [
+  { name: 'Amur Leopard', emoji: '🐆', status: 'Critically Endangered', fact: 'Fewer than 100 remain in the wild' },
+  { name: 'Sumatran Orangutan', emoji: '🦧', status: 'Critically Endangered', fact: 'Lost 80% of habitat in just 20 years' },
+  { name: 'Vaquita Porpoise', emoji: '🐬', status: 'Critically Endangered', fact: 'Fewer than 10 remain on Earth' },
+  { name: 'Javan Rhino', emoji: '🦏', status: 'Critically Endangered', fact: 'Only ~70 survive in the wild' },
+  { name: 'Cross River Gorilla', emoji: '🦍', status: 'Critically Endangered', fact: 'Fewer than 300 individuals remain' },
+  { name: 'Hawksbill Sea Turtle', emoji: '🐢', status: 'Critically Endangered', fact: 'Still hunted for their beautiful shells' },
+  { name: 'Kakapo Parrot', emoji: '🦜', status: 'Critically Endangered', fact: "World's only flightless parrot" },
+  { name: 'Siberian Tiger', emoji: '🐯', status: 'Endangered', fact: 'Only ~500 survive in the wild' },
+  { name: 'Snow Leopard', emoji: '🐆', status: 'Endangered', fact: 'Lives in the high mountains of central Asia' },
+  { name: 'Blue Whale', emoji: '🐋', status: 'Endangered', fact: "Earth's largest animal, still recovering from hunting" },
+  { name: 'Leatherback Sea Turtle', emoji: '🐢', status: 'Critically Endangered', fact: 'Population fell 40% in just 3 generations' },
+  { name: 'Sumatran Elephant', emoji: '🐘', status: 'Critically Endangered', fact: 'Half their population lost in one generation' },
+  { name: 'African Wild Dog', emoji: '🐕', status: 'Endangered', fact: 'Only ~6,600 remain across Africa' },
+  { name: 'Giant Panda', emoji: '🐼', status: 'Endangered', fact: 'A global symbol of conservation' },
+  { name: 'Mountain Gorilla', emoji: '🦍', status: 'Endangered', fact: 'Fewer than 1,100 survive in the wild' },
+];
 
 interface CelebrationPage {
-  type: 'stamp' | 'challenge' | 'upsell';
+  type: 'stamp' | 'challenge' | 'upsell' | 'charity';
   storeName?: string;
   challengeTitle?: string;
   upsellTitle?: string;
@@ -488,6 +515,7 @@ interface CelebrationPage {
   reward: string;
   encouragement: string;
   done: boolean;
+  charityAnimal?: EndangeredAnimal;
 }
 
 interface AppBadge {
@@ -2464,6 +2492,9 @@ const BADGE_METRIC_LABELS: Record<BadgeMetric, string> = {
   followers: 'Followers',
   following: 'Following',
   posts: 'Posts published',
+  charity_animals: 'Animals championed',
+  charity_trees: 'Trees championed',
+  charity_total: 'Total good deeds',
 };
 
 const BADGE_COLORS = [
@@ -3730,6 +3761,18 @@ function buildStampCelebrationPages(
     done,
   });
 
+  // --- Charity deed page (always shown after stamp) ---
+  const charityAnimal = ENDANGERED_ANIMALS[card.current_stamps % ENDANGERED_ANIMALS.length];
+  pages.push({
+    type: 'charity',
+    currentStamps: card.current_stamps,
+    totalStamps: nextTier?.stamps || store.stamps_required_for_reward || 10,
+    reward: '',
+    encouragement: '',
+    done: false,
+    charityAnimal,
+  });
+
   // --- Challenge progress pages ---
   const joined = challenges.filter(c =>
     (c.participantUids || []).includes(user.uid) &&
@@ -3965,6 +4008,9 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       followers: followersCountG,
       following: followingCountG,
       posts: postsCountG,
+      charity_animals: profile.charityAnimals || 0,
+      charity_trees: profile.charityTrees || 0,
+      charity_total: (profile.charityAnimals || 0) + (profile.charityTrees || 0),
     };
     const earned = allBadgesGlobal.filter(b => (metrics[b.metric] ?? 0) >= b.threshold);
 
@@ -4534,7 +4580,16 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       {/* Stamp celebration */}
       <AnimatePresence>
         {celebrationPages && (
-          <StampCelebrationModal pages={celebrationPages} onClose={() => setCelebrationPages(null)} />
+          <StampCelebrationModal
+            pages={celebrationPages}
+            onClose={() => setCelebrationPages(null)}
+            avatarConfig={profile?.avatar}
+            userUid={user.uid}
+            onCharityPick={async (choice) => {
+              const field = choice === 'animal' ? 'charityAnimals' : 'charityTrees';
+              await updateDoc(doc(db, 'users', user.uid), { [field]: increment(1) });
+            }}
+          />
         )}
       </AnimatePresence>
 
@@ -4869,18 +4924,43 @@ const PAGE_ICONS: Record<string, string> = { stamp: '⭐', challenge: '🏆', ch
 const PAGE_ANIM: Record<string, CelebAnimType> = { stamp: 'confetti', challenge: 'sparkles', challenge_done: 'fireworks', upsell: 'burst' };
 const CTA_LABELS = ['Keep smashing it! 🚀', 'You\'re on fire! 🔥', 'Unstoppable! 💪', 'Legend! ⭐', 'Amazing work! 🎉'];
 
-function StampCelebrationModal({ pages, onClose }: { pages: CelebrationPage[]; onClose: () => void }) {
+function StampCelebrationModal({
+  pages,
+  onClose,
+  avatarConfig,
+  userUid,
+  onCharityPick,
+}: {
+  pages: CelebrationPage[];
+  onClose: () => void;
+  avatarConfig?: UserAvatar;
+  userUid?: string;
+  onCharityPick?: (choice: 'animal' | 'tree') => void;
+}) {
   const [pageIdx, setPageIdx] = useState(0);
+  const [charityPicked, setCharityPicked] = useState<'animal' | 'tree' | null>(null);
   const page = pages[pageIdx];
   const isLast = pageIdx === pages.length - 1;
   const pct = Math.min(100, page.totalStamps > 0 ? Math.round((page.currentStamps / page.totalStamps) * 100) : 0);
   const circumference = 2 * Math.PI * 42;
   const isUpsell = page.type === 'upsell';
+  const isCharity = page.type === 'charity';
   const pageKey = page.type === 'challenge' && page.done ? 'challenge_done' : page.type;
 
   useEffect(() => {
-    fireCelebAnimation(PAGE_ANIM[pageKey] || 'sparkles');
+    setCharityPicked(null);
+    if (!isCharity) fireCelebAnimation(PAGE_ANIM[pageKey] || 'sparkles');
   }, [pageIdx]);
+
+  const handleCharityChoice = (choice: 'animal' | 'tree') => {
+    if (charityPicked) return;
+    setCharityPicked(choice);
+    onCharityPick?.(choice);
+    setTimeout(() => {
+      if (isLast) onClose();
+      else setPageIdx(i => i + 1);
+    }, 600);
+  };
 
   const ctaLabel = isLast
     ? (isUpsell ? 'Join the challenge! 🎯' : CTA_LABELS[pageIdx % CTA_LABELS.length])
@@ -4905,114 +4985,255 @@ function StampCelebrationModal({ pages, onClose }: { pages: CelebrationPage[]; o
             transition={{ duration: 0.2 }}
             className="p-6 pb-12 space-y-5"
           >
-            {/* Animated icon + label */}
-            <div className="text-center space-y-1">
-              <motion.div
-                initial={{ scale: 0, rotate: -20 }} animate={{ scale: 1, rotate: 0 }}
-                transition={{ type: 'spring', stiffness: 350, damping: 15, delay: 0.05 }}
-                className="text-5xl mb-2"
-              >
-                {PAGE_ICONS[pageKey]}
-              </motion.div>
-              <motion.p
-                initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-                className="text-[10px] font-bold uppercase tracking-widest text-brand-gold"
-              >
-                {isUpsell ? '✨ Level up your stamps!' : page.type === 'stamp' ? '🎉 Stamp Collected!' : page.done ? '🏆 Challenge Complete!' : '🏃 Challenge Update'}
-              </motion.p>
-              <motion.h2
-                initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-                className="font-display text-2xl font-bold text-brand-navy leading-tight"
-              >
-                {isUpsell ? page.upsellTitle : page.type === 'stamp' ? page.storeName : page.challengeTitle}
-              </motion.h2>
-            </div>
+            {isCharity ? (
+              /* ── Charity deed page ── */
+              <>
+                {/* Header */}
+                <div className="text-center space-y-1">
+                  <motion.p
+                    initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+                    className="text-[10px] font-bold uppercase tracking-widest text-emerald-500"
+                  >
+                    🌍 Do a Good Deed!
+                  </motion.p>
+                  <motion.h2
+                    initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+                    className="font-display text-xl font-bold text-brand-navy leading-tight"
+                  >
+                    Your stamp can help the planet
+                  </motion.h2>
+                </div>
 
-            {isUpsell ? (
-              /* Upsell layout — no ring, just big prize highlight */
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }}
-                className="rounded-3xl bg-brand-navy p-5 text-center space-y-2"
-              >
-                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold/70">Prize</p>
-                <p className="font-display text-xl font-bold text-white leading-tight">{page.reward}</p>
-                <p className="text-xs text-white/60">Collect {page.totalStamps} stamps to win</p>
-              </motion.div>
-            ) : (
-              /* Progress ring */
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.15, type: 'spring', stiffness: 300 }}
-                className="flex justify-center"
-              >
-                <div className="relative w-32 h-32">
-                  <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="42" fill="none" strokeWidth="8" stroke="currentColor" className="text-brand-navy/8" />
-                    <motion.circle
-                      cx="50" cy="50" r="42" fill="none" strokeWidth="8" stroke="currentColor"
-                      className={page.done ? 'text-green-400' : 'text-brand-gold'}
-                      strokeLinecap="round"
-                      strokeDasharray={circumference}
-                      initial={{ strokeDashoffset: circumference }}
-                      animate={{ strokeDashoffset: circumference * (1 - pct / 100) }}
-                      transition={{ duration: 0.9, ease: 'easeOut' }}
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-3xl font-display font-bold text-brand-navy leading-none">{page.currentStamps}</span>
-                    <span className="text-xs text-brand-navy/40 font-bold">/ {page.totalStamps}</span>
+                {/* Waving avatar with party hat */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2, type: 'spring', stiffness: 300 }}
+                  className="flex justify-center"
+                >
+                  <div className="relative flex items-end gap-2">
+                    {/* Avatar + party hat */}
+                    <motion.div
+                      animate={{ rotate: [0, -8, 8, -8, 8, 0] }}
+                      transition={{ duration: 1.4, repeat: Infinity, repeatDelay: 0.8, ease: 'easeInOut' }}
+                      className="relative"
+                    >
+                      {/* Party hat emoji above avatar head */}
+                      <div className="absolute -top-4 left-1/2 -translate-x-1/2 text-2xl z-10 select-none">🎉</div>
+                      <div className="bg-gradient-to-b from-emerald-100 to-teal-50 rounded-[1.5rem] p-3">
+                        <PixelAvatar config={avatarConfig} uid={userUid ?? 'x'} size={64} view="full" />
+                      </div>
+                    </motion.div>
+                    {/* Waving hand */}
+                    <motion.div
+                      animate={{ rotate: [0, 25, 0, 25, 0] }}
+                      transition={{ duration: 0.8, repeat: Infinity, repeatDelay: 1.4, ease: 'easeInOut' }}
+                      className="text-3xl mb-2 origin-bottom select-none"
+                    >
+                      👋
+                    </motion.div>
                   </div>
-                </div>
-              </motion.div>
-            )}
+                </motion.div>
 
-            {/* Encouragement pill */}
-            <motion.div
-              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-              className={cn('rounded-2xl p-4 text-center', page.done ? 'bg-green-50' : isUpsell ? 'bg-brand-gold/15' : 'bg-brand-gold/10')}
-            >
-              <p className={cn('font-bold text-sm leading-snug', page.done ? 'text-green-600' : 'text-brand-navy')}>
-                {page.encouragement}
-              </p>
-            </motion.div>
+                {/* Pick a cause */}
+                <motion.p
+                  initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+                  className="text-center text-xs font-bold text-brand-navy/50 uppercase tracking-widest"
+                >
+                  Pick what to champion today:
+                </motion.p>
 
-            {/* Progress bar (skip for upsell) */}
-            {!isUpsell && (
-              <motion.div
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
-                className="space-y-1.5"
-              >
-                <div className="flex justify-between text-[10px] font-bold text-brand-navy/40">
-                  <span className="truncate max-w-[70%]">{page.reward}</span>
-                  <span>{pct}%</span>
-                </div>
-                <div className="h-2 bg-brand-navy/8 rounded-full overflow-hidden">
+                {/* Animal + Tree cards */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
+                  className="grid grid-cols-2 gap-3"
+                >
+                  {/* Endangered animal card */}
+                  <button
+                    onClick={() => handleCharityChoice('animal')}
+                    disabled={!!charityPicked}
+                    className={cn(
+                      'flex flex-col items-center gap-2 p-4 rounded-2xl border-2 text-left transition-all active:scale-[0.97]',
+                      charityPicked === 'animal'
+                        ? 'border-emerald-400 bg-emerald-50 scale-[0.97]'
+                        : charityPicked === 'tree'
+                          ? 'border-brand-navy/10 bg-white opacity-40'
+                          : 'border-brand-navy/10 bg-white hover:border-emerald-300 hover:bg-emerald-50/50',
+                    )}
+                  >
+                    <div className="text-4xl">{page.charityAnimal?.emoji ?? '🐾'}</div>
+                    <div className="w-full">
+                      <p className="font-display font-bold text-sm text-brand-navy leading-tight">{page.charityAnimal?.name ?? 'Endangered Animal'}</p>
+                      <p className="text-[10px] font-bold text-red-500 mt-0.5">{page.charityAnimal?.status}</p>
+                      <p className="text-[10px] text-brand-navy/50 mt-1 leading-tight">{page.charityAnimal?.fact}</p>
+                    </div>
+                    {charityPicked === 'animal' && (
+                      <motion.div
+                        initial={{ scale: 0 }} animate={{ scale: 1 }}
+                        className="text-xl"
+                      >✅</motion.div>
+                    )}
+                  </button>
+
+                  {/* Plant a tree card */}
+                  <button
+                    onClick={() => handleCharityChoice('tree')}
+                    disabled={!!charityPicked}
+                    className={cn(
+                      'flex flex-col items-center gap-2 p-4 rounded-2xl border-2 text-left transition-all active:scale-[0.97]',
+                      charityPicked === 'tree'
+                        ? 'border-emerald-400 bg-emerald-50 scale-[0.97]'
+                        : charityPicked === 'animal'
+                          ? 'border-brand-navy/10 bg-white opacity-40'
+                          : 'border-brand-navy/10 bg-white hover:border-emerald-300 hover:bg-emerald-50/50',
+                    )}
+                  >
+                    <div className="text-4xl">🌳</div>
+                    <div className="w-full">
+                      <p className="font-display font-bold text-sm text-brand-navy leading-tight">Plant a Tree</p>
+                      <p className="text-[10px] font-bold text-emerald-600 mt-0.5">Reforestation</p>
+                      <p className="text-[10px] text-brand-navy/50 mt-1 leading-tight">Help restore forests and fight climate change</p>
+                    </div>
+                    {charityPicked === 'tree' && (
+                      <motion.div
+                        initial={{ scale: 0 }} animate={{ scale: 1 }}
+                        className="text-xl"
+                      >✅</motion.div>
+                    )}
+                  </button>
+                </motion.div>
+
+                {/* Donation note */}
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
+                  className="rounded-2xl bg-emerald-50 border border-emerald-200 p-3 flex items-start gap-2"
+                >
+                  <span className="text-lg shrink-0">💚</span>
+                  <p className="text-[11px] text-emerald-700 font-medium leading-snug">
+                    We donate <strong>10% of our profits</strong> to charitable organisations supporting wildlife conservation and reforestation.
+                  </p>
+                </motion.div>
+
+                {/* Page dots */}
+                {pages.length > 1 && (
+                  <div className="flex justify-center gap-1.5">
+                    {pages.map((_, i) => (
+                      <motion.div key={i} animate={{ width: i === pageIdx ? 16 : 6 }} className={cn('h-1.5 rounded-full transition-colors', i === pageIdx ? 'bg-brand-navy' : 'bg-brand-navy/20')} />
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              /* ── Standard stamp / challenge / upsell pages ── */
+              <>
+                {/* Animated icon + label */}
+                <div className="text-center space-y-1">
                   <motion.div
-                    className={cn('h-full rounded-full', page.done ? 'bg-green-400' : 'bg-brand-gold')}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${pct}%` }}
-                    transition={{ duration: 0.9, ease: 'easeOut' }}
-                  />
+                    initial={{ scale: 0, rotate: -20 }} animate={{ scale: 1, rotate: 0 }}
+                    transition={{ type: 'spring', stiffness: 350, damping: 15, delay: 0.05 }}
+                    className="text-5xl mb-2"
+                  >
+                    {PAGE_ICONS[pageKey]}
+                  </motion.div>
+                  <motion.p
+                    initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+                    className="text-[10px] font-bold uppercase tracking-widest text-brand-gold"
+                  >
+                    {isUpsell ? '✨ Level up your stamps!' : page.type === 'stamp' ? '🎉 Stamp Collected!' : page.done ? '🏆 Challenge Complete!' : '🏃 Challenge Update'}
+                  </motion.p>
+                  <motion.h2
+                    initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                    className="font-display text-2xl font-bold text-brand-navy leading-tight"
+                  >
+                    {isUpsell ? page.upsellTitle : page.type === 'stamp' ? page.storeName : page.challengeTitle}
+                  </motion.h2>
                 </div>
-              </motion.div>
-            )}
 
-            {/* Page dots */}
-            {pages.length > 1 && (
-              <div className="flex justify-center gap-1.5">
-                {pages.map((_, i) => (
-                  <motion.div key={i} animate={{ width: i === pageIdx ? 16 : 6 }} className={cn('h-1.5 rounded-full transition-colors', i === pageIdx ? 'bg-brand-navy' : 'bg-brand-navy/20')} />
-                ))}
-              </div>
-            )}
+                {isUpsell ? (
+                  /* Upsell layout — no ring, just big prize highlight */
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }}
+                    className="rounded-3xl bg-brand-navy p-5 text-center space-y-2"
+                  >
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold/70">Prize</p>
+                    <p className="font-display text-xl font-bold text-white leading-tight">{page.reward}</p>
+                    <p className="text-xs text-white/60">Collect {page.totalStamps} stamps to win</p>
+                  </motion.div>
+                ) : (
+                  /* Progress ring */
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.15, type: 'spring', stiffness: 300 }}
+                    className="flex justify-center"
+                  >
+                    <div className="relative w-32 h-32">
+                      <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="42" fill="none" strokeWidth="8" stroke="currentColor" className="text-brand-navy/8" />
+                        <motion.circle
+                          cx="50" cy="50" r="42" fill="none" strokeWidth="8" stroke="currentColor"
+                          className={page.done ? 'text-green-400' : 'text-brand-gold'}
+                          strokeLinecap="round"
+                          strokeDasharray={circumference}
+                          initial={{ strokeDashoffset: circumference }}
+                          animate={{ strokeDashoffset: circumference * (1 - pct / 100) }}
+                          transition={{ duration: 0.9, ease: 'easeOut' }}
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="text-3xl font-display font-bold text-brand-navy leading-none">{page.currentStamps}</span>
+                        <span className="text-xs text-brand-navy/40 font-bold">/ {page.totalStamps}</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
 
-            {/* CTA */}
-            <motion.button
-              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
-              onClick={isLast ? onClose : () => setPageIdx(i => i + 1)}
-              className="w-full py-3.5 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-[0.98] transition-all"
-            >
-              {ctaLabel}
-            </motion.button>
+                {/* Encouragement pill */}
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+                  className={cn('rounded-2xl p-4 text-center', page.done ? 'bg-green-50' : isUpsell ? 'bg-brand-gold/15' : 'bg-brand-gold/10')}
+                >
+                  <p className={cn('font-bold text-sm leading-snug', page.done ? 'text-green-600' : 'text-brand-navy')}>
+                    {page.encouragement}
+                  </p>
+                </motion.div>
+
+                {/* Progress bar (skip for upsell) */}
+                {!isUpsell && (
+                  <motion.div
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
+                    className="space-y-1.5"
+                  >
+                    <div className="flex justify-between text-[10px] font-bold text-brand-navy/40">
+                      <span className="truncate max-w-[70%]">{page.reward}</span>
+                      <span>{pct}%</span>
+                    </div>
+                    <div className="h-2 bg-brand-navy/8 rounded-full overflow-hidden">
+                      <motion.div
+                        className={cn('h-full rounded-full', page.done ? 'bg-green-400' : 'bg-brand-gold')}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${pct}%` }}
+                        transition={{ duration: 0.9, ease: 'easeOut' }}
+                      />
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Page dots */}
+                {pages.length > 1 && (
+                  <div className="flex justify-center gap-1.5">
+                    {pages.map((_, i) => (
+                      <motion.div key={i} animate={{ width: i === pageIdx ? 16 : 6 }} className={cn('h-1.5 rounded-full transition-colors', i === pageIdx ? 'bg-brand-navy' : 'bg-brand-navy/20')} />
+                    ))}
+                  </div>
+                )}
+
+                {/* CTA */}
+                <motion.button
+                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
+                  onClick={isLast ? onClose : () => setPageIdx(i => i + 1)}
+                  className="w-full py-3.5 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-[0.98] transition-all"
+                >
+                  {ctaLabel}
+                </motion.button>
+              </>
+            )}
           </motion.div>
         </AnimatePresence>
       </motion.div>
@@ -7653,6 +7874,9 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
     followers: followers.length,
     following: following.length,
     posts: myGlobalPosts.length,
+    charity_animals: profile.charityAnimals || 0,
+    charity_trees: profile.charityTrees || 0,
+    charity_total: (profile.charityAnimals || 0) + (profile.charityTrees || 0),
   };
   const earnedBadges = allBadges.filter(b => (badgeMetrics[b.metric] ?? 0) >= b.threshold);
 
@@ -12143,6 +12367,9 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
     followers: targetFollowers,
     following: targetFollowing,
     posts: userPosts.length,
+    charity_animals: targetUser.charityAnimals || 0,
+    charity_trees: targetUser.charityTrees || 0,
+    charity_total: (targetUser.charityAnimals || 0) + (targetUser.charityTrees || 0),
   };
   const earnedBadges = allBadges.filter(b => (pubBadgeMetrics[b.metric] ?? 0) >= b.threshold);
 
