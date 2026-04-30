@@ -10385,6 +10385,12 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
   const [activeSubTab, setActiveSubTab] = useState<'discovery' | 'following'>('discovery');
   const [showAllDeals, setShowAllDeals] = useState(false);
   const [feedChallenges, setFeedChallenges] = useState<Challenge[]>([]);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [lbPeriod, setLbPeriod] = useState<'alltime' | 'weekly'>('alltime');
+  const [lbCategory, setLbCategory] = useState<'stamps' | 'rewards' | 'challenges' | 'streak' | 'monopoly'>('stamps');
+  const [lbUsers, setLbUsers] = useState<UserProfile[]>([]);
+  const [challengeCounts, setChallengeCounts] = useState<Map<string, number>>(new Map());
+  const [lbLoading, setLbLoading] = useState(false);
   const lastDocRef = useRef<any>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -10494,6 +10500,27 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
       setFeedChallenges(snap.docs.map(d => ({ id: d.id, ...d.data() } as Challenge)))
     , () => {});
   }, []);
+
+  useEffect(() => {
+    if (!showLeaderboard || lbUsers.length > 0) return;
+    setLbLoading(true);
+    (async () => {
+      try {
+        const [usersSnap, entriesSnap] = await Promise.all([
+          getDocs(collection(db, 'users')),
+          getDocs(collection(db, 'challenge_entries')),
+        ]);
+        const counts = new Map<string, number>();
+        for (const d of entriesSnap.docs) {
+          const uid = d.data().uid;
+          if (uid) counts.set(uid, (counts.get(uid) || 0) + 1);
+        }
+        setChallengeCounts(counts);
+        setLbUsers(usersSnap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile)));
+      } catch (e) { console.error(e); }
+      setLbLoading(false);
+    })();
+  }, [showLeaderboard]);
 
   useEffect(() => {
     const userLoc = currentProfile?.location as { lat: number; lng: number } | undefined;
@@ -10685,7 +10712,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: i * 0.05 }}
                       className="shrink-0 w-36 rounded-[1.5rem] overflow-hidden cursor-pointer active:scale-[0.97] transition-transform flex flex-col relative"
-                      style={{ background: `linear-gradient(145deg, ${dealColor}dd, ${dealColor}99)`, backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)', border: '1px solid rgba(255,255,255,0.18)', height: '160px' }}
+                      style={{ background: `linear-gradient(145deg, ${dealColor}dd, ${dealColor}99)`, backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)', border: '1px solid rgba(255,255,255,0.18)', height: '120px' }}
                       onClick={() => onViewStore && onViewStore(store)}
                     >
                       {store.coverUrl && (
@@ -10728,7 +10755,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
                 <button
                   onClick={() => setShowAllDeals(true)}
                   className="shrink-0 w-24 rounded-[1.5rem] flex flex-col items-center justify-center gap-2 border-2 border-dashed border-brand-navy/20 text-brand-navy/40 hover:text-brand-navy/60 hover:border-brand-navy/40 transition-all active:scale-95"
-                  style={{ height: '160px' }}
+                  style={{ height: '120px' }}
                 >
                   <ChevronRight size={20} />
                   <span className="text-[10px] font-bold text-center leading-tight">See<br />More</span>
@@ -10794,6 +10821,132 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
               </div>
             </div>
           )}
+
+          {/* Leaderboard section */}
+          {(() => {
+            const getLbScore = (u: UserProfile) => {
+              switch (lbCategory) {
+                case 'stamps': return u.totalStamps || 0;
+                case 'rewards': return u.totalRedeemed || 0;
+                case 'challenges': return challengeCounts.get(u.uid) || 0;
+                case 'streak': return u.streak || 0;
+                case 'monopoly': return u.total_cards_held || 0;
+              }
+            };
+            const lbCategoryLabel = { stamps: 'Stamps', rewards: 'Rewards', challenges: 'Challenges', streak: 'Streak', monopoly: 'Monopoly' }[lbCategory];
+            const lbCategoryUnit = { stamps: 'stamps', rewards: 'redeemed', challenges: 'entries', streak: 'day streak', monopoly: 'stores' }[lbCategory];
+            const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+            const periodUsers = lbPeriod === 'weekly'
+              ? lbUsers.filter(u => u.lastStreakDate && u.lastStreakDate >= sevenDaysAgo)
+              : lbUsers;
+            const sorted = [...periodUsers].sort((a, b) => getLbScore(b) - getLbScore(a)).filter(u => getLbScore(u) > 0).slice(0, 20);
+            const podium = [sorted[1], sorted[0], sorted[2]]; // 2nd | 1st | 3rd
+            const podiumHeights = ['h-20', 'h-28', 'h-16'];
+            const podiumColors = ['bg-brand-navy/10', 'bg-brand-gold/30', 'bg-brand-navy/5'];
+            const podiumMedals = ['🥈', '🥇', '🥉'];
+            const podiumIndexes = [1, 0, 2]; // actual rank index for each column
+            return (
+              <div>
+                <button
+                  onClick={() => setShowLeaderboard(v => !v)}
+                  className="w-full flex items-center justify-between p-4 rounded-2xl bg-brand-navy text-white active:scale-[0.98] transition-transform"
+                >
+                  <div className="flex items-center gap-2">
+                    <Trophy size={16} className="text-brand-gold" />
+                    <span className="font-bold text-sm">Leaderboard</span>
+                  </div>
+                  <motion.div animate={{ rotate: showLeaderboard ? 90 : 0 }} transition={{ duration: 0.2 }}>
+                    <ChevronRight size={16} />
+                  </motion.div>
+                </button>
+
+                {showLeaderboard && (
+                  <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="mt-3 space-y-4">
+                    {/* Period tabs */}
+                    <div className="flex gap-2 p-1 bg-white rounded-2xl border border-brand-navy/5">
+                      {(['alltime', 'weekly'] as const).map(p => (
+                        <button key={p} onClick={() => setLbPeriod(p)}
+                          className={cn('flex-1 py-2 rounded-xl text-xs font-bold transition-all', lbPeriod === p ? 'bg-brand-navy text-white shadow' : 'text-brand-navy/40')}>
+                          {p === 'alltime' ? 'All Time' : 'This Week'}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Category pills */}
+                    <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+                      {([
+                        { key: 'stamps', label: 'Stamps', icon: '🏷️' },
+                        { key: 'rewards', label: 'Rewards', icon: '🎁' },
+                        { key: 'challenges', label: 'Challenges', icon: '🏆' },
+                        { key: 'streak', label: 'Streak', icon: '🔥' },
+                        { key: 'monopoly', label: 'Monopoly', icon: '🎯' },
+                      ] as const).map(({ key, label, icon }) => (
+                        <button key={key} onClick={() => setLbCategory(key)}
+                          className={cn('shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold transition-all', lbCategory === key ? 'bg-brand-gold text-brand-navy shadow' : 'bg-white border border-brand-navy/10 text-brand-navy/50')}>
+                          <span>{icon}</span>{label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {lbLoading ? (
+                      <div className="flex justify-center py-8">
+                        <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}>
+                          <Sparkles className="w-6 h-6 text-brand-gold/60" />
+                        </motion.div>
+                      </div>
+                    ) : sorted.length === 0 ? (
+                      <div className="py-10 text-center text-brand-navy/30">
+                        <Trophy size={40} className="mx-auto mb-3 opacity-20" />
+                        <p className="text-sm font-bold">No data yet</p>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Podium */}
+                        <div className="glass-card rounded-[2rem] p-4 pt-6">
+                          <p className="text-center text-[10px] font-bold text-brand-navy/30 uppercase tracking-widest mb-4">{lbCategoryLabel} Leaders</p>
+                          <div className="flex items-end justify-center gap-3 mb-2">
+                            {podium.map((u, col) => {
+                              const rank = podiumIndexes[col];
+                              if (!u) return <div key={col} className="w-[30%]" />;
+                              return (
+                                <div key={u.uid} className="flex flex-col items-center w-[30%]" onClick={() => onViewUser(u)} style={{ cursor: 'pointer' }}>
+                                  <span className="text-lg mb-0.5">{podiumMedals[col]}</span>
+                                  <div className={cn('w-12 h-12 rounded-2xl overflow-hidden border-2 bg-indigo-50 flex items-center justify-center mb-1', rank === 0 ? 'border-brand-gold shadow-lg shadow-brand-gold/30' : 'border-brand-navy/10')}>
+                                    <PixelAvatar config={u.avatar} uid={u.uid} size={48} view="head" />
+                                  </div>
+                                  <p className="text-[10px] font-bold text-brand-navy text-center leading-tight line-clamp-1 w-full">{u.name}</p>
+                                  <p className={cn('text-[11px] font-black mt-0.5', rank === 0 ? 'text-brand-gold' : 'text-brand-navy/50')}>{getLbScore(u)}</p>
+                                  <div className={cn('w-full rounded-t-xl mt-1', podiumColors[col], podiumHeights[col])} />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Rest of list */}
+                        {sorted.length > 3 && (
+                          <div className="space-y-2">
+                            {sorted.slice(3).map((u, i) => (
+                              <div key={u.uid} onClick={() => onViewUser(u)} className="glass-card p-3 rounded-2xl flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-transform">
+                                <div className="w-6 font-display font-bold text-brand-navy/30 text-sm text-center">#{i + 4}</div>
+                                <div className="w-8 h-8 rounded-xl overflow-hidden bg-indigo-50 flex items-center justify-center shrink-0">
+                                  <PixelAvatar config={u.avatar} uid={u.uid} size={32} view="head" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1"><p className="font-bold text-xs truncate">{u.name}</p><StreakBadge streak={u.streak} /></div>
+                                </div>
+                                <p className="font-black text-sm text-brand-navy/70 shrink-0">{getLbScore(u)} <span className="text-[10px] font-medium text-brand-navy/30">{lbCategoryUnit}</span></p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </motion.div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Main mixed feed */}
           {loading ? <FeedLoadingSpinner /> : (
