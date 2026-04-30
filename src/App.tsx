@@ -2157,20 +2157,20 @@ async function updateChallengeProgress(customerUid: string, storeId: string, qty
 
 function NavButton({ active, onClick, icon, label, badgeCount }: { active: boolean, onClick: () => void, icon: React.ReactNode, label: string, badgeCount?: number }) {
   return (
-    <button 
+    <button
       onClick={onClick}
       className={cn(
         "flex flex-col items-center gap-1 transition-all relative",
-        active ? "text-brand-gold" : "text-brand-navy/40 hover:text-brand-navy/60"
+        active ? "text-white" : "text-brand-navy/40 hover:text-brand-navy/60"
       )}
     >
       <div className={cn(
         "p-2 rounded-xl transition-all",
-        active && "bg-brand-gold/10"
+        active ? "gradient-red shadow-md shadow-blue-500/20" : ""
       )}>
         {React.cloneElement(icon as React.ReactElement, { size: 24 })}
       </div>
-      <span className="text-[10px] font-bold uppercase tracking-wider">{label}</span>
+      <span className={cn("text-[10px] font-bold uppercase tracking-wider", active && "text-brand-gold")}>{label}</span>
       {badgeCount !== undefined && badgeCount > 0 && (
         <span className="absolute top-0 right-2 w-4 h-4 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center border-2 border-white">
           {badgeCount > 9 ? '9+' : badgeCount}
