@@ -2116,10 +2116,10 @@ async function bumpStreak(uid: string): Promise<number> {
   }
 }
 
-function StreakBadge({ streak }: { streak?: number }) {
+function StreakBadge({ streak, size = 'sm' }: { streak?: number; size?: 'sm' | 'lg' }) {
   if (!streak || streak <= 0) return null;
   return (
-    <span className="inline-flex items-center gap-0.5 text-[11px] font-bold text-orange-500 leading-none shrink-0">
+    <span className={`inline-flex items-center gap-0.5 font-bold text-orange-500 leading-none shrink-0 ${size === 'lg' ? 'text-2xl' : 'text-[11px]'}`}>
       🔥{streak}
     </span>
   );
@@ -8206,7 +8206,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
 
         <div className="flex items-center justify-center gap-2">
           <h2 className="font-display text-3xl font-bold">{profile.name}</h2>
-          <StreakBadge streak={profile.streak} />
+          <StreakBadge streak={profile.streak} size="lg" />
         </div>
         <p className="text-brand-gold font-bold text-xs uppercase tracking-[0.2em]">@{profile.handle || user.email?.split('@')[0]}</p>
         <div className="flex items-center justify-center gap-4 mt-2 text-sm">
@@ -12452,7 +12452,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
           </div>
           <div className="flex items-center justify-center gap-2">
             <h2 className="text-2xl font-bold">{targetUser.name}</h2>
-            <StreakBadge streak={targetUser.streak} />
+            <StreakBadge streak={targetUser.streak} size="lg" />
           </div>
           <p className="text-brand-gold font-bold text-xs uppercase tracking-[0.2em]">@{targetUser.handle || targetUser.email?.split('@')[0]}</p>
           <div className="flex items-center justify-center gap-4 mt-2 mb-4 text-sm">
