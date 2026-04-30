@@ -8200,9 +8200,9 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
       {earnedBadges.length > 0 && (
         <div>
           <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 px-1">Badges</p>
-          <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+          <div className="flex flex-wrap gap-2">
             {earnedBadges.map(b => (
-              <button key={b.id} onClick={() => setSelectedBadge(b)} className="shrink-0 flex flex-col items-center gap-1 active:scale-95 transition-transform">
+              <button key={b.id} onClick={() => setSelectedBadge(b)} className="flex flex-col items-center gap-1 active:scale-95 transition-transform">
                 <div
                   className="w-14 h-14 rounded-[1.1rem] flex items-center justify-center text-2xl shadow-md"
                   style={{ background: `linear-gradient(135deg, ${b.color}ee, ${b.color}99)` }}
@@ -12453,9 +12453,9 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
           {earnedBadges.length > 0 && (
             <div className="mt-4">
               <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5">Badges</p>
-              <div className="flex gap-2 overflow-x-auto pb-1 justify-center" style={{ scrollbarWidth: 'none' }}>
+              <div className="flex flex-wrap gap-2 justify-center">
                 {earnedBadges.map(b => (
-                  <button key={b.id} onClick={() => setSelectedBadge(b)} className="shrink-0 flex flex-col items-center gap-1 active:scale-95 transition-transform">
+                  <button key={b.id} onClick={() => setSelectedBadge(b)} className="flex flex-col items-center gap-1 active:scale-95 transition-transform">
                     <div
                       className="w-14 h-14 rounded-[1.1rem] flex items-center justify-center text-2xl shadow-md"
                       style={{ background: `linear-gradient(135deg, ${b.color}ee, ${b.color}99)` }}
