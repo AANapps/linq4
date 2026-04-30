@@ -6621,19 +6621,7 @@ function LoyaltyCard({ card, store, onViewStore }: { card: Card, store?: StorePr
     setIsArchiving(true);
     const numTiers = store.rewardTiers?.length || 1;
     try {
-      // Create an archived record for the history/archive list
-      await addDoc(collection(db, 'cards'), {
-        user_id: card.user_id,
-        store_id: card.store_id,
-        current_stamps: limit,
-        total_completed_cycles: card.total_completed_cycles,
-        last_tap_timestamp: serverTimestamp(),
-        isArchived: true,
-        isRedeemed: true,
-        archivedAt: serverTimestamp(),
-        tiersCompleted: numTiers,
-      });
-      // Reset the active card for the next loyalty cycle, locking in current store stamp count
+      // Reset the active card first — this is the critical write
       await updateDoc(doc(db, 'cards', card.id), {
         current_stamps: 0,
         isRedeemed: false,
@@ -6642,20 +6630,29 @@ function LoyaltyCard({ card, store, onViewStore }: { card: Card, store?: StorePr
         tiersCompleted: numTiers,
         last_tap_timestamp: serverTimestamp(),
       });
-      // Increment user's reward count by number of tiers on this card
-      await updateDoc(doc(db, 'users', auth.currentUser.uid), {
-        totalRedeemed: increment(numTiers),
-      });
-      // Increment store's rewards-given counter by the same amount
-      await updateDoc(doc(db, 'stores', card.store_id), {
-        rewardsGiven: increment(numTiers),
-      });
-      setShowCompletionPopup(false);
     } catch (error) {
-      console.error(error);
+      console.error('Card reset failed:', error);
     } finally {
+      // Always close the popup and clear loading state regardless of write outcome
+      setShowCompletionPopup(false);
       setIsArchiving(false);
     }
+
+    // Fire-and-forget: archive history + stats updates (non-critical)
+    const uid = auth.currentUser.uid;
+    addDoc(collection(db, 'cards'), {
+      user_id: card.user_id,
+      store_id: card.store_id,
+      current_stamps: limit,
+      total_completed_cycles: card.total_completed_cycles,
+      last_tap_timestamp: serverTimestamp(),
+      isArchived: true,
+      isRedeemed: true,
+      archivedAt: serverTimestamp(),
+      tiersCompleted: numTiers,
+    }).catch(console.error);
+    updateDoc(doc(db, 'users', uid), { totalRedeemed: increment(numTiers) }).catch(console.error);
+    updateDoc(doc(db, 'stores', card.store_id), { rewardsGiven: increment(numTiers) }).catch(console.error);
   };
 
   const handleDelete = async (e: React.MouseEvent) => {
