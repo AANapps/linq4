@@ -12573,7 +12573,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
   const pubBadgeMetrics: Record<BadgeMetric, number> = {
     stamps: publicUserStamps,
     cards_completed: publicUserRewards,
-    challenges_joined: 0,
+    challenges_joined: publicEntries.size,
     memberships: cards.length,
     followers: targetFollowers,
     following: targetFollowing,
@@ -12667,24 +12667,25 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
             ))}
           </div>
 
-          {earnedBadges.length > 0 && (
-            <div className="mt-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5">Badges</p>
-              <div className="flex flex-wrap gap-2 justify-center">
-                {earnedBadges.map(b => (
-                  <button key={b.id} onClick={() => setSelectedBadge(b)} className="flex flex-col items-center gap-1 active:scale-95 transition-transform">
-                    <div
-                      className="w-14 h-14 rounded-[1.1rem] flex items-center justify-center text-2xl shadow-md"
-                      style={{ background: `linear-gradient(135deg, ${b.color}ee, ${b.color}99)` }}
-                    >{b.icon}</div>
-                    <p className="text-[9px] font-bold text-brand-navy/50 text-center max-w-[56px] leading-tight line-clamp-2">{b.name}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
+
+      {earnedBadges.length > 0 && (
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 px-1">Badges</p>
+          <div className="flex flex-wrap gap-2">
+            {earnedBadges.map(b => (
+              <button key={b.id} onClick={() => setSelectedBadge(b)} className="flex flex-col items-center gap-1 active:scale-95 transition-transform">
+                <div
+                  className="w-14 h-14 rounded-[1.1rem] flex items-center justify-center text-2xl shadow-md"
+                  style={{ background: `linear-gradient(135deg, ${b.color}ee, ${b.color}99)` }}
+                >{b.icon}</div>
+                <p className="text-[9px] font-bold text-brand-navy/50 text-center max-w-[56px] leading-tight line-clamp-2">{b.name}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <AnimatePresence>
         {selectedBadge && (
