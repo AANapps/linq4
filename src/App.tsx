@@ -6884,7 +6884,7 @@ function LoyaltyCard({ card, store, onViewStore }: { card: Card, store?: StorePr
                     >
                       {isFilled
                         ? isTier ? <Gift size={11} className="text-brand-navy" /> : <span className="text-base leading-none">{stampIcon}</span>
-                        : isTier ? <Gift size={10} style={{ color: stampBorderColor, opacity: 0.65 }} /> : <span className="text-[8px] font-bold text-white">{stampNum}</span>}
+                        : isTier ? <Gift size={10} style={{ color: stampBorderColor, opacity: 0.65 }} /> : <span className="text-[8px] font-bold" style={{ color: stampBorderColor, opacity: 0.8 }}>{stampNum}</span>}
                     </div>
                   );
                 })}
@@ -7553,6 +7553,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
   const [stampBorderColor, setStampBorderColor] = useState(store?.stampBorderColor || '#ffffff');
   const [cardPattern, setCardPattern] = useState(store?.cardPattern || 'solid');
   const [selectedIconGroup, setSelectedIconGroup] = useState(STAMP_ICON_GROUPS[0].group);
+  const [openColorPicker, setOpenColorPicker] = useState<'primary' | 'secondary' | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -7662,22 +7663,77 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
           <p className="text-[11px] text-brand-navy/30 pl-1">Set the stamp count and reward name for each stage. Stage {numTiers} is the top reward.</p>
         </div>
 
-        {/* Card colour — dark only */}
+        {/* Colours — primary & secondary side by side */}
         <div className="space-y-2">
-          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Card Colour (Dark)</label>
-          <div className="flex gap-3 flex-wrap">
-            {DARK_THEMES.map(c => (
-              <button key={c} onClick={() => setTheme(c)}
-                className={cn("w-10 h-10 rounded-2xl border-2 transition-all", theme === c ? "border-brand-gold scale-110 shadow-lg" : "border-white/20")}
-                style={{ backgroundColor: c }}
-              />
-            ))}
-            <div className="relative w-10 h-10">
-              <input type="color" value={theme} onChange={e => setTheme(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-              <div className="w-10 h-10 rounded-2xl border-2 border-dashed border-brand-navy/20 flex items-center justify-center" style={{ backgroundColor: theme }}>
-                <Palette size={14} className="text-white/60" />
-              </div>
+          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Colours</label>
+          <div className="flex gap-3">
+
+            {/* Primary — card background */}
+            <div className="flex-1 relative">
+              <p className="text-[10px] text-brand-navy/35 font-bold uppercase tracking-wider mb-1.5">Primary</p>
+              <button
+                onClick={() => setOpenColorPicker(v => v === 'primary' ? null : 'primary')}
+                className="w-full h-12 rounded-2xl border-2 border-brand-navy/10 flex items-center justify-center gap-2 bg-brand-bg active:scale-95 transition-all"
+              >
+                <div className="w-6 h-6 rounded-full border border-black/10 shadow-sm" style={{ backgroundColor: theme }} />
+                <span className="text-xs font-bold text-brand-navy/60">Card</span>
+              </button>
+              {openColorPicker === 'primary' && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setOpenColorPicker(null)} />
+                  <div className="absolute top-full left-0 mt-2 z-50 bg-white rounded-2xl shadow-2xl border border-black/5 p-3 w-52">
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {DARK_THEMES.map(c => (
+                        <button key={c} onClick={() => { setTheme(c); setOpenColorPicker(null); }}
+                          className={cn("w-9 h-9 rounded-xl border-2 transition-all", theme === c ? "border-brand-gold scale-110 shadow" : "border-transparent")}
+                          style={{ backgroundColor: c }} />
+                      ))}
+                    </div>
+                    <div className="relative h-9">
+                      <input type="color" value={theme} onChange={e => setTheme(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                      <div className="h-9 rounded-xl border-2 border-dashed border-brand-navy/15 flex items-center justify-center gap-2" style={{ backgroundColor: theme }}>
+                        <Palette size={13} className="text-white/70" />
+                        <span className="text-[11px] text-white/70 font-bold">Custom</span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
+
+            {/* Secondary — border & text */}
+            <div className="flex-1 relative">
+              <p className="text-[10px] text-brand-navy/35 font-bold uppercase tracking-wider mb-1.5">Secondary</p>
+              <button
+                onClick={() => setOpenColorPicker(v => v === 'secondary' ? null : 'secondary')}
+                className="w-full h-12 rounded-2xl border-2 border-brand-navy/10 flex items-center justify-center gap-2 bg-brand-bg active:scale-95 transition-all"
+              >
+                <div className="w-6 h-6 rounded-full border border-black/10 shadow-sm" style={{ backgroundColor: stampBorderColor }} />
+                <span className="text-xs font-bold text-brand-navy/60">Border &amp; Text</span>
+              </button>
+              {openColorPicker === 'secondary' && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setOpenColorPicker(null)} />
+                  <div className="absolute top-full left-0 mt-2 z-50 bg-white rounded-2xl shadow-2xl border border-black/5 p-3 w-52">
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {['#ffffff', '#f5a623', '#a78bfa', '#34d399', '#fb7185', '#60a5fa'].map(c => (
+                        <button key={c} onClick={() => { setStampBorderColor(c); setOpenColorPicker(null); }}
+                          className={cn("w-9 h-9 rounded-xl border-2 transition-all", stampBorderColor === c ? "border-brand-navy scale-110 shadow" : "border-transparent")}
+                          style={{ backgroundColor: c }} />
+                      ))}
+                    </div>
+                    <div className="relative h-9">
+                      <input type="color" value={stampBorderColor} onChange={e => setStampBorderColor(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                      <div className="h-9 rounded-xl border-2 border-dashed border-brand-navy/15 flex items-center justify-center gap-2" style={{ backgroundColor: stampBorderColor }}>
+                        <Palette size={13} className="text-white/70" />
+                        <span className="text-[11px] text-white/70 font-bold">Custom</span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
           </div>
         </div>
 
@@ -7712,26 +7768,6 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
           </div>
         </div>
 
-        {/* Stamp border colour */}
-        <div className="space-y-2">
-          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Stamp Border Colour</label>
-          <div className="flex gap-2 flex-wrap">
-            {['#ffffff', '#f5a623', '#a78bfa', '#34d399', '#fb7185', '#60a5fa'].map(c => (
-              <button
-                key={c}
-                onClick={() => setStampBorderColor(c)}
-                className={cn("w-9 h-9 rounded-xl border-2 transition-all", stampBorderColor === c ? "border-brand-navy scale-110 shadow" : "border-transparent")}
-                style={{ backgroundColor: c }}
-              />
-            ))}
-            <div className="relative w-9 h-9">
-              <input type="color" value={stampBorderColor} onChange={e => setStampBorderColor(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-              <div className="w-9 h-9 rounded-xl border-2 border-dashed border-brand-navy/20 flex items-center justify-center" style={{ backgroundColor: stampBorderColor }}>
-                <Palette size={12} className="text-white/60" />
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* Card Pattern */}
         <div className="space-y-2">
@@ -7790,7 +7826,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
                   >
                     {isFilled
                       ? isTier ? <Gift size={10} className="text-brand-navy" /> : <span className="text-base leading-none">{stampIcon}</span>
-                      : isTier ? <Gift size={10} style={{ color: stampBorderColor, opacity: 0.7 }} /> : <span className="text-[8px] font-bold text-white">{stampNum}</span>}
+                      : isTier ? <Gift size={10} style={{ color: stampBorderColor, opacity: 0.7 }} /> : <span className="text-[8px] font-bold" style={{ color: stampBorderColor, opacity: 0.8 }}>{stampNum}</span>}
                   </div>
                 );
               })}
