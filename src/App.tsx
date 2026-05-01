@@ -283,6 +283,7 @@ interface StoreProfile {
   reward?: string;
   theme?: string;
   stampIcon?: string;
+  stampBorderColor?: string;
   cardPattern?: string;
   location?: string;
   lat?: number;
@@ -6283,6 +6284,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
           setActiveChatId={setActiveChatId}
           onViewUser={onViewUser}
           vendorStore={store}
+          storeCards={storeCards}
         />
       )}
 
@@ -6858,6 +6860,7 @@ function LoyaltyCard({ card, store, onViewStore }: { card: Card, store?: StorePr
           );
 
           const stampIcon = store?.stampIcon || '⭐';
+          const stampBorderColor = store?.stampBorderColor || '#ffffff';
           const cardPattern = store?.cardPattern || 'solid';
           return (
             <div className="rounded-[1.5rem] p-4 space-y-4 relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${cardTheme} 0%, ${cardTheme}cc 100%)` }}>
@@ -6870,15 +6873,18 @@ function LoyaltyCard({ card, store, onViewStore }: { card: Card, store?: StorePr
                   const isFilled = i < card.current_stamps;
                   const isTier = tierStamps.has(stampNum);
                   return (
-                    <div key={i} className={cn(
-                      "aspect-square rounded-xl border flex items-center justify-center transition-all",
-                      isFilled
-                        ? isTier ? "bg-brand-gold border-brand-gold" : "bg-white/30 border-white/50"
-                        : isTier ? "border-white/60 bg-white/10" : "border-dashed border-white/25"
-                    )}>
+                    <div key={i}
+                      className={cn(
+                        "aspect-square rounded-xl border-2 flex items-center justify-center transition-all",
+                        isFilled
+                          ? isTier ? "bg-brand-gold" : "bg-white/30"
+                          : isTier ? "bg-white/10 border-dashed" : "border-dashed"
+                      )}
+                      style={{ borderColor: isTier ? (isFilled ? stampBorderColor : `${stampBorderColor}88`) : (isFilled ? stampBorderColor : `${stampBorderColor}55`) }}
+                    >
                       {isFilled
                         ? isTier ? <Gift size={11} className="text-brand-navy" /> : <span className="text-base leading-none">{stampIcon}</span>
-                        : isTier ? <Gift size={10} className="text-white/60" /> : <span className="text-white/30 text-[8px] font-bold">{stampNum}</span>}
+                        : isTier ? <Gift size={10} style={{ color: stampBorderColor, opacity: 0.65 }} /> : <span className="text-[8px] font-bold text-white">{stampNum}</span>}
                     </div>
                   );
                 })}
@@ -7544,7 +7550,9 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
   const [tiers, setTiers] = useState<{ stamps: number; reward: string }[]>(() => initTiers(store));
   const [theme, setTheme] = useState(store?.theme || '#3a6fcc');
   const [stampIcon, setStampIcon] = useState(store?.stampIcon || '⭐');
+  const [stampBorderColor, setStampBorderColor] = useState(store?.stampBorderColor || '#ffffff');
   const [cardPattern, setCardPattern] = useState(store?.cardPattern || 'solid');
+  const [selectedIconGroup, setSelectedIconGroup] = useState(STAMP_ICON_GROUPS[0].group);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -7555,6 +7563,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
     setTiers(loaded);
     setTheme(store.theme || '#1a1a2e');
     setStampIcon(store.stampIcon || '⭐');
+    setStampBorderColor(store.stampBorderColor || '#ffffff');
     setCardPattern(store.cardPattern || 'solid');
   }, [store?.id]);
 
@@ -7586,6 +7595,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
         reward: topTier.reward,
         theme,
         stampIcon,
+        stampBorderColor,
         cardPattern,
       });
       setSaved(true);
@@ -7674,25 +7684,53 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
         {/* Stamp Icon */}
         <div className="space-y-3">
           <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Stamp Icon</label>
-          {STAMP_ICON_GROUPS.map(({ group, icons }) => (
-            <div key={group}>
-              <p className="text-[10px] text-brand-navy/30 font-bold uppercase tracking-wider mb-2">{group}</p>
-              <div className="flex flex-wrap gap-2">
-                {icons.map(icon => (
-                  <button
-                    key={icon}
-                    onClick={() => setStampIcon(icon)}
-                    className={cn(
-                      "w-10 h-10 rounded-xl flex items-center justify-center text-xl transition-all",
-                      stampIcon === icon ? "bg-brand-gold/20 ring-2 ring-brand-gold scale-110 shadow" : "bg-brand-bg hover:bg-brand-navy/5"
-                    )}
-                  >
-                    {icon}
-                  </button>
-                ))}
+          <div className="relative">
+            <select
+              value={selectedIconGroup}
+              onChange={e => setSelectedIconGroup(e.target.value)}
+              className="w-full px-5 py-3.5 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-gold/30 appearance-none"
+            >
+              {STAMP_ICON_GROUPS.map(({ group }) => (
+                <option key={group} value={group}>{group}</option>
+              ))}
+            </select>
+            <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-navy/40 pointer-events-none" />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {(STAMP_ICON_GROUPS.find(g => g.group === selectedIconGroup)?.icons || []).map(icon => (
+              <button
+                key={icon}
+                onClick={() => setStampIcon(icon)}
+                className={cn(
+                  "w-11 h-11 rounded-xl flex items-center justify-center text-2xl transition-all",
+                  stampIcon === icon ? "bg-brand-gold/20 ring-2 ring-brand-gold scale-110 shadow" : "bg-brand-bg hover:bg-brand-navy/5"
+                )}
+              >
+                {icon}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Stamp border colour */}
+        <div className="space-y-2">
+          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Stamp Border Colour</label>
+          <div className="flex gap-2 flex-wrap">
+            {['#ffffff', '#f5a623', '#a78bfa', '#34d399', '#fb7185', '#60a5fa'].map(c => (
+              <button
+                key={c}
+                onClick={() => setStampBorderColor(c)}
+                className={cn("w-9 h-9 rounded-xl border-2 transition-all", stampBorderColor === c ? "border-brand-navy scale-110 shadow" : "border-transparent")}
+                style={{ backgroundColor: c }}
+              />
+            ))}
+            <div className="relative w-9 h-9">
+              <input type="color" value={stampBorderColor} onChange={e => setStampBorderColor(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+              <div className="w-9 h-9 rounded-xl border-2 border-dashed border-brand-navy/20 flex items-center justify-center" style={{ backgroundColor: stampBorderColor }}>
+                <Palette size={12} className="text-white/60" />
               </div>
             </div>
-          ))}
+          </div>
         </div>
 
         {/* Card Pattern */}
@@ -7741,15 +7779,18 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
               {Array.from({ length: totalStamps }).map((_, i) => {
                 const stampNum = i + 1;
                 const isTier = tiers.slice(0, numTiers).some(t => t.stamps === stampNum);
-                const isFilled = i < 3; // preview shows 3 filled
+                const isFilled = i < 3;
                 return (
-                  <div key={i} className={cn("aspect-square rounded-xl border flex items-center justify-center",
-                    isFilled ? isTier ? "bg-brand-gold border-brand-gold" : "bg-white/30 border-white/50"
-                    : isTier ? "border-white/60 bg-white/10" : "border-dashed border-white/20"
-                  )}>
+                  <div key={i}
+                    className={cn("aspect-square rounded-xl border-2 flex items-center justify-center",
+                      isFilled ? isTier ? "bg-brand-gold" : "bg-white/30"
+                      : isTier ? "bg-white/10 border-dashed" : "border-dashed"
+                    )}
+                    style={{ borderColor: isTier ? (isFilled ? stampBorderColor : `${stampBorderColor}99`) : (isFilled ? stampBorderColor : `${stampBorderColor}66`) }}
+                  >
                     {isFilled
                       ? isTier ? <Gift size={10} className="text-brand-navy" /> : <span className="text-base leading-none">{stampIcon}</span>
-                      : isTier ? <Gift size={10} className="text-white/60" /> : <span className="text-white/25 text-[8px] font-bold">{stampNum}</span>}
+                      : isTier ? <Gift size={10} style={{ color: stampBorderColor, opacity: 0.7 }} /> : <span className="text-[8px] font-bold text-white">{stampNum}</span>}
                   </div>
                 );
               })}
@@ -11253,7 +11294,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
   );
 }
 
-function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveChatId, onViewUser, vendorStore }: { currentUser: FirebaseUser, currentProfile: UserProfile | null, activeChatId: string | null, setActiveChatId: (id: string | null) => void, onViewUser: (u: UserProfile) => void, vendorStore?: StoreProfile | null }) {
+function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveChatId, onViewUser, vendorStore, storeCards = [] }: { currentUser: FirebaseUser, currentProfile: UserProfile | null, activeChatId: string | null, setActiveChatId: (id: string | null) => void, onViewUser: (u: UserProfile) => void, vendorStore?: StoreProfile | null, storeCards?: Card[] }) {
   const [chats, setChats] = useState<Chat[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [olderMessages, setOlderMessages] = useState<ChatMessage[]>([]);
@@ -11268,6 +11309,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
   const [selectedMsgId, setSelectedMsgId] = useState<string | null>(null);
   const [showCustomerPicker, setShowCustomerPicker] = useState(false);
   const [storeCustomers, setStoreCustomers] = useState<UserProfile[]>([]);
+  const [showBroadcast, setShowBroadcast] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -11678,6 +11720,13 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
 
   return (
     <div className="space-y-6">
+      {/* Broadcast panel */}
+      <AnimatePresence>
+        {showBroadcast && vendorStore && (
+          <VendorBroadcastPanel store={vendorStore} storeCards={storeCards} onClose={() => setShowBroadcast(false)} />
+        )}
+      </AnimatePresence>
+
       <header className="flex items-center justify-between">
         <div>
           <h2 className="font-display text-3xl font-bold mb-1">Messages</h2>
@@ -11693,6 +11742,23 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
           </button>
         )}
       </header>
+
+      {/* Broadcast button — vendors only, at the top */}
+      {vendorStore && (
+        <button
+          onClick={() => setShowBroadcast(true)}
+          className="w-full flex items-center gap-4 p-5 rounded-[2rem] gradient-red text-white shadow-md active:scale-95 transition-transform"
+        >
+          <div className="w-10 h-10 rounded-2xl bg-white/15 flex items-center justify-center shrink-0">
+            <Send size={18} />
+          </div>
+          <div className="text-left flex-1 min-w-0">
+            <p className="font-bold text-sm">Broadcast Message</p>
+            <p className="text-xs text-white/70">Send to all members &amp; manage automations</p>
+          </div>
+          <ChevronRight size={18} className="text-white/50 shrink-0" />
+        </button>
+      )}
 
       <div className="space-y-3">
         {chats.filter(c => !(c.isBroadcast && vendorStore && c.storeId === vendorStore.id)).map(chat => (
