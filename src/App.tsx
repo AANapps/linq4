@@ -265,6 +265,7 @@ interface UserProfile {
   streak?: number;
   lastStreakDate?: string;
   avatar?: UserAvatar;
+  lastDogFed?: any;
 }
 
 interface StoreProfile {
@@ -12612,6 +12613,184 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
   );
 }
 
+// ─── Pixel Pet Scene ──────────────────────────────────────────────────────────
+function PixelPetScene({ targetUser, currentUser }: { targetUser: UserProfile; currentUser: FirebaseUser }) {
+  const charityAnimals = targetUser.charityAnimals || 0;
+  const hasDog = charityAnimals >= 5;
+
+  const lastFedMs = targetUser.lastDogFed
+    ? typeof targetUser.lastDogFed === 'number'
+      ? targetUser.lastDogFed
+      : (targetUser.lastDogFed.toMillis?.() ?? 0)
+    : 0;
+  const dogAlive = hasDog && lastFedMs > 0 && Date.now() - lastFedMs < 3 * 24 * 60 * 60 * 1000;
+  const isOwner = currentUser.uid === targetUser.uid;
+  const [justFed, setJustFed] = useState(false);
+
+  const feedDog = async () => {
+    if (!isOwner || !dogAlive) return;
+    try {
+      await updateDoc(doc(db, 'users', targetUser.uid), { lastDogFed: serverTimestamp() });
+      setJustFed(true);
+      setTimeout(() => setJustFed(false), 2500);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const hoursAgo = lastFedMs > 0 ? Math.floor((Date.now() - lastFedMs) / 3_600_000) : null;
+
+  return (
+    <div className="rounded-2xl overflow-hidden border border-brand-navy/10 shadow-sm">
+      <svg
+        viewBox="0 0 64 32"
+        width="100%"
+        style={{ display: 'block', imageRendering: 'pixelated' }}
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        {/* Sky */}
+        <rect x="0" y="0" width="64" height="32" fill="#87CEEB" />
+
+        {/* Sun */}
+        <rect x="52" y="2" width="6" height="6" fill="#FFD700" />
+        <rect x="54" y="1" width="2" height="1" fill="#FFD700" />
+        <rect x="54" y="8" width="2" height="1" fill="#FFD700" />
+        <rect x="51" y="4" width="1" height="2" fill="#FFD700" />
+        <rect x="58" y="4" width="1" height="2" fill="#FFD700" />
+        <rect x="51" y="2" width="1" height="1" fill="#FFE566" />
+        <rect x="58" y="2" width="1" height="1" fill="#FFE566" />
+        <rect x="51" y="7" width="1" height="1" fill="#FFE566" />
+        <rect x="58" y="7" width="1" height="1" fill="#FFE566" />
+
+        {/* Cloud 1 (slow) */}
+        <g>
+          <animateTransform attributeName="transform" type="translate" from="0 0" to="-78 0" dur="24s" repeatCount="indefinite" />
+          <rect x="6" y="4" width="13" height="3" fill="#FFFFFF" />
+          <rect x="9" y="2" width="7" height="3" fill="#FFFFFF" />
+          <rect x="5" y="5" width="2" height="2" fill="#EEEEEE" />
+          <rect x="17" y="5" width="2" height="2" fill="#EEEEEE" />
+        </g>
+
+        {/* Cloud 2 (faster, offset) */}
+        <g>
+          <animateTransform attributeName="transform" type="translate" from="20 0" to="-47 0" dur="16s" repeatCount="indefinite" />
+          <rect x="32" y="7" width="9" height="2" fill="#FFFFFF" />
+          <rect x="34" y="5" width="5" height="3" fill="#FFFFFF" />
+        </g>
+
+        {/* Grass */}
+        {[1,4,8,13,18,24,29,35,41,47,53,58].map(x => (
+          <rect key={x} x={x} y="26" width="1" height="2" fill="#5DBB3E" />
+        ))}
+        <rect x="0" y="27" width="64" height="1" fill="#4CAF50" />
+        <rect x="0" y="28" width="64" height="4" fill="#388E3C" />
+
+        {/* House — chimney */}
+        <rect x="15" y="11" width="2" height="4" fill="#9E9E9E" />
+        <rect x="14" y="10" width="4" height="1" fill="#757575" />
+        {/* Roof */}
+        <rect x="10" y="14" width="2" height="1" fill="#C0392B" />
+        <rect x="9"  y="15" width="4" height="1" fill="#C0392B" />
+        <rect x="8"  y="16" width="6" height="1" fill="#C0392B" />
+        <rect x="7"  y="17" width="8" height="1" fill="#C0392B" />
+        <rect x="6"  y="18" width="10" height="1" fill="#C0392B" />
+        <rect x="5"  y="19" width="12" height="1" fill="#C0392B" />
+        <rect x="4"  y="20" width="14" height="1" fill="#A93226" />
+        {/* Walls */}
+        <rect x="4" y="21" width="14" height="6" fill="#F5CBA7" />
+        {/* Door */}
+        <rect x="9" y="23" width="4" height="4" fill="#7D4E2D" />
+        <rect x="12" y="25" width="1" height="1" fill="#A07850" />
+        {/* Left window */}
+        <rect x="5" y="22" width="3" height="3" fill="#AED6F1" />
+        <rect x="5" y="22" width="3" height="1" fill="#D6EAF8" />
+        <rect x="6" y="22" width="1" height="3" fill="#D6EAF8" />
+        {/* Right window */}
+        <rect x="14" y="22" width="3" height="3" fill="#AED6F1" />
+        <rect x="14" y="22" width="3" height="1" fill="#D6EAF8" />
+        <rect x="15" y="22" width="1" height="3" fill="#D6EAF8" />
+
+        {/* Person figure */}
+        {/* Head */}
+        <rect x="46" y="17" width="4" height="4" fill="#FDBCB4" />
+        <rect x="47" y="18" width="1" height="1" fill="#1A1A1A" />
+        <rect x="49" y="18" width="1" height="1" fill="#1A1A1A" />
+        {/* Hair */}
+        <rect x="46" y="17" width="4" height="1" fill="#5D4037" />
+        <rect x="46" y="18" width="1" height="1" fill="#5D4037" />
+        {/* Body */}
+        <rect x="45" y="21" width="6" height="4" fill="#4B8DC8" />
+        <rect x="44" y="21" width="1" height="3" fill="#4B8DC8" />
+        <rect x="51" y="21" width="1" height="3" fill="#4B8DC8" />
+        {/* Legs */}
+        <rect x="46" y="25" width="2" height="2" fill="#2B4C7E" />
+        <rect x="49" y="25" width="2" height="2" fill="#2B4C7E" />
+
+        {/* Dog (only when earned + fed within 3 days) */}
+        {dogAlive && (
+          <g style={{ cursor: isOwner ? 'pointer' : 'default' }} onClick={feedDog}>
+            {/* Body */}
+            <rect x="29" y="24" width="9" height="3" fill="#A0732A" />
+            {/* Head */}
+            <rect x="36" y="22" width="5" height="3" fill="#A0732A" />
+            {/* Ear (floppy) */}
+            <rect x="39" y="20" width="2" height="3" fill="#7A5520" />
+            {/* Eye */}
+            <rect x="38" y="22" width="1" height="1" fill="#1A1A1A" />
+            {/* Nose */}
+            <rect x="40" y="23" width="1" height="1" fill="#1A1A1A" />
+            {/* Snout */}
+            <rect x="40" y="24" width="2" height="1" fill="#C49A6C" />
+            {/* Legs */}
+            <rect x="30" y="27" width="2" height="1" fill="#7A5520" />
+            <rect x="33" y="27" width="2" height="1" fill="#7A5520" />
+            <rect x="36" y="27" width="2" height="1" fill="#7A5520" />
+            {/* Animated tail */}
+            <g>
+              <animateTransform
+                attributeName="transform" type="rotate"
+                values="0 29 25;-25 29 25;0 29 25;25 29 25;0 29 25"
+                dur="1.1s" repeatCount="indefinite"
+              />
+              <rect x="27" y="22" width="2" height="4" fill="#A0732A" />
+              <rect x="26" y="22" width="1" height="2" fill="#7A5520" />
+            </g>
+          </g>
+        )}
+      </svg>
+
+      {/* Footer strip */}
+      {dogAlive && isOwner && (
+        <div className="bg-amber-50 border-t border-amber-100 px-3 py-1.5 flex items-center justify-between">
+          <span className="text-[10px] font-bold text-amber-700">
+            {justFed ? '🐕 Fed! See you tomorrow' : '🐾 Tap the dog to feed it'}
+          </span>
+          {hoursAgo !== null && (
+            <span className="text-[10px] text-amber-400">{hoursAgo}h ago</span>
+          )}
+        </div>
+      )}
+      {dogAlive && !isOwner && (
+        <div className="bg-amber-50 border-t border-amber-100 px-3 py-1.5">
+          <span className="text-[10px] font-bold text-amber-600">🐾 {targetUser.name.split(' ')[0]}'s dog</span>
+        </div>
+      )}
+      {hasDog && !dogAlive && isOwner && (
+        <div className="bg-stone-50 border-t border-stone-100 px-3 py-1.5">
+          <span className="text-[10px] text-stone-500">🐾 Your dog wandered off — feed it every day to keep it</span>
+        </div>
+      )}
+      {!hasDog && isOwner && (
+        <div className="bg-sky-50 border-t border-sky-100 px-3 py-1.5">
+          <span className="text-[10px] text-sky-600">
+            🐾 Donate to {5 - charityAnimals} more endangered animal{5 - charityAnimals !== 1 ? 's' : ''} to unlock a dog
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser, currentProfile, onViewStore, onViewUser, onMessage }: { targetUser: UserProfile, onBack: () => void, currentUser: FirebaseUser, currentProfile: UserProfile | null, onViewStore: (s: StoreProfile) => void, onViewUser: (u: UserProfile) => void, onMessage?: (uid: string) => void, key?: React.Key }) {
   const [targetUser, setTargetUser] = useState<UserProfile>(initialTargetUser);
   const [cards, setCards] = useState<Card[]>([]);
@@ -12950,6 +13129,8 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
           )}
         </div>
       </div>
+
+      <PixelPetScene targetUser={targetUser} currentUser={currentUser} />
 
       {earnedBadges.length > 0 && (
         <div>
