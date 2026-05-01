@@ -267,6 +267,8 @@ interface UserProfile {
   avatar?: UserAvatar;
   lastDogFed?: any;
   lastTreeWatered?: any;
+  foodCount?: number;
+  waterCount?: number;
 }
 
 interface StoreProfile {
@@ -8400,6 +8402,8 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         </div>
       )}
 
+      <PixelPetScene targetUser={profile} currentUser={user} />
+
       {/* Badge detail sheet */}
       <AnimatePresence>
         {selectedBadge && (
@@ -12627,37 +12631,71 @@ function PixelPetScene({ targetUser, currentUser }: { targetUser: UserProfile; c
   const lastFedMs     = toMs(targetUser.lastDogFed);
   const lastWateredMs = toMs(targetUser.lastTreeWatered);
 
-  // gone only if explicitly tended before AND that was 3+ days ago
   const dogGone  = lastFedMs     > 0 && Date.now() - lastFedMs     >= THREE_DAYS;
   const treeGone = lastWateredMs > 0 && Date.now() - lastWateredMs >= THREE_DAYS;
 
   const dogAlive  = hasDog  && !dogGone;
   const treeAlive = hasTree && !treeGone;
 
-  const isOwner = currentUser.uid === targetUser.uid;
-  const [justFed,     setJustFed]     = useState(false);
-  const [justWatered, setJustWatered] = useState(false);
+  const isOwner    = currentUser.uid === targetUser.uid;
+  const foodCount  = targetUser.foodCount  ?? 5;
+  const waterCount = targetUser.waterCount ?? 5;
 
-  const feedDog = async () => {
-    if (!isOwner || !dogAlive) return;
+  const [justFed,         setJustFed]         = useState(false);
+  const [justWatered,     setJustWatered]     = useState(false);
+  const [justGiftedFood,  setJustGiftedFood]  = useState(false);
+  const [justGiftedWater, setJustGiftedWater] = useState(false);
+
+  const handleFeed = async () => {
+    if (!isOwner || !dogAlive || foodCount <= 0) return;
     try {
-      await updateDoc(doc(db, 'users', targetUser.uid), { lastDogFed: serverTimestamp() });
+      await updateDoc(doc(db, 'users', targetUser.uid), { lastDogFed: serverTimestamp(), foodCount: increment(-1) });
       setJustFed(true);
-      setTimeout(() => setJustFed(false), 2500);
+      setTimeout(() => setJustFed(false), 2000);
     } catch (e) { console.error(e); }
   };
 
-  const waterTree = async () => {
-    if (!isOwner || !treeAlive) return;
+  const handleWater = async () => {
+    if (!isOwner || !treeAlive || waterCount <= 0) return;
     try {
-      await updateDoc(doc(db, 'users', targetUser.uid), { lastTreeWatered: serverTimestamp() });
+      await updateDoc(doc(db, 'users', targetUser.uid), { lastTreeWatered: serverTimestamp(), waterCount: increment(-1) });
       setJustWatered(true);
-      setTimeout(() => setJustWatered(false), 2500);
+      setTimeout(() => setJustWatered(false), 2000);
     } catch (e) { console.error(e); }
   };
 
-  const dogHoursAgo  = lastFedMs     > 0 ? Math.floor((Date.now() - lastFedMs)     / 3_600_000) : null;
-  const treeHoursAgo = lastWateredMs > 0 ? Math.floor((Date.now() - lastWateredMs) / 3_600_000) : null;
+  const handleGiftFood = async () => {
+    if (isOwner) return;
+    try {
+      await updateDoc(doc(db, 'users', targetUser.uid), { foodCount: increment(1) });
+      setJustGiftedFood(true);
+      setTimeout(() => setJustGiftedFood(false), 2000);
+    } catch (e) { console.error(e); }
+  };
+
+  const handleGiftWater = async () => {
+    if (isOwner) return;
+    try {
+      await updateDoc(doc(db, 'users', targetUser.uid), { waterCount: increment(1) });
+      setJustGiftedWater(true);
+      setTimeout(() => setJustGiftedWater(false), 2000);
+    } catch (e) { console.error(e); }
+  };
+
+  const btnBase: React.CSSProperties = {
+    background: 'rgba(255,255,255,0.92)',
+    backdropFilter: 'blur(4px)',
+    border: '1px solid rgba(0,0,0,0.08)',
+    borderRadius: 8,
+    padding: '2px 6px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 3,
+    fontSize: 10,
+    fontWeight: 700,
+    cursor: 'pointer',
+    lineHeight: 1.4,
+  };
 
   return (
     <div className="rounded-2xl overflow-hidden border border-brand-navy/10 shadow-sm">
@@ -12769,7 +12807,7 @@ function PixelPetScene({ targetUser, currentUser }: { targetUser: UserProfile; c
 
           {/* ── Tree — unlocked at charityTrees ≥ 5, watered every 3 days ── */}
           {treeAlive && (
-            <g style={{ cursor: isOwner ? 'pointer' : 'default' }} onClick={waterTree}>
+            <g>
               <rect x="35" y="22" width="2" height="4" fill="#7D5A2A" />
               <rect x="34" y="14" width="4"  height="2" fill="#2E7D32" />
               <rect x="32" y="16" width="8"  height="2" fill="#388E3C" />
@@ -12790,7 +12828,7 @@ function PixelPetScene({ targetUser, currentUser }: { targetUser: UserProfile; c
 
           {/* ── Dog — unlocked at charityAnimals ≥ 5, fed every 3 days ── */}
           {dogAlive && (
-            <g style={{ cursor: isOwner ? 'pointer' : 'default' }} onClick={feedDog}>
+            <g>
               {/* Tail */}
               <g>
                 <animateTransform
@@ -12833,25 +12871,63 @@ function PixelPetScene({ targetUser, currentUser }: { targetUser: UserProfile; c
         }}>
           <PixelAvatar config={targetUser.avatar} uid={targetUser.uid} size={48} view="full" className="w-full h-auto" />
         </div>
+
+        {/* ── Top-left action buttons ── */}
+        <div style={{ position: 'absolute', top: '7%', left: '3%', display: 'flex', gap: 4, zIndex: 10 }}>
+          {/* Food button */}
+          {isOwner ? (
+            <button
+              onClick={handleFeed}
+              disabled={!dogAlive || foodCount <= 0}
+              style={{ ...btnBase, opacity: (!dogAlive || foodCount <= 0) ? 0.45 : 1, cursor: (!dogAlive || foodCount <= 0) ? 'default' : 'pointer' }}
+              title={dogAlive ? `Feed dog (${foodCount} left)` : 'No dog yet'}
+            >
+              <span>🍖</span>
+              <span style={{ color: '#92400e' }}>{foodCount}</span>
+              {justFed && <span style={{ color: '#16a34a' }}>✓</span>}
+            </button>
+          ) : (
+            <button
+              onClick={handleGiftFood}
+              style={btnBase}
+              title={`Gift food to ${targetUser.name.split(' ')[0]}`}
+            >
+              {justGiftedFood
+                ? <span style={{ color: '#16a34a' }}>✓ Sent!</span>
+                : <><span>🎁</span><span>🍖</span></>}
+            </button>
+          )}
+
+          {/* Water button */}
+          {isOwner ? (
+            <button
+              onClick={handleWater}
+              disabled={!treeAlive || waterCount <= 0}
+              style={{ ...btnBase, opacity: (!treeAlive || waterCount <= 0) ? 0.45 : 1, cursor: (!treeAlive || waterCount <= 0) ? 'default' : 'pointer' }}
+              title={treeAlive ? `Water tree (${waterCount} left)` : 'No tree yet'}
+            >
+              <span>💧</span>
+              <span style={{ color: '#1e40af' }}>{waterCount}</span>
+              {justWatered && <span style={{ color: '#16a34a' }}>✓</span>}
+            </button>
+          ) : (
+            <button
+              onClick={handleGiftWater}
+              style={btnBase}
+              title={`Gift water to ${targetUser.name.split(' ')[0]}`}
+            >
+              {justGiftedWater
+                ? <span style={{ color: '#16a34a' }}>✓ Sent!</span>
+                : <><span>🎁</span><span>💧</span></>}
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* ── Footer hints — dog ── */}
-      {dogAlive && isOwner && (
-        <div className="bg-amber-50 border-t border-amber-100 px-3 py-1.5 flex items-center justify-between">
-          <span className="text-[10px] font-bold text-amber-700">
-            {justFed ? '🐕 Fed! See you tomorrow' : '🐾 Tap the dog to feed it'}
-          </span>
-          {dogHoursAgo !== null && <span className="text-[10px] text-amber-400">{dogHoursAgo}h ago</span>}
-        </div>
-      )}
-      {dogAlive && !isOwner && (
-        <div className="bg-amber-50 border-t border-amber-100 px-3 py-1.5">
-          <span className="text-[10px] font-bold text-amber-600">🐾 {targetUser.name.split(' ')[0]}'s dog</span>
-        </div>
-      )}
+      {/* ── Footer — only state hints, no interaction prompts (buttons handle that) ── */}
       {hasDog && dogGone && isOwner && (
         <div className="bg-stone-50 border-t border-stone-100 px-3 py-1.5">
-          <span className="text-[10px] text-stone-500">🐾 Your dog wandered off — feed it within 3 days to keep it</span>
+          <span className="text-[10px] text-stone-500">🐾 Your dog wandered off — use 🍖 to feed it within 3 days</span>
         </div>
       )}
       {!hasDog && isOwner && (
@@ -12861,24 +12937,9 @@ function PixelPetScene({ targetUser, currentUser }: { targetUser: UserProfile; c
           </span>
         </div>
       )}
-
-      {/* ── Footer hints — tree ── */}
-      {treeAlive && isOwner && (
-        <div className="bg-green-50 border-t border-green-100 px-3 py-1.5 flex items-center justify-between">
-          <span className="text-[10px] font-bold text-green-700">
-            {justWatered ? '🌳 Watered! Come back tomorrow' : '💧 Tap the tree to water it'}
-          </span>
-          {treeHoursAgo !== null && <span className="text-[10px] text-green-400">{treeHoursAgo}h ago</span>}
-        </div>
-      )}
-      {treeAlive && !isOwner && (
-        <div className="bg-green-50 border-t border-green-100 px-3 py-1.5">
-          <span className="text-[10px] font-bold text-green-600">🌳 {targetUser.name.split(' ')[0]}'s tree</span>
-        </div>
-      )}
       {hasTree && treeGone && isOwner && (
         <div className="bg-stone-50 border-t border-stone-100 px-3 py-1.5">
-          <span className="text-[10px] text-stone-500">🌳 Your tree withered — water it within 3 days to keep it</span>
+          <span className="text-[10px] text-stone-500">🌳 Your tree withered — use 💧 to water it within 3 days</span>
         </div>
       )}
       {!hasTree && isOwner && (
@@ -12886,6 +12947,12 @@ function PixelPetScene({ targetUser, currentUser }: { targetUser: UserProfile; c
           <span className="text-[10px] text-emerald-600">
             🌱 Plant {5 - charityTrees} more tree{5 - charityTrees !== 1 ? 's' : ''} to grow one here
           </span>
+        </div>
+      )}
+      {!isOwner && (dogAlive || treeAlive) && (
+        <div className="bg-amber-50 border-t border-amber-100 px-3 py-1.5 flex items-center gap-3">
+          {dogAlive && <span className="text-[10px] font-bold text-amber-600">🐾 {targetUser.name.split(' ')[0]}'s dog</span>}
+          {treeAlive && <span className="text-[10px] font-bold text-green-600">🌳 {targetUser.name.split(' ')[0]}'s tree</span>}
         </div>
       )}
     </div>
