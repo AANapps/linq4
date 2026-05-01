@@ -282,6 +282,8 @@ interface StoreProfile {
   stamps_required_for_reward: number;
   reward?: string;
   theme?: string;
+  stampIcon?: string;
+  cardPattern?: string;
   location?: string;
   lat?: number;
   lng?: number;
@@ -6855,9 +6857,14 @@ function LoyaltyCard({ card, store, onViewStore }: { card: Card, store?: StorePr
             </div>
           );
 
+          const stampIcon = store?.stampIcon || '⭐';
+          const cardPattern = store?.cardPattern || 'solid';
           return (
-            <div className="rounded-[1.5rem] p-4 space-y-4" style={{ background: `linear-gradient(135deg, ${cardTheme} 0%, ${cardTheme}cc 100%)` }}>
-              <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(5, 1fr)` }}>
+            <div className="rounded-[1.5rem] p-4 space-y-4 relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${cardTheme} 0%, ${cardTheme}cc 100%)` }}>
+              {cardPattern !== 'solid' && (
+                <div className="absolute inset-0 pointer-events-none rounded-[1.5rem]" style={getCardPatternStyle(cardPattern)} />
+              )}
+              <div className="relative z-[1] grid gap-1.5" style={{ gridTemplateColumns: `repeat(5, 1fr)` }}>
                 {Array.from({ length: limit }).map((_, i) => {
                   const stampNum = i + 1;
                   const isFilled = i < card.current_stamps;
@@ -6870,18 +6877,18 @@ function LoyaltyCard({ card, store, onViewStore }: { card: Card, store?: StorePr
                         : isTier ? "border-white/60 bg-white/10" : "border-dashed border-white/25"
                     )}>
                       {isFilled
-                        ? isTier ? <Gift size={11} className="text-brand-navy" /> : <CheckCircle2 size={11} className="text-white" />
+                        ? isTier ? <Gift size={11} className="text-brand-navy" /> : <span className="text-base leading-none">{stampIcon}</span>
                         : isTier ? <Gift size={10} className="text-white/60" /> : <span className="text-white/30 text-[8px] font-bold">{stampNum}</span>}
                     </div>
                   );
                 })}
               </div>
-              <div className="flex items-center justify-between">
+              <div className="relative z-[1] flex items-center justify-between">
                 <span className="text-white/60 text-xs font-bold">{card.current_stamps} / {limit} Stamps</span>
                 {nextTier && <span className="text-white/50 text-[10px]">{nextTier.stamps - card.current_stamps} to <span className="text-white font-semibold">{nextTier.reward}</span></span>}
               </div>
               {currentTierReward && (
-                <div className="bg-white/10 border border-white/20 rounded-xl px-3 py-2 flex items-center gap-2">
+                <div className="relative z-[1] bg-white/10 border border-white/20 rounded-xl px-3 py-2 flex items-center gap-2">
                   <Gift size={12} className="text-brand-gold flex-shrink-0" />
                   <p className="text-white/80 text-[11px] font-medium">Unlocked: <span className="font-bold text-white">{currentTierReward.reward}</span></p>
                 </div>
@@ -7503,6 +7510,29 @@ function Modal({ title, children, onClose }: { title: string, children: React.Re
   );
 }
 
+const STAMP_ICON_GROUPS = [
+  { group: 'Food & Drink',       icons: ['☕','🫘','🍴','🥐','🍕','🍔','🧃','🍦','🍰'] },
+  { group: 'Barber & Beauty',    icons: ['✂️','💈','💅','🌸','✨','🪥','💆','🧖'] },
+  { group: 'Health & Fitness',   icons: ['💪','🏋️','⚡','🔥','❤️','🎯','🏃','🧘'] },
+  { group: 'Retail & Other',     icons: ['🛍️','👑','💎','⭐','🎫','🏆','🌟','🎁'] },
+];
+
+const CARD_PATTERNS: { id: string; label: string }[] = [
+  { id: 'solid',    label: 'Solid' },
+  { id: 'dots',     label: 'Dots' },
+  { id: 'grid',     label: 'Grid' },
+  { id: 'lines',    label: 'Lines' },
+];
+
+function getCardPatternStyle(pattern: string): React.CSSProperties {
+  switch (pattern) {
+    case 'dots':  return { backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.18) 1.5px, transparent 1.5px)', backgroundSize: '18px 18px' };
+    case 'grid':  return { backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)', backgroundSize: '20px 20px' };
+    case 'lines': return { backgroundImage: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.07) 0px, rgba(255,255,255,0.07) 2px, transparent 2px, transparent 14px)' };
+    default:      return {};
+  }
+}
+
 function CardBuilder({ store }: { store: StoreProfile | null }) {
   const initTiers = (s: StoreProfile | null) => {
     if (s?.rewardTiers?.length) return s.rewardTiers;
@@ -7513,6 +7543,8 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
   const [numTiers, setNumTiers] = useState(() => store?.rewardTiers?.length || 1);
   const [tiers, setTiers] = useState<{ stamps: number; reward: string }[]>(() => initTiers(store));
   const [theme, setTheme] = useState(store?.theme || '#3a6fcc');
+  const [stampIcon, setStampIcon] = useState(store?.stampIcon || '⭐');
+  const [cardPattern, setCardPattern] = useState(store?.cardPattern || 'solid');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -7522,6 +7554,8 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
     setNumTiers(loaded.length);
     setTiers(loaded);
     setTheme(store.theme || '#1a1a2e');
+    setStampIcon(store.stampIcon || '⭐');
+    setCardPattern(store.cardPattern || 'solid');
   }, [store?.id]);
 
   // When numTiers changes, resize tiers array
@@ -7551,6 +7585,8 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
         stamps_required_for_reward: topTier.stamps,
         reward: topTier.reward,
         theme,
+        stampIcon,
+        cardPattern,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -7635,11 +7671,57 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
           </div>
         </div>
 
+        {/* Stamp Icon */}
+        <div className="space-y-3">
+          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Stamp Icon</label>
+          {STAMP_ICON_GROUPS.map(({ group, icons }) => (
+            <div key={group}>
+              <p className="text-[10px] text-brand-navy/30 font-bold uppercase tracking-wider mb-2">{group}</p>
+              <div className="flex flex-wrap gap-2">
+                {icons.map(icon => (
+                  <button
+                    key={icon}
+                    onClick={() => setStampIcon(icon)}
+                    className={cn(
+                      "w-10 h-10 rounded-xl flex items-center justify-center text-xl transition-all",
+                      stampIcon === icon ? "bg-brand-gold/20 ring-2 ring-brand-gold scale-110 shadow" : "bg-brand-bg hover:bg-brand-navy/5"
+                    )}
+                  >
+                    {icon}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Card Pattern */}
+        <div className="space-y-2">
+          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Card Pattern</label>
+          <div className="flex gap-2">
+            {CARD_PATTERNS.map(({ id, label }) => (
+              <button
+                key={id}
+                onClick={() => setCardPattern(id)}
+                className={cn(
+                  "flex-1 py-2.5 rounded-2xl text-xs font-bold transition-all border",
+                  cardPattern === id ? "bg-brand-navy text-white border-brand-navy" : "bg-brand-bg text-brand-navy/40 border-brand-navy/10"
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Live preview */}
         <div>
           <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-3">Live Preview</p>
-          <div className="rounded-[2rem] p-5 space-y-4" style={{ background: `linear-gradient(135deg, ${theme} 0%, ${theme}dd 100%)` }}>
-            <div className="flex items-center justify-between">
+          <div className="rounded-[2rem] p-5 space-y-4 relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${theme} 0%, ${theme}dd 100%)` }}>
+            {cardPattern !== 'solid' && (
+              <div className="absolute inset-0 pointer-events-none rounded-[2rem]" style={getCardPatternStyle(cardPattern)} />
+            )}
+            <div className="relative z-[1] flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {store?.logoUrl
                   ? <img src={store.logoUrl} alt="" className="w-11 h-11 rounded-2xl object-cover border-2 border-white/30" />
@@ -7655,19 +7737,25 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
                 </div>
               )}
             </div>
-            <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${Math.min(totalStamps, 5)}, 1fr)` }}>
+            <div className="relative z-[1] grid gap-1.5" style={{ gridTemplateColumns: `repeat(${Math.min(totalStamps, 5)}, 1fr)` }}>
               {Array.from({ length: totalStamps }).map((_, i) => {
                 const stampNum = i + 1;
-                const tier = tiers.slice(0, numTiers).find(t => t.stamps === stampNum);
+                const isTier = tiers.slice(0, numTiers).some(t => t.stamps === stampNum);
+                const isFilled = i < 3; // preview shows 3 filled
                 return (
-                  <div key={i} className={cn("aspect-square rounded-xl border flex items-center justify-center relative", tier ? "border-white/60 bg-white/10" : "border-dashed border-white/20")}>
-                    {tier ? <Gift size={10} className="text-white/80" /> : <span className="text-white/25 text-[8px] font-bold">{stampNum}</span>}
+                  <div key={i} className={cn("aspect-square rounded-xl border flex items-center justify-center",
+                    isFilled ? isTier ? "bg-brand-gold border-brand-gold" : "bg-white/30 border-white/50"
+                    : isTier ? "border-white/60 bg-white/10" : "border-dashed border-white/20"
+                  )}>
+                    {isFilled
+                      ? isTier ? <Gift size={10} className="text-brand-navy" /> : <span className="text-base leading-none">{stampIcon}</span>
+                      : isTier ? <Gift size={10} className="text-white/60" /> : <span className="text-white/25 text-[8px] font-bold">{stampNum}</span>}
                   </div>
                 );
               })}
             </div>
             {numTiers > 1 && (
-              <div className="space-y-1">
+              <div className="relative z-[1] space-y-1">
                 {tiers.slice(0, numTiers).map((t, i) => (
                   <div key={i} className="flex items-center gap-2">
                     <div className="w-4 h-4 rounded-full bg-white/10 border border-white/30 flex items-center justify-center flex-shrink-0">
@@ -7678,7 +7766,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
                 ))}
               </div>
             )}
-            <p className="text-white/30 text-[10px] text-right">0 / {totalStamps} Stamps</p>
+            <p className="relative z-[1] text-white/30 text-[10px] text-right">3 / {totalStamps} Stamps (preview)</p>
           </div>
         </div>
 
@@ -12149,11 +12237,15 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
             )}
           </div>
         </div>
-        <div className="absolute top-4 right-4 flex gap-2">
-          {onMessage && store.ownerUid && store.ownerUid !== user.uid && (
+      </div>
+
+      {/* Action buttons — below profile picture */}
+      {store.ownerUid !== user.uid && (
+        <div className="flex gap-2">
+          {onMessage && store.ownerUid && (
             <button
               onClick={handleMessageStore}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-white/90 text-brand-navy font-bold text-xs shadow-lg active:scale-95 transition-all"
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl gradient-red text-white font-bold text-xs shadow active:scale-95 transition-all"
             >
               <MessageCircle size={14} />
               Message
@@ -12162,51 +12254,33 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
           <button
             onClick={handleFollowStore}
             className={cn(
-              "flex items-center gap-1.5 px-4 py-2 rounded-2xl font-bold text-xs transition-all shadow-lg active:scale-95",
+              "flex items-center gap-1.5 px-4 py-2.5 rounded-2xl font-bold text-xs transition-all shadow active:scale-95",
               isFollowingStore
-                ? "bg-white/20 text-white border border-white/30 hover:bg-red-500/30"
-                : "bg-brand-gold text-brand-navy hover:bg-brand-gold/80"
+                ? "bg-brand-navy/8 text-brand-navy border border-brand-navy/15"
+                : "gradient-red text-white"
             )}
           >
             {isFollowingStore ? <UserCheck size={14} /> : <UserPlus size={14} />}
             {isFollowingStore ? 'Following' : 'Follow'}
           </button>
-          {store.ownerUid !== user.uid && (
-            <button
-              onClick={card ? undefined : handleJoinStore}
-              className={cn(
-                "flex items-center gap-1.5 px-4 py-2 rounded-2xl font-bold text-xs transition-all shadow-lg active:scale-95",
-                card
-                  ? "bg-green-500/30 text-green-300 border border-green-400/40 cursor-default"
-                  : "bg-white/90 text-brand-navy hover:bg-white"
-              )}
-            >
-              {card ? <><UserCheck size={14} /> Member</> : <><Plus size={14} /> Join</>}
-            </button>
-          )}
+          <button
+            onClick={card ? undefined : handleJoinStore}
+            className={cn(
+              "flex items-center gap-1.5 px-4 py-2.5 rounded-2xl font-bold text-xs transition-all shadow active:scale-95",
+              card
+                ? "bg-green-50 text-green-600 border border-green-200 cursor-default"
+                : "gradient-red text-white"
+            )}
+          >
+            {card ? <><UserCheck size={14} /> Member</> : <><Plus size={14} /> Join</>}
+          </button>
         </div>
-      </div>
+      )}
 
       {store.ownerUid !== user.uid && (
         card ? (
-          <>
-            <div className="flex items-center gap-2 px-1">
-              <UserCheck size={15} className="text-green-400" />
-              <span className="text-green-400 font-bold text-sm">Joined</span>
-            </div>
-            <LoyaltyCard card={card} store={store} />
-          </>
-        ) : (
-          <div className="flex items-center justify-between px-1">
-            <p className="text-white/50 text-sm">Not a member yet</p>
-            <button
-              onClick={handleJoinStore}
-              className="flex items-center gap-1.5 px-5 py-2.5 rounded-2xl bg-brand-gold text-brand-navy font-bold text-sm shadow active:scale-95 transition-all"
-            >
-              <Plus size={14} /> Join
-            </button>
-          </div>
-        )
+          <LoyaltyCard card={card} store={store} />
+        ) : null
       )}
 
 
