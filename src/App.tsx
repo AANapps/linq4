@@ -12633,133 +12633,225 @@ function PixelPetScene({ targetUser, currentUser }: { targetUser: UserProfile; c
       await updateDoc(doc(db, 'users', targetUser.uid), { lastDogFed: serverTimestamp() });
       setJustFed(true);
       setTimeout(() => setJustFed(false), 2500);
-    } catch (e) {
-      console.error(e);
-    }
+    } catch (e) { console.error(e); }
   };
 
   const hoursAgo = lastFedMs > 0 ? Math.floor((Date.now() - lastFedMs) / 3_600_000) : null;
 
   return (
     <div className="rounded-2xl overflow-hidden border border-brand-navy/10 shadow-sm">
-      <svg
-        viewBox="0 0 64 32"
-        width="100%"
-        style={{ display: 'block', imageRendering: 'pixelated' }}
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        {/* Sky */}
-        <rect x="0" y="0" width="64" height="32" fill="#87CEEB" />
+      {/* position:relative wrapper keeps avatar overlay in sync with the SVG */}
+      <div style={{ position: 'relative', width: '100%', aspectRatio: '64 / 32' }}>
+        <svg
+          viewBox="0 0 64 32"
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block', imageRendering: 'pixelated' }}
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          {/* ── Sky ── */}
+          <rect x="0" y="0" width="64" height="32" fill="#87CEEB" />
 
-        {/* Sun */}
-        <rect x="52" y="2" width="6" height="6" fill="#FFD700" />
-        <rect x="54" y="1" width="2" height="1" fill="#FFD700" />
-        <rect x="54" y="8" width="2" height="1" fill="#FFD700" />
-        <rect x="51" y="4" width="1" height="2" fill="#FFD700" />
-        <rect x="58" y="4" width="1" height="2" fill="#FFD700" />
-        <rect x="51" y="2" width="1" height="1" fill="#FFE566" />
-        <rect x="58" y="2" width="1" height="1" fill="#FFE566" />
-        <rect x="51" y="7" width="1" height="1" fill="#FFE566" />
-        <rect x="58" y="7" width="1" height="1" fill="#FFE566" />
+          {/* ── Sun ── */}
+          <rect x="55" y="2" width="6" height="6" fill="#FFD700" />
+          {/* cardinal rays */}
+          <rect x="57" y="1" width="2" height="1" fill="#FFE566" />
+          <rect x="57" y="8" width="2" height="1" fill="#FFE566" />
+          <rect x="54" y="3" width="1" height="2" fill="#FFE566" />
+          <rect x="62" y="3" width="1" height="2" fill="#FFE566" />
+          {/* diagonal rays */}
+          <rect x="54" y="2" width="1" height="1" fill="#FFE566" />
+          <rect x="62" y="2" width="1" height="1" fill="#FFE566" />
+          <rect x="54" y="7" width="1" height="1" fill="#FFE566" />
+          <rect x="62" y="7" width="1" height="1" fill="#FFE566" />
 
-        {/* Cloud 1 (slow) */}
-        <g>
-          <animateTransform attributeName="transform" type="translate" from="0 0" to="-78 0" dur="24s" repeatCount="indefinite" />
-          <rect x="6" y="4" width="13" height="3" fill="#FFFFFF" />
-          <rect x="9" y="2" width="7" height="3" fill="#FFFFFF" />
-          <rect x="5" y="5" width="2" height="2" fill="#EEEEEE" />
-          <rect x="17" y="5" width="2" height="2" fill="#EEEEEE" />
-        </g>
-
-        {/* Cloud 2 (faster, offset) */}
-        <g>
-          <animateTransform attributeName="transform" type="translate" from="20 0" to="-47 0" dur="16s" repeatCount="indefinite" />
-          <rect x="32" y="7" width="9" height="2" fill="#FFFFFF" />
-          <rect x="34" y="5" width="5" height="3" fill="#FFFFFF" />
-        </g>
-
-        {/* Grass */}
-        {[1,4,8,13,18,24,29,35,41,47,53,58].map(x => (
-          <rect key={x} x={x} y="26" width="1" height="2" fill="#5DBB3E" />
-        ))}
-        <rect x="0" y="27" width="64" height="1" fill="#4CAF50" />
-        <rect x="0" y="28" width="64" height="4" fill="#388E3C" />
-
-        {/* House — chimney */}
-        <rect x="15" y="11" width="2" height="4" fill="#9E9E9E" />
-        <rect x="14" y="10" width="4" height="1" fill="#757575" />
-        {/* Roof */}
-        <rect x="10" y="14" width="2" height="1" fill="#C0392B" />
-        <rect x="9"  y="15" width="4" height="1" fill="#C0392B" />
-        <rect x="8"  y="16" width="6" height="1" fill="#C0392B" />
-        <rect x="7"  y="17" width="8" height="1" fill="#C0392B" />
-        <rect x="6"  y="18" width="10" height="1" fill="#C0392B" />
-        <rect x="5"  y="19" width="12" height="1" fill="#C0392B" />
-        <rect x="4"  y="20" width="14" height="1" fill="#A93226" />
-        {/* Walls */}
-        <rect x="4" y="21" width="14" height="6" fill="#F5CBA7" />
-        {/* Door */}
-        <rect x="9" y="23" width="4" height="4" fill="#7D4E2D" />
-        <rect x="12" y="25" width="1" height="1" fill="#A07850" />
-        {/* Left window */}
-        <rect x="5" y="22" width="3" height="3" fill="#AED6F1" />
-        <rect x="5" y="22" width="3" height="1" fill="#D6EAF8" />
-        <rect x="6" y="22" width="1" height="3" fill="#D6EAF8" />
-        {/* Right window */}
-        <rect x="14" y="22" width="3" height="3" fill="#AED6F1" />
-        <rect x="14" y="22" width="3" height="1" fill="#D6EAF8" />
-        <rect x="15" y="22" width="1" height="3" fill="#D6EAF8" />
-
-        {/* Person figure */}
-        {/* Head */}
-        <rect x="46" y="17" width="4" height="4" fill="#FDBCB4" />
-        <rect x="47" y="18" width="1" height="1" fill="#1A1A1A" />
-        <rect x="49" y="18" width="1" height="1" fill="#1A1A1A" />
-        {/* Hair */}
-        <rect x="46" y="17" width="4" height="1" fill="#5D4037" />
-        <rect x="46" y="18" width="1" height="1" fill="#5D4037" />
-        {/* Body */}
-        <rect x="45" y="21" width="6" height="4" fill="#4B8DC8" />
-        <rect x="44" y="21" width="1" height="3" fill="#4B8DC8" />
-        <rect x="51" y="21" width="1" height="3" fill="#4B8DC8" />
-        {/* Legs */}
-        <rect x="46" y="25" width="2" height="2" fill="#2B4C7E" />
-        <rect x="49" y="25" width="2" height="2" fill="#2B4C7E" />
-
-        {/* Dog (only when earned + fed within 3 days) */}
-        {dogAlive && (
-          <g style={{ cursor: isOwner ? 'pointer' : 'default' }} onClick={feedDog}>
-            {/* Body */}
-            <rect x="29" y="24" width="9" height="3" fill="#A0732A" />
-            {/* Head */}
-            <rect x="36" y="22" width="5" height="3" fill="#A0732A" />
-            {/* Ear (floppy) */}
-            <rect x="39" y="20" width="2" height="3" fill="#7A5520" />
-            {/* Eye */}
-            <rect x="38" y="22" width="1" height="1" fill="#1A1A1A" />
-            {/* Nose */}
-            <rect x="40" y="23" width="1" height="1" fill="#1A1A1A" />
-            {/* Snout */}
-            <rect x="40" y="24" width="2" height="1" fill="#C49A6C" />
-            {/* Legs */}
-            <rect x="30" y="27" width="2" height="1" fill="#7A5520" />
-            <rect x="33" y="27" width="2" height="1" fill="#7A5520" />
-            <rect x="36" y="27" width="2" height="1" fill="#7A5520" />
-            {/* Animated tail */}
-            <g>
-              <animateTransform
-                attributeName="transform" type="rotate"
-                values="0 29 25;-25 29 25;0 29 25;25 29 25;0 29 25"
-                dur="1.1s" repeatCount="indefinite"
-              />
-              <rect x="27" y="22" width="2" height="4" fill="#A0732A" />
-              <rect x="26" y="22" width="1" height="2" fill="#7A5520" />
-            </g>
+          {/* ── Clouds ── */}
+          {/* Cloud 1 – large, slow */}
+          <g>
+            <animateTransform attributeName="transform" type="translate" from="0 0" to="-80 0" dur="30s" repeatCount="indefinite" />
+            <rect x="4"  y="5" width="16" height="3" fill="#FFFFFF" />
+            <rect x="7"  y="3" width="10" height="3" fill="#FFFFFF" />
+            <rect x="5"  y="6" width="3"  height="2" fill="#EEEEEE" />
+            <rect x="17" y="6" width="3"  height="2" fill="#EEEEEE" />
           </g>
-        )}
-      </svg>
+          {/* Cloud 2 – small, faster, offset start */}
+          <g>
+            <animateTransform attributeName="transform" type="translate" from="20 0" to="-60 0" dur="19s" repeatCount="indefinite" />
+            <rect x="30" y="8" width="10" height="2" fill="#FFFFFF" />
+            <rect x="32" y="6" width="6"  height="3" fill="#FFFFFF" />
+          </g>
+          {/* Cloud 3 – medium, slower, different offset */}
+          <g>
+            <animateTransform attributeName="transform" type="translate" from="48 0" to="-80 0" dur="38s" repeatCount="indefinite" />
+            <rect x="18" y="4" width="12" height="2" fill="#FFFFFF" />
+            <rect x="20" y="2" width="8"  height="3" fill="#FFFFFF" />
+          </g>
 
-      {/* Footer strip */}
+          {/* ── Birds ── simple V-silhouette, each wing 1px, centre 1px lower */}
+          {/* Bird 1 */}
+          <g>
+            <animateTransform attributeName="transform" type="translate" from="0 0" to="-82 0" dur="13s" repeatCount="indefinite" />
+            <rect x="20" y="7"  width="1" height="1" fill="#334155" />
+            <rect x="21" y="8"  width="1" height="1" fill="#334155" />
+            <rect x="22" y="7"  width="1" height="1" fill="#334155" />
+          </g>
+          {/* Bird 2 – faster, different height */}
+          <g>
+            <animateTransform attributeName="transform" type="translate" from="12 0" to="-82 0" dur="9s" repeatCount="indefinite" />
+            <rect x="44" y="5"  width="1" height="1" fill="#334155" />
+            <rect x="45" y="6"  width="1" height="1" fill="#334155" />
+            <rect x="46" y="5"  width="1" height="1" fill="#334155" />
+          </g>
+          {/* Bird 3 – slowest, high in sky */}
+          <g>
+            <animateTransform attributeName="transform" type="translate" from="36 0" to="-82 0" dur="17s" repeatCount="indefinite" />
+            <rect x="36" y="9"  width="1" height="1" fill="#475569" />
+            <rect x="37" y="10" width="1" height="1" fill="#475569" />
+            <rect x="38" y="9"  width="1" height="1" fill="#475569" />
+          </g>
+
+          {/* ── Chimney — drawn BEFORE roof so the roof rows overlap its base ── */}
+          {/* Body: x=15-17, y=8-20. Roof covers y≥16 at x=15, y≥17 at x=16, y≥18 at x=17 */}
+          <rect x="15" y="8"  width="3" height="13" fill="#9E9E9E" />
+          <rect x="14" y="7"  width="5" height="1"  fill="#757575" />
+          {/* Smoke puffs – two offset timers */}
+          <rect x="16" y="4" width="2" height="2" fill="#CCCCCC" opacity="0">
+            <animate attributeName="opacity" values="0;0.7;0" dur="3s" repeatCount="indefinite" begin="0s" />
+            <animateTransform attributeName="transform" type="translate" values="0 0;-1 -2;-1 -4" dur="3s" repeatCount="indefinite" begin="0s" additive="sum" />
+          </rect>
+          <rect x="15" y="3" width="2" height="2" fill="#BBBBBB" opacity="0">
+            <animate attributeName="opacity" values="0;0.5;0" dur="3s" repeatCount="indefinite" begin="1.5s" />
+            <animateTransform attributeName="transform" type="translate" values="0 0;1 -2;0 -4" dur="3s" repeatCount="indefinite" begin="1.5s" additive="sum" />
+          </rect>
+
+          {/* ── Roof — drawn AFTER chimney so it covers chimney lower rows ── */}
+          {/* Peak */}
+          <rect x="10" y="13" width="3"  height="1" fill="#E74C3C" />
+          <rect x="9"  y="14" width="5"  height="1" fill="#C0392B" />
+          <rect x="8"  y="15" width="7"  height="1" fill="#C0392B" />
+          {/* x=15 covered here → chimney at x=15 hidden from y=16 down */}
+          <rect x="7"  y="16" width="9"  height="1" fill="#C0392B" />
+          {/* x=16 covered here */}
+          <rect x="6"  y="17" width="11" height="1" fill="#C0392B" />
+          {/* x=17 covered here */}
+          <rect x="5"  y="18" width="13" height="1" fill="#B03A2E" />
+          {/* Eave */}
+          <rect x="3"  y="19" width="17" height="1" fill="#A93226" />
+          <rect x="3"  y="20" width="17" height="1" fill="#922B21" />
+
+          {/* ── Walls ── */}
+          <rect x="3" y="21" width="17" height="5" fill="#F5CBA7" />
+          <rect x="3" y="25" width="17" height="1" fill="#E8B896" />
+
+          {/* ── Door ── */}
+          <rect x="9"  y="23" width="5" height="3" fill="#7D4E2D" />
+          <rect x="9"  y="23" width="5" height="1" fill="#8B5E3C" />
+          <rect x="13" y="24" width="1" height="1" fill="#A07850" />
+
+          {/* ── Left window ── */}
+          <rect x="4"  y="22" width="4" height="3" fill="#AED6F1" />
+          <rect x="4"  y="22" width="4" height="1" fill="#D6EAF8" />
+          <rect x="6"  y="22" width="1" height="3" fill="#D6EAF8" />
+
+          {/* ── Right window ── */}
+          <rect x="15" y="22" width="4" height="3" fill="#AED6F1" />
+          <rect x="15" y="22" width="4" height="1" fill="#D6EAF8" />
+          <rect x="17" y="22" width="1" height="3" fill="#D6EAF8" />
+
+          {/* ── Cobblestone path from door ── */}
+          <rect x="13" y="26" width="8" height="1" fill="#C8B89A" />
+          <rect x="14" y="26" width="2" height="1" fill="#B8A88A" />
+          <rect x="17" y="26" width="2" height="1" fill="#B8A88A" />
+
+          {/* ── Fence (garden divider) ── */}
+          {/* Rails */}
+          <rect x="21" y="23" width="12" height="1" fill="#C49A55" />
+          <rect x="21" y="25" width="12" height="1" fill="#C49A55" />
+          {/* Pickets */}
+          {[21,23,25,27,29,31].map(x => (
+            <rect key={x} x={x} y="22" width="1" height="4" fill="#D4AC6E" />
+          ))}
+
+          {/* ── Flowers beside house ── */}
+          <rect x="22" y="25" width="1" height="1" fill="#F9A8D4" />
+          <rect x="22" y="26" width="1" height="1" fill="#4CAF50" />
+          <rect x="24" y="25" width="1" height="1" fill="#FCD34D" />
+          <rect x="24" y="26" width="1" height="1" fill="#4CAF50" />
+
+          {/* ── Tree ── */}
+          {/* Trunk */}
+          <rect x="35" y="22" width="2" height="4" fill="#7D5A2A" />
+          {/* Canopy – layered green blobs */}
+          <rect x="34" y="14" width="4"  height="2" fill="#2E7D32" />
+          <rect x="32" y="16" width="8"  height="2" fill="#388E3C" />
+          <rect x="31" y="18" width="10" height="2" fill="#43A047" />
+          <rect x="32" y="20" width="8"  height="2" fill="#388E3C" />
+          <rect x="34" y="22" width="4"  height="1" fill="#2E7D32" />
+          {/* Apple highlight */}
+          <rect x="33" y="19" width="1" height="1" fill="#E53935" />
+          <rect x="37" y="17" width="1" height="1" fill="#E53935" />
+
+          {/* ── Grass blades ── */}
+          {[0,2,6,10,20,41,44,47,51,56,60,62].map(x => (
+            <rect key={x} x={x} y="25" width="1" height="2" fill="#5DBB3E" />
+          ))}
+          {/* Grass strip */}
+          <rect x="0" y="26" width="64" height="1" fill="#4CAF50" />
+          <rect x="0" y="27" width="64" height="5" fill="#388E3C" />
+
+          {/* ── Dog ── facing right toward the avatar */}
+          {dogAlive && (
+            <g style={{ cursor: isOwner ? 'pointer' : 'default' }} onClick={feedDog}>
+              {/* Tail — animated around body-base (x=39,y=25) */}
+              <g>
+                <animateTransform
+                  attributeName="transform" type="rotate"
+                  values="0 39 25;30 39 25;0 39 25;-30 39 25;0 39 25"
+                  dur="1.1s" repeatCount="indefinite"
+                />
+                <rect x="36" y="22" width="2" height="4" fill="#A0732A" />
+                <rect x="35" y="22" width="1" height="2" fill="#7A5520" />
+              </g>
+              {/* Body */}
+              <rect x="39" y="23" width="9" height="3" fill="#A0732A" />
+              {/* Head (facing right) */}
+              <rect x="46" y="21" width="5" height="3" fill="#A0732A" />
+              {/* Floppy ear */}
+              <rect x="49" y="19" width="2" height="3" fill="#7A5520" />
+              {/* Eye */}
+              <rect x="49" y="21" width="1" height="1" fill="#1A1A1A" />
+              {/* Nose */}
+              <rect x="50" y="22" width="1" height="1" fill="#1A1A1A" />
+              {/* Snout */}
+              <rect x="50" y="23" width="2" height="1" fill="#C49A6C" />
+              {/* Legs */}
+              <rect x="40" y="26" width="2" height="1" fill="#7A5520" />
+              <rect x="43" y="26" width="2" height="1" fill="#7A5520" />
+              <rect x="46" y="26" width="2" height="1" fill="#7A5520" />
+            </g>
+          )}
+        </svg>
+
+        {/* ── Real user avatar — overlaid absolutely, feet on the grass line ── */}
+        {/* left=78% centres the avatar at ~x=50 in SVG coords; bottom=18.75% = (32-26)/32 */}
+        <div style={{
+          position: 'absolute',
+          left: '78%',
+          bottom: '18.75%',
+          width: '14%',
+          transform: 'translateX(-50%)',
+          imageRendering: 'pixelated',
+          pointerEvents: 'none',
+        }}>
+          <PixelAvatar
+            config={targetUser.avatar}
+            uid={targetUser.uid}
+            size={48}
+            view="full"
+            className="w-full h-auto"
+          />
+        </div>
+      </div>
+
+      {/* ── Footer hints ── */}
       {dogAlive && isOwner && (
         <div className="bg-amber-50 border-t border-amber-100 px-3 py-1.5 flex items-center justify-between">
           <span className="text-[10px] font-bold text-amber-700">
