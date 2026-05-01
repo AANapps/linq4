@@ -10665,14 +10665,14 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
   return (
     <div className="space-y-5 pb-20">
       {/* Tab bar */}
-      <div className="flex gap-4 px-1">
+      <div className="flex justify-center gap-6">
         {(['discovery', 'following'] as const).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveSubTab(tab)}
             className={cn(
-              "py-1 text-xs font-semibold transition-all border-b-2",
-              activeSubTab === tab ? "text-brand-navy border-brand-navy" : "text-brand-navy/35 border-transparent"
+              "pb-0.5 text-[11px] font-semibold tracking-widest uppercase transition-all border-b",
+              activeSubTab === tab ? "text-gray-500 border-gray-400" : "text-gray-300 border-transparent"
             )}
           >
             {tab === 'discovery' ? 'Discovery' : 'Following'}
