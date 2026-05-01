@@ -1252,7 +1252,7 @@ export default function App() {
       </header>
 
       {/* Main Content */}
-      <main className="px-6 py-8">
+      <main className="px-6 pt-4 pb-8">
         <AnimatePresence mode="wait">
           {viewingStore ? (
             <StoreProfileView
