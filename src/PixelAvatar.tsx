@@ -534,14 +534,14 @@ export function AvatarViewModal({ avatar, uid, onCustomise, onClose }: {
 // ─── Daily Wheel Modal ─────────────────────────────────────────────────────────
 
 interface DailyWheelModalProps {
-  /** Current avatar inventory */
   inventory: string[];
   lastSpin?: string; // ISO date YYYY-MM-DD
   onClose: () => void;
   onWin: (itemId: string) => void;
+  timerLabel?: string; // HH:MM:SS countdown shown when already spun
 }
 
-export function DailyWheelModal({ inventory, lastSpin, onClose, onWin }: DailyWheelModalProps) {
+export function DailyWheelModal({ inventory, lastSpin, onClose, onWin, timerLabel }: DailyWheelModalProps) {
   const today = new Date().toISOString().slice(0, 10);
   const alreadySpun = lastSpin === today;
 
@@ -713,7 +713,11 @@ export function DailyWheelModal({ inventory, lastSpin, onClose, onWin }: DailyWh
 
         {alreadySpun && !showResult && (
           <div className="text-center text-brand-navy/50 text-sm mb-4">
-            You already spun today. Come back tomorrow!
+            You already spun today.
+            {timerLabel && (
+              <div className="mt-1 font-mono text-base font-bold text-brand-navy/70">{timerLabel}</div>
+            )}
+            <div className="text-xs text-brand-navy/35 mt-0.5">until next spin</div>
           </div>
         )}
 

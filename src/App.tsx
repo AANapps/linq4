@@ -7714,7 +7714,6 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
   const [showProfileSettings, setShowProfileSettings] = useState(false);
   const [avatarViewOpen, setAvatarViewOpen] = useState(false);
   const [avatarCustomiserOpen, setAvatarCustomiserOpen] = useState(false);
-  const [dailyWheelOpen, setDailyWheelOpen] = useState(false);
   const profileLastDocRef = useRef<any>(null);
   const [profileHasMore, setProfileHasMore] = useState(true);
   const [profileLoadingMore, setProfileLoadingMore] = useState(false);
@@ -8151,25 +8150,6 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         )}
       </AnimatePresence>
 
-      {/* Daily wheel modal */}
-      <AnimatePresence>
-        {dailyWheelOpen && (
-          <DailyWheelModal
-            inventory={profile.avatar?.inventory ?? []}
-            lastSpin={profile.avatar?.lastWheelSpin}
-            onClose={() => setDailyWheelOpen(false)}
-            onWin={async (itemId) => {
-              const today = new Date().toISOString().slice(0, 10);
-              await updateDoc(doc(db, 'users', profile.uid), {
-                'avatar.inventory': arrayUnion(itemId),
-                'avatar.lastWheelSpin': today,
-              });
-              bumpStreak(profile.uid).catch(console.error);
-            }}
-          />
-        )}
-      </AnimatePresence>
-
       <header className="relative">
         <button onClick={() => setShowProfileSettings(true)}
           className="absolute right-0 top-0 p-2 rounded-2xl bg-white border border-brand-navy/10 shadow-sm active:scale-95 transition-all">
@@ -8193,9 +8173,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
               <PixelAvatar config={profile.avatar} uid={profile.uid} size={64} view="head" />
             </button>
             <div className="flex items-center gap-1 mt-1.5">
-              <p className="text-[8px] text-brand-navy/40 font-bold uppercase tracking-wider">tap</p>
-              <span className="text-brand-navy/20">·</span>
-              <button onClick={() => setDailyWheelOpen(true)} className="text-[8px] text-brand-gold font-bold uppercase tracking-wider">🎡 spin</button>
+              <p className="text-[8px] text-brand-navy/40 font-bold uppercase tracking-wider">tap to customise</p>
             </div>
           </div>
 
@@ -10388,6 +10366,9 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
   const [showAllDeals, setShowAllDeals] = useState(false);
   const [feedChallenges, setFeedChallenges] = useState<Challenge[]>([]);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [dailyWheelOpen, setDailyWheelOpen] = useState(false);
+  const [spinTimeLeft, setSpinTimeLeft] = useState('');
+  const [spinWiggle, setSpinWiggle] = useState(false);
   const [lbPeriod, setLbPeriod] = useState<'alltime' | 'weekly'>('alltime');
   const [lbCategory, setLbCategory] = useState<'stamps' | 'rewards' | 'challenges' | 'streak' | 'monopoly'>('stamps');
   const [lbUsers, setLbUsers] = useState<UserProfile[]>([]);
@@ -10662,10 +10643,62 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
     .sort((a, b) => (storeParticipantMap.get(b.id) || 0) - (storeParticipantMap.get(a.id) || 0))
     .slice(0, 3);
 
+  const today = new Date().toISOString().slice(0, 10);
+  const alreadySpun = currentProfile?.avatar?.lastWheelSpin === today;
+  const spinsAvailable = alreadySpun ? 0 : 1;
+
+  // Countdown timer to midnight
+  useEffect(() => {
+    if (!alreadySpun) { setSpinTimeLeft(''); return; }
+    const tick = () => {
+      const now = new Date();
+      const midnight = new Date(now);
+      midnight.setHours(24, 0, 0, 0);
+      const diff = midnight.getTime() - now.getTime();
+      const h = Math.floor(diff / 3_600_000);
+      const m = Math.floor((diff % 3_600_000) / 60_000);
+      const s = Math.floor((diff % 60_000) / 1_000);
+      setSpinTimeLeft(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [alreadySpun]);
+
+  // Button wiggle animation every 4s when spin is available
+  useEffect(() => {
+    if (alreadySpun) return;
+    const id = setInterval(() => {
+      setSpinWiggle(true);
+      setTimeout(() => setSpinWiggle(false), 700);
+    }, 4000);
+    return () => clearInterval(id);
+  }, [alreadySpun]);
+
   return (
     <div className="space-y-5 pb-20">
-      {/* Tab bar */}
-      <div className="flex justify-center gap-6">
+      {/* Daily wheel modal */}
+      <AnimatePresence>
+        {dailyWheelOpen && currentUser && currentProfile && (
+          <DailyWheelModal
+            inventory={currentProfile.avatar?.inventory ?? []}
+            lastSpin={currentProfile.avatar?.lastWheelSpin}
+            onClose={() => setDailyWheelOpen(false)}
+            onWin={async (itemId) => {
+              const d = new Date().toISOString().slice(0, 10);
+              await updateDoc(doc(db, 'users', currentUser.uid), {
+                'avatar.inventory': arrayUnion(itemId),
+                'avatar.lastWheelSpin': d,
+              });
+              bumpStreak(currentUser.uid).catch(console.error);
+            }}
+            timerLabel={alreadySpun ? spinTimeLeft : undefined}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Tab bar + spin button */}
+      <div className="relative flex justify-center items-center gap-6">
         {(['discovery', 'following'] as const).map(tab => (
           <button
             key={tab}
@@ -10678,6 +10711,31 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
             {tab === 'discovery' ? 'Discovery' : 'Following'}
           </button>
         ))}
+
+        {/* Spin button — top right */}
+        <div className="absolute right-0 flex flex-col items-center gap-0.5">
+          <div className="relative">
+            <motion.button
+              onClick={() => setDailyWheelOpen(true)}
+              animate={spinWiggle ? { rotate: [0, -25, 25, -15, 15, 0] } : { rotate: 0 }}
+              transition={{ duration: 0.6, ease: 'easeInOut' }}
+              className={cn(
+                "w-9 h-9 rounded-full flex items-center justify-center text-lg shadow-sm transition-all active:scale-90",
+                alreadySpun ? "bg-gray-100" : "bg-brand-gold/15"
+              )}
+            >
+              🎡
+            </motion.button>
+            {spinsAvailable > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-brand-gold text-white text-[9px] font-bold flex items-center justify-center leading-none">
+                {spinsAvailable}
+              </span>
+            )}
+          </div>
+          {alreadySpun && spinTimeLeft ? (
+            <span className="text-[9px] text-gray-300 font-mono leading-none">{spinTimeLeft}</span>
+          ) : null}
+        </div>
       </div>
 
       {activeSubTab === 'following' ? (
