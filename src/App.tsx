@@ -267,6 +267,7 @@ interface UserProfile {
   avatar?: UserAvatar;
   lastDogFed?: any;
   lastTreeWatered?: any;
+  lastFruitHarvested?: any;
   foodCount?: number;
   waterCount?: number;
 }
@@ -12621,6 +12622,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
 // ─── Pixel Pet Scene ──────────────────────────────────────────────────────────
 function PixelPetScene({ targetUser, currentUser }: { targetUser: UserProfile; currentUser: FirebaseUser }) {
   const THREE_DAYS = 3 * 24 * 60 * 60 * 1000;
+  const ONE_DAY    = 24 * 60 * 60 * 1000;
   const toMs = (v: any) => !v ? 0 : typeof v === 'number' ? v : (v.toMillis?.() ?? 0);
 
   const charityAnimals = targetUser.charityAnimals || 0;
@@ -12628,14 +12630,20 @@ function PixelPetScene({ targetUser, currentUser }: { targetUser: UserProfile; c
   const hasDog  = charityAnimals >= 5;
   const hasTree = charityTrees   >= 5;
 
-  const lastFedMs     = toMs(targetUser.lastDogFed);
-  const lastWateredMs = toMs(targetUser.lastTreeWatered);
+  // Scene evolves with every plant donated (trees, flowers, vegetables, etc.):
+  // 0 → bare + skeleton | 1-2 → green grass + tyre + skeleton | 3-4 → rats | 5-7 → rabbits + holes (max)
+  const sceneStage = charityTrees === 0 ? 0 : charityTrees <= 2 ? 1 : charityTrees <= 4 ? 2 : 3;
+
+  const lastFedMs       = toMs(targetUser.lastDogFed);
+  const lastWateredMs   = toMs(targetUser.lastTreeWatered);
+  const lastHarvestedMs = toMs(targetUser.lastFruitHarvested);
 
   const dogGone  = lastFedMs     > 0 && Date.now() - lastFedMs     >= THREE_DAYS;
   const treeGone = lastWateredMs > 0 && Date.now() - lastWateredMs >= THREE_DAYS;
 
-  const dogAlive  = hasDog  && !dogGone;
-  const treeAlive = hasTree && !treeGone;
+  const dogAlive   = hasDog  && !dogGone;
+  const treeAlive  = hasTree && !treeGone;
+  const canHarvest = treeAlive && (lastHarvestedMs === 0 || Date.now() - lastHarvestedMs >= ONE_DAY);
 
   const isOwner    = currentUser.uid === targetUser.uid;
   const foodCount  = targetUser.foodCount  ?? 5;
@@ -12645,6 +12653,7 @@ function PixelPetScene({ targetUser, currentUser }: { targetUser: UserProfile; c
   const [justWatered,     setJustWatered]     = useState(false);
   const [justGiftedFood,  setJustGiftedFood]  = useState(false);
   const [justGiftedWater, setJustGiftedWater] = useState(false);
+  const [justHarvested,   setJustHarvested]   = useState(false);
 
   const handleFeed = async () => {
     if (!isOwner || !dogAlive || foodCount <= 0) return;
@@ -12682,6 +12691,15 @@ function PixelPetScene({ targetUser, currentUser }: { targetUser: UserProfile; c
     } catch (e) { console.error(e); }
   };
 
+  const handleHarvestFruit = async () => {
+    if (!isOwner || !canHarvest) return;
+    try {
+      await updateDoc(doc(db, 'users', targetUser.uid), { lastFruitHarvested: serverTimestamp(), foodCount: increment(3) });
+      setJustHarvested(true);
+      setTimeout(() => setJustHarvested(false), 2000);
+    } catch (e) { console.error(e); }
+  };
+
   const btnBase: React.CSSProperties = {
     background: 'rgba(255,255,255,0.92)',
     backdropFilter: 'blur(4px)',
@@ -12705,7 +12723,7 @@ function PixelPetScene({ targetUser, currentUser }: { targetUser: UserProfile; c
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block', imageRendering: 'pixelated' }}
           xmlns="http://www.w3.org/2000/svg"
         >
-          {/* ── Sky (bright blue) ── */}
+          {/* ── Sky ── */}
           <rect x="0" y="0" width="64" height="32" fill="#5BB8FF" />
 
           {/* ── Sun ── */}
@@ -12758,73 +12776,123 @@ function PixelPetScene({ targetUser, currentUser }: { targetUser: UserProfile; c
             <rect x="38" y="9"  width="1" height="1" fill="#2E5F8F" />
           </g>
 
-          {/* ── Roof (no chimney) ── */}
-          <rect x="10" y="13" width="3"  height="1" fill="#E74C3C" />
-          <rect x="9"  y="14" width="5"  height="1" fill="#C0392B" />
-          <rect x="8"  y="15" width="7"  height="1" fill="#C0392B" />
-          <rect x="7"  y="16" width="9"  height="1" fill="#C0392B" />
-          <rect x="6"  y="17" width="11" height="1" fill="#C0392B" />
-          <rect x="5"  y="18" width="13" height="1" fill="#B03A2E" />
-          <rect x="3"  y="19" width="17" height="1" fill="#A93226" />
-          <rect x="3"  y="20" width="17" height="1" fill="#922B21" />
-
-          {/* ── Walls ── */}
-          <rect x="3" y="21" width="17" height="5" fill="#F5CBA7" />
-          <rect x="3" y="25" width="17" height="1" fill="#E8B896" />
-
-          {/* ── Door ── */}
-          <rect x="9"  y="23" width="5" height="3" fill="#7D4E2D" />
-          <rect x="9"  y="23" width="5" height="1" fill="#8B5E3C" />
-          <rect x="13" y="24" width="1" height="1" fill="#A07850" />
-
-          {/* ── Left window ── */}
-          <rect x="4"  y="22" width="4" height="3" fill="#AED6F1" />
-          <rect x="4"  y="22" width="4" height="1" fill="#D6EAF8" />
-          <rect x="6"  y="22" width="1" height="3" fill="#D6EAF8" />
-
-          {/* ── Right window ── */}
-          <rect x="15" y="22" width="4" height="3" fill="#AED6F1" />
-          <rect x="15" y="22" width="4" height="1" fill="#D6EAF8" />
-          <rect x="17" y="22" width="1" height="3" fill="#D6EAF8" />
-
-          {/* ── Path ── */}
-          <rect x="13" y="26" width="8" height="1" fill="#C8B89A" />
-          <rect x="14" y="26" width="2" height="1" fill="#B8A88A" />
-          <rect x="17" y="26" width="2" height="1" fill="#B8A88A" />
-
-          {/* ── Fence ── */}
-          <rect x="21" y="23" width="10" height="1" fill="#C49A55" />
-          <rect x="21" y="25" width="10" height="1" fill="#C49A55" />
-          {[21,23,25,27,29].map(x => (
-            <rect key={x} x={x} y="22" width="1" height="4" fill="#D4AC6E" />
-          ))}
-
-          {/* ── Flowers ── */}
-          <rect x="22" y="25" width="1" height="1" fill="#F9A8D4" />
-          <rect x="22" y="26" width="1" height="1" fill="#4CAF50" />
-          <rect x="24" y="25" width="1" height="1" fill="#FCD34D" />
-          <rect x="24" y="26" width="1" height="1" fill="#4CAF50" />
-
-          {/* ── Tree — unlocked at charityTrees ≥ 5, watered every 3 days ── */}
-          {treeAlive && (
-            <g>
-              <rect x="35" y="22" width="2" height="4" fill="#7D5A2A" />
-              <rect x="34" y="14" width="4"  height="2" fill="#2E7D32" />
-              <rect x="32" y="16" width="8"  height="2" fill="#388E3C" />
-              <rect x="31" y="18" width="10" height="2" fill="#43A047" />
-              <rect x="32" y="20" width="8"  height="2" fill="#388E3C" />
-              <rect x="34" y="22" width="4"  height="1" fill="#2E7D32" />
-              <rect x="33" y="19" width="1"  height="1" fill="#E53935" />
-              <rect x="37" y="17" width="1"  height="1" fill="#E53935" />
-            </g>
+          {/* ── Ground ── */}
+          {sceneStage === 0 ? (
+            <>
+              {/* Bare sandy/rocky */}
+              <rect x="0" y="26" width="64" height="6" fill="#C4A86A" />
+              <rect x="0" y="28" width="64" height="4" fill="#B0894E" />
+              <rect x="4"  y="25" width="5" height="1" fill="#A89060" />
+              <rect x="18" y="26" width="4" height="1" fill="#9A7C48" />
+              <rect x="35" y="25" width="3" height="1" fill="#A89060" />
+              <rect x="50" y="26" width="5" height="1" fill="#9A7C48" />
+              <rect x="8"  y="26" width="2" height="1" fill="#8A6C3A" />
+              <rect x="27" y="26" width="2" height="1" fill="#8A6C3A" />
+              <rect x="44" y="26" width="1" height="1" fill="#8A6C3A" />
+              <rect x="58" y="26" width="2" height="1" fill="#8A6C3A" />
+            </>
+          ) : (
+            <>
+              {/* Full green grass (stage 1+) */}
+              {[0,2,6,10,20,41,44,47,51,56,60,62].map(x => (
+                <rect key={x} x={x} y="25" width="1" height="2" fill="#5DBB3E" />
+              ))}
+              <rect x="0" y="26" width="64" height="1" fill="#4CAF50" />
+              <rect x="0" y="27" width="64" height="5" fill="#388E3C" />
+            </>
           )}
 
-          {/* ── Grass blades ── */}
-          {[0,2,6,10,20,41,44,47,51,56,60,62].map(x => (
-            <rect key={x} x={x} y="25" width="1" height="2" fill="#5DBB3E" />
-          ))}
-          <rect x="0" y="26" width="64" height="1" fill="#4CAF50" />
-          <rect x="0" y="27" width="64" height="5" fill="#388E3C" />
+          {/* ── Tyre on ground (stage 1+) — lying flat ── */}
+          {sceneStage >= 1 && (
+            <>
+              <rect x="19" y="25" width="10" height="1" fill="#2D2D2D" />
+              <rect x="18" y="26" width="12" height="1" fill="#1A1A1A" />
+              <rect x="19" y="27" width="10" height="1" fill="#2D2D2D" />
+              <rect x="21" y="25" width="6"  height="3" fill="#4A3A28" />
+              <rect x="23" y="26" width="2"  height="1" fill="#6A5A48" />
+            </>
+          )}
+
+          {/* ── Animal skeleton (stages 0 and 1 — disappears as land comes alive) ── */}
+          {sceneStage <= 1 && (
+            <>
+              <rect x="31" y="24" width="3" height="2" fill="#E8E0D0" />
+              <rect x="30" y="25" width="1" height="1" fill="#E8E0D0" />
+              <rect x="34" y="25" width="1" height="1" fill="#E8E0D0" />
+              <rect x="32" y="24" width="1" height="1" fill="#1A1A1A" />
+              <rect x="30" y="26" width="9" height="1" fill="#D8D0C0" />
+              <rect x="33" y="25" width="1" height="2" fill="#D8D0C0" />
+              <rect x="35" y="25" width="1" height="2" fill="#D8D0C0" />
+              <rect x="37" y="25" width="1" height="2" fill="#D8D0C0" />
+              <rect x="38" y="27" width="3" height="1" fill="#C8C0B0" />
+            </>
+          )}
+
+          {/* ── Tiny rats (stage 2+) ── */}
+          {sceneStage >= 2 && (
+            <>
+              {/* Rat 1 — facing right */}
+              <rect x="21" y="25" width="4" height="1" fill="#8A7A6A" />
+              <rect x="24" y="24" width="2" height="1" fill="#7A6A5A" />
+              <rect x="24" y="23" width="1" height="1" fill="#6A5A4A" />
+              <rect x="25" y="24" width="1" height="1" fill="#1A1A1A" />
+              <rect x="19" y="25" width="3" height="1" fill="#7A6A5A" />
+              <rect x="22" y="26" width="1" height="1" fill="#6A5A4A" />
+              <rect x="24" y="26" width="1" height="1" fill="#6A5A4A" />
+              {/* Rat 2 — facing left */}
+              <rect x="31" y="25" width="4" height="1" fill="#8A7A6A" />
+              <rect x="30" y="24" width="2" height="1" fill="#7A6A5A" />
+              <rect x="31" y="23" width="1" height="1" fill="#6A5A4A" />
+              <rect x="30" y="24" width="1" height="1" fill="#1A1A1A" />
+              <rect x="34" y="25" width="3" height="1" fill="#7A6A5A" />
+              <rect x="32" y="26" width="1" height="1" fill="#6A5A4A" />
+              <rect x="34" y="26" width="1" height="1" fill="#6A5A4A" />
+            </>
+          )}
+
+          {/* ── Rabbits + holes (stage 3) ── */}
+          {sceneStage >= 3 && (
+            <>
+              {/* Hole 1 — far left */}
+              <rect x="0" y="26" width="4" height="1" fill="#2D1F0A" />
+              <rect x="1" y="27" width="2" height="1" fill="#1A0F05" />
+              {/* Rabbit 1 — facing right near hole */}
+              <rect x="1"  y="24" width="4" height="2" fill="#D4C4B0" />
+              <rect x="4"  y="23" width="2" height="2" fill="#D4C4B0" />
+              <rect x="4"  y="21" width="1" height="3" fill="#C4B0A0" />
+              <rect x="5"  y="21" width="1" height="3" fill="#C4B0A0" />
+              <rect x="5"  y="23" width="1" height="1" fill="#1A1A1A" />
+              <rect x="0"  y="24" width="1" height="1" fill="#F0EAE0" />
+              {/* Hole 2 — middle-left */}
+              <rect x="14" y="26" width="4" height="1" fill="#2D1F0A" />
+              <rect x="15" y="27" width="2" height="1" fill="#1A0F05" />
+              {/* Rabbit 2 — facing right near hole */}
+              <rect x="14" y="24" width="4" height="2" fill="#D4C4B0" />
+              <rect x="17" y="23" width="2" height="2" fill="#D4C4B0" />
+              <rect x="17" y="21" width="1" height="3" fill="#C4B0A0" />
+              <rect x="18" y="21" width="1" height="3" fill="#C4B0A0" />
+              <rect x="18" y="23" width="1" height="1" fill="#1A1A1A" />
+              <rect x="13" y="24" width="1" height="1" fill="#F0EAE0" />
+            </>
+          )}
+
+          {/* ── Tree (left side) — unlocked at 5+ plants, watered every 3 days ── */}
+          {treeAlive && (
+            <g>
+              <rect x="9"  y="22" width="2" height="4" fill="#7D5A2A" />
+              <rect x="8"  y="14" width="4"  height="2" fill="#2E7D32" />
+              <rect x="6"  y="16" width="8"  height="2" fill="#388E3C" />
+              <rect x="5"  y="18" width="10" height="2" fill="#43A047" />
+              <rect x="6"  y="20" width="8"  height="2" fill="#388E3C" />
+              <rect x="8"  y="22" width="4"  height="1" fill="#2E7D32" />
+              {/* Fruit */}
+              <rect x="7"  y="19" width="1" height="1" fill="#E53935" />
+              <rect x="11" y="17" width="1" height="1" fill="#E53935" />
+              <rect x="9"  y="20" width="1" height="1" fill="#FF8F00" />
+              <rect x="6"  y="18" width="1" height="1" fill="#E53935" />
+              <rect x="13" y="19" width="1" height="1" fill="#FF8F00" />
+            </g>
+          )}
 
           {/* ── Dog — unlocked at charityAnimals ≥ 5, fed every 3 days ── */}
           {dogAlive && (
@@ -12859,7 +12927,7 @@ function PixelPetScene({ targetUser, currentUser }: { targetUser: UserProfile; c
           )}
         </svg>
 
-        {/* ── Real avatar overlay — feet at grass line (bottom 18.75% = 6/32 rows) ── */}
+        {/* ── Avatar overlay — feet at grass line ── */}
         <div style={{
           position: 'absolute',
           left: '82%',
@@ -12872,9 +12940,8 @@ function PixelPetScene({ targetUser, currentUser }: { targetUser: UserProfile; c
           <PixelAvatar config={targetUser.avatar} uid={targetUser.uid} size={48} view="full" className="w-full h-auto" />
         </div>
 
-        {/* ── Top-left action buttons ── */}
+        {/* ── Action buttons ── */}
         <div style={{ position: 'absolute', top: '7%', left: '3%', display: 'flex', gap: 4, zIndex: 10 }}>
-          {/* Food button */}
           {isOwner ? (
             <button
               onClick={handleFeed}
@@ -12887,18 +12954,11 @@ function PixelPetScene({ targetUser, currentUser }: { targetUser: UserProfile; c
               {justFed && <span style={{ color: '#16a34a' }}>✓</span>}
             </button>
           ) : (
-            <button
-              onClick={handleGiftFood}
-              style={btnBase}
-              title={`Gift food to ${targetUser.name.split(' ')[0]}`}
-            >
-              {justGiftedFood
-                ? <span style={{ color: '#16a34a' }}>✓ Sent!</span>
-                : <><span>🎁</span><span>🍖</span></>}
+            <button onClick={handleGiftFood} style={btnBase} title={`Gift food to ${targetUser.name.split(' ')[0]}`}>
+              {justGiftedFood ? <span style={{ color: '#16a34a' }}>✓ Sent!</span> : <><span>🎁</span><span>🍖</span></>}
             </button>
           )}
 
-          {/* Water button */}
           {isOwner ? (
             <button
               onClick={handleWater}
@@ -12911,20 +12971,29 @@ function PixelPetScene({ targetUser, currentUser }: { targetUser: UserProfile; c
               {justWatered && <span style={{ color: '#16a34a' }}>✓</span>}
             </button>
           ) : (
+            <button onClick={handleGiftWater} style={btnBase} title={`Gift water to ${targetUser.name.split(' ')[0]}`}>
+              {justGiftedWater ? <span style={{ color: '#16a34a' }}>✓ Sent!</span> : <><span>🎁</span><span>💧</span></>}
+            </button>
+          )}
+
+          {/* Fruit harvest — owner only, once per day, tree must be alive */}
+          {isOwner && treeAlive && (
             <button
-              onClick={handleGiftWater}
-              style={btnBase}
-              title={`Gift water to ${targetUser.name.split(' ')[0]}`}
+              onClick={handleHarvestFruit}
+              disabled={!canHarvest}
+              style={{ ...btnBase, opacity: canHarvest ? 1 : 0.45, cursor: canHarvest ? 'pointer' : 'default' }}
+              title={canHarvest ? 'Harvest fruit (+3 🍖)' : 'Come back tomorrow to harvest'}
             >
-              {justGiftedWater
-                ? <span style={{ color: '#16a34a' }}>✓ Sent!</span>
-                : <><span>🎁</span><span>💧</span></>}
+              <span>🍎</span>
+              {justHarvested
+                ? <span style={{ color: '#16a34a' }}>+3!</span>
+                : !canHarvest && <span style={{ color: '#6b7280', fontSize: 8 }}>✓</span>}
             </button>
           )}
         </div>
       </div>
 
-      {/* ── Footer — only state hints, no interaction prompts (buttons handle that) ── */}
+      {/* ── Footer hints ── */}
       {hasDog && dogGone && isOwner && (
         <div className="bg-stone-50 border-t border-stone-100 px-3 py-1.5">
           <span className="text-[10px] text-stone-500">🐾 Your dog wandered off — use 🍖 to feed it within 3 days</span>
@@ -12939,14 +13008,22 @@ function PixelPetScene({ targetUser, currentUser }: { targetUser: UserProfile; c
       )}
       {hasTree && treeGone && isOwner && (
         <div className="bg-stone-50 border-t border-stone-100 px-3 py-1.5">
-          <span className="text-[10px] text-stone-500">🌳 Your tree withered — use 💧 to water it within 3 days</span>
+          <span className="text-[10px] text-stone-500">🌳 Your plant withered — use 💧 to water it within 3 days</span>
         </div>
       )}
-      {!hasTree && isOwner && (
-        <div className="bg-emerald-50 border-t border-emerald-100 px-3 py-1.5">
-          <span className="text-[10px] text-emerald-600">
-            🌱 Plant {5 - charityTrees} more tree{5 - charityTrees !== 1 ? 's' : ''} to grow one here
-          </span>
+      {sceneStage === 0 && isOwner && (
+        <div className="bg-amber-50 border-t border-amber-100 px-3 py-1.5">
+          <span className="text-[10px] text-amber-700">🌱 Plant 2 plants to bring this land to life</span>
+        </div>
+      )}
+      {sceneStage === 1 && isOwner && (
+        <div className="bg-amber-50 border-t border-amber-100 px-3 py-1.5">
+          <span className="text-[10px] text-amber-700">🐀 Plant {3 - charityTrees} more to see what scurries out</span>
+        </div>
+      )}
+      {sceneStage === 2 && isOwner && (
+        <div className="bg-amber-50 border-t border-amber-100 px-3 py-1.5">
+          <span className="text-[10px] text-amber-700">🐇 Plant {5 - charityTrees} more to attract rabbits &amp; grow a tree</span>
         </div>
       )}
       {!isOwner && (dogAlive || treeAlive) && (
