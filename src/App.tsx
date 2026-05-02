@@ -12877,66 +12877,93 @@ function PixelPetScene({ targetUser, currentUser }: { targetUser: UserProfile; c
           {/* ── Tiny rats (stage 2+) ── */}
           {sceneStage >= 2 && (
             <>
-              {/* Rat 1 — facing right */}
-              <rect x="21" y="25" width="4" height="1" fill="#8A7A6A" />
-              <rect x="24" y="24" width="2" height="1" fill="#7A6A5A" />
-              <rect x="24" y="23" width="1" height="1" fill="#6A5A4A" />
-              <rect x="25" y="24" width="1" height="1" fill="#1A1A1A" />
-              <rect x="19" y="25" width="3" height="1" fill="#7A6A5A" />
-              <rect x="22" y="26" width="1" height="1" fill="#6A5A4A" />
-              <rect x="24" y="26" width="1" height="1" fill="#6A5A4A" />
-              {/* Rat 2 — facing left */}
-              <rect x="31" y="25" width="4" height="1" fill="#8A7A6A" />
-              <rect x="30" y="24" width="2" height="1" fill="#7A6A5A" />
-              <rect x="31" y="23" width="1" height="1" fill="#6A5A4A" />
-              <rect x="30" y="24" width="1" height="1" fill="#1A1A1A" />
-              <rect x="34" y="25" width="3" height="1" fill="#7A6A5A" />
-              <rect x="32" y="26" width="1" height="1" fill="#6A5A4A" />
-              <rect x="34" y="26" width="1" height="1" fill="#6A5A4A" />
+              {/* Rat 1 — scurries right */}
+              <g>
+                <animateTransform attributeName="transform" type="translate"
+                  values="0 0;2 0;0 0;-1 0;0 0" dur="1.8s" repeatCount="indefinite"
+                  calcMode="spline" keyTimes="0;0.3;0.6;0.8;1"
+                  keySplines="0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1" />
+                <rect x="21" y="25" width="4" height="1" fill="#8A7A6A" />
+                <rect x="24" y="24" width="2" height="1" fill="#7A6A5A" />
+                <rect x="24" y="23" width="1" height="1" fill="#6A5A4A" />
+                <rect x="25" y="24" width="1" height="1" fill="#1A1A1A" />
+                <rect x="19" y="25" width="3" height="1" fill="#7A6A5A" />
+                <rect x="22" y="26" width="1" height="1" fill="#6A5A4A" />
+                <rect x="24" y="26" width="1" height="1" fill="#6A5A4A" />
+              </g>
+              {/* Rat 2 — scurries left */}
+              <g>
+                <animateTransform attributeName="transform" type="translate"
+                  values="0 0;-2 0;0 0;1 0;0 0" dur="2.3s" repeatCount="indefinite"
+                  calcMode="spline" keyTimes="0;0.3;0.6;0.8;1"
+                  keySplines="0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1" />
+                <rect x="31" y="25" width="4" height="1" fill="#8A7A6A" />
+                <rect x="30" y="24" width="2" height="1" fill="#7A6A5A" />
+                <rect x="31" y="23" width="1" height="1" fill="#6A5A4A" />
+                <rect x="30" y="24" width="1" height="1" fill="#1A1A1A" />
+                <rect x="34" y="25" width="3" height="1" fill="#7A6A5A" />
+                <rect x="32" y="26" width="1" height="1" fill="#6A5A4A" />
+                <rect x="34" y="26" width="1" height="1" fill="#6A5A4A" />
+              </g>
             </>
           )}
 
           {/* ── Rabbits + holes (stage 3) ── */}
           {sceneStage >= 3 && (
             <>
-              {/* Hole 1 — far left */}
-              <rect x="0" y="26" width="4" height="1" fill="#2D1F0A" />
-              <rect x="1" y="27" width="2" height="1" fill="#1A0F05" />
-              {/* Rabbit 1 — facing right near hole */}
-              <rect x="1"  y="24" width="4" height="2" fill="#D4C4B0" />
-              <rect x="4"  y="23" width="2" height="2" fill="#D4C4B0" />
-              <rect x="4"  y="21" width="1" height="3" fill="#C4B0A0" />
-              <rect x="5"  y="21" width="1" height="3" fill="#C4B0A0" />
-              <rect x="5"  y="23" width="1" height="1" fill="#1A1A1A" />
-              <rect x="0"  y="24" width="1" height="1" fill="#F0EAE0" />
-              {/* Hole 2 — middle-left */}
+              {/* Holes — static */}
+              <rect x="0"  y="26" width="4" height="1" fill="#2D1F0A" />
+              <rect x="1"  y="27" width="2" height="1" fill="#1A0F05" />
               <rect x="14" y="26" width="4" height="1" fill="#2D1F0A" />
               <rect x="15" y="27" width="2" height="1" fill="#1A0F05" />
-              {/* Rabbit 2 — facing right near hole */}
-              <rect x="14" y="24" width="4" height="2" fill="#D4C4B0" />
-              <rect x="17" y="23" width="2" height="2" fill="#D4C4B0" />
-              <rect x="17" y="21" width="1" height="3" fill="#C4B0A0" />
-              <rect x="18" y="21" width="1" height="3" fill="#C4B0A0" />
-              <rect x="18" y="23" width="1" height="1" fill="#1A1A1A" />
-              <rect x="13" y="24" width="1" height="1" fill="#F0EAE0" />
+              {/* Rabbit 1 — gentle bob */}
+              <g>
+                <animateTransform attributeName="transform" type="translate"
+                  values="0 0;0 -1;0 0" dur="2s" repeatCount="indefinite"
+                  calcMode="spline" keyTimes="0;0.5;1"
+                  keySplines="0.45 0 0.55 1;0.45 0 0.55 1" />
+                <rect x="1" y="24" width="4" height="2" fill="#D4C4B0" />
+                <rect x="4" y="23" width="2" height="2" fill="#D4C4B0" />
+                <rect x="4" y="21" width="1" height="3" fill="#C4B0A0" />
+                <rect x="5" y="21" width="1" height="3" fill="#C4B0A0" />
+                <rect x="5" y="23" width="1" height="1" fill="#1A1A1A" />
+                <rect x="0" y="24" width="1" height="1" fill="#F0EAE0" />
+              </g>
+              {/* Rabbit 2 — offset bob */}
+              <g>
+                <animateTransform attributeName="transform" type="translate"
+                  values="0 0;0 -1;0 0" dur="2.6s" repeatCount="indefinite"
+                  calcMode="spline" keyTimes="0;0.5;1"
+                  keySplines="0.45 0 0.55 1;0.45 0 0.55 1" />
+                <rect x="14" y="24" width="4" height="2" fill="#D4C4B0" />
+                <rect x="17" y="23" width="2" height="2" fill="#D4C4B0" />
+                <rect x="17" y="21" width="1" height="3" fill="#C4B0A0" />
+                <rect x="18" y="21" width="1" height="3" fill="#C4B0A0" />
+                <rect x="18" y="23" width="1" height="1" fill="#1A1A1A" />
+                <rect x="13" y="24" width="1" height="1" fill="#F0EAE0" />
+              </g>
             </>
           )}
 
           {/* ── Tree (left side) — unlocked at 5+ plants, watered every 3 days ── */}
           {treeAlive && (
             <g>
+              <animateTransform attributeName="transform" type="rotate"
+                values="0 10 26;1.5 10 26;0 10 26;-1.5 10 26;0 10 26"
+                dur="5s" repeatCount="indefinite"
+                calcMode="spline" keyTimes="0;0.25;0.5;0.75;1"
+                keySplines="0.45 0 0.55 1;0.45 0 0.55 1;0.45 0 0.55 1;0.45 0 0.55 1" />
               <rect x="9"  y="22" width="2" height="4" fill="#7D5A2A" />
               <rect x="8"  y="14" width="4"  height="2" fill="#2E7D32" />
               <rect x="6"  y="16" width="8"  height="2" fill="#388E3C" />
               <rect x="5"  y="18" width="10" height="2" fill="#43A047" />
               <rect x="6"  y="20" width="8"  height="2" fill="#388E3C" />
               <rect x="8"  y="22" width="4"  height="1" fill="#2E7D32" />
-              {/* Fruit */}
-              <rect x="7"  y="19" width="1" height="1" fill="#E53935" />
-              <rect x="11" y="17" width="1" height="1" fill="#E53935" />
-              <rect x="9"  y="20" width="1" height="1" fill="#FF8F00" />
-              <rect x="6"  y="18" width="1" height="1" fill="#E53935" />
-              <rect x="13" y="19" width="1" height="1" fill="#FF8F00" />
+              <rect x="7"  y="19" width="1"  height="1" fill="#E53935" />
+              <rect x="11" y="17" width="1"  height="1" fill="#E53935" />
+              <rect x="9"  y="20" width="1"  height="1" fill="#FF8F00" />
+              <rect x="6"  y="18" width="1"  height="1" fill="#E53935" />
+              <rect x="13" y="19" width="1"  height="1" fill="#FF8F00" />
             </g>
           )}
 
