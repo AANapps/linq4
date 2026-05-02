@@ -115,7 +115,7 @@ import {
   Package,
   Pencil
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 import { format } from 'date-fns';
 
@@ -516,8 +516,16 @@ const ENDANGERED_ANIMALS: EndangeredAnimal[] = [
   { name: 'Mountain Gorilla', emoji: '🦍', status: 'Endangered', fact: 'Fewer than 1,100 survive in the wild' },
 ];
 
+interface RankEntry {
+  uid: string;
+  name: string;
+  totalStamps: number;
+  avatar?: UserAvatar;
+  globalRank: number;
+}
+
 interface CelebrationPage {
-  type: 'stamp' | 'challenge' | 'upsell' | 'charity';
+  type: 'stamp' | 'challenge' | 'upsell' | 'charity' | 'rank';
   storeName?: string;
   challengeTitle?: string;
   upsellTitle?: string;
@@ -527,6 +535,11 @@ interface CelebrationPage {
   encouragement: string;
   done: boolean;
   charityAnimal?: EndangeredAnimal;
+  rankBefore?: number;
+  rankAfter?: number;
+  rankChange?: number;
+  rankTopTen?: RankEntry[];
+  rankNearby?: RankEntry[];
 }
 
 interface AppBadge {
@@ -3911,17 +3924,66 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       cardsInitializedRef.current = true;
       return;
     }
-    activeCards.forEach(card => {
-      const prev = prevCardStampsRef.current.get(card.id) ?? -1;
-      if (card.current_stamps > prev) {
-        const store = stores.find(s => s.id === card.store_id);
-        if (store) {
-          const pages = buildStampCelebrationPages(store, card, activeStandardChallenges, myStandardEntries, profile, user);
-          if (pages.length > 0) setCelebrationPages(pages);
+    (async () => {
+      for (const card of activeCards) {
+        const prev = prevCardStampsRef.current.get(card.id) ?? -1;
+        if (card.current_stamps > prev) {
+          const store = stores.find(s => s.id === card.store_id);
+          if (store) {
+            const pages = buildStampCelebrationPages(store, card, activeStandardChallenges, myStandardEntries, profile, user);
+
+            // Build rank change page
+            try {
+              const snap = await getDocs(collection(db, 'users'));
+              const allUsers = snap.docs
+                .map(d => ({ uid: d.id, ...d.data() } as UserProfile))
+                .filter(u => (u.totalStamps || 0) > 0)
+                .sort((a, b) => (b.totalStamps || 0) - (a.totalStamps || 0));
+
+              const newStamps = profile?.totalStamps || 0;
+              const oldStamps = newStamps - 1;
+              const userIdx = allUsers.findIndex(u => u.uid === user.uid);
+              const rankAfter = userIdx >= 0 ? userIdx + 1 : allUsers.length + 1;
+              const othersWithMoreThanOld = allUsers.filter(u => u.uid !== user.uid && (u.totalStamps || 0) > oldStamps).length;
+              const rankBefore = othersWithMoreThanOld + 1;
+              const rankChange = rankBefore - rankAfter;
+
+              const toEntry = (u: UserProfile, rank: number): RankEntry => ({
+                uid: u.uid, name: u.name || 'User', totalStamps: u.totalStamps || 0, avatar: u.avatar, globalRank: rank,
+              });
+
+              const rankTopTen = allUsers.slice(0, 10).map((u, i) => toEntry(u, i + 1));
+
+              let rankNearby: RankEntry[] | undefined;
+              if (rankAfter > 10 && userIdx >= 0) {
+                const start = Math.max(0, userIdx - 4);
+                const end = Math.min(allUsers.length, userIdx + 5);
+                rankNearby = allUsers.slice(start, end).map((u, i) => toEntry(u, start + i + 1));
+              }
+
+              if (rankAfter > 0) {
+                pages.splice(1, 0, {
+                  type: 'rank',
+                  currentStamps: newStamps,
+                  totalStamps: newStamps,
+                  reward: '',
+                  encouragement: '',
+                  done: false,
+                  rankBefore,
+                  rankAfter,
+                  rankChange,
+                  rankTopTen,
+                  rankNearby,
+                });
+              }
+            } catch (_) { /* rank page is optional */ }
+
+            if (pages.length > 0) setCelebrationPages(pages);
+          }
         }
+        prevCardStampsRef.current.set(card.id, card.current_stamps);
       }
-      prevCardStampsRef.current.set(card.id, card.current_stamps);
-    });
+    })();
   }, [initialCards]);
 
   // Watch myStickerCards for new stickers
@@ -5020,19 +5082,51 @@ function StampCelebrationModal({
   const [pageIdx, setPageIdx] = useState(0);
   const [charityPicked, setCharityPicked] = useState<'animal' | 'tree' | null>(null);
   const [charityFeedback, setCharityFeedback] = useState<{ emoji: string; title: string; detail: string } | null>(null);
+  const [rankAnimStep, setRankAnimStep] = useState<'before' | 'after'>('before');
   const page = pages[pageIdx];
   const isLast = pageIdx === pages.length - 1;
   const pct = Math.min(100, page.totalStamps > 0 ? Math.round((page.currentStamps / page.totalStamps) * 100) : 0);
   const circumference = 2 * Math.PI * 42;
   const isUpsell = page.type === 'upsell';
   const isCharity = page.type === 'charity';
+  const isRank = page.type === 'rank';
   const pageKey = page.type === 'challenge' && page.done ? 'challenge_done' : page.type;
+
+  // Rank page animation data
+  const rankAfterVal = page.rankAfter ?? 0;
+  const rankBeforeVal = page.rankBefore ?? rankAfterVal;
+  const rankChange = page.rankChange ?? 0;
+  const rankInTopTen = rankAfterVal > 0 && rankAfterVal <= 10;
+  const rankBaseList = isRank ? (rankInTopTen ? (page.rankTopTen ?? []) : (page.rankNearby ?? [])) : [];
+  // Build "before" ordering: shift user down to their pre-stamp position within the visible window
+  const rankBeforeList = React.useMemo(() => {
+    if (!isRank || rankChange === 0 || !rankBaseList.length) return rankBaseList;
+    const list = [...rankBaseList];
+    const idx = list.findIndex(e => e.uid === (userUid ?? ''));
+    if (idx === -1) return list;
+    const [entry] = list.splice(idx, 1);
+    const beforeIdx = Math.min(Math.max(0, idx + rankChange), list.length);
+    list.splice(beforeIdx, 0, entry);
+    return list;
+  }, [isRank, rankBaseList, userUid, rankChange]);
+  const rankDisplayList = isRank ? (rankAnimStep === 'before' ? rankBeforeList : rankBaseList) : [];
 
   useEffect(() => {
     setCharityPicked(null);
     setCharityFeedback(null);
-    if (!isCharity) fireCelebAnimation(PAGE_ANIM[pageKey] || 'sparkles');
+    setRankAnimStep('before');
+    if (!isCharity && !isRank) {
+      fireCelebAnimation(PAGE_ANIM[pageKey] || 'sparkles');
+    } else if (isRank && rankChange > 0) {
+      setTimeout(() => fireCelebAnimation('sparkles'), 1000);
+    }
   }, [pageIdx]);
+
+  useEffect(() => {
+    if (!isRank) return;
+    const t = setTimeout(() => setRankAnimStep('after'), 800);
+    return () => clearTimeout(t);
+  }, [pageIdx, isRank]);
 
   const handleCharityChoice = (choice: 'animal' | 'tree') => {
     if (charityPicked) return;
@@ -5094,7 +5188,92 @@ function StampCelebrationModal({
               )}
             </AnimatePresence>
 
-            {isCharity ? (
+            {isRank ? (
+              /* ── Rank change page ── */
+              <>
+                <div className="text-center space-y-2">
+                  <motion.p
+                    initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+                    className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40"
+                  >🏆 Leaderboard</motion.p>
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.15, type: 'spring', stiffness: 300 }}
+                  >
+                    <span className={cn(
+                      'inline-flex items-center gap-1 px-3 py-1.5 rounded-full font-black text-lg',
+                      rankChange > 0 ? 'bg-emerald-100 text-emerald-600' :
+                      rankChange < 0 ? 'bg-red-50 text-red-500' :
+                      'bg-brand-navy/8 text-brand-navy/40'
+                    )}>
+                      {rankChange > 0 ? `↑ +${rankChange} rank` : rankChange < 0 ? `↓ ${rankChange} rank` : '— Same rank'}
+                    </span>
+                  </motion.div>
+                  <motion.p
+                    initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                    className="font-display font-bold text-xl text-brand-navy leading-tight"
+                  >
+                    {rankAfterVal <= 10 ? `You're #${rankAfterVal} — top 10!` : `You're ranked #${rankAfterVal}`}
+                  </motion.p>
+                </div>
+
+                {/* Leaderboard rows with layout animation */}
+                <motion.div
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25 }}
+                  className="space-y-1.5"
+                >
+                  <LayoutGroup>
+                    {rankDisplayList.map((entry) => {
+                      const isMe = entry.uid === (userUid ?? '');
+                      const shownRank = isMe && rankAnimStep === 'before' && rankChange !== 0 ? rankBeforeVal : entry.globalRank;
+                      return (
+                        <motion.div
+                          key={entry.uid}
+                          layout
+                          transition={{ type: 'spring', stiffness: 350, damping: 32 }}
+                          className={cn(
+                            'flex items-center gap-3 px-3 py-2 rounded-xl',
+                            isMe
+                              ? 'bg-brand-gold/15 border border-brand-gold/20 shadow-sm'
+                              : 'bg-brand-navy/4'
+                          )}
+                        >
+                          <span className="w-6 text-[10px] font-black text-brand-navy/30 text-right shrink-0">
+                            #{shownRank}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className={cn('text-xs font-bold truncate', isMe ? 'text-brand-navy' : 'text-brand-navy/60')}>
+                              {isMe ? 'You' : entry.name}
+                            </p>
+                          </div>
+                          <p className="text-xs font-black text-brand-navy/40 shrink-0">{entry.totalStamps}</p>
+                        </motion.div>
+                      );
+                    })}
+                  </LayoutGroup>
+                </motion.div>
+
+                {!rankInTopTen && (
+                  <p className="text-center text-[10px] text-brand-navy/30">Showing your position in the leaderboard</p>
+                )}
+
+                {pages.length > 1 && (
+                  <div className="flex justify-center gap-1.5">
+                    {pages.map((_, i) => (
+                      <motion.div key={i} animate={{ width: i === pageIdx ? 16 : 6 }} className={cn('h-1.5 rounded-full transition-colors', i === pageIdx ? 'bg-brand-navy' : 'bg-brand-navy/20')} />
+                    ))}
+                  </div>
+                )}
+
+                <motion.button
+                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
+                  onClick={isLast ? onClose : () => setPageIdx(i => i + 1)}
+                  className="w-full py-3.5 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-[0.98] transition-all"
+                >
+                  {ctaLabel}
+                </motion.button>
+              </>
+            ) : isCharity ? (
               /* ── Charity deed page ── */
               <>
                 {/* Header */}
@@ -11168,7 +11347,11 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
               const periodUsers = lbPeriod === 'weekly'
                 ? lbUsers.filter(u => u.lastStreakDate && u.lastStreakDate >= sevenDaysAgo)
                 : lbUsers;
-              const sorted = [...periodUsers].sort((a, b) => getLbScore(b) - getLbScore(a)).filter(u => getLbScore(u) > 0).slice(0, 20);
+              const allSorted = [...periodUsers].sort((a, b) => getLbScore(b) - getLbScore(a)).filter(u => getLbScore(u) > 0);
+              const sorted = allSorted.slice(0, 10);
+              const myRankIdx = allSorted.findIndex(u => u.uid === currentProfile?.uid);
+              const myRank = myRankIdx >= 0 ? myRankIdx + 1 : null;
+              const myRankInTopTen = myRank !== null && myRank <= 10;
               const podium = [sorted[1], sorted[0], sorted[2]];
               const podiumHeights = ['h-20', 'h-28', 'h-16'];
               const podiumColors = ['bg-brand-navy/10', 'bg-brand-gold/30', 'bg-brand-navy/5'];
@@ -11273,6 +11456,21 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
                                 <p className="font-black text-sm text-brand-navy/70 shrink-0">{getLbScore(u)} <span className="text-[10px] font-medium text-brand-navy/30">{lbCategoryUnit}</span></p>
                               </div>
                             ))}
+                          </div>
+                        )}
+                        {!myRankInTopTen && myRank !== null && currentProfile && (
+                          <div className="mt-1 space-y-1">
+                            <p className="text-center text-[10px] text-brand-navy/30 font-bold uppercase tracking-widest">Your position</p>
+                            <div className="glass-card p-3 rounded-2xl flex items-center gap-3 border border-brand-gold/20 bg-brand-gold/5">
+                              <div className="w-6 font-display font-bold text-brand-gold text-sm text-center">#{myRank}</div>
+                              <div className="w-8 h-8 rounded-xl overflow-hidden bg-indigo-50 flex items-center justify-center shrink-0">
+                                <PixelAvatar config={currentProfile.avatar} uid={currentProfile.uid} size={32} view="head" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1"><p className="font-bold text-xs truncate">{currentProfile.name}</p><StreakBadge streak={currentProfile.streak} /></div>
+                              </div>
+                              <p className="font-black text-sm text-brand-navy/70 shrink-0">{getLbScore(currentProfile)} <span className="text-[10px] font-medium text-brand-navy/30">{lbCategoryUnit}</span></p>
+                            </div>
                           </div>
                         )}
                       </>
