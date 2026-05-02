@@ -12799,6 +12799,12 @@ function PixelPetScene({ targetUser, currentUser, currentProfile }: { targetUser
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block', imageRendering: 'pixelated' }}
           xmlns="http://www.w3.org/2000/svg"
         >
+          <defs>
+            <clipPath id="aboveGround">
+              <rect x="0" y="0" width="64" height="26" />
+            </clipPath>
+          </defs>
+
           {/* ── Sky ── */}
           <rect x="0" y="0" width="64" height="32" fill="#5BB8FF" />
 
@@ -12938,39 +12944,68 @@ function PixelPetScene({ targetUser, currentUser, currentProfile }: { targetUser
             </>
           )}
 
-          {/* ── Rabbits + holes (stage 3) ── */}
+          {/* ── Rabbits hopping + moles popping (stage 3) ── */}
           {sceneStage >= 3 && (
             <>
-              {/* Holes — static */}
-              <rect x="0"  y="26" width="4" height="1" fill="#2D1F0A" />
-              <rect x="1"  y="27" width="2" height="1" fill="#1A0F05" />
-              <rect x="14" y="26" width="4" height="1" fill="#2D1F0A" />
-              <rect x="15" y="27" width="2" height="1" fill="#1A0F05" />
-              {/* Rabbit 1 — gentle bob */}
-              <g>
-                <animateTransform attributeName="transform" type="translate"
-                  values="0 0;0 -1;0 0" dur="2s" repeatCount="indefinite"
-                  calcMode="spline" keyTimes="0;0.5;1"
-                  keySplines="0.45 0 0.55 1;0.45 0 0.55 1" />
-                <rect x="1" y="24" width="4" height="2" fill="#D4C4B0" />
-                <rect x="4" y="23" width="2" height="2" fill="#D4C4B0" />
-                <rect x="4" y="21" width="1" height="3" fill="#C4B0A0" />
-                <rect x="5" y="21" width="1" height="3" fill="#C4B0A0" />
-                <rect x="5" y="23" width="1" height="1" fill="#1A1A1A" />
-                <rect x="0" y="24" width="1" height="1" fill="#F0EAE0" />
+              {/* Mole 1 — pops up at x=8, clipped at ground */}
+              <g clipPath="url(#aboveGround)">
+                <g>
+                  <animateTransform attributeName="transform" type="translate"
+                    values="0 6;0 6;0 0;0 0;0 6;0 6"
+                    dur="6s" repeatCount="indefinite"
+                    keyTimes="0;0.08;0.18;0.72;0.82;1"
+                    calcMode="spline"
+                    keySplines="0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1" />
+                  <rect x="8"  y="22" width="3" height="4" fill="#5D4037" />
+                  <rect x="8"  y="20" width="3" height="2" fill="#795548" />
+                  <rect x="9"  y="21" width="1" height="1" fill="#E91E63" />
+                  <rect x="8"  y="20" width="1" height="1" fill="#1A1A1A" />
+                  <rect x="10" y="20" width="1" height="1" fill="#1A1A1A" />
+                  <rect x="7"  y="24" width="1" height="1" fill="#8D6E63" />
+                  <rect x="11" y="24" width="1" height="1" fill="#8D6E63" />
+                </g>
               </g>
-              {/* Rabbit 2 — offset bob */}
+              {/* Mole 2 — pops up at x=50, offset timing */}
+              <g clipPath="url(#aboveGround)">
+                <g>
+                  <animateTransform attributeName="transform" type="translate"
+                    values="0 6;0 6;0 0;0 0;0 6;0 6"
+                    dur="8s" begin="2.5s" repeatCount="indefinite"
+                    keyTimes="0;0.08;0.18;0.72;0.82;1"
+                    calcMode="spline"
+                    keySplines="0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1" />
+                  <rect x="50" y="22" width="3" height="4" fill="#5D4037" />
+                  <rect x="50" y="20" width="3" height="2" fill="#795548" />
+                  <rect x="51" y="21" width="1" height="1" fill="#E91E63" />
+                  <rect x="50" y="20" width="1" height="1" fill="#1A1A1A" />
+                  <rect x="52" y="20" width="1" height="1" fill="#1A1A1A" />
+                  <rect x="49" y="24" width="1" height="1" fill="#8D6E63" />
+                  <rect x="53" y="24" width="1" height="1" fill="#8D6E63" />
+                </g>
+              </g>
+              {/* Rabbit 1 — hops left to right across scene */}
               <g>
-                <animateTransform attributeName="transform" type="translate"
-                  values="0 0;0 -1;0 0" dur="2.6s" repeatCount="indefinite"
-                  calcMode="spline" keyTimes="0;0.5;1"
-                  keySplines="0.45 0 0.55 1;0.45 0 0.55 1" />
-                <rect x="14" y="24" width="4" height="2" fill="#D4C4B0" />
-                <rect x="17" y="23" width="2" height="2" fill="#D4C4B0" />
-                <rect x="17" y="21" width="1" height="3" fill="#C4B0A0" />
-                <rect x="18" y="21" width="1" height="3" fill="#C4B0A0" />
-                <rect x="18" y="23" width="1" height="1" fill="#1A1A1A" />
-                <rect x="13" y="24" width="1" height="1" fill="#F0EAE0" />
+                <animateMotion
+                  path="M -8 26 Q -4 21 0 26 Q 4 21 8 26 Q 12 21 16 26 Q 20 21 24 26 Q 28 21 32 26 Q 36 21 40 26 Q 44 21 48 26 Q 52 21 56 26 Q 60 21 64 26 Q 66 21 72 26"
+                  dur="12s" repeatCount="indefinite" rotate="0" />
+                <rect x="-2" y="-2" width="4" height="2" fill="#D4C4B0" />
+                <rect x="1"  y="-4" width="2" height="2" fill="#D4C4B0" />
+                <rect x="1"  y="-7" width="1" height="3" fill="#C4B0A0" />
+                <rect x="2"  y="-7" width="1" height="3" fill="#C4B0A0" />
+                <rect x="2"  y="-3" width="1" height="1" fill="#1A1A1A" />
+                <rect x="-3" y="-2" width="1" height="1" fill="#F0EAE0" />
+              </g>
+              {/* Rabbit 2 — hops right to left, head mirrored, slower */}
+              <g>
+                <animateMotion
+                  path="M 72 26 Q 68 21 64 26 Q 60 21 56 26 Q 52 21 48 26 Q 44 21 40 26 Q 36 21 32 26 Q 28 21 24 26 Q 20 21 16 26 Q 12 21 8 26 Q 4 21 0 26 Q -2 21 -8 26"
+                  dur="15s" begin="4s" repeatCount="indefinite" rotate="0" />
+                <rect x="-2" y="-2" width="4" height="2" fill="#D4C4B0" />
+                <rect x="-3" y="-4" width="2" height="2" fill="#D4C4B0" />
+                <rect x="-3" y="-7" width="1" height="3" fill="#C4B0A0" />
+                <rect x="-2" y="-7" width="1" height="3" fill="#C4B0A0" />
+                <rect x="-3" y="-3" width="1" height="1" fill="#1A1A1A" />
+                <rect x="3"  y="-2" width="1" height="1" fill="#F0EAE0" />
               </g>
             </>
           )}
