@@ -265,6 +265,7 @@ interface UserProfile {
   streak?: number;
   lastStreakDate?: string;
   avatar?: UserAvatar;
+  dogName?: string;
   lastDogFed?: any;
   lastTreeWatered?: any;
   lastFruitHarvested?: any;
@@ -5067,8 +5068,33 @@ function StampCelebrationModal({
             key={pageIdx}
             initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -50, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="p-6 pb-12 space-y-5"
+            className="relative overflow-hidden p-6 pb-12 space-y-5"
           >
+            {/* ── Big reward overlay — slides in after charity pick ── */}
+            <AnimatePresence>
+              {charityFeedback && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.88, y: 24 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 22 }}
+                  className="absolute inset-0 bg-brand-bg z-20 flex flex-col items-center justify-center p-8 text-center gap-4"
+                >
+                  <motion.div
+                    initial={{ scale: 0 }} animate={{ scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 280, damping: 14, delay: 0.12 }}
+                    className="text-7xl select-none"
+                  >{charityFeedback.emoji}</motion.div>
+                  <div className="space-y-1">
+                    <p className="text-[11px] font-bold uppercase tracking-widest text-emerald-500">Thank you! 💚</p>
+                    <h2 className="font-display font-bold text-2xl text-brand-navy leading-tight">{charityFeedback.title}</h2>
+                  </div>
+                  <p className="text-sm text-brand-navy/70 leading-relaxed max-w-xs">{charityFeedback.detail}</p>
+                  <p className="text-[11px] text-brand-navy/35">✨ Your pixel board has been updated</p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {isCharity ? (
               /* ── Charity deed page ── */
               <>
@@ -5185,36 +5211,16 @@ function StampCelebrationModal({
                   </button>
                 </motion.div>
 
-                {/* Donation note / thank-you reward */}
-                <AnimatePresence mode="wait">
-                  {charityFeedback ? (
-                    <motion.div
-                      key="reward"
-                      initial={{ opacity: 0, y: 10, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ type: 'spring', stiffness: 320, damping: 24 }}
-                      className="rounded-2xl bg-emerald-50 border border-emerald-300 p-4 text-center space-y-1"
-                    >
-                      <div className="text-3xl">{charityFeedback.emoji}</div>
-                      <p className="font-display font-bold text-sm text-brand-navy leading-tight">
-                        Thank you! {charityFeedback.title}
-                      </p>
-                      <p className="text-[11px] text-emerald-700 leading-snug">{charityFeedback.detail}</p>
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key="note"
-                      initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                      transition={{ delay: 0.45 }}
-                      className="rounded-2xl bg-emerald-50 border border-emerald-200 p-3 flex items-start gap-2"
-                    >
-                      <span className="text-lg shrink-0">💚</span>
-                      <p className="text-[11px] text-emerald-700 font-medium leading-snug">
-                        We donate <strong>10% of our profits</strong> to charitable organisations supporting wildlife conservation and reforestation.
-                      </p>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                {/* Donation note */}
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
+                  className="rounded-2xl bg-emerald-50 border border-emerald-200 p-3 flex items-start gap-2"
+                >
+                  <span className="text-lg shrink-0">💚</span>
+                  <p className="text-[11px] text-emerald-700 font-medium leading-snug">
+                    We donate <strong>10% of our profits</strong> to charitable organisations supporting wildlife conservation and reforestation.
+                  </p>
+                </motion.div>
 
                 {/* Page dots */}
                 {pages.length > 1 && (
@@ -12695,11 +12701,15 @@ function PixelPetScene({ targetUser, currentUser }: { targetUser: UserProfile; c
   const foodCount  = targetUser.foodCount  ?? 5;
   const waterCount = targetUser.waterCount ?? 5;
 
+  const dogName = targetUser.dogName || '';
+
   const [justFed,         setJustFed]         = useState(false);
   const [justWatered,     setJustWatered]     = useState(false);
   const [justGiftedFood,  setJustGiftedFood]  = useState(false);
   const [justGiftedWater, setJustGiftedWater] = useState(false);
   const [justHarvested,   setJustHarvested]   = useState(false);
+  const [dogNameInput,    setDogNameInput]    = useState('');
+  const [savingDogName,   setSavingDogName]   = useState(false);
 
   const handleFeed = async () => {
     if (!isOwner || !dogAlive || foodCount <= 0) return;
@@ -12744,6 +12754,16 @@ function PixelPetScene({ targetUser, currentUser }: { targetUser: UserProfile; c
       setJustHarvested(true);
       setTimeout(() => setJustHarvested(false), 2000);
     } catch (e) { console.error(e); }
+  };
+
+  const handleSaveDogName = async () => {
+    const name = dogNameInput.trim();
+    if (!name || savingDogName) return;
+    setSavingDogName(true);
+    try {
+      await updateDoc(doc(db, 'users', targetUser.uid), { dogName: name });
+    } catch (e) { console.error(e); }
+    setSavingDogName(false);
   };
 
   const btnBase: React.CSSProperties = {
@@ -12967,35 +12987,51 @@ function PixelPetScene({ targetUser, currentUser }: { targetUser: UserProfile; c
             </g>
           )}
 
-          {/* ── Dog — unlocked at charityAnimals ≥ 5, fed every 3 days ── */}
+          {/* ── Dog — unlocked at charityAnimals ≥ 5 ── */}
           {dogAlive && (
             <g>
-              {/* Tail */}
+              {/* Tail — fluffy wag */}
               <g>
-                <animateTransform
-                  attributeName="transform" type="rotate"
-                  values="0 41 25;30 41 25;0 41 25;-30 41 25;0 41 25"
-                  dur="1.1s" repeatCount="indefinite"
-                />
-                <rect x="38" y="22" width="2" height="4" fill="#A0732A" />
-                <rect x="37" y="22" width="1" height="2" fill="#7A5520" />
+                <animateTransform attributeName="transform" type="rotate"
+                  values="0 37 26;38 37 26;0 37 26;-28 37 26;0 37 26"
+                  dur="0.85s" repeatCount="indefinite"
+                  calcMode="spline" keyTimes="0;0.25;0.5;0.75;1"
+                  keySplines="0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1" />
+                <rect x="35" y="20" width="3" height="1" fill="#D4A055" />
+                <rect x="36" y="21" width="2" height="5" fill="#A07030" />
               </g>
               {/* Body */}
-              <rect x="41" y="23" width="9" height="3" fill="#A0732A" />
-              {/* Head (facing right toward avatar) */}
-              <rect x="48" y="21" width="5" height="3" fill="#A0732A" />
-              {/* Floppy ear */}
-              <rect x="51" y="19" width="2" height="3" fill="#7A5520" />
-              {/* Eye */}
-              <rect x="51" y="21" width="1" height="1" fill="#1A1A1A" />
-              {/* Nose */}
-              <rect x="52" y="22" width="1" height="1" fill="#1A1A1A" />
-              {/* Snout */}
-              <rect x="52" y="23" width="2" height="1" fill="#C49A6C" />
+              <rect x="39" y="23" width="11" height="3" fill="#D4A055" />
+              {/* Belly highlight */}
+              <rect x="40" y="24" width="9"  height="1" fill="#E8B87A" />
               {/* Legs */}
-              <rect x="42" y="26" width="2" height="1" fill="#7A5520" />
-              <rect x="45" y="26" width="2" height="1" fill="#7A5520" />
-              <rect x="48" y="26" width="2" height="1" fill="#7A5520" />
+              <rect x="40" y="26" width="2"  height="1" fill="#A07030" />
+              <rect x="44" y="26" width="2"  height="1" fill="#A07030" />
+              <rect x="48" y="26" width="2"  height="1" fill="#A07030" />
+              {/* Neck */}
+              <rect x="48" y="22" width="3"  height="2" fill="#D4A055" />
+              {/* Head — rounded chibi */}
+              <rect x="48" y="18" width="4"  height="1" fill="#D4A055" />
+              <rect x="47" y="19" width="6"  height="4" fill="#D4A055" />
+              <rect x="48" y="23" width="4"  height="1" fill="#D4A055" />
+              {/* Ear — long floppy */}
+              <rect x="52" y="16" width="2"  height="7" fill="#A07030" />
+              <rect x="52" y="17" width="1"  height="5" fill="#E8B87A" />
+              {/* Snout / muzzle */}
+              <rect x="51" y="21" width="3"  height="2" fill="#E8B87A" />
+              {/* Eyebrow */}
+              <rect x="49" y="19" width="2"  height="1" fill="#7A5020" />
+              {/* Eye — 2×2 with highlight */}
+              <rect x="49" y="20" width="2"  height="2" fill="#1A1A1A" />
+              <rect x="49" y="20" width="1"  height="1" fill="#FFFFFF" />
+              {/* Nose */}
+              <rect x="52" y="21" width="2"  height="1" fill="#1A1A1A" />
+              {/* Cheek blush */}
+              <rect x="51" y="22" width="1"  height="1" fill="#FFB0B0" />
+              {/* Collar */}
+              <rect x="48" y="23" width="4"  height="1" fill="#E53935" />
+              {/* Collar tag */}
+              <rect x="50" y="23" width="1"  height="1" fill="#FFD700" />
             </g>
           )}
         </svg>
@@ -13013,96 +13049,138 @@ function PixelPetScene({ targetUser, currentUser }: { targetUser: UserProfile; c
           <PixelAvatar config={targetUser.avatar} uid={targetUser.uid} size={48} view="full" className="w-full h-auto" />
         </div>
 
-        {/* ── Action buttons ── */}
-        <div style={{ position: 'absolute', top: '7%', left: '3%', display: 'flex', gap: 4, zIndex: 10 }}>
-          {isOwner ? (
+        {/* ── Dog name tag ── */}
+        {dogAlive && dogName && (
+          <div style={{
+            position: 'absolute', left: '67%', bottom: '44%',
+            transform: 'translateX(-50%)',
+            background: '#FFF9E6', border: '1px solid #D4A055',
+            borderRadius: 4, padding: '1px 5px',
+            fontSize: 8, fontWeight: 800, color: '#7A5020',
+            pointerEvents: 'none', whiteSpace: 'nowrap', zIndex: 5,
+          }}>
+            {dogName}
+          </div>
+        )}
+
+        {/* ── Owner action buttons (top-left) ── */}
+        {isOwner && (
+          <div style={{ position: 'absolute', top: '7%', left: '3%', display: 'flex', gap: 4, zIndex: 10 }}>
             <button
               onClick={handleFeed}
               disabled={!dogAlive || foodCount <= 0}
               style={{ ...btnBase, opacity: (!dogAlive || foodCount <= 0) ? 0.45 : 1, cursor: (!dogAlive || foodCount <= 0) ? 'default' : 'pointer' }}
-              title={dogAlive ? `Feed dog (${foodCount} left)` : 'No dog yet'}
+              title={dogAlive ? `Feed ${dogName || 'dog'} (${foodCount} left)` : 'No dog yet'}
             >
               <span>🍖</span>
               <span style={{ color: '#92400e' }}>{foodCount}</span>
               {justFed && <span style={{ color: '#16a34a' }}>✓</span>}
             </button>
-          ) : (
-            <button onClick={handleGiftFood} style={btnBase} title={`Gift food to ${targetUser.name.split(' ')[0]}`}>
-              {justGiftedFood ? <span style={{ color: '#16a34a' }}>✓ Sent!</span> : <><span>🎁</span><span>🍖</span></>}
-            </button>
-          )}
-
-          {isOwner ? (
             <button
               onClick={handleWater}
               disabled={!treeAlive || waterCount <= 0}
               style={{ ...btnBase, opacity: (!treeAlive || waterCount <= 0) ? 0.45 : 1, cursor: (!treeAlive || waterCount <= 0) ? 'default' : 'pointer' }}
-              title={treeAlive ? `Water tree (${waterCount} left)` : 'No tree yet'}
+              title={treeAlive ? `Water plant (${waterCount} left)` : 'No plant yet'}
             >
               <span>💧</span>
               <span style={{ color: '#1e40af' }}>{waterCount}</span>
               {justWatered && <span style={{ color: '#16a34a' }}>✓</span>}
             </button>
-          ) : (
-            <button onClick={handleGiftWater} style={btnBase} title={`Gift water to ${targetUser.name.split(' ')[0]}`}>
-              {justGiftedWater ? <span style={{ color: '#16a34a' }}>✓ Sent!</span> : <><span>🎁</span><span>💧</span></>}
-            </button>
-          )}
-
-          {/* Fruit harvest — owner only, once per day, tree must be alive */}
-          {isOwner && treeAlive && (
-            <button
-              onClick={handleHarvestFruit}
-              disabled={!canHarvest}
-              style={{ ...btnBase, opacity: canHarvest ? 1 : 0.45, cursor: canHarvest ? 'pointer' : 'default' }}
-              title={canHarvest ? 'Harvest fruit (+3 🍖)' : 'Come back tomorrow to harvest'}
-            >
-              <span>🍎</span>
-              {justHarvested
-                ? <span style={{ color: '#16a34a' }}>+3!</span>
-                : !canHarvest && <span style={{ color: '#6b7280', fontSize: 8 }}>✓</span>}
-            </button>
-          )}
-        </div>
+            {treeAlive && (
+              <button
+                onClick={handleHarvestFruit}
+                disabled={!canHarvest}
+                style={{ ...btnBase, opacity: canHarvest ? 1 : 0.45, cursor: canHarvest ? 'pointer' : 'default' }}
+                title={canHarvest ? 'Harvest fruit (+3 🍖)' : 'Come back tomorrow to harvest'}
+              >
+                <span>🍎</span>
+                {justHarvested
+                  ? <span style={{ color: '#16a34a' }}>+3!</span>
+                  : !canHarvest && <span style={{ color: '#6b7280', fontSize: 8 }}>✓</span>}
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* ── Footer hints ── */}
-      {hasDog && dogGone && isOwner && (
+      {/* ── Owner footer hints ── */}
+      {isOwner && hasDog && dogGone && (
         <div className="bg-stone-50 border-t border-stone-100 px-3 py-1.5">
-          <span className="text-[10px] text-stone-500">🐾 Your dog wandered off — use 🍖 to feed it within 3 days</span>
+          <span className="text-[10px] text-stone-500">🐾 {dogName || 'Your dog'} wandered off — use 🍖 to feed within 3 days</span>
         </div>
       )}
-      {!hasDog && isOwner && (
+      {isOwner && !hasDog && (
         <div className="bg-sky-50 border-t border-sky-100 px-3 py-1.5">
           <span className="text-[10px] text-sky-600">
-            🐾 Donate to {5 - charityAnimals} more endangered animal{5 - charityAnimals !== 1 ? 's' : ''} to unlock a dog
+            🐾 Champion {5 - charityAnimals} more animal{5 - charityAnimals !== 1 ? 's' : ''} to unlock a dog
           </span>
         </div>
       )}
-      {hasTree && treeGone && isOwner && (
+      {isOwner && hasTree && treeGone && (
         <div className="bg-stone-50 border-t border-stone-100 px-3 py-1.5">
-          <span className="text-[10px] text-stone-500">🌳 Your plant withered — use 💧 to water it within 3 days</span>
+          <span className="text-[10px] text-stone-500">🌳 Your plant withered — use 💧 to water within 3 days</span>
         </div>
       )}
-      {sceneStage === 0 && isOwner && (
+      {isOwner && sceneStage === 0 && (
         <div className="bg-amber-50 border-t border-amber-100 px-3 py-1.5">
           <span className="text-[10px] text-amber-700">🌱 Plant 2 plants to bring this land to life</span>
         </div>
       )}
-      {sceneStage === 1 && isOwner && (
+      {isOwner && sceneStage === 1 && (
         <div className="bg-amber-50 border-t border-amber-100 px-3 py-1.5">
           <span className="text-[10px] text-amber-700">🐀 Plant {3 - charityTrees} more to see what scurries out</span>
         </div>
       )}
-      {sceneStage === 2 && isOwner && (
+      {isOwner && sceneStage === 2 && (
         <div className="bg-amber-50 border-t border-amber-100 px-3 py-1.5">
           <span className="text-[10px] text-amber-700">🐇 Plant {5 - charityTrees} more to attract rabbits &amp; grow a tree</span>
         </div>
       )}
-      {!isOwner && (dogAlive || treeAlive) && (
-        <div className="bg-amber-50 border-t border-amber-100 px-3 py-1.5 flex items-center gap-3">
-          {dogAlive && <span className="text-[10px] font-bold text-amber-600">🐾 {targetUser.name.split(' ')[0]}'s dog</span>}
-          {treeAlive && <span className="text-[10px] font-bold text-green-600">🌳 {targetUser.name.split(' ')[0]}'s tree</span>}
+      {/* Dog naming prompt — one-time, shown until saved */}
+      {isOwner && hasDog && !dogName && (
+        <div className="bg-amber-50 border-t border-amber-200 px-3 py-2.5">
+          <p className="text-[11px] font-bold text-amber-800 mb-1.5">🐕 Name your dog!</p>
+          <div className="flex gap-2">
+            <input
+              value={dogNameInput}
+              onChange={e => setDogNameInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSaveDogName()}
+              placeholder="e.g. Biscuit, Luna…"
+              maxLength={16}
+              className="flex-1 text-xs bg-white border border-amber-200 rounded-lg px-2 py-1.5 outline-none focus:border-amber-400"
+            />
+            <button
+              onClick={handleSaveDogName}
+              disabled={!dogNameInput.trim() || savingDogName}
+              className="text-xs font-bold bg-amber-400 text-white rounded-lg px-3 py-1.5 disabled:opacity-40"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Visitor gift panel — big buttons with counters ── */}
+      {!isOwner && (
+        <div className="border-t border-brand-navy/8 grid grid-cols-2">
+          <button
+            onClick={handleGiftFood}
+            className="flex flex-col items-center gap-1 py-4 border-r border-brand-navy/8 active:bg-amber-50 transition-colors"
+          >
+            <span className="text-3xl">🍖</span>
+            <span className="text-xs font-bold text-brand-navy">Gift Food</span>
+            <span className="text-[10px] text-stone-400">{foodCount} remaining</span>
+            {justGiftedFood && <span className="text-[10px] font-bold text-emerald-500">✓ Sent!</span>}
+          </button>
+          <button
+            onClick={handleGiftWater}
+            className="flex flex-col items-center gap-1 py-4 active:bg-sky-50 transition-colors"
+          >
+            <span className="text-3xl">💧</span>
+            <span className="text-xs font-bold text-brand-navy">Gift Water</span>
+            <span className="text-[10px] text-stone-400">{waterCount} remaining</span>
+            {justGiftedWater && <span className="text-[10px] font-bold text-emerald-500">✓ Sent!</span>}
+          </button>
         </div>
       )}
     </div>
