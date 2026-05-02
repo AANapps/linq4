@@ -4642,6 +4642,8 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
             onClose={() => setCelebrationPages(null)}
             avatarConfig={profile?.avatar}
             userUid={user.uid}
+            charityAnimals={profile?.charityAnimals ?? 0}
+            charityTrees={profile?.charityTrees ?? 0}
             onCharityPick={async (choice) => {
               const field = choice === 'animal' ? 'charityAnimals' : 'charityTrees';
               await updateDoc(doc(db, 'users', user.uid), { [field]: increment(1) });
@@ -4982,21 +4984,41 @@ const PAGE_ICONS: Record<string, string> = { stamp: '⭐', challenge: '🏆', ch
 const PAGE_ANIM: Record<string, CelebAnimType> = { stamp: 'confetti', challenge: 'sparkles', challenge_done: 'fireworks', upsell: 'burst' };
 const CTA_LABELS = ['Keep smashing it! 🚀', 'You\'re on fire! 🔥', 'Unstoppable! 💪', 'Legend! ⭐', 'Amazing work! 🎉'];
 
+function getCharityFeedback(type: 'animal' | 'tree', newCount: number): { emoji: string; title: string; detail: string } {
+  if (type === 'tree') {
+    if (newCount === 1) return { emoji: '🌿', title: 'Your land is coming to life!', detail: 'Green grass is growing and a tyre just appeared on your pixel board.' };
+    if (newCount === 2) return { emoji: '🌱', title: 'Land is blooming!', detail: '1 more plant and tiny creatures will move onto your board.' };
+    if (newCount === 3) return { emoji: '🐀', title: 'Tiny rats moved in!', detail: 'The old skeleton has gone and little critters are now scurrying around your board.' };
+    if (newCount === 4) return { emoji: '🐭', title: 'Almost there!', detail: '1 more plant for rabbits to arrive with their burrows.' };
+    if (newCount === 5) return { emoji: '🐇', title: 'Rabbits have arrived!', detail: 'Rabbit holes appeared and your tree is now unlocked — water it to keep it alive.' };
+    if (newCount === 6) return { emoji: '🌳', title: 'Thriving ecosystem!', detail: '1 more plant to reach the final stage of your pixel board.' };
+    return { emoji: '🌍', title: 'Your land is fully alive!', detail: 'You\'ve reached the final stage — what an incredible difference you\'ve made.' };
+  }
+  if (newCount < 5) return { emoji: '🐾', title: `${newCount} animal${newCount !== 1 ? 's' : ''} championed!`, detail: `${5 - newCount} more and a dog will appear on your pixel board.` };
+  if (newCount === 5) return { emoji: '🐕', title: 'A dog appeared on your board!', detail: 'Head to your profile to meet your new dog — keep it fed with 🍖' };
+  return { emoji: '🦁', title: 'Wildlife champion!', detail: 'Your support is making a real difference for endangered species.' };
+}
+
 function StampCelebrationModal({
   pages,
   onClose,
   avatarConfig,
   userUid,
   onCharityPick,
+  charityAnimals = 0,
+  charityTrees = 0,
 }: {
   pages: CelebrationPage[];
   onClose: () => void;
   avatarConfig?: UserAvatar;
   userUid?: string;
   onCharityPick?: (choice: 'animal' | 'tree') => void;
+  charityAnimals?: number;
+  charityTrees?: number;
 }) {
   const [pageIdx, setPageIdx] = useState(0);
   const [charityPicked, setCharityPicked] = useState<'animal' | 'tree' | null>(null);
+  const [charityFeedback, setCharityFeedback] = useState<{ emoji: string; title: string; detail: string } | null>(null);
   const page = pages[pageIdx];
   const isLast = pageIdx === pages.length - 1;
   const pct = Math.min(100, page.totalStamps > 0 ? Math.round((page.currentStamps / page.totalStamps) * 100) : 0);
@@ -5007,6 +5029,7 @@ function StampCelebrationModal({
 
   useEffect(() => {
     setCharityPicked(null);
+    setCharityFeedback(null);
     if (!isCharity) fireCelebAnimation(PAGE_ANIM[pageKey] || 'sparkles');
   }, [pageIdx]);
 
@@ -5014,10 +5037,13 @@ function StampCelebrationModal({
     if (charityPicked) return;
     setCharityPicked(choice);
     onCharityPick?.(choice);
+    const currentCount = choice === 'animal' ? charityAnimals : charityTrees;
+    const feedback = getCharityFeedback(choice, currentCount + 1);
+    setCharityFeedback(feedback);
     setTimeout(() => {
       if (isLast) onClose();
       else setPageIdx(i => i + 1);
-    }, 600);
+    }, 2600);
   };
 
   const ctaLabel = isLast
@@ -5159,16 +5185,36 @@ function StampCelebrationModal({
                   </button>
                 </motion.div>
 
-                {/* Donation note */}
-                <motion.div
-                  initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
-                  className="rounded-2xl bg-emerald-50 border border-emerald-200 p-3 flex items-start gap-2"
-                >
-                  <span className="text-lg shrink-0">💚</span>
-                  <p className="text-[11px] text-emerald-700 font-medium leading-snug">
-                    We donate <strong>10% of our profits</strong> to charitable organisations supporting wildlife conservation and reforestation.
-                  </p>
-                </motion.div>
+                {/* Donation note / thank-you reward */}
+                <AnimatePresence mode="wait">
+                  {charityFeedback ? (
+                    <motion.div
+                      key="reward"
+                      initial={{ opacity: 0, y: 10, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ type: 'spring', stiffness: 320, damping: 24 }}
+                      className="rounded-2xl bg-emerald-50 border border-emerald-300 p-4 text-center space-y-1"
+                    >
+                      <div className="text-3xl">{charityFeedback.emoji}</div>
+                      <p className="font-display font-bold text-sm text-brand-navy leading-tight">
+                        Thank you! {charityFeedback.title}
+                      </p>
+                      <p className="text-[11px] text-emerald-700 leading-snug">{charityFeedback.detail}</p>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="note"
+                      initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                      transition={{ delay: 0.45 }}
+                      className="rounded-2xl bg-emerald-50 border border-emerald-200 p-3 flex items-start gap-2"
+                    >
+                      <span className="text-lg shrink-0">💚</span>
+                      <p className="text-[11px] text-emerald-700 font-medium leading-snug">
+                        We donate <strong>10% of our profits</strong> to charitable organisations supporting wildlife conservation and reforestation.
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 {/* Page dots */}
                 {pages.length > 1 && (
