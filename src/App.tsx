@@ -115,7 +115,7 @@ import {
   Package,
   Pencil
 } from 'lucide-react';
-import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 import { format } from 'date-fns';
 
@@ -538,6 +538,9 @@ interface CelebrationPage {
   rankBefore?: number;
   rankAfter?: number;
   rankChange?: number;
+  rankWeeklyBefore?: number;
+  rankWeeklyAfter?: number;
+  rankWeeklyChange?: number;
   rankTopTen?: RankEntry[];
   rankNearby?: RankEntry[];
 }
@@ -3948,18 +3951,14 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
               const rankBefore = othersWithMoreThanOld + 1;
               const rankChange = rankBefore - rankAfter;
 
-              const toEntry = (u: UserProfile, rank: number): RankEntry => ({
-                uid: u.uid, name: u.name || 'User', totalStamps: u.totalStamps || 0, avatar: u.avatar, globalRank: rank,
-              });
-
-              const rankTopTen = allUsers.slice(0, 10).map((u, i) => toEntry(u, i + 1));
-
-              let rankNearby: RankEntry[] | undefined;
-              if (rankAfter > 10 && userIdx >= 0) {
-                const start = Math.max(0, userIdx - 4);
-                const end = Math.min(allUsers.length, userIdx + 5);
-                rankNearby = allUsers.slice(start, end).map((u, i) => toEntry(u, start + i + 1));
-              }
+              // Weekly rank: filter to users active in the last 7 days
+              const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+              const weeklyUsers = allUsers.filter(u => u.lastStreakDate && u.lastStreakDate >= sevenDaysAgo);
+              const weeklyUserIdx = weeklyUsers.findIndex(u => u.uid === user.uid);
+              const rankWeeklyAfter = weeklyUserIdx >= 0 ? weeklyUserIdx + 1 : weeklyUsers.length + 1;
+              const weeklyOthersWithMoreThanOld = weeklyUsers.filter(u => u.uid !== user.uid && (u.totalStamps || 0) > oldStamps).length;
+              const rankWeeklyBefore = weeklyOthersWithMoreThanOld + 1;
+              const rankWeeklyChange = rankWeeklyBefore - rankWeeklyAfter;
 
               if (rankAfter > 0) {
                 pages.splice(1, 0, {
@@ -3972,8 +3971,9 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                   rankBefore,
                   rankAfter,
                   rankChange,
-                  rankTopTen,
-                  rankNearby,
+                  rankWeeklyBefore,
+                  rankWeeklyAfter,
+                  rankWeeklyChange,
                 });
               }
             } catch (_) { /* rank page is optional */ }
@@ -5082,7 +5082,9 @@ function StampCelebrationModal({
   const [pageIdx, setPageIdx] = useState(0);
   const [charityPicked, setCharityPicked] = useState<'animal' | 'tree' | null>(null);
   const [charityFeedback, setCharityFeedback] = useState<{ emoji: string; title: string; detail: string } | null>(null);
-  const [rankAnimStep, setRankAnimStep] = useState<'before' | 'after'>('before');
+  const [displayRankGlobal, setDisplayRankGlobal] = useState(0);
+  const [displayRankWeekly, setDisplayRankWeekly] = useState(0);
+  const [rankRevealed, setRankRevealed] = useState(false);
   const page = pages[pageIdx];
   const isLast = pageIdx === pages.length - 1;
   const pct = Math.min(100, page.totalStamps > 0 ? Math.round((page.currentStamps / page.totalStamps) * 100) : 0);
@@ -5092,40 +5094,59 @@ function StampCelebrationModal({
   const isRank = page.type === 'rank';
   const pageKey = page.type === 'challenge' && page.done ? 'challenge_done' : page.type;
 
-  // Rank page animation data
+  // Rank page data
   const rankAfterVal = page.rankAfter ?? 0;
-  const rankBeforeVal = page.rankBefore ?? rankAfterVal;
   const rankChange = page.rankChange ?? 0;
-  const rankInTopTen = rankAfterVal > 0 && rankAfterVal <= 10;
-  const rankBaseList = isRank ? (rankInTopTen ? (page.rankTopTen ?? []) : (page.rankNearby ?? [])) : [];
-  // Build "before" ordering: shift user down to their pre-stamp position within the visible window
-  const rankBeforeList = React.useMemo(() => {
-    if (!isRank || rankChange === 0 || !rankBaseList.length) return rankBaseList;
-    const list = [...rankBaseList];
-    const idx = list.findIndex(e => e.uid === (userUid ?? ''));
-    if (idx === -1) return list;
-    const [entry] = list.splice(idx, 1);
-    const beforeIdx = Math.min(Math.max(0, idx + rankChange), list.length);
-    list.splice(beforeIdx, 0, entry);
-    return list;
-  }, [isRank, rankBaseList, userUid, rankChange]);
-  const rankDisplayList = isRank ? (rankAnimStep === 'before' ? rankBeforeList : rankBaseList) : [];
+  const weeklyRankAfterVal = page.rankWeeklyAfter ?? 0;
+  const weeklyRankChange = page.rankWeeklyChange ?? 0;
 
   useEffect(() => {
     setCharityPicked(null);
     setCharityFeedback(null);
-    setRankAnimStep('before');
     if (!isCharity && !isRank) {
       fireCelebAnimation(PAGE_ANIM[pageKey] || 'sparkles');
-    } else if (isRank && rankChange > 0) {
-      setTimeout(() => fireCelebAnimation('sparkles'), 1000);
     }
   }, [pageIdx]);
 
+  // Drumroll countdown effect for rank page
   useEffect(() => {
-    if (!isRank) return;
-    const t = setTimeout(() => setRankAnimStep('after'), 800);
-    return () => clearTimeout(t);
+    if (!isRank || !rankAfterVal) return;
+    setRankRevealed(false);
+
+    const gTarget = rankAfterVal;
+    const wTarget = weeklyRankAfterVal || rankAfterVal;
+    let iv1: ReturnType<typeof setInterval>;
+    let t1: ReturnType<typeof setTimeout>;
+    let iv2: ReturnType<typeof setInterval>;
+
+    // Phase 1 (1.2s): fast slot-machine random numbers
+    iv1 = setInterval(() => {
+      setDisplayRankGlobal(Math.max(1, Math.floor(Math.random() * Math.max(gTarget * 6, 200)) + 1));
+      setDisplayRankWeekly(Math.max(1, Math.floor(Math.random() * Math.max(wTarget * 6, 100)) + 1));
+    }, 55);
+
+    // Phase 2 (1.3s): decelerate into the real number
+    t1 = setTimeout(() => {
+      clearInterval(iv1);
+      const startG = Math.max(gTarget + 40, Math.round(gTarget * 2.5));
+      const startW = Math.max(wTarget + 20, Math.round(wTarget * 2.5));
+      const t0 = Date.now();
+      const dur = 1300;
+      iv2 = setInterval(() => {
+        const p = Math.min(1, (Date.now() - t0) / dur);
+        setDisplayRankGlobal(Math.max(1, Math.round(startG + (gTarget - startG) * Math.pow(p, 0.6))));
+        setDisplayRankWeekly(Math.max(1, Math.round(startW + (wTarget - startW) * Math.pow(p, 0.6))));
+        if (p >= 1) {
+          clearInterval(iv2);
+          setDisplayRankGlobal(gTarget);
+          setDisplayRankWeekly(wTarget);
+          setRankRevealed(true);
+          if (rankChange > 0 || weeklyRankChange > 0) setTimeout(() => fireCelebAnimation('sparkles'), 150);
+        }
+      }, 60);
+    }, 1200);
+
+    return () => { clearInterval(iv1); clearTimeout(t1); clearInterval(iv2); };
   }, [pageIdx, isRank]);
 
   const handleCharityChoice = (choice: 'animal' | 'tree') => {
@@ -5189,73 +5210,101 @@ function StampCelebrationModal({
             </AnimatePresence>
 
             {isRank ? (
-              /* ── Rank change page ── */
+              /* ── Rank reveal with drumroll countdown ── */
               <>
-                <div className="text-center space-y-2">
-                  <motion.p
-                    initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-                    className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40"
-                  >🏆 Leaderboard</motion.p>
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.15, type: 'spring', stiffness: 300 }}
-                  >
-                    <span className={cn(
-                      'inline-flex items-center gap-1 px-3 py-1.5 rounded-full font-black text-lg',
-                      rankChange > 0 ? 'bg-emerald-100 text-emerald-600' :
-                      rankChange < 0 ? 'bg-red-50 text-red-500' :
-                      'bg-brand-navy/8 text-brand-navy/40'
-                    )}>
-                      {rankChange > 0 ? `↑ +${rankChange} rank` : rankChange < 0 ? `↓ ${rankChange} rank` : '— Same rank'}
-                    </span>
-                  </motion.div>
-                  <motion.p
-                    initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-                    className="font-display font-bold text-xl text-brand-navy leading-tight"
-                  >
-                    {rankAfterVal <= 10 ? `You're #${rankAfterVal} — top 10!` : `You're ranked #${rankAfterVal}`}
-                  </motion.p>
-                </div>
-
-                {/* Leaderboard rows with layout animation */}
+                {/* Avatar */}
                 <motion.div
-                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25 }}
-                  className="space-y-1.5"
+                  initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.05 }}
+                  className="flex justify-center"
                 >
-                  <LayoutGroup>
-                    {rankDisplayList.map((entry) => {
-                      const isMe = entry.uid === (userUid ?? '');
-                      const shownRank = isMe && rankAnimStep === 'before' && rankChange !== 0 ? rankBeforeVal : entry.globalRank;
-                      return (
-                        <motion.div
-                          key={entry.uid}
-                          layout
-                          transition={{ type: 'spring', stiffness: 350, damping: 32 }}
-                          className={cn(
-                            'flex items-center gap-3 px-3 py-2 rounded-xl',
-                            isMe
-                              ? 'bg-brand-gold/15 border border-brand-gold/20 shadow-sm'
-                              : 'bg-brand-navy/4'
-                          )}
-                        >
-                          <span className="w-6 text-[10px] font-black text-brand-navy/30 text-right shrink-0">
-                            #{shownRank}
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <p className={cn('text-xs font-bold truncate', isMe ? 'text-brand-navy' : 'text-brand-navy/60')}>
-                              {isMe ? 'You' : entry.name}
-                            </p>
-                          </div>
-                          <p className="text-xs font-black text-brand-navy/40 shrink-0">{entry.totalStamps}</p>
-                        </motion.div>
-                      );
-                    })}
-                  </LayoutGroup>
+                  <div className="w-20 h-20 rounded-[1.75rem] bg-gradient-to-b from-indigo-100 to-indigo-50 flex items-center justify-center shadow-md border border-brand-navy/8">
+                    <PixelAvatar config={avatarConfig} uid={userUid ?? 'x'} size={68} view="full" />
+                  </div>
                 </motion.div>
 
-                {!rankInTopTen && (
-                  <p className="text-center text-[10px] text-brand-navy/30">Showing your position in the leaderboard</p>
-                )}
+                {/* Drumroll label */}
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                  className="text-center"
+                >
+                  <motion.p
+                    animate={!rankRevealed ? { opacity: [1, 0.4, 1] } : { opacity: 1 }}
+                    transition={!rankRevealed ? { duration: 0.55, repeat: Infinity } : {}}
+                    className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40"
+                  >
+                    {rankRevealed ? '🏆 Your rank' : '🥁 Calculating your rank...'}
+                  </motion.p>
+                </motion.div>
+
+                {/* Two rank cards */}
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Global rank */}
+                  <div className={cn(
+                    'rounded-2xl p-4 text-center space-y-1 border transition-colors duration-300',
+                    rankRevealed
+                      ? rankChange > 0 ? 'bg-emerald-50 border-emerald-200' : rankChange < 0 ? 'bg-red-50/60 border-red-100' : 'bg-brand-navy/4 border-brand-navy/8'
+                      : 'bg-brand-navy/4 border-brand-navy/8'
+                  )}>
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/40">Global</p>
+                    <motion.p
+                      key={rankRevealed ? 'g-final' : 'g-spin'}
+                      animate={rankRevealed ? { scale: [0.7, 1.25, 1], opacity: [0.5, 1, 1] } : {}}
+                      transition={{ type: 'spring', stiffness: 380, damping: 14 }}
+                      className={cn(
+                        'font-display font-black text-3xl leading-none tabular-nums',
+                        rankRevealed
+                          ? rankChange > 0 ? 'text-emerald-600' : rankChange < 0 ? 'text-red-500' : 'text-brand-navy'
+                          : 'text-brand-navy/25'
+                      )}
+                    >
+                      #{displayRankGlobal || '—'}
+                    </motion.p>
+                    <AnimatePresence>
+                      {rankRevealed && rankChange !== 0 && (
+                        <motion.p
+                          initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                          className={cn('text-[10px] font-black', rankChange > 0 ? 'text-emerald-500' : 'text-red-400')}
+                        >
+                          {rankChange > 0 ? `↑ +${rankChange}` : `↓ ${rankChange}`}
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* Weekly rank */}
+                  <div className={cn(
+                    'rounded-2xl p-4 text-center space-y-1 border transition-colors duration-300',
+                    rankRevealed
+                      ? weeklyRankChange > 0 ? 'bg-emerald-50 border-emerald-200' : weeklyRankChange < 0 ? 'bg-red-50/60 border-red-100' : 'bg-brand-navy/4 border-brand-navy/8'
+                      : 'bg-brand-navy/4 border-brand-navy/8'
+                  )}>
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/40">This Week</p>
+                    <motion.p
+                      key={rankRevealed ? 'w-final' : 'w-spin'}
+                      animate={rankRevealed ? { scale: [0.7, 1.25, 1], opacity: [0.5, 1, 1] } : {}}
+                      transition={{ type: 'spring', stiffness: 380, damping: 14, delay: 0.08 }}
+                      className={cn(
+                        'font-display font-black text-3xl leading-none tabular-nums',
+                        rankRevealed
+                          ? weeklyRankChange > 0 ? 'text-emerald-600' : weeklyRankChange < 0 ? 'text-red-500' : 'text-brand-navy'
+                          : 'text-brand-navy/25'
+                      )}
+                    >
+                      #{displayRankWeekly || '—'}
+                    </motion.p>
+                    <AnimatePresence>
+                      {rankRevealed && weeklyRankChange !== 0 && (
+                        <motion.p
+                          initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                          className={cn('text-[10px] font-black', weeklyRankChange > 0 ? 'text-emerald-500' : 'text-red-400')}
+                        >
+                          {weeklyRankChange > 0 ? `↑ +${weeklyRankChange}` : `↓ ${weeklyRankChange}`}
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </div>
 
                 {pages.length > 1 && (
                   <div className="flex justify-center gap-1.5">
@@ -5266,8 +5315,9 @@ function StampCelebrationModal({
                 )}
 
                 <motion.button
-                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
-                  onClick={isLast ? onClose : () => setPageIdx(i => i + 1)}
+                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: rankRevealed ? 1 : 0.35, y: 0 }} transition={{ delay: 0.35 }}
+                  onClick={rankRevealed ? (isLast ? onClose : () => setPageIdx(i => i + 1)) : undefined}
+                  style={{ pointerEvents: rankRevealed ? 'auto' : 'none' }}
                   className="w-full py-3.5 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-[0.98] transition-all"
                 >
                   {ctaLabel}
