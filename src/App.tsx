@@ -12672,7 +12672,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
 }
 
 // ─── Pixel Pet Scene ──────────────────────────────────────────────────────────
-function PixelPetScene({ targetUser, currentUser }: { targetUser: UserProfile; currentUser: FirebaseUser }) {
+function PixelPetScene({ targetUser, currentUser, currentProfile }: { targetUser: UserProfile; currentUser: FirebaseUser; currentProfile?: UserProfile | null }) {
   const THREE_DAYS = 3 * 24 * 60 * 60 * 1000;
   const ONE_DAY    = 24 * 60 * 60 * 1000;
   const toMs = (v: any) => !v ? 0 : typeof v === 'number' ? v : (v.toMillis?.() ?? 0);
@@ -12683,8 +12683,9 @@ function PixelPetScene({ targetUser, currentUser }: { targetUser: UserProfile; c
   const hasTree = charityTrees   >= 5;
 
   // Scene evolves with every plant donated (trees, flowers, vegetables, etc.):
-  // 0 → bare + skeleton | 1-2 → green grass + tyre + skeleton | 3-4 → rats | 5-7 → rabbits + holes (max)
+  // 0 → bare + skeleton | 1 → green grass + tyre + skeleton | 2+ → tyre only, rats at 3+, rabbits at 5+
   const sceneStage = charityTrees === 0 ? 0 : charityTrees <= 2 ? 1 : charityTrees <= 4 ? 2 : 3;
+  const showSkeleton = charityTrees < 2; // skeleton disappears once 2 plants are donated
 
   const lastFedMs       = toMs(targetUser.lastDogFed);
   const lastWateredMs   = toMs(targetUser.lastTreeWatered);
@@ -12729,19 +12730,28 @@ function PixelPetScene({ targetUser, currentUser }: { targetUser: UserProfile; c
     } catch (e) { console.error(e); }
   };
 
+  const myFoodCount  = currentProfile?.foodCount  ?? 5;
+  const myWaterCount = currentProfile?.waterCount ?? 5;
+
   const handleGiftFood = async () => {
-    if (isOwner) return;
+    if (isOwner || myFoodCount <= 0) return;
     try {
-      await updateDoc(doc(db, 'users', targetUser.uid), { foodCount: increment(1) });
+      await Promise.all([
+        updateDoc(doc(db, 'users', targetUser.uid),   { foodCount: increment(1) }),
+        updateDoc(doc(db, 'users', currentUser.uid),  { foodCount: increment(-1) }),
+      ]);
       setJustGiftedFood(true);
       setTimeout(() => setJustGiftedFood(false), 2000);
     } catch (e) { console.error(e); }
   };
 
   const handleGiftWater = async () => {
-    if (isOwner) return;
+    if (isOwner || myWaterCount <= 0) return;
     try {
-      await updateDoc(doc(db, 'users', targetUser.uid), { waterCount: increment(1) });
+      await Promise.all([
+        updateDoc(doc(db, 'users', targetUser.uid),   { waterCount: increment(1) }),
+        updateDoc(doc(db, 'users', currentUser.uid),  { waterCount: increment(-1) }),
+      ]);
       setJustGiftedWater(true);
       setTimeout(() => setJustGiftedWater(false), 2000);
     } catch (e) { console.error(e); }
@@ -12879,8 +12889,8 @@ function PixelPetScene({ targetUser, currentUser }: { targetUser: UserProfile; c
             </>
           )}
 
-          {/* ── Animal skeleton (stages 0 and 1 — disappears as land comes alive) ── */}
-          {sceneStage <= 1 && (
+          {/* ── Animal skeleton — disappears once 2 plants donated ── */}
+          {showSkeleton && (
             <>
               <rect x="31" y="24" width="3" height="2" fill="#E8E0D0" />
               <rect x="30" y="25" width="1" height="1" fill="#E8E0D0" />
@@ -12987,51 +12997,44 @@ function PixelPetScene({ targetUser, currentUser }: { targetUser: UserProfile; c
             </g>
           )}
 
-          {/* ── Dog — unlocked at charityAnimals ≥ 5 ── */}
+          {/* ── Dog — slim, static, occasional tongue ── */}
           {dogAlive && (
             <g>
-              {/* Tail — fluffy wag */}
-              <g>
-                <animateTransform attributeName="transform" type="rotate"
-                  values="0 37 26;38 37 26;0 37 26;-28 37 26;0 37 26"
-                  dur="0.85s" repeatCount="indefinite"
-                  calcMode="spline" keyTimes="0;0.25;0.5;0.75;1"
-                  keySplines="0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1" />
-                <rect x="35" y="20" width="3" height="1" fill="#D4A055" />
-                <rect x="36" y="21" width="2" height="5" fill="#A07030" />
-              </g>
-              {/* Body */}
-              <rect x="39" y="23" width="11" height="3" fill="#D4A055" />
-              {/* Belly highlight */}
-              <rect x="40" y="24" width="9"  height="1" fill="#E8B87A" />
+              {/* Tail — static, upright */}
+              <rect x="37" y="21" width="1" height="4" fill="#A07030" />
+              <rect x="37" y="20" width="2" height="1" fill="#D4A055" />
+              {/* Body — slimmer */}
+              <rect x="38" y="23" width="10" height="2" fill="#D4A055" />
               {/* Legs */}
-              <rect x="40" y="26" width="2"  height="1" fill="#A07030" />
-              <rect x="44" y="26" width="2"  height="1" fill="#A07030" />
-              <rect x="48" y="26" width="2"  height="1" fill="#A07030" />
+              <rect x="39" y="25" width="2"  height="1" fill="#A07030" />
+              <rect x="43" y="25" width="2"  height="1" fill="#A07030" />
+              <rect x="46" y="25" width="2"  height="1" fill="#A07030" />
               {/* Neck */}
-              <rect x="48" y="22" width="3"  height="2" fill="#D4A055" />
-              {/* Head — rounded chibi */}
-              <rect x="48" y="18" width="4"  height="1" fill="#D4A055" />
-              <rect x="47" y="19" width="6"  height="4" fill="#D4A055" />
-              <rect x="48" y="23" width="4"  height="1" fill="#D4A055" />
-              {/* Ear — long floppy */}
-              <rect x="52" y="16" width="2"  height="7" fill="#A07030" />
-              <rect x="52" y="17" width="1"  height="5" fill="#E8B87A" />
-              {/* Snout / muzzle */}
-              <rect x="51" y="21" width="3"  height="2" fill="#E8B87A" />
-              {/* Eyebrow */}
-              <rect x="49" y="19" width="2"  height="1" fill="#7A5020" />
-              {/* Eye — 2×2 with highlight */}
-              <rect x="49" y="20" width="2"  height="2" fill="#1A1A1A" />
-              <rect x="49" y="20" width="1"  height="1" fill="#FFFFFF" />
+              <rect x="47" y="22" width="2"  height="2" fill="#D4A055" />
+              {/* Head */}
+              <rect x="47" y="19" width="5"  height="3" fill="#D4A055" />
+              <rect x="48" y="18" width="3"  height="1" fill="#D4A055" />
+              {/* Ear — floppy */}
+              <rect x="51" y="17" width="2"  height="5" fill="#A07030" />
+              <rect x="51" y="18" width="1"  height="3" fill="#E8B87A" />
+              {/* Snout */}
+              <rect x="50" y="21" width="3"  height="1" fill="#E8B87A" />
+              {/* Eye — 2×2 with shine */}
+              <rect x="48" y="19" width="2"  height="2" fill="#1A1A1A" />
+              <rect x="48" y="19" width="1"  height="1" fill="#FFFFFF" />
               {/* Nose */}
-              <rect x="52" y="21" width="2"  height="1" fill="#1A1A1A" />
-              {/* Cheek blush */}
-              <rect x="51" y="22" width="1"  height="1" fill="#FFB0B0" />
+              <rect x="51" y="20" width="2"  height="1" fill="#1A1A1A" />
+              {/* Blush */}
+              <rect x="50" y="21" width="1"  height="1" fill="#FFB0B0" />
               {/* Collar */}
-              <rect x="48" y="23" width="4"  height="1" fill="#E53935" />
-              {/* Collar tag */}
-              <rect x="50" y="23" width="1"  height="1" fill="#FFD700" />
+              <rect x="47" y="22" width="3"  height="1" fill="#E53935" />
+              <rect x="48" y="22" width="1"  height="1" fill="#FFD700" />
+              {/* Tongue — flicks out briefly every ~5 s */}
+              <rect x="51" y="22" width="1" height="2" fill="#FF6B8A">
+                <animate attributeName="opacity"
+                  values="0;0;0;0;0;0;0;0;1;1;1;0;0;0;0;0"
+                  dur="5s" repeatCount="indefinite" />
+              </rect>
             </g>
           )}
         </svg>
@@ -13048,20 +13051,6 @@ function PixelPetScene({ targetUser, currentUser }: { targetUser: UserProfile; c
         }}>
           <PixelAvatar config={targetUser.avatar} uid={targetUser.uid} size={48} view="full" className="w-full h-auto" />
         </div>
-
-        {/* ── Dog name tag ── */}
-        {dogAlive && dogName && (
-          <div style={{
-            position: 'absolute', left: '67%', bottom: '44%',
-            transform: 'translateX(-50%)',
-            background: '#FFF9E6', border: '1px solid #D4A055',
-            borderRadius: 4, padding: '1px 5px',
-            fontSize: 8, fontWeight: 800, color: '#7A5020',
-            pointerEvents: 'none', whiteSpace: 'nowrap', zIndex: 5,
-          }}>
-            {dogName}
-          </div>
-        )}
 
         {/* ── Owner action buttons (top-left) ── */}
         {isOwner && (
@@ -13160,27 +13149,43 @@ function PixelPetScene({ targetUser, currentUser }: { targetUser: UserProfile; c
         </div>
       )}
 
-      {/* ── Visitor gift panel — big buttons with counters ── */}
+      {/* ── Visitor gift panel ── */}
       {!isOwner && (
-        <div className="border-t border-brand-navy/8 grid grid-cols-2">
-          <button
-            onClick={handleGiftFood}
-            className="flex flex-col items-center gap-1 py-4 border-r border-brand-navy/8 active:bg-amber-50 transition-colors"
-          >
-            <span className="text-3xl">🍖</span>
-            <span className="text-xs font-bold text-brand-navy">Gift Food</span>
-            <span className="text-[10px] text-stone-400">{foodCount} remaining</span>
-            {justGiftedFood && <span className="text-[10px] font-bold text-emerald-500">✓ Sent!</span>}
-          </button>
-          <button
-            onClick={handleGiftWater}
-            className="flex flex-col items-center gap-1 py-4 active:bg-sky-50 transition-colors"
-          >
-            <span className="text-3xl">💧</span>
-            <span className="text-xs font-bold text-brand-navy">Gift Water</span>
-            <span className="text-[10px] text-stone-400">{waterCount} remaining</span>
-            {justGiftedWater && <span className="text-[10px] font-bold text-emerald-500">✓ Sent!</span>}
-          </button>
+        <div className="border-t border-brand-navy/8">
+          <div className="grid grid-cols-2 divide-x divide-brand-navy/8">
+            <button
+              onClick={handleGiftFood}
+              disabled={myFoodCount <= 0}
+              className="flex items-center justify-between gap-2 px-3 py-2.5 active:bg-amber-50 transition-colors disabled:opacity-40"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🍖</span>
+                <div className="text-left">
+                  <p className="text-[11px] font-bold text-brand-navy leading-tight">
+                    {justGiftedFood ? <span className="text-emerald-500">✓ Sent!</span> : 'Gift Food'}
+                  </p>
+                  <p className="text-[10px] text-stone-400">You have {myFoodCount}</p>
+                </div>
+              </div>
+              <span className="text-[10px] text-stone-400 shrink-0">{foodCount} left</span>
+            </button>
+            <button
+              onClick={handleGiftWater}
+              disabled={myWaterCount <= 0}
+              className="flex items-center justify-between gap-2 px-3 py-2.5 active:bg-sky-50 transition-colors disabled:opacity-40"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-xl">💧</span>
+                <div className="text-left">
+                  <p className="text-[11px] font-bold text-brand-navy leading-tight">
+                    {justGiftedWater ? <span className="text-emerald-500">✓ Sent!</span> : 'Gift Water'}
+                  </p>
+                  <p className="text-[10px] text-stone-400">You have {myWaterCount}</p>
+                </div>
+              </div>
+              <span className="text-[10px] text-stone-400 shrink-0">{waterCount} left</span>
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -13526,7 +13531,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
         </div>
       </div>
 
-      <PixelPetScene targetUser={targetUser} currentUser={currentUser} />
+      <PixelPetScene targetUser={targetUser} currentUser={currentUser} currentProfile={currentProfile} />
 
       {earnedBadges.length > 0 && (
         <div>
