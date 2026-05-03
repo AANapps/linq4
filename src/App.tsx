@@ -2497,8 +2497,8 @@ function StickerCollectionModal({ stickerCard, programme, onClose }: {
                     style={{ background: cfg.solid, boxShadow: `0 4px 18px ${cfg.color}55` }}>
                     <div className="flex items-center justify-between mb-2.5">
                       <div>
-                        <span className="text-[10px] font-black uppercase tracking-wider text-white">{cfg.theme}</span>
-                        <span className="text-[9px] text-white/60 ml-1.5">· {cfg.label} · {cfg.chance}</span>
+                        <span className="text-[10px] font-black uppercase tracking-wider text-white">{cfg.label}</span>
+                        <span className="text-[9px] text-white/60 ml-1.5">· {cfg.theme} · {cfg.chance}</span>
                       </div>
                       <span className="text-[10px] font-black text-white/90">
                         {sets}/3 sets{tierDone ? ' ✓' : ''}
