@@ -4295,8 +4295,8 @@ function ProgrammeDetailModal({ prog, sc, onJoin, onView, onClose, joiningProgra
         className="fixed inset-0 z-[150] flex flex-col max-w-md mx-auto"
       >
         <button onClick={onClose} className="flex-shrink-0 h-16 w-full" />
-        <div className="flex-1 overflow-y-auto bg-brand-navy rounded-t-[2.5rem] shadow-2xl">
-          <div className="sticky top-0 bg-brand-navy px-5 pt-5 pb-4 z-10 border-b border-white/5">
+        <div className="flex-1 overflow-y-auto gradient-logo-blue rounded-t-[2.5rem] shadow-2xl">
+          <div className="sticky top-0 gradient-logo-blue px-5 pt-5 pb-4 z-10 border-b border-white/5">
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">Monopoly Challenge</p>
