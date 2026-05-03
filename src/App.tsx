@@ -2495,16 +2495,18 @@ function StickerCollectionModal({ stickerCard, programme, onClose }: {
                 return (
                   <div key={tier} className="rounded-2xl p-3 overflow-hidden relative"
                     style={{ background: cfg.solid, boxShadow: `0 4px 18px ${cfg.color}55` }}>
-                    <div className="flex items-center justify-between mb-2.5">
+                    {/* Backdrop shine sweep */}
+                    <span className="shine-ray" style={{ animationDelay: `${STICKER_ORDER.indexOf(tier) * 0.6}s` }} />
+                    <div className="flex items-center justify-between mb-2.5 relative z-10">
                       <div>
                         <span className="text-[10px] font-black uppercase tracking-wider text-white">{cfg.label}</span>
-                        <span className="text-[9px] text-white/60 ml-1.5">· {cfg.theme} · {cfg.chance}</span>
+                        <span className="text-[9px] text-white/70 ml-1.5">· {cfg.theme} · {cfg.chance}</span>
                       </div>
-                      <span className="text-[10px] font-black text-white/90">
+                      <span className="text-[10px] font-black text-white">
                         {sets}/3 sets{tierDone ? ' ✓' : ''}
                       </span>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 relative z-10">
                       {cfg.variants.map((v, vi) => {
                         const count = revealed.filter(s => s.tier === tier && (s.variant ?? 0) === vi).length;
                         const has3 = count >= 3;
@@ -2514,11 +2516,11 @@ function StickerCollectionModal({ stickerCard, programme, onClose }: {
                               style={count > 0
                                 ? { background: 'white', borderColor: 'rgba(255,255,255,0.6)', boxShadow: '0 2px 10px rgba(0,0,0,0.15)' }
                                 : { background: 'rgba(0,0,0,0.2)', borderColor: 'rgba(255,255,255,0.15)' }}>
-                              <span style={{ fontSize: 22, lineHeight: 1, position: 'relative', zIndex: 1 }}>{count > 0 ? v.emoji : '?'}</span>
-                              {count > 0 && <span className="text-[7px] font-bold mt-0.5 relative z-10" style={{ color: has3 ? cfg.color : '#94A3B8' }}>×{count}{has3 ? '✓' : ''}</span>}
+                              <span style={{ fontSize: 22, lineHeight: 1, position: 'relative', zIndex: 1 }}>{count > 0 ? v.emoji : <span className="text-white/40">?</span>}</span>
+                              {count > 0 && <span className="text-[7px] font-bold mt-0.5 relative z-10 text-white">×{count}{has3 ? '✓' : ''}</span>}
                               {count > 0 && <span className="card-shine-ray" style={{ animationDelay: `${vi * 0.7}s` }} />}
                             </div>
-                            <span className="text-[7px] font-bold text-center leading-tight" style={{ color: count > 0 ? 'white' : 'rgba(255,255,255,0.35)' }}>
+                            <span className="text-[7px] font-bold text-center leading-tight text-white/80">
                               {count > 0 ? v.name : '???'}
                             </span>
                           </div>
@@ -2535,7 +2537,7 @@ function StickerCollectionModal({ stickerCard, programme, onClose }: {
               )}
               {!myWon && myTotalSets > 0 && (
                 <div className="p-2.5 rounded-2xl text-center bg-brand-navy/5">
-                  <p className="text-[10px] font-bold text-brand-navy/50">{myTotalSets} sets collected · keep going!</p>
+                  <p className="text-[10px] font-bold text-brand-navy/60">{myTotalSets} sets collected · keep going!</p>
                 </div>
               )}
             </div>
