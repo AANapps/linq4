@@ -2464,21 +2464,24 @@ function StickerCollectionModal({ stickerCard, programme, onClose }: {
                   Top Players
                 </p>
                 <div className="space-y-2">
-                  {topPlayers.map((p, i) => (
-                    <div key={p.uid} className="flex items-center gap-2.5 bg-brand-navy/5 rounded-2xl px-3 py-2">
-                      <span className="text-[10px] font-black text-brand-navy/30 w-4 text-center shrink-0">{i + 1}</span>
-                      <div className="w-6 h-6 rounded-full overflow-hidden bg-brand-navy/10 shrink-0 flex items-center justify-center">
-                        <LivePixelAvatar uid={p.uid} size={24} view="head" />
+                  {topPlayers.map((p, i) => {
+                    const pct = Math.round((p.sets / STICKER_ORDER.reduce((s, t) => s + STICKER_CONFIG[t].variants.length * 3, 0)) * 100);
+                    return (
+                      <div key={p.uid} className="bg-brand-navy/5 rounded-2xl px-3 py-2.5">
+                        <div className="flex items-center gap-2.5 mb-1.5">
+                          <span className="text-[10px] font-black text-brand-navy/30 w-4 text-center shrink-0">{i + 1}</span>
+                          <div className="w-6 h-6 rounded-full overflow-hidden bg-brand-navy/10 shrink-0 flex items-center justify-center">
+                            <LivePixelAvatar uid={p.uid} size={24} view="head" />
+                          </div>
+                          <p className="text-[11px] font-bold text-brand-navy flex-1 truncate">{p.userName || 'Player'}</p>
+                          <span className="text-[10px] font-black text-brand-navy/60 shrink-0">{pct}%</span>
+                        </div>
+                        <div className="ml-10 h-1.5 bg-brand-navy/10 rounded-full overflow-hidden">
+                          <div className="h-full rounded-full bg-brand-gold transition-all" style={{ width: `${pct}%` }} />
+                        </div>
                       </div>
-                      <p className="text-[11px] font-bold text-brand-navy flex-1 truncate">{p.userName || 'Player'}</p>
-                      <div className="flex gap-0.5">
-                        {STICKER_ORDER.map(tier => (
-                          <div key={tier} className="w-3 h-3 rounded-sm" style={{ background: p.sets > 0 ? STICKER_CONFIG[tier].solid : '#E2E8F0', opacity: p.sets > 0 ? 1 : 0.3 }} />
-                        ))}
-                      </div>
-                      <span className="text-[10px] font-bold text-brand-navy/60 shrink-0">{p.sets} sets</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -4327,21 +4330,24 @@ function ProgrammeDetailModal({ prog, sc, onJoin, onView, onClose, joiningProgra
                 <p className="text-[10px] text-white/40 text-center py-4">No players yet — be the first!</p>
               ) : (
                 <div className="space-y-2.5">
-                  {topPlayers.map((p, i) => (
-                    <div key={p.uid} className="flex items-center gap-2.5 bg-white/5 rounded-2xl px-3 py-2.5">
-                      <span className="text-[10px] font-black text-white/30 w-4 text-center shrink-0">{i + 1}</span>
-                      <div className="w-7 h-7 rounded-full overflow-hidden bg-white/10 shrink-0 flex items-center justify-center">
-                        <LivePixelAvatar uid={p.uid} size={28} view="head" />
+                  {topPlayers.map((p, i) => {
+                    const pct = Math.round((p.sets / STICKER_ORDER.reduce((s, t) => s + STICKER_CONFIG[t].variants.length * 3, 0)) * 100);
+                    return (
+                      <div key={p.uid} className="bg-white/5 rounded-2xl px-3 py-2.5">
+                        <div className="flex items-center gap-2.5 mb-1.5">
+                          <span className="text-[10px] font-black text-white/30 w-4 text-center shrink-0">{i + 1}</span>
+                          <div className="w-7 h-7 rounded-full overflow-hidden bg-white/10 shrink-0 flex items-center justify-center">
+                            <LivePixelAvatar uid={p.uid} size={28} view="head" />
+                          </div>
+                          <p className="text-[11px] font-bold text-white flex-1 truncate">{p.userName || 'Player'}</p>
+                          <span className="text-[10px] font-black text-white shrink-0">{pct}%</span>
+                        </div>
+                        <div className="ml-11 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                          <div className="h-full rounded-full bg-brand-gold transition-all" style={{ width: `${pct}%` }} />
+                        </div>
                       </div>
-                      <p className="text-[11px] font-bold text-white flex-1 truncate">{p.userName || 'Player'}</p>
-                      <div className="flex gap-0.5">
-                        {STICKER_ORDER.map(tier => (
-                          <div key={tier} className="w-3.5 h-3.5 rounded-sm" style={{ background: p.sets > 0 ? STICKER_CONFIG[tier].solid : 'rgba(255,255,255,0.1)' }} />
-                        ))}
-                      </div>
-                      <span className="text-[10px] font-bold text-white/60 shrink-0">{p.sets} sets</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
