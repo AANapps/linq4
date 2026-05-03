@@ -417,12 +417,33 @@ type StickerTier = 'brown' | 'lightblue' | 'red' | 'blue' | 'gold';
 
 const STICKER_ORDER: StickerTier[] = ['brown', 'lightblue', 'red', 'blue', 'gold'];
 
-const STICKER_CONFIG: Record<StickerTier, { color: string; solid: string; bg: string; border: string; label: string; chance: string; animal: string }> = {
-  brown:    { color: '#6B3A2A', solid: '#955436', bg: '#F5E6D3', border: '#C4845C', label: 'Common',    chance: '50%', animal: 'Bush Turkey'  },
-  lightblue:{ color: '#0369A1', solid: '#4AACDA', bg: '#E0F2FE', border: '#7DD3FC', label: 'Uncommon',  chance: '28%', animal: 'Water Dragon' },
-  red:      { color: '#B91C1C', solid: '#D21B17', bg: '#FEE2E2', border: '#FCA5A5', label: 'Rare',      chance: '14%', animal: 'Lorikeet'     },
-  blue:     { color: '#1D4ED8', solid: '#0072BB', bg: '#DBEAFE', border: '#93C5FD', label: 'Epic',      chance: '7%',  animal: 'Kangaroo'     },
-  gold:     { color: '#92400E', solid: '#F5C518', bg: '#FFFBEB', border: '#FDE68A', label: 'Legendary', chance: '1%',  animal: 'Bin Chicken'  },
+interface StickerVariant { emoji: string; name: string; }
+
+const STICKER_CONFIG: Record<StickerTier, { color: string; solid: string; bg: string; border: string; label: string; chance: string; theme: string; variants: StickerVariant[] }> = {
+  brown:    { color: '#6B3A2A', solid: '#955436', bg: '#F5E6D3', border: '#C4845C', label: 'Common',    chance: '50%', theme: 'Creepy Crawlies', variants: [
+    { emoji: '🕷️', name: 'Spider' },
+    { emoji: '🐛', name: 'Caterpillar' },
+    { emoji: '🪲', name: 'Beetle' },
+  ]},
+  lightblue:{ color: '#0369A1', solid: '#4AACDA', bg: '#E0F2FE', border: '#7DD3FC', label: 'Uncommon',  chance: '28%', theme: 'Beach', variants: [
+    { emoji: '🦀', name: 'Crab' },
+    { emoji: '🐢', name: 'Sea Turtle' },
+    { emoji: '🦭', name: 'Seal' },
+  ]},
+  red:      { color: '#B91C1C', solid: '#D21B17', bg: '#FEE2E2', border: '#FCA5A5', label: 'Rare',      chance: '14%', theme: 'Land Animals', variants: [
+    { emoji: '🦎', name: 'Gecko' },
+    { emoji: '🐊', name: 'Crocodile' },
+    { emoji: '🐍', name: 'Snake' },
+  ]},
+  blue:     { color: '#1D4ED8', solid: '#0072BB', bg: '#DBEAFE', border: '#93C5FD', label: 'Epic',      chance: '7%',  theme: 'Ocean Life', variants: [
+    { emoji: '🐙', name: 'Octopus' },
+    { emoji: '🦈', name: 'Shark' },
+    { emoji: '🐠', name: 'Clownfish' },
+  ]},
+  gold:     { color: '#92400E', solid: '#F5C518', bg: '#FFFBEB', border: '#FDE68A', label: 'Legendary', chance: '1%',  theme: 'Legendary', variants: [
+    { emoji: '🐉', name: 'Golden Dragon' },
+    { emoji: '🦘', name: 'Kangaroo' },
+  ]},
 };
 
 const DEFAULT_TIER_CHANCES = { brown: 50, lightblue: 28, red: 14, blue: 7, gold: 1 };
@@ -438,147 +459,30 @@ function rollStickerTier(chances?: { brown: number; lightblue: number; red: numb
   return 'brown';
 }
 
-// --- Animal pixel art ---
+function rollStickerVariant(tier: StickerTier): number {
+  return Math.floor(Math.random() * STICKER_CONFIG[tier].variants.length);
+}
 
-const ANIMAL_DATA: Record<StickerTier, { palette: Record<string, string>; pixels: readonly string[] }> = {
-  // Bush Turkey — dark round body, red bare head with orange wattle, facing right
-  brown: {
-    palette: { K: '#1A0C06', N: '#5C3018', R: '#CC3300', O: '#E07030' },
-    pixels: [
-      '................',
-      '.......RRR......',
-      '......ROOR......',
-      '.......RRRR.....',
-      '.......KRRN.....',
-      '......KKKKN.....',
-      '.....KKKKKNNN...',
-      '....KKKKKKKNNN..',
-      '...KKKKKKKKNNN..',
-      '...KKKKKKKKNNN..',
-      '...KKKKKKKKNN...',
-      '....KKKKKKNN....',
-      '.....KKKKNN.....',
-      '......KNOOO.....',
-      '......OO.OO.....',
-      '......O...O.....',
-    ],
-  },
-  // Water Dragon — green lizard with dorsal crest, blue throat, facing right with tail
-  lightblue: {
-    palette: { G: '#3A8A40', g: '#1F5A25', b: '#4488CC', e: '#1A0A00' },
-    pixels: [
-      '.g..............',
-      '.gGG............',
-      'gGGGe...........',
-      'gGGbbGGg........',
-      'GGGbbGGGGg......',
-      'G..GGGGGGGGg....',
-      '....G.GGGGGGGg..',
-      '....G..GGGGGGGg.',
-      '....GG..GGGGGg..',
-      '.....GG..GGGg...',
-      '......GGG.GGg...',
-      '........G..Gg...',
-      '..........G.g...',
-      '............g...',
-      '................',
-      '................',
-    ],
-  },
-  // Lorikeet — red head, orange beak, yellow chest, blue belly, green wings
-  red: {
-    palette: { R: '#CC2200', O: '#E07800', G: '#2A8A30', B: '#2244BB', Y: '#EEC820', e: '#1A0A00' },
-    pixels: [
-      '....RRRR........',
-      '...RRRRR........',
-      '..RReRRRRO......',
-      '..RRRRROO.......',
-      '...RROO.........',
-      '....YYYYYY......',
-      '...YYBBBBYYY....',
-      '..GBBBBBBBBG....',
-      '.GGBBGGGGGGG....',
-      'GGGGGGGGGGGGG...',
-      'GGGGGGGGGGGGGG..',
-      '.GGGGGGGGGGGG...',
-      '..GGGGGGGGGGG...',
-      '....OO..OO......',
-      '....O....O......',
-      '................',
-    ],
-  },
-  // Kangaroo — upright pose, large back legs, long tail left, small ears top-right
-  blue: {
-    palette: { S: '#9A8A76', s: '#C4B49A', e: '#1A0A00' },
-    pixels: [
-      '......ss........',
-      '......SS........',
-      '.....SSSS.......',
-      '.....SeSS.......',
-      '.....SSSS.......',
-      '....SSSSSS......',
-      '...SSSSSSSS.....',
-      '...SSSSSSSS.....',
-      '..SSSSSSSSSS....',
-      '..SSSSSSSSSS....',
-      '..SSSSSSSSSS....',
-      '.SS.SSSSSSS.....',
-      'SS..SSSSSS......',
-      'SS...SSSSS......',
-      'SSS...SSSS......',
-      'SSS....SSSS.....',
-    ],
-  },
-  // Bin Chicken (White Ibis) — iconic long curved downward beak, black head, white body
-  gold: {
-    palette: { K: '#1A1A2E', W: '#F5F5F5', e: '#CC2222', O: '#D07830' },
-    pixels: [
-      '........KKK.....',
-      '........KKKKK...',
-      '.......KKKKKK...',
-      '......KKeKKKKK..',
-      '......KKKKK.KKK.',
-      '.......KKKK..KK.',
-      '.......KKKK..KK.',
-      '.......KWWWW....',
-      '......WWWWWWWW..',
-      '.....WWWWWWWWWWW',
-      '....WWWWWWWWWWW.',
-      '....WWWWWWWWWWW.',
-      '....WWWWWWWWWWW.',
-      '...KKWWWWWWWWKK.',
-      '.....OOO.OOO....',
-      '.....O...O......',
-    ],
-  },
-};
+// Returns min(count of each variant in tier) across revealed stickers — i.e. completed sets for that tier
+function tierSetsCompleted(revealedStickers: CollectibleSticker[], tier: StickerTier): number {
+  const variants = STICKER_CONFIG[tier].variants;
+  if (variants.length === 0) return 0;
+  const counts = variants.map((_, i) => revealedStickers.filter(s => s.tier === tier && (s.variant ?? 0) === i).length);
+  return Math.min(...counts);
+}
 
-function PixelAnimalSVG({ tier, size = 64 }: { tier: StickerTier; size?: number }) {
-  const { palette, pixels } = ANIMAL_DATA[tier];
-  const rows = pixels.length;
-  const cols = pixels[0]?.length ?? 16;
-  const rects: React.ReactNode[] = [];
-  for (let y = 0; y < rows; y++) {
-    const row = pixels[y];
-    for (let x = 0; x < (row?.length ?? 0); x++) {
-      const c = row[x];
-      if (!c || c === '.') continue;
-      const fill = palette[c];
-      if (!fill) continue;
-      rects.push(<rect key={`${x}-${y}`} x={x} y={y} width={1} height={1} fill={fill} />);
-    }
-  }
-  return (
-    <svg viewBox={`0 0 ${cols} ${rows}`} width={size} height={size}
-      style={{ imageRendering: 'pixelated', display: 'block' }}>
-      {rects}
-    </svg>
-  );
+function totalSetsCompleted(revealedStickers: CollectibleSticker[]): number {
+  return STICKER_ORDER.reduce((sum, tier) => sum + tierSetsCompleted(revealedStickers, tier), 0);
+}
+
+function allSetsWon(revealedStickers: CollectibleSticker[]): boolean {
+  return STICKER_ORDER.every(tier => tierSetsCompleted(revealedStickers, tier) >= 3);
 }
 
 interface CollectibleSticker {
   id: string;
   tier: StickerTier;
+  variant: number; // index into STICKER_CONFIG[tier].variants
   earnedAt: string;
 }
 
@@ -2377,11 +2281,10 @@ async function issueStickersToCard(customerUid: string, userName: string, qty: n
   const allNew: CollectibleSticker[] = [];
   for (const cardDoc of joinedSnap.docs) {
     const chances = chancesMap.get(cardDoc.data().programme_id);
-    const newStickers: CollectibleSticker[] = Array.from({ length: qty }, () => ({
-      id: Math.random().toString(36).slice(2),
-      tier: rollStickerTier(chances),
-      earnedAt: new Date().toISOString(),
-    }));
+    const newStickers: CollectibleSticker[] = Array.from({ length: qty }, () => {
+      const tier = rollStickerTier(chances);
+      return { id: Math.random().toString(36).slice(2), tier, variant: rollStickerVariant(tier), earnedAt: new Date().toISOString() };
+    });
     await updateDoc(cardDoc.ref, { stickers: arrayUnion(...newStickers), userName });
     allNew.push(...newStickers);
   }
@@ -2391,11 +2294,10 @@ async function issueStickersToCard(customerUid: string, userName: string, qty: n
 // --- Global user sticker collection (every stamp always issues 3 stickers here) ---
 
 async function issueUserStickers(uid: string, userName: string, qty: number): Promise<CollectibleSticker[]> {
-  const newStickers: CollectibleSticker[] = Array.from({ length: qty }, () => ({
-    id: Math.random().toString(36).slice(2),
-    tier: rollStickerTier(),
-    earnedAt: new Date().toISOString(),
-  }));
+  const newStickers: CollectibleSticker[] = Array.from({ length: qty }, () => {
+    const tier = rollStickerTier();
+    return { id: Math.random().toString(36).slice(2), tier, variant: rollStickerVariant(tier), earnedAt: new Date().toISOString() };
+  });
   const ref = doc(db, 'user_stickers', uid);
   const snap = await getDoc(ref);
   if (snap.exists()) {
@@ -2458,7 +2360,7 @@ function StickerCard({ sticker, isRevealed, onReveal, size = 'md' }: {
           <span style={{ fontSize: 30, fontWeight: 900, color: '#94A3B8' }}>?</span>
           {!localRevealed && <span style={{ fontSize: 8, color: '#94A3B8', fontWeight: 600 }}>Tap to reveal</span>}
         </div>
-        {/* Back — Animal card */}
+        {/* Back — Emoji card */}
         <div style={{
           position: 'absolute', inset: 0, backfaceVisibility: 'hidden',
           transform: 'rotateY(180deg)',
@@ -2468,11 +2370,13 @@ function StickerCard({ sticker, isRevealed, onReveal, size = 'md' }: {
           display: 'flex', flexDirection: 'column', overflow: 'hidden',
         }}>
           <div style={{ background: cfg.solid, height: '60%', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <PixelAnimalSVG tier={sticker.tier} size={Math.round(dims.h * 0.52)} />
+            <span style={{ fontSize: size === 'sm' ? 28 : 36, lineHeight: 1 }}>
+              {cfg.variants[sticker.variant ?? 0]?.emoji ?? cfg.variants[0].emoji}
+            </span>
           </div>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, padding: '2px 4px' }}>
             <span style={{ fontSize: size === 'sm' ? 7 : 8, fontWeight: 900, color: cfg.color, textAlign: 'center', lineHeight: 1.1 }}>
-              {cfg.animal}
+              {cfg.variants[sticker.variant ?? 0]?.name ?? cfg.variants[0].name}
             </span>
             <span style={{ fontSize: size === 'sm' ? 6 : 7, color: cfg.color, opacity: 0.65, fontWeight: 700 }}>{cfg.label}</span>
           </div>
@@ -2492,24 +2396,28 @@ function StickerCollectionModal({ stickerCard, programme, onClose }: {
 }) {
   const unrevealed = stickerCard.stickers.filter(s => !(stickerCard.revealedIds || []).includes(s.id));
   const revealed = stickerCard.stickers.filter(s => (stickerCard.revealedIds || []).includes(s.id));
-  const myUnique = new Set(stickerCard.uniqueTiers || []);
+  const myTotalSets = totalSetsCompleted(revealed);
+  const myWon = allSetsWon(revealed);
   const [showAllRevealed, setShowAllRevealed] = useState(false);
-  const [topPlayers, setTopPlayers] = useState<{ uid: string; userName?: string; userPhoto?: string; uniqueTiers: StickerTier[] }[]>([]);
+  const [topPlayers, setTopPlayers] = useState<{ uid: string; userName?: string; userPhoto?: string; sets: number; stickers: number }[]>([]);
 
   useEffect(() => {
     if (!programme?.id) return;
     getDocs(query(collection(db, 'sticker_cards'), where('programme_id', '==', programme.id))).then(snap => {
       const entries = snap.docs.map(d => {
         const data = d.data();
+        const revealedIds = (data.revealedIds || []) as string[];
+        const allStickers = (data.stickers || []) as CollectibleSticker[];
+        const revealedStickers = allStickers.filter(s => revealedIds.includes(s.id));
         return {
           uid: data.user_id as string,
           userName: data.userName as string | undefined,
           userPhoto: data.userPhoto as string | undefined,
-          uniqueTiers: (data.uniqueTiers || []) as StickerTier[],
-          stickers: ((data.stickers || []) as any[]).length,
+          sets: totalSetsCompleted(revealedStickers),
+          stickers: allStickers.length,
         };
       });
-      entries.sort((a, b) => b.uniqueTiers.length !== a.uniqueTiers.length ? b.uniqueTiers.length - a.uniqueTiers.length : b.stickers - a.stickers);
+      entries.sort((a, b) => b.sets !== a.sets ? b.sets - a.sets : b.stickers - a.stickers);
       setTopPlayers(entries.slice(0, 5));
     });
   }, [programme?.id]);
@@ -2519,10 +2427,7 @@ function StickerCollectionModal({ stickerCard, programme, onClose }: {
 
   const handleReveal = async (stickerId: string) => {
     const cardRef = doc(db, 'sticker_cards', stickerCard.id);
-    const newRevealedIds = [...(stickerCard.revealedIds || []), stickerId];
-    const revealedStickers = stickerCard.stickers.filter(s => newRevealedIds.includes(s.id));
-    const uniqueTiers = [...new Set(revealedStickers.map(s => s.tier))] as StickerTier[];
-    await updateDoc(cardRef, { revealedIds: arrayUnion(stickerId), uniqueTiers });
+    await updateDoc(cardRef, { revealedIds: arrayUnion(stickerId) });
   };
 
   return (
@@ -2553,45 +2458,58 @@ function StickerCollectionModal({ stickerCard, programme, onClose }: {
           </div>
 
           <div className="p-5 space-y-7">
-            {/* 5 Tier Slots */}
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-3">
-                Collect all 5 tiers
+            {/* Card collection — 3 variants per tier, collect 3 sets to win */}
+            <div className="space-y-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">
+                Collect 3 sets of each card to win
               </p>
-              <div className="grid grid-cols-5 gap-2">
-                {STICKER_ORDER.map(tier => {
-                  const cfg = STICKER_CONFIG[tier];
-                  const lit = myUnique.has(tier);
-                  const count = stickerCard.stickers.filter(s => s.tier === tier).length;
-                  return (
-                    <div key={tier} className="flex flex-col items-center gap-1">
-                      <div
-                        className="w-full aspect-square rounded-2xl border-2 flex flex-col items-center justify-center transition-all overflow-hidden"
-                        style={lit
-                          ? { background: cfg.bg, borderColor: cfg.border, boxShadow: `0 0 12px ${cfg.color}33` }
-                          : { background: '#F1F5F9', borderColor: '#E2E8F0' }}
-                      >
-                        {lit ? (
-                          <PixelAnimalSVG tier={tier} size={36} />
-                        ) : (
-                          <span className="text-xl text-slate-300">?</span>
-                        )}
-                        {count > 1 && (
-                          <span className="text-[8px] font-bold mt-0.5" style={{ color: cfg.color }}>×{count}</span>
-                        )}
+              {STICKER_ORDER.map(tier => {
+                const cfg = STICKER_CONFIG[tier];
+                const sets = tierSetsCompleted(revealed, tier);
+                const tierDone = sets >= 3;
+                return (
+                  <div key={tier} className="rounded-2xl p-3 border"
+                    style={{ background: tierDone ? cfg.bg : '#F8FAFC', borderColor: tierDone ? cfg.border : '#E2E8F0' }}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: cfg.color }}>{cfg.theme}</span>
+                        <span className="text-[9px] text-brand-navy/40 ml-1.5">· {cfg.label} · {cfg.chance}</span>
                       </div>
-                      <span className="text-[8px] font-bold text-center leading-tight"
-                        style={{ color: lit ? cfg.color : '#94A3B8' }}>
-                        {lit ? cfg.animal.split(' ')[0] : cfg.label}
+                      <span className="text-[10px] font-black" style={{ color: tierDone ? cfg.color : '#94A3B8' }}>
+                        {sets}/3 sets{tierDone ? ' ✓' : ''}
                       </span>
-                      <span className="text-[7px] text-brand-navy/30">{cfg.chance}</span>
                     </div>
-                  );
-                })}
-              </div>
-              {myUnique.size >= 5 && (
-                <div className="mt-3 p-3 rounded-2xl text-center" style={{ background: '#FEF9C3', border: '1px solid #FDE68A' }}>
-                  <p className="font-bold text-amber-700 text-sm">🎉 Full set collected!</p>
+                    <div className="flex gap-2">
+                      {cfg.variants.map((v, vi) => {
+                        const count = revealed.filter(s => s.tier === tier && (s.variant ?? 0) === vi).length;
+                        const has3 = count >= 3;
+                        return (
+                          <div key={vi} className="flex-1 flex flex-col items-center gap-1">
+                            <div className="w-full aspect-square rounded-xl border-2 flex flex-col items-center justify-center"
+                              style={count > 0
+                                ? { background: cfg.bg, borderColor: cfg.border, boxShadow: `0 0 8px ${cfg.color}22` }
+                                : { background: '#F1F5F9', borderColor: '#E2E8F0' }}>
+                              <span style={{ fontSize: 22, lineHeight: 1 }}>{count > 0 ? v.emoji : '?'}</span>
+                              {count > 0 && <span className="text-[7px] font-bold mt-0.5" style={{ color: has3 ? cfg.color : '#94A3B8' }}>×{count}{has3 ? '✓' : ''}</span>}
+                            </div>
+                            <span className="text-[7px] font-bold text-center leading-tight" style={{ color: count > 0 ? cfg.color : '#CBD5E1' }}>
+                              {count > 0 ? v.name : '???'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+              {myWon && (
+                <div className="p-3 rounded-2xl text-center" style={{ background: '#FEF9C3', border: '1px solid #FDE68A' }}>
+                  <p className="font-bold text-amber-700 text-sm">🏆 All sets complete — you win!</p>
+                </div>
+              )}
+              {!myWon && myTotalSets > 0 && (
+                <div className="p-2.5 rounded-2xl text-center bg-brand-navy/5">
+                  <p className="text-[10px] font-bold text-brand-navy/50">{myTotalSets} sets collected · keep going!</p>
                 </div>
               )}
             </div>
@@ -2624,10 +2542,10 @@ function StickerCollectionModal({ stickerCard, programme, onClose }: {
                       <p className="text-[11px] font-bold text-brand-navy flex-1 truncate">{p.userName || 'Player'}</p>
                       <div className="flex gap-0.5">
                         {STICKER_ORDER.map(tier => (
-                          <div key={tier} className="w-3 h-3 rounded-sm" style={{ background: p.uniqueTiers.includes(tier) ? STICKER_CONFIG[tier].solid : '#E2E8F0' }} />
+                          <div key={tier} className="w-3 h-3 rounded-sm" style={{ background: p.sets > 0 ? STICKER_CONFIG[tier].solid : '#E2E8F0', opacity: p.sets > 0 ? 1 : 0.3 }} />
                         ))}
                       </div>
-                      <span className="text-[10px] font-bold text-brand-navy/60 shrink-0">{p.uniqueTiers.length}/5</span>
+                      <span className="text-[10px] font-bold text-brand-navy/60 shrink-0">{p.sets} sets</span>
                     </div>
                   ))}
                 </div>
@@ -2696,10 +2614,7 @@ function UserStickerPanel({ uid, isOwnProfile = false, onOpenPack }: {
   const handleReveal = async (stickerId: string) => {
     if (!col) return;
     const ref = doc(db, 'user_stickers', uid);
-    const newRevealedIds = [...col.revealedIds, stickerId];
-    const revealedStickers = col.stickers.filter(s => newRevealedIds.includes(s.id));
-    const newUniqueTiers = [...new Set(revealedStickers.map(s => s.tier))];
-    await updateDoc(ref, { revealedIds: arrayUnion(stickerId), uniqueTiers: newUniqueTiers });
+    await updateDoc(ref, { revealedIds: arrayUnion(stickerId) });
   };
 
   if (!col) {
@@ -2712,43 +2627,53 @@ function UserStickerPanel({ uid, isOwnProfile = false, onOpenPack }: {
     );
   }
 
-  const uniqueSet = new Set(col.uniqueTiers);
   const unrevealed = col.stickers.filter(s => !col.revealedIds.includes(s.id));
   const revealed = col.stickers.filter(s => col.revealedIds.includes(s.id));
   const recentRevealed = [...revealed].reverse().slice(0, 6);
+  const panelSets = totalSetsCompleted(revealed);
+  const panelWon = allSetsWon(revealed);
 
   return (
     <div className="glass-card rounded-[2rem] p-5 space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">Animal Cards</p>
-        <span className="text-[10px] font-bold text-brand-navy/40">{uniqueSet.size}/5 unique · {col.stickers.length} total</span>
+        <span className="text-[10px] font-bold text-brand-navy/40">{panelSets} sets · {col.stickers.length} total</span>
       </div>
 
-      {/* Tier animal slots */}
-      <div className="grid grid-cols-5 gap-2">
+      {/* Compact tier overview — one row per tier showing variants */}
+      <div className="space-y-2">
         {STICKER_ORDER.map(tier => {
           const cfg = STICKER_CONFIG[tier];
-          const lit = uniqueSet.has(tier);
-          const count = col.stickers.filter(s => s.tier === tier).length;
+          const sets = tierSetsCompleted(revealed, tier);
           return (
-            <div key={tier} className="flex flex-col items-center gap-1">
-              <div className="w-full aspect-square rounded-2xl border-2 flex flex-col items-center justify-center overflow-hidden transition-all"
-                style={lit ? { background: cfg.bg, borderColor: cfg.border, boxShadow: `0 0 10px ${cfg.color}33` } : { background: '#F1F5F9', borderColor: '#E2E8F0' }}>
-                {lit ? <PixelAnimalSVG tier={tier} size={34} /> : <span className="text-lg text-slate-200">?</span>}
-                {count > 1 && <span className="text-[7px] font-bold leading-none" style={{ color: cfg.color }}>×{count}</span>}
+            <div key={tier} className="flex items-center gap-2">
+              <span className="text-[8px] font-black uppercase w-14 shrink-0" style={{ color: sets > 0 ? cfg.color : '#CBD5E1' }}>{cfg.theme}</span>
+              <div className="flex gap-1.5 flex-1">
+                {cfg.variants.map((v, vi) => {
+                  const count = revealed.filter(s => s.tier === tier && (s.variant ?? 0) === vi).length;
+                  return (
+                    <div key={vi} className="flex flex-col items-center gap-0.5 flex-1">
+                      <div className="w-full aspect-square rounded-xl border flex items-center justify-center"
+                        style={count > 0 ? { background: cfg.bg, borderColor: cfg.border } : { background: '#F1F5F9', borderColor: '#E2E8F0' }}>
+                        <span style={{ fontSize: 16, lineHeight: 1 }}>{count > 0 ? v.emoji : '?'}</span>
+                      </div>
+                      {count > 0 && <span className="text-[6px] font-bold" style={{ color: cfg.color }}>×{count}</span>}
+                    </div>
+                  );
+                })}
               </div>
-              <span className="text-[7px] font-bold text-center leading-tight" style={{ color: lit ? cfg.color : '#94A3B8' }}>
-                {lit ? cfg.animal.split(' ')[0] : cfg.label}
+              <span className="text-[8px] font-black shrink-0 w-9 text-right" style={{ color: sets >= 3 ? cfg.color : '#94A3B8' }}>
+                {sets}/3{sets >= 3 ? '✓' : ''}
               </span>
             </div>
           );
         })}
       </div>
 
-      {/* Full set badge */}
-      {uniqueSet.size >= 5 && (
+      {/* Win badge */}
+      {panelWon && (
         <div className="p-2.5 rounded-2xl text-center" style={{ background: '#FEF9C3', border: '1px solid #FDE68A' }}>
-          <p className="text-xs font-bold text-amber-700">🏆 Full set collected!</p>
+          <p className="text-xs font-bold text-amber-700">🏆 All sets complete — you win!</p>
         </div>
       )}
 
@@ -2937,10 +2862,14 @@ function MysteryRevealCard({ sticker, isRevealed, onReveal }: {
             />
           )}
           <div style={{ background: cfg.solid, height: '60%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <PixelAnimalSVG tier={sticker.tier} size={78} />
+            <span style={{ fontSize: 58, lineHeight: 1 }}>
+              {cfg.variants[sticker.variant ?? 0]?.emoji ?? cfg.variants[0].emoji}
+            </span>
           </div>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, padding: '4px 8px' }}>
-            <span style={{ fontSize: 11, fontWeight: 900, color: cfg.color, textAlign: 'center' }}>{cfg.animal}</span>
+            <span style={{ fontSize: 11, fontWeight: 900, color: cfg.color, textAlign: 'center' }}>
+              {cfg.variants[sticker.variant ?? 0]?.name ?? cfg.variants[0].name}
+            </span>
             <span style={{ fontSize: 9, fontWeight: 700, color: cfg.color, opacity: 0.65 }}>{cfg.label} · {cfg.chance}</span>
           </div>
         </div>
@@ -4243,9 +4172,11 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
                                   <p className="text-[10px] text-amber-700/50 text-center py-3">No players yet.</p>
                                 ) : (
                                   progPlayers.map(({ uid, profile: p, card: sc }) => {
-                                    const uniqueCount = sc.uniqueTiers?.length ?? 0;
+                                    const revealedIds = (sc.revealedIds || []) as string[];
+                                    const revealedStickers = (sc.stickers || []).filter((s: CollectibleSticker) => revealedIds.includes(s.id));
+                                    const sets = totalSetsCompleted(revealedStickers);
                                     const total = sc.stickers?.length ?? 0;
-                                    const complete = uniqueCount >= 5;
+                                    const complete = allSetsWon(revealedStickers);
                                     return (
                                       <div key={uid} className="flex items-center gap-2 py-2">
                                         <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0 bg-amber-100">
@@ -4254,20 +4185,14 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
                                         <div className="flex-1 min-w-0">
                                           <p className="text-[11px] font-bold text-amber-900 truncate">{p?.name || sc.userName || 'Player'}</p>
                                           <div className="flex gap-0.5 mt-0.5">
-                                            {STICKER_ORDER.map(tier => {
-                                              const lit = sc.uniqueTiers?.includes(tier);
-                                              return (
-                                                <div
-                                                  key={tier}
-                                                  className="w-3 h-3 rounded-sm"
-                                                  style={{ background: lit ? STICKER_CONFIG[tier].solid : '#E2E8F0' }}
-                                                />
-                                              );
-                                            })}
+                                            {STICKER_ORDER.map(tier => (
+                                              <div key={tier} className="w-3 h-3 rounded-sm"
+                                                style={{ background: tierSetsCompleted(revealedStickers, tier) > 0 ? STICKER_CONFIG[tier].solid : '#E2E8F0' }} />
+                                            ))}
                                           </div>
                                         </div>
                                         <div className="text-right flex-shrink-0">
-                                          <p className="text-[10px] font-bold text-amber-700">{uniqueCount}/5</p>
+                                          <p className="text-[10px] font-bold text-amber-700">{sets} sets</p>
                                           <p className="text-[9px] text-amber-600/60">{total} sticker{total !== 1 ? 's' : ''}</p>
                                         </div>
                                         {complete && <span className="text-[9px] font-black text-amber-600 flex-shrink-0">★</span>}
@@ -4332,27 +4257,31 @@ function ProgrammeDetailModal({ prog, sc, onJoin, onView, onClose, joiningProgra
   joinError: string | null;
   key?: React.Key;
 }) {
-  const [topPlayers, setTopPlayers] = useState<{ uid: string; userName?: string; userPhoto?: string; uniqueTiers: StickerTier[]; stickers: number }[]>([]);
+  const [topPlayers, setTopPlayers] = useState<{ uid: string; userName?: string; userPhoto?: string; sets: number; stickers: number }[]>([]);
   const [loadingPlayers, setLoadingPlayers] = useState(true);
 
   const joined = !!sc;
-  const myUnique = new Set(sc?.uniqueTiers || []);
-  const unrevealed = (sc?.stickers || []).filter(s => !(sc?.revealedIds || []).includes(s.id));
-  const isComplete = myUnique.size >= 5;
+  const myRevealedStickers = (sc?.stickers || []).filter((s: CollectibleSticker) => (sc?.revealedIds || []).includes(s.id));
+  const myTotalSets = totalSetsCompleted(myRevealedStickers);
+  const unrevealed = (sc?.stickers || []).filter((s: CollectibleSticker) => !(sc?.revealedIds || []).includes(s.id));
+  const isComplete = allSetsWon(myRevealedStickers);
 
   useEffect(() => {
     getDocs(query(collection(db, 'sticker_cards'), where('programme_id', '==', prog.id))).then(snap => {
       const entries = snap.docs.map(d => {
         const data = d.data();
+        const revealedIds = (data.revealedIds || []) as string[];
+        const allStickers = (data.stickers || []) as CollectibleSticker[];
+        const revealedStickers = allStickers.filter(s => revealedIds.includes(s.id));
         return {
           uid: data.user_id as string,
           userName: data.userName as string | undefined,
           userPhoto: data.userPhoto as string | undefined,
-          uniqueTiers: (data.uniqueTiers || []) as StickerTier[],
-          stickers: ((data.stickers || []) as any[]).length,
+          sets: totalSetsCompleted(revealedStickers),
+          stickers: allStickers.length,
         };
       });
-      entries.sort((a, b) => b.uniqueTiers.length !== a.uniqueTiers.length ? b.uniqueTiers.length - a.uniqueTiers.length : b.stickers - a.stickers);
+      entries.sort((a, b) => b.sets !== a.sets ? b.sets - a.sets : b.stickers - a.stickers);
       setTopPlayers(entries.slice(0, 5));
     }).finally(() => setLoadingPlayers(false));
   }, [prog.id]);
@@ -4405,10 +4334,10 @@ function ProgrammeDetailModal({ prog, sc, onJoin, onView, onClose, joiningProgra
                       <p className="text-[11px] font-bold text-white flex-1 truncate">{p.userName || 'Player'}</p>
                       <div className="flex gap-0.5">
                         {STICKER_ORDER.map(tier => (
-                          <div key={tier} className="w-3.5 h-3.5 rounded-sm" style={{ background: p.uniqueTiers.includes(tier) ? STICKER_CONFIG[tier].solid : 'rgba(255,255,255,0.1)' }} />
+                          <div key={tier} className="w-3.5 h-3.5 rounded-sm" style={{ background: p.sets > 0 ? STICKER_CONFIG[tier].solid : 'rgba(255,255,255,0.1)' }} />
                         ))}
                       </div>
-                      <span className="text-[10px] font-bold text-white/60 shrink-0">{p.uniqueTiers.length}/5</span>
+                      <span className="text-[10px] font-bold text-white/60 shrink-0">{p.sets} sets</span>
                     </div>
                   ))}
                 </div>
@@ -4439,7 +4368,7 @@ function ProgrammeDetailModal({ prog, sc, onJoin, onView, onClose, joiningProgra
                 <p className="text-sm font-black text-white">{prog.reward}</p>
               </div>
               {joined && (
-                <p className="text-[10px] text-amber-300 font-bold">{isComplete ? '✓ Earned' : `${5 - myUnique.size} left`}</p>
+                <p className="text-[10px] text-amber-300 font-bold">{isComplete ? '✓ Earned' : `${myTotalSets} sets`}</p>
               )}
             </div>
           </div>
@@ -4507,7 +4436,7 @@ interface StickerCelebData {
   programmeName: string;
   newCount: number;
   totalStickers: number;
-  uniqueTiers: number;
+  totalSets: number;
   animType: CelebAnimType;
   stickerCardId: string;
 }
@@ -4726,11 +4655,12 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         const programme = activePrograms.find(p => p.id === sc.programme_id);
         const animType = CELEB_ANIM_TYPES[animCounterRef.current % CELEB_ANIM_TYPES.length];
         animCounterRef.current++;
+        const revealedNow = (sc.stickers || []).filter((s: CollectibleSticker) => (sc.revealedIds || []).includes(s.id));
         const celeb: StickerCelebData = {
           programmeName: programme?.title || 'Monopoly Game',
           newCount: sc.stickers.length - prev,
           totalStickers: sc.stickers.length,
-          uniqueTiers: sc.uniqueTiers?.length || 0,
+          totalSets: totalSetsCompleted(revealedNow),
           animType,
           stickerCardId: sc.id,
         };
@@ -5050,10 +4980,12 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                 activePrograms.map(prog => {
                   const sc = myStickerCards.find(s => s.programme_id === prog.id);
                   const joined = !!sc;
-                  const myUnique = new Set(sc?.uniqueTiers || []);
-                  const unrevealed = (sc?.stickers || []).filter(s => !(sc?.revealedIds || []).includes(s.id));
+                  const myRevealedCards = (sc?.stickers || []).filter((s: CollectibleSticker) => (sc?.revealedIds || []).includes(s.id));
+                  const myProgSets = totalSetsCompleted(myRevealedCards);
+                  const unrevealed = (sc?.stickers || []).filter((s: CollectibleSticker) => !(sc?.revealedIds || []).includes(s.id));
                   const totalCollected = sc?.stickers.length || 0;
-                  const isComplete = myUnique.size >= 5;
+                  const isComplete = allSetsWon(myRevealedCards);
+                  const maxSets = STICKER_ORDER.reduce((sum, t) => sum + STICKER_CONFIG[t].variants.length * 3, 0);
                   return (
                     <div key={prog.id} className="rounded-[2rem] overflow-hidden shadow-lg border border-black/5">
                       {/* Tappable header — opens popup modal */}
@@ -5085,39 +5017,25 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                       </button>
 
                       {joined ? (
-                        /* Joined — Monopoly property strip board */
-                        <div className="bg-white px-4 py-5">
-                          <div className="flex gap-2 mb-4">
+                        /* Joined — emoji property strip */
+                        <div className="bg-white px-4 py-4">
+                          <div className="flex gap-1.5 mb-3">
                             {STICKER_ORDER.map(tier => {
                               const cfg = STICKER_CONFIG[tier];
-                              const lit = myUnique.has(tier);
-                              const count = (sc?.stickers || []).filter(s => s.tier === tier).length;
+                              const sets = tierSetsCompleted(myRevealedCards, tier);
+                              const firstFound = myRevealedCards.find((s: CollectibleSticker) => s.tier === tier);
                               return (
-                                <div key={tier} className="flex-1 flex flex-col items-center gap-1.5">
-                                  <div
-                                    className="w-full rounded-t-xl rounded-b-sm transition-all"
-                                    style={{
-                                      height: 36,
-                                      background: lit ? cfg.solid : '#E2E8F0',
-                                      boxShadow: lit ? `0 2px 8px ${cfg.color}44` : 'none',
-                                    }}
-                                  />
-                                  <div
-                                    className="w-full rounded-b-xl flex flex-col items-center justify-center py-2 border-x border-b"
-                                    style={{
-                                      borderColor: lit ? cfg.border : '#E2E8F0',
-                                      background: lit ? cfg.bg : '#F8FAFC',
-                                      minHeight: 44,
-                                    }}
-                                  >
-                                    <span className="text-[10px] font-black leading-tight text-center"
-                                      style={{ color: lit ? cfg.color : '#CBD5E1' }}>
-                                      {cfg.label}
+                                <div key={tier} className="flex-1 flex flex-col items-center gap-1">
+                                  <div className="w-full rounded-t-xl rounded-b-sm transition-all"
+                                    style={{ height: 30, background: sets > 0 ? cfg.solid : '#E2E8F0', boxShadow: sets > 0 ? `0 2px 8px ${cfg.color}44` : 'none' }} />
+                                  <div className="w-full rounded-b-xl flex flex-col items-center justify-center py-1.5 border-x border-b"
+                                    style={{ borderColor: sets > 0 ? cfg.border : '#E2E8F0', background: sets > 0 ? cfg.bg : '#F8FAFC', minHeight: 40 }}>
+                                    <span style={{ fontSize: 18, lineHeight: 1 }}>
+                                      {firstFound ? cfg.variants[firstFound.variant ?? 0]?.emoji ?? '?' : '?'}
                                     </span>
-                                    {count > 0 && (
-                                      <span className="text-[9px] font-bold mt-0.5" style={{ color: cfg.color }}>×{count}</span>
-                                    )}
-                                    {!lit && <span className="text-base text-slate-300 mt-0.5">?</span>}
+                                    <span className="text-[7px] font-black mt-0.5" style={{ color: sets > 0 ? cfg.color : '#CBD5E1' }}>
+                                      {sets}/3
+                                    </span>
                                   </div>
                                 </div>
                               );
@@ -5126,10 +5044,10 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-xs text-brand-navy/40">
-                                {myUnique.size}/5 tiers · {totalCollected} sticker{totalCollected !== 1 ? 's' : ''}
+                                {myProgSets} sets · {totalCollected} card{totalCollected !== 1 ? 's' : ''}
                               </p>
                               {isComplete && (
-                                <p className="text-xs font-bold text-amber-600">Full set! Claim: {prog.reward}</p>
+                                <p className="text-xs font-bold text-amber-600">All sets complete! Claim: {prog.reward}</p>
                               )}
                             </div>
                             <button
@@ -5159,16 +5077,16 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
 
                       {/* Progress bar */}
                       {joined && (
-                        <div className="px-5 pt-3 pb-1 bg-white">
+                        <div className="px-5 pt-2 pb-1 bg-white">
                           <div className="flex justify-between items-center mb-1.5">
-                            <p className="text-[10px] font-bold text-brand-navy/50">{myUnique.size} / 5 unique tiles</p>
-                            <p className="text-[10px] font-bold text-brand-navy/40">{Math.round((myUnique.size / 5) * 100)}%</p>
+                            <p className="text-[10px] font-bold text-brand-navy/50">{myProgSets} / {maxSets} sets</p>
+                            <p className="text-[10px] font-bold text-brand-navy/40">{Math.round((myProgSets / maxSets) * 100)}%</p>
                           </div>
                           <div className="h-2 bg-brand-navy/5 rounded-full overflow-hidden">
                             <motion.div
                               className={cn("h-full rounded-full", isComplete ? 'bg-green-400' : 'bg-brand-gold')}
                               initial={{ width: 0 }}
-                              animate={{ width: `${Math.round((myUnique.size / 5) * 100)}%` }}
+                              animate={{ width: `${Math.round((myProgSets / maxSets) * 100)}%` }}
                               transition={{ duration: 0.6, ease: 'easeOut' }}
                             />
                           </div>
@@ -5178,8 +5096,8 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                       {/* Prize banner */}
                       <div className="bg-amber-50 border-t border-amber-100 px-5 py-3 flex items-center gap-2">
                         <span className="text-base">🏆</span>
-                        <p className="text-xs text-amber-800 font-semibold flex-1">Full set reward: <span className="font-bold">{prog.reward}</span></p>
-                        {joined && <p className="text-[10px] text-amber-600 font-bold">{isComplete ? '✓ Earned' : `${5 - myUnique.size} left`}</p>}
+                        <p className="text-xs text-amber-800 font-semibold flex-1">Collect 3 sets to win: <span className="font-bold">{prog.reward}</span></p>
+                        {joined && <p className="text-[10px] text-amber-600 font-bold">{isComplete ? '✓ Earned' : `${myProgSets} sets so far`}</p>}
                       </div>
                     </div>
                   );
@@ -6331,18 +6249,19 @@ function StampCelebrationModal({
 
 const MONOPOLY_EMOJIS = ['🎰', '🃏', '🎲', '🏆', '🎯', '⭐', '💎', '🌟', '🎪', '🎡'];
 
-function StickerCelebrationModal({ programmeName, newCount, totalStickers, uniqueTiers, animType, stickerCardId, onClose, onReveal }: {
+function StickerCelebrationModal({ programmeName, newCount, totalStickers, totalSets, animType, stickerCardId, onClose, onReveal }: {
   programmeName: string;
   newCount: number;
   totalStickers: number;
-  uniqueTiers: number;
+  totalSets: number;
   animType: CelebAnimType;
   stickerCardId: string;
   onClose: () => void;
   onReveal: () => void;
 }) {
   const emoji = MONOPOLY_EMOJIS[Math.floor(Math.random() * MONOPOLY_EMOJIS.length)];
-  const allTiers = uniqueTiers >= 5;
+  const maxSets = STICKER_ORDER.reduce((sum, t) => sum + STICKER_CONFIG[t].variants.length * 3, 0);
+  const allWon = totalSets >= maxSets;
 
   useEffect(() => { fireCelebAnimation(animType); }, []);
 
@@ -6403,23 +6322,23 @@ function StickerCelebrationModal({ programmeName, newCount, totalStickers, uniqu
             <p className="text-2xl font-display font-bold text-brand-navy">{totalStickers}</p>
             <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-wider mt-0.5">Stickers</p>
           </div>
-          <div className={cn('flex-1 rounded-2xl p-3 text-center border', allTiers ? 'bg-green-50 border-green-200' : 'bg-white border-black/5')}>
-            <p className={cn('text-2xl font-display font-bold', allTiers ? 'text-green-500' : 'text-brand-navy')}>{uniqueTiers}/5</p>
-            <p className={cn('text-[10px] font-bold uppercase tracking-wider mt-0.5', allTiers ? 'text-green-400' : 'text-brand-navy/40')}>Tiers</p>
+          <div className={cn('flex-1 rounded-2xl p-3 text-center border', allWon ? 'bg-green-50 border-green-200' : 'bg-white border-black/5')}>
+            <p className={cn('text-2xl font-display font-bold', allWon ? 'text-green-500' : 'text-brand-navy')}>{totalSets}</p>
+            <p className={cn('text-[10px] font-bold uppercase tracking-wider mt-0.5', allWon ? 'text-green-400' : 'text-brand-navy/40')}>Sets</p>
           </div>
         </motion.div>
 
         {/* Encouragement */}
         <motion.div
           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
-          className={cn('rounded-2xl p-4 text-center', allTiers ? 'bg-green-50' : 'bg-brand-gold/10')}
+          className={cn('rounded-2xl p-4 text-center', allWon ? 'bg-green-50' : 'bg-brand-gold/10')}
         >
-          <p className={cn('font-bold text-sm leading-snug', allTiers ? 'text-green-600' : 'text-brand-navy')}>
-            {allTiers
-              ? '🏆 ALL 5 TIERS UNLOCKED! You absolute legend!'
-              : uniqueTiers === 4
-                ? '🔥 One more tier and you\'ve got the full set — so close!'
-                : `✨ ${5 - uniqueTiers} more tier${5 - uniqueTiers > 1 ? 's' : ''} to go — keep collecting and win big!`}
+          <p className={cn('font-bold text-sm leading-snug', allWon ? 'text-green-600' : 'text-brand-navy')}>
+            {allWon
+              ? '🏆 ALL SETS COMPLETE! You absolute legend!'
+              : totalSets >= maxSets - 3
+                ? `🔥 So close! Just ${maxSets - totalSets} more set${maxSets - totalSets > 1 ? 's' : ''} to go!`
+                : `✨ ${totalSets} set${totalSets !== 1 ? 's' : ''} collected — keep going and win big!`}
           </p>
         </motion.div>
 
@@ -9486,22 +9405,21 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
               const pct = c.goal > 0 ? Math.min(100, Math.round((progress / c.goal) * 100)) : 0;
               const done = pct >= 100;
               return (
-                <div key={c.id} className="rounded-2xl px-4 py-3 border border-white/80"
-                     style={{ background: 'linear-gradient(160deg, #ffffff 0%, #eff6ff 100%)', boxShadow: '0 4px 14px rgba(29,78,216,0.18), 0 1.5px 4px rgba(29,78,216,0.10), inset 0 1px 0 rgba(255,255,255,0.9)' }}>
-                  <div className="flex items-center justify-between mb-1.5 gap-2">
-                    <p className="text-xs font-bold leading-tight line-clamp-1 flex-1" style={{ color: '#1D4ED8' }}>{c.title}</p>
-                    <span className={cn('text-[10px] font-bold shrink-0', done ? 'text-green-600' : '')} style={done ? {} : { color: '#2563EB' }}>{done ? '✓ Done' : `${pct}%`}</span>
+                <div key={c.id} className="gradient-logo-blue rounded-2xl px-4 py-3 relative overflow-hidden shadow-lg">
+                  <span className="shine-ray" aria-hidden="true" />
+                  <div className="flex items-center justify-between mb-1.5 gap-2 relative z-10">
+                    <p className="text-xs font-bold leading-tight line-clamp-1 flex-1 text-white">{c.title}</p>
+                    <span className={cn('text-[10px] font-bold shrink-0', done ? 'text-green-300' : 'text-white/80')}>{done ? '✓ Done' : `${pct}%`}</span>
                   </div>
-                  <div className="h-1.5 bg-blue-100 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-white/20 rounded-full overflow-hidden relative z-10">
                     <motion.div
-                      className={cn('h-full rounded-full', done ? 'bg-green-500' : '')}
-                      style={done ? {} : { background: 'linear-gradient(90deg, #1D4ED8, #3B82F6)' }}
+                      className={cn('h-full rounded-full', done ? 'bg-green-400' : 'bg-white')}
                       initial={{ width: 0 }}
                       animate={{ width: `${pct}%` }}
                       transition={{ duration: 0.6, ease: 'easeOut' }}
                     />
                   </div>
-                  <p className="text-[9px] mt-1.5 font-medium" style={{ color: '#2563EB99' }}>{progress} / {c.goal} {c.unit} · 🎁 {c.reward}</p>
+                  <p className="text-[9px] mt-1.5 font-medium text-white/60 relative z-10">{progress} / {c.goal} {c.unit} · 🎁 {c.reward}</p>
                 </div>
               );
             })}
