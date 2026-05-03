@@ -4581,6 +4581,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const [showNFCStamp, setShowNFCStamp] = useState(false);
   const [autoNFCStoreId, setAutoNFCStoreId] = useState<string | null>(null);
   const [pendingPack, setPendingPack] = useState<CollectibleSticker[] | null>(null);
+  const [pendingPackCardId, setPendingPackCardId] = useState<string | null>(null);
 
   // Stamp celebration
   const [celebrationPages, setCelebrationPages] = useState<CelebrationPage[] | null>(null);
@@ -5347,7 +5348,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
             user={user}
             profile={profile}
             autoStoreId={autoNFCStoreId}
-            onPackReady={(stickers) => { setPendingPack(stickers); setShowNFCStamp(false); setAutoNFCStoreId(null); }}
+            onPackReady={() => { setShowNFCStamp(false); setAutoNFCStoreId(null); }}
             onClose={() => { setShowNFCStamp(false); setAutoNFCStoreId(null); }}
           />
         )}
@@ -5358,7 +5359,12 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         {pendingPack && (
           <PackOpeningModal
             stickers={pendingPack}
-            onClose={() => setPendingPack(null)}
+            onClose={() => {
+              const cardId = pendingPackCardId;
+              setPendingPack(null);
+              setPendingPackCardId(null);
+              if (cardId) setOpenStickerCardId(cardId);
+            }}
           />
         )}
       </AnimatePresence>
@@ -5411,7 +5417,17 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           <StickerCelebrationModal
             {...activeStickerCeleb}
             onClose={() => setActiveStickerCeleb(null)}
-            onReveal={() => setOpenStickerCardId(activeStickerCeleb.stickerCardId)}
+            onReveal={() => {
+              const celeb = activeStickerCeleb!;
+              const sc = myStickerCards.find(s => s.id === celeb.stickerCardId);
+              const unrevealed = sc ? sc.stickers.filter((s: CollectibleSticker) => !(sc.revealedIds || []).includes(s.id)) : [];
+              if (unrevealed.length > 0) {
+                setPendingPack(unrevealed);
+                setPendingPackCardId(celeb.stickerCardId);
+              } else {
+                setOpenStickerCardId(celeb.stickerCardId);
+              }
+            }}
           />
         )}
       </AnimatePresence>
