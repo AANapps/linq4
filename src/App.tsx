@@ -2399,25 +2399,30 @@ function StickerCollectionModal({ stickerCard, programme, onClose }: {
   const myTotalSets = totalSetsCompleted(revealed);
   const myWon = allSetsWon(revealed);
   const [showAllRevealed, setShowAllRevealed] = useState(false);
-  const [topPlayers, setTopPlayers] = useState<{ uid: string; userName?: string; userPhoto?: string; sets: number; stickers: number }[]>([]);
+  const [topPlayers, setTopPlayers] = useState<{ uid: string; userName?: string; userPhoto?: string; uniqueCards: number; stickers: number }[]>([]);
 
   useEffect(() => {
     if (!programme?.id) return;
+    const totalUnique = STICKER_ORDER.reduce((s, t) => s + STICKER_CONFIG[t].variants.length, 0);
     getDocs(query(collection(db, 'sticker_cards'), where('programme_id', '==', programme.id))).then(snap => {
       const entries = snap.docs.map(d => {
         const data = d.data();
         const revealedIds = (data.revealedIds || []) as string[];
         const allStickers = (data.stickers || []) as CollectibleSticker[];
         const revealedStickers = allStickers.filter(s => revealedIds.includes(s.id));
+        const uniqueCards = STICKER_ORDER.reduce((sum, tier) =>
+          sum + STICKER_CONFIG[tier].variants.filter((_, vi) =>
+            revealedStickers.some(s => s.tier === tier && (s.variant ?? 0) === vi)
+          ).length, 0);
         return {
           uid: data.user_id as string,
           userName: data.userName as string | undefined,
           userPhoto: data.userPhoto as string | undefined,
-          sets: totalSetsCompleted(revealedStickers),
+          uniqueCards,
           stickers: allStickers.length,
         };
       });
-      entries.sort((a, b) => b.sets !== a.sets ? b.sets - a.sets : b.stickers - a.stickers);
+      entries.sort((a, b) => b.uniqueCards !== a.uniqueCards ? b.uniqueCards - a.uniqueCards : b.stickers - a.stickers);
       setTopPlayers(entries.slice(0, 5));
     });
   }, [programme?.id]);
@@ -2465,7 +2470,7 @@ function StickerCollectionModal({ stickerCard, programme, onClose }: {
                 </p>
                 <div className="space-y-2">
                   {topPlayers.map((p, i) => {
-                    const pct = Math.round((p.sets / STICKER_ORDER.reduce((s, t) => s + STICKER_CONFIG[t].variants.length * 3, 0)) * 100);
+                    const pct = Math.round((p.uniqueCards / STICKER_ORDER.reduce((s, t) => s + STICKER_CONFIG[t].variants.length, 0)) * 100);
                     return (
                       <div key={p.uid} className="bg-brand-navy/5 rounded-2xl px-3 py-2.5">
                         <div className="flex items-center gap-2.5 mb-1.5">
@@ -4262,7 +4267,7 @@ function ProgrammeDetailModal({ prog, sc, onJoin, onView, onClose, joiningProgra
   joinError: string | null;
   key?: React.Key;
 }) {
-  const [topPlayers, setTopPlayers] = useState<{ uid: string; userName?: string; userPhoto?: string; sets: number; stickers: number }[]>([]);
+  const [topPlayers, setTopPlayers] = useState<{ uid: string; userName?: string; userPhoto?: string; uniqueCards: number; stickers: number }[]>([]);
   const [loadingPlayers, setLoadingPlayers] = useState(true);
 
   const joined = !!sc;
@@ -4272,21 +4277,26 @@ function ProgrammeDetailModal({ prog, sc, onJoin, onView, onClose, joiningProgra
   const isComplete = allSetsWon(myRevealedStickers);
 
   useEffect(() => {
+    const totalUnique = STICKER_ORDER.reduce((s, t) => s + STICKER_CONFIG[t].variants.length, 0);
     getDocs(query(collection(db, 'sticker_cards'), where('programme_id', '==', prog.id))).then(snap => {
       const entries = snap.docs.map(d => {
         const data = d.data();
         const revealedIds = (data.revealedIds || []) as string[];
         const allStickers = (data.stickers || []) as CollectibleSticker[];
         const revealedStickers = allStickers.filter(s => revealedIds.includes(s.id));
+        const uniqueCards = STICKER_ORDER.reduce((sum, tier) =>
+          sum + STICKER_CONFIG[tier].variants.filter((_, vi) =>
+            revealedStickers.some(s => s.tier === tier && (s.variant ?? 0) === vi)
+          ).length, 0);
         return {
           uid: data.user_id as string,
           userName: data.userName as string | undefined,
           userPhoto: data.userPhoto as string | undefined,
-          sets: totalSetsCompleted(revealedStickers),
+          uniqueCards,
           stickers: allStickers.length,
         };
       });
-      entries.sort((a, b) => b.sets !== a.sets ? b.sets - a.sets : b.stickers - a.stickers);
+      entries.sort((a, b) => b.uniqueCards !== a.uniqueCards ? b.uniqueCards - a.uniqueCards : b.stickers - a.stickers);
       setTopPlayers(entries.slice(0, 5));
     }).finally(() => setLoadingPlayers(false));
   }, [prog.id]);
@@ -4331,7 +4341,7 @@ function ProgrammeDetailModal({ prog, sc, onJoin, onView, onClose, joiningProgra
               ) : (
                 <div className="space-y-2.5">
                   {topPlayers.map((p, i) => {
-                    const pct = Math.round((p.sets / STICKER_ORDER.reduce((s, t) => s + STICKER_CONFIG[t].variants.length * 3, 0)) * 100);
+                    const pct = Math.round((p.uniqueCards / STICKER_ORDER.reduce((s, t) => s + STICKER_CONFIG[t].variants.length, 0)) * 100);
                     return (
                       <div key={p.uid} className="bg-white/5 rounded-2xl px-3 py-2.5">
                         <div className="flex items-center gap-2.5 mb-1.5">
