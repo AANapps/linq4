@@ -417,12 +417,12 @@ type StickerTier = 'brown' | 'lightblue' | 'red' | 'blue' | 'gold';
 
 const STICKER_ORDER: StickerTier[] = ['brown', 'lightblue', 'red', 'blue', 'gold'];
 
-const STICKER_CONFIG: Record<StickerTier, { color: string; solid: string; bg: string; border: string; label: string; chance: string }> = {
-  brown:    { color: '#6B3A2A', solid: '#955436', bg: '#F5E6D3', border: '#C4845C', label: 'Common',    chance: '50%'  },
-  lightblue:{ color: '#0369A1', solid: '#AAE0FA', bg: '#E0F2FE', border: '#7DD3FC', label: 'Uncommon',  chance: '28%'  },
-  red:      { color: '#B91C1C', solid: '#D21B17', bg: '#FEE2E2', border: '#FCA5A5', label: 'Rare',      chance: '14%'  },
-  blue:     { color: '#1D4ED8', solid: '#0072BB', bg: '#DBEAFE', border: '#93C5FD', label: 'Epic',      chance: '7%'   },
-  gold:     { color: '#92400E', solid: '#F5C518', bg: '#FFFBEB', border: '#FDE68A', label: 'Legendary', chance: '1%'   },
+const STICKER_CONFIG: Record<StickerTier, { color: string; solid: string; bg: string; border: string; label: string; chance: string; animal: string }> = {
+  brown:    { color: '#6B3A2A', solid: '#955436', bg: '#F5E6D3', border: '#C4845C', label: 'Common',    chance: '50%', animal: 'Bush Turkey'  },
+  lightblue:{ color: '#0369A1', solid: '#4AACDA', bg: '#E0F2FE', border: '#7DD3FC', label: 'Uncommon',  chance: '28%', animal: 'Water Dragon' },
+  red:      { color: '#B91C1C', solid: '#D21B17', bg: '#FEE2E2', border: '#FCA5A5', label: 'Rare',      chance: '14%', animal: 'Lorikeet'     },
+  blue:     { color: '#1D4ED8', solid: '#0072BB', bg: '#DBEAFE', border: '#93C5FD', label: 'Epic',      chance: '7%',  animal: 'Kangaroo'     },
+  gold:     { color: '#92400E', solid: '#F5C518', bg: '#FFFBEB', border: '#FDE68A', label: 'Legendary', chance: '1%',  animal: 'Bin Chicken'  },
 };
 
 const DEFAULT_TIER_CHANCES = { brown: 50, lightblue: 28, red: 14, blue: 7, gold: 1 };
@@ -436,6 +436,139 @@ function rollStickerTier(chances?: { brown: number; lightblue: number; red: numb
     if (r < cum) return tier;
   }
   return 'brown';
+}
+
+// --- Animal pixel art ---
+
+const ANIMAL_DATA: Record<StickerTier, { palette: Record<string, string>; pixels: readonly string[] }> = {
+  brown: {
+    palette: { K: '#1A0E06', N: '#5C3018', n: '#8B5030', R: '#CC3300', O: '#E07030' },
+    pixels: [
+      '................',
+      '.......RRR......',
+      '......ROOR......',
+      '......RRRR......',
+      '......KRKK......',
+      '.....KKKKK......',
+      '....KKKKKKK.....',
+      '...KKKKKKKKK....',
+      '..KKKKKKKKKKK...',
+      '..KKKKKKKKKKK...',
+      '...KKKKKKKKKK...',
+      '....KKKKKKKKK...',
+      '.....KKKKKKK....',
+      '.....KKKKKK.....',
+      '......OOOO......',
+      '......O..O......',
+    ],
+  },
+  lightblue: {
+    palette: { G: '#3A8A40', g: '#1F5A25', B: '#4488CC', e: '#1A0A00' },
+    pixels: [
+      '....g...........',
+      '....GG..........',
+      '...GGG..........',
+      '..GGGGe.........',
+      '..GBBGGgg.......',
+      '.GGBBGGGGgg.....',
+      'GGGGGGGGGGgg....',
+      '.GGGGGGGGGGGg...',
+      '..GGGGGGGGGGGg..',
+      '...GGGGGGGGGGg..',
+      '....GGGGGGGGg...',
+      '.....GGGGGGg....',
+      '......GGGGg.....',
+      '.......GGg......',
+      '........g.......',
+      '................',
+    ],
+  },
+  red: {
+    palette: { R: '#CC2200', O: '#E07800', G: '#2A8A30', B: '#2244BB', Y: '#EEC820', e: '#1A0A00' },
+    pixels: [
+      '....RRRR........',
+      '...RReRRR.......',
+      '...RRRRRRO......',
+      '....RRROO.......',
+      '....RROO........',
+      '....YYYY........',
+      '...YYYYYYYY.....',
+      '..BBBBBBBBB.....',
+      '.BBGGGGGGGGG....',
+      'BGGGGGGGGGGGG...',
+      'GGGGGGGGGGGGGG..',
+      '.GGGGGGGGGGGGG..',
+      '..GGGGGGGGGGG...',
+      '....OO.OO.......',
+      '....O...O.......',
+      '................',
+    ],
+  },
+  blue: {
+    palette: { S: '#9A8A76', s: '#C4B49A', e: '#1A0A00' },
+    pixels: [
+      '...ss...........',
+      '....SS..........',
+      '....SeS.........',
+      '...SSSS.........',
+      '...SSSSS........',
+      '..SSSSSSS.......',
+      '..SSSSSSSS......',
+      '.SSSSSSSSSS.....',
+      'SSSSSSSSSSS.....',
+      '.SSSSSSSSSS.SSSS',
+      '..SSSSSS...SSSSS',
+      '...SSSS...SSSSS.',
+      '....SSS..SSSSS..',
+      '....SS..SSSSS...',
+      '....S..SSSS.....',
+      '................',
+    ],
+  },
+  gold: {
+    palette: { K: '#1A1A2E', W: '#F5F5F5', w: '#DEDEDE', e: '#CC2222', O: '#D07830' },
+    pixels: [
+      '.....KK.........',
+      '....KKeK........',
+      '....KKKK....KK..',
+      '....KKKKK..KK...',
+      '.....KKKK.KK....',
+      '.....KKKK.K.....',
+      '......KKKK......',
+      '.....KWWW.......',
+      '....KWWWWWW.....',
+      '...KWWWWWWWWW...',
+      '..WWWWWWWWWWWW..',
+      '..WWWWWWWWWWWW..',
+      '..WWWWWWWWWWWW..',
+      '.KKWWWWWWWWWWKK.',
+      '...OOO....OOO...',
+      '...O........O...',
+    ],
+  },
+};
+
+function PixelAnimalSVG({ tier, size = 64 }: { tier: StickerTier; size?: number }) {
+  const { palette, pixels } = ANIMAL_DATA[tier];
+  const rows = pixels.length;
+  const cols = pixels[0]?.length ?? 16;
+  const rects: React.ReactNode[] = [];
+  for (let y = 0; y < rows; y++) {
+    const row = pixels[y];
+    for (let x = 0; x < (row?.length ?? 0); x++) {
+      const c = row[x];
+      if (!c || c === '.') continue;
+      const fill = palette[c];
+      if (!fill) continue;
+      rects.push(<rect key={`${x}-${y}`} x={x} y={y} width={1} height={1} fill={fill} />);
+    }
+  }
+  return (
+    <svg viewBox={`0 0 ${cols} ${rows}`} width={size} height={size}
+      style={{ imageRendering: 'pixelated', display: 'block' }}>
+      {rects}
+    </svg>
+  );
 }
 
 interface CollectibleSticker {
@@ -2227,15 +2360,16 @@ function NavButton({ active, onClick, icon, label, badgeCount }: { active: boole
 
 // --- Sticker issuance (triggered by stamp collection — 1 stamp = 1 sticker per active programme) ---
 
-async function issueStickersToCard(customerUid: string, userName: string, qty: number): Promise<void> {
+async function issueStickersToCard(customerUid: string, userName: string, qty: number): Promise<CollectibleSticker[]> {
   const joinedSnap = await getDocs(query(collection(db, 'sticker_cards'), where('user_id', '==', customerUid)));
-  if (joinedSnap.empty) return;
+  if (joinedSnap.empty) return [];
   const programmeIds = [...new Set(joinedSnap.docs.map(d => d.data().programme_id as string))];
   const chancesMap = new Map<string, { brown: number; lightblue: number; red: number; blue: number; gold: number } | undefined>();
   await Promise.all(programmeIds.map(async pid => {
     const snap = await getDoc(doc(db, 'challenges', pid));
     chancesMap.set(pid, snap.exists() ? snap.data().tierChances : undefined);
   }));
+  const allNew: CollectibleSticker[] = [];
   for (const cardDoc of joinedSnap.docs) {
     const chances = chancesMap.get(cardDoc.data().programme_id);
     const newStickers: CollectibleSticker[] = Array.from({ length: qty }, () => ({
@@ -2244,7 +2378,9 @@ async function issueStickersToCard(customerUid: string, userName: string, qty: n
       earnedAt: new Date().toISOString(),
     }));
     await updateDoc(cardDoc.ref, { stickers: arrayUnion(...newStickers), userName });
+    allNew.push(...newStickers);
   }
+  return allNew;
 }
 
 // --- Sticker Card (flip reveal) ---
@@ -2299,7 +2435,7 @@ function StickerCard({ sticker, isRevealed, onReveal, size = 'md' }: {
           <span style={{ fontSize: 30, fontWeight: 900, color: '#94A3B8' }}>?</span>
           {!localRevealed && <span style={{ fontSize: 8, color: '#94A3B8', fontWeight: 600 }}>Tap to reveal</span>}
         </div>
-        {/* Back — Monopoly property card style */}
+        {/* Back — Animal card */}
         <div style={{
           position: 'absolute', inset: 0, backfaceVisibility: 'hidden',
           transform: 'rotateY(180deg)',
@@ -2308,14 +2444,14 @@ function StickerCard({ sticker, isRevealed, onReveal, size = 'md' }: {
           boxShadow: `0 4px 20px ${cfg.color}33`,
           display: 'flex', flexDirection: 'column', overflow: 'hidden',
         }}>
-          <div style={{ background: cfg.solid, height: '38%', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontSize: 22, fontWeight: 900, color: 'white', textShadow: '0 1px 3px rgba(0,0,0,0.4)' }}>
-              {sticker.tier === 'gold' ? '★' : sticker.tier[0].toUpperCase()}
-            </span>
+          <div style={{ background: cfg.solid, height: '60%', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <PixelAnimalSVG tier={sticker.tier} size={Math.round(dims.h * 0.52)} />
           </div>
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
-            <span style={{ fontSize: 9, fontWeight: 800, color: cfg.color, textAlign: 'center', lineHeight: 1.2 }}>{cfg.label}</span>
-            <span style={{ fontSize: 7, color: '#94A3B8' }}>{cfg.chance}</span>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, padding: '2px 4px' }}>
+            <span style={{ fontSize: size === 'sm' ? 7 : 8, fontWeight: 900, color: cfg.color, textAlign: 'center', lineHeight: 1.1 }}>
+              {cfg.animal}
+            </span>
+            <span style={{ fontSize: size === 'sm' ? 6 : 7, color: cfg.color, opacity: 0.65, fontWeight: 700 }}>{cfg.label}</span>
           </div>
         </div>
       </motion.div>
@@ -2407,27 +2543,25 @@ function StickerCollectionModal({ stickerCard, programme, onClose }: {
                   return (
                     <div key={tier} className="flex flex-col items-center gap-1">
                       <div
-                        className="w-full aspect-square rounded-2xl border-2 flex flex-col items-center justify-center transition-all"
+                        className="w-full aspect-square rounded-2xl border-2 flex flex-col items-center justify-center transition-all overflow-hidden"
                         style={lit
                           ? { background: cfg.bg, borderColor: cfg.border, boxShadow: `0 0 12px ${cfg.color}33` }
                           : { background: '#F1F5F9', borderColor: '#E2E8F0' }}
                       >
                         {lit ? (
-                          <span className="text-2xl font-black" style={{ color: cfg.color }}>
-                            {tier === 'gold' ? '★' : tier[0].toUpperCase()}
-                          </span>
+                          <PixelAnimalSVG tier={tier} size={36} />
                         ) : (
                           <span className="text-xl text-slate-300">?</span>
                         )}
                         {count > 1 && (
-                          <span className="text-[9px] font-bold" style={{ color: cfg.color }}>×{count}</span>
+                          <span className="text-[8px] font-bold mt-0.5" style={{ color: cfg.color }}>×{count}</span>
                         )}
                       </div>
-                      <span className="text-[9px] font-bold text-center leading-tight"
+                      <span className="text-[8px] font-bold text-center leading-tight"
                         style={{ color: lit ? cfg.color : '#94A3B8' }}>
-                        {cfg.label}
+                        {lit ? cfg.animal.split(' ')[0] : cfg.label}
                       </span>
-                      <span className="text-[8px] text-brand-navy/30">{cfg.chance}</span>
+                      <span className="text-[7px] text-brand-navy/30">{cfg.chance}</span>
                     </div>
                   );
                 })}
@@ -2515,6 +2649,230 @@ function StickerCollectionModal({ stickerCard, programme, onClose }: {
   );
 }
 
+
+// --- Pack Opening Modal ---
+
+const PACK_STARS = [
+  { x: 12, y: 8, r: 1.2, d: 1.8, delay: 0 }, { x: 78, y: 5, r: 0.8, d: 2.3, delay: 0.4 },
+  { x: 35, y: 12, r: 1.5, d: 1.5, delay: 0.9 }, { x: 91, y: 18, r: 1, d: 2.8, delay: 0.2 },
+  { x: 5, y: 25, r: 0.7, d: 2.1, delay: 1.1 }, { x: 65, y: 22, r: 1.3, d: 1.9, delay: 0.7 },
+  { x: 48, y: 7, r: 0.9, d: 2.5, delay: 0.3 }, { x: 82, y: 35, r: 1.1, d: 1.7, delay: 0.6 },
+  { x: 22, y: 38, r: 0.8, d: 2.2, delay: 1.3 }, { x: 55, y: 40, r: 1.4, d: 1.6, delay: 0.1 },
+  { x: 8, y: 48, r: 1, d: 2.4, delay: 0.8 }, { x: 96, y: 45, r: 0.7, d: 2, delay: 1.5 },
+  { x: 40, y: 52, r: 1.2, d: 1.8, delay: 0.5 }, { x: 71, y: 55, r: 0.9, d: 2.6, delay: 1 },
+  { x: 18, y: 60, r: 1.1, d: 2.1, delay: 0.2 }, { x: 88, y: 62, r: 0.8, d: 1.9, delay: 1.4 },
+  { x: 30, y: 68, r: 1.3, d: 2.3, delay: 0.7 }, { x: 60, y: 70, r: 0.7, d: 1.7, delay: 1.2 },
+  { x: 50, y: 15, r: 1, d: 2, delay: 0.6 }, { x: 75, y: 10, r: 1.2, d: 2.5, delay: 0.9 },
+];
+
+const VIBRATE_PATTERNS: Record<StickerTier, number | number[]> = {
+  brown:     40,
+  lightblue: [60, 30, 80],
+  red:       [80, 40, 100, 40, 80],
+  blue:      [120, 50, 120, 50, 180],
+  gold:      [200, 80, 200, 80, 200, 80, 400],
+};
+
+function PackOpeningModal({ stickers, onClose }: { stickers: CollectibleSticker[]; onClose: () => void }) {
+  type PackPhase = 'sealed' | 'opening' | 'reveal' | 'done';
+  const [phase, setPhase] = useState<PackPhase>('sealed');
+  const [localRevealedIds, setLocalRevealedIds] = useState<Set<string>>(new Set());
+
+  const vibrate = (pattern: number | number[]) => {
+    try { if ('vibrate' in navigator) (navigator as any).vibrate(pattern); } catch {}
+  };
+
+  const handlePackOpen = () => {
+    vibrate([60, 40, 60, 40, 120]);
+    setPhase('opening');
+    setTimeout(() => setPhase('reveal'), 800);
+  };
+
+  const handleCardReveal = (sticker: CollectibleSticker) => {
+    vibrate(VIBRATE_PATTERNS[sticker.tier]);
+    setLocalRevealedIds(prev => new Set([...prev, sticker.id]));
+  };
+
+  const allRevealed = stickers.length > 0 && stickers.every(s => localRevealedIds.has(s.id));
+
+  useEffect(() => {
+    if (allRevealed && phase === 'reveal') {
+      vibrate([50, 30, 50]);
+      const t = setTimeout(() => setPhase('done'), 650);
+      return () => clearTimeout(t);
+    }
+  }, [allRevealed, phase]);
+
+  const topCfg = stickers.length > 0
+    ? STICKER_CONFIG[stickers.reduce((best, s) =>
+        STICKER_ORDER.indexOf(s.tier) > STICKER_ORDER.indexOf(best.tier) ? s : best
+      ).tier]
+    : STICKER_CONFIG.gold;
+
+  const doneTitle = stickers.some(s => s.tier === 'gold') ? '🏆 Legendary!'
+    : stickers.some(s => s.tier === 'blue') ? '🔥 Epic pull!'
+    : stickers.some(s => s.tier === 'red') ? '✨ Rare find!'
+    : stickers.some(s => s.tier === 'lightblue') ? '👍 Nice pull!'
+    : '🎴 Card collected!';
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[300] flex flex-col items-center justify-center overflow-hidden"
+      style={{ background: 'linear-gradient(180deg, #0D0D2B 0%, #1A0730 60%, #0D0D2B 100%)' }}
+    >
+      {/* Stars */}
+      {PACK_STARS.map((star, i) => (
+        <motion.div key={i}
+          className="absolute rounded-full bg-white pointer-events-none"
+          style={{ width: star.r * 2, height: star.r * 2, left: `${star.x}%`, top: `${star.y}%` }}
+          animate={{ opacity: [0.15, 0.75, 0.15] }}
+          transition={{ duration: star.d, repeat: Infinity, delay: star.delay }}
+        />
+      ))}
+
+      <div className="flex flex-col items-center justify-center w-full max-w-sm px-6 relative z-10">
+
+        {phase === 'sealed' && (
+          <motion.div className="flex flex-col items-center gap-7"
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', damping: 15, stiffness: 200 }}
+          >
+            <p className="text-white/50 text-xs font-bold uppercase tracking-[0.2em]">
+              You earned a card pack!
+            </p>
+
+            <motion.div
+              className="relative cursor-pointer select-none"
+              onClick={handlePackOpen}
+              animate={{ rotate: [0, -4, 4, -4, 4, 0], y: [0, -6, 0] }}
+              transition={{ duration: 2.8, repeat: Infinity, repeatDelay: 1.2 }}
+              whileTap={{ scale: 0.88 }}
+            >
+              {/* Glow behind pack */}
+              <motion.div className="absolute inset-0 rounded-2xl pointer-events-none"
+                style={{ background: topCfg.solid, filter: 'blur(24px)', opacity: 0.55, transform: 'scale(1.2)' }}
+                animate={{ opacity: [0.35, 0.7, 0.35] }}
+                transition={{ duration: 1.6, repeat: Infinity }}
+              />
+              {/* Back cards in stack */}
+              {[2, 1].map(i => (
+                <div key={i} style={{
+                  position: 'absolute', width: 104, height: 140,
+                  background: 'linear-gradient(135deg, #2A2A50, #1A1A38)',
+                  borderRadius: 16, border: '1.5px solid rgba(255,255,255,0.12)',
+                  transform: `rotate(${(i - 1.5) * 6}deg) translateY(${i * 3}px)`,
+                }} />
+              ))}
+              {/* Top card */}
+              <div style={{
+                position: 'relative', width: 104, height: 140,
+                background: `linear-gradient(145deg, ${topCfg.solid}44, #2A1A4A)`,
+                borderRadius: 16, border: `2px solid ${topCfg.border}`,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
+                boxShadow: `0 12px 40px ${topCfg.color}66`,
+              }}>
+                <motion.div
+                  style={{
+                    position: 'absolute', inset: 0, borderRadius: 14, overflow: 'hidden',
+                    background: 'linear-gradient(120deg, transparent 25%, rgba(255,255,255,0.18) 50%, transparent 75%)',
+                    backgroundSize: '250% 100%',
+                  }}
+                  animate={{ backgroundPosition: ['-100% 0', '250% 0'] }}
+                  transition={{ duration: 1.6, repeat: Infinity, ease: 'linear' }}
+                />
+                <span style={{ fontSize: 40, filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.5))' }}>🎴</span>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)', fontWeight: 800, letterSpacing: '0.08em' }}>LINQ PACK</span>
+              </div>
+            </motion.div>
+
+            <motion.p className="text-white text-xl font-bold text-center"
+              animate={{ opacity: [0.55, 1, 0.55] }}
+              transition={{ duration: 1.4, repeat: Infinity }}
+            >Tap to open!</motion.p>
+            <p className="text-white/35 text-xs">{stickers.length} card{stickers.length !== 1 ? 's' : ''} inside</p>
+          </motion.div>
+        )}
+
+        {phase === 'opening' && (
+          <motion.div className="flex flex-col items-center"
+            initial={{ scale: 1, opacity: 1 }}
+            animate={{ scale: [1, 1.4, 1.1, 0], opacity: [1, 1, 1, 0] }}
+            transition={{ duration: 0.55, ease: 'easeIn' }}
+          >
+            <div style={{
+              width: 104, height: 140,
+              background: `linear-gradient(145deg, ${topCfg.solid}88, #2A1A4A)`,
+              borderRadius: 16, border: `2px solid ${topCfg.border}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <motion.span style={{ fontSize: 44 }}
+                animate={{ rotate: [0, 20, -20, 20, 0], scale: [1, 1.3, 1] }}
+                transition={{ duration: 0.5 }}
+              >✨</motion.span>
+            </div>
+          </motion.div>
+        )}
+
+        {(phase === 'reveal' || phase === 'done') && (
+          <motion.div className="flex flex-col items-center gap-6 w-full"
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: 'spring', damping: 22, stiffness: 220 }}
+          >
+            {phase === 'reveal' && !allRevealed && (
+              <motion.p className="text-white/55 text-xs font-bold uppercase tracking-widest"
+                animate={{ opacity: [0.4, 0.9, 0.4] }}
+                transition={{ duration: 1.6, repeat: Infinity }}
+              >Tap each card to reveal</motion.p>
+            )}
+
+            {phase === 'done' && (
+              <motion.p className="text-white text-2xl font-bold text-center"
+                initial={{ scale: 0.7, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: 'spring', damping: 12 }}
+              >{doneTitle}</motion.p>
+            )}
+
+            <div className="flex gap-4 flex-wrap justify-center">
+              {stickers.map(s => (
+                <motion.div key={s.id}
+                  initial={{ scale: 0, rotate: -15 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ type: 'spring', damping: 18, stiffness: 280, delay: stickers.indexOf(s) * 0.12 }}
+                >
+                  <StickerCard
+                    sticker={s}
+                    isRevealed={localRevealedIds.has(s.id)}
+                    onReveal={localRevealedIds.has(s.id) ? undefined : () => handleCardReveal(s)}
+                    size="md"
+                  />
+                </motion.div>
+              ))}
+            </div>
+
+            {phase === 'done' && (
+              <motion.button
+                className="mt-2 w-full py-4 rounded-2xl font-bold text-base"
+                style={{ background: 'rgba(255,255,255,0.14)', color: 'white', border: '1.5px solid rgba(255,255,255,0.28)' }}
+                onClick={onClose}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.35 }}
+                whileTap={{ scale: 0.96 }}
+              >Collect</motion.button>
+            )}
+          </motion.div>
+        )}
+
+      </div>
+    </motion.div>
+  );
+}
 
 // --- Admin Challenges Panel ---
 
@@ -3906,6 +4264,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const [openProgrammeId, setOpenProgrammeId] = useState<string | null>(null);
   const [showNFCStamp, setShowNFCStamp] = useState(false);
   const [autoNFCStoreId, setAutoNFCStoreId] = useState<string | null>(null);
+  const [pendingPack, setPendingPack] = useState<CollectibleSticker[] | null>(null);
 
   // Stamp celebration
   const [celebrationPages, setCelebrationPages] = useState<CelebrationPage[] | null>(null);
@@ -4668,7 +5027,18 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
             user={user}
             profile={profile}
             autoStoreId={autoNFCStoreId}
+            onPackReady={(stickers) => { setPendingPack(stickers); setShowNFCStamp(false); setAutoNFCStoreId(null); }}
             onClose={() => { setShowNFCStamp(false); setAutoNFCStoreId(null); }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Pack Opening Modal */}
+      <AnimatePresence>
+        {pendingPack && (
+          <PackOpeningModal
+            stickers={pendingPack}
+            onClose={() => setPendingPack(null)}
           />
         )}
       </AnimatePresence>
@@ -4802,11 +5172,11 @@ function BadgeNotifCard({ badge, queueCount, onDismiss }: { badge: AppBadge; que
 // --- NFC Stamp Modal ---
 
 async function processNFCStamp(storeId: string, user: FirebaseUser, profile: UserProfile | null,
-  onStatus: (state: 'processing' | 'success' | 'error', msg: string) => void) {
+  onStatus: (state: 'processing' | 'success' | 'error', msg: string) => void): Promise<CollectibleSticker[]> {
   onStatus('processing', 'Verifying stamp...');
   try {
     const storeSnap = await getDoc(doc(db, 'stores', storeId));
-    if (!storeSnap.exists()) { onStatus('error', 'Store not found. Please try again.'); return; }
+    if (!storeSnap.exists()) { onStatus('error', 'Store not found. Please try again.'); return []; }
 
     const store = { id: storeSnap.id, ...storeSnap.data() } as StoreProfile;
     const limit = store.stamps_required_for_reward || 10;
@@ -4822,7 +5192,7 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
         if (diffMins < 30) {
           const waitMins = Math.ceil(30 - diffMins);
           onStatus('error', `Already stamped at ${store.name} recently. Try again in ${waitMins} min.`);
-          return;
+          return [];
         }
       }
     }
@@ -4877,20 +5247,23 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
       }).catch(console.error);
     }
 
-    issueStickersToCard(user.uid, userName, 1).catch(console.error);
+    const newStickers = await issueStickersToCard(user.uid, userName, 1).catch(() => [] as CollectibleSticker[]);
     updateChallengeProgress(user.uid, store.id, 1).catch(console.error);
     onStatus('success', `Stamp added at ${store.name}!`);
+    return newStickers;
   } catch (err: any) {
     console.error('NFC stamp error:', err);
     onStatus('error', err?.message || 'Something went wrong. Please try again.');
+    return [];
   }
 }
 
-function NFCStampModal({ user, profile, onClose, autoStoreId }: {
+function NFCStampModal({ user, profile, onClose, autoStoreId, onPackReady }: {
   user: FirebaseUser;
   profile: UserProfile | null;
   onClose: () => void;
   autoStoreId?: string | null;
+  onPackReady?: (stickers: CollectibleSticker[]) => void;
 }) {
   type NFCState = 'ios' | 'scanning' | 'processing' | 'success' | 'error';
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -4908,7 +5281,9 @@ function NFCStampModal({ user, profile, onClose, autoStoreId }: {
   // Auto-process stamp from URL (iOS NFC banner / shared link)
   useEffect(() => {
     if (!autoStoreId) return;
-    processNFCStamp(autoStoreId, user, profile, onStatus);
+    processNFCStamp(autoStoreId, user, profile, onStatus).then(stickers => {
+      if (stickers.length > 0) onPackReady?.(stickers);
+    });
   }, []);
 
   // Android Web NFC scanning
@@ -4937,7 +5312,8 @@ function NFCStampModal({ user, profile, onClose, autoStoreId }: {
             }
           }
           if (!storeId) { onStatus('error', 'This tag is not a valid Linq store tag.'); return; }
-          await processNFCStamp(storeId, user, profile, onStatus);
+          const stickers = await processNFCStamp(storeId, user, profile, onStatus);
+          if (stickers.length > 0) onPackReady?.(stickers);
         };
         await reader.scan({ signal: controller.signal });
       } catch (err: any) {
