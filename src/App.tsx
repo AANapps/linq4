@@ -2818,47 +2818,198 @@ const VIBRATE_PATTERNS: Record<StickerTier, number | number[]> = {
   gold:      [200, 80, 200, 80, 200, 80, 400],
 };
 
+// Mystery card used inside PackOpeningModal — larger, dramatic reveal
+function MysteryRevealCard({ sticker, isRevealed, onReveal }: {
+  sticker: CollectibleSticker; isRevealed: boolean; onReveal?: () => void;
+}) {
+  const [localRevealed, setLocalRevealed] = useState(isRevealed);
+  const [flipping, setFlipping] = useState(false);
+  const [showFlash, setShowFlash] = useState(false);
+  const cfg = STICKER_CONFIG[sticker.tier];
+
+  useEffect(() => { if (isRevealed) setLocalRevealed(true); }, [isRevealed]);
+
+  const handleTap = () => {
+    if (localRevealed || !onReveal || flipping) return;
+    setFlipping(true);
+  };
+
+  return (
+    <motion.div
+      onClick={handleTap}
+      animate={flipping ? { scale: [1, 1.3, 0.88, 1.12, 1] } : { scale: 1 }}
+      transition={{ duration: 0.48 }}
+      onAnimationComplete={() => {
+        if (flipping) {
+          setFlipping(false);
+          setLocalRevealed(true);
+          setShowFlash(true);
+          setTimeout(() => setShowFlash(false), 380);
+          onReveal?.();
+        }
+      }}
+      style={{ width: 108, height: 148, perspective: '1000px', position: 'relative',
+        cursor: localRevealed ? 'default' : 'pointer', flexShrink: 0 }}
+    >
+      {/* Unrevealed glow pulse */}
+      {!localRevealed && (
+        <motion.div style={{
+          position: 'absolute', inset: -8, borderRadius: 28, zIndex: 0,
+          background: 'radial-gradient(circle, rgba(140,60,255,0.55) 0%, transparent 70%)',
+          filter: 'blur(8px)',
+        }}
+          animate={{ opacity: [0.3, 0.9, 0.3], scale: [0.92, 1.08, 0.92] }}
+          transition={{ duration: 1.5, repeat: Infinity }}
+        />
+      )}
+      {/* Tier glow after reveal */}
+      {localRevealed && (
+        <motion.div style={{
+          position: 'absolute', inset: -6, borderRadius: 26, zIndex: 0,
+          background: cfg.solid, filter: 'blur(16px)',
+        }}
+          initial={{ opacity: 0 }} animate={{ opacity: 0.45 }}
+          transition={{ duration: 0.4 }}
+        />
+      )}
+
+      <motion.div
+        animate={{ rotateY: localRevealed ? 180 : 0 }}
+        transition={{ duration: 0.68, ease: [0.23, 1, 0.32, 1] }}
+        style={{ transformStyle: 'preserve-3d', width: '100%', height: '100%', position: 'relative', zIndex: 1 }}
+      >
+        {/* Front — mystery */}
+        <div style={{
+          position: 'absolute', inset: 0, backfaceVisibility: 'hidden',
+          background: 'linear-gradient(148deg, #16103A, #2B1458)',
+          border: '2px solid rgba(160,100,255,0.4)', borderRadius: 20,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8,
+          overflow: 'hidden',
+        }}>
+          {/* Shimmer sweep */}
+          <motion.div style={{
+            position: 'absolute', inset: 0, borderRadius: 18,
+            background: 'linear-gradient(108deg, transparent 32%, rgba(255,255,255,0.13) 50%, transparent 68%)',
+            backgroundSize: '300% 100%',
+          }}
+            animate={{ backgroundPosition: ['-200% 0', '300% 0'] }}
+            transition={{ duration: 2.0, repeat: Infinity, ease: 'linear' }}
+          />
+          {/* Rotating rings */}
+          <motion.div style={{
+            position: 'absolute', width: 86, height: 86, borderRadius: '50%',
+            border: '1.5px solid rgba(170,110,255,0.28)',
+          }}
+            animate={{ rotate: 360 }}
+            transition={{ duration: 5, repeat: Infinity, ease: 'linear' }}
+          />
+          <motion.div style={{
+            position: 'absolute', width: 58, height: 58, borderRadius: '50%',
+            border: '1.5px solid rgba(200,150,255,0.22)',
+          }}
+            animate={{ rotate: -360 }}
+            transition={{ duration: 3.5, repeat: Infinity, ease: 'linear' }}
+          />
+          {/* Question mark */}
+          <motion.div style={{ fontSize: 54, lineHeight: 1, color: 'rgba(210,170,255,0.92)', fontWeight: 900,
+            filter: 'drop-shadow(0 0 18px rgba(190,110,255,0.85))', zIndex: 2 }}
+            animate={{ scale: [1, 1.12, 1], opacity: [0.75, 1, 0.75] }}
+            transition={{ duration: 1.4, repeat: Infinity }}
+          >?</motion.div>
+          <motion.div style={{ fontSize: 9, color: 'rgba(200,155,255,0.6)', fontWeight: 800,
+            letterSpacing: '0.16em', zIndex: 2 }}
+            animate={{ opacity: [0.35, 1, 0.35] }}
+            transition={{ duration: 1.1, repeat: Infinity, delay: 0.4 }}
+          >TAP TO REVEAL</motion.div>
+        </div>
+
+        {/* Back — animal reveal */}
+        <div style={{
+          position: 'absolute', inset: 0, backfaceVisibility: 'hidden',
+          transform: 'rotateY(180deg)', background: 'white',
+          border: `2px solid ${cfg.border}`, borderRadius: 20,
+          boxShadow: `0 8px 32px ${cfg.color}44`,
+          display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        }}>
+          {showFlash && (
+            <motion.div style={{ position: 'absolute', inset: 0, background: 'white', borderRadius: 18, zIndex: 10 }}
+              initial={{ opacity: 0.9 }} animate={{ opacity: 0 }} transition={{ duration: 0.38 }}
+            />
+          )}
+          <div style={{ background: cfg.solid, height: '60%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <PixelAnimalSVG tier={sticker.tier} size={78} />
+          </div>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, padding: '4px 8px' }}>
+            <span style={{ fontSize: 11, fontWeight: 900, color: cfg.color, textAlign: 'center' }}>{cfg.animal}</span>
+            <span style={{ fontSize: 9, fontWeight: 700, color: cfg.color, opacity: 0.65 }}>{cfg.label} · {cfg.chance}</span>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 function PackOpeningModal({ stickers, onClose }: { stickers: CollectibleSticker[]; onClose: () => void }) {
-  type PackPhase = 'sealed' | 'opening' | 'reveal' | 'done';
+  type PackPhase = 'sealed' | 'opening' | 'dealing' | 'reveal' | 'done';
   const [phase, setPhase] = useState<PackPhase>('sealed');
+  const [dealtCount, setDealtCount] = useState(0);
   const [localRevealedIds, setLocalRevealedIds] = useState<Set<string>>(new Set());
+  const [burstTier, setBurstTier] = useState<StickerTier | null>(null);
+  const [burstKey, setBurstKey] = useState(0);
+
+  const displayStickers = stickers.slice(0, 3);
 
   const vibrate = (pattern: number | number[]) => {
     try { if ('vibrate' in navigator) (navigator as any).vibrate(pattern); } catch {}
   };
 
   const handlePackOpen = () => {
-    vibrate([60, 40, 60, 40, 120]);
+    vibrate([100, 50, 100, 50, 200, 80, 300]);
     setPhase('opening');
-    setTimeout(() => setPhase('reveal'), 800);
+    setTimeout(() => {
+      setPhase('dealing');
+      const N = displayStickers.length;
+      for (let i = 0; i < N; i++) {
+        setTimeout(() => { setDealtCount(i + 1); vibrate(35); }, i * 400);
+      }
+      setTimeout(() => setPhase('reveal'), N * 400 + 520);
+    }, 680);
   };
 
   const handleCardReveal = (sticker: CollectibleSticker) => {
     vibrate(VIBRATE_PATTERNS[sticker.tier]);
     setLocalRevealedIds(prev => new Set([...prev, sticker.id]));
+    if (['red', 'blue', 'gold'].includes(sticker.tier)) {
+      setBurstTier(sticker.tier);
+      setBurstKey(k => k + 1);
+      setTimeout(() => setBurstTier(null), 900);
+    }
   };
 
-  const allRevealed = stickers.length > 0 && stickers.every(s => localRevealedIds.has(s.id));
+  const allRevealed = displayStickers.length > 0 && displayStickers.every(s => localRevealedIds.has(s.id));
 
   useEffect(() => {
     if (allRevealed && phase === 'reveal') {
-      vibrate([50, 30, 50]);
-      const t = setTimeout(() => setPhase('done'), 650);
+      const premium = displayStickers.some(s => ['gold', 'blue', 'red'].includes(s.tier));
+      vibrate(premium ? [150, 60, 150, 60, 300] : [80, 40, 120]);
+      const t = setTimeout(() => setPhase('done'), 850);
       return () => clearTimeout(t);
     }
   }, [allRevealed, phase]);
 
-  const topCfg = stickers.length > 0
-    ? STICKER_CONFIG[stickers.reduce((best, s) =>
-        STICKER_ORDER.indexOf(s.tier) > STICKER_ORDER.indexOf(best.tier) ? s : best
-      ).tier]
-    : STICKER_CONFIG.gold;
+  const topTier = displayStickers.length > 0
+    ? displayStickers.reduce((b, s) => STICKER_ORDER.indexOf(s.tier) > STICKER_ORDER.indexOf(b.tier) ? s : b).tier
+    : 'gold' as StickerTier;
+  const topCfg = STICKER_CONFIG[topTier];
 
-  const doneTitle = stickers.some(s => s.tier === 'gold') ? '🏆 Legendary!'
-    : stickers.some(s => s.tier === 'blue') ? '🔥 Epic pull!'
-    : stickers.some(s => s.tier === 'red') ? '✨ Rare find!'
-    : stickers.some(s => s.tier === 'lightblue') ? '👍 Nice pull!'
-    : '🎴 Card collected!';
+  const doneTitle = displayStickers.some(s => s.tier === 'gold') ? '🏆 Legendary!'
+    : displayStickers.some(s => s.tier === 'blue') ? '🔥 Epic pull!'
+    : displayStickers.some(s => s.tier === 'red') ? '✨ Rare find!'
+    : displayStickers.some(s => s.tier === 'lightblue') ? '👍 Uncommon!'
+    : '🎴 Cards collected!';
+
+  // Deterministic burst particles (no Math.random in render)
+  const burstAngles = [0,30,60,90,120,150,180,210,240,270,300,330];
 
   return (
     <motion.div
@@ -2866,135 +3017,205 @@ function PackOpeningModal({ stickers, onClose }: { stickers: CollectibleSticker[
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[300] flex flex-col items-center justify-center overflow-hidden"
-      style={{ background: 'linear-gradient(180deg, #0D0D2B 0%, #1A0730 60%, #0D0D2B 100%)' }}
+      style={{ background: 'linear-gradient(180deg, #080616 0%, #160530 55%, #080616 100%)' }}
     >
       {/* Stars */}
       {PACK_STARS.map((star, i) => (
-        <motion.div key={i}
-          className="absolute rounded-full bg-white pointer-events-none"
+        <motion.div key={i} className="absolute rounded-full bg-white pointer-events-none"
           style={{ width: star.r * 2, height: star.r * 2, left: `${star.x}%`, top: `${star.y}%` }}
-          animate={{ opacity: [0.15, 0.75, 0.15] }}
+          animate={{ opacity: [0.1, 0.6, 0.1] }}
           transition={{ duration: star.d, repeat: Infinity, delay: star.delay }}
         />
       ))}
 
+      {/* Rare+ burst overlay flash */}
+      <AnimatePresence>
+        {burstTier && (
+          <motion.div key={`flash-${burstKey}`}
+            className="absolute inset-0 pointer-events-none"
+            initial={{ opacity: 0.3 }} animate={{ opacity: 0 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.55 }}
+            style={{ background: STICKER_CONFIG[burstTier].solid }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Burst particles */}
+      <AnimatePresence>
+        {burstTier && burstAngles.map((angle, i) => {
+          const rad = (angle * Math.PI) / 180;
+          const dist = 70 + (i % 4) * 28;
+          return (
+            <motion.div key={`p-${burstKey}-${i}`}
+              className="absolute rounded-full pointer-events-none"
+              style={{ width: 7, height: 7, background: STICKER_CONFIG[burstTier].solid,
+                left: 'calc(50% - 3.5px)', top: 'calc(50% - 3.5px)', zIndex: 20 }}
+              initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+              animate={{ x: Math.cos(rad) * dist, y: Math.sin(rad) * dist, opacity: 0, scale: 0.2 }}
+              transition={{ duration: 0.65, ease: 'easeOut' }}
+            />
+          );
+        })}
+      </AnimatePresence>
+
       <div className="flex flex-col items-center justify-center w-full max-w-sm px-6 relative z-10">
 
+        {/* ── SEALED ── */}
         {phase === 'sealed' && (
-          <motion.div className="flex flex-col items-center gap-7"
-            initial={{ scale: 0.8, opacity: 0 }}
+          <motion.div className="flex flex-col items-center gap-8"
+            initial={{ scale: 0.75, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', damping: 15, stiffness: 200 }}
+            transition={{ type: 'spring', damping: 13, stiffness: 170 }}
           >
-            <p className="text-white/50 text-xs font-bold uppercase tracking-[0.2em]">
-              You earned a card pack!
-            </p>
+            <p className="text-white/45 text-[11px] font-bold uppercase tracking-[0.22em]">You earned a card pack!</p>
 
-            <motion.div
-              className="relative cursor-pointer select-none"
+            <motion.div className="relative cursor-pointer select-none"
               onClick={handlePackOpen}
-              animate={{ rotate: [0, -4, 4, -4, 4, 0], y: [0, -6, 0] }}
-              transition={{ duration: 2.8, repeat: Infinity, repeatDelay: 1.2 }}
-              whileTap={{ scale: 0.88 }}
+              animate={{ y: [0, -9, 0], rotate: [0, -3.5, 3.5, -3.5, 3.5, 0] }}
+              transition={{ duration: 3.2, repeat: Infinity, repeatDelay: 0.6 }}
+              whileTap={{ scale: 0.84, rotate: 0 }}
             >
-              {/* Glow behind pack */}
-              <motion.div className="absolute inset-0 rounded-2xl pointer-events-none"
-                style={{ background: topCfg.solid, filter: 'blur(24px)', opacity: 0.55, transform: 'scale(1.2)' }}
-                animate={{ opacity: [0.35, 0.7, 0.35] }}
-                transition={{ duration: 1.6, repeat: Infinity }}
+              {/* Halo glow */}
+              <motion.div style={{
+                position: 'absolute', inset: -20, borderRadius: 36,
+                background: topCfg.solid, filter: 'blur(32px)', zIndex: 0,
+              }}
+                animate={{ opacity: [0.25, 0.6, 0.25], scale: [0.88, 1.12, 0.88] }}
+                transition={{ duration: 2, repeat: Infinity }}
               />
-              {/* Back cards in stack */}
+              {/* Back cards */}
               {[2, 1].map(i => (
                 <div key={i} style={{
-                  position: 'absolute', width: 104, height: 140,
-                  background: 'linear-gradient(135deg, #2A2A50, #1A1A38)',
-                  borderRadius: 16, border: '1.5px solid rgba(255,255,255,0.12)',
-                  transform: `rotate(${(i - 1.5) * 6}deg) translateY(${i * 3}px)`,
+                  position: 'absolute', width: 118, height: 162,
+                  background: 'linear-gradient(148deg, #1E1244, #130B28)',
+                  borderRadius: 20, border: '1.5px solid rgba(255,255,255,0.09)',
+                  transform: `rotate(${(i - 1.5) * 9}deg) translateY(${i * 5}px)`, zIndex: i,
                 }} />
               ))}
               {/* Top card */}
               <div style={{
-                position: 'relative', width: 104, height: 140,
-                background: `linear-gradient(145deg, ${topCfg.solid}44, #2A1A4A)`,
-                borderRadius: 16, border: `2px solid ${topCfg.border}`,
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
-                boxShadow: `0 12px 40px ${topCfg.color}66`,
+                position: 'relative', width: 118, height: 162, zIndex: 3,
+                background: `linear-gradient(148deg, ${topCfg.solid}60, #200E48)`,
+                borderRadius: 20, border: `2px solid ${topCfg.border}`,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
+                boxShadow: `0 18px 56px ${topCfg.color}80, 0 0 0 1px ${topCfg.border}55`,
+                overflow: 'hidden',
               }}>
-                <motion.div
-                  style={{
-                    position: 'absolute', inset: 0, borderRadius: 14, overflow: 'hidden',
-                    background: 'linear-gradient(120deg, transparent 25%, rgba(255,255,255,0.18) 50%, transparent 75%)',
-                    backgroundSize: '250% 100%',
-                  }}
-                  animate={{ backgroundPosition: ['-100% 0', '250% 0'] }}
-                  transition={{ duration: 1.6, repeat: Infinity, ease: 'linear' }}
+                <motion.div style={{
+                  position: 'absolute', inset: 0,
+                  background: 'linear-gradient(118deg, transparent 28%, rgba(255,255,255,0.22) 50%, transparent 72%)',
+                  backgroundSize: '300% 100%',
+                }}
+                  animate={{ backgroundPosition: ['-200% 0', '300% 0'] }}
+                  transition={{ duration: 1.9, repeat: Infinity, ease: 'linear' }}
                 />
-                <span style={{ fontSize: 40, filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.5))' }}>🎴</span>
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)', fontWeight: 800, letterSpacing: '0.08em' }}>LINQ PACK</span>
+                <span style={{ fontSize: 52, filter: 'drop-shadow(0 2px 14px rgba(0,0,0,0.65))' }}>🎴</span>
+                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.72)', fontWeight: 800, letterSpacing: '0.12em' }}>LINQ PACK</span>
+                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.38)' }}>{displayStickers.length} cards inside</span>
               </div>
             </motion.div>
 
-            <motion.p className="text-white text-xl font-bold text-center"
-              animate={{ opacity: [0.55, 1, 0.55] }}
-              transition={{ duration: 1.4, repeat: Infinity }}
+            <motion.p className="text-white text-2xl font-bold tracking-tight"
+              animate={{ opacity: [0.5, 1, 0.5], scale: [0.97, 1.03, 0.97] }}
+              transition={{ duration: 1.25, repeat: Infinity }}
             >Tap to open!</motion.p>
-            <p className="text-white/35 text-xs">{stickers.length} card{stickers.length !== 1 ? 's' : ''} inside</p>
           </motion.div>
         )}
 
+        {/* ── OPENING ── */}
         {phase === 'opening' && (
-          <motion.div className="flex flex-col items-center"
-            initial={{ scale: 1, opacity: 1 }}
-            animate={{ scale: [1, 1.4, 1.1, 0], opacity: [1, 1, 1, 0] }}
-            transition={{ duration: 0.55, ease: 'easeIn' }}
+          <motion.div className="flex items-center justify-center"
+            initial={{ scale: 1, rotate: 0 }}
+            animate={{ scale: [1, 1.18, 1.08, 1.28, 0.6, 1.5, 0], rotate: [0, -10, 12, -16, 14, 0], opacity: [1,1,1,1,1,1,0] }}
+            transition={{ duration: 0.62, ease: 'easeIn' }}
           >
             <div style={{
-              width: 104, height: 140,
-              background: `linear-gradient(145deg, ${topCfg.solid}88, #2A1A4A)`,
-              borderRadius: 16, border: `2px solid ${topCfg.border}`,
+              width: 118, height: 162,
+              background: `linear-gradient(148deg, ${topCfg.solid}99, #200E48)`,
+              borderRadius: 20, border: `2px solid ${topCfg.border}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: `0 0 80px ${topCfg.solid}`,
             }}>
-              <motion.span style={{ fontSize: 44 }}
-                animate={{ rotate: [0, 20, -20, 20, 0], scale: [1, 1.3, 1] }}
-                transition={{ duration: 0.5 }}
+              <motion.span style={{ fontSize: 56 }}
+                animate={{ rotate: [0, 360], scale: [1, 1.6, 1] }}
+                transition={{ duration: 0.6 }}
               >✨</motion.span>
             </div>
           </motion.div>
         )}
 
+        {/* ── DEALING ── */}
+        {phase === 'dealing' && (
+          <div className="flex flex-col items-center gap-5">
+            <motion.p className="text-white/40 text-[11px] font-bold uppercase tracking-[0.2em]"
+              animate={{ opacity: [0.3, 0.8, 0.3] }} transition={{ duration: 1.2, repeat: Infinity }}
+            >Dealing your cards…</motion.p>
+            <div className="flex gap-5 items-end justify-center">
+              {displayStickers.map((s, i) => (
+                <AnimatePresence key={s.id}>
+                  {dealtCount > i && (
+                    <motion.div
+                      initial={{ y: -160, scale: 0.3, rotate: -25, opacity: 0 }}
+                      animate={{ y: 0, scale: 1, rotate: (i - 1) * 4, opacity: 1 }}
+                      transition={{ type: 'spring', damping: 16, stiffness: 260 }}
+                      style={{
+                        width: 90, height: 124,
+                        background: 'linear-gradient(148deg, #16103A, #2B1458)',
+                        border: '2px solid rgba(160,100,255,0.38)', borderRadius: 18,
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
+                        boxShadow: '0 8px 28px rgba(100,40,200,0.4)',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <motion.div style={{
+                        position: 'absolute', inset: 0, borderRadius: 16,
+                        background: 'linear-gradient(108deg, transparent 32%, rgba(255,255,255,0.1) 50%, transparent 68%)',
+                        backgroundSize: '300% 100%',
+                      }}
+                        animate={{ backgroundPosition: ['-200% 0', '300% 0'] }}
+                        transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                      />
+                      <motion.div style={{ fontSize: 38, filter: 'drop-shadow(0 0 10px rgba(190,110,255,0.9))', lineHeight: 1 }}
+                        animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 1.3, repeat: Infinity }}
+                      >?</motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── REVEAL + DONE ── */}
         {(phase === 'reveal' || phase === 'done') && (
           <motion.div className="flex flex-col items-center gap-6 w-full"
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ type: 'spring', damping: 22, stiffness: 220 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.28 }}
           >
             {phase === 'reveal' && !allRevealed && (
-              <motion.p className="text-white/55 text-xs font-bold uppercase tracking-widest"
-                animate={{ opacity: [0.4, 0.9, 0.4] }}
-                transition={{ duration: 1.6, repeat: Infinity }}
-              >Tap each card to reveal</motion.p>
+              <motion.p className="text-white/50 text-[11px] font-bold uppercase tracking-[0.2em]"
+                animate={{ opacity: [0.3, 0.85, 0.3] }} transition={{ duration: 1.4, repeat: Infinity }}
+              >Tap a mystery card to reveal</motion.p>
             )}
 
             {phase === 'done' && (
-              <motion.p className="text-white text-2xl font-bold text-center"
-                initial={{ scale: 0.7, opacity: 0 }}
+              <motion.p className="text-white text-3xl font-bold text-center"
+                initial={{ scale: 0.55, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: 'spring', damping: 12 }}
+                transition={{ type: 'spring', damping: 9, stiffness: 200 }}
               >{doneTitle}</motion.p>
             )}
 
-            <div className="flex gap-4 flex-wrap justify-center">
-              {stickers.map(s => (
+            <div className="flex gap-4 justify-center items-end">
+              {displayStickers.map((s, i) => (
                 <motion.div key={s.id}
-                  initial={{ scale: 0, rotate: -15 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  transition={{ type: 'spring', damping: 18, stiffness: 280, delay: stickers.indexOf(s) * 0.12 }}
+                  initial={{ scale: 0, y: 40, rotate: (i - 1) * 8 }}
+                  animate={{ scale: 1, y: 0, rotate: (i - 1) * 4 }}
+                  transition={{ type: 'spring', damping: 16, stiffness: 240, delay: i * 0.08 }}
                 >
-                  <StickerCard
+                  <MysteryRevealCard
                     sticker={s}
                     isRevealed={localRevealedIds.has(s.id)}
-                    onReveal={localRevealedIds.has(s.id) ? undefined : () => handleCardReveal(s)}
-                    size="md"
+                    onReveal={() => handleCardReveal(s)}
                   />
                 </motion.div>
               ))}
@@ -3003,11 +3224,12 @@ function PackOpeningModal({ stickers, onClose }: { stickers: CollectibleSticker[
             {phase === 'done' && (
               <motion.button
                 className="mt-2 w-full py-4 rounded-2xl font-bold text-base"
-                style={{ background: 'rgba(255,255,255,0.14)', color: 'white', border: '1.5px solid rgba(255,255,255,0.28)' }}
+                style={{ background: 'rgba(255,255,255,0.11)', color: 'white',
+                  border: '1.5px solid rgba(255,255,255,0.22)', backdropFilter: 'blur(8px)' }}
                 onClick={onClose}
-                initial={{ opacity: 0, y: 12 }}
+                initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.35 }}
+                transition={{ delay: 0.55 }}
                 whileTap={{ scale: 0.96 }}
               >Collect</motion.button>
             )}
