@@ -5207,28 +5207,33 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                     const isComplete = progressPct >= 100;
                     const isHighlighted = highlightedChallengeId === c.id;
                     return (
-                      <div key={c.id} id={`challenge-${c.id}`} className={cn("bg-white rounded-[2rem] border shadow-sm overflow-hidden transition-all duration-500", isHighlighted ? 'border-brand-gold ring-2 ring-brand-gold/30' : 'border-black/5')}>
-                        <div className="p-5 space-y-3">
-                          <div className="flex items-start justify-between gap-3">
+                      <div key={c.id} id={`challenge-${c.id}`} className={cn("rounded-[2rem] shadow-lg overflow-hidden transition-all duration-500", isHighlighted ? 'ring-2 ring-brand-gold/60' : '')}>
+                        {/* Gradient header */}
+                        <div className="gradient-logo-blue px-5 py-4 relative overflow-hidden">
+                          <span className="shine-ray" aria-hidden="true" />
+                          <div className="flex items-start justify-between gap-3 relative z-10">
                             <div className="flex-1 min-w-0">
-                              <p className="font-bold text-brand-navy text-base leading-tight">{c.title}</p>
-                              {c.description && <p className="text-xs text-brand-navy/50 mt-1">{c.description}</p>}
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-white/50 mb-0.5">Challenge</p>
+                              <p className="font-bold text-white text-base leading-tight">{c.title}</p>
+                              {c.description && <p className="text-xs text-white/60 mt-1">{c.description}</p>}
                             </div>
-                            <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center shrink-0", isComplete ? 'bg-green-100' : 'bg-brand-gold/10')}>
-                              <Trophy size={18} className={isComplete ? 'text-green-500' : 'text-brand-gold'} />
+                            <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 mt-0.5", isComplete ? 'bg-green-400/30' : 'bg-white/15')}>
+                              <Trophy size={18} className={isComplete ? 'text-green-300' : 'text-white'} />
                             </div>
                           </div>
-
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-[10px] font-bold bg-brand-gold/10 text-brand-gold px-2.5 py-1 rounded-full">
+                          <div className="flex items-center gap-2 flex-wrap mt-2.5 relative z-10">
+                            <span className="text-[10px] font-bold bg-white/20 text-white px-2.5 py-1 rounded-full">
                               🎁 {c.reward}
                             </span>
                             {c.endsAt && (
-                              <span className="text-[10px] font-bold bg-brand-navy/5 text-brand-navy/50 px-2.5 py-1 rounded-full flex items-center gap-1">
+                              <span className="text-[10px] font-bold bg-white/10 text-white/70 px-2.5 py-1 rounded-full flex items-center gap-1">
                                 <Clock size={9} /> <CountdownTimer endsAt={c.endsAt} />
                               </span>
                             )}
                           </div>
+                        </div>
+                        {/* White body */}
+                        <div className="bg-white px-5 py-4 space-y-3">
 
                           {c.vendorIds?.length ? (
                             <div>
