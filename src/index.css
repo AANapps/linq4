@@ -44,6 +44,34 @@
   background: linear-gradient(135deg, #1D4ED8 0%, #2563EB 50%, #3B82F6 100%);
 }
 
+.gradient-logo-blue {
+  background: linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 40%, #2563eb 70%, #3b82f6 100%);
+}
+
+@keyframes shine-sweep {
+  0%   { transform: translateX(-120%) skewX(-20deg); opacity: 0; }
+  8%   { opacity: 1; }
+  40%  { transform: translateX(220%) skewX(-20deg); opacity: 0.6; }
+  41%  { opacity: 0; }
+  100% { transform: translateX(220%) skewX(-20deg); opacity: 0; }
+}
+
+.shine-ray {
+  position: absolute;
+  top: -30%;
+  left: 0;
+  width: 45%;
+  height: 160%;
+  background: linear-gradient(
+    105deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.35) 50%,
+    transparent 80%
+  );
+  animation: shine-sweep 3.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
 .gradient-card {
   background: linear-gradient(135deg, rgba(29, 78, 216, 0.95) 0%, rgba(37, 99, 235, 0.98) 100%);
 }

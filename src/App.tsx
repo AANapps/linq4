@@ -5059,9 +5059,10 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                       {/* Tappable header — opens popup modal */}
                       <button
                         onClick={() => setOpenProgrammeId(prog.id)}
-                        className="w-full gradient-red px-5 py-4 text-left active:opacity-90 transition-opacity"
+                        className="w-full gradient-logo-blue px-5 py-4 text-left active:opacity-90 transition-opacity relative overflow-hidden"
                       >
-                        <div className="flex items-start justify-between gap-2">
+                        <span className="shine-ray" aria-hidden="true" />
+                        <div className="flex items-start justify-between gap-2 relative z-10">
                           <div className="flex-1 min-w-0">
                             <p className="text-[10px] font-bold uppercase tracking-widest text-white/50">Monopoly Challenge</p>
                             <h3 className="font-display text-lg font-bold text-white leading-tight">{prog.title}</h3>
@@ -5076,7 +5077,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                           </div>
                         </div>
                         {prog.endsAt && (
-                          <div className="mt-2 flex items-center gap-1.5 text-white/60 text-[10px] font-bold">
+                          <div className="mt-2 flex items-center gap-1.5 text-white/60 text-[10px] font-bold relative z-10">
                             <Clock size={10} />
                             <CountdownTimer endsAt={prog.endsAt} />
                           </div>
