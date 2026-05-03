@@ -5037,29 +5037,33 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                       </button>
 
                       {joined ? (
-                        /* Joined — emoji property strip */
+                        /* Joined — coloured rank tiles */
                         <div className="bg-white px-4 py-4">
                           <div className="flex gap-1.5 mb-3">
                             {STICKER_ORDER.map(tier => {
                               const cfg = STICKER_CONFIG[tier];
                               const sets = tierSetsCompleted(myRevealedCards, tier);
                               const firstFound = myRevealedCards.find((s: CollectibleSticker) => s.tier === tier);
+                              const idx = STICKER_ORDER.indexOf(tier);
                               return (
-                                <div key={tier} className="flex-1 flex flex-col items-center gap-1">
-                                  <div className="w-full rounded-t-xl rounded-b-sm transition-all relative overflow-hidden"
-                                    style={{ height: 30, background: sets > 0 ? cfg.solid : '#E2E8F0', boxShadow: sets > 0 ? `0 2px 8px ${cfg.color}44` : 'none' }}>
-                                    {sets > 0 && <span className="card-shine-ray" style={{ animationDelay: `${STICKER_ORDER.indexOf(tier) * 0.45}s` }} />}
+                                <div key={tier} className="flex-1 flex flex-col items-center gap-0.5">
+                                  {/* Rank colour band */}
+                                  <div className="w-full rounded-t-xl rounded-b-sm relative overflow-hidden"
+                                    style={{ height: 14, background: cfg.solid }}>
+                                    <span className="card-shine-ray" style={{ animationDelay: `${idx * 0.45}s` }} />
                                   </div>
-                                  <div className="w-full rounded-b-xl flex flex-col items-center justify-center py-1.5 border-x border-b relative overflow-hidden"
-                                    style={{ borderColor: sets > 0 ? cfg.border : '#E2E8F0', background: sets > 0 ? cfg.bg : '#F8FAFC', minHeight: 40 }}>
-                                    <span style={{ fontSize: 18, lineHeight: 1, position: 'relative', zIndex: 1 }}>
+                                  {/* Card body — always rank-coloured */}
+                                  <div className="w-full rounded-b-xl flex flex-col items-center justify-center py-2 relative overflow-hidden"
+                                    style={{ background: cfg.solid, opacity: sets > 0 ? 1 : 0.35, minHeight: 52, boxShadow: sets > 0 ? `0 3px 10px ${cfg.color}55` : 'none' }}>
+                                    <span style={{ fontSize: 20, lineHeight: 1, position: 'relative', zIndex: 1 }}>
                                       {firstFound ? cfg.variants[firstFound.variant ?? 0]?.emoji ?? '?' : '?'}
                                     </span>
-                                    <span className="text-[7px] font-black mt-0.5 relative z-10" style={{ color: sets > 0 ? cfg.color : '#CBD5E1' }}>
+                                    <span className="text-[7px] font-black mt-1 relative z-10 text-white">
                                       {sets}/3
                                     </span>
-                                    {sets > 0 && <span className="card-shine-ray" style={{ animationDelay: `${STICKER_ORDER.indexOf(tier) * 0.45 + 0.2}s` }} />}
+                                    {sets > 0 && <span className="card-shine-ray" style={{ animationDelay: `${idx * 0.45 + 0.25}s` }} />}
                                   </div>
+                                  <span className="text-[7px] font-black text-center leading-tight mt-0.5" style={{ color: cfg.color }}>{cfg.label}</span>
                                 </div>
                               );
                             })}
@@ -5082,11 +5086,13 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                           </div>
                         </div>
                       ) : (
-                        /* Not joined */
-                        <div className="bg-white px-5 py-4 flex items-center justify-between gap-3">
-                          <div className="flex gap-1">
+                        /* Not joined — show rank colours as preview */
+                        <div className="bg-white px-4 py-4 flex items-center justify-between gap-3">
+                          <div className="flex gap-1.5 flex-1">
                             {STICKER_ORDER.map(tier => (
-                              <div key={tier} className="w-5 h-5 rounded-md" style={{ background: STICKER_CONFIG[tier].solid, opacity: 0.4 }} />
+                              <div key={tier} className="flex-1 h-10 rounded-xl relative overflow-hidden" style={{ background: STICKER_CONFIG[tier].solid, opacity: 0.5 }}>
+                                <span className="card-shine-ray" style={{ animationDelay: `${STICKER_ORDER.indexOf(tier) * 0.4}s` }} />
+                              </div>
                             ))}
                           </div>
                           <button
