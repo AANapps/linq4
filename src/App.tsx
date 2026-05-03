@@ -2493,14 +2493,14 @@ function StickerCollectionModal({ stickerCard, programme, onClose }: {
                 const sets = tierSetsCompleted(revealed, tier);
                 const tierDone = sets >= 3;
                 return (
-                  <div key={tier} className="rounded-2xl p-3 border"
-                    style={{ background: tierDone ? cfg.bg : '#F8FAFC', borderColor: tierDone ? cfg.border : '#E2E8F0' }}>
-                    <div className="flex items-center justify-between mb-2">
+                  <div key={tier} className="rounded-2xl p-3 overflow-hidden relative"
+                    style={{ background: cfg.solid, boxShadow: `0 4px 18px ${cfg.color}55` }}>
+                    <div className="flex items-center justify-between mb-2.5">
                       <div>
-                        <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: cfg.color }}>{cfg.theme}</span>
-                        <span className="text-[9px] text-brand-navy/40 ml-1.5">· {cfg.label} · {cfg.chance}</span>
+                        <span className="text-[10px] font-black uppercase tracking-wider text-white">{cfg.theme}</span>
+                        <span className="text-[9px] text-white/60 ml-1.5">· {cfg.label} · {cfg.chance}</span>
                       </div>
-                      <span className="text-[10px] font-black" style={{ color: tierDone ? cfg.color : '#94A3B8' }}>
+                      <span className="text-[10px] font-black text-white/90">
                         {sets}/3 sets{tierDone ? ' ✓' : ''}
                       </span>
                     </div>
@@ -2510,14 +2510,15 @@ function StickerCollectionModal({ stickerCard, programme, onClose }: {
                         const has3 = count >= 3;
                         return (
                           <div key={vi} className="flex-1 flex flex-col items-center gap-1">
-                            <div className="w-full aspect-square rounded-xl border-2 flex flex-col items-center justify-center"
+                            <div className="w-full aspect-square rounded-xl border-2 flex flex-col items-center justify-center relative overflow-hidden"
                               style={count > 0
-                                ? { background: cfg.bg, borderColor: cfg.border, boxShadow: `0 0 8px ${cfg.color}22` }
-                                : { background: '#F1F5F9', borderColor: '#E2E8F0' }}>
-                              <span style={{ fontSize: 22, lineHeight: 1 }}>{count > 0 ? v.emoji : '?'}</span>
-                              {count > 0 && <span className="text-[7px] font-bold mt-0.5" style={{ color: has3 ? cfg.color : '#94A3B8' }}>×{count}{has3 ? '✓' : ''}</span>}
+                                ? { background: 'white', borderColor: 'rgba(255,255,255,0.6)', boxShadow: '0 2px 10px rgba(0,0,0,0.15)' }
+                                : { background: 'rgba(0,0,0,0.2)', borderColor: 'rgba(255,255,255,0.15)' }}>
+                              <span style={{ fontSize: 22, lineHeight: 1, position: 'relative', zIndex: 1 }}>{count > 0 ? v.emoji : '?'}</span>
+                              {count > 0 && <span className="text-[7px] font-bold mt-0.5 relative z-10" style={{ color: has3 ? cfg.color : '#94A3B8' }}>×{count}{has3 ? '✓' : ''}</span>}
+                              {count > 0 && <span className="card-shine-ray" style={{ animationDelay: `${vi * 0.7}s` }} />}
                             </div>
-                            <span className="text-[7px] font-bold text-center leading-tight" style={{ color: count > 0 ? cfg.color : '#CBD5E1' }}>
+                            <span className="text-[7px] font-bold text-center leading-tight" style={{ color: count > 0 ? 'white' : 'rgba(255,255,255,0.35)' }}>
                               {count > 0 ? v.name : '???'}
                             </span>
                           </div>

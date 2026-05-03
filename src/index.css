@@ -56,6 +56,30 @@
   100% { transform: translateX(220%) skewX(-20deg); opacity: 0; }
 }
 
+@keyframes card-shine-sweep {
+  0%   { transform: translateX(-150%) skewX(-15deg); opacity: 0; }
+  10%  { opacity: 0.9; }
+  35%  { transform: translateX(250%) skewX(-15deg); opacity: 0.7; }
+  36%  { opacity: 0; }
+  100% { transform: translateX(250%) skewX(-15deg); opacity: 0; }
+}
+
+.card-shine-ray {
+  position: absolute;
+  top: -20%;
+  left: 0;
+  width: 40%;
+  height: 140%;
+  background: linear-gradient(
+    105deg,
+    transparent 15%,
+    rgba(255, 255, 255, 0.75) 50%,
+    transparent 85%
+  );
+  animation: card-shine-sweep 2.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
 .shine-ray {
   position: absolute;
   top: -30%;
