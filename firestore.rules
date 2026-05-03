@@ -179,6 +179,13 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    match /user_stickers/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow delete: if isAdmin();
+    }
+
     match /badges/{badgeId} {
       allow read: if isAuthenticated();
       allow create, update, delete: if isAdmin();
