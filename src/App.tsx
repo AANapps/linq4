@@ -441,109 +441,114 @@ function rollStickerTier(chances?: { brown: number; lightblue: number; red: numb
 // --- Animal pixel art ---
 
 const ANIMAL_DATA: Record<StickerTier, { palette: Record<string, string>; pixels: readonly string[] }> = {
+  // Bush Turkey — dark round body, red bare head with orange wattle, facing right
   brown: {
-    palette: { K: '#1A0E06', N: '#5C3018', n: '#8B5030', R: '#CC3300', O: '#E07030' },
+    palette: { K: '#1A0C06', N: '#5C3018', R: '#CC3300', O: '#E07030' },
     pixels: [
       '................',
       '.......RRR......',
       '......ROOR......',
-      '......RRRR......',
-      '......KRKK......',
-      '.....KKKKK......',
-      '....KKKKKKK.....',
-      '...KKKKKKKKK....',
-      '..KKKKKKKKKKK...',
-      '..KKKKKKKKKKK...',
-      '...KKKKKKKKKK...',
-      '....KKKKKKKKK...',
-      '.....KKKKKKK....',
-      '.....KKKKKK.....',
-      '......OOOO......',
-      '......O..O......',
+      '.......RRRR.....',
+      '.......KRRN.....',
+      '......KKKKN.....',
+      '.....KKKKKNNN...',
+      '....KKKKKKKNNN..',
+      '...KKKKKKKKNNN..',
+      '...KKKKKKKKNNN..',
+      '...KKKKKKKKNN...',
+      '....KKKKKKNN....',
+      '.....KKKKNN.....',
+      '......KNOOO.....',
+      '......OO.OO.....',
+      '......O...O.....',
     ],
   },
+  // Water Dragon — green lizard with dorsal crest, blue throat, facing right with tail
   lightblue: {
-    palette: { G: '#3A8A40', g: '#1F5A25', B: '#4488CC', e: '#1A0A00' },
+    palette: { G: '#3A8A40', g: '#1F5A25', b: '#4488CC', e: '#1A0A00' },
     pixels: [
-      '....g...........',
-      '....GG..........',
-      '...GGG..........',
-      '..GGGGe.........',
-      '..GBBGGgg.......',
-      '.GGBBGGGGgg.....',
-      'GGGGGGGGGGgg....',
-      '.GGGGGGGGGGGg...',
-      '..GGGGGGGGGGGg..',
-      '...GGGGGGGGGGg..',
-      '....GGGGGGGGg...',
-      '.....GGGGGGg....',
-      '......GGGGg.....',
-      '.......GGg......',
-      '........g.......',
+      '.g..............',
+      '.gGG............',
+      'gGGGe...........',
+      'gGGbbGGg........',
+      'GGGbbGGGGg......',
+      'G..GGGGGGGGg....',
+      '....G.GGGGGGGg..',
+      '....G..GGGGGGGg.',
+      '....GG..GGGGGg..',
+      '.....GG..GGGg...',
+      '......GGG.GGg...',
+      '........G..Gg...',
+      '..........G.g...',
+      '............g...',
+      '................',
       '................',
     ],
   },
+  // Lorikeet — red head, orange beak, yellow chest, blue belly, green wings
   red: {
     palette: { R: '#CC2200', O: '#E07800', G: '#2A8A30', B: '#2244BB', Y: '#EEC820', e: '#1A0A00' },
     pixels: [
       '....RRRR........',
-      '...RReRRR.......',
-      '...RRRRRRO......',
-      '....RRROO.......',
-      '....RROO........',
-      '....YYYY........',
-      '...YYYYYYYY.....',
-      '..BBBBBBBBB.....',
-      '.BBGGGGGGGGG....',
-      'BGGGGGGGGGGGG...',
+      '...RRRRR........',
+      '..RReRRRRO......',
+      '..RRRRROO.......',
+      '...RROO.........',
+      '....YYYYYY......',
+      '...YYBBBBYYY....',
+      '..GBBBBBBBBG....',
+      '.GGBBGGGGGGG....',
+      'GGGGGGGGGGGGG...',
       'GGGGGGGGGGGGGG..',
-      '.GGGGGGGGGGGGG..',
+      '.GGGGGGGGGGGG...',
       '..GGGGGGGGGGG...',
-      '....OO.OO.......',
-      '....O...O.......',
+      '....OO..OO......',
+      '....O....O......',
       '................',
     ],
   },
+  // Kangaroo — upright pose, large back legs, long tail left, small ears top-right
   blue: {
     palette: { S: '#9A8A76', s: '#C4B49A', e: '#1A0A00' },
     pixels: [
-      '...ss...........',
-      '....SS..........',
-      '....SeS.........',
-      '...SSSS.........',
-      '...SSSSS........',
-      '..SSSSSSS.......',
-      '..SSSSSSSS......',
-      '.SSSSSSSSSS.....',
-      'SSSSSSSSSSS.....',
-      '.SSSSSSSSSS.SSSS',
-      '..SSSSSS...SSSSS',
-      '...SSSS...SSSSS.',
-      '....SSS..SSSSS..',
-      '....SS..SSSSS...',
-      '....S..SSSS.....',
-      '................',
+      '......ss........',
+      '......SS........',
+      '.....SSSS.......',
+      '.....SeSS.......',
+      '.....SSSS.......',
+      '....SSSSSS......',
+      '...SSSSSSSS.....',
+      '...SSSSSSSS.....',
+      '..SSSSSSSSSS....',
+      '..SSSSSSSSSS....',
+      '..SSSSSSSSSS....',
+      '.SS.SSSSSSS.....',
+      'SS..SSSSSS......',
+      'SS...SSSSS......',
+      'SSS...SSSS......',
+      'SSS....SSSS.....',
     ],
   },
+  // Bin Chicken (White Ibis) — iconic long curved downward beak, black head, white body
   gold: {
-    palette: { K: '#1A1A2E', W: '#F5F5F5', w: '#DEDEDE', e: '#CC2222', O: '#D07830' },
+    palette: { K: '#1A1A2E', W: '#F5F5F5', e: '#CC2222', O: '#D07830' },
     pixels: [
-      '.....KK.........',
-      '....KKeK........',
-      '....KKKK....KK..',
-      '....KKKKK..KK...',
-      '.....KKKK.KK....',
-      '.....KKKK.K.....',
-      '......KKKK......',
-      '.....KWWW.......',
-      '....KWWWWWW.....',
-      '...KWWWWWWWWW...',
-      '..WWWWWWWWWWWW..',
-      '..WWWWWWWWWWWW..',
-      '..WWWWWWWWWWWW..',
-      '.KKWWWWWWWWWWKK.',
-      '...OOO....OOO...',
-      '...O........O...',
+      '........KKK.....',
+      '........KKKKK...',
+      '.......KKKKKK...',
+      '......KKeKKKKK..',
+      '......KKKKK.KKK.',
+      '.......KKKK..KK.',
+      '.......KKKK..KK.',
+      '.......KWWWW....',
+      '......WWWWWWWW..',
+      '.....WWWWWWWWWWW',
+      '....WWWWWWWWWWW.',
+      '....WWWWWWWWWWW.',
+      '....WWWWWWWWWWW.',
+      '...KKWWWWWWWWKK.',
+      '.....OOO.OOO....',
+      '.....O...O......',
     ],
   },
 };
@@ -2383,6 +2388,24 @@ async function issueStickersToCard(customerUid: string, userName: string, qty: n
   return allNew;
 }
 
+// --- Global user sticker collection (every stamp always issues 3 stickers here) ---
+
+async function issueUserStickers(uid: string, userName: string, qty: number): Promise<CollectibleSticker[]> {
+  const newStickers: CollectibleSticker[] = Array.from({ length: qty }, () => ({
+    id: Math.random().toString(36).slice(2),
+    tier: rollStickerTier(),
+    earnedAt: new Date().toISOString(),
+  }));
+  const ref = doc(db, 'user_stickers', uid);
+  const snap = await getDoc(ref);
+  if (snap.exists()) {
+    await updateDoc(ref, { stickers: arrayUnion(...newStickers), userName });
+  } else {
+    await setDoc(ref, { userId: uid, userName, stickers: newStickers, revealedIds: [], uniqueTiers: [] });
+  }
+  return newStickers;
+}
+
 // --- Sticker Card (flip reveal) ---
 
 function StickerCard({ sticker, isRevealed, onReveal, size = 'md' }: {
@@ -2649,6 +2672,128 @@ function StickerCollectionModal({ stickerCard, programme, onClose }: {
   );
 }
 
+
+// --- User Sticker Panel (profile view — own + other users) ---
+
+function UserStickerPanel({ uid, isOwnProfile = false, onOpenPack }: {
+  uid: string;
+  isOwnProfile?: boolean;
+  onOpenPack?: (stickers: CollectibleSticker[]) => void;
+}) {
+  const [col, setCol] = useState<{ stickers: CollectibleSticker[]; revealedIds: string[]; uniqueTiers: StickerTier[] } | null>(null);
+
+  useEffect(() => {
+    return onSnapshot(doc(db, 'user_stickers', uid), snap => {
+      if (snap.exists()) {
+        const d = snap.data();
+        setCol({ stickers: d.stickers || [], revealedIds: d.revealedIds || [], uniqueTiers: d.uniqueTiers || [] });
+      } else {
+        setCol(null);
+      }
+    });
+  }, [uid]);
+
+  const handleReveal = async (stickerId: string) => {
+    if (!col) return;
+    const ref = doc(db, 'user_stickers', uid);
+    const newRevealedIds = [...col.revealedIds, stickerId];
+    const revealedStickers = col.stickers.filter(s => newRevealedIds.includes(s.id));
+    const newUniqueTiers = [...new Set(revealedStickers.map(s => s.tier))];
+    await updateDoc(ref, { revealedIds: arrayUnion(stickerId), uniqueTiers: newUniqueTiers });
+  };
+
+  if (!col) {
+    if (!isOwnProfile) return null;
+    return (
+      <div className="glass-card rounded-[2rem] p-5">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-3">Animal Cards</p>
+        <p className="text-xs text-brand-navy/40 text-center py-6">Collect stamps to earn your first animal cards!</p>
+      </div>
+    );
+  }
+
+  const uniqueSet = new Set(col.uniqueTiers);
+  const unrevealed = col.stickers.filter(s => !col.revealedIds.includes(s.id));
+  const revealed = col.stickers.filter(s => col.revealedIds.includes(s.id));
+  const recentRevealed = [...revealed].reverse().slice(0, 6);
+
+  return (
+    <div className="glass-card rounded-[2rem] p-5 space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">Animal Cards</p>
+        <span className="text-[10px] font-bold text-brand-navy/40">{uniqueSet.size}/5 unique · {col.stickers.length} total</span>
+      </div>
+
+      {/* Tier animal slots */}
+      <div className="grid grid-cols-5 gap-2">
+        {STICKER_ORDER.map(tier => {
+          const cfg = STICKER_CONFIG[tier];
+          const lit = uniqueSet.has(tier);
+          const count = col.stickers.filter(s => s.tier === tier).length;
+          return (
+            <div key={tier} className="flex flex-col items-center gap-1">
+              <div className="w-full aspect-square rounded-2xl border-2 flex flex-col items-center justify-center overflow-hidden transition-all"
+                style={lit ? { background: cfg.bg, borderColor: cfg.border, boxShadow: `0 0 10px ${cfg.color}33` } : { background: '#F1F5F9', borderColor: '#E2E8F0' }}>
+                {lit ? <PixelAnimalSVG tier={tier} size={34} /> : <span className="text-lg text-slate-200">?</span>}
+                {count > 1 && <span className="text-[7px] font-bold leading-none" style={{ color: cfg.color }}>×{count}</span>}
+              </div>
+              <span className="text-[7px] font-bold text-center leading-tight" style={{ color: lit ? cfg.color : '#94A3B8' }}>
+                {lit ? cfg.animal.split(' ')[0] : cfg.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Full set badge */}
+      {uniqueSet.size >= 5 && (
+        <div className="p-2.5 rounded-2xl text-center" style={{ background: '#FEF9C3', border: '1px solid #FDE68A' }}>
+          <p className="text-xs font-bold text-amber-700">🏆 Full set collected!</p>
+        </div>
+      )}
+
+      {/* Unrevealed cards — open pack CTA */}
+      {isOwnProfile && unrevealed.length > 0 && (
+        <motion.button
+          className="w-full py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"
+          style={{ background: 'linear-gradient(135deg, #0D0D2B, #1A0730)', color: 'white' }}
+          onClick={() => onOpenPack?.(unrevealed)}
+          whileTap={{ scale: 0.97 }}
+          animate={{ boxShadow: ['0 0 0px #F5C51800', '0 0 18px #F5C51866', '0 0 0px #F5C51800'] }}
+          transition={{ duration: 2, repeat: Infinity }}
+        >
+          🎴 Open {unrevealed.length} stored card{unrevealed.length !== 1 ? 's' : ''}
+        </motion.button>
+      )}
+
+      {/* Recent revealed cards */}
+      {recentRevealed.length > 0 && (
+        <div>
+          <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/30 mb-2">
+            Recent {isOwnProfile ? '' : 'cards'}
+          </p>
+          <div className="flex gap-2 flex-wrap">
+            {recentRevealed.map(s => (
+              <StickerCard key={s.id} sticker={s} isRevealed={true} size="sm" />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Unrevealed cards for own profile (in-place reveal) */}
+      {isOwnProfile && unrevealed.length > 0 && (
+        <div>
+          <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/30 mb-2">Tap to reveal</p>
+          <div className="flex gap-2 flex-wrap">
+            {unrevealed.slice(0, 6).map(s => (
+              <StickerCard key={s.id} sticker={s} isRevealed={false} onReveal={() => handleReveal(s.id)} size="sm" />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // --- Pack Opening Modal ---
 
@@ -5247,7 +5392,8 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
       }).catch(console.error);
     }
 
-    const newStickers = await issueStickersToCard(user.uid, userName, 1).catch(() => [] as CollectibleSticker[]);
+    const newStickers = await issueUserStickers(user.uid, userName, 3).catch(() => [] as CollectibleSticker[]);
+    issueStickersToCard(user.uid, userName, 3).catch(console.error);
     updateChallengeProgress(user.uid, store.id, 1).catch(console.error);
     onStatus('success', `Stamp added at ${store.name}!`);
     return newStickers;
@@ -8548,6 +8694,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
   const [vendorStore, setVendorStore] = useState<StoreProfile | null>(null);
   const [storeCards, setStoreCards] = useState<Card[]>([]);
   const [selectedBadge, setSelectedBadge] = useState<AppBadge | null>(null);
+  const [profilePendingPack, setProfilePendingPack] = useState<CollectibleSticker[] | null>(null);
 
   useEffect(() => {
     if (profile?.role !== 'vendor') return;
@@ -9134,6 +9281,15 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         </div>
       )}
 
+      {/* Animal Card Collection */}
+      {profile.role === 'consumer' && (
+        <UserStickerPanel
+          uid={user.uid}
+          isOwnProfile
+          onOpenPack={stickers => setProfilePendingPack(stickers)}
+        />
+      )}
+
       <div className="flex p-1 glass-card rounded-2xl">
         <button
           onClick={() => setActiveSubTab('posts')}
@@ -9148,6 +9304,12 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           Interactions
         </button>
       </div>
+
+      <AnimatePresence>
+        {profilePendingPack && (
+          <PackOpeningModal stickers={profilePendingPack} onClose={() => setProfilePendingPack(null)} />
+        )}
+      </AnimatePresence>
 
       {activeSubTab === 'posts' && (
         <div className="space-y-6">
@@ -13808,6 +13970,9 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
 
       {profileTab === 'wall' ? (
         <div className="space-y-4">
+          {/* Sticker collection — visible on all public profiles */}
+          <UserStickerPanel uid={targetUser.uid} isOwnProfile={false} />
+
           {targetUser.uid !== currentUser.uid && (
             <div className="glass-card p-6 rounded-[2.5rem] space-y-4">
               <textarea
