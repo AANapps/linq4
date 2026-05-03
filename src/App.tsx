@@ -2458,6 +2458,31 @@ function StickerCollectionModal({ stickerCard, programme, onClose }: {
           </div>
 
           <div className="p-5 space-y-7">
+            {topPlayers.length > 0 && (
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-3">
+                  Top Players
+                </p>
+                <div className="space-y-2">
+                  {topPlayers.map((p, i) => (
+                    <div key={p.uid} className="flex items-center gap-2.5 bg-brand-navy/5 rounded-2xl px-3 py-2">
+                      <span className="text-[10px] font-black text-brand-navy/30 w-4 text-center shrink-0">{i + 1}</span>
+                      <div className="w-6 h-6 rounded-full overflow-hidden bg-brand-navy/10 shrink-0 flex items-center justify-center">
+                        <LivePixelAvatar uid={p.uid} size={24} view="head" />
+                      </div>
+                      <p className="text-[11px] font-bold text-brand-navy flex-1 truncate">{p.userName || 'Player'}</p>
+                      <div className="flex gap-0.5">
+                        {STICKER_ORDER.map(tier => (
+                          <div key={tier} className="w-3 h-3 rounded-sm" style={{ background: p.sets > 0 ? STICKER_CONFIG[tier].solid : '#E2E8F0', opacity: p.sets > 0 ? 1 : 0.3 }} />
+                        ))}
+                      </div>
+                      <span className="text-[10px] font-bold text-brand-navy/60 shrink-0">{p.sets} sets</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Card collection — 3 variants per tier, collect 3 sets to win */}
             <div className="space-y-4">
               <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">
@@ -2522,31 +2547,6 @@ function StickerCollectionModal({ stickerCard, programme, onClose }: {
                 <div className="flex flex-wrap gap-3">
                   {unrevealed.map(s => (
                     <StickerCard key={s.id} sticker={s} isRevealed={false} onReveal={() => handleReveal(s.id)} size="md" />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {topPlayers.length > 0 && (
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-3">
-                  Top Players
-                </p>
-                <div className="space-y-2">
-                  {topPlayers.map((p, i) => (
-                    <div key={p.uid} className="flex items-center gap-2.5 bg-brand-navy/5 rounded-2xl px-3 py-2">
-                      <span className="text-[10px] font-black text-brand-navy/30 w-4 text-center shrink-0">{i + 1}</span>
-                      <div className="w-6 h-6 rounded-full overflow-hidden bg-brand-navy/10 shrink-0 flex items-center justify-center">
-                        <LivePixelAvatar uid={p.uid} size={24} view="head" />
-                      </div>
-                      <p className="text-[11px] font-bold text-brand-navy flex-1 truncate">{p.userName || 'Player'}</p>
-                      <div className="flex gap-0.5">
-                        {STICKER_ORDER.map(tier => (
-                          <div key={tier} className="w-3 h-3 rounded-sm" style={{ background: p.sets > 0 ? STICKER_CONFIG[tier].solid : '#E2E8F0', opacity: p.sets > 0 ? 1 : 0.3 }} />
-                        ))}
-                      </div>
-                      <span className="text-[10px] font-bold text-brand-navy/60 shrink-0">{p.sets} sets</span>
-                    </div>
                   ))}
                 </div>
               </div>
@@ -2945,8 +2945,7 @@ function PackOpeningModal({ stickers, onClose }: { stickers: CollectibleSticker[
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[300] flex flex-col items-center justify-center overflow-hidden"
-      style={{ background: 'linear-gradient(180deg, #080616 0%, #160530 55%, #080616 100%)' }}
+      className="fixed inset-0 z-[300] flex flex-col items-center justify-center overflow-hidden gradient-logo-blue"
     >
       {/* Stars */}
       {PACK_STARS.map((star, i) => (
