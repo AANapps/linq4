@@ -4352,8 +4352,10 @@ function ProgrammeDetailModal({ prog, sc, onJoin, onView, onClose, joiningProgra
                 const pct = prog.tierChances ? prog.tierChances[tier] : DEFAULT_TIER_CHANCES[tier];
                 return (
                   <div key={tier} className="flex items-center gap-2.5">
-                    <div className="w-5 h-5 rounded-md shrink-0" style={{ background: cfg.solid }} />
-                    <span className="text-[11px] font-bold flex-1" style={{ color: cfg.solid }}>{cfg.label}</span>
+                    <div className="w-5 h-5 rounded-md shrink-0 relative overflow-hidden" style={{ background: cfg.solid }}>
+                      <span className="card-shine-ray" style={{ animationDelay: `${STICKER_ORDER.indexOf(tier) * 0.4}s` }} />
+                    </div>
+                    <span className="text-[11px] font-bold text-white flex-1">{cfg.label}</span>
                     <span className="text-[11px] font-bold text-white/50">{pct}%</span>
                   </div>
                 );
@@ -5026,16 +5028,19 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                               const firstFound = myRevealedCards.find((s: CollectibleSticker) => s.tier === tier);
                               return (
                                 <div key={tier} className="flex-1 flex flex-col items-center gap-1">
-                                  <div className="w-full rounded-t-xl rounded-b-sm transition-all"
-                                    style={{ height: 30, background: sets > 0 ? cfg.solid : '#E2E8F0', boxShadow: sets > 0 ? `0 2px 8px ${cfg.color}44` : 'none' }} />
-                                  <div className="w-full rounded-b-xl flex flex-col items-center justify-center py-1.5 border-x border-b"
+                                  <div className="w-full rounded-t-xl rounded-b-sm transition-all relative overflow-hidden"
+                                    style={{ height: 30, background: sets > 0 ? cfg.solid : '#E2E8F0', boxShadow: sets > 0 ? `0 2px 8px ${cfg.color}44` : 'none' }}>
+                                    {sets > 0 && <span className="card-shine-ray" style={{ animationDelay: `${STICKER_ORDER.indexOf(tier) * 0.45}s` }} />}
+                                  </div>
+                                  <div className="w-full rounded-b-xl flex flex-col items-center justify-center py-1.5 border-x border-b relative overflow-hidden"
                                     style={{ borderColor: sets > 0 ? cfg.border : '#E2E8F0', background: sets > 0 ? cfg.bg : '#F8FAFC', minHeight: 40 }}>
-                                    <span style={{ fontSize: 18, lineHeight: 1 }}>
+                                    <span style={{ fontSize: 18, lineHeight: 1, position: 'relative', zIndex: 1 }}>
                                       {firstFound ? cfg.variants[firstFound.variant ?? 0]?.emoji ?? '?' : '?'}
                                     </span>
-                                    <span className="text-[7px] font-black mt-0.5" style={{ color: sets > 0 ? cfg.color : '#CBD5E1' }}>
+                                    <span className="text-[7px] font-black mt-0.5 relative z-10" style={{ color: sets > 0 ? cfg.color : '#CBD5E1' }}>
                                       {sets}/3
                                     </span>
+                                    {sets > 0 && <span className="card-shine-ray" style={{ animationDelay: `${STICKER_ORDER.indexOf(tier) * 0.45 + 0.2}s` }} />}
                                   </div>
                                 </div>
                               );
