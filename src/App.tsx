@@ -9146,19 +9146,31 @@ function CompactStickerPanel({ uid, isOwnProfile, onOpenPack }: { uid: string; i
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
-    return onSnapshot(doc(db, 'user_stickers', uid), snap => {
-      if (snap.exists()) {
+    const unsub = onSnapshot(doc(db, 'user_stickers', uid), async snap => {
+      if (snap.exists() && (snap.data().stickers || []).length > 0) {
         const d = snap.data();
         setCol({ stickers: d.stickers || [], revealedIds: d.revealedIds || [] });
-      } else setCol(null);
+      } else {
+        // fall back: aggregate from sticker_cards (per-programme cards)
+        const cardsSnap = await getDocs(query(collection(db, 'sticker_cards'), where('user_id', '==', uid)));
+        if (cardsSnap.empty) { setCol(null); return; }
+        const allStickers: CollectibleSticker[] = [];
+        const allRevealedIds: string[] = [];
+        cardsSnap.docs.forEach(d => {
+          allStickers.push(...(d.data().stickers || []));
+          allRevealedIds.push(...(d.data().revealedIds || []));
+        });
+        setCol({ stickers: allStickers, revealedIds: allRevealedIds });
+      }
     });
+    return unsub;
   }, [uid]);
 
-  const revealed = col ? col.stickers.filter(s => col.revealedIds.includes(s.id)) : [];
+  const allStickers = col ? col.stickers : [];
   const unrevealed = col ? col.stickers.filter(s => !col.revealedIds.includes(s.id)) : [];
-  const panelSets = totalSetsCompleted(revealed);
+  const panelSets = totalSetsCompleted(allStickers);
 
-  if (!col) {
+  if (!col || col.stickers.length === 0) {
     return (
       <div className="flex-1 glass-card rounded-[2rem] p-4 flex flex-col items-center justify-center min-h-[9rem]">
         <p className="text-2xl mb-1">🃏</p>
@@ -9178,7 +9190,7 @@ function CompactStickerPanel({ uid, isOwnProfile, onOpenPack }: { uid: string; i
 
       <div className="flex gap-3 text-center">
         <div className="flex-1">
-          <p className="font-black text-brand-navy text-base leading-none">{col.stickers.length}</p>
+          <p className="font-black text-brand-navy text-base leading-none">{allStickers.length}</p>
           <p className="text-[7px] text-brand-navy/40 font-bold uppercase mt-0.5">Cards</p>
         </div>
         <div className="flex-1">
@@ -9190,7 +9202,7 @@ function CompactStickerPanel({ uid, isOwnProfile, onOpenPack }: { uid: string; i
       <div className="grid grid-cols-4 gap-1">
         {STICKER_ORDER.map(tier => {
           const cfg = STICKER_CONFIG[tier];
-          const count = revealed.filter(s => s.tier === tier).length;
+          const count = allStickers.filter(s => s.tier === tier).length;
           return (
             <div key={tier} className="flex flex-col items-center gap-0.5">
               <div className="w-7 h-7 rounded-lg flex items-center justify-center text-sm"
@@ -9218,13 +9230,13 @@ function CompactStickerPanel({ uid, isOwnProfile, onOpenPack }: { uid: string; i
             <div className="space-y-1.5 pt-2 border-t border-brand-navy/5">
               {STICKER_ORDER.map(tier => {
                 const cfg = STICKER_CONFIG[tier];
-                const sets = tierSetsCompleted(revealed, tier);
+                const sets = tierSetsCompleted(allStickers, tier);
                 return (
                   <div key={tier} className="flex items-center gap-1.5">
                     <span className="text-[7px] font-black uppercase w-10 shrink-0 leading-tight" style={{ color: sets > 0 ? cfg.color : '#CBD5E1' }}>{cfg.theme}</span>
                     <div className="flex gap-0.5 flex-1">
                       {cfg.variants.map((v, vi) => {
-                        const count = revealed.filter(s => s.tier === tier && (s.variant ?? 0) === vi).length;
+                        const count = allStickers.filter(s => s.tier === tier && (s.variant ?? 0) === vi).length;
                         return (
                           <div key={vi} className="flex-1 aspect-square rounded-md border flex items-center justify-center text-[10px]"
                             style={count > 0 ? { background: cfg.bg, borderColor: cfg.border } : { background: '#F1F5F9', borderColor: '#E2E8F0' }}>
