@@ -7573,6 +7573,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
           } catch { /* non-fatal */ }
         })();
 
+        issueUserStickers(customer.uid, customer.name, qty).catch(console.error);
         issueStickersToCard(customer.uid, customer.name, qty).catch(console.error);
         updateChallengeProgress(customer.uid, store.id, qty).catch(console.error);
         setIssueStatus({ type: 'success', message: `${qty} stamp(s) issued to ${customer.name}!` });
@@ -8034,6 +8035,7 @@ function LoyaltyCard({ card, store, onViewStore }: { card: Card, store?: StorePr
       bumpStreak(auth.currentUser.uid).catch(console.error);
 
       const customerName = auth.currentUser.displayName || auth.currentUser.email?.split('@')[0] || 'Customer';
+      issueUserStickers(auth.currentUser.uid, customerName, qty).catch(console.error);
       issueStickersToCard(auth.currentUser.uid, customerName, qty).catch(console.error);
       updateChallengeProgress(auth.currentUser.uid, store.id, qty).catch(console.error);
 
@@ -9311,118 +9313,64 @@ function BadgeSquarePanel({ badges, onSelectBadge }: { badges: AppBadge[]; onSel
   );
 }
 
-function CompactStickerPanel({ uid, isOwnProfile, onOpenPack }: { uid: string; isOwnProfile?: boolean; onOpenPack?: (stickers: CollectibleSticker[]) => void }) {
-  const [col, setCol] = useState<{ stickers: CollectibleSticker[]; revealedIds: string[] } | null>(null);
-  const [expanded, setExpanded] = useState(false);
+function StickerListPanel({ uid }: { uid: string }) {
+  const [stickers, setStickers] = useState<CollectibleSticker[] | null>(null);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'user_stickers', uid), async snap => {
       if (snap.exists() && (snap.data().stickers || []).length > 0) {
-        const d = snap.data();
-        setCol({ stickers: d.stickers || [], revealedIds: d.revealedIds || [] });
+        setStickers(snap.data().stickers || []);
       } else {
-        // fall back: aggregate from sticker_cards (per-programme cards)
         const cardsSnap = await getDocs(query(collection(db, 'sticker_cards'), where('user_id', '==', uid)));
-        if (cardsSnap.empty) { setCol(null); return; }
-        const allStickers: CollectibleSticker[] = [];
-        const allRevealedIds: string[] = [];
-        cardsSnap.docs.forEach(d => {
-          allStickers.push(...(d.data().stickers || []));
-          allRevealedIds.push(...(d.data().revealedIds || []));
-        });
-        setCol({ stickers: allStickers, revealedIds: allRevealedIds });
+        if (cardsSnap.empty) { setStickers([]); return; }
+        const all: CollectibleSticker[] = [];
+        cardsSnap.docs.forEach(d => all.push(...(d.data().stickers || [])));
+        setStickers(all);
       }
     });
     return unsub;
   }, [uid]);
 
-  const allStickers = col ? col.stickers : [];
-  const unrevealed = col ? col.stickers.filter(s => !col.revealedIds.includes(s.id)) : [];
-  const panelSets = totalSetsCompleted(allStickers);
-
-  if (!col || col.stickers.length === 0) {
+  if (!stickers || stickers.length === 0) {
     return (
-      <div className="flex-1 glass-card rounded-[2rem] p-4 flex flex-col items-center justify-center min-h-[9rem]">
-        <p className="text-2xl mb-1">🃏</p>
-        <p className="text-[9px] text-brand-navy/30 font-bold text-center">No cards yet</p>
+      <div className="flex-1 glass-card rounded-[2rem] p-4 flex items-center justify-center min-h-[9rem]">
+        <p className="text-[9px] text-brand-navy/30 font-bold text-center">No stickers yet</p>
       </div>
     );
   }
 
+  // Group by tier+variant, count duplicates
+  const grouped = new Map<string, { bg: string; border: string; emoji: string; count: number }>();
+  stickers.forEach(s => {
+    const key = `${s.tier}-${s.variant ?? 0}`;
+    if (!grouped.has(key)) {
+      const cfg = STICKER_CONFIG[s.tier];
+      const v = cfg.variants[s.variant ?? 0];
+      grouped.set(key, { bg: cfg.bg, border: cfg.border, emoji: v?.emoji ?? '?', count: 0 });
+    }
+    grouped.get(key)!.count++;
+  });
+
   return (
-    <div className="flex-1 glass-card rounded-[2rem] p-4 space-y-2.5">
-      <div className="flex items-center justify-between">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">Cards</p>
-        <button onClick={() => setExpanded(e => !e)} className="text-[9px] font-bold text-brand-gold uppercase tracking-wide active:scale-95 transition-transform">
-          {expanded ? 'Less ▲' : 'More ▼'}
-        </button>
-      </div>
-
-      <div className="flex gap-3 text-center">
-        <div className="flex-1">
-          <p className="font-black text-brand-navy text-base leading-none">{allStickers.length}</p>
-          <p className="text-[7px] text-brand-navy/40 font-bold uppercase mt-0.5">Cards</p>
-        </div>
-        <div className="flex-1">
-          <p className="font-black text-brand-navy text-base leading-none">{panelSets}</p>
-          <p className="text-[7px] text-brand-navy/40 font-bold uppercase mt-0.5">Sets</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-4 gap-1">
-        {STICKER_ORDER.map(tier => {
-          const cfg = STICKER_CONFIG[tier];
-          const count = allStickers.filter(s => s.tier === tier).length;
-          return (
-            <div key={tier} className="flex flex-col items-center gap-0.5">
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center text-sm"
-                style={count > 0 ? { background: cfg.bg, border: `1px solid ${cfg.border}` } : { background: '#F1F5F9', border: '1px solid #E2E8F0' }}>
-                {count > 0 ? cfg.variants[0]?.emoji : '?'}
-              </div>
-              <span className="text-[6px] font-bold leading-none" style={{ color: count > 0 ? cfg.color : '#CBD5E1' }}>{count}</span>
+    <div className="flex-1 glass-card rounded-[2rem] p-4">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5">Stickers</p>
+      <div className="flex flex-wrap gap-1.5">
+        {Array.from(grouped.values()).map((g, i) => (
+          <div key={i} className="relative">
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-lg"
+              style={{ background: g.bg, border: `1px solid ${g.border}` }}
+            >
+              {g.emoji}
             </div>
-          );
-        })}
+            {g.count > 1 && (
+              <span className="absolute -top-1 -right-1 bg-brand-navy text-white text-[7px] font-black w-3.5 h-3.5 rounded-full flex items-center justify-center leading-none">
+                {g.count}
+              </span>
+            )}
+          </div>
+        ))}
       </div>
-
-      {isOwnProfile && unrevealed.length > 0 && (
-        <button onClick={() => onOpenPack?.(unrevealed)}
-          className="w-full py-2 rounded-xl font-bold text-[10px] flex items-center justify-center gap-1"
-          style={{ background: 'linear-gradient(135deg, #0D0D2B, #1A0730)', color: 'white' }}>
-          🎴 {unrevealed.length} to open
-        </button>
-      )}
-
-      <AnimatePresence>
-        {expanded && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-            style={{ overflow: 'hidden' }}>
-            <div className="space-y-1.5 pt-2 border-t border-brand-navy/5">
-              {STICKER_ORDER.map(tier => {
-                const cfg = STICKER_CONFIG[tier];
-                const sets = tierSetsCompleted(allStickers, tier);
-                return (
-                  <div key={tier} className="flex items-center gap-1.5">
-                    <span className="text-[7px] font-black uppercase w-10 shrink-0 leading-tight" style={{ color: sets > 0 ? cfg.color : '#CBD5E1' }}>{cfg.theme}</span>
-                    <div className="flex gap-0.5 flex-1">
-                      {cfg.variants.map((v, vi) => {
-                        const count = allStickers.filter(s => s.tier === tier && (s.variant ?? 0) === vi).length;
-                        return (
-                          <div key={vi} className="flex-1 aspect-square rounded-md border flex items-center justify-center text-[10px]"
-                            style={count > 0 ? { background: cfg.bg, borderColor: cfg.border } : { background: '#F1F5F9', borderColor: '#E2E8F0' }}>
-                            {count > 0 ? v.emoji : '?'}
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <span className="text-[7px] font-bold w-7 text-right shrink-0" style={{ color: sets >= 3 ? cfg.color : '#94A3B8' }}>{sets}/3{sets >= 3 ? '✓' : ''}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
@@ -9940,7 +9888,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 px-1">Badges &amp; Cards</p>
           <div className="flex gap-3 items-start">
             <BadgeSquarePanel badges={earnedBadges} onSelectBadge={setSelectedBadge} />
-            <CompactStickerPanel uid={user.uid} isOwnProfile onOpenPack={stickers => setProfilePendingPack(stickers)} />
+            <StickerListPanel uid={user.uid} />
           </div>
         </div>
       )}
@@ -14537,7 +14485,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
           <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 px-1">Badges &amp; Cards</p>
           <div className="flex gap-3 items-start">
             <BadgeSquarePanel badges={earnedBadges} onSelectBadge={setSelectedBadge} />
-            <CompactStickerPanel uid={targetUser.uid} isOwnProfile={false} />
+            <StickerListPanel uid={targetUser.uid} />
           </div>
         </div>
       )}
