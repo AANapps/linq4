@@ -567,7 +567,7 @@ interface RankEntry {
 }
 
 interface CelebrationPage {
-  type: 'stamp' | 'challenge' | 'upsell' | 'charity' | 'rank';
+  type: 'stamp' | 'challenge' | 'upsell' | 'charity' | 'rank' | 'monopoly_pack' | 'challenges_list' | 'upsell_list';
   storeName?: string;
   challengeTitle?: string;
   upsellTitle?: string;
@@ -585,6 +585,9 @@ interface CelebrationPage {
   rankWeeklyChange?: number;
   rankTopTen?: RankEntry[];
   rankNearby?: RankEntry[];
+  monopolyChallengeName?: string;
+  challengesList?: Array<{ title: string; currentStamps: number; totalStamps: number; reward: string; done: boolean }>;
+  upsellList?: Array<{ title: string; totalStamps: number; reward: string; id: string }>;
 }
 
 interface AppBadge {
@@ -2388,12 +2391,21 @@ function StickerCard({ sticker, isRevealed, onReveal, size = 'md' }: {
 
 // --- Sticker Collection Modal (per-store sticker card, mirrors loyalty card modal) ---
 
-function StickerCollectionModal({ stickerCard, programme, onClose }: {
+function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }: {
   stickerCard: StickerCardDoc;
   programme?: Challenge;
   onClose: () => void;
   key?: React.Key;
 }) {
+  const [liveCard, setLiveCard] = useState<StickerCardDoc>(initialCard);
+
+  useEffect(() => {
+    return onSnapshot(doc(db, 'sticker_cards', initialCard.id), snap => {
+      if (snap.exists()) setLiveCard({ id: snap.id, ...snap.data() } as StickerCardDoc);
+    });
+  }, [initialCard.id]);
+
+  const stickerCard = liveCard;
   const unrevealed = stickerCard.stickers.filter(s => !(stickerCard.revealedIds || []).includes(s.id));
   const revealed = stickerCard.stickers.filter(s => (stickerCard.revealedIds || []).includes(s.id));
   const myTotalSets = totalSetsCompleted(revealed);
@@ -2445,8 +2457,9 @@ function StickerCollectionModal({ stickerCard, programme, onClose }: {
         className="fixed inset-0 z-[150] flex flex-col max-w-md mx-auto"
       >
         <button onClick={onClose} className="flex-shrink-0 h-16 w-full" />
-        <div className="flex-1 overflow-y-auto bg-brand-bg rounded-t-[2.5rem] shadow-2xl">
-          <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm px-5 pt-5 pb-4 border-b border-black/5 z-10">
+        <div className="flex-1 bg-brand-bg rounded-t-[2.5rem] shadow-2xl flex flex-col overflow-hidden">
+          {/* Header lives outside the scroll container so nothing can paint over it */}
+          <div className="bg-brand-bg px-5 pt-5 pb-4 border-b border-black/5 flex-shrink-0">
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
                 <h2 className="font-display text-xl font-bold text-brand-navy">
@@ -2462,6 +2475,7 @@ function StickerCollectionModal({ stickerCard, programme, onClose }: {
             </div>
           </div>
 
+          <div className="flex-1 overflow-y-auto">
           <div className="p-5 space-y-7">
             {topPlayers.length > 0 && (
               <div>
@@ -2520,17 +2534,23 @@ function StickerCollectionModal({ stickerCard, programme, onClose }: {
                         const has3 = count >= 3;
                         return (
                           <div key={vi} className="flex-1 flex flex-col items-center gap-1">
-                            <div className="w-full aspect-square rounded-xl border-2 flex flex-col items-center justify-center relative overflow-hidden"
+                            <div className="w-full rounded-xl border-2 flex flex-col items-center justify-between relative overflow-hidden pt-2 pb-1.5 px-1"
                               style={count > 0
                                 ? { background: 'white', borderColor: 'rgba(255,255,255,0.6)', boxShadow: '0 2px 10px rgba(0,0,0,0.15)' }
                                 : { background: 'rgba(0,0,0,0.2)', borderColor: 'rgba(255,255,255,0.15)' }}>
-                              <span style={{ fontSize: 22, lineHeight: 1, position: 'relative', zIndex: 1 }}>{count > 0 ? v.emoji : <span className="text-white/40">?</span>}</span>
-                              {count > 0 && <span className="text-[7px] font-bold mt-0.5 relative z-10 text-white">×{count}{has3 ? '✓' : ''}</span>}
+                              <span style={{ fontSize: 34, lineHeight: 1, position: 'relative', zIndex: 1 }}>{count > 0 ? v.emoji : <span style={{ fontSize: 28 }} className="text-white/30">?</span>}</span>
+                              <span className="text-[8px] font-bold text-center leading-tight mt-1 relative z-10 truncate w-full text-center"
+                                style={{ color: count > 0 ? cfg.solid : 'rgba(255,255,255,0.4)' }}>
+                                {count > 0 ? v.name : '???'}
+                              </span>
+                              {count > 0 && (
+                                <span className="text-[7px] font-black relative z-10 mt-0.5"
+                                  style={{ color: has3 ? '#16a34a' : cfg.solid }}>
+                                  ×{count}{has3 ? ' ✓' : ''}
+                                </span>
+                              )}
                               {count > 0 && <span className="card-shine-ray" style={{ animationDelay: `${vi * 0.7}s` }} />}
                             </div>
-                            <span className="text-[7px] font-bold text-center leading-tight text-white/80">
-                              {count > 0 ? v.name : '???'}
-                            </span>
                           </div>
                         );
                       })}
@@ -2588,6 +2608,7 @@ function StickerCollectionModal({ stickerCard, programme, onClose }: {
               <p className="text-sm text-brand-navy/40 text-center py-10">No stickers yet. Collect stamps to earn some!</p>
             )}
           </div>
+          </div>{/* end overflow-y-auto */}
         </div>
       </motion.div>
       <motion.div
@@ -2889,7 +2910,7 @@ function MysteryRevealCard({ sticker, isRevealed, onReveal }: {
   );
 }
 
-function PackOpeningModal({ stickers, onClose }: { stickers: CollectibleSticker[]; onClose: () => void }) {
+function PackOpeningModal({ stickers, cardId, onClose }: { stickers: CollectibleSticker[]; cardId?: string | null; onClose: () => void }) {
   type PackPhase = 'sealed' | 'opening' | 'dealing' | 'reveal' | 'done';
   const [phase, setPhase] = useState<PackPhase>('sealed');
   const [dealtCount, setDealtCount] = useState(0);
@@ -2932,6 +2953,11 @@ function PackOpeningModal({ stickers, onClose }: { stickers: CollectibleSticker[
     if (allRevealed && phase === 'reveal') {
       const premium = displayStickers.some(s => ['gold', 'blue', 'red'].includes(s.tier));
       vibrate(premium ? [150, 60, 150, 60, 300] : [80, 40, 120]);
+      if (cardId) {
+        updateDoc(doc(db, 'sticker_cards', cardId), {
+          revealedIds: arrayUnion(...displayStickers.map(s => s.id)),
+        }).catch(console.error);
+      }
       const t = setTimeout(() => setPhase('done'), 850);
       return () => clearTimeout(t);
     }
@@ -4480,12 +4506,13 @@ function buildStampCelebrationPages(
   challenges: Challenge[],
   entries: Map<string, any>,
   profile: UserProfile | null,
-  user: FirebaseUser
+  user: FirebaseUser,
+  collectiblePrograms: Challenge[] = [],
 ): CelebrationPage[] {
   const pages: CelebrationPage[] = [];
-  const seed = card.current_stamps; // vary messages by stamp count
+  const seed = card.current_stamps;
 
-  // --- Stamp page ---
+  // 1. Stamp / card-progress page
   const tiers = store.rewardTiers?.length
     ? [...store.rewardTiers].sort((a, b) => a.stamps - b.stamps)
     : [{ stamps: store.stamps_required_for_reward || 10, reward: store.reward || 'Free Reward' }];
@@ -4509,7 +4536,7 @@ function buildStampCelebrationPages(
     done,
   });
 
-  // --- Charity deed page (always shown after stamp) ---
+  // 2. Charity deed page (rank is spliced in at position 1 by caller, pushing charity to pos 2)
   const charityAnimal = ENDANGERED_ANIMALS[card.current_stamps % ENDANGERED_ANIMALS.length];
   pages.push({
     type: 'charity',
@@ -4521,44 +4548,42 @@ function buildStampCelebrationPages(
     charityAnimal,
   });
 
-  // --- Challenge progress pages ---
+  // 3. Monopoly pack page — if user is in any active collectible programme
+  const joinedProg = collectiblePrograms.find(p => (p.participantUids || []).includes(user.uid));
+  if (joinedProg) {
+    pages.push({
+      type: 'monopoly_pack',
+      currentStamps: card.current_stamps,
+      totalStamps: card.current_stamps,
+      reward: '',
+      encouragement: '',
+      done: false,
+      monopolyChallengeName: joinedProg.title,
+    });
+  }
+
+  // 4. All joined standard-challenge progresses in one list page
   const joined = challenges.filter(c =>
     (c.participantUids || []).includes(user.uid) &&
     (!c.vendorIds?.length || c.vendorIds.includes(store.id!))
   );
 
-  for (const c of joined) {
-    const entry = entries.get(c.id);
-    const progress = c.vendorIds?.length
-      ? Math.min(c.goal, (entry?.count || 0) + 1)
-      : Math.min(c.goal, Math.max(0, ((profile?.totalStamps || 0) + 1) - (entry?.totalStampsAtJoin || 0)));
-    const left = Math.max(0, c.goal - progress);
-    const cdone = left === 0;
-    const unit = c.unit || 'stamps';
-    const cenc = cdone
-      ? `🏆 CHALLENGE COMPLETE! Go claim your ${c.reward} — you've earned it!`
-      : left === 1
-        ? `🤩 ONE more ${unit} and ${c.reward} is YOURS!`
-        : CHALL_ENCOUR[progress % CHALL_ENCOUR.length](left, unit, c.reward);
-    pages.push({ type: 'challenge', challengeTitle: c.title, currentStamps: progress, totalStamps: c.goal, reward: c.reward, encouragement: cenc, done: cdone });
+  if (joined.length > 0) {
+    const challengesList = joined.map(c => {
+      const entry = entries.get(c.id);
+      const progress = c.vendorIds?.length
+        ? Math.min(c.goal, (entry?.count || 0) + 1)
+        : Math.min(c.goal, Math.max(0, ((profile?.totalStamps || 0) + 1) - (entry?.totalStampsAtJoin || 0)));
+      return { title: c.title, currentStamps: progress, totalStamps: c.goal, reward: c.reward, done: progress >= c.goal };
+    });
+    pages.push({ type: 'challenges_list', currentStamps: 0, totalStamps: 0, reward: '', encouragement: '', done: false, challengesList });
   }
 
-  // --- Upsell pages for unjoined challenges ---
-  const notJoined = challenges.filter(c =>
-    !(c.participantUids || []).includes(user.uid)
-  ).slice(0, 2);
-
-  for (const c of notJoined) {
-    pages.push({
-      type: 'upsell',
-      upsellTitle: c.title,
-      challengeTitle: c.title,
-      currentStamps: 0,
-      totalStamps: c.goal,
-      reward: c.reward,
-      encouragement: `🎯 Your stamps could be going towards ${c.reward}! Join this challenge and every stamp counts!`,
-      done: false,
-    });
+  // 5. All unjoined challenges in one recommendation list page
+  const notJoined = challenges.filter(c => !(c.participantUids || []).includes(user.uid)).slice(0, 5);
+  if (notJoined.length > 0) {
+    const upsellList = notJoined.map(c => ({ title: c.title, totalStamps: c.goal, reward: c.reward, id: c.id }));
+    pages.push({ type: 'upsell_list', currentStamps: 0, totalStamps: 0, reward: '', encouragement: '', done: false, upsellList });
   }
 
   return pages;
@@ -4582,18 +4607,16 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const [autoNFCStoreId, setAutoNFCStoreId] = useState<string | null>(null);
   const [pendingPack, setPendingPack] = useState<CollectibleSticker[] | null>(null);
   const [pendingPackCardId, setPendingPackCardId] = useState<string | null>(null);
+  const [pendingCollectionCardId, setPendingCollectionCardId] = useState<string | null>(null);
 
   // Stamp celebration
   const [celebrationPages, setCelebrationPages] = useState<CelebrationPage[] | null>(null);
   const prevCardStampsRef = useRef<Map<string, number>>(new Map());
   const cardsInitializedRef = useRef(false);
 
-  // Sticker (monopoly) celebration
-  const [activeStickerCeleb, setActiveStickerCeleb] = useState<StickerCelebData | null>(null);
-  const [pendingStickerCeleb, setPendingStickerCeleb] = useState<StickerCelebData | null>(null);
+  // Sticker (monopoly) — no intermediate modal, pack opens directly
   const prevStickerCountRef = useRef<Map<string, number>>(new Map());
   const stickerCardsInitRef = useRef(false);
-  const animCounterRef = useRef(0);
 
   useEffect(() => {
     const activeCards = initialCards.filter(c => !c.isArchived);
@@ -4609,7 +4632,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         if (card.current_stamps > prev) {
           const store = stores.find(s => s.id === card.store_id);
           if (store) {
-            const pages = buildStampCelebrationPages(store, card, activeStandardChallenges, myStandardEntries, profile, user);
+            const pages = buildStampCelebrationPages(store, card, activeStandardChallenges, myStandardEntries, profile, user, activePrograms);
 
             // Build rank change page
             try {
@@ -4662,7 +4685,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
     })();
   }, [initialCards]);
 
-  // Watch myStickerCards for new stickers
+  // Watch myStickerCards for new stickers — open pack directly, no intermediate modal
   useEffect(() => {
     if (myStickerCards.length === 0) return;
     if (!stickerCardsInitRef.current) {
@@ -4673,33 +4696,26 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
     myStickerCards.forEach(sc => {
       const prev = prevStickerCountRef.current.get(sc.id) ?? -1;
       if (prev !== -1 && sc.stickers.length > prev) {
-        const programme = activePrograms.find(p => p.id === sc.programme_id);
-        const animType = CELEB_ANIM_TYPES[animCounterRef.current % CELEB_ANIM_TYPES.length];
-        animCounterRef.current++;
-        const revealedNow = (sc.stickers || []).filter((s: CollectibleSticker) => (sc.revealedIds || []).includes(s.id));
-        const celeb: StickerCelebData = {
-          programmeName: programme?.title || 'Monopoly Game',
-          newCount: sc.stickers.length - prev,
-          totalStickers: sc.stickers.length,
-          totalSets: totalSetsCompleted(revealedNow),
-          animType,
-          stickerCardId: sc.id,
-        };
-        // Queue behind stamp celebration if it's currently showing
-        if (celebrationPages) setPendingStickerCeleb(celeb);
-        else setActiveStickerCeleb(celeb);
+        const unrevealed = (sc.stickers || []).filter((s: CollectibleSticker) => !(sc.revealedIds || []).includes(s.id));
+        if (unrevealed.length > 0 && !pendingPack) {
+          setPendingPack(unrevealed);
+          setPendingPackCardId(sc.id);
+        }
       }
       prevStickerCountRef.current.set(sc.id, sc.stickers.length);
     });
   }, [myStickerCards]);
 
-  // When stamp celebration ends, show any queued sticker celebration
+  // After pack + stamp celeb are both gone, open the queued collection
   useEffect(() => {
-    if (!celebrationPages && pendingStickerCeleb) {
-      setActiveStickerCeleb(pendingStickerCeleb);
-      setPendingStickerCeleb(null);
+    if (!pendingPack && !celebrationPages && pendingCollectionCardId) {
+      const t = setTimeout(() => {
+        setOpenStickerCardId(pendingCollectionCardId);
+        setPendingCollectionCardId(null);
+      }, 300);
+      return () => clearTimeout(t);
     }
-  }, [celebrationPages, pendingStickerCeleb]);
+  }, [pendingPack, celebrationPages, pendingCollectionCardId]);
 
   // Badge notification system
   const [allBadgesGlobal, setAllBadgesGlobal] = useState<AppBadge[]>([]);
@@ -4989,7 +5005,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
 
           {/* Challenges sub-tab — Monopoly sticker programme */}
           {walletSubTab === 'challenges' && (
-            <div className="space-y-6">
+            <div className="space-y-5">
               {activePrograms.length === 0 ? (
                 <div className="glass-card p-10 rounded-[2.5rem] border-2 border-dashed border-amber-300/60 text-center">
                   <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -4997,142 +5013,139 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                   </div>
                   <p className="text-brand-navy/60">No active sticker programmes right now. Check back soon!</p>
                 </div>
-              ) : (
-                activePrograms.map(prog => {
-                  const sc = myStickerCards.find(s => s.programme_id === prog.id);
-                  const joined = !!sc;
-                  const myRevealedCards = (sc?.stickers || []).filter((s: CollectibleSticker) => (sc?.revealedIds || []).includes(s.id));
-                  const myProgSets = totalSetsCompleted(myRevealedCards);
-                  const unrevealed = (sc?.stickers || []).filter((s: CollectibleSticker) => !(sc?.revealedIds || []).includes(s.id));
-                  const totalCollected = sc?.stickers.length || 0;
-                  const isComplete = allSetsWon(myRevealedCards);
-                  const maxSets = STICKER_ORDER.reduce((sum, t) => sum + STICKER_CONFIG[t].variants.length * 3, 0);
-                  return (
-                    <div key={prog.id} className="rounded-[2rem] overflow-hidden shadow-lg border border-black/5">
-                      {/* Tappable header — opens popup modal */}
-                      <button
-                        onClick={() => setOpenProgrammeId(prog.id)}
-                        className="w-full gradient-logo-blue px-5 py-4 text-left active:opacity-90 transition-opacity relative overflow-hidden"
-                      >
-                        <span className="shine-ray" aria-hidden="true" />
-                        <div className="flex items-start justify-between gap-2 relative z-10">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-white/50">Monopoly Challenge</p>
-                            <h3 className="font-display text-lg font-bold text-white leading-tight">{prog.title}</h3>
-                          </div>
-                          <div className="flex items-center gap-2 flex-shrink-0 mt-1">
-                            {joined && unrevealed.length > 0 && (
-                              <span className="text-[10px] font-bold text-white bg-brand-rose px-2.5 py-1 rounded-full animate-pulse">
-                                {unrevealed.length} new!
-                              </span>
-                            )}
-                            <Users size={14} className="text-white/40" />
-                          </div>
+              ) : (() => {
+                const joinedProgs = activePrograms.filter(p => myStickerCards.some(s => s.programme_id === p.id));
+                const availableProgs = activePrograms.filter(p => !myStickerCards.some(s => s.programme_id === p.id));
+                const maxSets = STICKER_ORDER.reduce((sum, t) => sum + STICKER_CONFIG[t].variants.length * 3, 0);
+                return (
+                  <>
+                    {/* ── My Challenges ── */}
+                    {joinedProgs.length > 0 && (
+                      <div className="rounded-[2rem] overflow-hidden shadow-lg border border-black/5">
+                        <div className="gradient-logo-blue px-5 py-3 relative overflow-hidden">
+                          <span className="shine-ray" aria-hidden="true" />
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-white/60 relative z-10">My Challenges</p>
+                          <h3 className="font-display text-base font-bold text-white relative z-10">Your progress</h3>
                         </div>
-                        {prog.endsAt && (
-                          <div className="mt-2 flex items-center gap-1.5 text-white/60 text-[10px] font-bold relative z-10">
-                            <Clock size={10} />
-                            <CountdownTimer endsAt={prog.endsAt} />
-                          </div>
-                        )}
-                      </button>
-
-                      {joined ? (
-                        /* Joined — coloured rank tiles */
-                        <div className="bg-white px-4 py-4">
-                          <div className="flex gap-1.5 mb-3">
-                            {STICKER_ORDER.map(tier => {
-                              const cfg = STICKER_CONFIG[tier];
-                              const sets = tierSetsCompleted(myRevealedCards, tier);
-                              const firstFound = myRevealedCards.find((s: CollectibleSticker) => s.tier === tier);
-                              const idx = STICKER_ORDER.indexOf(tier);
-                              return (
-                                <div key={tier} className="flex-1 flex flex-col items-center gap-0.5">
-                                  {/* Rank colour band */}
-                                  <div className="w-full rounded-t-xl rounded-b-sm relative overflow-hidden"
-                                    style={{ height: 14, background: cfg.solid }}>
-                                    <span className="card-shine-ray" style={{ animationDelay: `${idx * 0.45}s` }} />
+                        <div className="bg-white divide-y divide-black/5">
+                          {joinedProgs.map(prog => {
+                            const sc = myStickerCards.find(s => s.programme_id === prog.id)!;
+                            const myRevealedCards = sc.stickers.filter((s: CollectibleSticker) => (sc.revealedIds || []).includes(s.id));
+                            const myProgSets = totalSetsCompleted(myRevealedCards);
+                            const unrevealed = sc.stickers.filter((s: CollectibleSticker) => !(sc.revealedIds || []).includes(s.id));
+                            const isComplete = allSetsWon(myRevealedCards);
+                            const pct = Math.round((myProgSets / maxSets) * 100);
+                            return (
+                              <div key={prog.id} className="px-4 py-3">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <p className="text-sm font-bold text-brand-navy truncate">{prog.title}</p>
+                                      {unrevealed.length > 0 && (
+                                        <span className="text-[9px] font-bold text-white bg-brand-gold px-2 py-0.5 rounded-full animate-pulse shrink-0">
+                                          {unrevealed.length} new!
+                                        </span>
+                                      )}
+                                    </div>
+                                    {prog.endsAt && (
+                                      <div className="flex items-center gap-1 text-brand-navy/40 text-[10px] mt-0.5">
+                                        <Clock size={9} /><CountdownTimer endsAt={prog.endsAt} />
+                                      </div>
+                                    )}
                                   </div>
-                                  {/* Card body — always rank-coloured */}
-                                  <div className="w-full rounded-b-xl flex flex-col items-center justify-center py-2 relative overflow-hidden"
-                                    style={{ background: cfg.solid, opacity: sets > 0 ? 1 : 0.35, minHeight: 52, boxShadow: sets > 0 ? `0 3px 10px ${cfg.color}55` : 'none' }}>
-                                    <span style={{ fontSize: 20, lineHeight: 1, position: 'relative', zIndex: 1 }}>
-                                      {firstFound ? cfg.variants[firstFound.variant ?? 0]?.emoji ?? '?' : '?'}
-                                    </span>
-                                    <span className="text-[7px] font-black mt-1 relative z-10 text-white">
-                                      {sets}/3
-                                    </span>
-                                    {sets > 0 && <span className="card-shine-ray" style={{ animationDelay: `${idx * 0.45 + 0.25}s` }} />}
-                                  </div>
-                                  <span className="text-[7px] font-black text-center leading-tight mt-0.5" style={{ color: cfg.color }}>{cfg.label}</span>
+                                  <button
+                                    onClick={() => setOpenStickerCardId(sc.id)}
+                                    className="px-3 py-1.5 rounded-xl bg-brand-navy text-white text-[11px] font-bold active:scale-95 transition-all shrink-0"
+                                  >
+                                    {unrevealed.length > 0 ? 'Reveal' : 'View'}
+                                  </button>
                                 </div>
-                              );
-                            })}
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-xs text-brand-navy/40">
-                                {myProgSets} sets · {totalCollected} card{totalCollected !== 1 ? 's' : ''}
-                              </p>
-                              {isComplete && (
-                                <p className="text-xs font-bold text-amber-600">All sets complete! Claim: {prog.reward}</p>
-                              )}
-                            </div>
-                            <button
-                              onClick={() => setOpenStickerCardId(sc!.id)}
-                              className="px-4 py-2 rounded-2xl bg-brand-navy text-white text-xs font-bold active:scale-95 transition-all"
-                            >
-                              {unrevealed.length > 0 ? 'Reveal' : 'View'}
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        /* Not joined — show rank colours as preview */
-                        <div className="bg-white px-4 py-4 flex items-center justify-between gap-3">
-                          <div className="flex gap-1.5 flex-1">
-                            {STICKER_ORDER.map(tier => (
-                              <div key={tier} className="flex-1 h-10 rounded-xl relative overflow-hidden" style={{ background: STICKER_CONFIG[tier].solid, opacity: 0.5 }}>
-                                <span className="card-shine-ray" style={{ animationDelay: `${STICKER_ORDER.indexOf(tier) * 0.4}s` }} />
+                                {/* Mini rank tiles */}
+                                <div className="flex gap-1 mb-2">
+                                  {STICKER_ORDER.map((tier, idx) => {
+                                    const cfg = STICKER_CONFIG[tier];
+                                    const sets = tierSetsCompleted(myRevealedCards, tier);
+                                    const firstFound = myRevealedCards.find((s: CollectibleSticker) => s.tier === tier);
+                                    return (
+                                      <div key={tier} className="flex-1 rounded-lg flex flex-col items-center justify-center py-1.5 relative overflow-hidden"
+                                        style={{ background: cfg.solid, opacity: sets > 0 ? 1 : 0.3 }}>
+                                        <span style={{ fontSize: 14, lineHeight: 1 }}>{firstFound ? cfg.variants[firstFound.variant ?? 0]?.emoji ?? '?' : '?'}</span>
+                                        <span className="text-[6px] font-black text-white mt-0.5">{sets}/3</span>
+                                        {sets > 0 && <span className="card-shine-ray" style={{ animationDelay: `${idx * 0.45}s` }} />}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                                {/* Progress bar */}
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 h-1.5 bg-brand-navy/8 rounded-full overflow-hidden">
+                                    <motion.div
+                                      className={cn("h-full rounded-full", isComplete ? 'bg-green-400' : 'bg-brand-gold')}
+                                      initial={{ width: 0 }}
+                                      animate={{ width: `${pct}%` }}
+                                      transition={{ duration: 0.6, ease: 'easeOut' }}
+                                    />
+                                  </div>
+                                  <span className="text-[10px] font-bold text-brand-navy/40 shrink-0">{pct}%</span>
+                                </div>
+                                {isComplete && (
+                                  <p className="text-[10px] font-bold text-amber-600 mt-1">🏆 Complete! Claim: {prog.reward}</p>
+                                )}
                               </div>
-                            ))}
-                          </div>
-                          <button
-                            onClick={() => setOpenProgrammeId(prog.id)}
-                            className="px-4 py-2 rounded-2xl bg-brand-navy text-white text-xs font-bold active:scale-95 transition-all shrink-0"
-                          >
-                            View &amp; Join
-                          </button>
+                            );
+                          })}
                         </div>
-                      )}
-
-                      {/* Progress bar */}
-                      {joined && (
-                        <div className="px-5 pt-2 pb-1 bg-white">
-                          <div className="flex justify-between items-center mb-1.5">
-                            <p className="text-[10px] font-bold text-brand-navy/50">{myProgSets} / {maxSets} sets</p>
-                            <p className="text-[10px] font-bold text-brand-navy/40">{Math.round((myProgSets / maxSets) * 100)}%</p>
-                          </div>
-                          <div className="h-2 bg-brand-navy/5 rounded-full overflow-hidden">
-                            <motion.div
-                              className={cn("h-full rounded-full", isComplete ? 'bg-green-400' : 'bg-brand-gold')}
-                              initial={{ width: 0 }}
-                              animate={{ width: `${Math.round((myProgSets / maxSets) * 100)}%` }}
-                              transition={{ duration: 0.6, ease: 'easeOut' }}
-                            />
-                          </div>
+                        {/* Prize footer */}
+                        <div className="bg-amber-50 border-t border-amber-100 px-5 py-2.5 flex items-center gap-2">
+                          <span className="text-sm">🏆</span>
+                          <p className="text-xs text-amber-800 font-semibold">Collect 3 full sets to win the reward</p>
                         </div>
-                      )}
-
-                      {/* Prize banner */}
-                      <div className="bg-amber-50 border-t border-amber-100 px-5 py-3 flex items-center gap-2">
-                        <span className="text-base">🏆</span>
-                        <p className="text-xs text-amber-800 font-semibold flex-1">Collect 3 sets to win: <span className="font-bold">{prog.reward}</span></p>
-                        {joined && <p className="text-[10px] text-amber-600 font-bold">{isComplete ? '✓ Earned' : `${myProgSets} sets so far`}</p>}
                       </div>
-                    </div>
-                  );
-                })
-              )}
+                    )}
+
+                    {/* ── Available to Join ── */}
+                    {availableProgs.length > 0 && (
+                      <div className="rounded-[2rem] overflow-hidden shadow-lg border border-black/5">
+                        <div className="gradient-logo-blue px-5 py-3 relative overflow-hidden">
+                          <span className="shine-ray" aria-hidden="true" />
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-white/60 relative z-10">Available to Join</p>
+                          <h3 className="font-display text-base font-bold text-white relative z-10">Sticker challenges</h3>
+                        </div>
+                        <div className="bg-white divide-y divide-black/5">
+                          {availableProgs.map(prog => (
+                            <div key={prog.id} className="px-4 py-3 flex items-center gap-3">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-bold text-brand-navy truncate">{prog.title}</p>
+                                <p className="text-[10px] text-brand-navy/40 mt-0.5">🏆 {prog.reward}</p>
+                                {prog.endsAt && (
+                                  <div className="flex items-center gap-1 text-brand-navy/40 text-[10px] mt-0.5">
+                                    <Clock size={9} /><CountdownTimer endsAt={prog.endsAt} />
+                                  </div>
+                                )}
+                              </div>
+                              {/* Rank preview tiles */}
+                              <div className="flex gap-0.5 shrink-0">
+                                {STICKER_ORDER.map((tier, idx) => (
+                                  <div key={tier} className="w-7 h-7 rounded-md relative overflow-hidden"
+                                    style={{ background: STICKER_CONFIG[tier].solid, opacity: 0.5 }}>
+                                    <span className="card-shine-ray" style={{ animationDelay: `${idx * 0.4}s` }} />
+                                  </div>
+                                ))}
+                              </div>
+                              <button
+                                onClick={() => setOpenProgrammeId(prog.id)}
+                                className="px-3 py-1.5 rounded-xl bg-brand-navy text-white text-[11px] font-bold active:scale-95 transition-all shrink-0"
+                              >
+                                Join
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
 
               {/* Standard challenges */}
               {activeStandardChallenges.length > 0 && (
@@ -5354,16 +5367,17 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         )}
       </AnimatePresence>
 
-      {/* Pack Opening Modal */}
+      {/* Pack Opening Modal — standalone, only when no stamp celebration is running */}
       <AnimatePresence>
-        {pendingPack && (
+        {pendingPack && !celebrationPages && (
           <PackOpeningModal
             stickers={pendingPack}
+            cardId={pendingPackCardId}
             onClose={() => {
               const cardId = pendingPackCardId;
               setPendingPack(null);
               setPendingPackCardId(null);
-              if (cardId) setOpenStickerCardId(cardId);
+              if (cardId) setPendingCollectionCardId(cardId);
             }}
           />
         )}
@@ -5393,12 +5407,14 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         />
       )}
 
-      {/* Stamp celebration */}
+      {/* Stamp celebration — shows immediately; pack opens inside when monopoly_pack page is reached */}
       <AnimatePresence>
         {celebrationPages && (
           <StampCelebrationModal
             pages={celebrationPages}
-            onClose={() => setCelebrationPages(null)}
+            onClose={() => {
+              setCelebrationPages(null);
+            }}
             avatarConfig={profile?.avatar}
             userUid={user.uid}
             charityAnimals={profile?.charityAnimals ?? 0}
@@ -5407,26 +5423,12 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
               const field = choice === 'animal' ? 'charityAnimals' : 'charityTrees';
               await updateDoc(doc(db, 'users', user.uid), { [field]: increment(1) });
             }}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Sticker / monopoly celebration */}
-      <AnimatePresence>
-        {activeStickerCeleb && (
-          <StickerCelebrationModal
-            {...activeStickerCeleb}
-            onClose={() => setActiveStickerCeleb(null)}
-            onReveal={() => {
-              const celeb = activeStickerCeleb!;
-              const sc = myStickerCards.find(s => s.id === celeb.stickerCardId);
-              const unrevealed = sc ? sc.stickers.filter((s: CollectibleSticker) => !(sc.revealedIds || []).includes(s.id)) : [];
-              if (unrevealed.length > 0) {
-                setPendingPack(unrevealed);
-                setPendingPackCardId(celeb.stickerCardId);
-              } else {
-                setOpenStickerCardId(celeb.stickerCardId);
-              }
+            pendingPack={pendingPack}
+            pendingPackCardId={pendingPackCardId}
+            onPackClosed={(cardId) => {
+              setPendingPack(null);
+              setPendingPackCardId(null);
+              if (cardId) setPendingCollectionCardId(cardId);
             }}
           />
         )}
@@ -5756,8 +5758,8 @@ function NFCStampModal({ user, profile, onClose, autoStoreId, onPackReady }: {
   );
 }
 
-const PAGE_ICONS: Record<string, string> = { stamp: '⭐', challenge: '🏆', challenge_done: '🎉', upsell: '🎯' };
-const PAGE_ANIM: Record<string, CelebAnimType> = { stamp: 'confetti', challenge: 'sparkles', challenge_done: 'fireworks', upsell: 'burst' };
+const PAGE_ICONS: Record<string, string> = { stamp: '⭐', challenge: '🏆', challenge_done: '🎉', upsell: '🎯', monopoly_pack: '🎰', challenges_list: '🏃', upsell_list: '🎯' };
+const PAGE_ANIM: Record<string, CelebAnimType> = { stamp: 'confetti', challenge: 'sparkles', challenge_done: 'fireworks', upsell: 'burst', monopoly_pack: 'sparks', challenges_list: 'sparkles', upsell_list: 'burst' };
 const CTA_LABELS = ['Keep smashing it! 🚀', 'You\'re on fire! 🔥', 'Unstoppable! 💪', 'Legend! ⭐', 'Amazing work! 🎉'];
 
 function getCharityFeedback(type: 'animal' | 'tree', newCount: number): { emoji: string; title: string; detail: string } {
@@ -5783,6 +5785,9 @@ function StampCelebrationModal({
   onCharityPick,
   charityAnimals = 0,
   charityTrees = 0,
+  pendingPack,
+  pendingPackCardId,
+  onPackClosed,
 }: {
   pages: CelebrationPage[];
   onClose: () => void;
@@ -5791,6 +5796,9 @@ function StampCelebrationModal({
   onCharityPick?: (choice: 'animal' | 'tree') => void;
   charityAnimals?: number;
   charityTrees?: number;
+  pendingPack?: CollectibleSticker[] | null;
+  pendingPackCardId?: string | null;
+  onPackClosed?: (cardId: string | null) => void;
 }) {
   const [pageIdx, setPageIdx] = useState(0);
   const [charityPicked, setCharityPicked] = useState<'animal' | 'tree' | null>(null);
@@ -5798,6 +5806,7 @@ function StampCelebrationModal({
   const [displayRankGlobal, setDisplayRankGlobal] = useState(0);
   const [displayRankWeekly, setDisplayRankWeekly] = useState(0);
   const [rankRevealed, setRankRevealed] = useState(false);
+  const [monopolyPackOpen, setMonopolyPackOpen] = useState(false);
   const page = pages[pageIdx];
   const isLast = pageIdx === pages.length - 1;
   const pct = Math.min(100, page.totalStamps > 0 ? Math.round((page.currentStamps / page.totalStamps) * 100) : 0);
@@ -5805,6 +5814,9 @@ function StampCelebrationModal({
   const isUpsell = page.type === 'upsell';
   const isCharity = page.type === 'charity';
   const isRank = page.type === 'rank';
+  const isMonopolyPack = page.type === 'monopoly_pack';
+  const isChallengesList = page.type === 'challenges_list';
+  const isUpsellList = page.type === 'upsell_list';
   const pageKey = page.type === 'challenge' && page.done ? 'challenge_done' : page.type;
 
   // Rank page data
@@ -5816,7 +5828,8 @@ function StampCelebrationModal({
   useEffect(() => {
     setCharityPicked(null);
     setCharityFeedback(null);
-    if (!isCharity && !isRank) {
+    setMonopolyPackOpen(false);
+    if (!isCharity && !isRank && !isMonopolyPack) {
       fireCelebAnimation(PAGE_ANIM[pageKey] || 'sparkles');
     }
   }, [pageIdx]);
@@ -5876,7 +5889,7 @@ function StampCelebrationModal({
   };
 
   const ctaLabel = isLast
-    ? (isUpsell ? 'Join the challenge! 🎯' : CTA_LABELS[pageIdx % CTA_LABELS.length])
+    ? (isUpsell ? 'Join the challenge! 🎯' : isUpsellList ? 'Explore Challenges! 🎯' : CTA_LABELS[pageIdx % CTA_LABELS.length])
     : 'Next 🎉';
 
   return (
@@ -6172,8 +6185,201 @@ function StampCelebrationModal({
                   </div>
                 )}
               </>
+            ) : isMonopolyPack ? (
+              /* ── Monopoly/collectible pack page ── */
+              <>
+                {/* PackOpeningModal renders on top when triggered */}
+                {monopolyPackOpen && pendingPack && (
+                  <PackOpeningModal
+                    stickers={pendingPack}
+                    cardId={pendingPackCardId}
+                    onClose={() => {
+                      setMonopolyPackOpen(false);
+                      onPackClosed?.(pendingPackCardId ?? null);
+                      if (isLast) onClose();
+                      else setPageIdx(i => i + 1);
+                    }}
+                  />
+                )}
+
+                <div className="text-center space-y-1">
+                  <motion.p
+                    initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+                    className="text-[10px] font-bold uppercase tracking-widest text-brand-gold"
+                  >
+                    🎰 Sticker Pack
+                  </motion.p>
+                  <motion.h2
+                    initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+                    className="font-display text-xl font-bold text-brand-navy leading-tight"
+                  >
+                    {page.monopolyChallengeName ?? 'Collectible Challenge'}
+                  </motion.h2>
+                </div>
+
+                <motion.div
+                  initial={{ scale: 0, rotate: -15 }} animate={{ scale: 1, rotate: 0 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 18, delay: 0.1 }}
+                  className="flex justify-center"
+                >
+                  <div className="text-8xl select-none">🎁</div>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+                  className="rounded-2xl bg-brand-gold/10 p-4 text-center"
+                >
+                  <p className="font-bold text-sm text-brand-navy">
+                    {pendingPack ? 'Your sticker pack is ready — tap to reveal! 🎉' : 'Getting your sticker pack ready...'}
+                  </p>
+                </motion.div>
+
+                {pages.length > 1 && (
+                  <div className="flex justify-center gap-1.5">
+                    {pages.map((_, i) => (
+                      <motion.div key={i} animate={{ width: i === pageIdx ? 16 : 6 }} className={cn('h-1.5 rounded-full transition-colors', i === pageIdx ? 'bg-brand-navy' : 'bg-brand-navy/20')} />
+                    ))}
+                  </div>
+                )}
+
+                <motion.button
+                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: pendingPack ? 1 : 0.4, y: 0 }} transition={{ delay: 0.35 }}
+                  onClick={pendingPack ? () => setMonopolyPackOpen(true) : undefined}
+                  style={{ pointerEvents: pendingPack ? 'auto' : 'none' }}
+                  className="w-full py-3.5 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-[0.98] transition-all"
+                >
+                  {pendingPack ? 'Open Your Pack! 🎰' : 'Loading...'}
+                </motion.button>
+              </>
+            ) : isChallengesList ? (
+              /* ── All joined challenge progresses as a list ── */
+              <>
+                <div className="text-center space-y-1">
+                  <motion.p
+                    initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+                    className="text-[10px] font-bold uppercase tracking-widest text-brand-gold"
+                  >
+                    🏃 Challenge Updates
+                  </motion.p>
+                  <motion.h2
+                    initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+                    className="font-display text-xl font-bold text-brand-navy leading-tight"
+                  >
+                    Your Progress
+                  </motion.h2>
+                </div>
+
+                <div className="space-y-3 max-h-60 overflow-y-auto">
+                  {page.challengesList?.map((c, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 + i * 0.08 }}
+                      className={cn('rounded-2xl p-4 space-y-2', c.done ? 'bg-green-50' : 'bg-brand-navy/5')}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-bold text-sm text-brand-navy truncate">{c.title}</p>
+                        {c.done && (
+                          <motion.span
+                            initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 400, damping: 14 }}
+                            className="text-[10px] font-black text-green-500 shrink-0"
+                          >✓ DONE!</motion.span>
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] font-bold text-brand-navy/40">
+                          <span className="truncate max-w-[70%]">{c.reward}</span>
+                          <span>{c.currentStamps}/{c.totalStamps}</span>
+                        </div>
+                        <div className="h-1.5 bg-brand-navy/8 rounded-full overflow-hidden">
+                          <motion.div
+                            className={cn('h-full rounded-full', c.done ? 'bg-green-400' : 'bg-brand-gold')}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${c.totalStamps > 0 ? Math.min(100, Math.round((c.currentStamps / c.totalStamps) * 100)) : 0}%` }}
+                            transition={{ duration: 0.8, ease: 'easeOut', delay: 0.2 + i * 0.08 }}
+                          />
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+
+                {pages.length > 1 && (
+                  <div className="flex justify-center gap-1.5">
+                    {pages.map((_, i) => (
+                      <motion.div key={i} animate={{ width: i === pageIdx ? 16 : 6 }} className={cn('h-1.5 rounded-full transition-colors', i === pageIdx ? 'bg-brand-navy' : 'bg-brand-navy/20')} />
+                    ))}
+                  </div>
+                )}
+
+                <motion.button
+                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
+                  onClick={isLast ? onClose : () => setPageIdx(i => i + 1)}
+                  className="w-full py-3.5 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-[0.98] transition-all"
+                >
+                  {ctaLabel}
+                </motion.button>
+              </>
+            ) : isUpsellList ? (
+              /* ── Recommended challenges list ── */
+              <>
+                <div className="text-center space-y-1">
+                  <motion.p
+                    initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+                    className="text-[10px] font-bold uppercase tracking-widest text-brand-gold"
+                  >
+                    ✨ Level Up!
+                  </motion.p>
+                  <motion.h2
+                    initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+                    className="font-display text-xl font-bold text-brand-navy leading-tight"
+                  >
+                    Make every stamp count!
+                  </motion.h2>
+                </div>
+
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {page.upsellList?.map((c, i) => (
+                    <motion.div
+                      key={c.id}
+                      initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 + i * 0.07 }}
+                      className="rounded-2xl bg-brand-navy/5 border border-brand-navy/8 p-3.5 flex items-center justify-between gap-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-bold text-sm text-brand-navy truncate">{c.title}</p>
+                        <p className="text-[11px] text-brand-navy/50 mt-0.5 truncate">🏆 {c.reward}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-[10px] font-bold text-brand-navy/40">{c.totalStamps} stamps</p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
+                  className="rounded-2xl bg-brand-gold/10 border border-brand-gold/20 p-3.5 text-center"
+                >
+                  <p className="text-xs font-bold text-brand-navy">🎯 Join in the Challenges tab — every stamp counts!</p>
+                </motion.div>
+
+                {pages.length > 1 && (
+                  <div className="flex justify-center gap-1.5">
+                    {pages.map((_, i) => (
+                      <motion.div key={i} animate={{ width: i === pageIdx ? 16 : 6 }} className={cn('h-1.5 rounded-full transition-colors', i === pageIdx ? 'bg-brand-navy' : 'bg-brand-navy/20')} />
+                    ))}
+                  </div>
+                )}
+
+                <motion.button
+                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
+                  onClick={isLast ? onClose : () => setPageIdx(i => i + 1)}
+                  className="w-full py-3.5 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-[0.98] transition-all"
+                >
+                  {ctaLabel}
+                </motion.button>
+              </>
             ) : (
-              /* ── Standard stamp / challenge / upsell pages ── */
+              /* ── Standard stamp page ── */
               <>
                 {/* Animated icon + label */}
                 <div className="text-center space-y-1">
