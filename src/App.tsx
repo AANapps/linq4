@@ -9079,6 +9079,172 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
   );
 }
 
+function BadgeSquarePanel({ badges, onSelectBadge }: { badges: AppBadge[]; onSelectBadge: (b: AppBadge) => void }) {
+  const [showAll, setShowAll] = useState(false);
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-1.5 w-36 shrink-0">
+        {[0, 1, 2].map(i => {
+          const b = badges[i];
+          if (!b) return (
+            <div key={i} className="aspect-square rounded-[1.1rem] bg-brand-navy/5 border border-brand-navy/8 flex items-center justify-center">
+              <span className="text-brand-navy/20 text-lg">✦</span>
+            </div>
+          );
+          return (
+            <button key={b.id} onClick={() => onSelectBadge(b)}
+              className="aspect-square rounded-[1.1rem] flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-transform shadow-md overflow-hidden"
+              style={{ background: `linear-gradient(135deg, ${b.color}ee, ${b.color}99)` }}>
+              <span className="text-2xl leading-none">{b.icon}</span>
+              <span className="text-[6px] font-bold text-white/90 text-center px-1 leading-tight line-clamp-2 max-w-full">{b.name}</span>
+            </button>
+          );
+        })}
+        <button onClick={() => setShowAll(true)}
+          className="aspect-square rounded-[1.1rem] bg-brand-navy flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-transform shadow-md">
+          <span className="text-lg leading-none">🏅</span>
+          <span className="text-[7px] font-bold text-white/70 uppercase tracking-wide">See all</span>
+          {badges.length > 0 && <span className="text-[9px] font-black text-brand-gold">{badges.length}</span>}
+        </button>
+      </div>
+
+      <AnimatePresence>
+        {showAll && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] flex items-end max-w-md mx-auto"
+            onClick={() => setShowAll(false)}>
+            <motion.div initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+              className="w-full bg-brand-bg rounded-t-3xl p-6 pb-10"
+              onClick={e => e.stopPropagation()}>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-4">All Badges</p>
+              {badges.length === 0 ? (
+                <p className="text-xs text-brand-navy/40 text-center py-8">No badges earned yet</p>
+              ) : (
+                <div className="grid grid-cols-4 gap-3 max-h-72 overflow-y-auto pb-1">
+                  {badges.map(b => (
+                    <button key={b.id} onClick={() => { setShowAll(false); onSelectBadge(b); }}
+                      className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform">
+                      <div className="w-14 h-14 rounded-[1.1rem] flex items-center justify-center text-2xl shadow-md"
+                        style={{ background: `linear-gradient(135deg, ${b.color}ee, ${b.color}99)` }}>{b.icon}</div>
+                      <p className="text-[8px] font-bold text-brand-navy/60 text-center max-w-[56px] leading-tight line-clamp-2">{b.name}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <button onClick={() => setShowAll(false)} className="w-full mt-5 py-3 rounded-2xl bg-brand-navy/8 text-brand-navy font-bold text-sm active:scale-[0.98] transition-all">Close</button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
+function CompactStickerPanel({ uid, isOwnProfile, onOpenPack }: { uid: string; isOwnProfile?: boolean; onOpenPack?: (stickers: CollectibleSticker[]) => void }) {
+  const [col, setCol] = useState<{ stickers: CollectibleSticker[]; revealedIds: string[] } | null>(null);
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    return onSnapshot(doc(db, 'user_stickers', uid), snap => {
+      if (snap.exists()) {
+        const d = snap.data();
+        setCol({ stickers: d.stickers || [], revealedIds: d.revealedIds || [] });
+      } else setCol(null);
+    });
+  }, [uid]);
+
+  const revealed = col ? col.stickers.filter(s => col.revealedIds.includes(s.id)) : [];
+  const unrevealed = col ? col.stickers.filter(s => !col.revealedIds.includes(s.id)) : [];
+  const panelSets = totalSetsCompleted(revealed);
+
+  if (!col) {
+    return (
+      <div className="flex-1 glass-card rounded-[2rem] p-4 flex flex-col items-center justify-center min-h-[9rem]">
+        <p className="text-2xl mb-1">🃏</p>
+        <p className="text-[9px] text-brand-navy/30 font-bold text-center">No cards yet</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 glass-card rounded-[2rem] p-4 space-y-2.5">
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">Cards</p>
+        <button onClick={() => setExpanded(e => !e)} className="text-[9px] font-bold text-brand-gold uppercase tracking-wide active:scale-95 transition-transform">
+          {expanded ? 'Less ▲' : 'More ▼'}
+        </button>
+      </div>
+
+      <div className="flex gap-3 text-center">
+        <div className="flex-1">
+          <p className="font-black text-brand-navy text-base leading-none">{col.stickers.length}</p>
+          <p className="text-[7px] text-brand-navy/40 font-bold uppercase mt-0.5">Cards</p>
+        </div>
+        <div className="flex-1">
+          <p className="font-black text-brand-navy text-base leading-none">{panelSets}</p>
+          <p className="text-[7px] text-brand-navy/40 font-bold uppercase mt-0.5">Sets</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-4 gap-1">
+        {STICKER_ORDER.map(tier => {
+          const cfg = STICKER_CONFIG[tier];
+          const count = revealed.filter(s => s.tier === tier).length;
+          return (
+            <div key={tier} className="flex flex-col items-center gap-0.5">
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center text-sm"
+                style={count > 0 ? { background: cfg.bg, border: `1px solid ${cfg.border}` } : { background: '#F1F5F9', border: '1px solid #E2E8F0' }}>
+                {count > 0 ? cfg.variants[0]?.emoji : '?'}
+              </div>
+              <span className="text-[6px] font-bold leading-none" style={{ color: count > 0 ? cfg.color : '#CBD5E1' }}>{count}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      {isOwnProfile && unrevealed.length > 0 && (
+        <button onClick={() => onOpenPack?.(unrevealed)}
+          className="w-full py-2 rounded-xl font-bold text-[10px] flex items-center justify-center gap-1"
+          style={{ background: 'linear-gradient(135deg, #0D0D2B, #1A0730)', color: 'white' }}>
+          🎴 {unrevealed.length} to open
+        </button>
+      )}
+
+      <AnimatePresence>
+        {expanded && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+            style={{ overflow: 'hidden' }}>
+            <div className="space-y-1.5 pt-2 border-t border-brand-navy/5">
+              {STICKER_ORDER.map(tier => {
+                const cfg = STICKER_CONFIG[tier];
+                const sets = tierSetsCompleted(revealed, tier);
+                return (
+                  <div key={tier} className="flex items-center gap-1.5">
+                    <span className="text-[7px] font-black uppercase w-10 shrink-0 leading-tight" style={{ color: sets > 0 ? cfg.color : '#CBD5E1' }}>{cfg.theme}</span>
+                    <div className="flex gap-0.5 flex-1">
+                      {cfg.variants.map((v, vi) => {
+                        const count = revealed.filter(s => s.tier === tier && (s.variant ?? 0) === vi).length;
+                        return (
+                          <div key={vi} className="flex-1 aspect-square rounded-md border flex items-center justify-center text-[10px]"
+                            style={count > 0 ? { background: cfg.bg, borderColor: cfg.border } : { background: '#F1F5F9', borderColor: '#E2E8F0' }}>
+                            {count > 0 ? v.emoji : '?'}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <span className="text-[7px] font-bold w-7 text-right shrink-0" style={{ color: sets >= 3 ? cfg.color : '#94A3B8' }}>{sets}/3{sets >= 3 ? '✓' : ''}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, onViewUser, user }: { profile: UserProfile | null, userCards: Card[], stores?: StoreProfile[], onLogout: () => void, onDeleteAccount: () => Promise<void>, onViewUser: (u: UserProfile) => void, user: FirebaseUser }) {
   const [activeSubTab, setActiveSubTab] = useState<'posts' | 'interactions'>('posts');
   const [showProfileSettings, setShowProfileSettings] = useState(false);
@@ -9586,21 +9752,20 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         ))}
       </div>
 
-      {/* Earned badges */}
-      {earnedBadges.length > 0 && (
+      {/* Badges + Sticker collection side-by-side */}
+      {profile.role === 'consumer' && (
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 px-1">Badges &amp; Cards</p>
+          <div className="flex gap-3 items-start">
+            <BadgeSquarePanel badges={earnedBadges} onSelectBadge={setSelectedBadge} />
+            <CompactStickerPanel uid={user.uid} isOwnProfile onOpenPack={stickers => setProfilePendingPack(stickers)} />
+          </div>
+        </div>
+      )}
+      {profile.role !== 'consumer' && earnedBadges.length > 0 && (
         <div>
           <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 px-1">Badges</p>
-          <div className="flex flex-wrap gap-2">
-            {earnedBadges.map(b => (
-              <button key={b.id} onClick={() => setSelectedBadge(b)} className="flex flex-col items-center gap-1 active:scale-95 transition-transform">
-                <div
-                  className="w-14 h-14 rounded-[1.1rem] flex items-center justify-center text-2xl shadow-md"
-                  style={{ background: `linear-gradient(135deg, ${b.color}ee, ${b.color}99)` }}
-                >{b.icon}</div>
-                <p className="text-[9px] font-bold text-brand-navy/50 text-center max-w-[56px] leading-tight line-clamp-2">{b.name}</p>
-              </button>
-            ))}
-          </div>
+          <BadgeSquarePanel badges={earnedBadges} onSelectBadge={setSelectedBadge} />
         </div>
       )}
 
@@ -9676,15 +9841,6 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
             })}
           </div>
         </div>
-      )}
-
-      {/* Animal Card Collection */}
-      {profile.role === 'consumer' && (
-        <UserStickerPanel
-          uid={user.uid}
-          isOwnProfile
-          onOpenPack={stickers => setProfilePendingPack(stickers)}
-        />
       )}
 
       <div className="flex p-1 glass-card rounded-2xl">
@@ -14193,20 +14349,20 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
       </div>
 
 
-      {earnedBadges.length > 0 && (
+      {/* Badges + Sticker collection side-by-side */}
+      {targetUser.role === 'consumer' && (
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 px-1">Badges &amp; Cards</p>
+          <div className="flex gap-3 items-start">
+            <BadgeSquarePanel badges={earnedBadges} onSelectBadge={setSelectedBadge} />
+            <CompactStickerPanel uid={targetUser.uid} isOwnProfile={false} />
+          </div>
+        </div>
+      )}
+      {targetUser.role !== 'consumer' && earnedBadges.length > 0 && (
         <div>
           <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 px-1">Badges</p>
-          <div className="flex flex-wrap gap-2">
-            {earnedBadges.map(b => (
-              <button key={b.id} onClick={() => setSelectedBadge(b)} className="flex flex-col items-center gap-1 active:scale-95 transition-transform">
-                <div
-                  className="w-14 h-14 rounded-[1.1rem] flex items-center justify-center text-2xl shadow-md"
-                  style={{ background: `linear-gradient(135deg, ${b.color}ee, ${b.color}99)` }}
-                >{b.icon}</div>
-                <p className="text-[9px] font-bold text-brand-navy/50 text-center max-w-[56px] leading-tight line-clamp-2">{b.name}</p>
-              </button>
-            ))}
-          </div>
+          <BadgeSquarePanel badges={earnedBadges} onSelectBadge={setSelectedBadge} />
         </div>
       )}
 
@@ -14367,9 +14523,6 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
 
       {profileTab === 'wall' ? (
         <div className="space-y-4">
-          {/* Sticker collection — visible on all public profiles */}
-          <UserStickerPanel uid={targetUser.uid} isOwnProfile={false} />
-
           {targetUser.uid !== currentUser.uid && (
             <div className="glass-card p-6 rounded-[2.5rem] space-y-4">
               <textarea
