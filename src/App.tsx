@@ -567,7 +567,7 @@ interface RankEntry {
 }
 
 interface CelebrationPage {
-  type: 'stamp' | 'challenge' | 'upsell' | 'charity' | 'rank' | 'monopoly_pack' | 'challenges_list' | 'upsell_list';
+  type: 'stamp' | 'challenge' | 'upsell' | 'charity' | 'rank' | 'monopoly_pack' | 'challenges_list' | 'upsell_list' | 'stage_reward';
   storeName?: string;
   challengeTitle?: string;
   upsellTitle?: string;
@@ -588,6 +588,11 @@ interface CelebrationPage {
   monopolyChallengeName?: string;
   challengesList?: Array<{ title: string; currentStamps: number; totalStamps: number; reward: string; done: boolean }>;
   upsellList?: Array<{ title: string; totalStamps: number; reward: string; id: string }>;
+  stageReward?: string;
+  stageStoreName?: string;
+  stageStamps?: number;
+  nextStageStamps?: number;
+  nextStageReward?: string;
 }
 
 interface AppBadge {
@@ -4517,24 +4522,47 @@ function buildStampCelebrationPages(
     ? [...store.rewardTiers].sort((a, b) => a.stamps - b.stamps)
     : [{ stamps: store.stamps_required_for_reward || 10, reward: store.reward || 'Free Reward' }];
 
+  const hitTier = tiers.find(t => t.stamps === card.current_stamps);
+  const hitTierIdx = hitTier ? tiers.indexOf(hitTier) : -1;
+  const nextStageTier = hitTier ? tiers[hitTierIdx + 1] : undefined;
+
   const nextTier = tiers.find(t => t.stamps > card.current_stamps);
   const stampsLeft = nextTier ? nextTier.stamps - card.current_stamps : 0;
-  const done = stampsLeft === 0;
+  const done = stampsLeft === 0 && !hitTier;
   const enc = done
     ? `🎁 YES! Your reward is ready to claim at ${store.name}!`
     : stampsLeft === 1
       ? `🤩 ONE more stamp and ${nextTier!.reward} is yours!`
-      : STAMP_ENCOUR[seed % STAMP_ENCOUR.length](stampsLeft, nextTier!.reward);
+      : nextTier
+        ? STAMP_ENCOUR[seed % STAMP_ENCOUR.length](stampsLeft, nextTier.reward)
+        : `🎁 You've earned: ${hitTier?.reward || store.reward || 'Free Reward'}!`;
 
   pages.push({
     type: 'stamp',
     storeName: store.name,
     currentStamps: card.current_stamps,
-    totalStamps: nextTier?.stamps || store.stamps_required_for_reward || 10,
-    reward: nextTier?.reward || store.reward || 'Free Reward',
+    totalStamps: nextTier?.stamps || hitTier?.stamps || store.stamps_required_for_reward || 10,
+    reward: nextTier?.reward || hitTier?.reward || store.reward || 'Free Reward',
     encouragement: enc,
-    done,
+    done: done || (!!hitTier && !nextStageTier),
   });
+
+  // 1a. Stage reward page — inserted at index 0 when the current stamp hits a tier
+  if (hitTier) {
+    pages.unshift({
+      type: 'stage_reward',
+      currentStamps: card.current_stamps,
+      totalStamps: hitTier.stamps,
+      reward: hitTier.reward,
+      encouragement: '',
+      done: !nextStageTier,
+      stageReward: hitTier.reward,
+      stageStoreName: store.name,
+      stageStamps: card.current_stamps,
+      nextStageStamps: nextStageTier?.stamps ?? 0,
+      nextStageReward: nextStageTier?.reward ?? '',
+    });
+  }
 
   // 2. Charity deed page (rank is spliced in at position 1 by caller, pushing charity to pos 2)
   const charityAnimal = ENDANGERED_ANIMALS[card.current_stamps % ENDANGERED_ANIMALS.length];
@@ -5758,8 +5786,8 @@ function NFCStampModal({ user, profile, onClose, autoStoreId, onPackReady }: {
   );
 }
 
-const PAGE_ICONS: Record<string, string> = { stamp: '⭐', challenge: '🏆', challenge_done: '🎉', upsell: '🎯', monopoly_pack: '🎰', challenges_list: '🏃', upsell_list: '🎯' };
-const PAGE_ANIM: Record<string, CelebAnimType> = { stamp: 'confetti', challenge: 'sparkles', challenge_done: 'fireworks', upsell: 'burst', monopoly_pack: 'sparks', challenges_list: 'sparkles', upsell_list: 'burst' };
+const PAGE_ICONS: Record<string, string> = { stamp: '⭐', challenge: '🏆', challenge_done: '🎉', upsell: '🎯', monopoly_pack: '🎰', challenges_list: '🏃', upsell_list: '🎯', stage_reward: '🎁' };
+const PAGE_ANIM: Record<string, CelebAnimType> = { stamp: 'confetti', challenge: 'sparkles', challenge_done: 'fireworks', upsell: 'burst', monopoly_pack: 'sparks', challenges_list: 'sparkles', upsell_list: 'burst', stage_reward: 'fireworks' };
 const CTA_LABELS = ['Keep smashing it! 🚀', 'You\'re on fire! 🔥', 'Unstoppable! 💪', 'Legend! ⭐', 'Amazing work! 🎉'];
 
 function getCharityFeedback(type: 'animal' | 'tree', newCount: number): { emoji: string; title: string; detail: string } {
@@ -5807,6 +5835,7 @@ function StampCelebrationModal({
   const [displayRankWeekly, setDisplayRankWeekly] = useState(0);
   const [rankRevealed, setRankRevealed] = useState(false);
   const [monopolyPackOpen, setMonopolyPackOpen] = useState(false);
+  const [stageRedeemed, setStageRedeemed] = useState(false);
   const page = pages[pageIdx];
   const isLast = pageIdx === pages.length - 1;
   const pct = Math.min(100, page.totalStamps > 0 ? Math.round((page.currentStamps / page.totalStamps) * 100) : 0);
@@ -5817,6 +5846,7 @@ function StampCelebrationModal({
   const isMonopolyPack = page.type === 'monopoly_pack';
   const isChallengesList = page.type === 'challenges_list';
   const isUpsellList = page.type === 'upsell_list';
+  const isStageReward = page.type === 'stage_reward';
   const pageKey = page.type === 'challenge' && page.done ? 'challenge_done' : page.type;
 
   // Rank page data
@@ -5829,6 +5859,7 @@ function StampCelebrationModal({
     setCharityPicked(null);
     setCharityFeedback(null);
     setMonopolyPackOpen(false);
+    setStageRedeemed(false);
     if (!isCharity && !isRank && !isMonopolyPack) {
       fireCelebAnimation(PAGE_ANIM[pageKey] || 'sparkles');
     }
@@ -6183,6 +6214,145 @@ function StampCelebrationModal({
                       <motion.div key={i} animate={{ width: i === pageIdx ? 16 : 6 }} className={cn('h-1.5 rounded-full transition-colors', i === pageIdx ? 'bg-brand-navy' : 'bg-brand-navy/20')} />
                     ))}
                   </div>
+                )}
+              </>
+            ) : isStageReward ? (
+              /* ── Stage reward page (2-step: reward → next stage progress) ── */
+              <>
+                {!stageRedeemed ? (
+                  /* Step 1: reward celebration */
+                  <>
+                    <div className="text-center space-y-1">
+                      <motion.p
+                        initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+                        className="text-[10px] font-bold uppercase tracking-widest text-brand-gold"
+                      >
+                        🎁 Stage Reward Unlocked!
+                      </motion.p>
+                      <motion.h2
+                        initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+                        className="font-display text-2xl font-bold text-brand-navy leading-tight"
+                      >
+                        {page.stageStoreName}
+                      </motion.h2>
+                    </div>
+
+                    <motion.div
+                      initial={{ scale: 0, rotate: -15 }} animate={{ scale: 1, rotate: 0 }}
+                      transition={{ type: 'spring', stiffness: 300, damping: 18, delay: 0.1 }}
+                      className="flex justify-center"
+                    >
+                      <div className="text-8xl select-none">🎁</div>
+                    </motion.div>
+
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }}
+                      className="rounded-3xl bg-brand-navy p-5 text-center space-y-2"
+                    >
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold/70">Your reward</p>
+                      <p className="font-display text-xl font-bold text-white leading-tight">{page.stageReward}</p>
+                      <p className="text-xs text-white/50 mt-1">Show this screen at {page.stageStoreName} to claim</p>
+                    </motion.div>
+
+                    {pages.length > 1 && (
+                      <div className="flex justify-center gap-1.5">
+                        {pages.map((_, i) => (
+                          <motion.div key={i} animate={{ width: i === pageIdx ? 16 : 6 }} className={cn('h-1.5 rounded-full transition-colors', i === pageIdx ? 'bg-brand-navy' : 'bg-brand-navy/20')} />
+                        ))}
+                      </div>
+                    )}
+
+                    <motion.button
+                      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+                      onClick={() => { setStageRedeemed(true); fireCelebAnimation('fireworks'); }}
+                      className="w-full py-3.5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-all"
+                      style={{ background: 'linear-gradient(135deg, #16A34A, #15803D)', color: 'white' }}
+                    >
+                      Redeem 🎁
+                    </motion.button>
+                  </>
+                ) : (
+                  /* Step 2: next stage progress */
+                  <>
+                    <div className="text-center space-y-1">
+                      <motion.p
+                        initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                        className="text-[10px] font-bold uppercase tracking-widest text-green-600"
+                      >
+                        ✓ Redeemed!
+                      </motion.p>
+                      <motion.h2
+                        initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+                        className="font-display text-2xl font-bold text-brand-navy leading-tight"
+                      >
+                        {page.nextStageStamps ? 'Keep going!' : 'Card Complete!'}
+                      </motion.h2>
+                    </div>
+
+                    {page.nextStageStamps ? (
+                      <>
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: 0.1, type: 'spring', stiffness: 300 }}
+                          className="flex justify-center"
+                        >
+                          <div className="relative w-32 h-32">
+                            <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                              <circle cx="50" cy="50" r="42" fill="none" strokeWidth="8" stroke="currentColor" className="text-brand-navy/8" />
+                              <motion.circle
+                                cx="50" cy="50" r="42" fill="none" strokeWidth="8" stroke="currentColor"
+                                className="text-brand-gold"
+                                strokeLinecap="round"
+                                strokeDasharray={circumference}
+                                initial={{ strokeDashoffset: circumference }}
+                                animate={{ strokeDashoffset: circumference * (1 - (page.stageStamps ?? 0) / (page.nextStageStamps ?? 1)) }}
+                                transition={{ duration: 0.9, ease: 'easeOut' }}
+                              />
+                            </svg>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                              <span className="text-3xl font-display font-bold text-brand-navy leading-none">{page.stageStamps}</span>
+                              <span className="text-xs text-brand-navy/40 font-bold">/ {page.nextStageStamps}</span>
+                            </div>
+                          </div>
+                        </motion.div>
+
+                        <motion.div
+                          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                          className="rounded-2xl bg-brand-gold/10 p-4 text-center"
+                        >
+                          <p className="font-bold text-sm text-brand-navy">
+                            {(page.nextStageStamps - (page.stageStamps ?? 0))} more stamp{page.nextStageStamps - (page.stageStamps ?? 0) !== 1 ? 's' : ''} to earn:
+                          </p>
+                          <p className="font-display font-bold text-lg text-brand-navy mt-0.5">{page.nextStageReward}</p>
+                        </motion.div>
+                      </>
+                    ) : (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }}
+                        className="rounded-3xl bg-green-50 border border-green-200 p-6 text-center space-y-2"
+                      >
+                        <p className="text-5xl">🏆</p>
+                        <p className="font-display font-bold text-lg text-green-800">All rewards earned!</p>
+                        <p className="text-xs text-green-600/80">A new card starts fresh next visit</p>
+                      </motion.div>
+                    )}
+
+                    {pages.length > 1 && (
+                      <div className="flex justify-center gap-1.5">
+                        {pages.map((_, i) => (
+                          <motion.div key={i} animate={{ width: i === pageIdx ? 16 : 6 }} className={cn('h-1.5 rounded-full transition-colors', i === pageIdx ? 'bg-brand-navy' : 'bg-brand-navy/20')} />
+                        ))}
+                      </div>
+                    )}
+
+                    <motion.button
+                      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+                      onClick={isLast ? onClose : () => setPageIdx(i => i + 1)}
+                      className="w-full py-3.5 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-[0.98] transition-all"
+                    >
+                      {isLast ? 'Done 🎉' : 'Continue 🎉'}
+                    </motion.button>
+                  </>
                 )}
               </>
             ) : isMonopolyPack ? (
