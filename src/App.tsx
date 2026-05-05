@@ -14232,6 +14232,156 @@ function CommunityScreen({ onViewUser, currentUser }: { onViewUser: (u: UserProf
   );
 }
 
+function AdminStoreEditModal({ store, onClose }: { store: StoreProfile; onClose: () => void }) {
+  const [name, setName] = useState(store.name || '');
+  const [category, setCategory] = useState<Category>(store.category || 'Food');
+  const [description, setDescription] = useState(store.description || '');
+  const [location, setLocation] = useState(store.location || store.address || '');
+  const [phone, setPhone] = useState(store.phone || '');
+  const [logoUrl, setLogoUrl] = useState(store.logoUrl || '');
+  const [coverUrl, setCoverUrl] = useState(store.coverUrl || '');
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [coverUploading, setCoverUploading] = useState(false);
+  const [isVerified, setIsVerified] = useState(store.isVerified || false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const uploadImage = async (file: File, path: string) => {
+    const r = storageRef(storage, path);
+    await uploadBytes(r, file);
+    return getDownloadURL(r);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await updateDoc(doc(db, 'stores', store.id), {
+        name, category, description, location, address: location, phone,
+        logoUrl, coverUrl, isVerified,
+      });
+      setSaved(true);
+      setTimeout(() => { setSaved(false); onClose(); }, 800);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: '100%' }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: '100%' }}
+      transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+      className="fixed inset-0 bg-brand-bg z-[300] flex flex-col max-w-md mx-auto overflow-y-auto"
+    >
+      <header className="glass-panel px-5 py-4 flex items-center gap-3 sticky top-0 z-10">
+        <button onClick={onClose} className="p-2 -ml-2 text-brand-navy/60"><ArrowLeft size={22} /></button>
+        <div className="flex-1">
+          <p className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest">Admin</p>
+          <h2 className="font-bold text-brand-navy text-base">Edit Business Profile</h2>
+        </div>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="px-4 py-2 gradient-logo-blue text-white text-xs font-bold rounded-2xl active:scale-95 transition-all disabled:opacity-60"
+        >
+          {saved ? '✓ Saved' : saving ? 'Saving…' : 'Save'}
+        </button>
+      </header>
+
+      <div className="px-5 py-4 space-y-5">
+        {/* Logo */}
+        <div>
+          <p className="text-xs font-bold text-brand-navy/50 mb-2">Logo</p>
+          <div className="flex items-center gap-3">
+            <div className="w-16 h-16 rounded-2xl overflow-hidden bg-brand-navy/5 border border-brand-navy/10 shrink-0">
+              {logoUrl ? <img src={logoUrl} alt="" className="w-full h-full object-cover" /> : <Building2 size={24} className="m-auto mt-4 text-brand-navy/20" />}
+            </div>
+            <label className="flex-1 py-2.5 px-4 rounded-2xl bg-brand-navy/5 text-xs font-bold text-brand-navy/60 text-center cursor-pointer active:scale-95 transition-all">
+              {logoUploading ? 'Uploading…' : 'Upload Logo'}
+              <input type="file" accept="image/*" className="hidden" onChange={async e => {
+                const f = e.target.files?.[0]; if (!f) return;
+                setLogoUploading(true);
+                try { setLogoUrl(await uploadImage(f, `store_logos/${store.id}/logo_${Date.now()}`)); } finally { setLogoUploading(false); }
+              }} />
+            </label>
+          </div>
+        </div>
+
+        {/* Cover */}
+        <div>
+          <p className="text-xs font-bold text-brand-navy/50 mb-2">Cover Image</p>
+          <div className="relative w-full h-24 rounded-2xl overflow-hidden bg-brand-navy/5 border border-brand-navy/10">
+            {coverUrl && <img src={coverUrl} alt="" className="w-full h-full object-cover" />}
+            <label className="absolute inset-0 flex items-center justify-center bg-black/20 cursor-pointer active:scale-95">
+              <span className="text-white text-xs font-bold">{coverUploading ? 'Uploading…' : 'Upload Cover'}</span>
+              <input type="file" accept="image/*" className="hidden" onChange={async e => {
+                const f = e.target.files?.[0]; if (!f) return;
+                setCoverUploading(true);
+                try { setCoverUrl(await uploadImage(f, `store_logos/${store.id}/cover_${Date.now()}`)); } finally { setCoverUploading(false); }
+              }} />
+            </label>
+          </div>
+        </div>
+
+        {/* Fields */}
+        <div className="space-y-3">
+          {([
+            { label: 'Business Name', value: name, set: setName },
+            { label: 'Location / Address', value: location, set: setLocation },
+            { label: 'Phone', value: phone, set: setPhone },
+          ] as { label: string; value: string; set: (v: string) => void }[]).map(({ label, value, set }) => (
+            <div key={label}>
+              <p className="text-xs font-bold text-brand-navy/50 mb-1">{label}</p>
+              <input
+                value={value}
+                onChange={e => set(e.target.value)}
+                className="w-full px-4 py-3 rounded-2xl bg-white border border-brand-navy/10 text-sm text-brand-navy outline-none focus:border-brand-navy/30"
+              />
+            </div>
+          ))}
+
+          <div>
+            <p className="text-xs font-bold text-brand-navy/50 mb-1">Category</p>
+            <select
+              value={category}
+              onChange={e => setCategory(e.target.value as Category)}
+              className="w-full px-4 py-3 rounded-2xl bg-white border border-brand-navy/10 text-sm text-brand-navy outline-none"
+            >
+              {(['Food','Beauty','Gym','Barber','Retail','Coffee','Other'] as Category[]).map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <p className="text-xs font-bold text-brand-navy/50 mb-1">Description</p>
+            <textarea
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              rows={3}
+              className="w-full px-4 py-3 rounded-2xl bg-white border border-brand-navy/10 text-sm text-brand-navy outline-none focus:border-brand-navy/30 resize-none"
+            />
+          </div>
+
+          <label className="flex items-center gap-3 px-4 py-3 bg-white rounded-2xl border border-brand-navy/10 cursor-pointer">
+            <input type="checkbox" checked={isVerified} onChange={e => setIsVerified(e.target.checked)} className="w-4 h-4 accent-blue-500" />
+            <span className="text-sm font-bold text-brand-navy">Verified badge</span>
+          </label>
+        </div>
+
+        {/* Card builder section */}
+        <div>
+          <p className="text-xs font-bold text-brand-navy/50 mb-3 uppercase tracking-widest">Stamp Card Settings</p>
+          <CardBuilder store={store} />
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage }: { store: StoreProfile, onBack: () => void, user: FirebaseUser, profile: UserProfile | null, onViewUser: (u: UserProfile) => void, onMessage?: (chatId: string) => void, key?: React.Key }) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [vendorGlobalPosts, setVendorGlobalPosts] = useState<GlobalPost[]>([]);
@@ -14246,6 +14396,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
   const [leaderboardProfiles, setLeaderboardProfiles] = useState<Map<string, UserProfile>>(new Map());
   const [newPost, setNewPost] = useState('');
   const [isPosting, setIsPosting] = useState(false);
+  const [showAdminEdit, setShowAdminEdit] = useState(false);
   const [card, setCard] = useState<Card | null>(null);
   const [isFollowingStore, setIsFollowingStore] = useState(false);
   const [allStoreCards, setAllStoreCards] = useState<Card[]>([]);
@@ -14503,10 +14654,26 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
       exit={{ opacity: 0, y: 20 }}
       className="space-y-5"
     >
-      <button onClick={onBack} className="flex items-center gap-2 text-brand-navy/60 font-bold text-sm hover:text-brand-navy transition-colors">
-        <ArrowLeft size={18} />
-        Back
-      </button>
+      <div className="flex items-center justify-between">
+        <button onClick={onBack} className="flex items-center gap-2 text-brand-navy/60 font-bold text-sm hover:text-brand-navy transition-colors">
+          <ArrowLeft size={18} />
+          Back
+        </button>
+        {profile?.email === ADMIN_EMAIL && (
+          <button
+            onClick={() => setShowAdminEdit(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl gradient-logo-blue text-white text-xs font-bold active:scale-95 transition-all"
+          >
+            <Edit3 size={12} /> Edit Profile
+          </button>
+        )}
+      </div>
+
+      <AnimatePresence>
+        {showAdminEdit && (
+          <AdminStoreEditModal store={store} onClose={() => setShowAdminEdit(false)} />
+        )}
+      </AnimatePresence>
 
       {/* Logo + name */}
       <div className="flex flex-col items-center text-center gap-3 pt-2">
