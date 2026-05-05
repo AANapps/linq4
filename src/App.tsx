@@ -5468,6 +5468,11 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                       <div key={c.id} id={`challenge-${c.id}`} className={cn("rounded-[2rem] shadow-lg overflow-hidden transition-all duration-500", isHighlighted ? 'ring-2 ring-brand-gold/60' : '')}>
                         {/* Gradient header */}
                         <div className="gradient-logo-blue px-5 py-4 relative overflow-hidden">
+                          {c.imageUrl && (
+                            <div className="absolute inset-0">
+                              <img src={c.imageUrl} alt="" className="w-full h-full object-cover opacity-20" />
+                            </div>
+                          )}
                           <span className="shine-ray" aria-hidden="true" />
                           <div className="flex items-start justify-between gap-3 relative z-10">
                             <div className="flex-1 min-w-0">
