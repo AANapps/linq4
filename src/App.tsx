@@ -12814,7 +12814,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
   }, []);
 
   useEffect(() => {
-    const q = query(collection(db, 'challenges'), where('status', '==', 'active'));
+    const q = query(collection(db, 'challenges'), where('type', '==', 'standard'), where('status', '==', 'active'));
     return onSnapshot(q, snap =>
       setFeedChallenges(snap.docs.map(d => ({ id: d.id, ...d.data() } as Challenge)))
     , () => {});
