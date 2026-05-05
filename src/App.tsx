@@ -13452,14 +13452,14 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
             <div className="sticky top-0 bg-[#f8f9fc] z-10 px-5 pt-5 pb-3 flex items-center justify-between border-b border-brand-navy/5">
               <div>
                 <h2 className="font-extrabold text-brand-navy text-lg">All Deals Near You</h2>
-                <p className="text-brand-navy/40 text-xs mt-0.5">{hotStores.length} businesses in your area</p>
+                <p className="text-brand-navy/40 text-xs mt-0.5">{(hotStores.length > 0 ? hotStores : allStores).length} businesses</p>
               </div>
               <button onClick={() => setShowAllDeals(false)} className="w-9 h-9 rounded-full bg-brand-navy/10 flex items-center justify-center active:scale-95 transition-transform">
                 <X size={16} className="text-brand-navy" />
               </button>
             </div>
             <div className="grid grid-cols-2 gap-3 p-4 pb-10">
-              {hotStores.map((store, i) => {
+              {(hotStores.length > 0 ? hotStores : allStores).map((store, i) => {
                 const dealColor = DEAL_COLORS[i % DEAL_COLORS.length];
                 const joined = userCards.some(c => c.store_id === store.id && !c.isArchived);
                 const isJoining = joiningStoreId === store.id;
