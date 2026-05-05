@@ -7090,7 +7090,8 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
   const [subTab, setSubTab] = useState<'mass' | 'automations'>('mass');
 
   // Mass message
-  const [filter, setFilter] = useState<'cardholders' | 'followers' | 'both'>('cardholders');
+  const [filter, setFilter] = useState<'cardholders' | 'followers' | 'both' | 'topX'>('cardholders');
+  const [topXCount, setTopXCount] = useState(10);
   const [msgTitle, setMsgTitle] = useState('');
   const [msgBody, setMsgBody] = useState('');
   const [sending, setSending] = useState(false);
@@ -7101,8 +7102,19 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
   const [loadingFollowers, setLoadingFollowers] = useState(true);
   const [broadcastHistory, setBroadcastHistory] = useState<any[]>([]);
 
+  const stampsReq = store.stamps_required_for_reward || 10;
   const cardHolderUids = [...new Set(storeCards.filter(c => !c.isArchived).map(c => c.user_id))];
   const followerUids = [...new Set([...storeFollowerUids, ...userFollowerUids])];
+
+  // Top X users by lifetime stamps
+  const topXUids = [...new Set<string>(storeCards.map(c => c.user_id))]
+    .map(uid => ({
+      uid,
+      stamps: storeCards.filter(c => c.user_id === uid).reduce((s, c) => s + (c.current_stamps || 0) + ((c.total_completed_cycles || 0) * stampsReq), 0),
+    }))
+    .sort((a, b) => b.stamps - a.stamps)
+    .slice(0, topXCount)
+    .map(u => u.uid);
 
   useEffect(() => {
     let done = 0;
@@ -7127,6 +7139,7 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
     const s = new Set<string>();
     if (filter === 'cardholders' || filter === 'both') cardHolderUids.forEach(u => s.add(u));
     if (filter === 'followers' || filter === 'both') followerUids.forEach(u => s.add(u));
+    if (filter === 'topX') topXUids.forEach(u => s.add(u));
     return [...s];
   })();
 
@@ -7160,13 +7173,14 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
           });
         }));
       }
-      const record = {
+      const record: any = {
         title: msgTitle.trim(),
         message: msgBody.trim(),
         filter,
         recipientCount: recipientUids.length,
         sentAt: serverTimestamp(),
       };
+      if (filter === 'topX') record.topXCount = topXCount;
       await addDoc(collection(db, 'stores', store.id, 'broadcasts'), record);
       const histSnap = await getDocs(query(collection(db, 'stores', store.id, 'broadcasts'), orderBy('sentAt', 'desc'), limit(20)));
       setBroadcastHistory(histSnap.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -7244,22 +7258,34 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
               <div className="space-y-5">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2">Send To</p>
-                  <div className="flex gap-2">
-                    {(['cardholders', 'followers', 'both'] as const).map(f => (
+                  <div className="grid grid-cols-2 gap-2">
+                    {(['cardholders', 'followers', 'both', 'topX'] as const).map(f => (
                       <button
                         key={f}
                         onClick={() => { setFilter(f); setSentCount(null); setSendError(null); }}
                         className={cn(
-                          'flex-1 py-2.5 rounded-xl text-xs font-bold transition-all',
+                          'py-2.5 rounded-xl text-xs font-bold transition-all',
                           filter === f ? 'bg-brand-navy text-white' : 'bg-brand-navy/5 text-brand-navy/50'
                         )}
                       >
-                        {f === 'cardholders' ? 'Card Holders' : f === 'followers' ? 'Followers' : 'Both'}
+                        {f === 'cardholders' ? 'Card Holders' : f === 'followers' ? 'Followers' : f === 'both' ? 'Both' : '⭐ Top Users'}
                       </button>
                     ))}
                   </div>
+                  {filter === 'topX' && (
+                    <div className="flex items-center gap-3 mt-3">
+                      <p className="text-xs font-bold text-brand-navy/50 shrink-0">Top</p>
+                      <input
+                        type="number" min={1} max={cardHolderUids.length || 100}
+                        value={topXCount}
+                        onChange={e => setTopXCount(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-20 px-3 py-2 rounded-xl bg-white border border-brand-navy/10 text-sm font-bold text-brand-navy text-center focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+                      />
+                      <p className="text-xs font-bold text-brand-navy/50 shrink-0">users by stamps</p>
+                    </div>
+                  )}
                   <p className="text-xs text-brand-navy/40 mt-2 text-center">
-                    {loadingFollowers
+                    {loadingFollowers && filter !== 'topX'
                       ? 'Loading...'
                       : `${recipientUids.length} recipient${recipientUids.length !== 1 ? 's' : ''}`}
                   </p>
@@ -7327,7 +7353,7 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
                             </div>
                           </div>
                           <span className="inline-block mt-2 text-[9px] font-bold uppercase tracking-widest bg-brand-navy/5 text-brand-navy/40 px-2 py-0.5 rounded-full">
-                            {b.filter === 'cardholders' ? 'Card Holders' : b.filter === 'followers' ? 'Followers' : 'Both'}
+                            {b.filter === 'cardholders' ? 'Card Holders' : b.filter === 'followers' ? 'Followers' : b.filter === 'topX' ? `Top ${b.topXCount ?? ''} Users` : 'Both'}
                           </span>
                         </div>
                       ))}
@@ -7447,19 +7473,34 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   const [statModalSearch, setStatModalSearch] = useState('');
   const [memberProfiles, setMemberProfiles] = useState<Map<string, UserProfile>>(new Map());
   const [showBroadcast, setShowBroadcast] = useState(false);
+  const [chartMode, setChartMode] = useState<'days' | 'weeks'>('weeks');
+  const [chartOffset, setChartOffset] = useState(0);
+  const [chartTransactions, setChartTransactions] = useState<any[]>([]);
 
   useEffect(() => {
     if (!store) return;
     const q = query(
-      collection(db, 'transactions'), 
-      where('store_id', '==', store.id), 
-      orderBy('completed_at', 'desc'), 
+      collection(db, 'transactions'),
+      where('store_id', '==', store.id),
+      orderBy('completed_at', 'desc'),
       limit(10)
     );
     return onSnapshot(q, (snap) => {
       setRecentTransactions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
   }, [store]);
+
+  useEffect(() => {
+    if (!store) return;
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 90);
+    const q = query(
+      collection(db, 'transactions'),
+      where('store_id', '==', store.id),
+      orderBy('completed_at', 'asc')
+    );
+    return onSnapshot(q, snap => setChartTransactions(snap.docs.map(d => ({ id: d.id, ...d.data() }))), () => {});
+  }, [store?.id]);
 
   useEffect(() => {
     const q = query(collection(db, 'stores'), where('ownerUid', '==', user.uid));
@@ -7552,12 +7593,36 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   const returnRate = totalMembers > 0 ? Math.round((returningUsers / totalMembers) * 100) : 0;
   const totalCompletedCycles = storeCards.reduce((sum, c) => sum + (c.total_completed_cycles || 0), 0);
   const redemptionRate = Math.round((totalCompletedCycles / Math.max(1, totalStampsGiven / stampsPerReward)) * 100);
+  const avgScansPerWeekPerUser = (() => {
+    if (totalMembers === 0 || chartTransactions.length === 0) return '—';
+    const first = chartTransactions[0]?.completed_at?.toDate?.();
+    if (!first) return '—';
+    const weeksElapsed = Math.max(1, (Date.now() - first.getTime()) / (7 * 86400000));
+    return (chartTransactions.length / weeksElapsed / totalMembers).toFixed(1);
+  })();
   const storeTiersVendor = store?.rewardTiers?.length || Math.max(...storeCards.map(c => c.tiersCompleted || 0), 1);
   const vendorRewardsGiven = Math.max(
     storeCards.filter(c => !c.isArchived).reduce((sum, c) => sum + (c.total_completed_cycles || 0), 0) * storeTiersVendor,
     storeCards.filter(c => c.isArchived && c.isRedeemed).length * storeTiersVendor,
     store?.rewardsGiven || 0
   );
+
+  // Pre-load member profiles for top-10 display
+  useEffect(() => {
+    if (storeCards.length === 0) return;
+    const uids: string[] = [...new Set<string>(storeCards.map(c => c.user_id))];
+    const missing = uids.filter(uid => !memberProfiles.has(uid));
+    if (missing.length === 0) return;
+    const chunks: string[][] = [];
+    for (let i = 0; i < missing.length; i += 10) chunks.push(missing.slice(i, i + 10));
+    Promise.all(chunks.map(chunk => getDocs(query(collection(db, 'users'), where('uid', 'in', chunk))))).then(results => {
+      setMemberProfiles(prev => {
+        const updated = new Map(prev);
+        results.forEach(snap => snap.docs.forEach(d => updated.set(d.id, { uid: d.id, ...d.data() } as UserProfile)));
+        return updated;
+      });
+    });
+  }, [storeCards.length]);
 
   const openStatModal = async (type: 'members' | 'stamps' | 'activeCards') => {
     setStatModal(type);
@@ -7791,12 +7856,13 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
       )}
 
       {activeTab === 'home' && (
-        <div className="space-y-8">
+        <div className="space-y-6">
           <header>
             <h2 className="font-display text-3xl font-bold mb-1">Dashboard</h2>
             <p className="text-brand-navy/60">{store?.name || 'Your Store'}</p>
           </header>
 
+          {/* Stat tiles */}
           <div className="grid grid-cols-4 gap-3">
             <div onClick={() => openStatModal('members')} className="cursor-pointer active:scale-95 transition-transform">
               <StatSquare icon={<Users className="text-blue-500" />} label="Members" value={String(totalMembers)} />
@@ -7805,8 +7871,113 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
               <StatSquare icon={<Wallet className="text-purple-500" />} label="Active Cards" value={String(activeStoreCards)} />
             </div>
             <StatSquare icon={<RefreshCw className="text-orange-500" />} label="Return Rate" value={`${returnRate}%`} />
-            <StatSquare icon={<Award className="text-brand-gold" />} label="Redemption Rate" value={`${redemptionRate}%`} />
+            <StatSquare icon={<TrendingUp className="text-green-500" />} label="Avg/Wk/User" value={String(avgScansPerWeekPerUser)} />
           </div>
+
+          {/* Stamps chart */}
+          {(() => {
+            const periodCount = chartMode === 'weeks' ? 8 : 14;
+            const msPerPeriod = chartMode === 'weeks' ? 7 * 86400000 : 86400000;
+            const now = Date.now();
+            const periodEnd = now - chartOffset * periodCount * msPerPeriod;
+            const periods: { label: string; count: number }[] = [];
+            for (let i = periodCount - 1; i >= 0; i--) {
+              const end = periodEnd - i * msPerPeriod;
+              const start = end - msPerPeriod;
+              const count = chartTransactions.filter(tx => {
+                const t = tx.completed_at?.toMillis?.() ?? tx.completed_at?.seconds * 1000 ?? 0;
+                return t >= start && t < end;
+              }).length;
+              const d = new Date(start);
+              const label = chartMode === 'weeks'
+                ? `${d.getDate()}/${d.getMonth() + 1}`
+                : `${d.getDate()}/${d.getMonth() + 1}`;
+              periods.push({ label, count });
+            }
+            const maxVal = Math.max(...periods.map(p => p.count), 1);
+            return (
+              <div className="glass-card p-5 rounded-[2rem] space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-brand-navy">Stamps Chart</p>
+                    <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest mt-0.5">
+                      {chartMode === 'weeks' ? 'By week' : 'By day'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex p-0.5 bg-brand-navy/8 rounded-xl">
+                      {(['days', 'weeks'] as const).map(m => (
+                        <button key={m} onClick={() => { setChartMode(m); setChartOffset(0); }}
+                          className={cn('px-3 py-1.5 rounded-[10px] text-[10px] font-bold transition-all', chartMode === m ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/40')}>
+                          {m === 'days' ? 'Days' : 'Weeks'}
+                        </button>
+                      ))}
+                    </div>
+                    <button onClick={() => setChartOffset(o => o + 1)} className="p-1.5 rounded-xl bg-brand-navy/8 active:scale-90 transition-all">
+                      <ChevronLeft size={14} className="text-brand-navy" />
+                    </button>
+                    <button onClick={() => setChartOffset(o => Math.max(0, o - 1))} disabled={chartOffset === 0} className="p-1.5 rounded-xl bg-brand-navy/8 disabled:opacity-30 active:scale-90 transition-all">
+                      <ChevronRight size={14} className="text-brand-navy" />
+                    </button>
+                  </div>
+                </div>
+                <div className="flex items-end gap-1 h-28">
+                  {periods.map((p, i) => (
+                    <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                      <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
+                        <motion.div
+                          initial={{ height: 0 }} animate={{ height: `${Math.round((p.count / maxVal) * 80)}px` }}
+                          transition={{ duration: 0.4, delay: i * 0.03 }}
+                          className="w-full rounded-t-lg bg-brand-gold"
+                          style={{ minHeight: p.count > 0 ? '4px' : '0' }}
+                        />
+                      </div>
+                      <p className="text-[8px] text-brand-navy/30 font-bold leading-none">{p.label}</p>
+                    </div>
+                  ))}
+                </div>
+                {chartTransactions.length === 0 && (
+                  <p className="text-center text-xs text-brand-navy/30 font-bold py-2">No stamp data yet</p>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Top 10 users */}
+          {(() => {
+            const top10 = [...new Set<string>(storeCards.map(c => c.user_id))]
+              .map(uid => {
+                const cards = storeCards.filter(c => c.user_id === uid);
+                const stamps = cards.reduce((s, c) => s + (c.current_stamps || 0) + ((c.total_completed_cycles || 0) * stampsPerReward), 0);
+                return { uid, stamps, prof: memberProfiles.get(uid) };
+              })
+              .sort((a, b) => b.stamps - a.stamps)
+              .slice(0, 10);
+            if (top10.length === 0) return null;
+            return (
+              <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="font-bold text-brand-navy">Top 10 Users</p>
+                  <Trophy size={16} className="text-brand-gold" />
+                </div>
+                {top10.map(({ uid, stamps, prof }, i) => (
+                  <div key={uid} className="flex items-center gap-3">
+                    <span className="text-[11px] font-bold text-brand-navy/30 w-5 text-right">{i + 1}</span>
+                    <div className="w-8 h-8 rounded-full overflow-hidden bg-indigo-50 shrink-0 flex items-center justify-center">
+                      <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={32} view="head" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-sm truncate">{prof?.name || 'Customer'}</p>
+                      <div className="h-1 bg-brand-navy/8 rounded-full mt-1 overflow-hidden">
+                        <div className="h-full bg-brand-gold rounded-full" style={{ width: `${Math.round((stamps / (top10[0].stamps || 1)) * 100)}%` }} />
+                      </div>
+                    </div>
+                    <span className="text-xs font-bold text-brand-navy/50 shrink-0">{stamps}</span>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
 
           <AnimatePresence>
             {statModal && (() => {
