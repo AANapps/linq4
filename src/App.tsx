@@ -4653,6 +4653,17 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const prevStickerCountRef = useRef<Map<string, number>>(new Map());
   const stickerCardsInitRef = useRef(false);
 
+  // Global user_stickers — drives pack animation for users not in any active challenge
+  const prevUserStickerCountRef = useRef(-1);
+  const userStickersInitRef = useRef(false);
+  const hasJoinedActiveProgramRef = useRef(false);
+  const pendingPackRef = useRef<CollectibleSticker[] | null>(null);
+  useEffect(() => { pendingPackRef.current = pendingPack; }, [pendingPack]);
+  useEffect(() => {
+    const activeProgrammeIds = new Set(activePrograms.map(p => p.id));
+    hasJoinedActiveProgramRef.current = myStickerCards.some(sc => activeProgrammeIds.has(sc.programme_id));
+  }, [myStickerCards, activePrograms]);
+
   useEffect(() => {
     const activeCards = initialCards.filter(c => !c.isArchived);
     if (activeCards.length === 0) return;
@@ -4741,6 +4752,26 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       prevStickerCountRef.current.set(sc.id, sc.stickers.length);
     });
   }, [myStickerCards]);
+
+  // Watch user_stickers — trigger pack animation for users NOT in any active challenge
+  useEffect(() => {
+    return onSnapshot(doc(db, 'user_stickers', user.uid), snap => {
+      const stickers: CollectibleSticker[] = snap.exists() ? (snap.data().stickers || []) : [];
+      if (!userStickersInitRef.current) {
+        prevUserStickerCountRef.current = stickers.length;
+        userStickersInitRef.current = true;
+        return;
+      }
+      const prev = prevUserStickerCountRef.current;
+      prevUserStickerCountRef.current = stickers.length;
+      if (stickers.length > prev && !hasJoinedActiveProgramRef.current && !pendingPackRef.current) {
+        const addedCount = stickers.length - prev;
+        const newStickers = stickers.slice(-addedCount);
+        setPendingPack(newStickers);
+        setPendingPackCardId(null);
+      }
+    });
+  }, [user.uid]);
 
   // After pack + stamp celeb are both gone, open the queued collection
   useEffect(() => {
