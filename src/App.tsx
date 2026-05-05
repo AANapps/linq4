@@ -7790,7 +7790,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
             <p className="text-brand-navy/60">{store?.name || 'Your Store'}</p>
           </header>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-4 gap-3">
             <div onClick={() => openStatModal('members')} className="cursor-pointer active:scale-95 transition-transform">
               <StatSquare icon={<Users className="text-blue-500" />} label="Members" value={String(totalMembers)} />
             </div>
