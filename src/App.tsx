@@ -14200,8 +14200,6 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
         </div>
       )}
 
-      {store.ownerUid !== user.uid && card && <LoyaltyCard card={card} store={store} />}
-
       {/* Top collectors */}
       <div className="glass-card p-5 rounded-[2rem] space-y-4">
         <div className="flex items-center justify-between">
