@@ -45,7 +45,9 @@ import {
   startAfter,
   Timestamp
 } from 'firebase/firestore';
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, db } from './firebase';
+const storage = getStorage();
 import { cn } from './lib/utils';
 import {
   Sparkles,
@@ -10403,6 +10405,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
   const [logoFetchUrl, setLogoFetchUrl] = useState('');
   const [logoFetching, setLogoFetching] = useState(false);
   const [logoFetchError, setLogoFetchError] = useState('');
+  const [logoUploading, setLogoUploading] = useState(false);
   const [storeLocation, setStoreLocation] = useState('');
   const [visibility, setVisibility] = useState({ members: true, stamps: true, activeCards: true, returnRate: true, followers: true });
   const [saving, setSaving] = useState(false);
@@ -10647,16 +10650,36 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
               </div>
               {logoFetchError && <p className="text-[11px] text-red-500 pl-1">{logoFetchError}</p>}
 
-              {/* Manual URL override */}
-              <div className="flex gap-3">
-                <input value={storeLogo} onChange={e => setStoreLogo(e.target.value)} placeholder="Or paste logo URL directly..."
-                  className="flex-1 px-5 py-4 rounded-2xl bg-white border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30" />
+              {/* Upload from device */}
+              <div className="flex gap-3 items-center">
+                <label className={cn('flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl border-2 border-dashed border-brand-navy/20 text-sm font-semibold text-brand-navy/50 cursor-pointer transition-all', logoUploading ? 'opacity-50 pointer-events-none' : 'hover:border-brand-gold/50 hover:text-brand-navy active:scale-[0.98]')}>
+                  {logoUploading ? 'Uploading...' : '📁 Upload from device'}
+                  <input type="file" accept="image/*" className="hidden" onChange={async e => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setLogoUploading(true);
+                    try {
+                      const path = `store_logos/${user.uid}/${Date.now()}_${file.name}`;
+                      const snap = await uploadBytes(storageRef(storage, path), file);
+                      const url = await getDownloadURL(snap.ref);
+                      setStoreLogo(url);
+                    } catch {
+                      setLogoFetchError('Upload failed — check your connection and try again.');
+                    } finally {
+                      setLogoUploading(false);
+                    }
+                  }} />
+                </label>
                 {storeLogo && (
                   <div className="w-14 h-14 rounded-2xl overflow-hidden border border-brand-navy/10 shrink-0">
                     <img src={storeLogo} alt="" className="w-full h-full object-cover" onError={e => (e.currentTarget.style.display = 'none')} />
                   </div>
                 )}
               </div>
+
+              {/* Manual URL override */}
+              <input value={storeLogo} onChange={e => setStoreLogo(e.target.value)} placeholder="Or paste logo URL directly..."
+                className="w-full px-5 py-4 rounded-2xl bg-white border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30" />
             </div>
 
             {/* Colour Theme */}
