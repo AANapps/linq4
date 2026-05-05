@@ -14659,7 +14659,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
           <ArrowLeft size={18} />
           Back
         </button>
-        {profile?.email === ADMIN_EMAIL && (
+        {(user.email === ADMIN_EMAIL || profile?.email === ADMIN_EMAIL) && (
           <button
             onClick={() => setShowAdminEdit(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl gradient-logo-blue text-white text-xs font-bold active:scale-95 transition-all"
