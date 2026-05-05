@@ -8127,11 +8127,11 @@ function LoyaltyCard({ card, store, onViewStore }: { card: Card, store?: StorePr
 
   return (
     <>
-      <motion.div 
+      <motion.div
         whileTap={{ scale: 0.98 }}
         onClick={() => !isCompleted && setShowQR(true)}
         className={cn(
-          "glass-card p-6 rounded-[2.5rem] border relative overflow-hidden transition-all",
+          "glass-card p-6 rounded-[2.5rem] border relative overflow-hidden transition-all w-full",
           isCompleted ? "border-brand-gold/40 bg-blue-50/60" : "border-transparent cursor-pointer"
         )}
       >
@@ -9255,7 +9255,7 @@ function BadgeSquarePanel({ badges, onSelectBadge }: { badges: AppBadge[]; onSel
   const [showAll, setShowAll] = useState(false);
   return (
     <>
-      <div className="grid grid-cols-2 gap-1.5 w-36 shrink-0">
+      <div className="grid grid-cols-2 gap-1.5 w-full">
         {[0, 1, 2].map(i => {
           const b = badges[i];
           if (!b) return (
@@ -9349,7 +9349,7 @@ function StickerListPanel({ uid }: { uid: string }) {
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-1.5 w-36 shrink-0">
+      <div className="grid grid-cols-2 gap-1.5 w-full">
         {[0, 1, 2].map(i => {
           const g = grouped[i];
           if (!g) return (
@@ -9928,11 +9928,11 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
       {/* Badges + Sticker collection side-by-side */}
       {profile.role === 'consumer' && (
         <div className="flex gap-3 items-start">
-          <div>
+          <div className="flex-1 min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 px-1">Badges</p>
             <BadgeSquarePanel badges={earnedBadges} onSelectBadge={setSelectedBadge} />
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 px-1">Stickers</p>
             <StickerListPanel uid={user.uid} />
           </div>
@@ -14528,11 +14528,11 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
       {/* Badges + Sticker collection side-by-side */}
       {targetUser.role === 'consumer' && (
         <div className="flex gap-3 items-start">
-          <div>
+          <div className="flex-1 min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 px-1">Badges</p>
             <BadgeSquarePanel badges={earnedBadges} onSelectBadge={setSelectedBadge} />
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 px-1">Stickers</p>
             <StickerListPanel uid={targetUser.uid} />
           </div>
