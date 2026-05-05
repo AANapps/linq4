@@ -13108,33 +13108,24 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: i * 0.05 }}
-                      className="shrink-0 w-36 rounded-[1.5rem] overflow-hidden cursor-pointer active:scale-[0.97] transition-transform flex flex-col relative"
-                      style={{ background: `linear-gradient(145deg, ${dealColor}dd, ${dealColor}99)`, backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)', border: '1px solid rgba(255,255,255,0.18)', height: '120px' }}
+                      className="shrink-0 w-36 rounded-[1.5rem] overflow-hidden cursor-pointer active:scale-[0.97] transition-transform flex flex-col"
+                      style={{ height: '120px' }}
                       onClick={() => onViewStore && onViewStore(store)}
                     >
-                      {store.coverUrl && (
-                        <div className="absolute inset-0">
-                          <img src={store.coverUrl} alt="" className="w-full h-full object-cover opacity-15" />
-                        </div>
-                      )}
-                      <div className="relative z-10 flex flex-col h-full p-3">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="w-9 h-9 rounded-xl overflow-hidden border-2 border-white/40 shadow-md bg-white/20 shrink-0">
-                            {store.logoUrl
-                              ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
-                              : <div className="w-full h-full flex items-center justify-center"><Building2 size={14} className="text-white/70" /></div>}
-                          </div>
-                          <motion.span
-                            animate={{ scale: [1, 1.3, 0.9, 1.2, 1], rotate: [-8, 8, -5, 6, 0] }}
-                            transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut', delay: i * 0.35 }}
-                            className="text-base leading-none"
-                          >🔥</motion.span>
-                        </div>
-                        <p className="font-extrabold text-white text-xs leading-tight line-clamp-2 mb-1">{finalReward || `${store.stamps_required_for_reward} stamps`}</p>
-                        <div className="mt-auto">
-                          <p className="text-white/60 text-[9px] font-medium line-clamp-1">{store.name}</p>
-                          <div className="flex items-center justify-between mt-0.5">
-                            <p className="text-white/50 text-[8px] font-bold">{memberCount} players</p>
+                      {/* Top half — logo */}
+                      <div className="flex-1 overflow-hidden relative bg-white/10">
+                        {store.logoUrl
+                          ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
+                          : <div className="w-full h-full flex items-center justify-center bg-brand-navy/5"><Building2 size={20} className="text-brand-navy/30" /></div>}
+                      </div>
+                      {/* Bottom half — gradient-logo-blue */}
+                      <div className="gradient-logo-blue px-2.5 py-1.5 flex flex-col justify-center relative overflow-hidden" style={{ height: '56px' }}>
+                        <span className="shine-ray" aria-hidden="true" />
+                        <p className="font-extrabold text-white text-[11px] leading-tight line-clamp-1 relative z-10">{finalReward || `${store.stamps_required_for_reward} stamps`}</p>
+                        <p className="text-white/60 text-[9px] font-medium line-clamp-1 mt-0.5 relative z-10">{store.name}</p>
+                        {(memberCount > 0 || storeDistances.has(store.id)) && (
+                          <div className="flex items-center justify-between mt-0.5 relative z-10">
+                            {memberCount > 0 && <p className="text-white/50 text-[8px] font-bold">{memberCount} players</p>}
                             {storeDistances.has(store.id) && (
                               <p className="text-white/40 text-[8px] font-medium flex items-center gap-0.5">
                                 <MapPin size={7} className="shrink-0" />
@@ -13144,7 +13135,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
                               </p>
                             )}
                           </div>
-                        </div>
+                        )}
                       </div>
                     </motion.div>
                   );
@@ -13478,45 +13469,41 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: i * 0.04 }}
-                    className="relative rounded-[1.75rem] overflow-hidden aspect-square flex flex-col cursor-pointer active:scale-[0.97] transition-transform"
-                    style={{ background: `linear-gradient(145deg, ${dealColor}dd, ${dealColor}99)`, backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)', border: '1px solid rgba(255,255,255,0.18)' }}
+                    className="rounded-[1.75rem] overflow-hidden flex flex-col cursor-pointer active:scale-[0.97] transition-transform"
+                    style={{ height: '160px' }}
                     onClick={() => { onViewStore && onViewStore(store); setShowAllDeals(false); }}
                   >
-                    {store.coverUrl && (
-                      <div className="absolute inset-0">
-                        <img src={store.coverUrl} alt="" className="w-full h-full object-cover opacity-20" />
-                      </div>
-                    )}
-                    <div className="relative z-10 flex flex-col h-full p-4">
-                      <div className="flex items-start justify-between mb-auto">
-                        <div className="w-11 h-11 rounded-2xl overflow-hidden border-2 border-white/40 shadow-lg bg-white/20">
-                          {store.logoUrl
-                            ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
-                            : <div className="w-full h-full flex items-center justify-center"><Building2 size={18} className="text-white/70" /></div>}
+                    {/* Top half — logo */}
+                    <div className="flex-1 overflow-hidden relative bg-white/10">
+                      {store.logoUrl
+                        ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
+                        : <div className="w-full h-full flex items-center justify-center bg-brand-navy/5"><Building2 size={24} className="text-brand-navy/30" /></div>}
+                      {store.isVerified && (
+                        <div className="absolute top-2 right-2 w-6 h-6 bg-white/80 rounded-full flex items-center justify-center shadow">
+                          <Sparkles size={11} className="text-brand-navy" />
                         </div>
-                        {store.isVerified && (
-                          <div className="w-6 h-6 bg-white/30 rounded-full flex items-center justify-center shadow">
-                            <Sparkles size={11} className="text-white" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="mt-2">
-                        <p className="font-extrabold text-white text-sm leading-tight line-clamp-2">
+                      )}
+                    </div>
+                    {/* Bottom half — gradient-logo-blue */}
+                    <div className="gradient-logo-blue px-3 py-2.5 flex flex-col justify-between relative overflow-hidden" style={{ height: '80px' }}>
+                      <span className="shine-ray" aria-hidden="true" />
+                      <div className="relative z-10">
+                        <p className="font-extrabold text-white text-xs leading-tight line-clamp-2">
                           {store.reward || `${store.stamps_required_for_reward} stamps to reward`}
                         </p>
-                        <p className="text-white/60 text-[10px] font-medium mt-1 line-clamp-1">{store.name}</p>
+                        <p className="text-white/60 text-[9px] font-medium mt-0.5 line-clamp-1">{store.name}</p>
                       </div>
                       <button
                         onClick={(e) => { e.stopPropagation(); if (!joined) handleJoinStore(store); else { onViewStore && onViewStore(store); setShowAllDeals(false); } }}
                         disabled={isJoining}
                         className={cn(
-                          "mt-3 w-full py-2 rounded-xl text-[11px] font-bold transition-all active:scale-95 flex items-center justify-center gap-1.5",
-                          joined ? "bg-white/20 text-white/80" : "bg-white text-brand-navy shadow-lg"
+                          "w-full py-1.5 rounded-xl text-[10px] font-bold transition-all active:scale-95 flex items-center justify-center gap-1 relative z-10",
+                          joined ? "bg-white/20 text-white/80" : "bg-white text-brand-navy shadow"
                         )}
                       >
                         {isJoining
-                          ? <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}><Sparkles size={12} /></motion.div>
-                          : joined ? <><UserCheck size={12} /> Joined</> : <><Plus size={12} /> Join</>}
+                          ? <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}><Sparkles size={11} /></motion.div>
+                          : joined ? <><UserCheck size={11} /> Joined</> : <><Plus size={11} /> Join</>}
                       </button>
                     </div>
                   </motion.div>
