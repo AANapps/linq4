@@ -12509,6 +12509,12 @@ function DealSliderSection({ title, icon, challenges, onViewStore, onViewChallen
               style={{ background: `linear-gradient(145deg, ${colors[0]}dd, ${colors[1]}bb)`, backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)', border: '1px solid rgba(255,255,255,0.18)', height: '160px' }}
               onClick={() => onViewChallenge?.(c)}
             >
+              {c.imageUrl && (
+                <div className="absolute inset-0">
+                  <img src={c.imageUrl} alt="" className="w-full h-full object-cover opacity-30" />
+                  <div className="absolute inset-0" style={{ background: `linear-gradient(145deg, ${colors[0]}99, ${colors[1]}77)` }} />
+                </div>
+              )}
               <div className="relative z-10 flex flex-col h-full p-3">
                 <div className="w-8 h-8 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center mb-2 shrink-0">
                   {c.rewardTag === 'experience' ? <Star size={14} className="text-white" />
@@ -13165,6 +13171,22 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
                   style={{ background: 'linear-gradient(135deg, #7C3AED 0%, #A855F7 55%, #C084FC 100%)', minHeight: '148px' }}
                   onClick={() => onViewChallenges?.()}
                 >
+                  {/* Challenge image background */}
+                  <AnimatePresence mode="wait">
+                    {feedChallenges[challengeIdx % feedChallenges.length]?.imageUrl && (
+                      <motion.div
+                        key={`img-${challengeIdx}`}
+                        className="absolute inset-0"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.4 }}
+                      >
+                        <img src={feedChallenges[challengeIdx % feedChallenges.length].imageUrl} alt="" className="w-full h-full object-cover opacity-25" />
+                        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #7C3AED99, #A855F777)' }} />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                   {/* Confetti particles */}
                   {[
                     { x: 8,  y: 18, color: '#FFD700', size: 6, delay: 0,   dur: 2.2 },
