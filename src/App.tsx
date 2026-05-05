@@ -2282,12 +2282,17 @@ async function issueStickersToCard(customerUid: string, userName: string, qty: n
   if (joinedSnap.empty) return [];
   const programmeIds = [...new Set(joinedSnap.docs.map(d => d.data().programme_id as string))];
   const chancesMap = new Map<string, { brown: number; lightblue: number; red: number; blue: number; gold: number } | undefined>();
+  const activeProgrammeIds = new Set<string>();
   await Promise.all(programmeIds.map(async pid => {
     const snap = await getDoc(doc(db, 'challenges', pid));
-    chancesMap.set(pid, snap.exists() ? snap.data().tierChances : undefined);
+    if (snap.exists() && snap.data().status === 'active') {
+      chancesMap.set(pid, snap.data().tierChances);
+      activeProgrammeIds.add(pid);
+    }
   }));
   const allNew: CollectibleSticker[] = [];
   for (const cardDoc of joinedSnap.docs) {
+    if (!activeProgrammeIds.has(cardDoc.data().programme_id)) continue;
     const chances = chancesMap.get(cardDoc.data().programme_id);
     const newStickers: CollectibleSticker[] = Array.from({ length: qty }, () => {
       const tier = rollStickerTier(chances);
@@ -4513,6 +4518,7 @@ function buildStampCelebrationPages(
   profile: UserProfile | null,
   user: FirebaseUser,
   collectiblePrograms: Challenge[] = [],
+  joinedStickerCards: StickerCardDoc[] = [],
 ): CelebrationPage[] {
   const pages: CelebrationPage[] = [];
   const seed = card.current_stamps;
@@ -4576,8 +4582,9 @@ function buildStampCelebrationPages(
     charityAnimal,
   });
 
-  // 3. Monopoly pack page — if user is in any active collectible programme
-  const joinedProg = collectiblePrograms.find(p => (p.participantUids || []).includes(user.uid));
+  // 3. Monopoly pack page — if user has a sticker_card for any active collectible programme
+  const joinedStickerCardIds = new Set(joinedStickerCards.map(sc => sc.programme_id));
+  const joinedProg = collectiblePrograms.find(p => joinedStickerCardIds.has(p.id));
   if (joinedProg) {
     pages.push({
       type: 'monopoly_pack',
@@ -4660,7 +4667,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         if (card.current_stamps > prev) {
           const store = stores.find(s => s.id === card.store_id);
           if (store) {
-            const pages = buildStampCelebrationPages(store, card, activeStandardChallenges, myStandardEntries, profile, user, activePrograms);
+            const pages = buildStampCelebrationPages(store, card, activeStandardChallenges, myStandardEntries, profile, user, activePrograms, myStickerCards);
 
             // Build rank change page
             try {
@@ -4721,9 +4728,10 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       stickerCardsInitRef.current = true;
       return;
     }
+    const activeProgrammeIds = new Set(activePrograms.map(p => p.id));
     myStickerCards.forEach(sc => {
       const prev = prevStickerCountRef.current.get(sc.id) ?? -1;
-      if (prev !== -1 && sc.stickers.length > prev) {
+      if (prev !== -1 && sc.stickers.length > prev && activeProgrammeIds.has(sc.programme_id)) {
         const unrevealed = (sc.stickers || []).filter((s: CollectibleSticker) => !(sc.revealedIds || []).includes(s.id));
         if (unrevealed.length > 0 && !pendingPack) {
           setPendingPack(unrevealed);
