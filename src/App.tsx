@@ -644,7 +644,7 @@ export default function App() {
   const [pendingNFCStoreId, setPendingNFCStoreId] = useState<string | null>(null);
   const [userCards, setUserCards] = useState<Card[]>([]);
   const [showSettings, setShowSettings] = useState(false);
-  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges'>(null);
+  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges' | 'stores'>(null);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -1428,6 +1428,7 @@ export default function App() {
             onClose={() => setAdminView(null)}
             onOpenChallenges={() => setAdminView('challenges')}
             onOpenBadges={() => setAdminView('badges')}
+            onOpenStores={() => setAdminView('stores')}
           />
         )}
         {adminView === 'challenges' && (
@@ -1435,6 +1436,9 @@ export default function App() {
         )}
         {adminView === 'badges' && (
           <BadgesAdminPanel onClose={() => setAdminView('menu')} />
+        )}
+        {adminView === 'stores' && (
+          <AdminStoresPanel onClose={() => setAdminView('menu')} />
         )}
       </AnimatePresence>
 
@@ -3685,7 +3689,80 @@ function BadgesAdminPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
-function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void }) {
+function AdminStoresPanel({ onClose }: { onClose: () => void }) {
+  const [stores, setStores] = useState<StoreProfile[]>([]);
+  const [search, setSearch] = useState('');
+  const [editingStore, setEditingStore] = useState<StoreProfile | null>(null);
+
+  useEffect(() => {
+    return onSnapshot(collection(db, 'stores'), snap =>
+      setStores(snap.docs.map(d => ({ id: d.id, ...d.data() } as StoreProfile)).sort((a, b) => (a.name || '').localeCompare(b.name || '')))
+    , () => {});
+  }, []);
+
+  const filtered = search.trim()
+    ? stores.filter(s => s.name?.toLowerCase().includes(search.toLowerCase()))
+    : stores;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: '100%' }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: '100%' }}
+      transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+      className="fixed inset-0 bg-brand-bg z-[200] flex flex-col max-w-md mx-auto"
+    >
+      <header className="glass-panel px-5 py-4 flex items-center gap-3">
+        <button onClick={onClose} className="p-2 -ml-2 text-brand-navy/60"><ArrowLeft size={22} /></button>
+        <div className="flex-1">
+          <p className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest">Admin</p>
+          <h2 className="font-bold text-brand-navy text-base">Businesses</h2>
+        </div>
+      </header>
+
+      <div className="px-5 pt-3 pb-2">
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search businesses…"
+          className="w-full px-4 py-2.5 rounded-2xl bg-white border border-brand-navy/10 text-sm text-brand-navy outline-none"
+        />
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-5 py-2 space-y-2 pb-10">
+        {filtered.map(store => (
+          <div
+            key={store.id}
+            className="flex items-center gap-3 bg-white rounded-2xl px-4 py-3 border border-brand-navy/5 cursor-pointer active:scale-[0.98] transition-all"
+            onClick={() => setEditingStore(store)}
+          >
+            <div className="w-10 h-10 rounded-xl overflow-hidden bg-brand-navy/5 shrink-0">
+              {store.logoUrl
+                ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
+                : <Building2 size={18} className="m-auto mt-2.5 text-brand-navy/20" />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-sm text-brand-navy truncate">{store.name}</p>
+              <p className="text-[10px] text-brand-navy/40">{store.category}{store.location ? ` · ${store.location}` : ''}</p>
+            </div>
+            <Edit3 size={14} className="text-brand-navy/30 shrink-0" />
+          </div>
+        ))}
+        {filtered.length === 0 && (
+          <p className="text-center text-brand-navy/30 text-sm py-10">No businesses found</p>
+        )}
+      </div>
+
+      <AnimatePresence>
+        {editingStore && (
+          <AdminStoreEditModal store={editingStore} onClose={() => setEditingStore(null)} />
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -3730,6 +3807,20 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges }: { onClose: 
             <div>
               <p className="font-bold text-brand-navy text-sm">Badges</p>
               <p className="text-[11px] text-brand-navy/40 mt-0.5">Design achievement badges</p>
+            </div>
+          </motion.button>
+
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={onOpenStores}
+            className="rounded-[2rem] bg-white border border-black/5 shadow-sm p-6 flex flex-col items-start gap-3 text-left active:bg-brand-navy/5 transition-colors"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-emerald-100 flex items-center justify-center">
+              <Store size={22} className="text-emerald-500" />
+            </div>
+            <div>
+              <p className="font-bold text-brand-navy text-sm">Businesses</p>
+              <p className="text-[11px] text-brand-navy/40 mt-0.5">Edit business profiles</p>
             </div>
           </motion.button>
         </div>
