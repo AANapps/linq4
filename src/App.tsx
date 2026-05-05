@@ -12573,27 +12573,23 @@ function StoreDealsSection({ stores, onViewStore, showAll, onToggleAll }: {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.04 }}
-              className={cn('rounded-[1.5rem] overflow-hidden flex flex-col relative cursor-pointer active:scale-[0.97] transition-transform', showAll ? '' : 'shrink-0 w-36')}
-              style={{ background: `linear-gradient(145deg, ${dealColor}dd, ${dealColor}99)`, backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)', border: '1px solid rgba(255,255,255,0.18)', height: '160px' }}
+              className={cn('rounded-[1.5rem] overflow-hidden flex flex-col cursor-pointer active:scale-[0.97] transition-transform', showAll ? '' : 'shrink-0 w-36')}
+              style={{ height: '160px' }}
               onClick={() => onViewStore && onViewStore(store)}
             >
-              {store.coverUrl && (
-                <div className="absolute inset-0">
-                  <img src={store.coverUrl} alt="" className="w-full h-full object-cover opacity-15" />
-                </div>
-              )}
-              <div className="relative z-10 flex flex-col h-full p-3">
-                <div className="w-9 h-9 rounded-xl overflow-hidden border-2 border-white/40 shadow-md bg-white/20 mb-2 shrink-0">
-                  {store.logoUrl
-                    ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
-                    : <div className="w-full h-full flex items-center justify-center"><Building2 size={14} className="text-white/70" /></div>}
-                </div>
-                <p className="font-extrabold text-white text-xs leading-tight line-clamp-2 mb-1">
+              {/* Top half — logo */}
+              <div className="flex-1 bg-white/10 overflow-hidden relative">
+                {store.logoUrl
+                  ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
+                  : <div className="w-full h-full flex items-center justify-center bg-brand-navy/5"><Building2 size={24} className="text-brand-navy/30" /></div>}
+              </div>
+              {/* Bottom half — gradient-logo-blue */}
+              <div className="gradient-logo-blue px-3 py-2 flex flex-col justify-center relative overflow-hidden" style={{ height: '72px' }}>
+                <span className="shine-ray" aria-hidden="true" />
+                <p className="font-extrabold text-white text-xs leading-tight line-clamp-2 relative z-10">
                   {finalReward || `${store.stamps_required_for_reward} stamps reward`}
                 </p>
-                <div className="mt-auto">
-                  <p className="text-white/60 text-[9px] font-medium line-clamp-1">{store.name}</p>
-                </div>
+                <p className="text-white/60 text-[9px] font-medium line-clamp-1 mt-0.5 relative z-10">{store.name}</p>
               </div>
             </motion.div>
           );
