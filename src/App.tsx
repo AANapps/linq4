@@ -516,6 +516,7 @@ interface Challenge {
   rewardTag?: 'product' | 'experience' | 'service';
   isAvatarPrize?: boolean;
   avatarPrizeItemId?: string;
+  imageUrl?: string;
 }
 
 interface StoreAutomation {
@@ -3780,6 +3781,8 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
   const [stdRewardTag, setStdRewardTag] = useState<'product' | 'experience' | 'service' | ''>('');
   const [stdIsAvatarPrize, setStdIsAvatarPrize] = useState(false);
   const [stdAvatarPrizeItemId, setStdAvatarPrizeItemId] = useState('');
+  const [stdImageUrl, setStdImageUrl] = useState('');
+  const [stdImageUploading, setStdImageUploading] = useState(false);
 
   // Collectible programme form state
   const [colTitle, setColTitle] = useState('');
@@ -3787,6 +3790,8 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
   const [colEndsAt, setColEndsAt] = useState('');
   const [stdEndsAt, setStdEndsAt] = useState('');
   const [colChances, setColChances] = useState<{ brown: number; lightblue: number; red: number; blue: number; gold: number }>({ ...DEFAULT_TIER_CHANCES });
+  const [colImageUrl, setColImageUrl] = useState('');
+  const [colImageUploading, setColImageUploading] = useState(false);
 
   useEffect(() => {
     const q = query(collection(db, 'challenges'), orderBy('createdAt', 'desc'));
@@ -3816,8 +3821,9 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
         ...(stdVendorIds.length > 0 ? { vendorIds: stdVendorIds } : {}),
         ...(stdRewardTag ? { rewardTag: stdRewardTag } : {}),
         ...(stdIsAvatarPrize && stdAvatarPrizeItemId ? { isAvatarPrize: true, avatarPrizeItemId: stdAvatarPrizeItemId } : {}),
+        ...(stdImageUrl ? { imageUrl: stdImageUrl } : {}),
       });
-      setStdTitle(''); setStdDesc(''); setStdGoal(''); setStdUnit(''); setStdReward(''); setStdEndsAt(''); setStdVendorIds([]); setStdRewardTag(''); setStdIsAvatarPrize(false); setStdAvatarPrizeItemId('');
+      setStdTitle(''); setStdDesc(''); setStdGoal(''); setStdUnit(''); setStdReward(''); setStdEndsAt(''); setStdVendorIds([]); setStdRewardTag(''); setStdIsAvatarPrize(false); setStdAvatarPrizeItemId(''); setStdImageUrl('');
     } finally {
       setDeploying(false);
     }
@@ -3837,8 +3843,9 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
         tierChances: colChances,
         createdAt: serverTimestamp(),
         ...(colEndsAt ? { endsAt: Timestamp.fromDate(new Date(colEndsAt)) } : {}),
+        ...(colImageUrl ? { imageUrl: colImageUrl } : {}),
       });
-      setColTitle(''); setColReward(''); setColEndsAt(''); setColChances({ ...DEFAULT_TIER_CHANCES });
+      setColTitle(''); setColReward(''); setColEndsAt(''); setColChances({ ...DEFAULT_TIER_CHANCES }); setColImageUrl('');
     } finally {
       setDeployingCollectible(false);
     }
@@ -4212,6 +4219,34 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
               </select>
             )}
 
+            {/* Challenge image upload */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-brand-navy/50">Challenge image (optional)</label>
+              <div className="flex items-center gap-3">
+                <label className={cn('flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl border-2 border-dashed border-brand-navy/20 text-sm font-semibold text-brand-navy/50 cursor-pointer transition-all', stdImageUploading ? 'opacity-50 pointer-events-none' : 'hover:border-brand-gold/50 hover:text-brand-navy active:scale-[0.98]')}>
+                  {stdImageUploading ? 'Uploading...' : '📁 Upload image'}
+                  <input type="file" accept="image/*" className="hidden" onChange={async e => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setStdImageUploading(true);
+                    try {
+                      const path = `challenge_images/${Date.now()}_${file.name}`;
+                      const snap = await uploadBytes(storageRef(storage, path), file);
+                      setStdImageUrl(await getDownloadURL(snap.ref));
+                    } finally {
+                      setStdImageUploading(false);
+                    }
+                  }} />
+                </label>
+                {stdImageUrl && (
+                  <div className="relative shrink-0">
+                    <img src={stdImageUrl} alt="" className="w-14 h-14 rounded-2xl object-cover border border-brand-navy/10" />
+                    <button onClick={() => setStdImageUrl('')} className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center font-bold">×</button>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <button
               onClick={handleDeployStandard}
               disabled={deploying || !stdTitle.trim() || !stdReward.trim() || !stdUnit.trim() || !stdGoal || (stdIsAvatarPrize && !stdAvatarPrizeItemId)}
@@ -4261,6 +4296,34 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
                 );
               })}
             </div>
+            {/* Programme image upload */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-amber-700/60">Programme image (optional)</label>
+              <div className="flex items-center gap-3">
+                <label className={cn('flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl border-2 border-dashed border-amber-300 text-sm font-semibold text-amber-700/50 cursor-pointer transition-all', colImageUploading ? 'opacity-50 pointer-events-none' : 'hover:border-amber-500 hover:text-amber-700 active:scale-[0.98]')}>
+                  {colImageUploading ? 'Uploading...' : '📁 Upload image'}
+                  <input type="file" accept="image/*" className="hidden" onChange={async e => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setColImageUploading(true);
+                    try {
+                      const path = `challenge_images/${Date.now()}_${file.name}`;
+                      const snap = await uploadBytes(storageRef(storage, path), file);
+                      setColImageUrl(await getDownloadURL(snap.ref));
+                    } finally {
+                      setColImageUploading(false);
+                    }
+                  }} />
+                </label>
+                {colImageUrl && (
+                  <div className="relative shrink-0">
+                    <img src={colImageUrl} alt="" className="w-14 h-14 rounded-2xl object-cover border border-amber-200" />
+                    <button onClick={() => setColImageUrl('')} className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center font-bold">×</button>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <button
               onClick={handleDeployCollectible}
               disabled={deployingCollectible || !colTitle.trim() || !colReward.trim() || Math.round(sumChances(colChances)) !== 100}
