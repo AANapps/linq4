@@ -13187,8 +13187,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.4 }}
                       >
-                        <img src={feedChallenges[challengeIdx % feedChallenges.length].imageUrl} alt="" className="w-full h-full object-cover opacity-25" />
-                        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #7C3AED99, #A855F777)' }} />
+                        <img src={feedChallenges[challengeIdx % feedChallenges.length].imageUrl} alt="" className="w-full h-full object-cover" style={{ opacity: 0.45 }} />
                       </motion.div>
                     )}
                   </AnimatePresence>
