@@ -14103,24 +14103,10 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
       </div>
 
       {/* Stats */}
-      {showStats && (
-        <div className="grid grid-cols-3 gap-3">
-          {(vis?.members !== false) && (
-            <div className="glass-card p-4 rounded-3xl text-center">
-              <p className="text-lg font-bold text-brand-navy">{totalMembers}</p>
-              <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest mt-0.5">Members</p>
-            </div>
-          )}
-          {(vis?.stamps !== false) && (
-            <div className="glass-card p-4 rounded-3xl text-center">
-              <p className="text-lg font-bold text-brand-navy">{totalStampsGiven}</p>
-              <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest mt-0.5">Stamps</p>
-            </div>
-          )}
-          <div className="glass-card p-4 rounded-3xl text-center">
-            <p className="text-lg font-bold text-brand-navy">{publicStoreRewards}</p>
-            <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest mt-0.5">Rewards</p>
-          </div>
+      {(vis?.members !== false) && (
+        <div className="glass-card p-4 rounded-3xl text-center">
+          <p className="text-lg font-bold text-brand-navy">{totalMembers}</p>
+          <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest mt-0.5">Members</p>
         </div>
       )}
 
