@@ -466,20 +466,19 @@ function rollStickerVariant(tier: StickerTier): number {
   return Math.floor(Math.random() * STICKER_CONFIG[tier].variants.length);
 }
 
-// Returns min(count of each variant in tier) across revealed stickers — i.e. completed sets for that tier
+// Returns how many distinct variants in this tier the player has collected at least one of
 function tierSetsCompleted(revealedStickers: CollectibleSticker[], tier: StickerTier): number {
   const variants = STICKER_CONFIG[tier].variants;
-  if (variants.length === 0) return 0;
-  const counts = variants.map((_, i) => revealedStickers.filter(s => s.tier === tier && (s.variant ?? 0) === i).length);
-  return Math.min(...counts);
+  return variants.filter((_, i) => revealedStickers.some(s => s.tier === tier && (s.variant ?? 0) === i)).length;
 }
 
+// Total unique animals collected across all tiers (max 14)
 function totalSetsCompleted(revealedStickers: CollectibleSticker[]): number {
   return STICKER_ORDER.reduce((sum, tier) => sum + tierSetsCompleted(revealedStickers, tier), 0);
 }
 
 function allSetsWon(revealedStickers: CollectibleSticker[]): boolean {
-  return STICKER_ORDER.every(tier => tierSetsCompleted(revealedStickers, tier) >= 3);
+  return STICKER_ORDER.every(tier => tierSetsCompleted(revealedStickers, tier) >= STICKER_CONFIG[tier].variants.length);
 }
 
 interface CollectibleSticker {
@@ -2530,12 +2529,12 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
             {/* Card collection — 3 variants per tier, collect 3 sets to win */}
             <div className="space-y-4">
               <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">
-                Collect 3 sets of each card to win
+                Collect 1 of each animal to complete all tiers
               </p>
               {STICKER_ORDER.map(tier => {
                 const cfg = STICKER_CONFIG[tier];
                 const sets = tierSetsCompleted(revealed, tier);
-                const tierDone = sets >= 3;
+                const tierDone = sets >= cfg.variants.length;
                 return (
                   <div key={tier} className="rounded-2xl p-3 overflow-hidden relative"
                     style={{ background: cfg.solid, boxShadow: `0 4px 18px ${cfg.color}55` }}>
@@ -2547,13 +2546,12 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
                         <span className="text-[9px] text-white/70 ml-1.5">· {cfg.theme} · {cfg.chance}</span>
                       </div>
                       <span className="text-[10px] font-black text-white">
-                        {sets}/3 sets{tierDone ? ' ✓' : ''}
+                        {sets}/{cfg.variants.length}{tierDone ? ' ✓' : ''}
                       </span>
                     </div>
                     <div className="flex gap-2 relative z-10">
                       {cfg.variants.map((v, vi) => {
                         const count = revealed.filter(s => s.tier === tier && (s.variant ?? 0) === vi).length;
-                        const has3 = count >= 3;
                         return (
                           <div key={vi} className="flex-1 flex flex-col items-center gap-1">
                             <div className="w-full rounded-xl border-2 flex flex-col items-center justify-between relative overflow-hidden pt-2 pb-1.5 px-1"
@@ -2567,8 +2565,8 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
                               </span>
                               {count > 0 && (
                                 <span className="text-[7px] font-black relative z-10 mt-0.5"
-                                  style={{ color: has3 ? '#16a34a' : cfg.solid }}>
-                                  ×{count}{has3 ? ' ✓' : ''}
+                                  style={{ color: '#16a34a' }}>
+                                  ✓
                                 </span>
                               )}
                               {count > 0 && <span className="card-shine-ray" style={{ animationDelay: `${vi * 0.7}s` }} />}
@@ -2587,7 +2585,7 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
               )}
               {!myWon && myTotalSets > 0 && (
                 <div className="p-2.5 rounded-2xl text-center bg-brand-navy/5">
-                  <p className="text-[10px] font-bold text-brand-navy/60">{myTotalSets} sets collected · keep going!</p>
+                  <p className="text-[10px] font-bold text-brand-navy/60">{myTotalSets}/14 animals collected · keep going!</p>
                 </div>
               )}
             </div>
@@ -2691,7 +2689,7 @@ function UserStickerPanel({ uid, isOwnProfile = false, onOpenPack }: {
     <div className="glass-card rounded-[2rem] p-5 space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">Animal Cards</p>
-        <span className="text-[10px] font-bold text-brand-navy/40">{panelSets} sets · {col.stickers.length} total</span>
+        <span className="text-[10px] font-bold text-brand-navy/40">{panelSets}/14 · {col.stickers.length} total</span>
       </div>
 
       {/* Compact tier overview — one row per tier showing variants */}
@@ -2699,8 +2697,10 @@ function UserStickerPanel({ uid, isOwnProfile = false, onOpenPack }: {
         {STICKER_ORDER.map(tier => {
           const cfg = STICKER_CONFIG[tier];
           const sets = tierSetsCompleted(revealed, tier);
+          const tierDone = sets >= cfg.variants.length;
           return (
-            <div key={tier} className="flex items-center gap-2">
+            <div key={tier} className="flex items-center gap-2 rounded-xl px-1.5 py-1 transition-all"
+              style={tierDone ? { boxShadow: `0 0 10px 2px ${cfg.solid}55`, background: `${cfg.bg}` } : {}}>
               <span className="text-[8px] font-black uppercase w-14 shrink-0" style={{ color: sets > 0 ? cfg.color : '#CBD5E1' }}>{cfg.theme}</span>
               <div className="flex gap-1.5 flex-1">
                 {cfg.variants.map((v, vi) => {
@@ -2711,13 +2711,12 @@ function UserStickerPanel({ uid, isOwnProfile = false, onOpenPack }: {
                         style={count > 0 ? { background: cfg.bg, borderColor: cfg.border } : { background: '#F1F5F9', borderColor: '#E2E8F0' }}>
                         <span style={{ fontSize: 16, lineHeight: 1 }}>{count > 0 ? v.emoji : '?'}</span>
                       </div>
-                      {count > 0 && <span className="text-[6px] font-bold" style={{ color: cfg.color }}>×{count}</span>}
                     </div>
                   );
                 })}
               </div>
-              <span className="text-[8px] font-black shrink-0 w-9 text-right" style={{ color: sets >= 3 ? cfg.color : '#94A3B8' }}>
-                {sets}/3{sets >= 3 ? '✓' : ''}
+              <span className="text-[8px] font-black shrink-0 w-9 text-right" style={{ color: tierDone ? cfg.color : '#94A3B8' }}>
+                {sets}/{cfg.variants.length}{tierDone ? '✓' : ''}
               </span>
             </div>
           );
@@ -3040,7 +3039,7 @@ function ChallengeRedeemModal({ challenge, entry, userName, onClose }: {
   );
 }
 
-function PackOpeningModal({ stickers, cardId, onClose }: { stickers: CollectibleSticker[]; cardId?: string | null; onClose: () => void }) {
+function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: CollectibleSticker[]; cardId?: string | null; uid?: string | null; onClose: () => void }) {
   type PackPhase = 'sealed' | 'opening' | 'dealing' | 'reveal' | 'done';
   const [phase, setPhase] = useState<PackPhase>('sealed');
   const [dealtCount, setDealtCount] = useState(0);
@@ -3086,6 +3085,11 @@ function PackOpeningModal({ stickers, cardId, onClose }: { stickers: Collectible
       if (cardId) {
         updateDoc(doc(db, 'sticker_cards', cardId), {
           revealedIds: arrayUnion(...displayStickers.map(s => s.id)),
+        }).catch(console.error);
+      } else if (uid) {
+        updateDoc(doc(db, 'user_stickers', uid), {
+          revealedIds: arrayUnion(...displayStickers.map(s => s.id)),
+          uniqueTiers: arrayUnion(...displayStickers.map(s => s.tier)),
         }).catch(console.error);
       }
       const t = setTimeout(() => setPhase('done'), 850);
@@ -4358,7 +4362,7 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
                                           </div>
                                         </div>
                                         <div className="text-right flex-shrink-0">
-                                          <p className="text-[10px] font-bold text-amber-700">{sets} sets</p>
+                                          <p className="text-[10px] font-bold text-amber-700">{sets}/14</p>
                                           <p className="text-[9px] text-amber-600/60">{total} sticker{total !== 1 ? 's' : ''}</p>
                                         </div>
                                         {complete && <span className="text-[9px] font-black text-amber-600 flex-shrink-0">★</span>}
@@ -5217,7 +5221,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
               ) : (() => {
                 const joinedProgs = activePrograms.filter(p => myStickerCards.some(s => s.programme_id === p.id));
                 const availableProgs = activePrograms.filter(p => !myStickerCards.some(s => s.programme_id === p.id));
-                const maxSets = STICKER_ORDER.reduce((sum, t) => sum + STICKER_CONFIG[t].variants.length * 3, 0);
+                const maxSets = STICKER_ORDER.reduce((sum, t) => sum + STICKER_CONFIG[t].variants.length, 0);
                 return (
                   <>
                     {/* ── My Challenges ── */}
@@ -5271,7 +5275,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                                       <div key={tier} className="flex-1 rounded-lg flex flex-col items-center justify-center py-1.5 relative overflow-hidden"
                                         style={{ background: cfg.solid, opacity: sets > 0 ? 1 : 0.3 }}>
                                         <span style={{ fontSize: 14, lineHeight: 1 }}>{firstFound ? cfg.variants[firstFound.variant ?? 0]?.emoji ?? '?' : '?'}</span>
-                                        <span className="text-[6px] font-black text-white mt-0.5">{sets}/3</span>
+                                        <span className="text-[6px] font-black text-white mt-0.5">{sets}/{cfg.variants.length}</span>
                                         {sets > 0 && <span className="card-shine-ray" style={{ animationDelay: `${idx * 0.45}s` }} />}
                                       </div>
                                     );
@@ -5626,6 +5630,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           <PackOpeningModal
             stickers={pendingPack}
             cardId={pendingPackCardId}
+            uid={user.uid}
             onClose={() => {
               const cardId = pendingPackCardId;
               setPendingPack(null);
@@ -6589,6 +6594,7 @@ function StampCelebrationModal({
                   <PackOpeningModal
                     stickers={pendingPack}
                     cardId={pendingPackCardId}
+                    uid={userUid}
                     onClose={() => {
                       setMonopolyPackOpen(false);
                       onPackClosed?.(pendingPackCardId ?? null);
@@ -10508,7 +10514,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
 
       <AnimatePresence>
         {profilePendingPack && (
-          <PackOpeningModal stickers={profilePendingPack} onClose={() => setProfilePendingPack(null)} />
+          <PackOpeningModal stickers={profilePendingPack} uid={user.uid} onClose={() => setProfilePendingPack(null)} />
         )}
       </AnimatePresence>
 
@@ -15229,22 +15235,21 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
               const pct = c.goal > 0 ? Math.min(100, Math.round((progress / c.goal) * 100)) : 0;
               const done = pct >= 100;
               return (
-                <div key={c.id} className="rounded-2xl px-4 py-3 border border-white/80"
-                     style={{ background: 'linear-gradient(160deg, #ffffff 0%, #eff6ff 100%)', boxShadow: '0 4px 14px rgba(29,78,216,0.18), 0 1.5px 4px rgba(29,78,216,0.10), inset 0 1px 0 rgba(255,255,255,0.9)' }}>
-                  <div className="flex items-center justify-between mb-1.5 gap-2">
-                    <p className="text-xs font-bold leading-tight line-clamp-1 flex-1" style={{ color: '#1D4ED8' }}>{c.title}</p>
-                    <span className={cn('text-[10px] font-bold shrink-0', done ? 'text-green-600' : '')} style={done ? {} : { color: '#2563EB' }}>{done ? '✓ Done' : `${pct}%`}</span>
+                <div key={c.id} className="rounded-2xl px-4 py-3 gradient-logo-blue overflow-hidden relative">
+                  <span className="shine-ray" aria-hidden="true" />
+                  <div className="flex items-center justify-between mb-1.5 gap-2 relative z-10">
+                    <p className="text-xs font-bold leading-tight line-clamp-1 flex-1 text-white">{c.title}</p>
+                    <span className={cn('text-[10px] font-bold shrink-0', done ? 'text-green-300' : 'text-white/80')}>{done ? '✓ Done' : `${pct}%`}</span>
                   </div>
-                  <div className="h-1.5 bg-blue-100 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-white/20 rounded-full overflow-hidden relative z-10">
                     <motion.div
-                      className={cn('h-full rounded-full', done ? 'bg-green-500' : '')}
-                      style={done ? {} : { background: 'linear-gradient(90deg, #1D4ED8, #3B82F6)' }}
+                      className={cn('h-full rounded-full', done ? 'bg-green-400' : 'bg-white')}
                       initial={{ width: 0 }}
                       animate={{ width: `${pct}%` }}
                       transition={{ duration: 0.6, ease: 'easeOut' }}
                     />
                   </div>
-                  <p className="text-[9px] mt-1.5 font-medium" style={{ color: '#2563EB99' }}>{progress} / {c.goal} {c.unit} · 🎁 {c.reward}</p>
+                  <p className="text-[9px] mt-1.5 font-medium text-white/60 relative z-10">{progress} / {c.goal} {c.unit} · 🎁 {c.reward}</p>
                 </div>
               );
             })}
