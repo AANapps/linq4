@@ -8955,12 +8955,12 @@ function WallPostItem({ post, currentUser, wallOwnerUid, onViewUser }: { post: a
 
 function StatSquare({ icon, label, value }: { icon: React.ReactNode, label: string, value: string }) {
   return (
-    <div className="glass-card aspect-square rounded-[2rem] flex flex-col items-center justify-center p-4 hover:shadow-md transition-all">
-      <div className="w-10 h-10 bg-brand-bg rounded-2xl flex items-center justify-center mb-2">
-        {React.cloneElement(icon as React.ReactElement, { size: 20 })}
+    <div className="glass-card aspect-square rounded-[1.5rem] flex flex-col items-center justify-center p-3 hover:shadow-md transition-all">
+      <div className="w-7 h-7 bg-brand-bg rounded-xl flex items-center justify-center mb-1.5">
+        {React.cloneElement(icon as React.ReactElement, { size: 15 })}
       </div>
-      <p className="font-display text-lg font-bold text-brand-navy leading-none mb-1">{value}</p>
-      <p className="text-[9px] text-brand-navy/40 font-bold uppercase tracking-wider text-center">{label}</p>
+      <p className="font-display text-base font-bold text-brand-navy leading-none mb-0.5">{value}</p>
+      <p className="text-[8px] text-brand-navy/40 font-bold uppercase tracking-wider text-center">{label}</p>
     </div>
   );
 }
