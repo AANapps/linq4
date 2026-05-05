@@ -730,6 +730,11 @@ export default function App() {
     }, (error) => console.error("Profile listener:", error));
   }, [user, profileCollection]);
 
+  // Vendors don't have a For You tab — redirect to home if they land there
+  useEffect(() => {
+    if (profile?.role === 'vendor' && activeTab === 'for-you') setActiveTab('home');
+  }, [profile?.role]);
+
   // Decay avatar mood daily when no food stamps were collected — runs once per session
   const moodDecayApplied = useRef(false);
   useEffect(() => {
@@ -1456,13 +1461,15 @@ export default function App() {
 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto glass-panel border-t border-black/5 px-4 py-4 flex justify-between items-center z-50">
-        <NavButton 
-          active={activeTab === 'for-you'} 
-          onClick={() => { setActiveTab('for-you'); setViewingStore(null); setViewingUser(null); }}
-          icon={<Zap />}
-          label="For You"
-          badgeCount={notifications.filter(n => !n.isRead).length}
-        />
+        {profile?.role === 'consumer' && (
+          <NavButton
+            active={activeTab === 'for-you'}
+            onClick={() => { setActiveTab('for-you'); setViewingStore(null); setViewingUser(null); }}
+            icon={<Zap />}
+            label="For You"
+            badgeCount={notifications.filter(n => !n.isRead).length}
+          />
+        )}
         {profile?.role === 'consumer' ? (
           <NavButton
             active={activeTab === 'deals'}
