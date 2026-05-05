@@ -7794,15 +7794,11 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
             <div onClick={() => openStatModal('members')} className="cursor-pointer active:scale-95 transition-transform">
               <StatSquare icon={<Users className="text-blue-500" />} label="Members" value={String(totalMembers)} />
             </div>
-            <div onClick={() => openStatModal('stamps')} className="cursor-pointer active:scale-95 transition-transform">
-              <StatSquare icon={<TrendingUp className="text-green-500" />} label="Stamps" value={String(totalStampsGiven)} />
-            </div>
             <div onClick={() => openStatModal('activeCards')} className="cursor-pointer active:scale-95 transition-transform">
               <StatSquare icon={<Wallet className="text-purple-500" />} label="Active Cards" value={String(activeStoreCards)} />
             </div>
             <StatSquare icon={<RefreshCw className="text-orange-500" />} label="Return Rate" value={`${returnRate}%`} />
             <StatSquare icon={<Award className="text-brand-gold" />} label="Redemption Rate" value={`${redemptionRate}%`} />
-            <StatSquare icon={<Gift className="text-pink-500" />} label="Rewards Given" value={String(vendorRewardsGiven)} />
           </div>
 
           <AnimatePresence>
@@ -7915,21 +7911,6 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
             })()}
           </AnimatePresence>
 
-          {store && (
-            <button
-              onClick={() => setShowBroadcast(true)}
-              className="w-full flex items-center gap-4 p-5 rounded-[2rem] bg-white border border-black/5 shadow-sm active:scale-95 transition-transform"
-            >
-              <div className="w-12 h-12 rounded-2xl bg-brand-navy/5 flex items-center justify-center flex-shrink-0">
-                <Send size={20} className="text-brand-navy/60" />
-              </div>
-              <div className="text-left flex-1 min-w-0">
-                <p className="font-bold text-brand-navy">Broadcast</p>
-                <p className="text-xs text-brand-navy/40">Send messages & manage automations</p>
-              </div>
-              <ChevronRight size={18} className="text-brand-navy/20 flex-shrink-0" />
-            </button>
-          )}
 
           <div className="bg-brand-navy p-8 rounded-[2.5rem] text-white text-center">
             <h3 className="font-display text-xl font-bold mb-4">Issue a Stamp</h3>
@@ -9839,12 +9820,6 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
             </button>
           </div>
         )}
-
-        {/* Business stats */}
-        <div className="grid grid-cols-2 gap-4">
-          <StatSquare icon={<TrendingUp className="text-green-500" />} label="Stamps Given" value={String(totalStampsGiven)} />
-          <StatSquare icon={<Gift className="text-pink-500" />} label="Rewards Given" value={String(profileRewardsGiven)} />
-        </div>
 
         {/* Posts */}
         <div className="flex p-1 glass-card rounded-2xl">
