@@ -9315,6 +9315,7 @@ function BadgeSquarePanel({ badges, onSelectBadge }: { badges: AppBadge[]; onSel
 
 function StickerListPanel({ uid }: { uid: string }) {
   const [stickers, setStickers] = useState<CollectibleSticker[] | null>(null);
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'user_stickers', uid), async snap => {
@@ -9331,47 +9332,89 @@ function StickerListPanel({ uid }: { uid: string }) {
     return unsub;
   }, [uid]);
 
-  if (!stickers || stickers.length === 0) {
-    return (
-      <div className="flex-1 glass-card rounded-[2rem] p-4 flex items-center justify-center min-h-[9rem]">
-        <p className="text-[9px] text-brand-navy/30 font-bold text-center">No stickers yet</p>
-      </div>
-    );
-  }
-
   // Group by tier+variant, count duplicates
-  const grouped = new Map<string, { bg: string; border: string; emoji: string; count: number }>();
-  stickers.forEach(s => {
-    const key = `${s.tier}-${s.variant ?? 0}`;
-    if (!grouped.has(key)) {
-      const cfg = STICKER_CONFIG[s.tier];
-      const v = cfg.variants[s.variant ?? 0];
-      grouped.set(key, { bg: cfg.bg, border: cfg.border, emoji: v?.emoji ?? '?', count: 0 });
-    }
-    grouped.get(key)!.count++;
-  });
+  const grouped = (() => {
+    const map = new Map<string, { bg: string; border: string; emoji: string; name: string; count: number }>();
+    (stickers || []).forEach(s => {
+      const key = `${s.tier}-${s.variant ?? 0}`;
+      if (!map.has(key)) {
+        const cfg = STICKER_CONFIG[s.tier];
+        const v = cfg.variants[s.variant ?? 0];
+        map.set(key, { bg: cfg.bg, border: cfg.border, emoji: v?.emoji ?? '?', name: v?.name ?? cfg.label, count: 0 });
+      }
+      map.get(key)!.count++;
+    });
+    return Array.from(map.values());
+  })();
 
   return (
-    <div className="flex-1 glass-card rounded-[2rem] p-4">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5">Stickers</p>
-      <div className="flex flex-wrap gap-1.5">
-        {Array.from(grouped.values()).map((g, i) => (
-          <div key={i} className="relative">
-            <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-lg"
-              style={{ background: g.bg, border: `1px solid ${g.border}` }}
-            >
-              {g.emoji}
+    <>
+      <div className="grid grid-cols-2 gap-1.5 w-36 shrink-0">
+        {[0, 1, 2].map(i => {
+          const g = grouped[i];
+          if (!g) return (
+            <div key={i} className="aspect-square rounded-[1.1rem] bg-brand-navy/5 border border-brand-navy/8 flex items-center justify-center">
+              <span className="text-brand-navy/20 text-lg">✦</span>
             </div>
-            {g.count > 1 && (
-              <span className="absolute -top-1 -right-1 bg-brand-navy text-white text-[7px] font-black w-3.5 h-3.5 rounded-full flex items-center justify-center leading-none">
-                {g.count}
-              </span>
-            )}
-          </div>
-        ))}
+          );
+          return (
+            <button key={i} onClick={() => setShowAll(true)}
+              className="aspect-square rounded-[1.1rem] flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-transform shadow-md overflow-hidden relative"
+              style={{ background: g.bg, border: `1.5px solid ${g.border}` }}>
+              <span className="text-2xl leading-none">{g.emoji}</span>
+              <span className="text-[6px] font-bold text-brand-navy/80 text-center px-1 leading-tight line-clamp-2 max-w-full">{g.name}</span>
+              {g.count > 1 && (
+                <span className="absolute top-1 right-1 bg-brand-navy text-white text-[6px] font-black w-3 h-3 rounded-full flex items-center justify-center leading-none">
+                  {g.count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+        <button onClick={() => setShowAll(true)}
+          className="aspect-square rounded-[1.1rem] bg-brand-navy flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-transform shadow-md">
+          <span className="text-lg leading-none">🌟</span>
+          <span className="text-[7px] font-bold text-white/70 uppercase tracking-wide">See all</span>
+          {grouped.length > 0 && <span className="text-[9px] font-black text-brand-gold">{grouped.length}</span>}
+        </button>
       </div>
-    </div>
+
+      <AnimatePresence>
+        {showAll && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] flex items-end max-w-md mx-auto"
+            onClick={() => setShowAll(false)}>
+            <motion.div initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+              className="w-full bg-brand-bg rounded-t-3xl p-6 pb-10"
+              onClick={e => e.stopPropagation()}>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-4">All Stickers</p>
+              {grouped.length === 0 ? (
+                <p className="text-xs text-brand-navy/40 text-center py-8">No stickers collected yet</p>
+              ) : (
+                <div className="grid grid-cols-4 gap-3 max-h-72 overflow-y-auto pb-1">
+                  {grouped.map((g, i) => (
+                    <div key={i} className="flex flex-col items-center gap-1">
+                      <div className="relative w-14 h-14 rounded-[1.1rem] flex items-center justify-center text-2xl shadow-md"
+                        style={{ background: g.bg, border: `1.5px solid ${g.border}` }}>
+                        {g.emoji}
+                        {g.count > 1 && (
+                          <span className="absolute -top-1 -right-1 bg-brand-navy text-white text-[7px] font-black w-3.5 h-3.5 rounded-full flex items-center justify-center leading-none">
+                            {g.count}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[8px] font-bold text-brand-navy/60 text-center max-w-[56px] leading-tight line-clamp-2">{g.name}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <button onClick={() => setShowAll(false)} className="w-full mt-5 py-3 rounded-2xl bg-brand-navy/8 text-brand-navy font-bold text-sm active:scale-[0.98] transition-all">Close</button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
 
@@ -9884,10 +9927,13 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
 
       {/* Badges + Sticker collection side-by-side */}
       {profile.role === 'consumer' && (
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 px-1">Badges &amp; Cards</p>
-          <div className="flex gap-3 items-start">
+        <div className="flex gap-3 items-start">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 px-1">Badges</p>
             <BadgeSquarePanel badges={earnedBadges} onSelectBadge={setSelectedBadge} />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 px-1">Stickers</p>
             <StickerListPanel uid={user.uid} />
           </div>
         </div>
@@ -14481,10 +14527,13 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
 
       {/* Badges + Sticker collection side-by-side */}
       {targetUser.role === 'consumer' && (
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 px-1">Badges &amp; Cards</p>
-          <div className="flex gap-3 items-start">
+        <div className="flex gap-3 items-start">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 px-1">Badges</p>
             <BadgeSquarePanel badges={earnedBadges} onSelectBadge={setSelectedBadge} />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 px-1">Stickers</p>
             <StickerListPanel uid={targetUser.uid} />
           </div>
         </div>
