@@ -8917,9 +8917,12 @@ function LoyaltyCard({ card, store, onViewStore }: { card: Card, store?: StorePr
 
 function StoreCard({ store, card, onJoin, onClick }: { store: StoreProfile, card?: Card, onJoin: () => void, onClick?: () => void, key?: React.Key }) {
   const stampsRequired = store.stamps_required_for_reward || 10;
-  
+  const finalReward = store.rewardTiers?.length
+    ? [...store.rewardTiers].sort((a, b) => b.stamps - a.stamps)[0]?.reward
+    : store.reward;
+
   return (
-    <div 
+    <div
       onClick={onClick}
       className="glass-card p-4 rounded-3xl flex items-center gap-4 hover:shadow-lg transition-all cursor-pointer group"
     >
@@ -8932,10 +8935,10 @@ function StoreCard({ store, card, onJoin, onClick }: { store: StoreProfile, card
           {store.isVerified && <CheckCircle2 size={14} className="text-blue-500 fill-blue-500/10" />}
         </div>
         <p className="text-xs text-brand-navy/40 mb-2 flex items-center gap-1">
-            <StoreCategoryIcon category={store.category} size={11} />
-            {store.category} • 1.2km away
-          </p>
-        
+          <StoreCategoryIcon category={store.category} size={11} />
+          {store.category} • 1.2km away
+        </p>
+
         {card ? (
           <div className="space-y-2">
             <div className="flex gap-1">
@@ -8951,19 +8954,19 @@ function StoreCard({ store, card, onJoin, onClick }: { store: StoreProfile, card
             </p>
           </div>
         ) : (
-          <div className="flex items-center gap-2">
-            <div className="px-2 py-1 bg-brand-gold/10 rounded-lg">
-              <span className="text-[10px] font-bold text-brand-gold uppercase">Double Stamps</span>
+          finalReward && (
+            <div className="px-2 py-1 bg-brand-gold/10 rounded-lg w-fit">
+              <span className="text-[10px] font-bold text-brand-gold">🎁 {finalReward}</span>
             </div>
-          </div>
+          )
         )}
       </div>
       {!card && (
-        <button 
+        <button
           onClick={(e) => { e.stopPropagation(); onJoin(); }}
-          className="w-10 h-10 bg-brand-bg rounded-full flex items-center justify-center text-brand-navy hover:bg-brand-navy hover:text-white transition-all shrink-0"
+          className="px-4 py-2 gradient-logo-blue text-white text-xs font-bold rounded-2xl active:scale-95 transition-all shrink-0 shadow"
         >
-          <Plus size={20} />
+          Join
         </button>
       )}
     </div>
