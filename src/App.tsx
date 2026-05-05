@@ -10677,9 +10677,11 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
                 )}
               </div>
 
-              {/* Manual URL override */}
-              <input value={storeLogo} onChange={e => setStoreLogo(e.target.value)} placeholder="Or paste logo URL directly..."
-                className="w-full px-5 py-4 rounded-2xl bg-white border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30" />
+              {/* Manual URL override — only show when no logo set */}
+              {!storeLogo && (
+                <input value={storeLogo} onChange={e => setStoreLogo(e.target.value)} placeholder="Or paste logo URL directly..."
+                  className="w-full px-5 py-4 rounded-2xl bg-white border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30" />
+              )}
             </div>
 
             {/* Colour Theme */}
