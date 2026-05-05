@@ -567,7 +567,7 @@ interface RankEntry {
 }
 
 interface CelebrationPage {
-  type: 'stamp' | 'challenge' | 'upsell' | 'charity' | 'rank' | 'monopoly_pack' | 'challenges_list' | 'upsell_list' | 'stage_reward';
+  type: 'stamp' | 'challenge' | 'upsell' | 'charity' | 'rank' | 'monopoly_pack' | 'challenges_list' | 'upsell_list' | 'stage_reward' | 'collectible_promo';
   storeName?: string;
   challengeTitle?: string;
   upsellTitle?: string;
@@ -593,6 +593,8 @@ interface CelebrationPage {
   stageStamps?: number;
   nextStageStamps?: number;
   nextStageReward?: string;
+  collectiblePromoName?: string;
+  collectiblePromoReward?: string;
 }
 
 interface AppBadge {
@@ -4595,6 +4597,19 @@ function buildStampCelebrationPages(
       done: false,
       monopolyChallengeName: joinedProg.title,
     });
+  } else if (collectiblePrograms.length > 0) {
+    // User hasn't joined — show a promo teaser for the first active programme
+    const promo = collectiblePrograms[0];
+    pages.push({
+      type: 'collectible_promo',
+      currentStamps: card.current_stamps,
+      totalStamps: card.current_stamps,
+      reward: '',
+      encouragement: '',
+      done: false,
+      collectiblePromoName: promo.title,
+      collectiblePromoReward: promo.reward,
+    });
   }
 
   // 4. All joined standard-challenge progresses in one list page
@@ -5825,8 +5840,8 @@ function NFCStampModal({ user, profile, onClose, autoStoreId, onPackReady }: {
   );
 }
 
-const PAGE_ICONS: Record<string, string> = { stamp: '⭐', challenge: '🏆', challenge_done: '🎉', upsell: '🎯', monopoly_pack: '🎰', challenges_list: '🏃', upsell_list: '🎯', stage_reward: '🎁' };
-const PAGE_ANIM: Record<string, CelebAnimType> = { stamp: 'confetti', challenge: 'sparkles', challenge_done: 'fireworks', upsell: 'burst', monopoly_pack: 'sparks', challenges_list: 'sparkles', upsell_list: 'burst', stage_reward: 'fireworks' };
+const PAGE_ICONS: Record<string, string> = { stamp: '⭐', challenge: '🏆', challenge_done: '🎉', upsell: '🎯', monopoly_pack: '🎰', challenges_list: '🏃', upsell_list: '🎯', stage_reward: '🎁', collectible_promo: '🎴' };
+const PAGE_ANIM: Record<string, CelebAnimType> = { stamp: 'confetti', challenge: 'sparkles', challenge_done: 'fireworks', upsell: 'burst', monopoly_pack: 'sparks', challenges_list: 'sparkles', upsell_list: 'burst', stage_reward: 'fireworks', collectible_promo: 'sparks' };
 const CTA_LABELS = ['Keep smashing it! 🚀', 'You\'re on fire! 🔥', 'Unstoppable! 💪', 'Legend! ⭐', 'Amazing work! 🎉'];
 
 function getCharityFeedback(type: 'animal' | 'tree', newCount: number): { emoji: string; title: string; detail: string } {
@@ -5886,6 +5901,7 @@ function StampCelebrationModal({
   const isChallengesList = page.type === 'challenges_list';
   const isUpsellList = page.type === 'upsell_list';
   const isStageReward = page.type === 'stage_reward';
+  const isCollectiblePromo = page.type === 'collectible_promo';
   const pageKey = page.type === 'challenge' && page.done ? 'challenge_done' : page.type;
 
   // Rank page data
@@ -6581,6 +6597,67 @@ function StampCelebrationModal({
 
                 <motion.button
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
+                  onClick={isLast ? onClose : () => setPageIdx(i => i + 1)}
+                  className="w-full py-3.5 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-[0.98] transition-all"
+                >
+                  {ctaLabel}
+                </motion.button>
+              </>
+            ) : isCollectiblePromo ? (
+              /* ── Collectible programme promo (user not yet joined) ── */
+              <>
+                <div className="text-center space-y-1">
+                  <motion.p
+                    initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+                    className="text-[10px] font-bold uppercase tracking-widest text-brand-gold"
+                  >
+                    🎴 Sticker Game
+                  </motion.p>
+                  <motion.h2
+                    initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+                    className="font-display text-xl font-bold text-brand-navy leading-tight"
+                  >
+                    {page.collectiblePromoName ?? 'Collectible Challenge'}
+                  </motion.h2>
+                </div>
+
+                <motion.div
+                  initial={{ scale: 0, rotate: -12 }} animate={{ scale: 1, rotate: 0 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 18, delay: 0.1 }}
+                  className="flex justify-center"
+                >
+                  <div className="text-8xl select-none">🎴</div>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                  className="rounded-2xl bg-brand-navy/5 p-4 text-center space-y-2"
+                >
+                  <p className="text-xs font-semibold text-brand-navy/60">
+                    Your stickers could go towards the {page.collectiblePromoName ?? 'game'} — join to start collecting!
+                  </p>
+                </motion.div>
+
+                {page.collectiblePromoReward && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }}
+                    className="rounded-2xl bg-brand-gold/15 border border-brand-gold/30 p-5 text-center"
+                  >
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold mb-1">Prize</p>
+                    <p className="font-display text-2xl font-black text-brand-navy leading-tight">{page.collectiblePromoReward}</p>
+                  </motion.div>
+                )}
+
+                {pages.length > 1 && (
+                  <div className="flex justify-center gap-1.5">
+                    {pages.map((_, i) => (
+                      <motion.div key={i} animate={{ width: i === pageIdx ? 16 : 6 }} className={cn('h-1.5 rounded-full transition-colors', i === pageIdx ? 'bg-brand-navy' : 'bg-brand-navy/20')} />
+                    ))}
+                  </div>
+                )}
+
+                <motion.button
+                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
                   onClick={isLast ? onClose : () => setPageIdx(i => i + 1)}
                   className="w-full py-3.5 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-[0.98] transition-all"
                 >
@@ -10323,6 +10400,9 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
   const [storeCategory, setStoreCategory] = useState<Category>('Food');
   const [storeTheme, setStoreTheme] = useState('#1e3a5f');
   const [storeLogo, setStoreLogo] = useState('');
+  const [logoFetchUrl, setLogoFetchUrl] = useState('');
+  const [logoFetching, setLogoFetching] = useState(false);
+  const [logoFetchError, setLogoFetchError] = useState('');
   const [storeLocation, setStoreLocation] = useState('');
   const [visibility, setVisibility] = useState({ members: true, stamps: true, activeCards: true, returnRate: true, followers: true });
   const [saving, setSaving] = useState(false);
@@ -10528,9 +10608,48 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">Logo URL</label>
+              <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">Logo</label>
+
+              {/* Fetch from website */}
+              <div className="flex gap-2">
+                <input
+                  value={logoFetchUrl}
+                  onChange={e => { setLogoFetchUrl(e.target.value); setLogoFetchError(''); }}
+                  placeholder="yourwebsite.com"
+                  className="flex-1 px-4 py-3 rounded-2xl bg-white border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+                />
+                <button
+                  type="button"
+                  disabled={logoFetching || !logoFetchUrl.trim()}
+                  onClick={async () => {
+                    setLogoFetching(true);
+                    setLogoFetchError('');
+                    try {
+                      let raw = logoFetchUrl.trim().replace(/^https?:\/\//i, '').replace(/\/.*$/, '');
+                      const clearbitUrl = `https://logo.clearbit.com/${raw}`;
+                      const res = await fetch(clearbitUrl);
+                      if (res.ok) {
+                        setStoreLogo(clearbitUrl);
+                      } else {
+                        const fallback = `https://www.google.com/s2/favicons?domain=${raw}&sz=128`;
+                        setStoreLogo(fallback);
+                      }
+                    } catch {
+                      setLogoFetchError('Could not fetch logo — paste the URL manually below.');
+                    } finally {
+                      setLogoFetching(false);
+                    }
+                  }}
+                  className="px-4 py-3 rounded-2xl bg-brand-navy text-white text-xs font-bold shrink-0 disabled:opacity-40 active:scale-95 transition-all"
+                >
+                  {logoFetching ? '...' : 'Fetch Logo'}
+                </button>
+              </div>
+              {logoFetchError && <p className="text-[11px] text-red-500 pl-1">{logoFetchError}</p>}
+
+              {/* Manual URL override */}
               <div className="flex gap-3">
-                <input value={storeLogo} onChange={e => setStoreLogo(e.target.value)} placeholder="https://..."
+                <input value={storeLogo} onChange={e => setStoreLogo(e.target.value)} placeholder="Or paste logo URL directly..."
                   className="flex-1 px-5 py-4 rounded-2xl bg-white border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30" />
                 {storeLogo && (
                   <div className="w-14 h-14 rounded-2xl overflow-hidden border border-brand-navy/10 shrink-0">
