@@ -1417,6 +1417,7 @@ export default function App() {
             userCards={userCards}
             isAdmin={profile?.email === ADMIN_EMAIL}
             onOpenAdmin={() => { setShowSettings(false); setAdminView('menu'); }}
+            onOpenStores={() => { setShowSettings(false); setAdminView('stores'); }}
           />
         )}
       </AnimatePresence>
@@ -11344,6 +11345,7 @@ function SettingsMenu({
   userCards,
   isAdmin,
   onOpenAdmin,
+  onOpenStores,
 }: {
   isOpen: boolean,
   onClose: () => void,
@@ -11351,6 +11353,7 @@ function SettingsMenu({
   userCards: Card[],
   isAdmin?: boolean,
   onOpenAdmin?: () => void,
+  onOpenStores?: () => void,
 }) {
   const [showArchive, setShowArchive] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -11741,6 +11744,9 @@ function SettingsMenu({
           <MenuButton icon={<Sparkles />} label="Seed Sample Data" sub="Generate test users & stamps" onClick={seedData} disabled={isSeeding} />
           {isAdmin && (
             <MenuButton icon={<Flag />} label="Admin Panel" sub="Challenges, badges & settings" onClick={onOpenAdmin} />
+          )}
+          {isAdmin && (
+            <MenuButton icon={<Store />} label="Businesses" sub="Edit business profiles" onClick={onOpenStores} />
           )}
         </div>
 
