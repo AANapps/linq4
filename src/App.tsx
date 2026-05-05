@@ -2964,7 +2964,9 @@ function ChallengeRedeemModal({ challenge, entry, userName, onClose }: {
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 28, stiffness: 260 }}
         className="relative w-full max-w-md bg-brand-bg rounded-t-[2.5rem] shadow-2xl overflow-hidden"
+        style={{ maxHeight: '92vh' }}
       >
+        <div className="overflow-y-auto" style={{ maxHeight: '92vh' }}>
         <div className="px-5 pt-5 pb-8 space-y-5">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-xl font-bold text-brand-navy">Redeem Reward</h2>
@@ -3031,6 +3033,7 @@ function ChallengeRedeemModal({ challenge, entry, userName, onClose }: {
               </button>
             </div>
           )}
+        </div>
         </div>
       </motion.div>
     </motion.div>
