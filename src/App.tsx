@@ -58,6 +58,7 @@ import {
   CheckCircle2,
   Gift,
   ChevronRight,
+  ChevronLeft,
   Search,
   MapPin,
   Star,
@@ -14056,96 +14057,52 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
     store.rewardsGiven || 0
   );
 
+  const tiers = store.rewardTiers?.length
+    ? [...store.rewardTiers].sort((a, b) => a.stamps - b.stamps)
+    : store.reward ? [{ stamps: store.stamps_required_for_reward || 10, reward: store.reward }] : [];
+  const [tierSlideIdx, setTierSlideIdx] = React.useState(0);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
-      className="space-y-6"
+      className="space-y-5"
     >
       <button onClick={onBack} className="flex items-center gap-2 text-brand-navy/60 font-bold text-sm hover:text-brand-navy transition-colors">
         <ArrowLeft size={18} />
         Back
       </button>
 
-      <div className="relative h-48 rounded-[2.5rem] overflow-hidden">
-        <img src={store.coverUrl} alt="" className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-brand-navy/80 to-transparent" />
-        <div className="absolute bottom-6 left-6 flex items-end gap-4">
-          <div className="w-20 h-20 rounded-2xl border-4 border-white overflow-hidden bg-white">
-            <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
+      {/* Logo + name */}
+      <div className="flex flex-col items-center text-center gap-3 pt-2">
+        <div className="w-24 h-24 rounded-3xl overflow-hidden border-4 border-white shadow-lg bg-white">
+          {store.logoUrl
+            ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
+            : <div className="w-full h-full flex items-center justify-center bg-brand-navy/5 text-3xl">{store.name?.[0]}</div>
+          }
+        </div>
+        <div>
+          <div className="flex items-center justify-center gap-2">
+            <h2 className="text-2xl font-bold text-brand-navy">{store.name}</h2>
+            {store.isVerified && <CheckCircle2 size={18} className="text-blue-400" />}
           </div>
-          <div className="mb-2">
-            <div className="flex items-center gap-2">
-              <h2 className="text-2xl font-bold text-white">{store.name}</h2>
-              {store.isVerified && <CheckCircle2 size={18} className="text-blue-400" />}
-            </div>
-            <p className="text-white/60 text-sm">{store.category}{store.location || store.address ? ` • ${store.location || store.address}` : ''}</p>
-            {avgRating !== null && (
-              <div className="flex items-center gap-1.5 mt-1">
-                <div className="flex items-center gap-0.5">
-                  {[1,2,3,4,5].map(s => (
-                    <Star key={s} size={11} className={s <= Math.round(avgRating) ? "text-brand-gold fill-brand-gold" : "text-white/30"} />
-                  ))}
-                </div>
-                <span className="text-white font-bold text-xs">{avgRating.toFixed(1)}</span>
-                <span className="text-white/50 text-xs">({storeReviews.length})</span>
+          <p className="text-sm text-brand-navy/50 mt-0.5">{store.category}{store.location || store.address ? ` · ${store.location || store.address}` : ''}</p>
+          {avgRating !== null && (
+            <div className="flex items-center justify-center gap-1.5 mt-1.5">
+              <div className="flex items-center gap-0.5">
+                {[1,2,3,4,5].map(s => (
+                  <Star key={s} size={12} className={s <= Math.round(avgRating) ? "text-brand-gold fill-brand-gold" : "text-brand-navy/20"} />
+                ))}
               </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Action buttons — below profile picture */}
-      {store.ownerUid !== user.uid && (
-        <div className="flex gap-2">
-          {onMessage && store.ownerUid && (
-            <button
-              onClick={handleMessageStore}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl gradient-red text-white font-bold text-xs shadow active:scale-95 transition-all"
-            >
-              <MessageCircle size={14} />
-              Message
-            </button>
+              <span className="text-brand-navy font-bold text-xs">{avgRating.toFixed(1)}</span>
+              <span className="text-brand-navy/40 text-xs">({storeReviews.length})</span>
+            </div>
           )}
-          <button
-            onClick={handleFollowStore}
-            className={cn(
-              "flex items-center gap-1.5 px-4 py-2.5 rounded-2xl font-bold text-xs transition-all shadow active:scale-95",
-              isFollowingStore
-                ? "bg-brand-navy/8 text-brand-navy border border-brand-navy/15"
-                : "gradient-red text-white"
-            )}
-          >
-            {isFollowingStore ? <UserCheck size={14} /> : <UserPlus size={14} />}
-            {isFollowingStore ? 'Following' : 'Follow'}
-          </button>
-          <button
-            onClick={card ? undefined : handleJoinStore}
-            className={cn(
-              "flex items-center gap-1.5 px-4 py-2.5 rounded-2xl font-bold text-xs transition-all shadow active:scale-95",
-              card
-                ? "bg-green-50 text-green-600 border border-green-200 cursor-default"
-                : "gradient-red text-white"
-            )}
-          >
-            {card ? <><UserCheck size={14} /> Member</> : <><Plus size={14} /> Join</>}
-          </button>
         </div>
-      )}
-
-      {store.ownerUid !== user.uid && (
-        card ? (
-          <LoyaltyCard card={card} store={store} />
-        ) : null
-      )}
-
-
-      <div className="glass-card p-6 rounded-[2.5rem]">
-        <h3 className="font-bold mb-2">About</h3>
-        <p className="text-sm text-brand-navy/60 leading-relaxed">{store.description}</p>
       </div>
 
+      {/* Stats */}
       {showStats && (
         <div className="grid grid-cols-3 gap-3">
           {(vis?.members !== false) && (
@@ -14167,7 +14124,86 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
         </div>
       )}
 
-      <div className="glass-card p-6 rounded-[2.5rem] space-y-4">
+      {/* Reward tiers slider */}
+      {tiers.length > 0 && (
+        <div className="glass-card p-5 rounded-[2rem] space-y-3">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">
+            {tiers.length > 1 ? `Reward ${tierSlideIdx + 1} of ${tiers.length}` : 'Reward'}
+          </p>
+          <div className="overflow-hidden">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={tierSlideIdx}
+                initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }}
+                transition={{ duration: 0.2 }}
+                className="flex items-center gap-4"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-brand-gold/15 flex items-center justify-center shrink-0">
+                  <Gift size={22} className="text-brand-gold" />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-bold text-brand-navy text-base leading-tight">{tiers[tierSlideIdx].reward}</p>
+                  <p className="text-xs text-brand-navy/40 mt-0.5">after {tiers[tierSlideIdx].stamps} stamps</p>
+                </div>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+          {tiers.length > 1 && (
+            <div className="flex items-center justify-between pt-1">
+              <button
+                onClick={() => setTierSlideIdx(i => Math.max(0, i - 1))}
+                disabled={tierSlideIdx === 0}
+                className="p-1.5 rounded-xl bg-brand-navy/8 disabled:opacity-20 active:scale-90 transition-all"
+              >
+                <ChevronLeft size={16} className="text-brand-navy" />
+              </button>
+              <div className="flex gap-1.5">
+                {tiers.map((_, i) => (
+                  <button key={i} onClick={() => setTierSlideIdx(i)}
+                    className={cn('h-1.5 rounded-full transition-all', i === tierSlideIdx ? 'w-4 bg-brand-navy' : 'w-1.5 bg-brand-navy/20')}
+                  />
+                ))}
+              </div>
+              <button
+                onClick={() => setTierSlideIdx(i => Math.min(tiers.length - 1, i + 1))}
+                disabled={tierSlideIdx === tiers.length - 1}
+                className="p-1.5 rounded-xl bg-brand-navy/8 disabled:opacity-20 active:scale-90 transition-all"
+              >
+                <ChevronRight size={16} className="text-brand-navy" />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Action buttons */}
+      {store.ownerUid !== user.uid && (
+        <div className="flex gap-2">
+          {onMessage && store.ownerUid && (
+            <button onClick={handleMessageStore} className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl gradient-red text-white font-bold text-xs shadow active:scale-95 transition-all">
+              <MessageCircle size={14} /> Message
+            </button>
+          )}
+          <button
+            onClick={handleFollowStore}
+            className={cn("flex items-center gap-1.5 px-4 py-2.5 rounded-2xl font-bold text-xs transition-all shadow active:scale-95", isFollowingStore ? "bg-brand-navy/8 text-brand-navy border border-brand-navy/15" : "gradient-red text-white")}
+          >
+            {isFollowingStore ? <UserCheck size={14} /> : <UserPlus size={14} />}
+            {isFollowingStore ? 'Following' : 'Follow'}
+          </button>
+          <button
+            onClick={card ? undefined : handleJoinStore}
+            className={cn("flex items-center gap-1.5 px-4 py-2.5 rounded-2xl font-bold text-xs transition-all shadow active:scale-95", card ? "bg-green-50 text-green-600 border border-green-200 cursor-default" : "gradient-red text-white")}
+          >
+            {card ? <><UserCheck size={14} /> Member</> : <><Plus size={14} /> Join</>}
+          </button>
+        </div>
+      )}
+
+      {store.ownerUid !== user.uid && card && <LoyaltyCard card={card} store={store} />}
+
+      {/* Top collectors */}
+      <div className="glass-card p-5 rounded-[2rem] space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-bold">Top Collectors</h3>
           <Trophy size={18} className="text-brand-gold" />
@@ -14183,9 +14219,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                 className="flex items-center justify-between p-3 rounded-2xl hover:bg-brand-bg transition-colors cursor-pointer group"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-6 h-6 flex items-center justify-center font-bold text-xs text-brand-navy/40">
-                    #{index + 1}
-                  </div>
+                  <div className="w-6 h-6 flex items-center justify-center font-bold text-xs text-brand-navy/40">#{index + 1}</div>
                   <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-navy/5 bg-indigo-50 flex items-center justify-center">
                     <PixelAvatar config={lbProfile?.avatar} uid={lbProfile?.uid ?? entry.user_id} size={40} view="head" />
                   </div>
