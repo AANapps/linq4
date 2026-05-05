@@ -2932,6 +2932,111 @@ function MysteryRevealCard({ sticker, isRevealed, onReveal }: {
   );
 }
 
+function ChallengeRedeemModal({ challenge, entry, userName, onClose }: {
+  challenge: Challenge;
+  entry: any;
+  userName: string;
+  onClose: () => void;
+}) {
+  const [confirmed, setConfirmed] = useState(false);
+  const [marking, setMarking] = useState(false);
+
+  const handleMark = async () => {
+    setMarking(true);
+    try {
+      await updateDoc(doc(db, 'challenge_entries', entry.id), {
+        redeemed: true,
+        redeemedAt: serverTimestamp(),
+      });
+      setConfirmed(true);
+    } finally {
+      setMarking(false);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[200] flex flex-col items-center justify-end"
+    >
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <motion.div
+        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 28, stiffness: 260 }}
+        className="relative w-full max-w-md bg-brand-bg rounded-t-[2.5rem] shadow-2xl overflow-hidden"
+      >
+        <div className="px-5 pt-5 pb-8 space-y-5">
+          <div className="flex items-center justify-between">
+            <h2 className="font-display text-xl font-bold text-brand-navy">Redeem Reward</h2>
+            <button onClick={onClose} className="p-2 rounded-2xl bg-brand-navy/8 active:scale-90 transition-all">
+              <X size={18} className="text-brand-navy/60" />
+            </button>
+          </div>
+
+          {/* Instagram story card */}
+          <div className="rounded-[2rem] overflow-hidden shadow-xl" style={{ background: 'linear-gradient(160deg, #0f2460 0%, #1E3A8A 50%, #162d6e 100%)', aspectRatio: '9/14', position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', padding: '32px 24px' }}>
+            {/* Top sparkles */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              {[...Array(18)].map((_, i) => (
+                <div key={i} className="absolute rounded-full bg-white/10"
+                  style={{ width: `${4 + (i % 5) * 3}px`, height: `${4 + (i % 5) * 3}px`, top: `${(i * 37) % 90}%`, left: `${(i * 53) % 90}%`, opacity: 0.15 + (i % 4) * 0.08 }} />
+              ))}
+            </div>
+
+            {/* Linq wordmark */}
+            <div className="text-center relative z-10">
+              <p className="font-display text-5xl font-black text-white tracking-tight leading-none">linq</p>
+              <div className="h-0.5 bg-white/20 rounded-full mt-2 mx-4" />
+            </div>
+
+            {/* Achievement */}
+            <div className="text-center space-y-4 relative z-10 px-2">
+              <div className="w-20 h-20 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center mx-auto border-2 border-white/20">
+                <span className="text-4xl">🏆</span>
+              </div>
+              <div className="space-y-1">
+                <p className="text-white/60 text-xs font-bold uppercase tracking-widest">Challenge Complete</p>
+                <p className="font-display text-2xl font-black text-white leading-tight">{challenge.title}</p>
+              </div>
+              <div className="bg-white/15 backdrop-blur-sm rounded-2xl px-5 py-3 border border-white/20">
+                <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mb-1">Reward</p>
+                <p className="font-bold text-white text-lg leading-snug">{challenge.reward}</p>
+              </div>
+            </div>
+
+            {/* Footer tagline */}
+            <div className="text-center relative z-10 space-y-1">
+              <p className="text-white/50 text-xs font-medium">Collect stamps &amp; rewards with</p>
+              <p className="font-display text-xl font-black text-white tracking-tight">linq</p>
+              <p className="text-white/30 text-[10px] font-bold tracking-widest">@joinlinq</p>
+            </div>
+          </div>
+
+          {confirmed ? (
+            <div className="rounded-2xl bg-green-50 border border-green-200 p-4 text-center">
+              <p className="font-bold text-green-700">✓ Marked as redeemed! Enjoy your reward.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="rounded-2xl bg-brand-navy/5 p-4 text-center space-y-1">
+                <p className="font-bold text-sm text-brand-navy">📸 Screenshot &amp; share on your story</p>
+                <p className="text-xs text-brand-navy/50">Tag <span className="font-bold">@joinlinq</span> to show off your reward!</p>
+              </div>
+              <button
+                onClick={handleMark}
+                disabled={marking}
+                className="w-full py-4 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-[0.98] transition-all disabled:opacity-50"
+              >
+                {marking ? 'Marking...' : '✓ Mark as Redeemed'}
+              </button>
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 function PackOpeningModal({ stickers, cardId, onClose }: { stickers: CollectibleSticker[]; cardId?: string | null; onClose: () => void }) {
   type PackPhase = 'sealed' | 'opening' | 'dealing' | 'reveal' | 'done';
   const [phase, setPhase] = useState<PackPhase>('sealed');
@@ -4654,6 +4759,7 @@ function buildStampCelebrationPages(
 function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onViewUser, cards: initialCards, notifications, activeChatId, setActiveChatId, onLogout, onDeleteAccount, pendingNFCStoreId, onClearPendingNFC }: { activeTab: string, setActiveTab: (tab: string) => void, profile: UserProfile | null, user: FirebaseUser, onViewStore: (s: StoreProfile) => void, onViewUser: (u: UserProfile) => void, cards: Card[], notifications: Notification[], activeChatId: string | null, setActiveChatId: (id: string | null) => void, onLogout: () => void, onDeleteAccount: () => Promise<void>, pendingNFCStoreId?: string | null, onClearPendingNFC?: () => void, key?: React.Key }) {
   const [stores, setStores] = useState<StoreProfile[]>([]);
   const [walletSubTab, setWalletSubTab] = useState<'stamps' | 'challenges'>('stamps');
+  const [redeemingChallenge, setRedeemingChallenge] = useState<{ challenge: Challenge; entry: any; userName: string } | null>(null);
   const [myStickerCards, setMyStickerCards] = useState<StickerCardDoc[]>([]);
   const [openStickerCardId, setOpenStickerCardId] = useState<string | null>(null);
   const [activePrograms, setActivePrograms] = useState<Challenge[]>([]);
@@ -5240,13 +5346,40 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
               })()}
 
               {/* Standard challenges */}
+              {/* Redeemed / archived challenges */}
+              {(() => {
+                const redeemedEntries = [...myStandardEntries.values()].filter(e => e.redeemed);
+                const redeemedChallenges = redeemedEntries.map(e => activeStandardChallenges.find(c => c.id === e.challengeId)).filter(Boolean) as Challenge[];
+                if (redeemedChallenges.length === 0) return null;
+                return (
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Redeemed</p>
+                    {redeemedChallenges.map(c => {
+                      const entry = myStandardEntries.get(c.id);
+                      return (
+                        <div key={c.id} className="rounded-2xl bg-white border border-brand-navy/8 px-4 py-3 flex items-center gap-3 opacity-60">
+                          <div className="w-9 h-9 rounded-xl bg-green-50 flex items-center justify-center shrink-0">
+                            <Trophy size={16} className="text-green-500" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-sm text-brand-navy truncate">{c.title}</p>
+                            <p className="text-[10px] text-brand-navy/40 mt-0.5">🎁 {c.reward}</p>
+                          </div>
+                          <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full shrink-0">Redeemed</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+
               {activeStandardChallenges.length > 0 && (
                 <div className="space-y-3">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Challenges</p>
                   {activeStandardChallenges.map(c => {
                     const joined = (c.participantUids || []).includes(user.uid);
                     const entry = myStandardEntries.get(c.id);
-                    const joinedCount = activeStandardChallenges.filter(ch => (ch.participantUids || []).includes(user.uid)).length;
+                    const joinedCount = activeStandardChallenges.filter(ch => (ch.participantUids || []).includes(user.uid) && !myStandardEntries.get(ch.id)?.redeemed).length;
                     let stampsProgress = 0;
                     if (joined && entry) {
                       if (c.vendorIds?.length) {
@@ -5258,7 +5391,9 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                     }
                     const progressPct = c.goal > 0 ? Math.min(100, Math.round((stampsProgress / c.goal) * 100)) : 0;
                     const isComplete = progressPct >= 100;
+                    const isRedeemed = !!entry?.redeemed;
                     const isHighlighted = highlightedChallengeId === c.id;
+                    if (isRedeemed) return null; // shown in archived section
                     return (
                       <div key={c.id} id={`challenge-${c.id}`} className={cn("rounded-[2rem] shadow-lg overflow-hidden transition-all duration-500", isHighlighted ? 'ring-2 ring-brand-gold/60' : '')}>
                         {/* Gradient header */}
@@ -5332,13 +5467,23 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                               </div>
                               {isComplete && (
                                 <p className="text-[10px] font-bold text-green-600 text-center">
-                                  ✓ Goal reached! Claim your reward.
+                                  ✓ Goal reached! Claim your reward below.
                                 </p>
                               )}
                             </div>
                           )}
 
+                          {joined && isComplete && (
+                            <button
+                              onClick={() => setRedeemingChallenge({ challenge: c, entry, userName: profile?.name || '' })}
+                              className="w-full py-3 rounded-2xl text-sm font-bold transition-all active:scale-95 bg-brand-gold text-white shadow-lg"
+                            >
+                              🏆 Redeem Now
+                            </button>
+                          )}
+
                           {joined ? (
+                            !isComplete && (
                             <button
                               onClick={async () => {
                                 if (!entry) return;
@@ -5349,6 +5494,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                             >
                               Leave Challenge
                             </button>
+                            )
                           ) : (
                             <>
                               {joinedCount >= 5 && (
@@ -5455,6 +5601,18 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
             autoStoreId={autoNFCStoreId}
             onPackReady={() => { setShowNFCStamp(false); setAutoNFCStoreId(null); }}
             onClose={() => { setShowNFCStamp(false); setAutoNFCStoreId(null); }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Challenge Redeem Modal */}
+      <AnimatePresence>
+        {redeemingChallenge && (
+          <ChallengeRedeemModal
+            challenge={redeemingChallenge.challenge}
+            entry={redeemingChallenge.entry}
+            userName={redeemingChallenge.userName}
+            onClose={() => setRedeemingChallenge(null)}
           />
         )}
       </AnimatePresence>
@@ -9698,6 +9856,7 @@ function StickerListPanel({ uid }: { uid: string }) {
 
 function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, onViewUser, user }: { profile: UserProfile | null, userCards: Card[], stores?: StoreProfile[], onLogout: () => void, onDeleteAccount: () => Promise<void>, onViewUser: (u: UserProfile) => void, user: FirebaseUser }) {
   const [activeSubTab, setActiveSubTab] = useState<'posts' | 'interactions'>('posts');
+  const [profileRedeemingChallenge, setProfileRedeemingChallenge] = useState<{ challenge: Challenge; entry: any; userName: string } | null>(null);
   const [showProfileSettings, setShowProfileSettings] = useState(false);
   const [avatarViewOpen, setAvatarViewOpen] = useState(false);
   const [avatarCustomiserOpen, setAvatarCustomiserOpen] = useState(false);
@@ -10253,11 +10412,12 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
 
       {/* My challenges */}
       {myChallenges.length > 0 && (
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 px-1">Challenges</p>
+        <div className="space-y-3">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Challenges</p>
           <div className="space-y-2">
             {myChallenges.map(c => {
               const entry = profileEntries.get(c.id);
+              if (entry?.redeemed) return null;
               let progress = 0;
               if (entry) {
                 if (c.vendorIds?.length) {
@@ -10269,27 +10429,64 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
               const pct = c.goal > 0 ? Math.min(100, Math.round((progress / c.goal) * 100)) : 0;
               const done = pct >= 100;
               return (
-                <div key={c.id} className="gradient-logo-blue rounded-2xl px-4 py-3 relative overflow-hidden shadow-lg">
+                <div key={c.id} className="gradient-logo-blue rounded-2xl px-4 py-3 pb-4 relative overflow-hidden shadow-lg space-y-2">
                   <span className="shine-ray" aria-hidden="true" />
-                  <div className="flex items-center justify-between mb-1.5 gap-2 relative z-10">
+                  <div className="flex items-center justify-between gap-2 relative z-10">
                     <p className="text-xs font-bold leading-tight line-clamp-1 flex-1 text-white">{c.title}</p>
                     <span className={cn('text-[10px] font-bold shrink-0', done ? 'text-green-300' : 'text-white/80')}>{done ? '✓ Done' : `${pct}%`}</span>
                   </div>
                   <div className="h-1.5 bg-white/20 rounded-full overflow-hidden relative z-10">
                     <motion.div
                       className={cn('h-full rounded-full', done ? 'bg-green-400' : 'bg-white')}
-                      initial={{ width: 0 }}
-                      animate={{ width: `${pct}%` }}
+                      initial={{ width: 0 }} animate={{ width: `${pct}%` }}
                       transition={{ duration: 0.6, ease: 'easeOut' }}
                     />
                   </div>
-                  <p className="text-[9px] mt-1.5 font-medium text-white/60 relative z-10">{progress} / {c.goal} {c.unit} · 🎁 {c.reward}</p>
+                  <p className="text-[9px] font-medium text-white/60 relative z-10">{progress} / {c.goal} {c.unit} · 🎁 {c.reward}</p>
+                  {done && entry && (
+                    <button
+                      onClick={() => setProfileRedeemingChallenge({ challenge: c, entry, userName: profile.name || '' })}
+                      className="w-full py-2.5 rounded-xl bg-white/20 backdrop-blur-sm border border-white/30 text-white font-bold text-xs relative z-10 active:scale-95 transition-all"
+                    >
+                      🏆 Redeem Now
+                    </button>
+                  )}
                 </div>
               );
             })}
           </div>
+
+          {/* Redeemed challenges */}
+          {myChallenges.some(c => profileEntries.get(c.id)?.redeemed) && (
+            <div className="space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Redeemed</p>
+              {myChallenges.filter(c => profileEntries.get(c.id)?.redeemed).map(c => (
+                <div key={c.id} className="rounded-2xl bg-white border border-brand-navy/8 px-4 py-3 flex items-center gap-3 opacity-60">
+                  <div className="w-8 h-8 rounded-xl bg-green-50 flex items-center justify-center shrink-0">
+                    <Trophy size={14} className="text-green-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-sm text-brand-navy truncate">{c.title}</p>
+                    <p className="text-[10px] text-brand-navy/40">🎁 {c.reward}</p>
+                  </div>
+                  <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full shrink-0">Redeemed</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
+
+      <AnimatePresence>
+        {profileRedeemingChallenge && (
+          <ChallengeRedeemModal
+            challenge={profileRedeemingChallenge.challenge}
+            entry={profileRedeemingChallenge.entry}
+            userName={profileRedeemingChallenge.userName}
+            onClose={() => setProfileRedeemingChallenge(null)}
+          />
+        )}
+      </AnimatePresence>
 
       <div className="flex p-1 glass-card rounded-2xl">
         <button
