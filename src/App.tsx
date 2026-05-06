@@ -304,6 +304,7 @@ interface StoreProfile {
   lng?: number;
   rewardTiers?: { stamps: number; reward: string; value?: number }[];
   currency?: string;
+  cardEnabled?: boolean;
   rewardsGiven?: number;
   visibilitySettings?: {
     members?: boolean;
@@ -5686,7 +5687,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   }, [badgeDetectionReady, allBadgesGlobal, initialCards, profile, followersCountG, followingCountG, postsCountG, myStandardEntries]);
 
   const handleJoinStore = async (store: StoreProfile) => {
-    if (!user) return;
+    if (!user || store.cardEnabled === false) return;
     const cardId = `${user.uid}_${store.id}`;
     const cardRef = doc(db, 'cards', cardId);
     const cardSnap = await getDoc(cardRef);
@@ -9173,7 +9174,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
             >
               <ArrowLeft size={16} /> Back
             </button>
-            {vendorIssueMode === 'card' ? <CardBuilder store={store} /> : <VendorOfferPanel store={store} />}
+            {vendorIssueMode === 'card' ? <VendorCardSection store={store} /> : <VendorOfferPanel store={store} />}
           </div>
         )
       )}
@@ -9689,6 +9690,7 @@ function StoreCard({ store, card, onJoin, onClick }: { store: StoreProfile, card
   const finalReward = store.rewardTiers?.length
     ? [...store.rewardTiers].sort((a, b) => b.stamps - a.stamps)[0]?.reward
     : store.reward;
+  const cardEnabled = store.cardEnabled !== false;
 
   return (
     <div
@@ -9708,7 +9710,7 @@ function StoreCard({ store, card, onJoin, onClick }: { store: StoreProfile, card
           {store.category} • 1.2km away
         </p>
 
-        {card ? (
+        {cardEnabled && card ? (
           <div className="space-y-2">
             <div className="flex gap-1">
               {Array.from({ length: stampsRequired }).map((_, i) => (
@@ -9722,15 +9724,13 @@ function StoreCard({ store, card, onJoin, onClick }: { store: StoreProfile, card
               {card.current_stamps} / {stampsRequired} Stamps
             </p>
           </div>
-        ) : (
-          finalReward && (
-            <div className="px-2 py-1 bg-brand-gold/10 rounded-lg w-fit">
-              <span className="text-[10px] font-bold text-brand-gold">🎁 {finalReward}</span>
-            </div>
-          )
-        )}
+        ) : cardEnabled && finalReward ? (
+          <div className="px-2 py-1 bg-brand-gold/10 rounded-lg w-fit">
+            <span className="text-[10px] font-bold text-brand-gold">🎁 {finalReward}</span>
+          </div>
+        ) : null}
       </div>
-      {!card && (
+      {cardEnabled && !card && (
         <button
           onClick={(e) => { e.stopPropagation(); onJoin(); }}
           className="px-4 py-2 gradient-logo-blue text-white text-xs font-bold rounded-2xl active:scale-95 transition-all shrink-0 shadow"
@@ -9797,7 +9797,8 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
                             s.category.toLowerCase().includes(search.toLowerCase());
       const matchesCat = activeCategory === 'All' || s.category === activeCategory;
       const notJoined = !cards.some(c => c.store_id === s.id && !c.isArchived);
-      return matchesSearch && matchesCat && notJoined;
+      const cardOn = s.cardEnabled !== false;
+      return matchesSearch && matchesCat && notJoined && cardOn;
     });
     if (!userCoords) return matched;
     return [...matched].sort((a, b) => {
@@ -10686,6 +10687,75 @@ function OffersModal({ offers, currentUser, onClose }: { offers: StoreOffer[]; c
         )}
       </AnimatePresence>
     </>
+  );
+}
+
+// ─── Vendor Card Section (toggle + builder) ──────────────────────────────────
+function VendorCardSection({ store }: { store: StoreProfile | null }) {
+  const enabled = store?.cardEnabled !== false; // default true
+  const [toggling, setToggling] = useState(false);
+
+  const toggle = async () => {
+    if (!store?.id) return;
+    setToggling(true);
+    try {
+      await updateDoc(doc(db, 'stores', store.id), { cardEnabled: !enabled });
+    } finally {
+      setToggling(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6 pb-20">
+      <header>
+        <h2 className="font-display text-3xl font-bold mb-1">Card</h2>
+        <p className="text-brand-navy/50 text-sm">Enable your loyalty card for customers.</p>
+      </header>
+
+      {/* Toggle */}
+      <div className="glass-card rounded-[1.5rem] px-5 py-4 flex items-center justify-between gap-4">
+        <div>
+          <p className="font-bold text-brand-navy">Loyalty Card</p>
+          <p className="text-xs text-brand-navy/50 mt-0.5">
+            {enabled ? 'Customers can join and collect stamps' : 'Card hidden from customers'}
+          </p>
+        </div>
+        <button
+          onClick={toggle}
+          disabled={toggling}
+          className={cn(
+            'relative w-14 h-7 rounded-full transition-colors duration-200 shrink-0 disabled:opacity-60',
+            enabled ? 'bg-emerald-500' : 'bg-brand-navy/20'
+          )}
+        >
+          <motion.div
+            animate={{ x: enabled ? 28 : 2 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+            className="absolute top-1 w-5 h-5 rounded-full bg-white shadow-md"
+          />
+        </button>
+      </div>
+
+      {/* Card builder — only when enabled */}
+      <AnimatePresence>
+        {enabled && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.2 }}
+          >
+            <CardBuilder store={store} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {!enabled && (
+        <div className="py-10 text-center text-brand-navy/25">
+          <CreditCard size={40} className="mx-auto mb-3 opacity-30" />
+          <p className="font-bold text-sm">Card is disabled</p>
+          <p className="text-xs mt-1">Toggle on to set up your loyalty card.</p>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -16273,12 +16343,14 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
             {isFollowingStore ? <UserCheck size={14} /> : <UserPlus size={14} />}
             {isFollowingStore ? 'Following' : 'Follow'}
           </button>
-          <button
-            onClick={card ? undefined : handleJoinStore}
-            className={cn("flex items-center gap-1.5 px-4 py-2.5 rounded-2xl font-bold text-xs transition-all shadow active:scale-95", card ? "bg-green-50 text-green-600 border border-green-200 cursor-default" : "gradient-red text-white")}
-          >
-            {card ? <><UserCheck size={14} /> Member</> : <><Plus size={14} /> Join</>}
-          </button>
+          {store.cardEnabled !== false && (
+            <button
+              onClick={card ? undefined : handleJoinStore}
+              className={cn("flex items-center gap-1.5 px-4 py-2.5 rounded-2xl font-bold text-xs transition-all shadow active:scale-95", card ? "bg-green-50 text-green-600 border border-green-200 cursor-default" : "gradient-red text-white")}
+            >
+              {card ? <><UserCheck size={14} /> Member</> : <><Plus size={14} /> Join</>}
+            </button>
+          )}
         </div>
       )}
 
