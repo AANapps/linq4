@@ -5355,7 +5355,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
               const rankWeeklyChange = rankWeeklyBefore - rankWeeklyAfter;
 
               if (rankAfter > 0) {
-                pages.splice(2, 0, {
+                pages.splice(1, 0, {
                   type: 'rank',
                   currentStamps: newStamps,
                   totalStamps: newStamps,
