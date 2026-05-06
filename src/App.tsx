@@ -5806,12 +5806,12 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                 <button
                   onClick={() => setWalletSubTab('challenges')}
                   className={cn(
-                    'flex-1 py-2.5 rounded-xl text-sm font-bold transition-all relative overflow-hidden',
-                    walletSubTab === 'challenges' ? 'text-white shadow-md' : 'text-brand-navy/50'
+                    'flex-1 py-2.5 rounded-xl text-sm font-bold transition-all relative overflow-hidden text-white',
+                    walletSubTab === 'challenges' ? 'shadow-md' : 'opacity-80'
                   )}
-                  style={walletSubTab === 'challenges' ? { background: 'linear-gradient(135deg, #d97706 0%, #f59e0b 35%, #fbbf24 60%, #f59e0b 100%)' } : undefined}
+                  style={{ background: 'linear-gradient(135deg, #d97706 0%, #f59e0b 35%, #fbbf24 60%, #f59e0b 100%)' }}
                 >
-                  {walletSubTab === 'challenges' && <span className="shine-ray" aria-hidden="true" />}
+                  <span className="shine-ray" aria-hidden="true" />
                   <span className="relative z-10">🏆 Win</span>
                   {totalUnrevealed > 0 && (
                     <span className="absolute top-1 right-3 w-4 h-4 bg-white/30 text-white text-[9px] font-black rounded-full flex items-center justify-center z-10">
