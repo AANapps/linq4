@@ -1501,7 +1501,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto glass-panel border-t border-black/5 px-4 py-4 flex justify-between items-center z-50">
+      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto glass-panel border-t border-black/5 px-4 py-3 flex justify-between items-end z-50">
         {profile?.role === 'consumer' && (
           <NavButton
             active={activeTab === 'for-you'}
@@ -1527,20 +1527,33 @@ export default function App() {
             badgeCount={unreadMessages}
           />
         )}
-        <NavButton 
-          active={activeTab === 'home'} 
-          onClick={() => { setActiveTab('home'); setViewingStore(null); setViewingUser(null); }}
-          icon={profile?.role === 'consumer' ? <Wallet /> : <LayoutDashboard />}
-          label={profile?.role === 'consumer' ? 'Wallet' : 'Dashboard'}
-        />
-        <NavButton 
-          active={activeTab === 'discover'} 
+        {profile?.role === 'consumer' ? (
+          <button
+            onClick={() => { setActiveTab('home'); setViewingStore(null); setViewingUser(null); }}
+            className="flex flex-col items-center gap-1 -mb-1 -mt-7 transition-all"
+          >
+            <div className="relative overflow-hidden w-[58px] h-[58px] rounded-full gradient-logo-blue shadow-lg shadow-blue-500/30 flex items-center justify-center active:scale-95 transition-transform">
+              <span className="card-shine-ray" aria-hidden="true" />
+              <Wallet size={26} className="text-white relative z-10" />
+            </div>
+            <span className={cn("text-[10px] font-bold uppercase tracking-wider", activeTab === 'home' ? "text-brand-gold" : "text-brand-navy/40")}>Wallet</span>
+          </button>
+        ) : (
+          <NavButton
+            active={activeTab === 'home'}
+            onClick={() => { setActiveTab('home'); setViewingStore(null); setViewingUser(null); }}
+            icon={<LayoutDashboard />}
+            label="Dashboard"
+          />
+        )}
+        <NavButton
+          active={activeTab === 'discover'}
           onClick={() => { setActiveTab('discover'); setViewingStore(null); setViewingUser(null); }}
           icon={profile?.role === 'consumer' ? <Compass /> : <Plus />}
           label={profile?.role === 'consumer' ? 'Discovery' : 'Issue'}
         />
-        <NavButton 
-          active={activeTab === 'profile'} 
+        <NavButton
+          active={activeTab === 'profile'}
           onClick={() => { setActiveTab('profile'); setViewingStore(null); setViewingUser(null); }}
           icon={<UserIcon />}
           label="Profile"
