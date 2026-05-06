@@ -2489,7 +2489,7 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-        className="fixed inset-0 z-[150] flex flex-col max-w-md mx-auto"
+        className="fixed inset-0 z-[250] flex flex-col max-w-md mx-auto"
       >
         <button onClick={onClose} className="flex-shrink-0 h-16 w-full" />
         <div className="flex-1 bg-brand-bg rounded-t-[2.5rem] shadow-2xl flex flex-col overflow-hidden">
@@ -2649,7 +2649,7 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
         initial={{ opacity: 0 }}
         animate={{ opacity: 0.6 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black z-[149]"
+        className="fixed inset-0 bg-black z-[249]"
         onClick={onClose}
       />
     </>
@@ -6185,7 +6185,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
               const cardId = pendingPackCardId;
               setPendingPack(null);
               setPendingPackCardId(null);
-              if (cardId) setPendingCollectionCardId(cardId);
+              if (cardId) setOpenStickerCardId(cardId);
             }}
           />
         )}
@@ -6236,7 +6236,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
             onPackClosed={(cardId) => {
               setPendingPack(null);
               setPendingPackCardId(null);
-              if (cardId) setPendingCollectionCardId(cardId);
+              if (cardId) setOpenStickerCardId(cardId);
             }}
           />
         )}
