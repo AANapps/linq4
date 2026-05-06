@@ -5370,6 +5370,19 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                   rankWeeklyChange,
                 });
               }
+
+              if (rankChange > 0) {
+                addDoc(collection(db, 'notifications'), {
+                  toUid: user.uid,
+                  fromUid: 'system',
+                  fromName: 'Linq',
+                  fromPhoto: '',
+                  type: 'system',
+                  message: `You moved up to rank #${rankAfter} on the leaderboard!`,
+                  isRead: false,
+                  createdAt: serverTimestamp(),
+                }).catch(() => {});
+              }
             } catch (_) { /* rank page is optional */ }
 
             if (pages.length > 0) setCelebrationPages(pages);
