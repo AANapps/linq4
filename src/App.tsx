@@ -10207,33 +10207,35 @@ function getCardPatternStyle(pattern: string): React.CSSProperties {
 // ─── Slide to Redeem ────────────────────────────────────────────────────────
 function SlideToRedeem({ onRedeem, disabled = false, label = 'Slide to redeem' }: { onRedeem: () => void; disabled?: boolean; label?: string }) {
   const trackRef = useRef<HTMLDivElement>(null);
-  const [dragging, setDragging] = useState(false);
+  const draggingRef = useRef(false);
   const [x, setX] = useState(0);
   const [redeemed, setRedeemed] = useState(false);
   const THUMB = 56;
 
-  const getMax = () => (trackRef.current?.offsetWidth ?? 280) - THUMB - 4;
+  const getMax = () => (trackRef.current?.offsetWidth ?? 280) - THUMB - 8;
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (disabled || redeemed) return;
     e.currentTarget.setPointerCapture(e.pointerId);
-    setDragging(true);
+    draggingRef.current = true;
   };
+
   const handlePointerMove = (e: React.PointerEvent) => {
-    if (!dragging) return;
+    if (!draggingRef.current) return;
     const track = trackRef.current;
     if (!track) return;
     const rect = track.getBoundingClientRect();
     const newX = Math.max(0, Math.min(e.clientX - rect.left - THUMB / 2, getMax()));
     setX(newX);
   };
-  const handlePointerUp = () => {
-    if (!dragging) return;
-    setDragging(false);
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (!draggingRef.current) return;
+    draggingRef.current = false;
     const max = getMax();
-    if (x >= max * 0.88) {
-      setRedeemed(true);
+    if (x >= max * 0.85) {
       setX(max);
+      setRedeemed(true);
       onRedeem();
     } else {
       setX(0);
@@ -10243,30 +10245,31 @@ function SlideToRedeem({ onRedeem, disabled = false, label = 'Slide to redeem' }
   return (
     <div
       ref={trackRef}
-      className={cn('relative h-14 rounded-full overflow-hidden select-none', redeemed ? 'bg-emerald-500' : 'bg-brand-navy/10')}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onPointerLeave={handlePointerUp}
+      className={cn('relative h-14 rounded-full select-none', redeemed ? 'bg-emerald-500' : 'bg-brand-navy/10')}
     >
       {/* Track fill */}
-      <div
-        className="absolute inset-y-0 left-0 rounded-full transition-colors"
-        style={{ width: x + THUMB, background: redeemed ? 'transparent' : 'linear-gradient(90deg, #1D4ED8 0%, #3B82F6 100%)', opacity: 0.15 }}
-      />
+      {!redeemed && (
+        <div
+          className="absolute inset-y-0 left-0 rounded-full"
+          style={{ width: x + THUMB + 4, background: 'linear-gradient(90deg, #1D4ED8 0%, #3B82F6 100%)', opacity: 0.18 }}
+        />
+      )}
       {/* Label */}
-      <div className={cn('absolute inset-0 flex items-center justify-center text-sm font-bold pointer-events-none transition-opacity', redeemed ? 'text-white opacity-100' : 'text-brand-navy/40 opacity-100')}>
+      <div className={cn('absolute inset-0 flex items-center justify-center text-sm font-bold pointer-events-none', redeemed ? 'text-white' : 'text-brand-navy/40')}>
         {redeemed ? '✓ Redeemed!' : label}
       </div>
-      {/* Thumb */}
+      {/* Thumb — pointer capture keeps events on this element even outside bounds */}
       {!redeemed && (
-        <motion.div
-          className={cn('absolute top-1 bottom-1 rounded-full flex items-center justify-center cursor-grab active:cursor-grabbing shadow-md', disabled ? 'bg-brand-navy/20' : 'gradient-logo-blue')}
-          style={{ left: x + 2, width: THUMB }}
-          animate={{ x: dragging ? 0 : 0 }}
+        <div
+          className={cn('absolute top-1 bottom-1 rounded-full flex items-center justify-center shadow-md touch-none', disabled ? 'bg-brand-navy/20 cursor-not-allowed' : 'gradient-logo-blue cursor-grab active:cursor-grabbing')}
+          style={{ left: x + 4, width: THUMB }}
           onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
         >
           <MoveHorizontal size={20} className="text-white" />
-        </motion.div>
+        </div>
       )}
     </div>
   );
