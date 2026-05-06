@@ -5806,13 +5806,15 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                 <button
                   onClick={() => setWalletSubTab('challenges')}
                   className={cn(
-                    'flex-1 py-2.5 rounded-xl text-sm font-bold transition-all relative',
-                    walletSubTab === 'challenges' ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/50'
+                    'flex-1 py-2.5 rounded-xl text-sm font-bold transition-all relative overflow-hidden',
+                    walletSubTab === 'challenges' ? 'text-white shadow-md' : 'text-brand-navy/50'
                   )}
+                  style={walletSubTab === 'challenges' ? { background: 'linear-gradient(135deg, #d97706 0%, #f59e0b 35%, #fbbf24 60%, #f59e0b 100%)' } : undefined}
                 >
-                  Win
+                  {walletSubTab === 'challenges' && <span className="shine-ray" aria-hidden="true" />}
+                  <span className="relative z-10">🏆 Win</span>
                   {totalUnrevealed > 0 && (
-                    <span className="absolute top-1 right-3 w-4 h-4 bg-brand-rose text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                    <span className="absolute top-1 right-3 w-4 h-4 bg-white/30 text-white text-[9px] font-black rounded-full flex items-center justify-center z-10">
                       {totalUnrevealed > 9 ? '9+' : totalUnrevealed}
                     </span>
                   )}
@@ -9563,7 +9565,8 @@ function LoyaltyCard({ card, store, onViewStore, compact = false }: { card: Card
           /* ── Compact list card ── */
           if (compact) return (
             <div>
-              <div className="relative flex items-center gap-3 px-4 py-3" style={{ backgroundColor: cardTheme }}>
+              <div className="relative overflow-hidden flex items-center gap-3 px-4 py-3" style={{ backgroundColor: cardTheme }}>
+                <span className="card-shine-ray" aria-hidden="true" />
                 {cardPattern !== 'solid' && <div className="absolute inset-0 pointer-events-none" style={getCardPatternStyle(cardPattern)} />}
                 <div className="relative z-10 w-10 h-10 rounded-full overflow-hidden border-2 border-white/50 shrink-0 cursor-pointer shadow-md"
                   onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}>
@@ -9589,7 +9592,8 @@ function LoyaltyCard({ card, store, onViewStore, compact = false }: { card: Card
           /* ── Carousel portrait card ── */
           return (
             <div>
-              <div className="relative pt-10 pb-8 flex flex-col items-center gap-2" style={{ backgroundColor: cardTheme }}>
+              <div className="relative overflow-hidden pt-10 pb-8 flex flex-col items-center gap-2" style={{ backgroundColor: cardTheme }}>
+                <span className="card-shine-ray" aria-hidden="true" />
                 {cardPattern !== 'solid' && <div className="absolute inset-0 pointer-events-none" style={getCardPatternStyle(cardPattern)} />}
                 {isCompleted && !card.isRedeemed && (
                   <div className="absolute top-4 left-4 bg-white/25 text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest animate-pulse z-10">Ready!</div>
