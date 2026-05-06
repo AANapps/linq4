@@ -198,8 +198,8 @@ service cloud.firestore {
 
     match /store_offers/{offerId} {
       allow read: if true;
-      allow create: if isAuthenticated() && isStoreOwner(request.resource.data.storeId);
-      allow update, delete: if isAuthenticated() && (isStoreOwner(resource.data.storeId) || isAdmin());
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && (resource.data.storeId == request.auth.uid || isStoreOwner(resource.data.storeId) || isAdmin());
     }
 
     match /offer_redemptions/{redemptionId} {

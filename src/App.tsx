@@ -10284,6 +10284,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [uploadError, setUploadError] = useState('');
+  const [createError, setCreateError] = useState('');
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
@@ -10310,6 +10311,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
 
   const handleCreate = async () => {
     if (!store || !title.trim() || !description.trim()) return;
+    setCreateError('');
     setSaving(true);
     try {
       await addDoc(collection(db, 'store_offers'), {
@@ -10328,6 +10330,8 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
       setTitle(''); setDescription(''); setImageUrl(''); setCategory(store?.category || 'Food'); setMaxRedemptions(1);
       setSaved(true); setTimeout(() => setSaved(false), 2000);
       setShowForm(false);
+    } catch (e: any) {
+      setCreateError(e?.message || 'Failed to create offer. Check permissions.');
     } finally {
       setSaving(false);
     }
@@ -10413,6 +10417,9 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
               </div>
             </div>
 
+            {createError && (
+              <p className="text-red-500 text-xs font-semibold bg-red-50 rounded-2xl px-4 py-2">{createError}</p>
+            )}
             <button
               onClick={handleCreate}
               disabled={saving || !title.trim() || !description.trim()}
