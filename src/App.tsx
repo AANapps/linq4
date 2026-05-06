@@ -13429,6 +13429,9 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
   const [lbUsers, setLbUsers] = useState<UserProfile[]>([]);
   const [challengeCounts, setChallengeCounts] = useState<Map<string, number>>(new Map());
   const [lbLoading, setLbLoading] = useState(false);
+  const [showSavingsLb, setShowSavingsLb] = useState(false);
+  const [savingsLbUsers, setSavingsLbUsers] = useState<UserProfile[]>([]);
+  const [savingsLbLoading, setSavingsLbLoading] = useState(false);
   const [challengeIdx, setChallengeIdx] = useState(0);
   const lastDocRef = useRef<any>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -13566,6 +13569,19 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
       setLbLoading(false);
     })();
   }, [showLeaderboard]);
+
+  useEffect(() => {
+    if (!showSavingsLb || savingsLbUsers.length > 0) return;
+    setSavingsLbLoading(true);
+    getDocs(collection(db, 'users')).then(snap => {
+      const users = snap.docs
+        .map(d => ({ uid: d.id, ...d.data() } as UserProfile))
+        .filter(u => (u.totalSaved ?? 0) > 0)
+        .sort((a, b) => (b.totalSaved ?? 0) - (a.totalSaved ?? 0))
+        .slice(0, 20);
+      setSavingsLbUsers(users);
+    }).catch(console.error).finally(() => setSavingsLbLoading(false));
+  }, [showSavingsLb]);
 
   useEffect(() => {
     const userLoc = currentProfile?.location as { lat: number; lng: number } | undefined;
@@ -13812,25 +13828,81 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
         )
       ) : (
         <>
-          {/* Total savings widget — always visible */}
+          {/* Total savings widget */}
           {(() => {
             const saved = currentProfile?.totalSaved ?? 0;
             const sym = currencySymbol('AUD');
+            const myRank = saved > 0 ? savingsLbUsers.findIndex(u => u.uid === currentUser?.uid) + 1 : 0;
             return (
-              <motion.div
-                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-4 rounded-[1.5rem] bg-emerald-50 border border-emerald-200 px-5 py-4"
-              >
-                <div className="w-12 h-12 rounded-xl bg-emerald-500 flex items-center justify-center shrink-0 shadow-sm">
-                  <span className="text-white text-xl font-black">{sym}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600">Total Saved with Linq</p>
-                  {saved > 0
-                    ? <CountUpValue value={saved} prefix={sym} className="font-display text-2xl font-black text-emerald-600" />
-                    : <p className="text-sm font-bold text-emerald-600/60">Collect stamps to start saving</p>
-                  }
-                </div>
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-[1.5rem] overflow-hidden shadow-lg shadow-blue-900/20">
+                {/* Header tap area */}
+                <button
+                  onClick={() => setShowSavingsLb(v => !v)}
+                  className="w-full gradient-logo-blue relative overflow-hidden px-5 py-4 flex items-center gap-4 active:opacity-90 transition-opacity"
+                >
+                  {/* Shine sweep */}
+                  <div className="shine-ray" />
+
+                  <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0 border border-white/20">
+                    <span className="text-white text-lg font-black">{sym}</span>
+                  </div>
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-blue-200/80">Total Saved with Linq</p>
+                    {saved > 0
+                      ? <CountUpValue value={saved} prefix={sym} className="font-display text-2xl font-black text-white" />
+                      : <p className="text-sm font-bold text-white/60">Collect stamps to start saving</p>
+                    }
+                  </div>
+                  <div className="flex flex-col items-end gap-0.5 shrink-0">
+                    {saved > 0 && myRank > 0 && (
+                      <span className="text-[10px] font-bold text-blue-200/70">#{myRank} saver</span>
+                    )}
+                    <motion.div animate={{ rotate: showSavingsLb ? 180 : 0 }} transition={{ duration: 0.25 }}>
+                      <ChevronDown size={18} className="text-white/60" />
+                    </motion.div>
+                  </div>
+                </button>
+
+                {/* Expanded leaderboard */}
+                <AnimatePresence>
+                  {showSavingsLb && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.28, ease: 'easeInOut' }}
+                      className="overflow-hidden bg-[#112169]"
+                    >
+                      <div className="px-4 py-3 space-y-1 max-h-72 overflow-y-auto">
+                        <p className="text-[9px] font-bold uppercase tracking-widest text-blue-300/60 mb-2 px-1">Savings Leaderboard</p>
+                        {savingsLbLoading ? (
+                          <div className="py-6 text-center text-blue-300/50 text-sm">Loading...</div>
+                        ) : savingsLbUsers.length === 0 ? (
+                          <div className="py-6 text-center text-blue-300/50 text-sm">No savers yet — be the first!</div>
+                        ) : savingsLbUsers.map((u, i) => {
+                          const isMe = u.uid === currentUser?.uid;
+                          return (
+                            <div key={u.uid} className={cn('flex items-center gap-3 px-3 py-2 rounded-xl transition-colors', isMe ? 'bg-white/10' : 'hover:bg-white/5')}>
+                              <span className={cn('text-xs font-black w-5 text-center shrink-0', i === 0 ? 'text-yellow-300' : i === 1 ? 'text-slate-300' : i === 2 ? 'text-amber-500' : 'text-blue-300/50')}>
+                                {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`}
+                              </span>
+                              <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 bg-white/10">
+                                {u.photoURL
+                                  ? <img src={u.photoURL} alt="" className="w-full h-full object-cover" />
+                                  : <div className="w-full h-full flex items-center justify-center text-xs font-bold text-white/60">{u.displayName?.[0] ?? '?'}</div>
+                                }
+                              </div>
+                              <span className={cn('flex-1 text-sm font-bold truncate', isMe ? 'text-white' : 'text-blue-100/80')}>
+                                {isMe ? 'You' : (u.displayName || u.handle || 'User')}
+                              </span>
+                              <span className="text-sm font-black text-emerald-300 shrink-0">
+                                {sym}{(u.totalSaved ?? 0).toFixed(2)}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.div>
             );
           })()}
