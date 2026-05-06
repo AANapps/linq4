@@ -13719,6 +13719,25 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
                 >
                   <Sparkles size={13} className="text-yellow-300" />
                 </motion.div>
+                {/* Golden confetti overlay */}
+                {[
+                  { x: 12, y: 20, color: '#FFD700', size: 5, delay: 0,   dur: 2.1 },
+                  { x: 75, y: 65, color: '#FFC200', size: 4, delay: 0.5, dur: 1.8 },
+                  { x: 45, y: 40, color: '#FFE566', size: 6, delay: 0.9, dur: 2.4 },
+                  { x: 85, y: 25, color: '#FFAA00', size: 3, delay: 0.3, dur: 2.0 },
+                  { x: 25, y: 75, color: '#FFD700', size: 4, delay: 0.7, dur: 1.9 },
+                  { x: 60, y: 85, color: '#FFF8DC', size: 5, delay: 1.1, dur: 2.3 },
+                  { x: 90, y: 50, color: '#FFC200', size: 3, delay: 0.2, dur: 2.2 },
+                  { x: 35, y: 55, color: '#FFE566', size: 4, delay: 0.8, dur: 1.7 },
+                ].map((p, i) => (
+                  <motion.div
+                    key={i}
+                    className="absolute rounded-sm pointer-events-none"
+                    style={{ left: `${p.x}%`, top: `${p.y}%`, width: p.size, height: p.size, background: p.color }}
+                    animate={{ y: [-4, -14, -4], rotate: [0, 180, 360], opacity: [0.5, 1, 0.5] }}
+                    transition={{ duration: p.dur, repeat: Infinity, delay: p.delay, ease: 'easeInOut' }}
+                  />
+                ))}
 
                 {/* Avatar + name + label */}
                 <div className="relative z-10 h-full flex flex-col items-center justify-center gap-1.5 px-2 py-4" style={{ minHeight: '148px' }}>
