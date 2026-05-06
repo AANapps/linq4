@@ -644,7 +644,7 @@ export default function App() {
   const [pendingNFCStoreId, setPendingNFCStoreId] = useState<string | null>(null);
   const [userCards, setUserCards] = useState<Card[]>([]);
   const [showSettings, setShowSettings] = useState(false);
-  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges' | 'stores'>(null);
+  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges' | 'stores' | 'users' | 'posts'>(null);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -1430,6 +1430,8 @@ export default function App() {
             onOpenChallenges={() => setAdminView('challenges')}
             onOpenBadges={() => setAdminView('badges')}
             onOpenStores={() => setAdminView('stores')}
+            onOpenUsers={() => setAdminView('users')}
+            onOpenPosts={() => setAdminView('posts')}
           />
         )}
         {adminView === 'challenges' && (
@@ -1440,6 +1442,12 @@ export default function App() {
         )}
         {adminView === 'stores' && (
           <AdminStoresPanel onClose={() => setAdminView('menu')} />
+        )}
+        {adminView === 'users' && (
+          <AdminUsersPanel onClose={() => setAdminView('menu')} />
+        )}
+        {adminView === 'posts' && (
+          <AdminPostsPanel onClose={() => setAdminView('menu')} />
         )}
       </AnimatePresence>
 
@@ -3694,6 +3702,8 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
   const [stores, setStores] = useState<StoreProfile[]>([]);
   const [search, setSearch] = useState('');
   const [editingStore, setEditingStore] = useState<StoreProfile | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     return onSnapshot(collection(db, 'stores'), snap =>
@@ -3704,6 +3714,16 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
   const filtered = search.trim()
     ? stores.filter(s => s.name?.toLowerCase().includes(search.toLowerCase()))
     : stores;
+
+  const handleDelete = async (storeId: string) => {
+    setDeleting(true);
+    try {
+      await deleteDoc(doc(db, 'stores', storeId));
+      setConfirmDeleteId(null);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <motion.div
@@ -3732,21 +3752,52 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
 
       <div className="flex-1 overflow-y-auto px-5 py-2 space-y-2 pb-10">
         {filtered.map(store => (
-          <div
-            key={store.id}
-            className="flex items-center gap-3 bg-white rounded-2xl px-4 py-3 border border-brand-navy/5 cursor-pointer active:scale-[0.98] transition-all"
-            onClick={() => setEditingStore(store)}
-          >
-            <div className="w-10 h-10 rounded-xl overflow-hidden bg-brand-navy/5 shrink-0">
-              {store.logoUrl
-                ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
-                : <Building2 size={18} className="m-auto mt-2.5 text-brand-navy/20" />}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-bold text-sm text-brand-navy truncate">{store.name}</p>
-              <p className="text-[10px] text-brand-navy/40">{store.category}{store.location ? ` · ${store.location}` : ''}</p>
-            </div>
-            <Edit3 size={14} className="text-brand-navy/30 shrink-0" />
+          <div key={store.id} className="bg-white rounded-2xl border border-brand-navy/5 overflow-hidden">
+            {confirmDeleteId === store.id ? (
+              <div className="px-4 py-3 flex items-center gap-3">
+                <p className="flex-1 text-xs font-bold text-red-500">Delete "{store.name}"?</p>
+                <button
+                  onClick={() => handleDelete(store.id)}
+                  disabled={deleting}
+                  className="px-3 py-1.5 bg-red-500 text-white text-xs font-bold rounded-xl active:scale-95 transition-all disabled:opacity-50"
+                >
+                  {deleting ? '…' : 'Delete'}
+                </button>
+                <button
+                  onClick={() => setConfirmDeleteId(null)}
+                  className="px-3 py-1.5 bg-brand-navy/10 text-brand-navy text-xs font-bold rounded-xl active:scale-95 transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 px-4 py-3">
+                <div
+                  className="w-10 h-10 rounded-xl overflow-hidden bg-brand-navy/5 shrink-0 cursor-pointer"
+                  onClick={() => setEditingStore(store)}
+                >
+                  {store.logoUrl
+                    ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
+                    : <Building2 size={18} className="m-auto mt-2.5 text-brand-navy/20" />}
+                </div>
+                <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setEditingStore(store)}>
+                  <p className="font-bold text-sm text-brand-navy truncate">{store.name}</p>
+                  <p className="text-[10px] text-brand-navy/40">{store.category}{store.location ? ` · ${store.location}` : ''}</p>
+                </div>
+                <button
+                  onClick={() => setEditingStore(store)}
+                  className="p-2 text-brand-navy/30 hover:text-brand-navy/60 transition-colors"
+                >
+                  <Edit3 size={14} />
+                </button>
+                <button
+                  onClick={() => setConfirmDeleteId(store.id)}
+                  className="p-2 text-red-400 hover:text-red-600 transition-colors"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            )}
           </div>
         ))}
         {filtered.length === 0 && (
@@ -3763,7 +3814,7 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
-function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void }) {
+function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -3821,10 +3872,305 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores 
             </div>
             <div>
               <p className="font-bold text-brand-navy text-sm">Businesses</p>
-              <p className="text-[11px] text-brand-navy/40 mt-0.5">Edit business profiles</p>
+              <p className="text-[11px] text-brand-navy/40 mt-0.5">Edit & delete business profiles</p>
+            </div>
+          </motion.button>
+
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={onOpenUsers}
+            className="rounded-[2rem] bg-white border border-black/5 shadow-sm p-6 flex flex-col items-start gap-3 text-left active:bg-brand-navy/5 transition-colors"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-sky-100 flex items-center justify-center">
+              <UserIcon size={22} className="text-sky-500" />
+            </div>
+            <div>
+              <p className="font-bold text-brand-navy text-sm">Users</p>
+              <p className="text-[11px] text-brand-navy/40 mt-0.5">Search & delete user accounts</p>
+            </div>
+          </motion.button>
+
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={onOpenPosts}
+            className="rounded-[2rem] bg-white border border-black/5 shadow-sm p-6 flex flex-col items-start gap-3 text-left active:bg-brand-navy/5 transition-colors"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-rose-100 flex items-center justify-center">
+              <Flag size={22} className="text-rose-500" />
+            </div>
+            <div>
+              <p className="font-bold text-brand-navy text-sm">Posts</p>
+              <p className="text-[11px] text-brand-navy/40 mt-0.5">All posts & flagged content</p>
             </div>
           </motion.button>
         </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function AdminUsersPanel({ onClose }: { onClose: () => void }) {
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [search, setSearch] = useState('');
+  const [confirmDeleteUid, setConfirmDeleteUid] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    return onSnapshot(collection(db, 'users'), snap =>
+      setUsers(snap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile)).sort((a, b) => (a.name || '').localeCompare(b.name || '')))
+    , () => {});
+  }, []);
+
+  const filtered = search.trim()
+    ? users.filter(u =>
+        u.name?.toLowerCase().includes(search.toLowerCase()) ||
+        u.handle?.toLowerCase().includes(search.toLowerCase()) ||
+        u.email?.toLowerCase().includes(search.toLowerCase())
+      )
+    : users;
+
+  const handleDelete = async (uid: string) => {
+    setDeleting(true);
+    try {
+      await deleteDoc(doc(db, 'users', uid));
+      await deleteDoc(doc(db, 'vendors', uid)).catch(() => {});
+      setConfirmDeleteUid(null);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const roleColor: Record<string, string> = {
+    admin: 'bg-brand-gold/20 text-brand-gold',
+    vendor: 'bg-emerald-100 text-emerald-600',
+    consumer: 'bg-sky-100 text-sky-600',
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: '100%' }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: '100%' }}
+      transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+      className="fixed inset-0 bg-brand-bg z-[200] flex flex-col max-w-md mx-auto"
+    >
+      <header className="glass-panel px-5 py-4 flex items-center gap-3">
+        <button onClick={onClose} className="p-2 -ml-2 text-brand-navy/60"><ArrowLeft size={22} /></button>
+        <div className="flex-1">
+          <p className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest">Admin</p>
+          <h2 className="font-bold text-brand-navy text-base">Users</h2>
+        </div>
+        <span className="text-xs text-brand-navy/40 font-semibold">{users.length} total</span>
+      </header>
+
+      <div className="px-5 pt-3 pb-2">
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search by name, handle, or email…"
+          className="w-full px-4 py-2.5 rounded-2xl bg-white border border-brand-navy/10 text-sm text-brand-navy outline-none"
+        />
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-5 py-2 space-y-2 pb-10">
+        {filtered.map(u => (
+          <div key={u.uid} className="bg-white rounded-2xl border border-brand-navy/5 overflow-hidden">
+            {confirmDeleteUid === u.uid ? (
+              <div className="px-4 py-3 flex items-center gap-3">
+                <p className="flex-1 text-xs font-bold text-red-500">Delete "{u.name}"?</p>
+                <button
+                  onClick={() => handleDelete(u.uid)}
+                  disabled={deleting}
+                  className="px-3 py-1.5 bg-red-500 text-white text-xs font-bold rounded-xl active:scale-95 transition-all disabled:opacity-50"
+                >
+                  {deleting ? '…' : 'Delete'}
+                </button>
+                <button
+                  onClick={() => setConfirmDeleteUid(null)}
+                  className="px-3 py-1.5 bg-brand-navy/10 text-brand-navy text-xs font-bold rounded-xl active:scale-95 transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 px-4 py-3">
+                <div className="w-9 h-9 rounded-xl overflow-hidden bg-brand-navy/5 shrink-0">
+                  {u.photoURL
+                    ? <img src={u.photoURL} alt="" className="w-full h-full object-cover" />
+                    : <UserIcon size={16} className="m-auto mt-2 text-brand-navy/20" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <p className="font-bold text-sm text-brand-navy truncate">{u.name || '—'}</p>
+                    <span className={cn('text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0', roleColor[u.role] || 'bg-brand-navy/10 text-brand-navy/60')}>{u.role}</span>
+                  </div>
+                  <p className="text-[10px] text-brand-navy/40 truncate">{u.handle ? `@${u.handle}` : u.email}</p>
+                </div>
+                <button
+                  onClick={() => setConfirmDeleteUid(u.uid)}
+                  className="p-2 text-red-400 hover:text-red-600 transition-colors"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
+        {filtered.length === 0 && (
+          <p className="text-center text-brand-navy/30 text-sm py-10">No users found</p>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+function AdminPostsPanel({ onClose }: { onClose: () => void }) {
+  const [posts, setPosts] = useState<GlobalPost[]>([]);
+  const [reportedPostIds, setReportedPostIds] = useState<Set<string>>(new Set());
+  const [tab, setTab] = useState<'all' | 'flagged'>('all');
+  const [search, setSearch] = useState('');
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    const unsub1 = onSnapshot(
+      query(collection(db, 'global_posts'), orderBy('createdAt', 'desc'), limit(200)),
+      snap => setPosts(snap.docs.map(d => ({ id: d.id, ...d.data() } as GlobalPost))),
+      () => {}
+    );
+    const unsub2 = onSnapshot(collection(db, 'reports'), snap => {
+      setReportedPostIds(new Set(snap.docs.map(d => d.data().postId).filter(Boolean)));
+    }, () => {});
+    return () => { unsub1(); unsub2(); };
+  }, []);
+
+  const base = tab === 'flagged'
+    ? posts.filter(p => reportedPostIds.has(p.id))
+    : posts;
+
+  const filtered = search.trim()
+    ? base.filter(p =>
+        p.authorName?.toLowerCase().includes(search.toLowerCase()) ||
+        p.content?.toLowerCase().includes(search.toLowerCase())
+      )
+    : base;
+
+  const handleDelete = async (postId: string) => {
+    setDeleting(true);
+    try {
+      await deleteDoc(doc(db, 'global_posts', postId));
+      setConfirmDeleteId(null);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const formatAge = (ts: any) => {
+    if (!ts?.toDate) return '';
+    const diff = Date.now() - ts.toDate().getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 60) return `${m}m`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h`;
+    return `${Math.floor(h / 24)}d`;
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: '100%' }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: '100%' }}
+      transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+      className="fixed inset-0 bg-brand-bg z-[200] flex flex-col max-w-md mx-auto"
+    >
+      <header className="glass-panel px-5 py-4 flex items-center gap-3">
+        <button onClick={onClose} className="p-2 -ml-2 text-brand-navy/60"><ArrowLeft size={22} /></button>
+        <div className="flex-1">
+          <p className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest">Admin</p>
+          <h2 className="font-bold text-brand-navy text-base">Posts</h2>
+        </div>
+        {tab === 'flagged' && reportedPostIds.size > 0 && (
+          <span className="text-xs font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-full">{reportedPostIds.size} flagged</span>
+        )}
+      </header>
+
+      <div className="px-5 pt-3 pb-2 space-y-2">
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search by user or content…"
+          className="w-full px-4 py-2.5 rounded-2xl bg-white border border-brand-navy/10 text-sm text-brand-navy outline-none"
+        />
+        <div className="flex gap-2">
+          {(['all', 'flagged'] as const).map(t => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={cn(
+                'flex-1 py-2 rounded-2xl text-xs font-bold transition-all',
+                tab === t ? 'bg-brand-navy text-white' : 'bg-white border border-brand-navy/10 text-brand-navy/50'
+              )}
+            >
+              {t === 'all' ? 'All Posts' : `Flagged${reportedPostIds.size > 0 ? ` (${reportedPostIds.size})` : ''}`}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-5 py-2 space-y-2 pb-10">
+        {filtered.map(post => (
+          <div key={post.id} className="bg-white rounded-2xl border border-brand-navy/5 overflow-hidden">
+            {confirmDeleteId === post.id ? (
+              <div className="px-4 py-3 flex items-center gap-3">
+                <p className="flex-1 text-xs font-bold text-red-500">Delete this post?</p>
+                <button
+                  onClick={() => handleDelete(post.id)}
+                  disabled={deleting}
+                  className="px-3 py-1.5 bg-red-500 text-white text-xs font-bold rounded-xl active:scale-95 transition-all disabled:opacity-50"
+                >
+                  {deleting ? '…' : 'Delete'}
+                </button>
+                <button
+                  onClick={() => setConfirmDeleteId(null)}
+                  className="px-3 py-1.5 bg-brand-navy/10 text-brand-navy text-xs font-bold rounded-xl active:scale-95 transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <div className="px-4 py-3">
+                <div className="flex items-start gap-2">
+                  <div className="w-7 h-7 rounded-full overflow-hidden bg-brand-navy/5 shrink-0 mt-0.5">
+                    {post.authorPhoto
+                      ? <img src={post.authorPhoto} alt="" className="w-full h-full object-cover" />
+                      : <UserIcon size={12} className="m-auto mt-1 text-brand-navy/20" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-bold text-xs text-brand-navy">{post.authorName || 'Unknown'}</span>
+                      {reportedPostIds.has(post.id) && (
+                        <span className="text-[9px] font-bold text-rose-500 bg-rose-50 px-1.5 py-0.5 rounded-full">Flagged</span>
+                      )}
+                      <span className="text-[10px] text-brand-navy/30 ml-auto">{formatAge(post.createdAt)}</span>
+                    </div>
+                    <p className="text-xs text-brand-navy/70 mt-0.5 line-clamp-2">{post.content}</p>
+                  </div>
+                  <button
+                    onClick={() => setConfirmDeleteId(post.id)}
+                    className="p-1.5 text-red-400 hover:text-red-600 transition-colors shrink-0"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+        {filtered.length === 0 && (
+          <p className="text-center text-brand-navy/30 text-sm py-10">
+            {tab === 'flagged' ? 'No flagged posts' : 'No posts found'}
+          </p>
+        )}
       </div>
     </motion.div>
   );
@@ -11745,9 +12091,6 @@ function SettingsMenu({
           {isAdmin && (
             <MenuButton icon={<Flag />} label="Admin Panel" sub="Challenges, badges & settings" onClick={onOpenAdmin} />
           )}
-          {isAdmin && (
-            <MenuButton icon={<Store />} label="Businesses" sub="Edit business profiles" onClick={onOpenStores} />
-          )}
         </div>
 
         <AnimatePresence>
@@ -14339,6 +14682,7 @@ function AdminStoreEditModal({ store, onClose }: { store: StoreProfile; onClose:
   const [coverUrl, setCoverUrl] = useState(store.coverUrl || '');
   const [logoUploading, setLogoUploading] = useState(false);
   const [coverUploading, setCoverUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
   const [isVerified, setIsVerified] = useState(store.isVerified || false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -14401,7 +14745,10 @@ function AdminStoreEditModal({ store, onClose }: { store: StoreProfile; onClose:
               <input type="file" accept="image/*" className="hidden" onChange={async e => {
                 const f = e.target.files?.[0]; if (!f) return;
                 setLogoUploading(true);
-                try { setLogoUrl(await uploadImage(f, `store_logos/${store.id}/logo_${Date.now()}`)); } finally { setLogoUploading(false); }
+                setUploadError('');
+                try { setLogoUrl(await uploadImage(f, `store_logos/${store.id}/logo_${Date.now()}`)); }
+                catch (err: any) { setUploadError('Logo upload failed: ' + (err?.message || 'Storage permission denied')); }
+                finally { setLogoUploading(false); }
               }} />
             </label>
           </div>
@@ -14417,11 +14764,18 @@ function AdminStoreEditModal({ store, onClose }: { store: StoreProfile; onClose:
               <input type="file" accept="image/*" className="hidden" onChange={async e => {
                 const f = e.target.files?.[0]; if (!f) return;
                 setCoverUploading(true);
-                try { setCoverUrl(await uploadImage(f, `store_logos/${store.id}/cover_${Date.now()}`)); } finally { setCoverUploading(false); }
+                setUploadError('');
+                try { setCoverUrl(await uploadImage(f, `store_logos/${store.id}/cover_${Date.now()}`)); }
+                catch (err: any) { setUploadError('Cover upload failed: ' + (err?.message || 'Storage permission denied')); }
+                finally { setCoverUploading(false); }
               }} />
             </label>
           </div>
         </div>
+
+        {uploadError && (
+          <p className="text-xs font-semibold text-red-500 bg-red-50 px-4 py-2 rounded-2xl">{uploadError}</p>
+        )}
 
         {/* Fields */}
         <div className="space-y-3">
