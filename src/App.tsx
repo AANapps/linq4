@@ -300,6 +300,7 @@ interface StoreProfile {
   lat?: number;
   lng?: number;
   rewardTiers?: { stamps: number; reward: string; value?: number }[];
+  currency?: string;
   rewardsGiven?: number;
   visibilitySettings?: {
     members?: boolean;
@@ -597,6 +598,7 @@ interface CelebrationPage {
   stageStoreName?: string;
   stageStamps?: number;
   stageValue?: number;
+  stageCurrency?: string;
   nextStageStamps?: number;
   nextStageReward?: string;
   collectiblePromoName?: string;
@@ -2428,6 +2430,17 @@ function StickerCard({ sticker, isRevealed, onReveal, size = 'md' }: {
 }
 
 // --- Sticker Collection Modal (per-store sticker card, mirrors loyalty card modal) ---
+
+const CURRENCY_SYMBOLS: Record<string, string> = { AUD: 'A$', USD: '$', GBP: '£', EUR: '€', NZD: 'NZ$', CAD: 'CA$' };
+const CURRENCIES = [
+  { code: 'AUD', label: 'Australian Dollar (A$)' },
+  { code: 'USD', label: 'US Dollar ($)' },
+  { code: 'GBP', label: 'British Pound (£)' },
+  { code: 'EUR', label: 'Euro (€)' },
+  { code: 'NZD', label: 'New Zealand Dollar (NZ$)' },
+  { code: 'CAD', label: 'Canadian Dollar (CA$)' },
+];
+function currencySymbol(code?: string) { return CURRENCY_SYMBOLS[code || 'AUD'] ?? (code || 'A$'); }
 
 function CountUpValue({ value, prefix = '£', className = '' }: { value: number; prefix?: string; className?: string }) {
   const [display, setDisplay] = useState(0);
@@ -5222,6 +5235,7 @@ function buildStampCelebrationPages(
       stageStoreName: store.name,
       stageStamps: card.current_stamps,
       stageValue: hitTier.value ?? 0,
+      stageCurrency: store.currency || 'AUD',
       nextStageStamps: nextStageTier?.stamps ?? 0,
       nextStageReward: nextStageTier?.reward ?? '',
     });
@@ -5347,6 +5361,8 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       for (const card of activeCards) {
         const prev = prevCardStampsRef.current.get(card.id) ?? -1;
         if (card.current_stamps > prev) {
+          // Update ref immediately so duplicate Firestore listener fires don't double-count
+          prevCardStampsRef.current.set(card.id, card.current_stamps);
           const store = stores.find(s => s.id === card.store_id);
           if (store) {
             const pages = buildStampCelebrationPages(store, card, activeStandardChallenges, myStandardEntries, profile, user, activePrograms, myStickerCards);
@@ -5419,7 +5435,6 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
             if (pages.length > 0) setCelebrationPages(pages);
           }
         }
-        prevCardStampsRef.current.set(card.id, card.current_stamps);
       }
     })();
   }, [initialCards]);
@@ -7109,7 +7124,7 @@ function StampCelebrationModal({
                         className="rounded-3xl bg-emerald-50 border-2 border-emerald-200 p-5 text-center space-y-1"
                       >
                         <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600">You saved</p>
-                        <CountUpValue value={page.stageValue!} prefix="£" className="font-display text-4xl font-black text-emerald-500" />
+                        <CountUpValue value={page.stageValue!} prefix={currencySymbol(page.stageCurrency)} className="font-display text-4xl font-black text-emerald-500" />
                         <p className="text-xs text-emerald-500/70">Added to your total savings 💚</p>
                       </motion.div>
                     )}
@@ -10097,6 +10112,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
 
   const [numTiers, setNumTiers] = useState(() => store?.rewardTiers?.length || 1);
   const [tiers, setTiers] = useState<{ stamps: number; reward: string; value?: number }[]>(() => initTiers(store));
+  const [currency, setCurrency] = useState(store?.currency || 'AUD');
   const [theme, setTheme] = useState(store?.theme || '#3a6fcc');
   const [stampIcon, setStampIcon] = useState(store?.stampIcon || '⭐');
   const [stampBorderColor, setStampBorderColor] = useState(store?.stampBorderColor || '#ffffff');
@@ -10111,6 +10127,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
     const loaded = initTiers(store);
     setNumTiers(loaded.length);
     setTiers(loaded);
+    setCurrency(store.currency || 'AUD');
     setTheme(store.theme || '#1a1a2e');
     setStampIcon(store.stampIcon || '⭐');
     setStampBorderColor(store.stampBorderColor || '#ffffff');
@@ -10143,6 +10160,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
         rewardTiers: sorted,
         stamps_required_for_reward: topTier.stamps,
         reward: topTier.reward,
+        currency,
         theme,
         stampIcon,
         stampBorderColor,
@@ -10212,21 +10230,36 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
                   className="flex-1 px-3 py-2.5 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
                 />
                 <div className="relative flex items-center">
-                  <span className="absolute left-3 text-xs font-bold text-emerald-600">£</span>
+                  <span className="absolute left-3 text-xs font-bold text-emerald-600">{currencySymbol(currency)}</span>
                   <input
                     type="number"
                     min="0"
                     step="0.01"
                     value={tier.value ?? ''}
                     onChange={e => updateTier(i, 'value', e.target.value)}
-                    className="w-20 pl-6 pr-2 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-sm font-bold text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                    className="w-20 pl-7 pr-2 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-sm font-bold text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-300"
                     placeholder="0.00"
                   />
                 </div>
               </div>
             </div>
           ))}
-          <p className="text-[11px] text-brand-navy/30 pl-1">Set stamps, reward name, and the £ value saved. Stage {numTiers} is the top reward.</p>
+          <p className="text-[11px] text-brand-navy/30 pl-1">Set stamps, reward name, and the {currencySymbol(currency)} value saved at each stage.</p>
+        </div>
+
+        {/* Currency */}
+        <div className="space-y-2">
+          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Reward Currency</label>
+          <div className="relative">
+            <select
+              value={currency}
+              onChange={e => setCurrency(e.target.value)}
+              className="w-full px-5 py-4 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-gold/30 appearance-none"
+            >
+              {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
+            </select>
+            <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-navy/40 pointer-events-none" />
+          </div>
         </div>
 
         {/* Colours — primary & secondary side by side */}
@@ -13779,21 +13812,28 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
         )
       ) : (
         <>
-          {/* Total savings widget */}
-          {(currentProfile?.totalSaved ?? 0) > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-4 rounded-[1.5rem] bg-emerald-50 border border-emerald-200 px-5 py-4"
-            >
-              <div className="w-12 h-12 rounded-xl bg-emerald-500 flex items-center justify-center shrink-0 shadow-sm">
-                <span className="text-white text-xl font-black">£</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600">Total Saved with Linq</p>
-                <CountUpValue value={currentProfile!.totalSaved!} prefix="£" className="font-display text-2xl font-black text-emerald-600" />
-              </div>
-            </motion.div>
-          )}
+          {/* Total savings widget — always visible */}
+          {(() => {
+            const saved = currentProfile?.totalSaved ?? 0;
+            const sym = currencySymbol('AUD');
+            return (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-4 rounded-[1.5rem] bg-emerald-50 border border-emerald-200 px-5 py-4"
+              >
+                <div className="w-12 h-12 rounded-xl bg-emerald-500 flex items-center justify-center shrink-0 shadow-sm">
+                  <span className="text-white text-xl font-black">{sym}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600">Total Saved with Linq</p>
+                  {saved > 0
+                    ? <CountUpValue value={saved} prefix={sym} className="font-display text-2xl font-black text-emerald-600" />
+                    : <p className="text-sm font-bold text-emerald-600/60">Collect stamps to start saving</p>
+                  }
+                </div>
+              </motion.div>
+            );
+          })()}
 
           {/* Challenges card + Leaderboard button — side by side */}
           {(feedChallenges.length > 0 || true) && (
