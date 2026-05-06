@@ -4026,6 +4026,7 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
 
 function AdminPostsPanel({ onClose }: { onClose: () => void }) {
   const [posts, setPosts] = useState<GlobalPost[]>([]);
+  const [flaggedPosts, setFlaggedPosts] = useState<GlobalPost[]>([]);
   const [reportedPostIds, setReportedPostIds] = useState<Set<string>>(new Set());
   const [tab, setTab] = useState<'all' | 'flagged'>('all');
   const [search, setSearch] = useState('');
@@ -4038,15 +4039,23 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
       snap => setPosts(snap.docs.map(d => ({ id: d.id, ...d.data() } as GlobalPost))),
       () => {}
     );
-    const unsub2 = onSnapshot(collection(db, 'reports'), snap => {
-      setReportedPostIds(new Set(snap.docs.map(d => d.data().postId).filter(Boolean)));
+    const unsub2 = onSnapshot(collection(db, 'reports'), async snap => {
+      const ids = [...new Set(snap.docs.map(d => d.data().postId).filter(Boolean))] as string[];
+      setReportedPostIds(new Set(ids));
+      if (ids.length === 0) { setFlaggedPosts([]); return; }
+      const fetched: GlobalPost[] = [];
+      for (const id of ids) {
+        try {
+          const d = await getDoc(doc(db, 'global_posts', id));
+          if (d.exists()) fetched.push({ id: d.id, ...d.data() } as GlobalPost);
+        } catch {}
+      }
+      setFlaggedPosts(fetched);
     }, () => {});
     return () => { unsub1(); unsub2(); };
   }, []);
 
-  const base = tab === 'flagged'
-    ? posts.filter(p => reportedPostIds.has(p.id))
-    : posts;
+  const base = tab === 'flagged' ? flaggedPosts : posts;
 
   const filtered = search.trim()
     ? base.filter(p =>
@@ -4059,6 +4068,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
     setDeleting(true);
     try {
       await deleteDoc(doc(db, 'global_posts', postId));
+      setFlaggedPosts(prev => prev.filter(p => p.id !== postId));
       setConfirmDeleteId(null);
     } finally {
       setDeleting(false);
