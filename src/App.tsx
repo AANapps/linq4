@@ -5347,7 +5347,7 @@ function buildStampCelebrationPages(
 function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onViewUser, cards: initialCards, notifications, activeChatId, setActiveChatId, onLogout, onDeleteAccount, pendingNFCStoreId, onClearPendingNFC }: { activeTab: string, setActiveTab: (tab: string) => void, profile: UserProfile | null, user: FirebaseUser, onViewStore: (s: StoreProfile) => void, onViewUser: (u: UserProfile) => void, cards: Card[], notifications: Notification[], activeChatId: string | null, setActiveChatId: (id: string | null) => void, onLogout: () => void, onDeleteAccount: () => Promise<void>, pendingNFCStoreId?: string | null, onClearPendingNFC?: () => void, key?: React.Key }) {
   const [stores, setStores] = useState<StoreProfile[]>([]);
   const [walletSubTab, setWalletSubTab] = useState<'stamps' | 'challenges'>('stamps');
-  const [walletLayout, setWalletLayout] = useState<'carousel' | 'list'>('carousel');
+  const [walletLayout, setWalletLayout] = useState<'carousel' | 'list'>('list');
   const [redeemingChallenge, setRedeemingChallenge] = useState<{ challenge: Challenge; entry: any; userName: string } | null>(null);
   const [myStickerCards, setMyStickerCards] = useState<StickerCardDoc[]>([]);
   const [openStickerCardId, setOpenStickerCardId] = useState<string | null>(null);
@@ -9582,7 +9582,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false }: { card: Card
                   </button>
                 </div>
               </div>
-              {stampGrid(5, 'gap-1.5', 'px-4 pt-4 pb-4', 11, 'text-[8px]')}
+              {stampGrid(6, 'gap-2', 'px-4 pt-4 pb-4', 10, 'text-[7px]')}
             </div>
           );
 
