@@ -5497,6 +5497,27 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
     );
   }, []);
 
+  // Notify user about collectible programme they haven't joined (once per programme)
+  useEffect(() => {
+    if (activePrograms.length === 0) return;
+    const joinedIds = new Set(myStickerCards.map(sc => sc.programme_id));
+    const unjoined = activePrograms.find(p => !joinedIds.has(p.id));
+    if (!unjoined) return;
+    const key = `linq_monopoly_notif_${user.uid}_${unjoined.id}`;
+    if (localStorage.getItem(key)) return;
+    localStorage.setItem(key, '1');
+    addDoc(collection(db, 'notifications'), {
+      toUid: user.uid,
+      fromUid: 'system',
+      fromName: 'Linq',
+      fromPhoto: '',
+      type: 'system',
+      message: `Your stickers could win you "${unjoined.reward}"! Join the ${unjoined.title} challenge to start collecting.`,
+      isRead: false,
+      createdAt: serverTimestamp(),
+    }).catch(() => {});
+  }, [activePrograms, myStickerCards]);
+
   useEffect(() => {
     const q = query(collection(db, 'challenges'), where('type', '==', 'standard'), where('status', '==', 'active'));
     return onSnapshot(q, snap =>
