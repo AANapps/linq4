@@ -517,6 +517,7 @@ interface Challenge {
   tierChances?: { brown: number; lightblue: number; red: number; blue: number; gold: number };
   vendorIds?: string[];
   rewardTag?: 'product' | 'experience' | 'service';
+  rewardValue?: number;
   isAvatarPrize?: boolean;
   avatarPrizeItemId?: string;
   imageUrl?: string;
@@ -2431,7 +2432,7 @@ function StickerCard({ sticker, isRevealed, onReveal, size = 'md' }: {
 
 // --- Sticker Collection Modal (per-store sticker card, mirrors loyalty card modal) ---
 
-const CURRENCY_SYMBOLS: Record<string, string> = { AUD: 'A$', USD: '$', GBP: '£', EUR: '€', NZD: 'NZ$', CAD: 'CA$' };
+const CURRENCY_SYMBOLS: Record<string, string> = { AUD: '$', USD: '$', GBP: '£', EUR: '€', NZD: 'NZ$', CAD: 'CA$' };
 const CURRENCIES = [
   { code: 'AUD', label: 'Australian Dollar (A$)' },
   { code: 'USD', label: 'US Dollar ($)' },
@@ -4263,6 +4264,7 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
   const [stdRewardTag, setStdRewardTag] = useState<'product' | 'experience' | 'service' | ''>('');
   const [stdIsAvatarPrize, setStdIsAvatarPrize] = useState(false);
   const [stdAvatarPrizeItemId, setStdAvatarPrizeItemId] = useState('');
+  const [stdRewardValue, setStdRewardValue] = useState('');
   const [stdImageUrl, setStdImageUrl] = useState('');
   const [stdImageUploading, setStdImageUploading] = useState(false);
 
@@ -4302,10 +4304,11 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
         ...(stdEndsAt ? { endsAt: Timestamp.fromDate(new Date(stdEndsAt)) } : {}),
         ...(stdVendorIds.length > 0 ? { vendorIds: stdVendorIds } : {}),
         ...(stdRewardTag ? { rewardTag: stdRewardTag } : {}),
+        ...(parseFloat(stdRewardValue) > 0 ? { rewardValue: parseFloat(stdRewardValue) } : {}),
         ...(stdIsAvatarPrize && stdAvatarPrizeItemId ? { isAvatarPrize: true, avatarPrizeItemId: stdAvatarPrizeItemId } : {}),
         ...(stdImageUrl ? { imageUrl: stdImageUrl } : {}),
       });
-      setStdTitle(''); setStdDesc(''); setStdGoal(''); setStdUnit(''); setStdReward(''); setStdEndsAt(''); setStdVendorIds([]); setStdRewardTag(''); setStdIsAvatarPrize(false); setStdAvatarPrizeItemId(''); setStdImageUrl('');
+      setStdTitle(''); setStdDesc(''); setStdGoal(''); setStdUnit(''); setStdReward(''); setStdRewardValue(''); setStdEndsAt(''); setStdVendorIds([]); setStdRewardTag(''); setStdIsAvatarPrize(false); setStdAvatarPrizeItemId(''); setStdImageUrl('');
     } finally {
       setDeploying(false);
     }
@@ -4615,6 +4618,15 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
               <input value={stdUnit} onChange={e => setStdUnit(e.target.value)} placeholder="Unit (e.g. stamps)" className={cn(inputCls, 'flex-1')} />
             </div>
             <input value={stdReward} onChange={e => setStdReward(e.target.value)} placeholder="Prize (e.g. Free coffee)" className={inputCls} />
+            <div className="relative flex items-center">
+              <span className="absolute left-4 text-sm font-bold text-emerald-600 pointer-events-none">$</span>
+              <input
+                type="number" min="0" step="0.01"
+                value={stdRewardValue} onChange={e => setStdRewardValue(e.target.value)}
+                placeholder="Reward value (optional, added to savings)"
+                className={cn(inputCls, 'pl-8')}
+              />
+            </div>
             <select
               value={stdRewardTag}
               onChange={e => setStdRewardTag(e.target.value as typeof stdRewardTag)}
@@ -5580,6 +5592,22 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
     });
   }, [user.uid]);
 
+  // Increment totalSaved when a standard challenge is first completed
+  const prevChallengeCountsRef = useRef<Map<string, number>>(new Map());
+  useEffect(() => {
+    for (const [challengeId, entry] of myStandardEntries) {
+      const challenge = activeStandardChallenges.find(c => c.id === challengeId);
+      if (!challenge?.rewardValue || !challenge.goal) continue;
+      const prev = prevChallengeCountsRef.current.get(challengeId) ?? -1;
+      const curr = entry.count ?? 0;
+      // First time hitting the goal on this device session
+      if (curr >= challenge.goal && prev < challenge.goal && prev !== -1) {
+        updateDoc(doc(db, 'users', user.uid), { totalSaved: increment(challenge.rewardValue) }).catch(() => {});
+      }
+      prevChallengeCountsRef.current.set(challengeId, curr);
+    }
+  }, [myStandardEntries]);
+
   // Badge notification listeners
   useEffect(() => {
     return onSnapshot(collection(db, 'badges'), snap =>
@@ -5728,8 +5756,14 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
 
       {activeTab === 'home' && (
         <div className="space-y-6">
-          <header>
-            <h2 className="font-display text-3xl font-bold mb-1">Wallet</h2>
+          <header className="flex items-end justify-between">
+            <h2 className="font-display text-3xl font-bold">Wallet</h2>
+            {(profile?.totalSaved ?? 0) > 0 && (
+              <div className="text-right pb-0.5">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/35">Total Saved</p>
+                <p className="font-display text-xl font-black text-emerald-500">${(profile!.totalSaved!).toFixed(2)}</p>
+              </div>
+            )}
           </header>
 
           {/* Sub-tabs */}
@@ -13747,6 +13781,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
   }, [alreadySpun]);
 
   return (
+    <>
     <div className="space-y-5 pb-20">
       {/* Daily wheel modal */}
       <AnimatePresence>
@@ -13832,17 +13867,13 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
           {(() => {
             const saved = currentProfile?.totalSaved ?? 0;
             const sym = currencySymbol('AUD');
-            const myRank = saved > 0 ? savingsLbUsers.findIndex(u => u.uid === currentUser?.uid) + 1 : 0;
             return (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-[1.5rem] overflow-hidden shadow-lg shadow-blue-900/20">
-                {/* Header tap area */}
                 <button
-                  onClick={() => setShowSavingsLb(v => !v)}
+                  onClick={() => setShowSavingsLb(true)}
                   className="w-full gradient-logo-blue relative overflow-hidden px-5 py-4 flex items-center gap-4 active:opacity-90 transition-opacity"
                 >
-                  {/* Shine sweep */}
                   <div className="shine-ray" />
-
                   <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0 border border-white/20">
                     <span className="text-white text-lg font-black">{sym}</span>
                   </div>
@@ -13853,56 +13884,8 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
                       : <p className="text-sm font-bold text-white/60">Collect stamps to start saving</p>
                     }
                   </div>
-                  <div className="flex flex-col items-end gap-0.5 shrink-0">
-                    {saved > 0 && myRank > 0 && (
-                      <span className="text-[10px] font-bold text-blue-200/70">#{myRank} saver</span>
-                    )}
-                    <motion.div animate={{ rotate: showSavingsLb ? 180 : 0 }} transition={{ duration: 0.25 }}>
-                      <ChevronDown size={18} className="text-white/60" />
-                    </motion.div>
-                  </div>
+                  <ChevronDown size={18} className="text-white/50 shrink-0" />
                 </button>
-
-                {/* Expanded leaderboard */}
-                <AnimatePresence>
-                  {showSavingsLb && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.28, ease: 'easeInOut' }}
-                      className="overflow-hidden bg-[#112169]"
-                    >
-                      <div className="px-4 py-3 space-y-1 max-h-72 overflow-y-auto">
-                        <p className="text-[9px] font-bold uppercase tracking-widest text-blue-300/60 mb-2 px-1">Savings Leaderboard</p>
-                        {savingsLbLoading ? (
-                          <div className="py-6 text-center text-blue-300/50 text-sm">Loading...</div>
-                        ) : savingsLbUsers.length === 0 ? (
-                          <div className="py-6 text-center text-blue-300/50 text-sm">No savers yet — be the first!</div>
-                        ) : savingsLbUsers.map((u, i) => {
-                          const isMe = u.uid === currentUser?.uid;
-                          return (
-                            <div key={u.uid} className={cn('flex items-center gap-3 px-3 py-2 rounded-xl transition-colors', isMe ? 'bg-white/10' : 'hover:bg-white/5')}>
-                              <span className={cn('text-xs font-black w-5 text-center shrink-0', i === 0 ? 'text-yellow-300' : i === 1 ? 'text-slate-300' : i === 2 ? 'text-amber-500' : 'text-blue-300/50')}>
-                                {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`}
-                              </span>
-                              <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 bg-white/10">
-                                {u.photoURL
-                                  ? <img src={u.photoURL} alt="" className="w-full h-full object-cover" />
-                                  : <div className="w-full h-full flex items-center justify-center text-xs font-bold text-white/60">{u.displayName?.[0] ?? '?'}</div>
-                                }
-                              </div>
-                              <span className={cn('flex-1 text-sm font-bold truncate', isMe ? 'text-white' : 'text-blue-100/80')}>
-                                {isMe ? 'You' : (u.displayName || u.handle || 'User')}
-                              </span>
-                              <span className="text-sm font-black text-emerald-300 shrink-0">
-                                {sym}{(u.totalSaved ?? 0).toFixed(2)}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
               </motion.div>
             );
           })()}
@@ -14291,6 +14274,90 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
         </div>
       )}
     </div>
+
+    {/* Savings leaderboard modal */}
+    <AnimatePresence>
+      {showSavingsLb && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[300] bg-black/50 backdrop-blur-sm flex flex-col justify-end"
+          onClick={() => setShowSavingsLb(false)}
+        >
+          <motion.div
+            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+            transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+            className="bg-white rounded-t-[2.5rem] max-h-[90vh] flex flex-col"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex justify-center pt-3 pb-1 shrink-0">
+              <div className="w-10 h-1 rounded-full bg-brand-navy/15" />
+            </div>
+
+            {/* Header card */}
+            <div className="gradient-logo-blue relative overflow-hidden mx-5 mt-2 mb-5 rounded-[1.5rem] px-5 py-5 shrink-0">
+              <div className="shine-ray" />
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-white/15 flex items-center justify-center shrink-0 border border-white/20">
+                  <span className="text-white text-2xl font-black">{currencySymbol('AUD')}</span>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-blue-200/70">Total Saved with Linq</p>
+                  {(currentProfile?.totalSaved ?? 0) > 0
+                    ? <CountUpValue value={currentProfile!.totalSaved!} prefix={currencySymbol('AUD')} className="font-display text-3xl font-black text-white" />
+                    : <p className="text-base font-bold text-white/60">Collect stamps to start saving</p>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <p className="px-5 mb-3 text-xs font-bold uppercase tracking-widest text-brand-navy/40 shrink-0">Savings Leaderboard</p>
+
+            <div className="flex-1 overflow-y-auto px-5 pb-10 space-y-2">
+              {savingsLbLoading ? (
+                <div className="py-16 text-center text-brand-navy/30">
+                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="inline-block mb-2">
+                    <Sparkles size={28} />
+                  </motion.div>
+                  <p className="text-sm">Loading...</p>
+                </div>
+              ) : savingsLbUsers.length === 0 ? (
+                <div className="py-16 text-center text-brand-navy/30">
+                  <p className="font-bold">No savers yet</p>
+                  <p className="text-sm mt-1">Redeem your first reward to appear here!</p>
+                </div>
+              ) : savingsLbUsers.map((u, i) => {
+                const isMe = u.uid === currentUser?.uid;
+                const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : null;
+                return (
+                  <div key={u.uid} className="gradient-logo-blue relative overflow-hidden rounded-[1.25rem] px-4 py-3 flex items-center gap-3 shadow-md shadow-blue-900/15">
+                    <div className="shine-ray opacity-50" />
+                    <span className="text-sm font-black text-white/60 w-6 text-center shrink-0">
+                      {medal ?? `${i + 1}`}
+                    </span>
+                    <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-white/20 border border-white/20">
+                      {u.photoURL
+                        ? <img src={u.photoURL} alt="" className="w-full h-full object-cover" />
+                        : <div className="w-full h-full flex items-center justify-center text-sm font-bold text-white/70">{(u.displayName || u.handle || '?')[0].toUpperCase()}</div>
+                      }
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-white truncate">
+                        {isMe ? 'You' : (u.displayName || u.handle || 'User')}
+                        {isMe && <span className="ml-1.5 text-[10px] font-black bg-white/20 px-1.5 py-0.5 rounded-full align-middle">you</span>}
+                      </p>
+                    </div>
+                    <span className="text-base font-black text-emerald-300 shrink-0">
+                      {currencySymbol('AUD')}{(u.totalSaved ?? 0).toFixed(2)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+    </>
   );
 }
 
