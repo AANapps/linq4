@@ -121,7 +121,8 @@ import {
   Ticket,
   ChevronUp,
   MoveHorizontal,
-  Check
+  Check,
+  LayoutList
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
@@ -5346,6 +5347,7 @@ function buildStampCelebrationPages(
 function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onViewUser, cards: initialCards, notifications, activeChatId, setActiveChatId, onLogout, onDeleteAccount, pendingNFCStoreId, onClearPendingNFC }: { activeTab: string, setActiveTab: (tab: string) => void, profile: UserProfile | null, user: FirebaseUser, onViewStore: (s: StoreProfile) => void, onViewUser: (u: UserProfile) => void, cards: Card[], notifications: Notification[], activeChatId: string | null, setActiveChatId: (id: string | null) => void, onLogout: () => void, onDeleteAccount: () => Promise<void>, pendingNFCStoreId?: string | null, onClearPendingNFC?: () => void, key?: React.Key }) {
   const [stores, setStores] = useState<StoreProfile[]>([]);
   const [walletSubTab, setWalletSubTab] = useState<'stamps' | 'challenges'>('stamps');
+  const [walletLayout, setWalletLayout] = useState<'carousel' | 'list'>('carousel');
   const [redeemingChallenge, setRedeemingChallenge] = useState<{ challenge: Challenge; entry: any; userName: string } | null>(null);
   const [myStickerCards, setMyStickerCards] = useState<StickerCardDoc[]>([]);
   const [openStickerCardId, setOpenStickerCardId] = useState<string | null>(null);
@@ -5822,27 +5824,61 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           {/* Stamps sub-tab */}
           {walletSubTab === 'stamps' && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <p className="text-brand-navy/60 text-sm">{activeCards.length} card{activeCards.length !== 1 ? 's' : ''} in wallet</p>
-                <button
-                  onClick={() => setShowNFCStamp(true)}
-                  className="flex items-center gap-2 gradient-red text-white px-4 py-2 rounded-xl font-bold text-xs"
-                >
-                  <Wifi size={14} />
-                  Collect Stamp
-                </button>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-brand-navy/60 text-sm shrink-0">{activeCards.length} card{activeCards.length !== 1 ? 's' : ''}</p>
+                <div className="flex items-center gap-2 ml-auto">
+                  {/* Layout toggle */}
+                  <div className="flex items-center bg-brand-navy/[0.07] rounded-xl p-0.5">
+                    <button
+                      onClick={() => setWalletLayout('carousel')}
+                      className={cn(
+                        'flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all',
+                        walletLayout === 'carousel' ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/40'
+                      )}
+                    >
+                      <MoveHorizontal size={12} />
+                      Swipe
+                    </button>
+                    <button
+                      onClick={() => setWalletLayout('list')}
+                      className={cn(
+                        'flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all',
+                        walletLayout === 'list' ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/40'
+                      )}
+                    >
+                      <LayoutList size={12} />
+                      List
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => setShowNFCStamp(true)}
+                    className="flex items-center gap-1.5 gradient-red text-white px-3 py-2 rounded-xl font-bold text-xs"
+                  >
+                    <Wifi size={13} />
+                    Collect
+                  </button>
+                </div>
               </div>
               {activeCards.length > 0 ? (
-                <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-3 -mx-4 px-4 scrollbar-hide">
-                  {activeCards.map(card => {
-                    const store = stores.find(s => s.id === card.store_id);
-                    return (
-                      <div key={card.id} className="snap-center shrink-0 w-[83vw] max-w-[340px]">
-                        <LoyaltyCard card={card} store={store} onViewStore={onViewStore} />
-                      </div>
-                    );
-                  })}
-                </div>
+                walletLayout === 'carousel' ? (
+                  <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-3 -mx-4 px-4 scrollbar-hide">
+                    {activeCards.map(card => {
+                      const store = stores.find(s => s.id === card.store_id);
+                      return (
+                        <div key={card.id} className="snap-center shrink-0 w-[83vw] max-w-[340px]">
+                          <LoyaltyCard card={card} store={store} onViewStore={onViewStore} />
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {activeCards.map(card => {
+                      const store = stores.find(s => s.id === card.store_id);
+                      return <LoyaltyCard key={card.id} card={card} store={store} onViewStore={onViewStore} compact />;
+                    })}
+                  </div>
+                )
               ) : (
                 <div className="glass-card p-10 rounded-[2.5rem] border-2 border-dashed border-brand-rose/40 text-center">
                   <div className="w-16 h-16 bg-brand-bg rounded-full flex items-center justify-center mx-auto mb-4">
@@ -9253,7 +9289,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
 
 // --- UI Components ---
 
-function LoyaltyCard({ card, store, onViewStore }: { card: Card, store?: StoreProfile, onViewStore?: (s: StoreProfile) => void, key?: React.Key }) {
+function LoyaltyCard({ card, store, onViewStore, compact = false }: { card: Card, store?: StoreProfile, onViewStore?: (s: StoreProfile) => void, compact?: boolean, key?: React.Key }) {
   const [showQR, setShowQR] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
   const [showCompletionPopup, setShowCompletionPopup] = useState(false);
@@ -9461,114 +9497,121 @@ function LoyaltyCard({ card, store, onViewStore }: { card: Card, store?: StorePr
           const stampIcon = store?.stampIcon || '⭐';
           const cardPattern = store?.cardPattern || 'solid';
 
-          return (
+          /* ── Shared stamp renderer ── */
+          const stampGrid = (cols: number, gap: string, bodyPad: string, iconSize: number, emptyTextSize: string) => (
+            <div className={`bg-white ${bodyPad}`}>
+              <div className={`grid ${gap} mb-4`} style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+                {Array.from({ length: limit }).map((_, i) => {
+                  const stampNum = i + 1;
+                  const isFilled = i < card.current_stamps;
+                  const isTier = tierStamps.has(stampNum);
+                  return (
+                    <div key={i} className="aspect-square">
+                      {isFilled ? (
+                        <motion.div
+                          initial={{ scale: 0.4, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{ type: 'spring', stiffness: 420, damping: 18 }}
+                          className="w-full h-full rounded-full flex items-center justify-center"
+                          style={{ backgroundColor: isTier ? '#f5a623' : cardTheme }}
+                        >
+                          {isTier
+                            ? <Gift size={iconSize} className="text-white" />
+                            : <span className="leading-none" style={{ fontSize: iconSize + 4 }}>{stampIcon}</span>
+                          }
+                        </motion.div>
+                      ) : (
+                        <div
+                          className="w-full h-full rounded-full flex items-center justify-center bg-white"
+                          style={{ borderWidth: compact ? 2 : 3, borderStyle: isTier ? 'dashed' : 'solid', borderColor: cardTheme }}
+                        >
+                          {isTier
+                            ? <Gift size={iconSize - 3} style={{ color: cardTheme, opacity: 0.4 }} />
+                            : <span className={`font-bold ${emptyTextSize}`} style={{ color: cardTheme, opacity: 0.35 }}>{stampNum}</span>
+                          }
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-brand-navy/35 text-[11px] font-bold">{card.current_stamps}/{limit} stamps</span>
+                {card.isRedeemed ? (
+                  <button onClick={(e) => { e.stopPropagation(); handleReset(e); }}
+                    className="text-brand-navy/45 text-[11px] font-bold underline">
+                    Start over
+                  </button>
+                ) : isCompleted ? (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowCompletionPopup(true); }}
+                    className="text-white text-[11px] font-bold px-4 py-1.5 rounded-full active:scale-95 transition-transform"
+                    style={{ backgroundColor: cardTheme }}
+                  >
+                    Claim Reward 🎁
+                  </button>
+                ) : nextTier ? (
+                  <span className="text-brand-navy/30 text-[10px] text-right leading-snug">
+                    {nextTier.stamps - card.current_stamps} more →{' '}
+                    <span className="font-semibold" style={{ color: cardTheme }}>{nextTier.reward}</span>
+                  </span>
+                ) : null}
+              </div>
+            </div>
+          );
+
+          /* ── Compact list card ── */
+          if (compact) return (
             <div>
-              {/* ── Coloured header — centred portrait layout ── */}
-              <div className="relative pt-10 pb-8 flex flex-col items-center gap-2" style={{ backgroundColor: cardTheme }}>
-                {cardPattern !== 'solid' && (
-                  <div className="absolute inset-0 pointer-events-none" style={getCardPatternStyle(cardPattern)} />
-                )}
-
-                {/* Status badge top-left */}
-                {(isCompleted && !card.isRedeemed) && (
-                  <div className="absolute top-4 left-4 bg-white/25 text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest animate-pulse z-10">
-                    Ready!
-                  </div>
-                )}
-                {card.isRedeemed && (
-                  <div className="absolute top-4 left-4 bg-green-400 text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest z-10">
-                    Claimed
-                  </div>
-                )}
-
-                {/* Options button top-right */}
-                <button
-                  onClick={(e) => { e.stopPropagation(); setShowOptions(!showOptions); }}
-                  className="absolute top-4 right-4 p-1.5 text-white/50 hover:text-white/80 transition-colors z-10"
-                >
-                  <MoreVertical size={16} />
-                </button>
-
-                {/* Circular logo */}
-                <div
-                  className="relative z-10 w-[72px] h-[72px] rounded-full overflow-hidden border-[3px] border-white/60 shadow-xl cursor-pointer"
-                  onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}
-                >
+              <div className="relative flex items-center gap-3 px-4 py-3" style={{ backgroundColor: cardTheme }}>
+                {cardPattern !== 'solid' && <div className="absolute inset-0 pointer-events-none" style={getCardPatternStyle(cardPattern)} />}
+                <div className="relative z-10 w-10 h-10 rounded-full overflow-hidden border-2 border-white/50 shrink-0 cursor-pointer shadow-md"
+                  onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}>
                   <img src={store?.logoUrl || `https://picsum.photos/seed/${card.store_id}/200/200`} alt="" className="w-full h-full object-cover" />
                 </div>
+                <div className="relative z-10 flex-1 min-w-0 cursor-pointer"
+                  onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}>
+                  <h4 className="font-bold text-white text-sm leading-tight truncate">{store?.name || 'Store'}</h4>
+                  <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">{store?.category || 'Retail'}</p>
+                </div>
+                <div className="relative z-10 flex items-center gap-1.5 shrink-0">
+                  {isCompleted && !card.isRedeemed && <div className="bg-white/25 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest animate-pulse">Ready!</div>}
+                  {card.isRedeemed && <div className="bg-green-400 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">Claimed</div>}
+                  <button onClick={(e) => { e.stopPropagation(); setShowOptions(!showOptions); }} className="p-1 text-white/50 hover:text-white/80 transition-colors">
+                    <MoreVertical size={15} />
+                  </button>
+                </div>
+              </div>
+              {stampGrid(5, 'gap-1.5', 'px-4 pt-4 pb-4', 11, 'text-[8px]')}
+            </div>
+          );
 
-                {/* Store name + category */}
-                <div
-                  className="relative z-10 text-center cursor-pointer"
-                  onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}
-                >
+          /* ── Carousel portrait card ── */
+          return (
+            <div>
+              <div className="relative pt-10 pb-8 flex flex-col items-center gap-2" style={{ backgroundColor: cardTheme }}>
+                {cardPattern !== 'solid' && <div className="absolute inset-0 pointer-events-none" style={getCardPatternStyle(cardPattern)} />}
+                {isCompleted && !card.isRedeemed && (
+                  <div className="absolute top-4 left-4 bg-white/25 text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest animate-pulse z-10">Ready!</div>
+                )}
+                {card.isRedeemed && (
+                  <div className="absolute top-4 left-4 bg-green-400 text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest z-10">Claimed</div>
+                )}
+                <button onClick={(e) => { e.stopPropagation(); setShowOptions(!showOptions); }}
+                  className="absolute top-4 right-4 p-1.5 text-white/50 hover:text-white/80 transition-colors z-10">
+                  <MoreVertical size={16} />
+                </button>
+                <div className="relative z-10 w-[72px] h-[72px] rounded-full overflow-hidden border-[3px] border-white/60 shadow-xl cursor-pointer"
+                  onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}>
+                  <img src={store?.logoUrl || `https://picsum.photos/seed/${card.store_id}/200/200`} alt="" className="w-full h-full object-cover" />
+                </div>
+                <div className="relative z-10 text-center cursor-pointer"
+                  onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}>
                   <h4 className="font-bold text-white text-lg leading-tight">{store?.name || 'Store'}</h4>
                   <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mt-0.5">{store?.category || 'Retail'}</p>
                 </div>
               </div>
-
-              {/* ── White body — stamp grid ── */}
-              <div className="bg-white px-4 pt-7 pb-6">
-                <div className="grid gap-2.5 mb-6" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
-                  {Array.from({ length: limit }).map((_, i) => {
-                    const stampNum = i + 1;
-                    const isFilled = i < card.current_stamps;
-                    const isTier = tierStamps.has(stampNum);
-                    return (
-                      <div key={i} className="aspect-square">
-                        {isFilled ? (
-                          <motion.div
-                            initial={{ scale: 0.4, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            transition={{ type: 'spring', stiffness: 420, damping: 18 }}
-                            className="w-full h-full rounded-full flex items-center justify-center"
-                            style={{ backgroundColor: isTier ? '#f5a623' : cardTheme }}
-                          >
-                            {isTier
-                              ? <Gift size={14} className="text-white" />
-                              : <span className="text-base leading-none">{stampIcon}</span>
-                            }
-                          </motion.div>
-                        ) : (
-                          <div
-                            className="w-full h-full rounded-full flex items-center justify-center bg-white"
-                            style={{ borderWidth: 3, borderStyle: isTier ? 'dashed' : 'solid', borderColor: cardTheme }}
-                          >
-                            {isTier
-                              ? <Gift size={10} style={{ color: cardTheme, opacity: 0.4 }} />
-                              : <span className="text-[9px] font-bold" style={{ color: cardTheme, opacity: 0.35 }}>{stampNum}</span>
-                            }
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Progress + action */}
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-brand-navy/35 text-[11px] font-bold">{card.current_stamps}/{limit} stamps</span>
-                  {card.isRedeemed ? (
-                    <button onClick={(e) => { e.stopPropagation(); handleReset(e); }}
-                      className="text-brand-navy/45 text-[11px] font-bold underline">
-                      Start over
-                    </button>
-                  ) : isCompleted ? (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setShowCompletionPopup(true); }}
-                      className="text-white text-[11px] font-bold px-4 py-1.5 rounded-full active:scale-95 transition-transform"
-                      style={{ backgroundColor: cardTheme }}
-                    >
-                      Claim Reward 🎁
-                    </button>
-                  ) : nextTier ? (
-                    <span className="text-brand-navy/30 text-[10px] text-right leading-snug">
-                      {nextTier.stamps - card.current_stamps} more →{' '}
-                      <span className="font-semibold" style={{ color: cardTheme }}>{nextTier.reward}</span>
-                    </span>
-                  ) : null}
-                </div>
-              </div>
+              {stampGrid(3, 'gap-3', 'px-4 pt-7 pb-6', 16, 'text-[10px]')}
             </div>
           );
         })()}
