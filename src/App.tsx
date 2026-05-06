@@ -116,7 +116,8 @@ import {
   Smartphone,
   Tag,
   Package,
-  Pencil
+  Pencil,
+  Stamp
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
@@ -8192,6 +8193,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   const [showBroadcast, setShowBroadcast] = useState(false);
   const [chartMode, setChartMode] = useState<'days' | 'weeks'>('weeks');
   const [chartOffset, setChartOffset] = useState(0);
+  const [signupsOffset, setSignupsOffset] = useState(0);
   const [chartTransactions, setChartTransactions] = useState<any[]>([]);
 
   useEffect(() => {
@@ -8580,15 +8582,19 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
           </header>
 
           {/* Stat tiles */}
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div onClick={() => openStatModal('members')} className="cursor-pointer active:scale-95 transition-transform">
               <StatSquare icon={<Users className="text-blue-500" />} label="Members" value={String(totalMembers)} />
+            </div>
+            <div onClick={() => openStatModal('stamps')} className="cursor-pointer active:scale-95 transition-transform">
+              <StatSquare icon={<Stamp className="text-brand-gold" />} label="Stamps Given" value={String(totalStampsGiven)} />
             </div>
             <div onClick={() => openStatModal('activeCards')} className="cursor-pointer active:scale-95 transition-transform">
               <StatSquare icon={<Wallet className="text-purple-500" />} label="Active Cards" value={String(activeStoreCards)} />
             </div>
             <StatSquare icon={<RefreshCw className="text-orange-500" />} label="Return Rate" value={`${returnRate}%`} />
             <StatSquare icon={<TrendingUp className="text-green-500" />} label="Avg/Wk/User" value={String(avgScansPerWeekPerUser)} />
+            <StatSquare icon={<Gift className="text-rose-500" />} label="Rewards Given" value={String(vendorRewardsGiven)} />
           </div>
 
           {/* Stamps chart */}
@@ -8655,6 +8661,131 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                 </div>
                 {chartTransactions.length === 0 && (
                   <p className="text-center text-xs text-brand-navy/30 font-bold py-2">No stamp data yet</p>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* User base growth chart */}
+          {(() => {
+            // Cumulative unique members over time based on first transaction per user
+            const firstTxByUser = new Map<string, number>();
+            chartTransactions.forEach(tx => {
+              const uid = tx.user_id;
+              const ms = tx.completed_at?.toMillis?.() ?? (tx.completed_at?.seconds ?? 0) * 1000;
+              if (!firstTxByUser.has(uid) || ms < firstTxByUser.get(uid)!) firstTxByUser.set(uid, ms);
+            });
+            const joinTimestamps = [...firstTxByUser.values()].sort((a, b) => a - b);
+            if (joinTimestamps.length === 0) return null;
+            const periodCount = 10;
+            const msPerDay = 86400000;
+            const now = Date.now();
+            const rangeMs = periodCount * msPerDay;
+            const rangeEnd = now - signupsOffset * rangeMs;
+            const rangeStart = rangeEnd - rangeMs;
+            const points: { label: string; cumulative: number }[] = [];
+            for (let i = 0; i < periodCount; i++) {
+              const dayEnd = rangeStart + (i + 1) * msPerDay;
+              const cumulative = joinTimestamps.filter(ms => ms < dayEnd).length;
+              const d = new Date(rangeStart + i * msPerDay);
+              points.push({ label: `${d.getDate()}/${d.getMonth() + 1}`, cumulative });
+            }
+            const maxVal = Math.max(...points.map(p => p.cumulative), 1);
+            return (
+              <div className="glass-card p-5 rounded-[2rem] space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-brand-navy">User Base Growth</p>
+                    <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest mt-0.5">Cumulative members</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setSignupsOffset(o => o + 1)} className="p-1.5 rounded-xl bg-brand-navy/8 active:scale-90 transition-all">
+                      <ChevronLeft size={14} className="text-brand-navy" />
+                    </button>
+                    <button onClick={() => setSignupsOffset(o => Math.max(0, o - 1))} disabled={signupsOffset === 0} className="p-1.5 rounded-xl bg-brand-navy/8 disabled:opacity-30 active:scale-90 transition-all">
+                      <ChevronRight size={14} className="text-brand-navy" />
+                    </button>
+                  </div>
+                </div>
+                <div className="flex items-end gap-1 h-28">
+                  {points.map((p, i) => (
+                    <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                      <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
+                        <motion.div
+                          initial={{ height: 0 }} animate={{ height: `${Math.round((p.cumulative / maxVal) * 80)}px` }}
+                          transition={{ duration: 0.4, delay: i * 0.03 }}
+                          className="w-full rounded-t-lg bg-blue-400"
+                          style={{ minHeight: p.cumulative > 0 ? '4px' : '0' }}
+                        />
+                      </div>
+                      <p className="text-[8px] text-brand-navy/30 font-bold leading-none">{p.label}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Sign-ups per day chart */}
+          {(() => {
+            // New distinct users per day (first transaction per user = sign-up proxy)
+            const firstTxByUser2 = new Map<string, number>();
+            chartTransactions.forEach(tx => {
+              const uid = tx.user_id;
+              const ms = tx.completed_at?.toMillis?.() ?? (tx.completed_at?.seconds ?? 0) * 1000;
+              if (!firstTxByUser2.has(uid) || ms < firstTxByUser2.get(uid)!) firstTxByUser2.set(uid, ms);
+            });
+            const [signupsDays, setSignupsDays] = [14, null] as any; // static 14-day window
+            const periodCount = 14;
+            const msPerDay = 86400000;
+            const now = Date.now();
+            const rangeEnd = now - signupsOffset * periodCount * msPerDay;
+            const rangeStart = rangeEnd - periodCount * msPerDay;
+            const days: { label: string; count: number }[] = [];
+            for (let i = 0; i < periodCount; i++) {
+              const dayStart = rangeStart + i * msPerDay;
+              const dayEnd = dayStart + msPerDay;
+              const count = [...firstTxByUser2.values()].filter(ms => ms >= dayStart && ms < dayEnd).length;
+              const d = new Date(dayStart);
+              days.push({ label: `${d.getDate()}/${d.getMonth() + 1}`, count });
+            }
+            const maxVal = Math.max(...days.map(d => d.count), 1);
+            const totalNew = days.reduce((s, d) => s + d.count, 0);
+            return (
+              <div className="glass-card p-5 rounded-[2rem] space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-brand-navy">New Sign-ups / Day</p>
+                    <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest mt-0.5">
+                      {totalNew} new in this period
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setSignupsOffset(o => o + 1)} className="p-1.5 rounded-xl bg-brand-navy/8 active:scale-90 transition-all">
+                      <ChevronLeft size={14} className="text-brand-navy" />
+                    </button>
+                    <button onClick={() => setSignupsOffset(o => Math.max(0, o - 1))} disabled={signupsOffset === 0} className="p-1.5 rounded-xl bg-brand-navy/8 disabled:opacity-30 active:scale-90 transition-all">
+                      <ChevronRight size={14} className="text-brand-navy" />
+                    </button>
+                  </div>
+                </div>
+                <div className="flex items-end gap-1 h-28">
+                  {days.map((d, i) => (
+                    <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                      <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
+                        <motion.div
+                          initial={{ height: 0 }} animate={{ height: `${Math.round((d.count / maxVal) * 80)}px` }}
+                          transition={{ duration: 0.4, delay: i * 0.03 }}
+                          className="w-full rounded-t-lg bg-emerald-400"
+                          style={{ minHeight: d.count > 0 ? '4px' : '0' }}
+                        />
+                      </div>
+                      <p className="text-[8px] text-brand-navy/30 font-bold leading-none">{d.label}</p>
+                    </div>
+                  ))}
+                </div>
+                {totalNew === 0 && (
+                  <p className="text-center text-xs text-brand-navy/30 font-bold py-2">No new sign-ups in this period</p>
                 )}
               </div>
             );
