@@ -10228,6 +10228,31 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
   );
 }
 
+function BadgeSwipeRow({ badges, onSelectBadge }: { badges: AppBadge[]; onSelectBadge: (b: AppBadge) => void }) {
+  if (badges.length === 0) return null;
+  return (
+    <div className="overflow-x-auto no-scrollbar -mx-5 px-5">
+      <div className={cn('flex gap-3 pb-1', badges.length <= 5 ? 'justify-center' : 'w-max')}>
+        {badges.map(b => (
+          <button
+            key={b.id}
+            onClick={() => onSelectBadge(b)}
+            className="flex flex-col items-center gap-1 shrink-0 active:scale-95 transition-transform"
+          >
+            <div
+              className="w-12 h-12 rounded-[1rem] flex items-center justify-center text-2xl shadow-sm"
+              style={{ background: `linear-gradient(135deg, ${b.color}ee, ${b.color}99)` }}
+            >
+              {b.icon}
+            </div>
+            <span className="text-[9px] font-bold text-brand-navy/50 text-center w-12 leading-tight line-clamp-2">{b.name}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function BadgeSquarePanel({ badges, onSelectBadge }: { badges: AppBadge[]; onSelectBadge: (b: AppBadge) => void }) {
   const [showAll, setShowAll] = useState(false);
   return (
@@ -10897,23 +10922,11 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         ))}
       </div>
 
-      {/* Badges + Sticker collection side-by-side */}
-      {profile.role === 'consumer' && (
-        <div className="flex gap-3 items-start">
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 px-1">Badges</p>
-            <BadgeSquarePanel badges={earnedBadges} onSelectBadge={setSelectedBadge} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 px-1">Stickers</p>
-            <StickerListPanel uid={user.uid} />
-          </div>
-        </div>
-      )}
-      {profile.role !== 'consumer' && earnedBadges.length > 0 && (
+      {/* Badges swipe row */}
+      {earnedBadges.length > 0 && (
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 px-1">Badges</p>
-          <BadgeSquarePanel badges={earnedBadges} onSelectBadge={setSelectedBadge} />
+          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 text-center">Badges</p>
+          <BadgeSwipeRow badges={earnedBadges} onSelectBadge={setSelectedBadge} />
         </div>
       )}
 
@@ -15839,23 +15852,11 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
       </div>
 
 
-      {/* Badges + Sticker collection side-by-side */}
-      {targetUser.role === 'consumer' && (
-        <div className="flex gap-3 items-start">
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 px-1">Badges</p>
-            <BadgeSquarePanel badges={earnedBadges} onSelectBadge={setSelectedBadge} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 px-1">Stickers</p>
-            <StickerListPanel uid={targetUser.uid} />
-          </div>
-        </div>
-      )}
-      {targetUser.role !== 'consumer' && earnedBadges.length > 0 && (
+      {/* Badges swipe row */}
+      {earnedBadges.length > 0 && (
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 px-1">Badges</p>
-          <BadgeSquarePanel badges={earnedBadges} onSelectBadge={setSelectedBadge} />
+          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 text-center">Badges</p>
+          <BadgeSwipeRow badges={earnedBadges} onSelectBadge={setSelectedBadge} />
         </div>
       )}
 
