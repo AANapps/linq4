@@ -5833,14 +5833,10 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                 </button>
               </div>
               {activeCards.length > 0 ? (
-                <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-3 -mx-4 px-4 scrollbar-hide">
+                <div className="space-y-4">
                   {activeCards.map(card => {
                     const store = stores.find(s => s.id === card.store_id);
-                    return (
-                      <div key={card.id} className="snap-center shrink-0 w-[82vw] max-w-[320px]">
-                        <LoyaltyCard card={card} store={store} onViewStore={onViewStore} />
-                      </div>
-                    );
+                    return <LoyaltyCard key={card.id} card={card} store={store} onViewStore={onViewStore} />;
                   })}
                 </div>
               ) : (
@@ -9459,51 +9455,53 @@ function LoyaltyCard({ card, store, onViewStore }: { card: Card, store?: StorePr
           const tierStamps = new Set(rewardTiers.map(t => t.stamps));
           const nextTier = rewardTiers.find(t => t.stamps > card.current_stamps);
           const stampIcon = store?.stampIcon || '⭐';
-          const stampBorderColor = store?.stampBorderColor || '#ffffff';
           const cardPattern = store?.cardPattern || 'solid';
 
           return (
-            <div className="relative" style={{ background: `linear-gradient(135deg, ${cardTheme} 0%, ${cardTheme}bb 100%)` }}>
-              {cardPattern !== 'solid' && (
-                <div className="absolute inset-0 pointer-events-none" style={getCardPatternStyle(cardPattern)} />
-              )}
-
-              {/* Store header */}
-              <div className="relative z-10 flex items-center gap-3 px-5 pt-5 pb-4">
-                <div
-                  className="w-12 h-12 rounded-2xl overflow-hidden bg-white/20 border border-white/30 shrink-0 cursor-pointer"
-                  onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}
-                >
-                  <img src={store?.logoUrl || `https://picsum.photos/seed/${card.store_id}/200/200`} alt="" className="w-full h-full object-cover" />
-                </div>
-                <div
-                  className="flex-1 min-w-0 cursor-pointer"
-                  onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}
-                >
-                  <h4 className="font-bold text-white text-[15px] leading-tight truncate">{store?.name || 'Store'}</h4>
-                  <p className="text-white/55 text-[10px] font-bold uppercase tracking-widest">{store?.category || 'Retail'}</p>
-                </div>
-                {isCompleted && !card.isRedeemed && (
-                  <div className="bg-brand-gold text-brand-navy text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest animate-pulse shrink-0">
-                    Ready!
-                  </div>
+            <div>
+              {/* Coloured header with circular logo */}
+              <div className="relative px-5 pt-6 pb-5" style={{ backgroundColor: cardTheme }}>
+                {cardPattern !== 'solid' && (
+                  <div className="absolute inset-0 pointer-events-none" style={getCardPatternStyle(cardPattern)} />
                 )}
-                {card.isRedeemed && (
-                  <div className="bg-green-400 text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest shrink-0">
-                    Claimed
+                <div className="relative z-10 flex items-center gap-4">
+                  <div
+                    className="w-16 h-16 rounded-full overflow-hidden border-[3px] border-white/50 shrink-0 shadow-md cursor-pointer"
+                    onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}
+                  >
+                    <img src={store?.logoUrl || `https://picsum.photos/seed/${card.store_id}/200/200`} alt="" className="w-full h-full object-cover" />
                   </div>
-                )}
-                <button
-                  onClick={(e) => { e.stopPropagation(); setShowOptions(!showOptions); }}
-                  className="p-1.5 text-white/50 hover:text-white/80 transition-colors shrink-0"
-                >
-                  <MoreVertical size={16} />
-                </button>
+                  <div
+                    className="flex-1 min-w-0 cursor-pointer"
+                    onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}
+                  >
+                    <h4 className="font-bold text-white text-base leading-tight truncate">{store?.name || 'Store'}</h4>
+                    <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mt-0.5">{store?.category || 'Retail'}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {isCompleted && !card.isRedeemed && (
+                      <div className="bg-white/25 text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest animate-pulse">
+                        Ready!
+                      </div>
+                    )}
+                    {card.isRedeemed && (
+                      <div className="bg-green-400 text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest">
+                        Claimed
+                      </div>
+                    )}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setShowOptions(!showOptions); }}
+                      className="p-1.5 text-white/50 hover:text-white/80 transition-colors"
+                    >
+                      <MoreVertical size={16} />
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              {/* Round stamp grid */}
-              <div className="relative z-10 px-5 pb-4">
-                <div className="grid gap-2.5" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
+              {/* White body with stamp grid */}
+              <div className="bg-white px-5 pt-6 pb-5">
+                <div className="grid gap-3 mb-5" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
                   {Array.from({ length: limit }).map((_, i) => {
                     const stampNum = i + 1;
                     const isFilled = i < card.current_stamps;
@@ -9512,30 +9510,29 @@ function LoyaltyCard({ card, store, onViewStore }: { card: Card, store?: StorePr
                       <div key={i} className="aspect-square">
                         {isFilled ? (
                           <motion.div
-                            initial={{ scale: 0.6, opacity: 0 }}
+                            initial={{ scale: 0.5, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-                            className={cn(
-                              "w-full h-full rounded-full shadow-lg flex items-center justify-center",
-                              isTier ? "bg-brand-gold" : "bg-white"
-                            )}
+                            transition={{ type: 'spring', stiffness: 420, damping: 18 }}
+                            className="w-full h-full rounded-full flex items-center justify-center shadow-sm"
+                            style={{ backgroundColor: isTier ? '#f5a623' : cardTheme }}
                           >
                             {isTier
-                              ? <Gift size={13} className="text-brand-navy" />
-                              : <span className="text-lg leading-none">{stampIcon}</span>
+                              ? <Gift size={14} className="text-white" />
+                              : <span className="text-base leading-none">{stampIcon}</span>
                             }
                           </motion.div>
                         ) : (
                           <div
-                            className={cn("w-full h-full rounded-full border-2 flex items-center justify-center", isTier && "border-dashed")}
+                            className="w-full h-full rounded-full flex items-center justify-center bg-white"
                             style={{
-                              borderColor: isTier ? `${stampBorderColor}77` : `${stampBorderColor}40`,
-                              backgroundColor: 'rgba(255,255,255,0.07)'
+                              borderWidth: 3,
+                              borderStyle: isTier ? 'dashed' : 'solid',
+                              borderColor: cardTheme,
                             }}
                           >
                             {isTier
-                              ? <Gift size={10} style={{ color: stampBorderColor, opacity: 0.45 }} />
-                              : <span className="text-[9px] font-bold" style={{ color: stampBorderColor, opacity: 0.4 }}>{stampNum}</span>
+                              ? <Gift size={10} style={{ color: cardTheme, opacity: 0.4 }} />
+                              : <span className="text-[9px] font-bold" style={{ color: cardTheme, opacity: 0.35 }}>{stampNum}</span>
                             }
                           </div>
                         )}
@@ -9543,31 +9540,32 @@ function LoyaltyCard({ card, store, onViewStore }: { card: Card, store?: StorePr
                     );
                   })}
                 </div>
-              </div>
 
-              {/* Card footer */}
-              <div className="relative z-10 px-5 pb-5 flex items-center justify-between gap-3">
-                <span className="text-white/55 text-[11px] font-bold">{card.current_stamps}/{limit} stamps</span>
-                {card.isRedeemed ? (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleReset(e); }}
-                    className="text-white/70 text-[11px] font-bold underline decoration-white/40"
-                  >
-                    Start over
-                  </button>
-                ) : isCompleted ? (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setShowCompletionPopup(true); }}
-                    className="bg-brand-gold text-brand-navy text-[11px] font-bold px-4 py-1.5 rounded-full shadow-md active:scale-95 transition-transform"
-                  >
-                    Claim Reward 🎁
-                  </button>
-                ) : nextTier ? (
-                  <span className="text-white/45 text-[10px] text-right leading-snug">
-                    {nextTier.stamps - card.current_stamps} more →{' '}
-                    <span className="text-white/75 font-semibold">{nextTier.reward}</span>
-                  </span>
-                ) : null}
+                {/* Footer */}
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-brand-navy/35 text-[11px] font-bold">{card.current_stamps}/{limit} stamps</span>
+                  {card.isRedeemed ? (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleReset(e); }}
+                      className="text-brand-navy/45 text-[11px] font-bold underline"
+                    >
+                      Start over
+                    </button>
+                  ) : isCompleted ? (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setShowCompletionPopup(true); }}
+                      className="text-white text-[11px] font-bold px-4 py-1.5 rounded-full shadow active:scale-95 transition-transform"
+                      style={{ backgroundColor: cardTheme }}
+                    >
+                      Claim Reward 🎁
+                    </button>
+                  ) : nextTier ? (
+                    <span className="text-brand-navy/30 text-[10px] text-right leading-snug">
+                      {nextTier.stamps - card.current_stamps} more →{' '}
+                      <span className="font-semibold" style={{ color: cardTheme }}>{nextTier.reward}</span>
+                    </span>
+                  ) : null}
+                </div>
               </div>
             </div>
           );
