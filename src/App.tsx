@@ -9582,7 +9582,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false }: { card: Card
                   </button>
                 </div>
               </div>
-              {stampGrid(6, 'gap-2', 'px-4 pt-4 pb-4', 10, 'text-[7px]')}
+              {stampGrid(5, 'gap-1.5', 'px-4 pt-4 pb-4', 11, 'text-[8px]')}
             </div>
           );
 
@@ -9611,7 +9611,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false }: { card: Card
                   <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mt-0.5">{store?.category || 'Retail'}</p>
                 </div>
               </div>
-              {stampGrid(3, 'gap-3', 'px-4 pt-7 pb-6', 16, 'text-[10px]')}
+              {stampGrid(4, 'gap-3', 'px-4 pt-7 pb-6', 13, 'text-[10px]')}
             </div>
           );
         })()}
