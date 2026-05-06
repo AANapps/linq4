@@ -5205,19 +5205,7 @@ function buildStampCelebrationPages(
     });
   }
 
-  // 2. Charity deed page (rank is spliced in at position 1 by caller, pushing charity to pos 2)
-  const charityAnimal = ENDANGERED_ANIMALS[card.current_stamps % ENDANGERED_ANIMALS.length];
-  pages.push({
-    type: 'charity',
-    currentStamps: card.current_stamps,
-    totalStamps: nextTier?.stamps || store.stamps_required_for_reward || 10,
-    reward: '',
-    encouragement: '',
-    done: false,
-    charityAnimal,
-  });
-
-  // 3. Monopoly pack page — if user has a sticker_card for any active collectible programme
+  // 2. Monopoly pack page — right after card progress (rank spliced at position 2 by caller)
   const joinedStickerCardIds = new Set(joinedStickerCards.map(sc => sc.programme_id));
   const joinedProg = collectiblePrograms.find(p => joinedStickerCardIds.has(p.id));
   if (joinedProg) {
@@ -5244,6 +5232,18 @@ function buildStampCelebrationPages(
       collectiblePromoReward: promo.reward,
     });
   }
+
+  // 3. Charity deed page (rank is spliced in at position 2 by caller, after the pack reveal)
+  const charityAnimal = ENDANGERED_ANIMALS[card.current_stamps % ENDANGERED_ANIMALS.length];
+  pages.push({
+    type: 'charity',
+    currentStamps: card.current_stamps,
+    totalStamps: nextTier?.stamps || store.stamps_required_for_reward || 10,
+    reward: '',
+    encouragement: '',
+    done: false,
+    charityAnimal,
+  });
 
   // 4. All joined standard-challenge progresses in one list page
   const joined = challenges.filter(c =>
@@ -5355,7 +5355,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
               const rankWeeklyChange = rankWeeklyBefore - rankWeeklyAfter;
 
               if (rankAfter > 0) {
-                pages.splice(1, 0, {
+                pages.splice(2, 0, {
                   type: 'rank',
                   currentStamps: newStamps,
                   totalStamps: newStamps,
