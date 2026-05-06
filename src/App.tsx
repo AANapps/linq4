@@ -13702,7 +13702,10 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
 
               {/* Leaderboard square button */}
               <button
-                onClick={() => setShowLeaderboard(true)}
+                onClick={() => {
+                  setShowLeaderboard(true);
+                  confetti({ particleCount: 80, spread: 60, startVelocity: 30, gravity: 0.8, scalar: 0.9, origin: { y: 0.6 }, zIndex: 9999, colors: ['#FFD700', '#FFC200', '#FFE566', '#FFAA00', '#FFF8DC'] });
+                }}
                 className="relative rounded-[1.5rem] overflow-hidden active:scale-[0.97] transition-transform shrink-0"
                 style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #2563EB 50%, #3B82F6 100%)', width: feedChallenges.length > 0 ? '136px' : '100%', minHeight: '148px' }}
               >
