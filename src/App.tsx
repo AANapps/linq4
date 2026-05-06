@@ -10317,7 +10317,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
   };
 
   const handleCreate = async () => {
-    if (!store || !title.trim() || !description.trim()) return;
+    if (!store || !title.trim() || !description.trim() || offers.length >= 3) return;
     setCreateError('');
     setSaving(true);
     try {
@@ -10355,20 +10355,24 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
 
   const inputCls = 'w-full px-4 py-3 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30';
 
+  const atLimit = offers.length >= 3;
+
   return (
     <div className="space-y-6 pb-20">
       <header className="flex items-center justify-between">
         <div>
           <h2 className="font-display text-3xl font-bold mb-0.5">Offers</h2>
-          <p className="text-brand-navy/50 text-sm">Create deals shown in the Deals section.</p>
+          <p className="text-brand-navy/50 text-sm">{atLimit ? '3/3 offers used — delete one to add more.' : 'Create deals shown in the Deals section.'}</p>
         </div>
-        <button
-          onClick={() => setShowForm(v => !v)}
-          className="gradient-logo-blue text-white px-4 py-2.5 rounded-2xl font-bold text-sm flex items-center gap-2 shadow active:scale-95 transition-transform"
-        >
-          {showForm ? <X size={16} /> : <Plus size={16} />}
-          {showForm ? 'Cancel' : 'New Offer'}
-        </button>
+        {!atLimit && (
+          <button
+            onClick={() => setShowForm(v => !v)}
+            className="gradient-logo-blue text-white px-4 py-2.5 rounded-2xl font-bold text-sm flex items-center gap-2 shadow active:scale-95 transition-transform"
+          >
+            {showForm ? <X size={16} /> : <Plus size={16} />}
+            {showForm ? 'Cancel' : 'New Offer'}
+          </button>
+        )}
       </header>
 
       {/* Create form */}
