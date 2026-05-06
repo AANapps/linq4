@@ -275,6 +275,7 @@ interface UserProfile {
   lastFruitHarvested?: any;
   foodCount?: number;
   waterCount?: number;
+  totalSaved?: number;
 }
 
 interface StoreProfile {
@@ -298,7 +299,7 @@ interface StoreProfile {
   location?: string;
   lat?: number;
   lng?: number;
-  rewardTiers?: { stamps: number; reward: string }[];
+  rewardTiers?: { stamps: number; reward: string; value?: number }[];
   rewardsGiven?: number;
   visibilitySettings?: {
     members?: boolean;
@@ -595,6 +596,7 @@ interface CelebrationPage {
   stageReward?: string;
   stageStoreName?: string;
   stageStamps?: number;
+  stageValue?: number;
   nextStageStamps?: number;
   nextStageReward?: string;
   collectiblePromoName?: string;
@@ -2426,6 +2428,24 @@ function StickerCard({ sticker, isRevealed, onReveal, size = 'md' }: {
 }
 
 // --- Sticker Collection Modal (per-store sticker card, mirrors loyalty card modal) ---
+
+function CountUpValue({ value, prefix = '£', className = '' }: { value: number; prefix?: string; className?: string }) {
+  const [display, setDisplay] = useState(0);
+  useEffect(() => {
+    const duration = 1200;
+    const startTime = Date.now();
+    const tick = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplay(value * eased);
+      if (progress < 1) requestAnimationFrame(tick);
+      else setDisplay(value);
+    };
+    requestAnimationFrame(tick);
+  }, [value]);
+  return <span className={className}>{prefix}{display.toFixed(2)}</span>;
+}
 
 function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }: {
   stickerCard: StickerCardDoc;
@@ -5201,6 +5221,7 @@ function buildStampCelebrationPages(
       stageReward: hitTier.reward,
       stageStoreName: store.name,
       stageStamps: card.current_stamps,
+      stageValue: hitTier.value ?? 0,
       nextStageStamps: nextStageTier?.stamps ?? 0,
       nextStageReward: nextStageTier?.reward ?? '',
     });
@@ -5329,6 +5350,15 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           const store = stores.find(s => s.id === card.store_id);
           if (store) {
             const pages = buildStampCelebrationPages(store, card, activeStandardChallenges, myStandardEntries, profile, user, activePrograms, myStickerCards);
+
+            // Increment totalSaved if a valued tier was hit
+            const storeTiers = store.rewardTiers?.length
+              ? [...store.rewardTiers].sort((a, b) => a.stamps - b.stamps)
+              : [{ stamps: store.stamps_required_for_reward || 10, reward: store.reward || '', value: 0 }];
+            const hitTierValue = storeTiers.find(t => t.stamps === card.current_stamps);
+            if (hitTierValue?.value && hitTierValue.value > 0) {
+              updateDoc(doc(db, 'users', user.uid), { totalSaved: increment(hitTierValue.value) }).catch(() => {});
+            }
 
             // Build rank change page
             try {
@@ -7070,6 +7100,19 @@ function StampCelebrationModal({
                         {page.nextStageStamps ? 'Keep going!' : 'Card Complete!'}
                       </motion.h2>
                     </div>
+
+                    {/* Savings animation */}
+                    {(page.stageValue ?? 0) > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.15, type: 'spring', stiffness: 280, damping: 20 }}
+                        className="rounded-3xl bg-emerald-50 border-2 border-emerald-200 p-5 text-center space-y-1"
+                      >
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600">You saved</p>
+                        <CountUpValue value={page.stageValue!} prefix="£" className="font-display text-4xl font-black text-emerald-500" />
+                        <p className="text-xs text-emerald-500/70">Added to your total savings 💚</p>
+                      </motion.div>
+                    )}
 
                     {page.nextStageStamps ? (
                       <>
@@ -9058,7 +9101,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
             <div className="flex flex-col gap-4 w-full">
               <button 
                 onClick={() => {
-                  setCustomerEmail(user.email || ''); // Simulate scanning own QR
+                  setCustomerHandle(user.email || ''); // Simulate scanning own QR
                   setIsScanning(false);
                   setTimeout(() => handleIssueStamp(), 100);
                 }}
@@ -10053,7 +10096,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
   };
 
   const [numTiers, setNumTiers] = useState(() => store?.rewardTiers?.length || 1);
-  const [tiers, setTiers] = useState<{ stamps: number; reward: string }[]>(() => initTiers(store));
+  const [tiers, setTiers] = useState<{ stamps: number; reward: string; value?: number }[]>(() => initTiers(store));
   const [theme, setTheme] = useState(store?.theme || '#3a6fcc');
   const [stampIcon, setStampIcon] = useState(store?.stampIcon || '⭐');
   const [stampBorderColor, setStampBorderColor] = useState(store?.stampBorderColor || '#ffffff');
@@ -10086,8 +10129,8 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
     });
   }, [numTiers]);
 
-  const updateTier = (i: number, field: 'stamps' | 'reward', val: string) => {
-    setTiers(prev => prev.map((t, idx) => idx === i ? { ...t, [field]: field === 'stamps' ? Math.max(1, parseInt(val) || 1) : val } : t));
+  const updateTier = (i: number, field: 'stamps' | 'reward' | 'value', val: string) => {
+    setTiers(prev => prev.map((t, idx) => idx === i ? { ...t, [field]: field === 'stamps' ? Math.max(1, parseInt(val) || 1) : field === 'value' ? (parseFloat(val) || 0) : val } : t));
   };
 
   const handleSave = async () => {
@@ -10143,30 +10186,47 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
         </div>
 
         {/* Tier inputs */}
-        <div className="space-y-3">
+        <div className="space-y-4">
           <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Reward at Each Stage</label>
           {tiers.slice(0, numTiers).map((tier, i) => (
-            <div key={i} className="flex gap-3 items-center">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-brand-gold/10 flex items-center justify-center">
-                <span className="text-xs font-extrabold text-brand-gold">{i + 1}</span>
+            <div key={i} className="space-y-1.5">
+              <div className="flex items-center gap-1.5">
+                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-brand-gold/10 flex items-center justify-center">
+                  <span className="text-[10px] font-extrabold text-brand-gold">{i + 1}</span>
+                </div>
+                <span className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest">Stage {i + 1}</span>
               </div>
-              <input
-                type="number"
-                min="1"
-                value={tier.stamps}
-                onChange={e => updateTier(i, 'stamps', e.target.value)}
-                className="w-20 px-3 py-3 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-bold text-center focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
-                placeholder="Stamps"
-              />
-              <input
-                value={tier.reward}
-                onChange={e => updateTier(i, 'reward', e.target.value)}
-                placeholder={i === numTiers - 1 ? 'e.g. Free coffee (top reward)' : `e.g. Stage ${i + 1} reward`}
-                className="flex-1 px-4 py-3 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
-              />
+              <div className="flex gap-2 items-center">
+                <input
+                  type="number"
+                  min="1"
+                  value={tier.stamps}
+                  onChange={e => updateTier(i, 'stamps', e.target.value)}
+                  className="w-16 px-2 py-2.5 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm font-bold text-center focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+                  placeholder="Stamps"
+                />
+                <input
+                  value={tier.reward}
+                  onChange={e => updateTier(i, 'reward', e.target.value)}
+                  placeholder={i === numTiers - 1 ? 'e.g. Free coffee' : `Stage ${i + 1} reward`}
+                  className="flex-1 px-3 py-2.5 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+                />
+                <div className="relative flex items-center">
+                  <span className="absolute left-3 text-xs font-bold text-emerald-600">£</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={tier.value ?? ''}
+                    onChange={e => updateTier(i, 'value', e.target.value)}
+                    className="w-20 pl-6 pr-2 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-sm font-bold text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
             </div>
           ))}
-          <p className="text-[11px] text-brand-navy/30 pl-1">Set the stamp count and reward name for each stage. Stage {numTiers} is the top reward.</p>
+          <p className="text-[11px] text-brand-navy/30 pl-1">Set stamps, reward name, and the £ value saved. Stage {numTiers} is the top reward.</p>
         </div>
 
         {/* Colours — primary & secondary side by side */}
@@ -13706,7 +13766,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
             {followingFeed.map((item) =>
               !item._type
                 ? <FeedPostCard key={`gp-${item.id}`} post={item as GlobalPost} currentUser={currentUser} currentProfile={currentProfile} onViewUser={onViewUser} onViewStore={onViewStore} onLike={handleLike} onVote={handleVote} onDelete={async (p) => { await deleteDoc(doc(db, 'global_posts', p.id)); }} />
-                : <FeedVendorPostCard key={`vp-${item.id}`} item={item} />
+                : <React.Fragment key={`vp-${item.id}`}><FeedVendorPostCard item={item} /></React.Fragment>
             )}
             {followingFeed.length === 0 && (
               <div className="py-20 text-center text-brand-navy/20">
@@ -13719,68 +13779,20 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
         )
       ) : (
         <>
-          {/* Hot Deals slider */}
-          {allStores.length > 0 && (
-            <div>
-              <div className="flex items-center gap-1.5 mb-3 px-1">
-                <Flame size={15} className="text-orange-500" />
-                <h3 className="font-extrabold text-brand-navy text-sm">Hot Deals</h3>
+          {/* Total savings widget */}
+          {(currentProfile?.totalSaved ?? 0) > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-4 rounded-[1.5rem] bg-emerald-50 border border-emerald-200 px-5 py-4"
+            >
+              <div className="w-12 h-12 rounded-xl bg-emerald-500 flex items-center justify-center shrink-0 shadow-sm">
+                <span className="text-white text-xl font-black">£</span>
               </div>
-              <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                {(hotStores.length > 0 ? hotStores : allStores).slice(0, 6).map((store, i) => {
-                  const dealColor = DEAL_COLORS[i % DEAL_COLORS.length];
-                  const memberCount = storeParticipantMap.get(store.id) || 0;
-                  const finalReward = store.rewardTiers?.length
-                    ? [...store.rewardTiers].sort((a, b) => b.stamps - a.stamps)[0]?.reward
-                    : store.reward;
-                  return (
-                    <motion.div
-                      key={store.id}
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: i * 0.05 }}
-                      className="shrink-0 w-36 rounded-[1.5rem] overflow-hidden cursor-pointer active:scale-[0.97] transition-transform flex flex-col"
-                      style={{ height: '120px' }}
-                      onClick={() => onViewStore && onViewStore(store)}
-                    >
-                      {/* Top half — logo */}
-                      <div className="flex-1 overflow-hidden relative bg-white/10">
-                        {store.logoUrl
-                          ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
-                          : <div className="w-full h-full flex items-center justify-center bg-brand-navy/5"><Building2 size={20} className="text-brand-navy/30" /></div>}
-                      </div>
-                      {/* Bottom half — gradient-logo-blue */}
-                      <div className="gradient-logo-blue px-2.5 py-1.5 flex flex-col justify-center relative overflow-hidden" style={{ height: '56px' }}>
-                        <span className="shine-ray" aria-hidden="true" />
-                        <p className="font-extrabold text-white text-[11px] leading-tight line-clamp-1 relative z-10">{finalReward || `${store.stamps_required_for_reward} stamps`}</p>
-                        <p className="text-white/60 text-[9px] font-medium line-clamp-1 mt-0.5 relative z-10">{store.name}</p>
-                        {(memberCount > 0 || storeDistances.has(store.id)) && (
-                          <div className="flex items-center justify-between mt-0.5 relative z-10">
-                            {memberCount > 0 && <p className="text-white/50 text-[8px] font-bold">{memberCount} players</p>}
-                            {storeDistances.has(store.id) && (
-                              <p className="text-white/40 text-[8px] font-medium flex items-center gap-0.5">
-                                <MapPin size={7} className="shrink-0" />
-                                {storeDistances.get(store.id)! < 1
-                                  ? `${(storeDistances.get(store.id)! * 1000).toFixed(0)} m`
-                                  : `${storeDistances.get(store.id)!.toFixed(1)} km`}
-                              </p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </motion.div>
-                  );
-                })}
-                <button
-                  onClick={() => setShowAllDeals(true)}
-                  className="shrink-0 w-24 rounded-[1.5rem] flex flex-col items-center justify-center gap-2 border-2 border-dashed border-brand-navy/20 text-brand-navy/40 hover:text-brand-navy/60 hover:border-brand-navy/40 transition-all active:scale-95"
-                  style={{ height: '120px' }}
-                >
-                  <ChevronRight size={20} />
-                  <span className="text-[10px] font-bold text-center leading-tight">See<br />More</span>
-                </button>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600">Total Saved with Linq</p>
+                <CountUpValue value={currentProfile!.totalSaved!} prefix="£" className="font-display text-2xl font-black text-emerald-600" />
               </div>
-            </div>
+            </motion.div>
           )}
 
           {/* Challenges card + Leaderboard button — side by side */}
@@ -14076,7 +14088,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
               {displayFeed.map((item) =>
                 !item._type
                   ? <FeedPostCard key={`gp-${item.id}`} post={item as GlobalPost} currentUser={currentUser} currentProfile={currentProfile} onViewUser={onViewUser} onViewStore={onViewStore} onLike={handleLike} onVote={handleVote} onDelete={async (p) => { await deleteDoc(doc(db, 'global_posts', p.id)); }} />
-                  : <FeedVendorPostCard key={`vp-${item.id}`} item={item} />
+                  : <React.Fragment key={`vp-${item.id}`}><FeedVendorPostCard item={item} /></React.Fragment>
               )}
               {displayFeed.length === 0 && (
                 <div className="py-20 text-center text-brand-navy/20">
