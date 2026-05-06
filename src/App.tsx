@@ -120,7 +120,8 @@ import {
   Stamp,
   Ticket,
   ChevronUp,
-  MoveHorizontal
+  MoveHorizontal,
+  Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
@@ -538,6 +539,7 @@ interface StoreOffer {
   imageUrl?: string;
   category: string;
   maxRedemptionsPerUser: number;
+  value?: number;
   status: 'active' | 'paused';
   createdAt: any;
 }
@@ -10281,6 +10283,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
   const [category, setCategory] = useState(store?.category || 'Food');
   const [maxRedemptions, setMaxRedemptions] = useState(1);
   const [imageUrl, setImageUrl] = useState('');
+  const [value, setValue] = useState('');
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -10325,10 +10328,11 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
         imageUrl,
         category,
         maxRedemptionsPerUser: maxRedemptions,
+        value: parseFloat(value) || 0,
         status: 'active',
         createdAt: serverTimestamp(),
       });
-      setTitle(''); setDescription(''); setImageUrl(''); setCategory(store?.category || 'Food'); setMaxRedemptions(1);
+      setTitle(''); setDescription(''); setImageUrl(''); setCategory(store?.category || 'Food'); setMaxRedemptions(1); setValue('');
       setSaved(true); setTimeout(() => setSaved(false), 2000);
       setShowForm(false);
     } catch (e: any) {
@@ -10373,6 +10377,24 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
           >
             <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Offer title (e.g. 20% off coffee)" className={inputCls} />
             <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Description — what the customer gets, any conditions..." rows={3} className={cn(inputCls, 'resize-none')} />
+
+            {/* Savings value */}
+            <div>
+              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40 mb-1.5 block">Savings Value ($)</label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-brand-navy/40 text-sm">$</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={value}
+                  onChange={e => setValue(e.target.value)}
+                  placeholder="0.00"
+                  className={cn(inputCls, 'pl-8')}
+                />
+              </div>
+              <p className="text-[11px] text-brand-navy/35 mt-1 px-1">The dollar amount the customer saves — added to their savings when redeemed.</p>
+            </div>
 
             {/* Image */}
             <div>
@@ -10458,6 +10480,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
                   <span>{offer.category}</span>
                   <span>•</span>
                   <span>{offer.maxRedemptionsPerUser === 0 ? 'Unlimited' : `${offer.maxRedemptionsPerUser}x`} per user</span>
+                  {(offer.value ?? 0) > 0 && <><span>•</span><span className="text-emerald-600">${offer.value!.toFixed(2)} saving</span></>}
                 </div>
                 <div className="flex gap-2 pt-1">
                   <button onClick={() => toggleStatus(offer)} className="flex-1 py-2 rounded-xl bg-brand-bg border border-brand-navy/10 text-xs font-bold text-brand-navy/60 active:scale-95 transition-transform">
@@ -10500,8 +10523,12 @@ function OfferDetailSheet({ offer, currentUser, onClose }: { offer: StoreOffer; 
         storeId: offer.storeId,
         storeName: offer.storeName,
         offerTitle: offer.title,
+        value: offer.value ?? 0,
         redeemedAt: serverTimestamp(),
       });
+      if ((offer.value ?? 0) > 0) {
+        await updateDoc(doc(db, 'users', currentUser.uid), { totalSaved: increment(offer.value!) });
+      }
       setRedeemed(true);
     } finally {
       setRedeeming(false);
@@ -10565,10 +10592,28 @@ function OfferDetailSheet({ offer, currentUser, onClose }: { offer: StoreOffer; 
             <p className="text-brand-navy/60 text-sm mt-2 leading-relaxed">{offer.description}</p>
           </div>
 
+          {/* Savings value badge */}
+          {(offer.value ?? 0) > 0 && (
+            <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 border border-emerald-100 px-4 py-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center shrink-0">
+                <span className="text-white font-black text-sm">$</span>
+              </div>
+              <div>
+                <p className="font-black text-emerald-700 text-xl leading-none">${offer.value!.toFixed(2)} saving</p>
+                <p className="text-[11px] text-emerald-600/70 font-medium mt-0.5">Added to your savings when redeemed</p>
+              </div>
+            </div>
+          )}
+
           {/* Redemption info */}
-          <div className="rounded-2xl bg-blue-50 px-4 py-3 text-sm text-blue-800 font-medium">
-            <p className="font-bold mb-0.5">How to redeem</p>
-            <p className="text-blue-600/80">Show this to a staff member and ask them to slide the button below to confirm your redemption.</p>
+          <div className="rounded-2xl bg-blue-50 border border-blue-100 px-4 py-3 space-y-1">
+            <p className="font-bold text-blue-800 text-sm">How to redeem</p>
+            {redemptionsLeft !== null && redemptionsLeft > 0 && (
+              <p className="text-blue-700 font-semibold text-sm">
+                You have <span className="font-black">{redemptionsLeft} use{redemptionsLeft !== 1 ? 's' : ''}</span> remaining on this offer.
+              </p>
+            )}
+            <p className="text-blue-600/80 text-sm">Show this screen to a staff member at {offer.storeName} — they need to slide the button below to confirm your redemption.</p>
           </div>
 
           {/* Slide to redeem */}
@@ -10576,6 +10621,10 @@ function OfferDetailSheet({ offer, currentUser, onClose }: { offer: StoreOffer; 
             {!canRedeem ? (
               <div className="h-14 rounded-full bg-brand-navy/8 flex items-center justify-center text-sm font-bold text-brand-navy/40">
                 {offer.maxRedemptionsPerUser === 0 ? 'No redemptions available' : 'Already fully redeemed'}
+              </div>
+            ) : redeemed ? (
+              <div className="h-14 rounded-full bg-emerald-500 flex items-center justify-center text-sm font-bold text-white gap-2">
+                <Check size={18} /> Redeemed!
               </div>
             ) : (
               <SlideToRedeem onRedeem={handleRedeem} disabled={redeeming} label="← Staff: slide to redeem →" />
