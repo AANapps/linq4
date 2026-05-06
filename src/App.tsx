@@ -5806,12 +5806,14 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           {(() => {
             const totalUnrevealed = myStickerCards.reduce((n, sc) => n + sc.stickers.filter(s => !(sc.revealedIds || []).includes(s.id)).length, 0);
             return (
-              <div className="flex bg-brand-bg rounded-2xl p-1 gap-1">
+              <div className="flex bg-brand-navy/[0.06] rounded-2xl p-1 gap-1">
                 <button
                   onClick={() => setWalletSubTab('stamps')}
                   className={cn(
                     'flex-1 py-2.5 rounded-xl text-sm font-bold transition-all',
-                    walletSubTab === 'stamps' ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/50'
+                    walletSubTab === 'stamps'
+                      ? 'bg-white text-brand-navy shadow-sm'
+                      : 'bg-white/50 text-brand-navy/50'
                   )}
                 >
                   Wallet
@@ -5820,12 +5822,12 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                   onClick={() => setWalletSubTab('challenges')}
                   className={cn(
                     'flex-1 py-2.5 rounded-xl text-sm font-bold transition-all relative overflow-hidden text-white',
-                    walletSubTab === 'challenges' ? 'shadow-md' : 'opacity-80'
+                    walletSubTab === 'challenges' ? 'shadow-md opacity-100' : 'opacity-60'
                   )}
                   style={{ background: 'linear-gradient(135deg, #d97706 0%, #f59e0b 35%, #fbbf24 60%, #f59e0b 100%)' }}
                 >
                   <span className="shine-ray" aria-hidden="true" />
-                  <span className="relative z-10">🏆 Win</span>
+                  <span className={cn('relative z-10', walletSubTab !== 'challenges' && 'tab-shake')}>🏆 Win</span>
                   {totalUnrevealed > 0 && (
                     <span className="absolute top-1 right-3 w-4 h-4 bg-white/30 text-white text-[9px] font-black rounded-full flex items-center justify-center z-10">
                       {totalUnrevealed > 9 ? '9+' : totalUnrevealed}
