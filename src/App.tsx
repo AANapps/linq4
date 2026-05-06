@@ -117,7 +117,10 @@ import {
   Tag,
   Package,
   Pencil,
-  Stamp
+  Stamp,
+  Ticket,
+  ChevronUp,
+  MoveHorizontal
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
@@ -521,6 +524,21 @@ interface Challenge {
   isAvatarPrize?: boolean;
   avatarPrizeItemId?: string;
   imageUrl?: string;
+}
+
+interface StoreOffer {
+  id: string;
+  storeId: string;
+  storeName: string;
+  storeLogoUrl?: string;
+  storeCategory?: string;
+  title: string;
+  description: string;
+  imageUrl?: string;
+  category: string;
+  maxRedemptionsPerUser: number;
+  status: 'active' | 'paused';
+  createdAt: any;
 }
 
 interface StoreAutomation {
@@ -8273,6 +8291,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   const [stampQuantity, setStampQuantity] = useState(1);
   const [isIssuing, setIsIssuing] = useState(false);
   const [lastIssueTime, setLastIssueTime] = useState(0);
+  const [vendorIssueMode, setVendorIssueMode] = useState<null | 'card' | 'offer'>(null);
   const [issueStatus, setIssueStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
   const [cardStampsInput, setCardStampsInput] = useState('');
@@ -9112,7 +9131,52 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
         </div>
       )}
 
-      {activeTab === 'discover' && <CardBuilder store={store} />}
+      {activeTab === 'discover' && (
+        vendorIssueMode === null ? (
+          <div className="space-y-6 pb-20">
+            <header>
+              <h2 className="font-display text-3xl font-bold mb-1">Issue</h2>
+              <p className="text-brand-navy/50 text-sm">Manage your card or create store offers.</p>
+            </header>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                onClick={() => setVendorIssueMode('card')}
+                className="glass-card rounded-[2rem] p-6 flex flex-col items-center gap-4 active:scale-95 transition-transform text-center"
+              >
+                <div className="w-16 h-16 gradient-logo-blue rounded-2xl flex items-center justify-center shadow-lg">
+                  <CreditCard size={28} className="text-white" />
+                </div>
+                <div>
+                  <p className="font-bold text-brand-navy">Card</p>
+                  <p className="text-xs text-brand-navy/50 mt-0.5">Design your loyalty card</p>
+                </div>
+              </button>
+              <button
+                onClick={() => setVendorIssueMode('offer')}
+                className="glass-card rounded-[2rem] p-6 flex flex-col items-center gap-4 active:scale-95 transition-transform text-center"
+              >
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(135deg, #7C3AED, #A855F7)' }}>
+                  <Ticket size={28} className="text-white" />
+                </div>
+                <div>
+                  <p className="font-bold text-brand-navy">Offer</p>
+                  <p className="text-xs text-brand-navy/50 mt-0.5">Create deals for customers</p>
+                </div>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4 pb-20">
+            <button
+              onClick={() => setVendorIssueMode(null)}
+              className="flex items-center gap-2 text-sm font-bold text-brand-navy/50 active:opacity-60 transition-opacity"
+            >
+              <ArrowLeft size={16} /> Back
+            </button>
+            {vendorIssueMode === 'card' ? <CardBuilder store={store} /> : <VendorOfferPanel store={store} />}
+          </div>
+        )
+      )}
       {activeTab === 'profile' && (
         <ProfileScreen
           profile={profile}
@@ -10135,6 +10199,487 @@ function getCardPatternStyle(pattern: string): React.CSSProperties {
     case 'lines': return { backgroundImage: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.07) 0px, rgba(255,255,255,0.07) 2px, transparent 2px, transparent 14px)' };
     default:      return {};
   }
+}
+
+// ─── Slide to Redeem ────────────────────────────────────────────────────────
+function SlideToRedeem({ onRedeem, disabled = false, label = 'Slide to redeem' }: { onRedeem: () => void; disabled?: boolean; label?: string }) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [dragging, setDragging] = useState(false);
+  const [x, setX] = useState(0);
+  const [redeemed, setRedeemed] = useState(false);
+  const THUMB = 56;
+
+  const getMax = () => (trackRef.current?.offsetWidth ?? 280) - THUMB - 4;
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (disabled || redeemed) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setDragging(true);
+  };
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!dragging) return;
+    const track = trackRef.current;
+    if (!track) return;
+    const rect = track.getBoundingClientRect();
+    const newX = Math.max(0, Math.min(e.clientX - rect.left - THUMB / 2, getMax()));
+    setX(newX);
+  };
+  const handlePointerUp = () => {
+    if (!dragging) return;
+    setDragging(false);
+    const max = getMax();
+    if (x >= max * 0.88) {
+      setRedeemed(true);
+      setX(max);
+      onRedeem();
+    } else {
+      setX(0);
+    }
+  };
+
+  return (
+    <div
+      ref={trackRef}
+      className={cn('relative h-14 rounded-full overflow-hidden select-none', redeemed ? 'bg-emerald-500' : 'bg-brand-navy/10')}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerLeave={handlePointerUp}
+    >
+      {/* Track fill */}
+      <div
+        className="absolute inset-y-0 left-0 rounded-full transition-colors"
+        style={{ width: x + THUMB, background: redeemed ? 'transparent' : 'linear-gradient(90deg, #1D4ED8 0%, #3B82F6 100%)', opacity: 0.15 }}
+      />
+      {/* Label */}
+      <div className={cn('absolute inset-0 flex items-center justify-center text-sm font-bold pointer-events-none transition-opacity', redeemed ? 'text-white opacity-100' : 'text-brand-navy/40 opacity-100')}>
+        {redeemed ? '✓ Redeemed!' : label}
+      </div>
+      {/* Thumb */}
+      {!redeemed && (
+        <motion.div
+          className={cn('absolute top-1 bottom-1 rounded-full flex items-center justify-center cursor-grab active:cursor-grabbing shadow-md', disabled ? 'bg-brand-navy/20' : 'gradient-logo-blue')}
+          style={{ left: x + 2, width: THUMB }}
+          animate={{ x: dragging ? 0 : 0 }}
+          onPointerDown={handlePointerDown}
+        >
+          <MoveHorizontal size={20} className="text-white" />
+        </motion.div>
+      )}
+    </div>
+  );
+}
+
+// ─── Vendor Offer Panel ──────────────────────────────────────────────────────
+function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
+  const OFFER_CATEGORIES = ['Food', 'Beauty', 'Barber', 'Gym', 'Parking', 'Retail', 'Other'];
+  const MAX_OPTIONS = [{ v: 1, l: '1 time' }, { v: 2, l: '2 times' }, { v: 3, l: '3 times' }, { v: 5, l: '5 times' }, { v: 0, l: 'Unlimited' }];
+
+  const [offers, setOffers] = useState<StoreOffer[]>([]);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [category, setCategory] = useState(store?.category || 'Food');
+  const [maxRedemptions, setMaxRedemptions] = useState(1);
+  const [imageUrl, setImageUrl] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const [showForm, setShowForm] = useState(false);
+
+  useEffect(() => {
+    if (!store?.id) return;
+    const q = query(collection(db, 'store_offers'), where('storeId', '==', store.id));
+    return onSnapshot(q, snap =>
+      setOffers(snap.docs.map(d => ({ id: d.id, ...d.data() } as StoreOffer)).sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0)))
+    );
+  }, [store?.id]);
+
+  const handleImageUpload = async (file: File) => {
+    setUploadError('');
+    setUploading(true);
+    try {
+      const path = `offer_images/${store!.id}/${Date.now()}_${file.name}`;
+      const snap = await uploadBytes(storageRef(storage, path), file);
+      setImageUrl(await getDownloadURL(snap.ref));
+    } catch (e: any) {
+      setUploadError('Upload failed: ' + e.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleCreate = async () => {
+    if (!store || !title.trim() || !description.trim()) return;
+    setSaving(true);
+    try {
+      await addDoc(collection(db, 'store_offers'), {
+        storeId: store.id,
+        storeName: store.name,
+        storeLogoUrl: store.logoUrl || '',
+        storeCategory: store.category || '',
+        title: title.trim(),
+        description: description.trim(),
+        imageUrl,
+        category,
+        maxRedemptionsPerUser: maxRedemptions,
+        status: 'active',
+        createdAt: serverTimestamp(),
+      });
+      setTitle(''); setDescription(''); setImageUrl(''); setCategory(store?.category || 'Food'); setMaxRedemptions(1);
+      setSaved(true); setTimeout(() => setSaved(false), 2000);
+      setShowForm(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleStatus = async (offer: StoreOffer) => {
+    await updateDoc(doc(db, 'store_offers', offer.id), { status: offer.status === 'active' ? 'paused' : 'active' });
+  };
+
+  const deleteOffer = async (id: string) => {
+    await deleteDoc(doc(db, 'store_offers', id));
+  };
+
+  const inputCls = 'w-full px-4 py-3 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30';
+
+  return (
+    <div className="space-y-6 pb-20">
+      <header className="flex items-center justify-between">
+        <div>
+          <h2 className="font-display text-3xl font-bold mb-0.5">Offers</h2>
+          <p className="text-brand-navy/50 text-sm">Create deals shown in the Deals section.</p>
+        </div>
+        <button
+          onClick={() => setShowForm(v => !v)}
+          className="gradient-logo-blue text-white px-4 py-2.5 rounded-2xl font-bold text-sm flex items-center gap-2 shadow active:scale-95 transition-transform"
+        >
+          {showForm ? <X size={16} /> : <Plus size={16} />}
+          {showForm ? 'Cancel' : 'New Offer'}
+        </button>
+      </header>
+
+      {/* Create form */}
+      <AnimatePresence>
+        {showForm && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+            className="glass-card p-5 rounded-[2rem] space-y-4"
+          >
+            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Offer title (e.g. 20% off coffee)" className={inputCls} />
+            <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Description — what the customer gets, any conditions..." rows={3} className={cn(inputCls, 'resize-none')} />
+
+            {/* Image */}
+            <div>
+              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40 mb-2 block">Offer Image</label>
+              {imageUrl ? (
+                <div className="relative rounded-2xl overflow-hidden aspect-video">
+                  <img src={imageUrl} alt="" className="w-full h-full object-cover" />
+                  <button onClick={() => setImageUrl('')} className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/50 flex items-center justify-center">
+                    <X size={14} className="text-white" />
+                  </button>
+                </div>
+              ) : (
+                <label className={cn(inputCls, 'flex items-center gap-3 cursor-pointer text-brand-navy/40')}>
+                  <Image size={18} />
+                  {uploading ? 'Uploading...' : 'Upload image'}
+                  <input type="file" accept="image/*" className="sr-only" onChange={e => e.target.files?.[0] && handleImageUpload(e.target.files[0])} disabled={uploading} />
+                </label>
+              )}
+              {uploadError && <p className="text-red-500 text-xs mt-1">{uploadError}</p>}
+            </div>
+
+            {/* Category */}
+            <div className="relative">
+              <select value={category} onChange={e => setCategory(e.target.value)} className={cn(inputCls, 'appearance-none')}>
+                {OFFER_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-navy/40 pointer-events-none" />
+            </div>
+
+            {/* Max redemptions */}
+            <div>
+              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40 mb-2 block">Max Redemptions Per User</label>
+              <div className="flex gap-2 flex-wrap">
+                {MAX_OPTIONS.map(opt => (
+                  <button
+                    key={opt.v}
+                    onClick={() => setMaxRedemptions(opt.v)}
+                    className={cn('px-4 py-2 rounded-2xl text-sm font-bold transition-all', maxRedemptions === opt.v ? 'gradient-logo-blue text-white shadow' : 'bg-brand-bg border border-brand-navy/10 text-brand-navy/60')}
+                  >
+                    {opt.l}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={handleCreate}
+              disabled={saving || !title.trim() || !description.trim()}
+              className="w-full gradient-logo-blue text-white py-3.5 rounded-2xl font-bold text-sm disabled:opacity-50 active:scale-[0.98] transition-all shadow"
+            >
+              {saving ? 'Creating...' : saved ? '✓ Created!' : 'Create Offer'}
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Existing offers */}
+      {offers.length === 0 && !showForm ? (
+        <div className="py-16 text-center text-brand-navy/25">
+          <Ticket size={48} className="mx-auto mb-3 opacity-30" />
+          <p className="font-bold">No offers yet</p>
+          <p className="text-sm mt-1">Create your first deal to attract customers.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {offers.map(offer => (
+            <div key={offer.id} className="glass-card rounded-[1.5rem] overflow-hidden">
+              {offer.imageUrl && <img src={offer.imageUrl} alt="" className="w-full h-32 object-cover" />}
+              <div className="p-4 space-y-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-brand-navy truncate">{offer.title}</p>
+                    <p className="text-xs text-brand-navy/50 mt-0.5 line-clamp-2">{offer.description}</p>
+                  </div>
+                  <span className={cn('text-[10px] font-black px-2.5 py-1 rounded-full shrink-0', offer.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-brand-navy/10 text-brand-navy/40')}>
+                    {offer.status === 'active' ? 'Live' : 'Paused'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-[11px] text-brand-navy/40 font-bold">
+                  <span>{offer.category}</span>
+                  <span>•</span>
+                  <span>{offer.maxRedemptionsPerUser === 0 ? 'Unlimited' : `${offer.maxRedemptionsPerUser}x`} per user</span>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button onClick={() => toggleStatus(offer)} className="flex-1 py-2 rounded-xl bg-brand-bg border border-brand-navy/10 text-xs font-bold text-brand-navy/60 active:scale-95 transition-transform">
+                    {offer.status === 'active' ? 'Pause' : 'Resume'}
+                  </button>
+                  <button onClick={() => deleteOffer(offer.id)} className="px-4 py-2 rounded-xl bg-red-50 text-red-500 text-xs font-bold active:scale-95 transition-transform">
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Offer Detail Sheet ───────────────────────────────────────────────────────
+function OfferDetailSheet({ offer, currentUser, onClose }: { offer: StoreOffer; currentUser?: FirebaseUser; onClose: () => void }) {
+  const [redemptionCount, setRedemptionCount] = useState(0);
+  const [redeeming, setRedeeming] = useState(false);
+  const [redeemed, setRedeemed] = useState(false);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    const q = query(collection(db, 'offer_redemptions'), where('offerId', '==', offer.id), where('userId', '==', currentUser.uid));
+    return onSnapshot(q, snap => setRedemptionCount(snap.docs.length));
+  }, [offer.id, currentUser?.uid]);
+
+  const canRedeem = offer.maxRedemptionsPerUser === 0 || redemptionCount < offer.maxRedemptionsPerUser;
+
+  const handleRedeem = async () => {
+    if (!currentUser || !canRedeem || redeeming) return;
+    setRedeeming(true);
+    try {
+      await addDoc(collection(db, 'offer_redemptions'), {
+        offerId: offer.id,
+        userId: currentUser.uid,
+        storeId: offer.storeId,
+        storeName: offer.storeName,
+        offerTitle: offer.title,
+        redeemedAt: serverTimestamp(),
+      });
+      setRedeemed(true);
+    } finally {
+      setRedeeming(false);
+    }
+  };
+
+  const redemptionsLeft = offer.maxRedemptionsPerUser === 0 ? null : offer.maxRedemptionsPerUser - redemptionCount;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[400] bg-black/50 backdrop-blur-sm flex flex-col justify-end"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+        transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+        className="bg-white rounded-t-[2.5rem] max-h-[92vh] flex flex-col overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Image */}
+        {offer.imageUrl ? (
+          <div className="relative h-52 shrink-0">
+            <img src={offer.imageUrl} alt="" className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+            <button onClick={onClose} className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
+              <X size={18} className="text-white" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex justify-between items-center px-5 pt-5 shrink-0">
+            <div className="w-10 h-1 rounded-full bg-brand-navy/10 mx-auto" />
+            <button onClick={onClose} className="p-2 rounded-full bg-brand-navy/8"><X size={18} className="text-brand-navy/60" /></button>
+          </div>
+        )}
+
+        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
+          {/* Store badge */}
+          <div className="flex items-center gap-3">
+            {offer.storeLogoUrl ? (
+              <img src={offer.storeLogoUrl} alt="" className="w-10 h-10 rounded-xl object-cover" />
+            ) : (
+              <div className="w-10 h-10 rounded-xl gradient-logo-blue flex items-center justify-center">
+                <Store size={18} className="text-white" />
+              </div>
+            )}
+            <div>
+              <p className="font-bold text-brand-navy">{offer.storeName}</p>
+              <p className="text-xs text-brand-navy/40">{offer.category}</p>
+            </div>
+            {redemptionsLeft !== null && (
+              <span className={cn('ml-auto text-xs font-bold px-3 py-1 rounded-full', redemptionsLeft > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-500')}>
+                {redemptionsLeft > 0 ? `${redemptionsLeft} left` : 'Fully redeemed'}
+              </span>
+            )}
+          </div>
+
+          {/* Title + description */}
+          <div>
+            <h2 className="font-display text-2xl font-bold text-brand-navy">{offer.title}</h2>
+            <p className="text-brand-navy/60 text-sm mt-2 leading-relaxed">{offer.description}</p>
+          </div>
+
+          {/* Redemption info */}
+          <div className="rounded-2xl bg-blue-50 px-4 py-3 text-sm text-blue-800 font-medium">
+            <p className="font-bold mb-0.5">How to redeem</p>
+            <p className="text-blue-600/80">Show this to a staff member and ask them to slide the button below to confirm your redemption.</p>
+          </div>
+
+          {/* Slide to redeem */}
+          <div>
+            {!canRedeem ? (
+              <div className="h-14 rounded-full bg-brand-navy/8 flex items-center justify-center text-sm font-bold text-brand-navy/40">
+                {offer.maxRedemptionsPerUser === 0 ? 'No redemptions available' : 'Already fully redeemed'}
+              </div>
+            ) : (
+              <SlideToRedeem onRedeem={handleRedeem} disabled={redeeming} label="← Staff: slide to redeem →" />
+            )}
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ─── Offers Modal ─────────────────────────────────────────────────────────────
+function OffersModal({ offers, currentUser, onClose }: { offers: StoreOffer[]; currentUser?: FirebaseUser; onClose: () => void }) {
+  const [search, setSearch] = useState('');
+  const [activeCategory, setActiveCategory] = useState<string>('All');
+  const [selectedOffer, setSelectedOffer] = useState<StoreOffer | null>(null);
+  const OFFER_CATEGORIES = ['All', 'Food', 'Beauty', 'Barber', 'Gym', 'Parking', 'Retail', 'Other'];
+
+  const filtered = offers.filter(o => {
+    const matchesCat = activeCategory === 'All' || o.category === activeCategory;
+    const q = search.toLowerCase();
+    const matchesSearch = !q || o.title.toLowerCase().includes(q) || o.storeName.toLowerCase().includes(q) || o.description.toLowerCase().includes(q);
+    return matchesCat && matchesSearch;
+  });
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[350] bg-black/50 backdrop-blur-sm flex flex-col justify-end"
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+          transition={{ type: 'spring', stiffness: 300, damping: 32 }}
+          className="bg-white rounded-t-[2.5rem] max-h-[92vh] flex flex-col"
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Handle + header */}
+          <div className="shrink-0 px-5 pt-4 pb-3 space-y-3">
+            <div className="w-10 h-1 rounded-full bg-brand-navy/15 mx-auto" />
+            <div className="flex items-center justify-between">
+              <h2 className="font-display text-xl font-bold text-brand-navy">All Offers</h2>
+              <button onClick={onClose} className="p-2 rounded-full bg-brand-navy/8 active:scale-90 transition-transform">
+                <X size={18} className="text-brand-navy/60" />
+              </button>
+            </div>
+            {/* Search */}
+            <div className="relative">
+              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-navy/30" />
+              <input
+                value={search} onChange={e => setSearch(e.target.value)}
+                placeholder="Search deals, stores..."
+                className="w-full pl-10 pr-4 py-3 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+              />
+            </div>
+            {/* Category tabs */}
+            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+              {OFFER_CATEGORIES.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className={cn('shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-all', activeCategory === cat ? 'gradient-logo-blue text-white shadow-md' : 'bg-brand-bg border border-brand-navy/10 text-brand-navy/50')}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Offer list */}
+          <div className="flex-1 overflow-y-auto px-5 pb-10 space-y-3">
+            {filtered.length === 0 ? (
+              <div className="py-16 text-center text-brand-navy/30">
+                <Ticket size={40} className="mx-auto mb-3 opacity-30" />
+                <p className="font-bold">No offers found</p>
+              </div>
+            ) : filtered.map(offer => (
+              <button
+                key={offer.id}
+                onClick={() => setSelectedOffer(offer)}
+                className="w-full text-left glass-card rounded-[1.5rem] overflow-hidden active:scale-[0.98] transition-transform"
+              >
+                {offer.imageUrl && <img src={offer.imageUrl} alt="" className="w-full h-36 object-cover" />}
+                <div className="p-4 flex items-start gap-3">
+                  {offer.storeLogoUrl ? (
+                    <img src={offer.storeLogoUrl} alt="" className="w-10 h-10 rounded-xl object-cover shrink-0" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-xl gradient-logo-blue flex items-center justify-center shrink-0">
+                      <Store size={16} className="text-white" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-brand-navy">{offer.title}</p>
+                    <p className="text-xs text-brand-navy/50 mt-0.5">{offer.storeName}</p>
+                    <p className="text-xs text-brand-navy/40 mt-1 line-clamp-1">{offer.description}</p>
+                  </div>
+                  <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full shrink-0">{offer.category}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </motion.div>
+      </motion.div>
+
+      <AnimatePresence>
+        {selectedOffer && (
+          <OfferDetailSheet offer={selectedOffer} currentUser={currentUser} onClose={() => setSelectedOffer(null)} />
+        )}
+      </AnimatePresence>
+    </>
+  );
 }
 
 function CardBuilder({ store }: { store: StoreProfile | null }) {
@@ -13362,10 +13907,13 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
 }) {
   const [allStores, setAllStores] = useState<StoreProfile[]>([]);
   const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [storeOffers, setStoreOffers] = useState<StoreOffer[]>([]);
   const [showAllHot, setShowAllHot] = useState(false);
   const [showAllExp, setShowAllExp] = useState(false);
   const [showAllSvc, setShowAllSvc] = useState(false);
   const [showAllProd, setShowAllProd] = useState(false);
+  const [showOffersModal, setShowOffersModal] = useState(false);
+  const [selectedOffer, setSelectedOffer] = useState<StoreOffer | null>(null);
 
   useEffect(() => {
     return onSnapshot(collection(db, 'stores'), snap =>
@@ -13380,12 +13928,20 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
     , () => {});
   }, []);
 
+  useEffect(() => {
+    const q = query(collection(db, 'store_offers'), where('status', '==', 'active'));
+    return onSnapshot(q, snap =>
+      setStoreOffers(snap.docs.map(d => ({ id: d.id, ...d.data() } as StoreOffer)))
+    , () => {});
+  }, []);
+
   const storeDeals = allStores.filter(s => s.reward || s.stamps_required_for_reward);
   const experiences = challenges.filter(c => c.rewardTag === 'experience');
   const services = challenges.filter(c => c.rewardTag === 'service');
   const products = challenges.filter(c => c.rewardTag === 'product');
 
   return (
+    <>
     <div className="space-y-6 pb-6">
       <div>
         <h1 className="font-display font-bold text-2xl text-brand-navy">Deals</h1>
@@ -13398,6 +13954,58 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
         showAll={showAllHot}
         onToggleAll={() => setShowAllHot(v => !v)}
       />
+
+      {/* Store Offers section */}
+      {storeOffers.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Ticket size={15} className="text-violet-500" />
+              <h2 className="font-bold text-brand-navy text-sm">Store Offers</h2>
+            </div>
+            <button
+              onClick={() => setShowOffersModal(true)}
+              className="text-xs font-bold text-blue-600 flex items-center gap-1"
+            >
+              View all <ChevronRight size={14} />
+            </button>
+          </div>
+          {/* Preview — first 3 offers as compact cards */}
+          <div className="space-y-2">
+            {storeOffers.slice(0, 3).map(offer => (
+              <button
+                key={offer.id}
+                onClick={() => setSelectedOffer(offer)}
+                className="w-full text-left glass-card rounded-[1.25rem] overflow-hidden flex items-stretch active:scale-[0.98] transition-transform"
+              >
+                {offer.imageUrl ? (
+                  <img src={offer.imageUrl} alt="" className="w-20 h-20 object-cover shrink-0" />
+                ) : (
+                  <div className="w-20 h-20 gradient-logo-blue shrink-0 flex items-center justify-center">
+                    <Ticket size={24} className="text-white/60" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0 px-4 py-3">
+                  <p className="font-bold text-brand-navy text-sm truncate">{offer.title}</p>
+                  <p className="text-xs text-brand-navy/50 mt-0.5">{offer.storeName}</p>
+                  <p className="text-xs text-brand-navy/40 mt-1 line-clamp-1">{offer.description}</p>
+                </div>
+                <div className="flex items-center pr-3">
+                  <ChevronRight size={16} className="text-brand-navy/30" />
+                </div>
+              </button>
+            ))}
+          </div>
+          {storeOffers.length > 3 && (
+            <button
+              onClick={() => setShowOffersModal(true)}
+              className="w-full py-3 rounded-2xl border-2 border-dashed border-brand-navy/10 text-sm font-bold text-brand-navy/40 active:opacity-60 transition-opacity"
+            >
+              View {storeOffers.length - 3} more offers
+            </button>
+          )}
+        </div>
+      )}
 
       <DealSliderSection
         title="Experiences"
@@ -13429,7 +14037,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
         onToggleAll={() => setShowAllProd(v => !v)}
       />
 
-      {storeDeals.length === 0 && experiences.length === 0 && services.length === 0 && products.length === 0 && (
+      {storeDeals.length === 0 && experiences.length === 0 && services.length === 0 && products.length === 0 && storeOffers.length === 0 && (
         <div className="py-20 text-center text-brand-navy/20">
           <Gift size={64} className="mx-auto mb-4 opacity-20" />
           <p className="font-bold">No deals yet</p>
@@ -13437,6 +14045,18 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
         </div>
       )}
     </div>
+
+    <AnimatePresence>
+      {showOffersModal && (
+        <OffersModal offers={storeOffers} currentUser={currentUser} onClose={() => setShowOffersModal(false)} />
+      )}
+    </AnimatePresence>
+    <AnimatePresence>
+      {selectedOffer && (
+        <OfferDetailSheet offer={selectedOffer} currentUser={currentUser} onClose={() => setSelectedOffer(null)} />
+      )}
+    </AnimatePresence>
+    </>
   );
 }
 
