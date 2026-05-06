@@ -14043,6 +14043,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
   const [showAllProd, setShowAllProd] = useState(false);
   const [showOffersModal, setShowOffersModal] = useState(false);
   const [selectedOffer, setSelectedOffer] = useState<StoreOffer | null>(null);
+  const [offerIndex, setOfferIndex] = useState(0);
 
   useEffect(() => {
     return onSnapshot(collection(db, 'stores'), snap =>
@@ -14063,6 +14064,16 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
       setStoreOffers(snap.docs.map(d => ({ id: d.id, ...d.data() } as StoreOffer)))
     , () => {});
   }, []);
+
+  useEffect(() => {
+    if (storeOffers.length <= 3) return;
+    const id = setInterval(() => setOfferIndex(i => (i + 1) % storeOffers.length), 5000);
+    return () => clearInterval(id);
+  }, [storeOffers.length]);
+
+  const visibleOffers = storeOffers.length <= 3
+    ? storeOffers
+    : [0, 1, 2].map(i => storeOffers[(offerIndex + i) % storeOffers.length]);
 
   const storeDeals = allStores.filter(s => s.reward || s.stamps_required_for_reward);
   const experiences = challenges.filter(c => c.rewardTag === 'experience');
@@ -14099,9 +14110,9 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
               View all <ChevronRight size={14} />
             </button>
           </div>
-          {/* Preview — first 3 offers as compact cards */}
+          {/* Preview — 3 rotating offers */}
           <div className="space-y-2">
-            {storeOffers.slice(0, 3).map(offer => (
+            {visibleOffers.map(offer => (
               <button
                 key={offer.id}
                 onClick={() => setSelectedOffer(offer)}
@@ -14117,7 +14128,10 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
                 <div className="flex-1 min-w-0 px-4 py-3">
                   <p className="font-bold text-brand-navy text-sm truncate">{offer.title}</p>
                   <p className="text-xs text-brand-navy/50 mt-0.5">{offer.storeName}</p>
-                  <p className="text-xs text-brand-navy/40 mt-1 line-clamp-1">{offer.description}</p>
+                  {(offer.value ?? 0) > 0 && (
+                    <p className="text-xs font-bold text-emerald-600 mt-0.5">Save ${offer.value!.toFixed(2)}</p>
+                  )}
+                  <p className="text-xs text-brand-navy/40 mt-0.5 line-clamp-1">{offer.description}</p>
                 </div>
                 <div className="flex items-center pr-3">
                   <ChevronRight size={16} className="text-brand-navy/30" />
@@ -14125,14 +14139,12 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
               </button>
             ))}
           </div>
-          {storeOffers.length > 3 && (
-            <button
-              onClick={() => setShowOffersModal(true)}
-              className="w-full py-3 rounded-2xl border-2 border-dashed border-brand-navy/10 text-sm font-bold text-brand-navy/40 active:opacity-60 transition-opacity"
-            >
-              View {storeOffers.length - 3} more offers
-            </button>
-          )}
+          <button
+            onClick={() => setShowOffersModal(true)}
+            className="w-full py-3 rounded-2xl border-2 border-dashed border-brand-navy/10 text-sm font-bold text-brand-navy/40 active:opacity-60 transition-opacity"
+          >
+            See more
+          </button>
         </div>
       )}
 
