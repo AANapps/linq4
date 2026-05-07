@@ -12283,6 +12283,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           <div className="flex-1 min-w-0 pt-1">
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="font-display text-2xl font-bold">{profile.name}</h2>
+              <StreakBadge streak={profile.streak} size="lg" />
             </div>
             <p className="text-brand-gold font-bold text-xs uppercase tracking-[0.2em]">@{profile.handle || user.email?.split('@')[0]}</p>
             <div className="flex items-center gap-3 mt-2 text-sm">
@@ -12302,54 +12303,33 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
 
       {settingsModal}
 
-      {/* Streak + Birthday cards */}
-      <div className="flex gap-2">
-        {/* Streak card */}
-        {(() => {
-          const s = profile?.streak || 0;
-          const gold = s > 0;
-          return (
-            <div
-              className="aspect-square rounded-2xl flex flex-col items-center justify-center relative overflow-hidden"
-              style={{
-                backgroundColor: gold ? '#f5a623' : '#ffffff',
-                border: gold ? 'none' : '1.5px solid #e5e7eb',
-                boxShadow: gold ? '0 4px 14px rgba(245,166,35,0.40)' : '0 2px 8px rgba(0,0,0,0.06)',
-                width: 80, flexShrink: 0,
-              }}
-            >
-              {gold && (
-                <motion.div
-                  className="absolute inset-0 pointer-events-none"
-                  style={{ background: 'linear-gradient(100deg, transparent 15%, rgba(255,255,255,0.28) 45%, rgba(255,255,255,0.55) 50%, rgba(255,255,255,0.28) 55%, transparent 85%)' }}
-                  animate={{ x: ['-160%', '220%'] }}
-                  transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut', repeatDelay: 1.4 }}
-                />
-              )}
-              <p className="font-black text-2xl leading-none relative z-10" style={{ color: gold ? '#fff' : '#111827' }}>{s}🔥</p>
-              <p className="text-xs font-bold relative z-10 mt-1" style={{ color: gold ? 'rgba(255,255,255,0.85)' : '#6B7280' }}>Streak</p>
-            </div>
-          );
-        })()}
-
-        {/* Birthday countdown card */}
-        <button
-          onClick={async () => {
-            const snap = await getDocs(query(collection(db, 'store_offers'), where('offerType', '==', 'birthday'), where('status', '==', 'active')));
-            setBirthdayOffers(snap.docs.map(d => ({ id: d.id, ...d.data() } as StoreOffer)));
-            setShowBirthdayPopup(true);
-          }}
-          className="flex-1 rounded-2xl p-3 flex flex-col justify-evenly text-left active:scale-[0.98] transition-all relative overflow-hidden"
-          style={{ background: 'linear-gradient(160deg, #5b8fa8 0%, #7ab0c8 50%, #8ec4d4 100%)', boxShadow: '0 4px 12px rgba(91,143,168,0.35)', minHeight: 80 }}
-        >
-          <span className="shine-ray" aria-hidden="true" />
-          <p className="text-white/70 text-[9px] font-bold uppercase tracking-wider leading-none relative z-10">Birthday in:</p>
-          <p className="font-black text-white text-sm leading-snug relative z-10">
-            {bdayCountdown.days}d {bdayCountdown.hours}h {bdayCountdown.mins}m {bdayCountdown.secs}s
-          </p>
-          <p className="text-white/70 text-[9px] font-bold uppercase tracking-wider relative z-10">FREE birthday gift 🎉</p>
-        </button>
-      </div>
+      {/* Streak card */}
+      {(() => {
+        const s = profile?.streak || 0;
+        const gold = s > 0;
+        return (
+          <div
+            className="aspect-square rounded-2xl flex flex-col items-center justify-center relative overflow-hidden"
+            style={{
+              backgroundColor: gold ? '#f5a623' : '#ffffff',
+              border: gold ? 'none' : '1.5px solid #e5e7eb',
+              boxShadow: gold ? '0 4px 14px rgba(245,166,35,0.40)' : '0 2px 8px rgba(0,0,0,0.06)',
+              width: 80,
+            }}
+          >
+            {gold && (
+              <motion.div
+                className="absolute inset-0 pointer-events-none"
+                style={{ background: 'linear-gradient(100deg, transparent 15%, rgba(255,255,255,0.28) 45%, rgba(255,255,255,0.55) 50%, rgba(255,255,255,0.28) 55%, transparent 85%)' }}
+                animate={{ x: ['-160%', '220%'] }}
+                transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut', repeatDelay: 1.4 }}
+              />
+            )}
+            <p className="font-black text-2xl leading-none relative z-10" style={{ color: gold ? '#fff' : '#111827' }}>{s}🔥</p>
+            <p className="text-xs font-bold relative z-10 mt-1" style={{ color: gold ? 'rgba(255,255,255,0.85)' : '#6B7280' }}>Streak</p>
+          </div>
+        );
+      })()}
 
       {/* Badges swipe row */}
       {earnedBadges.length > 0 && (
@@ -14645,7 +14625,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
           🎂
         </div>
         <div className="text-left flex-1 min-w-0">
-          <p className="font-bold text-white text-sm leading-tight">Birthday Gifts</p>
+          <p className="font-bold text-white text-sm leading-tight">FREE Birthday Gifts</p>
           <p className="text-white/70 text-xs mt-0.5">
             {birthdayOffers.length > 0 ? `${birthdayOffers.length} vendor${birthdayOffers.length !== 1 ? 's' : ''} offering free birthday gifts` : 'Free gifts from local vendors on your birthday'}
           </p>
