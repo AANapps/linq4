@@ -12348,11 +12348,27 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
               className="flex-1 rounded-2xl p-3 flex flex-col justify-evenly text-left active:scale-[0.98] transition-all relative overflow-hidden"
               style={{ backgroundColor: bg, boxShadow: `0 4px 12px ${shadow}`, minHeight: 80 }}
             >
-              <p className="text-white/70 text-[9px] font-bold uppercase tracking-wider leading-none">Birthday in:</p>
-              <p className="font-black text-white text-sm leading-snug">
+              {/* Confetti particles */}
+              {[
+                { x: '10%', color: '#fff',    size: 4, delay: 0,    dur: 1.6 },
+                { x: '28%', color: '#fde68a', size: 3, delay: 0.4,  dur: 1.9 },
+                { x: '48%', color: '#fff',    size: 5, delay: 0.8,  dur: 1.5 },
+                { x: '66%', color: '#fde68a', size: 3, delay: 0.2,  dur: 2.0 },
+                { x: '82%', color: '#fff',    size: 4, delay: 0.6,  dur: 1.7 },
+              ].map((p, i) => (
+                <motion.div
+                  key={i}
+                  className="absolute pointer-events-none rounded-sm"
+                  style={{ left: p.x, top: 0, width: p.size, height: p.size, backgroundColor: p.color, opacity: 0 }}
+                  animate={{ y: ['0%', '130%'], opacity: [0, 1, 1, 0], rotate: [0, 200] }}
+                  transition={{ duration: p.dur, repeat: Infinity, delay: p.delay, ease: 'linear', repeatDelay: 0.4 }}
+                />
+              ))}
+              <p className="text-white/70 text-[9px] font-bold uppercase tracking-wider leading-none relative z-10">Birthday in:</p>
+              <p className="font-black text-white text-sm leading-snug relative z-10">
                 {bdayCountdown.days}d {bdayCountdown.hours}h {bdayCountdown.mins}m {bdayCountdown.secs}s
               </p>
-              <p className="text-white/70 text-[9px] font-bold uppercase tracking-wider">FREE birthday gift 🎉</p>
+              <p className="text-white/70 text-[9px] font-bold uppercase tracking-wider relative z-10">FREE birthday gift 🎉</p>
             </button>
           );
         })()}
