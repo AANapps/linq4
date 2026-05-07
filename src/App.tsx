@@ -1617,6 +1617,20 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
   const [confirmResult, setConfirmResult] = React.useState<ConfirmationResult | null>(null);
   const recaptchaVerifier = React.useRef<RecaptchaVerifier | null>(null);
 
+  // Initialise + render invisible reCAPTCHA as soon as the phone screen mounts
+  React.useEffect(() => {
+    if (mode !== 'phone') return;
+    const timer = setTimeout(() => {
+      if (recaptchaVerifier.current) return;
+      try {
+        const v = new RecaptchaVerifier(auth, 'phone-recaptcha', { size: 'invisible' });
+        v.render().catch(() => {});
+        recaptchaVerifier.current = v;
+      } catch { /* element not ready yet */ }
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [mode]);
+
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError('');
@@ -1633,12 +1647,20 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
   const handleSendOTP = async () => {
     setError('');
     const cleaned = phone.trim();
-    if (!cleaned) { setError('Enter your phone number'); return; }
+    if (!cleaned) { setError('Enter your phone number with country code'); return; }
+    // Ensure verifier exists (handles resend after error)
+    if (!recaptchaVerifier.current) {
+      try {
+        const v = new RecaptchaVerifier(auth, 'phone-recaptcha', { size: 'invisible' });
+        await v.render();
+        recaptchaVerifier.current = v;
+      } catch (e: any) {
+        setError('reCAPTCHA failed to load — refresh and try again.');
+        return;
+      }
+    }
     setLoading(true);
     try {
-      if (!recaptchaVerifier.current) {
-        recaptchaVerifier.current = new RecaptchaVerifier(auth, 'phone-recaptcha', { size: 'invisible' });
-      }
       const result = await signInWithPhoneNumber(auth, cleaned, recaptchaVerifier.current);
       setConfirmResult(result);
       setMode('otp');
