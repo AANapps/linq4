@@ -12281,54 +12281,53 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
 
       {settingsModal}
 
-      {/* Compact stats — centered text */}
+      {/* Streak + Birthday cards */}
       <div className="flex gap-2">
-        {[
-          { val: lifetimeStamps,    label: 'Stamps'  },
-          { val: archivedCardsCount, label: 'Rewards' },
-          { val: activeCardsCount,  label: 'Cards'   },
-        ].map(s => (
-          <div key={s.label} className="flex-1 rounded-2xl px-3 py-2.5 flex flex-col items-center gap-0.5" style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #2563EB 50%, #3B82F6 100%)', boxShadow: '0 4px 14px rgba(37,99,235,0.35)' }}>
-            <p className="font-bold text-sm leading-none text-white">{s.val}</p>
-            <p className="text-[9px] font-bold uppercase tracking-wider mt-0.5 text-white/60">{s.label}</p>
-          </div>
-        ))}
-      </div>
+        {/* Streak card */}
+        <div className="flex-1 rounded-2xl px-4 py-3.5 flex flex-col justify-between" style={{ backgroundColor: '#9CA3AF', boxShadow: '0 4px 12px rgba(156,163,175,0.35)' }}>
+          <p className="font-black text-3xl text-white leading-none">{profile?.streak || 0}<span className="text-xl ml-0.5">🔥</span></p>
+          <p className="text-white/80 text-[11px] font-bold uppercase tracking-wider mt-1">Day streak</p>
+        </div>
 
-      {/* Birthday button */}
-      {profile?.birthday && (() => {
-        const today = new Date();
-        const bday = new Date(profile.birthday!);
-        const isToday = today.getMonth() === bday.getMonth() && today.getDate() === bday.getDate();
-        const thisYearBday = new Date(today.getFullYear(), bday.getMonth(), bday.getDate());
-        const nextBirthday = !isToday && thisYearBday <= today
-          ? new Date(today.getFullYear() + 1, bday.getMonth(), bday.getDate())
-          : thisYearBday;
-        const daysUntil = isToday ? 0 : Math.ceil((nextBirthday.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-        const state = isToday ? 'birthday' : daysUntil <= 7 ? 'soon' : 'normal';
-        const cfg = {
-          birthday: { bg: '#f5a623', shadow: 'rgba(245,166,35,0.45)', line1: "It's your Birthday! 🎉" },
-          soon:     { bg: '#ef4444', shadow: 'rgba(239,68,68,0.40)',   line1: `${daysUntil} day${daysUntil === 1 ? '' : 's'} until your birthday` },
-          normal:   { bg: '#374151', shadow: 'rgba(55,65,81,0.30)',    line1: `Birthday in ${daysUntil} days` },
-        }[state];
-        return (
-          <button
-            onClick={async () => {
-              const snap = await getDocs(query(collection(db, 'store_offers'), where('offerType', '==', 'birthday'), where('status', '==', 'active')));
-              setBirthdayOffers(snap.docs.map(d => ({ id: d.id, ...d.data() } as StoreOffer)));
-              setShowBirthdayPopup(true);
-            }}
-            className="w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-2xl active:scale-[0.98] transition-all"
-            style={{ backgroundColor: cfg.bg, boxShadow: `0 4px 16px ${cfg.shadow}` }}
-          >
-            <div className="text-left">
-              <p className="font-bold text-white text-sm leading-tight">{cfg.line1}</p>
-              <p className="text-white/70 text-xs font-semibold mt-0.5">FREE birthday gift</p>
-            </div>
-            <StreakBadge streak={profile.streak} size="lg" />
-          </button>
-        );
-      })()}
+        {/* Birthday countdown card */}
+        {profile?.birthday ? (() => {
+          const today = new Date();
+          const bday = new Date(profile.birthday!);
+          const isToday = today.getMonth() === bday.getMonth() && today.getDate() === bday.getDate();
+          const thisYearBday = new Date(today.getFullYear(), bday.getMonth(), bday.getDate());
+          const nextBirthday = !isToday && thisYearBday <= today
+            ? new Date(today.getFullYear() + 1, bday.getMonth(), bday.getDate())
+            : thisYearBday;
+          const daysUntil = isToday ? 0 : Math.ceil((nextBirthday.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+          const state = isToday ? 'birthday' : daysUntil <= 7 ? 'soon' : 'normal';
+          const cfg = {
+            birthday: { bg: '#f5a623', shadow: 'rgba(245,166,35,0.40)', top: '🎂', label: "It's your birthday!" },
+            soon:     { bg: '#EF4444', shadow: 'rgba(239,68,68,0.35)',  top: `${daysUntil}d`,  label: 'until your birthday' },
+            normal:   { bg: '#9CA3AF', shadow: 'rgba(156,163,175,0.35)', top: `${daysUntil}d`, label: 'days to birthday' },
+          }[state];
+          return (
+            <button
+              onClick={async () => {
+                const snap = await getDocs(query(collection(db, 'store_offers'), where('offerType', '==', 'birthday'), where('status', '==', 'active')));
+                setBirthdayOffers(snap.docs.map(d => ({ id: d.id, ...d.data() } as StoreOffer)));
+                setShowBirthdayPopup(true);
+              }}
+              className="flex-1 rounded-2xl px-4 py-3.5 flex flex-col justify-between text-left active:scale-[0.98] transition-all"
+              style={{ backgroundColor: cfg.bg, boxShadow: `0 4px 12px ${cfg.shadow}` }}
+            >
+              <p className="font-black text-3xl text-white leading-none">{cfg.top}</p>
+              <div className="mt-1">
+                <p className="text-white/80 text-[11px] font-bold uppercase tracking-wider">{cfg.label}</p>
+                <p className="text-white/60 text-[10px] font-semibold">FREE birthday gift</p>
+              </div>
+            </button>
+          );
+        })() : (
+          <div className="flex-1 rounded-2xl px-4 py-3.5 flex flex-col justify-between" style={{ backgroundColor: '#9CA3AF', boxShadow: '0 4px 12px rgba(156,163,175,0.35)' }}>
+            <p className="font-black text-3xl text-white leading-none">🎂</p>
+            <p className="text-white/80 text-[11px] font-bold uppercase tracking-wider mt-1">Birthday gifts</p>
+          </div>
+        )}</div>
 
       {/* Badges swipe row */}
       {earnedBadges.length > 0 && (
