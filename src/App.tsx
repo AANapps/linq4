@@ -11809,6 +11809,27 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
   const [showBirthdayPopup, setShowBirthdayPopup] = useState(false);
   const [birthdayOffers, setBirthdayOffers] = useState<StoreOffer[]>([]);
   const [selectedBirthdayOffer, setSelectedBirthdayOffer] = useState<StoreOffer | null>(null);
+  const [bdayCountdown, setBdayCountdown] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
+
+  useEffect(() => {
+    if (!profile?.birthday) return;
+    const tick = () => {
+      const now = new Date();
+      const bday = new Date(profile.birthday!);
+      const next = new Date(now.getFullYear(), bday.getMonth(), bday.getDate());
+      if (next.getTime() <= now.getTime()) next.setFullYear(now.getFullYear() + 1);
+      const diff = Math.max(0, next.getTime() - now.getTime());
+      setBdayCountdown({
+        days:  Math.floor(diff / 86400000),
+        hours: Math.floor((diff % 86400000) / 3600000),
+        mins:  Math.floor((diff % 3600000) / 60000),
+        secs:  Math.floor((diff % 60000) / 1000),
+      });
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [profile?.birthday]);
 
   useEffect(() => {
     if (profile?.role !== 'vendor') return;
@@ -12284,27 +12305,39 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
       {/* Streak + Birthday cards */}
       <div className="flex gap-2">
         {/* Streak card */}
-        <div className="flex-1 rounded-2xl px-4 py-3.5 flex flex-col justify-between" style={{ backgroundColor: '#9CA3AF', boxShadow: '0 4px 12px rgba(156,163,175,0.35)' }}>
-          <p className="font-black text-3xl text-white leading-none">{profile?.streak || 0}<span className="text-xl ml-0.5">🔥</span></p>
-          <p className="text-white/80 text-[11px] font-bold uppercase tracking-wider mt-1">Day streak</p>
-        </div>
+        {(() => {
+          const s = profile?.streak || 0;
+          const gold = s > 0;
+          return (
+            <div
+              className="flex-1 rounded-2xl p-3 flex flex-col justify-between relative overflow-hidden"
+              style={{
+                backgroundColor: gold ? '#f5a623' : '#ffffff',
+                border: gold ? 'none' : '1.5px solid #e5e7eb',
+                boxShadow: gold ? '0 4px 14px rgba(245,166,35,0.40)' : '0 2px 8px rgba(0,0,0,0.06)',
+                minHeight: 78,
+              }}
+            >
+              {gold && (
+                <motion.div
+                  className="absolute inset-0 pointer-events-none"
+                  style={{ background: 'linear-gradient(100deg, transparent 15%, rgba(255,255,255,0.28) 45%, rgba(255,255,255,0.55) 50%, rgba(255,255,255,0.28) 55%, transparent 85%)' }}
+                  animate={{ x: ['-160%', '220%'] }}
+                  transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut', repeatDelay: 1.4 }}
+                />
+              )}
+              <p className="font-black text-2xl leading-none relative z-10" style={{ color: gold ? '#fff' : '#111827' }}>{s}</p>
+              <p className="text-sm font-bold relative z-10" style={{ color: gold ? 'rgba(255,255,255,0.85)' : '#111827' }}>Streak 🔥</p>
+            </div>
+          );
+        })()}
 
         {/* Birthday countdown card */}
-        {profile?.birthday ? (() => {
-          const today = new Date();
-          const bday = new Date(profile.birthday!);
-          const isToday = today.getMonth() === bday.getMonth() && today.getDate() === bday.getDate();
-          const thisYearBday = new Date(today.getFullYear(), bday.getMonth(), bday.getDate());
-          const nextBirthday = !isToday && thisYearBday <= today
-            ? new Date(today.getFullYear() + 1, bday.getMonth(), bday.getDate())
-            : thisYearBday;
-          const daysUntil = isToday ? 0 : Math.ceil((nextBirthday.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-          const state = isToday ? 'birthday' : daysUntil <= 7 ? 'soon' : 'normal';
-          const cfg = {
-            birthday: { bg: '#f5a623', shadow: 'rgba(245,166,35,0.40)', top: '🎂', label: "It's your birthday!" },
-            soon:     { bg: '#EF4444', shadow: 'rgba(239,68,68,0.35)',  top: `${daysUntil}d`,  label: 'until your birthday' },
-            normal:   { bg: '#9CA3AF', shadow: 'rgba(156,163,175,0.35)', top: `${daysUntil}d`, label: 'days to birthday' },
-          }[state];
+        {(() => {
+          const isToday = bdayCountdown.days === 0 && bdayCountdown.hours === 0 && bdayCountdown.mins === 0;
+          const isSoon = !isToday && bdayCountdown.days <= 7;
+          const bg = isToday ? '#f5a623' : isSoon ? '#EF4444' : '#9CA3AF';
+          const shadow = isToday ? 'rgba(245,166,35,0.40)' : isSoon ? 'rgba(239,68,68,0.35)' : 'rgba(156,163,175,0.30)';
           return (
             <button
               onClick={async () => {
@@ -12312,22 +12345,20 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                 setBirthdayOffers(snap.docs.map(d => ({ id: d.id, ...d.data() } as StoreOffer)));
                 setShowBirthdayPopup(true);
               }}
-              className="flex-1 rounded-2xl px-4 py-3.5 flex flex-col justify-between text-left active:scale-[0.98] transition-all"
-              style={{ backgroundColor: cfg.bg, boxShadow: `0 4px 12px ${cfg.shadow}` }}
+              className="flex-1 rounded-2xl p-3 flex flex-col justify-between text-left active:scale-[0.98] transition-all relative overflow-hidden"
+              style={{ backgroundColor: bg, boxShadow: `0 4px 12px ${shadow}`, minHeight: 78 }}
             >
-              <p className="font-black text-3xl text-white leading-none">{cfg.top}</p>
-              <div className="mt-1">
-                <p className="text-white/80 text-[11px] font-bold uppercase tracking-wider">{cfg.label}</p>
-                <p className="text-white/60 text-[10px] font-semibold">FREE birthday gift</p>
+              <div>
+                <p className="text-white/70 text-[9px] font-bold uppercase tracking-wider leading-none">Birthday in:</p>
+                <p className="font-black text-white text-sm leading-snug mt-0.5">
+                  {bdayCountdown.days}d {bdayCountdown.hours}h {bdayCountdown.mins}m {bdayCountdown.secs}s
+                </p>
               </div>
+              <p className="text-white/70 text-[9px] font-bold uppercase tracking-wider">FREE birthday gift</p>
             </button>
           );
-        })() : (
-          <div className="flex-1 rounded-2xl px-4 py-3.5 flex flex-col justify-between" style={{ backgroundColor: '#9CA3AF', boxShadow: '0 4px 12px rgba(156,163,175,0.35)' }}>
-            <p className="font-black text-3xl text-white leading-none">🎂</p>
-            <p className="text-white/80 text-[11px] font-bold uppercase tracking-wider mt-1">Birthday gifts</p>
-          </div>
-        )}</div>
+        })()}
+      </div>
 
       {/* Badges swipe row */}
       {earnedBadges.length > 0 && (
