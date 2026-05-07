@@ -548,6 +548,8 @@ interface StoreOffer {
   value?: number;
   status: 'active' | 'paused';
   createdAt: any;
+  validDays?: number;
+  expiresAt?: any;
 }
 
 interface StoreAutomation {
@@ -709,7 +711,7 @@ export default function App() {
   const [pendingNFCStoreId, setPendingNFCStoreId] = useState<string | null>(null);
   const [userCards, setUserCards] = useState<Card[]>([]);
   const [showSettings, setShowSettings] = useState(false);
-  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges' | 'stores' | 'users' | 'posts'>(null);
+  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges' | 'stores' | 'users' | 'posts' | 'offers'>(null);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -1512,6 +1514,7 @@ export default function App() {
             onOpenStores={() => setAdminView('stores')}
             onOpenUsers={() => setAdminView('users')}
             onOpenPosts={() => setAdminView('posts')}
+            onOpenOffers={() => setAdminView('offers')}
           />
         )}
         {adminView === 'challenges' && (
@@ -1528,6 +1531,9 @@ export default function App() {
         )}
         {adminView === 'posts' && (
           <AdminPostsPanel onClose={() => setAdminView('menu')} />
+        )}
+        {adminView === 'offers' && (
+          <AdminOffersPanel onClose={() => setAdminView('menu')} />
         )}
       </AnimatePresence>
 
@@ -4228,7 +4234,7 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
-function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void }) {
+function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts, onOpenOffers }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void; onOpenOffers: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -4315,6 +4321,20 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores,
             <div>
               <p className="font-bold text-brand-navy text-sm">Posts</p>
               <p className="text-[11px] text-brand-navy/40 mt-0.5">All posts & flagged content</p>
+            </div>
+          </motion.button>
+
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={onOpenOffers}
+            className="rounded-[2rem] bg-white border border-black/5 shadow-sm p-6 flex flex-col items-start gap-3 text-left active:bg-brand-navy/5 transition-colors"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center">
+              <Ticket size={22} className="text-amber-500" />
+            </div>
+            <div>
+              <p className="font-bold text-brand-navy text-sm">Offers</p>
+              <p className="text-[11px] text-brand-navy/40 mt-0.5">View & delete all store offers</p>
             </div>
           </motion.button>
         </div>
@@ -4432,6 +4452,126 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
         ))}
         {filtered.length === 0 && (
           <p className="text-center text-brand-navy/30 text-sm py-10">No users found</p>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+function AdminOffersPanel({ onClose }: { onClose: () => void }) {
+  const [offers, setOffers] = useState<StoreOffer[]>([]);
+  const [search, setSearch] = useState('');
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    return onSnapshot(
+      query(collection(db, 'store_offers'), orderBy('createdAt', 'desc'), limit(300)),
+      snap => setOffers(snap.docs.map(d => ({ id: d.id, ...d.data() } as StoreOffer))),
+      () => {}
+    );
+  }, []);
+
+  const filtered = search.trim()
+    ? offers.filter(o =>
+        o.storeName?.toLowerCase().includes(search.toLowerCase()) ||
+        o.title?.toLowerCase().includes(search.toLowerCase())
+      )
+    : offers;
+
+  const handleDelete = async (id: string) => {
+    setDeleting(true);
+    try {
+      await deleteDoc(doc(db, 'store_offers', id));
+      setConfirmDeleteId(null);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const expiryLabel = (offer: StoreOffer) => {
+    if (!offer.expiresAt) return null;
+    const ms = (offer.expiresAt?.toDate?.() ?? new Date(offer.expiresAt)).getTime() - Date.now();
+    if (ms <= 0) return { text: 'Expired', red: true };
+    const days = Math.ceil(ms / 86400000);
+    return { text: `${days}d left`, red: days <= 3 };
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: '100%' }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: '100%' }}
+      transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+      className="fixed inset-0 bg-brand-bg z-[200] flex flex-col max-w-md mx-auto"
+    >
+      <header className="glass-panel px-5 py-4 flex items-center gap-3">
+        <button onClick={onClose} className="p-2 -ml-2 text-brand-navy/60"><ArrowLeft size={22} /></button>
+        <div className="flex-1">
+          <p className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest">Admin</p>
+          <h2 className="font-bold text-brand-navy text-base">Offers</h2>
+        </div>
+        <span className="text-xs font-bold text-brand-navy/40">{offers.length} total</span>
+      </header>
+
+      <div className="px-5 pt-3 pb-2">
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search by store or title…"
+          className="w-full px-4 py-2.5 rounded-2xl bg-white border border-brand-navy/10 text-sm text-brand-navy outline-none"
+        />
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-5 py-2 space-y-2 pb-10">
+        {filtered.map(offer => {
+          const exp = expiryLabel(offer);
+          return (
+            <div key={offer.id} className="bg-white rounded-2xl border border-brand-navy/5 overflow-hidden">
+              {confirmDeleteId === offer.id ? (
+                <div className="px-4 py-3 flex items-center gap-3">
+                  <p className="flex-1 text-xs font-bold text-red-500">Delete "{offer.title}"?</p>
+                  <button
+                    onClick={() => handleDelete(offer.id)}
+                    disabled={deleting}
+                    className="px-3 py-1.5 rounded-xl bg-red-500 text-white text-xs font-bold disabled:opacity-50"
+                  >
+                    {deleting ? '…' : 'Delete'}
+                  </button>
+                  <button onClick={() => setConfirmDeleteId(null)} className="px-3 py-1.5 rounded-xl bg-brand-navy/10 text-brand-navy/60 text-xs font-bold">
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <div className="px-4 py-3 flex items-start gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-brand-navy text-sm truncate">{offer.title}</p>
+                    <p className="text-[11px] text-brand-navy/50 truncate">{offer.storeName}</p>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <span className={cn('text-[10px] font-black px-2 py-0.5 rounded-full', offer.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-brand-navy/10 text-brand-navy/40')}>
+                        {offer.status === 'active' ? 'Live' : 'Paused'}
+                      </span>
+                      {offer.offerType === 'birthday' && <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-pink-100 text-pink-600">🎂 Birthday</span>}
+                      {offer.offerType === 'seasonal' && <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">🌸 Seasonal</span>}
+                      {exp && <span className={cn('text-[10px] font-black px-2 py-0.5 rounded-full', exp.red ? 'bg-red-100 text-red-500' : 'bg-amber-100 text-amber-600')}>{exp.text}</span>}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setConfirmDeleteId(offer.id)}
+                    className="shrink-0 px-3 py-1.5 rounded-xl bg-red-50 text-red-500 text-xs font-bold active:scale-95 transition-transform"
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {filtered.length === 0 && (
+          <div className="py-16 text-center text-brand-navy/25">
+            <Ticket size={40} className="mx-auto mb-3 opacity-30" />
+            <p className="font-bold text-sm">No offers found</p>
+          </div>
         )}
       </div>
     </motion.div>
@@ -10794,6 +10934,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
   const [imageUrl, setImageUrl] = useState('');
   const [value, setValue] = useState('');
   const [offerType, setOfferType] = useState<'standard' | 'birthday' | 'seasonal'>('standard');
+  const [validDays, setValidDays] = useState<number>(30);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -10804,9 +10945,20 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
   useEffect(() => {
     if (!store?.id) return;
     const q = query(collection(db, 'store_offers'), where('storeId', '==', store.id));
-    return onSnapshot(q, snap =>
-      setOffers(snap.docs.map(d => ({ id: d.id, ...d.data() } as StoreOffer)).sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0)))
-    );
+    return onSnapshot(q, snap => {
+      const now = Date.now();
+      const loaded: StoreOffer[] = [];
+      snap.docs.forEach(d => {
+        const o = { id: d.id, ...d.data() } as StoreOffer;
+        const exp = o.expiresAt;
+        if (exp) {
+          const expMs = (exp?.toDate?.() ?? new Date(exp)).getTime();
+          if (expMs <= now) { deleteDoc(doc(db, 'store_offers', o.id)); return; }
+        }
+        loaded.push(o);
+      });
+      setOffers(loaded.sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0)));
+    });
   }, [store?.id]);
 
   const handleImageUpload = async (file: File) => {
@@ -10829,6 +10981,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
     setCreateError('');
     setSaving(true);
     try {
+      const expiresAt = new Date(Date.now() + validDays * 24 * 60 * 60 * 1000);
       await addDoc(collection(db, 'store_offers'), {
         storeId: store.id,
         storeName: store.name,
@@ -10843,8 +10996,10 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
         value: parseFloat(value) || 0,
         status: 'active',
         createdAt: serverTimestamp(),
+        validDays,
+        expiresAt,
       });
-      setTitle(''); setDescription(''); setImageUrl(''); setCategory(store?.category || 'Food'); setMaxRedemptions(1); setValue(''); setOfferType('standard');
+      setTitle(''); setDescription(''); setImageUrl(''); setCategory(store?.category || 'Food'); setMaxRedemptions(1); setValue(''); setOfferType('standard'); setValidDays(30);
       setSaved(true); setTimeout(() => setSaved(false), 2000);
       setShowForm(false);
     } catch (e: any) {
@@ -10986,6 +11141,24 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
               </div>
             </div>
 
+            {/* Valid for */}
+            <div>
+              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40 mb-2 block">Valid For</label>
+              <div className="flex gap-2 flex-wrap">
+                {[7, 14, 30, 60, 90].map(d => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setValidDays(d)}
+                    className={cn('px-4 py-2 rounded-2xl text-sm font-bold transition-all', validDays === d ? 'gradient-logo-blue text-white shadow' : 'bg-brand-bg border border-brand-navy/10 text-brand-navy/60')}
+                  >
+                    {d}d
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-brand-navy/35 mt-1 px-1">Offer auto-deletes after {validDays} days.</p>
+            </div>
+
             {createError && (
               <p className="text-red-500 text-xs font-semibold bg-red-50 rounded-2xl px-4 py-2">{createError}</p>
             )}
@@ -11029,6 +11202,11 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
                   {offer.offerType === 'seasonal' && (
                     <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">🌸 Seasonal</span>
                   )}
+                  {offer.expiresAt && (() => {
+                    const ms = (offer.expiresAt?.toDate?.() ?? new Date(offer.expiresAt)).getTime() - Date.now();
+                    const days = Math.ceil(ms / 86400000);
+                    return <span className={cn('text-[10px] font-black px-2 py-0.5 rounded-full', days <= 3 ? 'bg-red-100 text-red-500' : 'bg-amber-100 text-amber-600')}>{days}d left</span>;
+                  })()}
                   <span className="text-[11px] text-brand-navy/40 font-bold">{offer.category}</span>
                   <span className="text-[11px] text-brand-navy/40 font-bold">•</span>
                   <span className="text-[11px] text-brand-navy/40 font-bold">{offer.maxRedemptionsPerUser === 0 ? 'Unlimited' : `${offer.maxRedemptionsPerUser}x`} per user</span>
@@ -14719,9 +14897,17 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
 
   useEffect(() => {
     const q = query(collection(db, 'store_offers'), where('status', '==', 'active'));
-    return onSnapshot(q, snap =>
-      setStoreOffers(snap.docs.map(d => ({ id: d.id, ...d.data() } as StoreOffer)))
-    , () => {});
+    return onSnapshot(q, snap => {
+      const now = Date.now();
+      setStoreOffers(
+        snap.docs
+          .map(d => ({ id: d.id, ...d.data() } as StoreOffer))
+          .filter(o => {
+            if (!o.expiresAt) return true;
+            return (o.expiresAt?.toDate?.() ?? new Date(o.expiresAt)).getTime() > now;
+          })
+      );
+    }, () => {});
   }, []);
 
   useEffect(() => {
