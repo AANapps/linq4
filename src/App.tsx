@@ -23,6 +23,7 @@ import {
   signInWithPhoneNumber,
   RecaptchaVerifier,
   ConfirmationResult,
+  updatePassword,
   User as FirebaseUser
 } from 'firebase/auth';
 import {
@@ -1621,7 +1622,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
   onEmailSignUp: (email: string, password: string) => Promise<string | null>;
   onEmailSignIn: (email: string, password: string) => Promise<string | null>;
 }) {
-  const [mode, setMode] = React.useState<'home' | 'signin' | 'signup' | 'phone' | 'otp'>('home');
+  const [mode, setMode] = React.useState<'home' | 'signin' | 'signup' | 'phone' | 'otp' | 'forgot' | 'forgot_otp'>('home');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
@@ -1630,12 +1631,14 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
   const [loading, setLoading] = React.useState(false);
   const [phone, setPhone] = React.useState('');
   const [otp, setOtp] = React.useState('');
+  const [newPass, setNewPass] = React.useState('');
+  const [confirmNewPass, setConfirmNewPass] = React.useState('');
   const [confirmResult, setConfirmResult] = React.useState<ConfirmationResult | null>(null);
   const recaptchaVerifier = React.useRef<RecaptchaVerifier | null>(null);
 
   // Initialise + render invisible reCAPTCHA as soon as the phone screen mounts
   React.useEffect(() => {
-    if (mode !== 'phone') return;
+    if (mode !== 'phone' && mode !== 'forgot') return;
     const timer = setTimeout(() => {
       if (recaptchaVerifier.current) return;
       try {
@@ -1655,9 +1658,11 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
     if (err) setError(err);
   };
 
-  const reset = (next: 'home' | 'signin' | 'signup' | 'phone' | 'otp') => {
+  const reset = (next: 'home' | 'signin' | 'signup' | 'phone' | 'otp' | 'forgot' | 'forgot_otp') => {
     setError(''); setEmail(''); setPassword(''); setConfirmPassword('');
-    setPhone(''); setOtp(''); setConfirmResult(null); setMode(next);
+    setPhone(''); setOtp(''); setConfirmResult(null);
+    setNewPass(''); setConfirmNewPass('');
+    setMode(next);
   };
 
   const handleSendOTP = async () => {
@@ -1679,7 +1684,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
     try {
       const result = await signInWithPhoneNumber(auth, cleaned, recaptchaVerifier.current);
       setConfirmResult(result);
-      setMode('otp');
+      setMode(mode === 'forgot' ? 'forgot_otp' : 'otp');
     } catch (e: any) {
       setError(e.message || 'Failed to send code. Check the number and try again.');
       recaptchaVerifier.current?.clear();
@@ -1698,6 +1703,24 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
       await confirmResult.confirm(otp.trim());
     } catch {
       setError('Invalid code — please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetVerify = async () => {
+    setError('');
+    if (!otp.trim()) { setError('Enter the 6-digit code'); return; }
+    if (!confirmResult) return;
+    if (newPass.length < 6) { setError('Password must be at least 6 characters'); return; }
+    if (newPass !== confirmNewPass) { setError('Passwords do not match'); return; }
+    setLoading(true);
+    try {
+      const credential = await confirmResult.confirm(otp.trim());
+      await updatePassword(credential.user, newPass);
+    } catch (e: any) {
+      if (e.code === 'auth/invalid-verification-code') setError('Invalid code — please try again.');
+      else setError(e.message || 'Something went wrong.');
     } finally {
       setLoading(false);
     }
@@ -1763,6 +1786,113 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
           >
             Already have an account? Sign in
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (mode === 'forgot' || mode === 'forgot_otp') {
+    return (
+      <div className="min-h-screen flex flex-col px-8" style={bg}>
+        <button onClick={() => reset('signin')} className="flex items-center gap-2 text-white/70 hover:text-white transition-colors pt-14 mb-8">
+          <ArrowLeft size={18} />
+          <span className="text-sm font-medium">Back</span>
+        </button>
+
+        <div className="flex-1 flex flex-col justify-center max-w-xs mx-auto w-full">
+          <div className="mb-8">
+            <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mb-4">
+              <Phone className="w-7 h-7 text-white" />
+            </div>
+            <h2 className="font-display font-bold text-2xl text-white mb-1">
+              {mode === 'forgot' ? 'Reset your password' : 'Verify your number'}
+            </h2>
+            <p className="text-white/50 text-sm">
+              {mode === 'forgot'
+                ? 'Enter your phone number and choose a new password'
+                : `We sent a 6-digit code to ${phone}`}
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            {mode === 'forgot' ? (
+              <>
+                <div className="relative">
+                  <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={e => setPhone(e.target.value)}
+                    placeholder="+44 7700 900000"
+                    autoComplete="tel"
+                    className="w-full pl-10 pr-5 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm focus:outline-none focus:border-white/50 focus:bg-white/20"
+                  />
+                </div>
+                <div className="relative">
+                  <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
+                  <input
+                    type="password"
+                    value={newPass}
+                    onChange={e => setNewPass(e.target.value)}
+                    placeholder="New password"
+                    autoComplete="new-password"
+                    className="w-full pl-10 pr-5 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm focus:outline-none focus:border-white/50 focus:bg-white/20"
+                  />
+                </div>
+                <div className="relative">
+                  <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
+                  <input
+                    type="password"
+                    value={confirmNewPass}
+                    onChange={e => setConfirmNewPass(e.target.value)}
+                    placeholder="Confirm new password"
+                    autoComplete="new-password"
+                    className="w-full pl-10 pr-5 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm focus:outline-none focus:border-white/50 focus:bg-white/20"
+                  />
+                </div>
+              </>
+            ) : (
+              <input
+                type="number"
+                value={otp}
+                onChange={e => setOtp(e.target.value)}
+                placeholder="6-digit code"
+                autoComplete="one-time-code"
+                inputMode="numeric"
+                maxLength={6}
+                className="w-full px-5 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm text-center tracking-[0.5em] font-bold focus:outline-none focus:border-white/50 focus:bg-white/20"
+              />
+            )}
+
+            {error && (
+              <div className="flex items-center gap-2 bg-white/15 border border-white/25 rounded-2xl px-4 py-3">
+                <AlertCircle size={14} className="text-white/80 shrink-0" />
+                <p className="text-white/80 text-xs">{error}</p>
+              </div>
+            )}
+
+            <div id="phone-recaptcha" />
+
+            <button
+              onClick={mode === 'forgot' ? handleSendOTP : handleResetVerify}
+              disabled={loading}
+              className="w-full bg-white text-brand-navy font-bold py-4 rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
+            >
+              {loading
+                ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}><Sparkles size={16} /></motion.div> Please wait…</>
+                : mode === 'forgot' ? 'Send Verification Code' : 'Confirm & Set Password'}
+            </button>
+
+            {mode === 'forgot_otp' && (
+              <button
+                onClick={handleSendOTP}
+                disabled={loading}
+                className="w-full text-white/50 text-sm py-2 hover:text-white/80 transition-colors disabled:opacity-40"
+              >
+                Resend code
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -1938,6 +2068,15 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
               ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}><Sparkles size={16} /></motion.div> Please wait…</>
               : mode === 'signup' ? 'Create Account' : 'Sign In'}
           </button>
+
+          {mode === 'signin' && (
+            <button
+              onClick={() => reset('forgot')}
+              className="w-full text-white/50 text-xs py-1 hover:text-white/80 transition-colors text-right"
+            >
+              Forgot password?
+            </button>
+          )}
 
           <div className="flex items-center gap-3 py-2">
             <div className="flex-1 h-px bg-white/20" />
@@ -14612,9 +14751,27 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
       {/* Birthday gifts banner */}
       <button
         onClick={() => setShowBirthdaySheet(true)}
-        className="w-full flex items-center gap-4 px-5 py-4 rounded-[1.5rem] active:scale-[0.98] transition-transform"
+        className="w-full flex items-center gap-4 px-5 py-4 rounded-[1.5rem] active:scale-[0.98] transition-transform relative overflow-hidden"
         style={{ background: 'linear-gradient(135deg, #be185d 0%, #ec4899 60%, #f9a8d4 100%)' }}
       >
+        {/* Confetti pieces */}
+        {[
+          { color: '#FBBF24', x: '6%',  delay: 0,    size: 7, r: 15  },
+          { color: '#ffffff', x: '18%', delay: 0.35, size: 5, r: -25 },
+          { color: '#34D399', x: '33%', delay: 0.7,  size: 6, r: 40  },
+          { color: '#FDE68A', x: '55%', delay: 0.15, size: 5, r: -15 },
+          { color: '#ffffff', x: '68%', delay: 0.55, size: 7, r: 30  },
+          { color: '#A78BFA', x: '80%', delay: 0.9,  size: 5, r: -35 },
+          { color: '#FBBF24', x: '91%', delay: 0.45, size: 6, r: 20  },
+        ].map((p, i) => (
+          <motion.div
+            key={i}
+            className="absolute pointer-events-none rounded-sm"
+            style={{ width: p.size, height: p.size, backgroundColor: p.color, left: p.x, top: 0 }}
+            animate={{ y: [-8, 76], rotate: [p.r, p.r + 360], opacity: [0, 1, 1, 0] }}
+            transition={{ duration: 2.0, repeat: Infinity, delay: p.delay, ease: 'linear' }}
+          />
+        ))}
         <div className="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center shrink-0 text-2xl leading-none">
           🎂
         </div>
