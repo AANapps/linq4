@@ -11806,6 +11806,9 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
   const [storeCards, setStoreCards] = useState<Card[]>([]);
   const [selectedBadge, setSelectedBadge] = useState<AppBadge | null>(null);
   const [profilePendingPack, setProfilePendingPack] = useState<CollectibleSticker[] | null>(null);
+  const [showBirthdayPopup, setShowBirthdayPopup] = useState(false);
+  const [birthdayOffers, setBirthdayOffers] = useState<StoreOffer[]>([]);
+  const [selectedBirthdayOffer, setSelectedBirthdayOffer] = useState<StoreOffer | null>(null);
 
   useEffect(() => {
     if (profile?.role !== 'vendor') return;
@@ -12286,7 +12289,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           { val: archivedCardsCount, label: 'Rewards' },
           { val: activeCardsCount,  label: 'Cards'   },
         ].map(s => (
-          <div key={s.label} className="flex-1 rounded-2xl px-3 py-2.5 flex flex-col items-center gap-0.5" style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #2563EB 50%, #3B82F6 100%)' }}>
+          <div key={s.label} className="flex-1 rounded-2xl px-3 py-2.5 flex flex-col items-center gap-0.5" style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #2563EB 50%, #3B82F6 100%)', boxShadow: '0 4px 14px rgba(37,99,235,0.35)' }}>
             <p className="font-bold text-sm leading-none text-white">{s.val}</p>
             <p className="text-[9px] font-bold uppercase tracking-wider mt-0.5 text-white/60">{s.label}</p>
           </div>
@@ -12305,17 +12308,20 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         const daysUntil = isToday ? 0 : Math.ceil((nextBirthday.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
         const state = isToday ? 'birthday' : daysUntil <= 7 ? 'soon' : 'normal';
         const cfg = {
-          birthday: { bg: '#f5a623', line1: "It's your Birthday! 🎉" },
-          soon:     { bg: '#ef4444', line1: `${daysUntil} day${daysUntil === 1 ? '' : 's'} until your birthday` },
-          normal:   { bg: '#374151', line1: `Birthday in ${daysUntil} days` },
+          birthday: { bg: '#f5a623', shadow: 'rgba(245,166,35,0.45)', line1: "It's your Birthday! 🎉" },
+          soon:     { bg: '#ef4444', shadow: 'rgba(239,68,68,0.40)',   line1: `${daysUntil} day${daysUntil === 1 ? '' : 's'} until your birthday` },
+          normal:   { bg: '#374151', shadow: 'rgba(55,65,81,0.30)',    line1: `Birthday in ${daysUntil} days` },
         }[state];
         return (
           <button
-            onClick={() => onGoToDeals?.()}
+            onClick={async () => {
+              const snap = await getDocs(query(collection(db, 'store_offers'), where('offerType', '==', 'birthday'), where('status', '==', 'active')));
+              setBirthdayOffers(snap.docs.map(d => ({ id: d.id, ...d.data() } as StoreOffer)));
+              setShowBirthdayPopup(true);
+            }}
             className="w-full flex items-center justify-center gap-3 py-3.5 rounded-2xl active:scale-[0.98] transition-all"
-            style={{ backgroundColor: cfg.bg }}
+            style={{ backgroundColor: cfg.bg, boxShadow: `0 4px 16px ${cfg.shadow}` }}
           >
-            <span className="text-2xl leading-none">🎂</span>
             <div className="text-left">
               <p className="font-bold text-white text-sm leading-tight">{cfg.line1}</p>
               <p className="text-white/70 text-xs font-semibold mt-0.5">FREE birthday gift</p>
@@ -12363,6 +12369,75 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
               <button onClick={() => setSelectedBadge(null)} className="w-full py-3 rounded-2xl bg-brand-navy/8 text-brand-navy font-bold text-sm active:scale-[0.98] transition-all">Close</button>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Birthday popup */}
+      <AnimatePresence>
+        {showBirthdayPopup && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[250] bg-black/50 backdrop-blur-sm flex flex-col justify-end max-w-md mx-auto"
+            onClick={() => setShowBirthdayPopup(false)}
+          >
+            <motion.div
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+              className="bg-white rounded-t-[2.5rem] max-h-[80vh] flex flex-col overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="px-5 pt-6 pb-4 shrink-0" style={{ background: 'linear-gradient(135deg, #be185d 0%, #ec4899 60%, #f9a8d4 100%)' }}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-bold text-white text-lg leading-tight">Birthday Gifts</h3>
+                    <p className="text-white/70 text-xs mt-0.5">Free gifts from local vendors on your birthday</p>
+                  </div>
+                  <button onClick={() => setShowBirthdayPopup(false)} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                    <X size={16} className="text-white" />
+                  </button>
+                </div>
+              </div>
+              <div className="overflow-y-auto flex-1 p-4 space-y-3">
+                {birthdayOffers.length === 0 ? (
+                  <div className="py-16 text-center text-brand-navy/25">
+                    <span className="text-5xl block mb-3">🎂</span>
+                    <p className="font-bold text-sm">No birthday offers yet</p>
+                    <p className="text-xs mt-1">Check back — vendors will add free birthday gifts here</p>
+                  </div>
+                ) : birthdayOffers.map(offer => (
+                  <button
+                    key={offer.id}
+                    onClick={() => { setShowBirthdayPopup(false); setSelectedBirthdayOffer(offer); }}
+                    className="w-full text-left bg-white rounded-[1.25rem] overflow-hidden flex items-stretch border border-pink-100 shadow-sm active:scale-[0.98] transition-transform"
+                  >
+                    {offer.imageUrl ? (
+                      <img src={offer.imageUrl} alt="" className="w-20 h-20 object-cover shrink-0" />
+                    ) : (
+                      <div className="w-20 h-20 shrink-0 flex items-center justify-center text-3xl leading-none" style={{ background: 'linear-gradient(135deg, #be185d22, #ec489922)' }}>
+                        🎂
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0 px-4 py-3">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        {offer.storeLogoUrl && <img src={offer.storeLogoUrl} alt="" className="w-4 h-4 rounded object-cover shrink-0" />}
+                        <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest truncate">{offer.storeName}</p>
+                      </div>
+                      <p className="font-bold text-brand-navy text-sm truncate">{offer.title}</p>
+                      <p className="text-xs text-brand-navy/40 mt-0.5 line-clamp-1">{offer.description}</p>
+                    </div>
+                    <div className="flex items-center pr-3 shrink-0">
+                      <ChevronRight size={16} className="text-pink-300" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {selectedBirthdayOffer && (
+          <OfferDetailSheet offer={selectedBirthdayOffer} currentUser={user} onClose={() => setSelectedBirthdayOffer(null)} />
         )}
       </AnimatePresence>
 
