@@ -645,6 +645,32 @@ interface AppBadge {
   createdAt: any;
 }
 
+// --- Image compression utility ---
+// Resizes to maxWidth and re-encodes as WebP at quality 0.85.
+// Keeps the original if it's already smaller than the compressed output.
+function compressImage(file: File, maxWidth = 1400, quality = 0.85): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, maxWidth / img.width);
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
+      canvas.toBlob(blob => {
+        if (!blob) { reject(new Error('Compression failed')); return; }
+        resolve(blob.size < file.size ? blob : file);
+      }, 'image/webp', quality);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image load failed')); };
+    img.src = url;
+  });
+}
+
 // --- Main App Component ---
 
 export default function App() {
@@ -4765,8 +4791,9 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
                     if (!file) return;
                     setStdImageUploading(true);
                     try {
-                      const path = `challenge_images/${Date.now()}_${file.name}`;
-                      const snap = await uploadBytes(storageRef(storage, path), file);
+                      const blob = await compressImage(file, 1400);
+                      const path = `challenge_images/${Date.now()}.webp`;
+                      const snap = await uploadBytes(storageRef(storage, path), blob, { contentType: 'image/webp' });
                       setStdImageUrl(await getDownloadURL(snap.ref));
                     } finally {
                       setStdImageUploading(false);
@@ -4842,8 +4869,9 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
                     if (!file) return;
                     setColImageUploading(true);
                     try {
-                      const path = `challenge_images/${Date.now()}_${file.name}`;
-                      const snap = await uploadBytes(storageRef(storage, path), file);
+                      const blob = await compressImage(file, 1400);
+                      const path = `challenge_images/${Date.now()}.webp`;
+                      const snap = await uploadBytes(storageRef(storage, path), blob, { contentType: 'image/webp' });
                       setColImageUrl(await getDownloadURL(snap.ref));
                     } finally {
                       setColImageUploading(false);
@@ -10470,8 +10498,9 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
     setUploadError('');
     setUploading(true);
     try {
-      const path = `offer_images/${store!.id}/${Date.now()}_${file.name}`;
-      const snap = await uploadBytes(storageRef(storage, path), file);
+      const blob = await compressImage(file, 1400);
+      const path = `offer_images/${store!.id}/${Date.now()}.webp`;
+      const snap = await uploadBytes(storageRef(storage, path), blob, { contentType: 'image/webp' });
       setImageUrl(await getDownloadURL(snap.ref));
     } catch (e: any) {
       setUploadError('Upload failed: ' + e.message);
@@ -12685,8 +12714,9 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
                     if (!file) return;
                     setLogoUploading(true);
                     try {
-                      const path = `store_logos/${user.uid}/${Date.now()}_${file.name}`;
-                      const snap = await uploadBytes(storageRef(storage, path), file);
+                      const blob = await compressImage(file, 800);
+                      const path = `store_logos/${user.uid}/${Date.now()}.webp`;
+                      const snap = await uploadBytes(storageRef(storage, path), blob, { contentType: 'image/webp' });
                       const url = await getDownloadURL(snap.ref);
                       setStoreLogo(url);
                     } catch {
