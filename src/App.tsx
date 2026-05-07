@@ -1507,7 +1507,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto glass-panel border-t border-black/5 px-4 py-3 flex justify-between items-end z-50">
+      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto glass-panel border-t border-black/5 px-4 py-3 flex justify-evenly items-end z-50">
         {profile?.role === 'consumer' && (
           <NavButton
             active={activeTab === 'for-you'}
