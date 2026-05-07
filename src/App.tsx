@@ -14570,6 +14570,28 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
   const [showBirthdaySheet, setShowBirthdaySheet] = useState(false);
   const [selectedOffer, setSelectedOffer] = useState<StoreOffer | null>(null);
   const [offerIndex, setOfferIndex] = useState(0);
+  const [dealsBdayCountdown, setDealsBdayCountdown] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
+
+  useEffect(() => {
+    const birthday = currentProfile?.birthday;
+    if (!birthday) return;
+    const tick = () => {
+      const now = new Date();
+      const bday = new Date(birthday);
+      const next = new Date(now.getFullYear(), bday.getMonth(), bday.getDate());
+      if (next.getTime() <= now.getTime()) next.setFullYear(now.getFullYear() + 1);
+      const diff = Math.max(0, next.getTime() - now.getTime());
+      setDealsBdayCountdown({
+        days:  Math.floor(diff / 86400000),
+        hours: Math.floor((diff % 86400000) / 3600000),
+        mins:  Math.floor((diff % 3600000) / 60000),
+        secs:  Math.floor((diff % 60000) / 1000),
+      });
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [currentProfile?.birthday]);
 
   useEffect(() => {
     return onSnapshot(collection(db, 'stores'), snap =>
@@ -14626,9 +14648,15 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
         </div>
         <div className="text-left flex-1 min-w-0">
           <p className="font-bold text-white text-sm leading-tight">FREE Birthday Gifts</p>
-          <p className="text-white/70 text-xs mt-0.5">
-            {birthdayOffers.length > 0 ? `${birthdayOffers.length} vendor${birthdayOffers.length !== 1 ? 's' : ''} offering free birthday gifts` : 'Free gifts from local vendors on your birthday'}
-          </p>
+          {currentProfile?.birthday ? (
+            <p className="text-white/70 text-xs mt-0.5 font-mono tracking-tight">
+              {dealsBdayCountdown.days}d {dealsBdayCountdown.hours}h {dealsBdayCountdown.mins}m {dealsBdayCountdown.secs}s
+            </p>
+          ) : (
+            <p className="text-white/70 text-xs mt-0.5">
+              {birthdayOffers.length > 0 ? `${birthdayOffers.length} vendor${birthdayOffers.length !== 1 ? 's' : ''} with free birthday gifts` : 'Free gifts from local vendors on your birthday'}
+            </p>
+          )}
         </div>
         <ChevronRight size={18} className="text-white/60 shrink-0" />
       </button>
