@@ -6584,6 +6584,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           onLogout={onLogout}
           onDeleteAccount={onDeleteAccount}
           onViewUser={onViewUser}
+          onGoToDeals={() => setActiveTab('deals')}
           user={user}
         />
       )}
@@ -9547,6 +9548,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
           onLogout={onLogout}
           onDeleteAccount={onDeleteAccount}
           onViewUser={onViewUser}
+          onGoToDeals={() => setActiveTab('deals')}
           user={user}
         />
       )}
@@ -11789,7 +11791,7 @@ function StickerListPanel({ uid }: { uid: string }) {
   );
 }
 
-function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, onViewUser, user }: { profile: UserProfile | null, userCards: Card[], stores?: StoreProfile[], onLogout: () => void, onDeleteAccount: () => Promise<void>, onViewUser: (u: UserProfile) => void, user: FirebaseUser }) {
+function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, onViewUser, onGoToDeals, user }: { profile: UserProfile | null, userCards: Card[], stores?: StoreProfile[], onLogout: () => void, onDeleteAccount: () => Promise<void>, onViewUser: (u: UserProfile) => void, onGoToDeals?: () => void, user: FirebaseUser }) {
   const [activeSubTab, setActiveSubTab] = useState<'posts' | 'interactions'>('posts');
   const [profileRedeemingChallenge, setProfileRedeemingChallenge] = useState<{ challenge: Challenge; entry: any; userName: string } | null>(null);
   const [showProfileSettings, setShowProfileSettings] = useState(false);
@@ -12290,6 +12292,37 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           </div>
         ))}
       </div>
+
+      {/* Birthday button */}
+      {profile?.birthday && (() => {
+        const today = new Date();
+        const bday = new Date(profile.birthday!);
+        const isToday = today.getMonth() === bday.getMonth() && today.getDate() === bday.getDate();
+        const thisYearBday = new Date(today.getFullYear(), bday.getMonth(), bday.getDate());
+        const nextBirthday = !isToday && thisYearBday <= today
+          ? new Date(today.getFullYear() + 1, bday.getMonth(), bday.getDate())
+          : thisYearBday;
+        const daysUntil = isToday ? 0 : Math.ceil((nextBirthday.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        const state = isToday ? 'birthday' : daysUntil <= 7 ? 'soon' : 'normal';
+        const cfg = {
+          birthday: { bg: '#f5a623', icon: '🎂', line1: "It's your Birthday! 🎉" },
+          soon:     { bg: '#ef4444', icon: '🕯️', line1: `${daysUntil} day${daysUntil === 1 ? '' : 's'} until your birthday` },
+          normal:   { bg: '#374151', icon: '🕯️', line1: `Birthday in ${daysUntil} days` },
+        }[state];
+        return (
+          <button
+            onClick={() => onGoToDeals?.()}
+            className="w-full flex items-center justify-center gap-3 py-3.5 rounded-2xl active:scale-[0.98] transition-all"
+            style={{ backgroundColor: cfg.bg }}
+          >
+            <span className="text-2xl leading-none">{cfg.icon}</span>
+            <div className="text-left">
+              <p className="font-bold text-white text-sm leading-tight">{cfg.line1}</p>
+              <p className="text-white/70 text-xs font-semibold mt-0.5">FREE birthday gift</p>
+            </div>
+          </button>
+        );
+      })()}
 
       {/* Badges swipe row */}
       {earnedBadges.length > 0 && (
