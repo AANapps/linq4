@@ -542,6 +542,7 @@ interface StoreOffer {
   description: string;
   imageUrl?: string;
   category: string;
+  offerType?: 'standard' | 'birthday' | 'seasonal';
   maxRedemptionsPerUser: number;
   value?: number;
   status: 'active' | 'paused';
@@ -10649,6 +10650,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
   const [maxRedemptions, setMaxRedemptions] = useState(1);
   const [imageUrl, setImageUrl] = useState('');
   const [value, setValue] = useState('');
+  const [offerType, setOfferType] = useState<'standard' | 'birthday' | 'seasonal'>('standard');
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -10693,12 +10695,13 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
         description: description.trim(),
         imageUrl,
         category,
+        offerType,
         maxRedemptionsPerUser: maxRedemptions,
         value: parseFloat(value) || 0,
         status: 'active',
         createdAt: serverTimestamp(),
       });
-      setTitle(''); setDescription(''); setImageUrl(''); setCategory(store?.category || 'Food'); setMaxRedemptions(1); setValue('');
+      setTitle(''); setDescription(''); setImageUrl(''); setCategory(store?.category || 'Food'); setMaxRedemptions(1); setValue(''); setOfferType('standard');
       setSaved(true); setTimeout(() => setSaved(false), 2000);
       setShowForm(false);
     } catch (e: any) {
@@ -10786,6 +10789,36 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
               {uploadError && <p className="text-red-500 text-xs mt-1">{uploadError}</p>}
             </div>
 
+            {/* Offer Type */}
+            <div>
+              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40 mb-2 block">Offer Type</label>
+              <div className="flex gap-2">
+                {([
+                  { v: 'standard', label: '🏷️ Standard', desc: 'General deal' },
+                  { v: 'birthday', label: '🎂 Birthday',  desc: 'Shown on their birthday' },
+                  { v: 'seasonal', label: '🌸 Seasonal',  desc: 'Time-limited event' },
+                ] as const).map(opt => (
+                  <button
+                    key={opt.v}
+                    type="button"
+                    onClick={() => setOfferType(opt.v)}
+                    className={cn(
+                      'flex-1 px-2 py-2.5 rounded-2xl text-xs font-bold transition-all leading-tight text-center',
+                      offerType === opt.v ? 'gradient-logo-blue text-white shadow' : 'bg-brand-bg border border-brand-navy/10 text-brand-navy/60'
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              {offerType === 'birthday' && (
+                <p className="text-[11px] text-brand-navy/35 mt-1.5 px-1">This offer is highlighted for customers on their birthday.</p>
+              )}
+              {offerType === 'seasonal' && (
+                <p className="text-[11px] text-brand-navy/35 mt-1.5 px-1">Use this for holidays, seasons, or special events.</p>
+              )}
+            </div>
+
             {/* Category */}
             <div className="relative">
               <select value={category} onChange={e => setCategory(e.target.value)} className={cn(inputCls, 'appearance-none')}>
@@ -10846,11 +10879,17 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
                     {offer.status === 'active' ? 'Live' : 'Paused'}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 text-[11px] text-brand-navy/40 font-bold">
-                  <span>{offer.category}</span>
-                  <span>•</span>
-                  <span>{offer.maxRedemptionsPerUser === 0 ? 'Unlimited' : `${offer.maxRedemptionsPerUser}x`} per user</span>
-                  {(offer.value ?? 0) > 0 && <><span>•</span><span className="text-emerald-600">${offer.value!.toFixed(2)} saving</span></>}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {offer.offerType === 'birthday' && (
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-pink-100 text-pink-600">🎂 Birthday</span>
+                  )}
+                  {offer.offerType === 'seasonal' && (
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">🌸 Seasonal</span>
+                  )}
+                  <span className="text-[11px] text-brand-navy/40 font-bold">{offer.category}</span>
+                  <span className="text-[11px] text-brand-navy/40 font-bold">•</span>
+                  <span className="text-[11px] text-brand-navy/40 font-bold">{offer.maxRedemptionsPerUser === 0 ? 'Unlimited' : `${offer.maxRedemptionsPerUser}x`} per user</span>
+                  {(offer.value ?? 0) > 0 && <><span className="text-[11px] text-brand-navy/40 font-bold">•</span><span className="text-[11px] font-bold text-emerald-600">${offer.value!.toFixed(2)} saving</span></>}
                 </div>
                 <div className="flex gap-2 pt-1">
                   <button onClick={() => toggleStatus(offer)} className="flex-1 py-2 rounded-xl bg-brand-bg border border-brand-navy/10 text-xs font-bold text-brand-navy/60 active:scale-95 transition-transform">
@@ -10947,7 +10986,15 @@ function OfferDetailSheet({ offer, currentUser, onClose }: { offer: StoreOffer; 
             )}
             <div>
               <p className="font-bold text-brand-navy">{offer.storeName}</p>
-              <p className="text-xs text-brand-navy/40">{offer.category}</p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <p className="text-xs text-brand-navy/40">{offer.category}</p>
+                {offer.offerType === 'birthday' && (
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-pink-100 text-pink-600">🎂 Birthday</span>
+                )}
+                {offer.offerType === 'seasonal' && (
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">🌸 Seasonal</span>
+                )}
+              </div>
             </div>
             {redemptionsLeft !== null && (
               <span className={cn('ml-auto text-xs font-bold px-3 py-1 rounded-full', redemptionsLeft > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-500')}>
