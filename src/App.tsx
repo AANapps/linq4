@@ -626,6 +626,8 @@ interface CelebrationPage {
   nextStageReward?: string;
   collectiblePromoName?: string;
   collectiblePromoReward?: string;
+  storeLogoUrl?: string;
+  rewardTiers?: Array<{ stamps: number; reward: string }>;
 }
 
 interface AppBadge {
@@ -5262,9 +5264,11 @@ function buildStampCelebrationPages(
   pages.push({
     type: 'stamp',
     storeName: store.name,
+    storeLogoUrl: store.logoUrl || '',
     currentStamps: card.current_stamps,
     totalStamps: nextTier?.stamps || hitTier?.stamps || store.stamps_required_for_reward || 10,
     reward: nextTier?.reward || hitTier?.reward || store.reward || 'Free Reward',
+    rewardTiers: tiers,
     encouragement: enc,
     done: done || (!!hitTier && !nextStageTier),
   });
@@ -7606,8 +7610,91 @@ function StampCelebrationModal({
                     <p className="font-display text-xl font-bold text-white leading-tight">{page.reward}</p>
                     <p className="text-xs text-white/60">Collect {page.totalStamps} stamps to win</p>
                   </motion.div>
+                ) : page.type === 'stamp' ? (
+                  /* Horizontal loyalty card */
+                  <motion.div
+                    initial={{ opacity: 0, y: 16, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ delay: 0.15, type: 'spring', stiffness: 280, damping: 22 }}
+                    className="rounded-3xl bg-brand-navy overflow-hidden"
+                  >
+                    <div className="p-4 flex items-center gap-3.5">
+                      {/* Vendor logo */}
+                      <div className="shrink-0 w-14 h-14 rounded-2xl overflow-hidden bg-white/10 flex items-center justify-center">
+                        {page.storeLogoUrl
+                          ? <img src={page.storeLogoUrl} alt="" className="w-full h-full object-cover" />
+                          : <span className="text-2xl select-none">🏪</span>
+                        }
+                      </div>
+
+                      {/* Stamps + info */}
+                      <div className="flex-1 min-w-0 space-y-2">
+                        <p className="font-display font-bold text-white text-sm leading-none truncate">{page.storeName}</p>
+
+                        {/* Stamp dots grid */}
+                        {(() => {
+                          const maxStamps = page.rewardTiers?.length
+                            ? Math.min(Math.max(...page.rewardTiers.map(t => t.stamps)), 20)
+                            : Math.min(page.totalStamps, 20);
+                          return (
+                            <div className="flex flex-wrap gap-1">
+                              {Array.from({ length: maxStamps }).map((_, i) => {
+                                const stampNum = i + 1;
+                                const isFilled = i < page.currentStamps;
+                                const isRewardTier = !!page.rewardTiers?.some(t => t.stamps === stampNum);
+                                const isNewStamp = i === page.currentStamps - 1;
+                                return (
+                                  <motion.div
+                                    key={i}
+                                    initial={isNewStamp ? { scale: 0.2, opacity: 0 } : {}}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    transition={isNewStamp ? { type: 'spring', stiffness: 500, damping: 18, delay: 0.35 } : {}}
+                                    className={cn(
+                                      'w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black',
+                                      isFilled
+                                        ? 'bg-brand-gold text-brand-navy'
+                                        : isRewardTier
+                                          ? 'bg-white/15 border border-brand-gold/40'
+                                          : 'bg-white/10',
+                                    )}
+                                  >
+                                    {isFilled ? (isRewardTier ? '🎁' : '✓') : ''}
+                                  </motion.div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
+
+                        {/* Progress + next reward */}
+                        <p className="text-[11px] font-semibold text-white/50 leading-none">
+                          {page.currentStamps} / {page.totalStamps}
+                          {' · '}
+                          <span className="text-brand-gold">{page.reward}</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Reward tier pills (only when multiple tiers) */}
+                    {(page.rewardTiers?.length ?? 0) > 1 && (
+                      <div className="px-4 pb-3.5 flex flex-wrap gap-x-4 gap-y-1">
+                        {page.rewardTiers!.map((t, i) => (
+                          <div
+                            key={i}
+                            className={cn(
+                              'flex items-center gap-1 text-[10px] font-bold',
+                              t.stamps <= page.currentStamps ? 'text-brand-gold' : 'text-white/30',
+                            )}
+                          >
+                            <span>{t.stamps <= page.currentStamps ? '✓' : `${t.stamps}×`}</span>
+                            <span className="truncate max-w-[90px]">{t.reward}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </motion.div>
                 ) : (
-                  /* Progress ring */
+                  /* Progress ring (challenges) */
                   <motion.div
                     initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.15, type: 'spring', stiffness: 300 }}
                     className="flex justify-center"
@@ -7643,8 +7730,8 @@ function StampCelebrationModal({
                   </p>
                 </motion.div>
 
-                {/* Progress bar (skip for upsell) */}
-                {!isUpsell && (
+                {/* Progress bar (skip for upsell and stamp — card already shows it) */}
+                {!isUpsell && page.type !== 'stamp' && (
                   <motion.div
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
                     className="space-y-1.5"
