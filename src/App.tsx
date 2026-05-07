@@ -1507,7 +1507,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto glass-panel border-t border-black/5 px-4 py-3 flex justify-evenly items-end z-50">
+      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto glass-panel border-t border-black/5 py-3 flex items-end z-50">
         {profile?.role === 'consumer' && (
           <NavButton
             active={activeTab === 'for-you'}
@@ -1536,7 +1536,7 @@ export default function App() {
         {profile?.role === 'consumer' ? (
           <button
             onClick={() => { setActiveTab('home'); setViewingStore(null); setViewingUser(null); }}
-            className="flex flex-col items-center gap-1 -mb-1 -mt-7 transition-all"
+            className="flex-1 flex flex-col items-center gap-1 -mb-1 -mt-7 transition-all"
           >
             <div className="relative overflow-hidden w-[58px] h-[58px] rounded-full gradient-logo-blue shadow-lg shadow-blue-500/30 flex items-center justify-center active:scale-95 transition-transform">
               <span className="card-shine-ray" aria-hidden="true" />
@@ -2327,7 +2327,7 @@ function NavButton({ active, onClick, icon, label, badgeCount }: { active: boole
     <button
       onClick={onClick}
       className={cn(
-        "flex flex-col items-center gap-1 transition-all relative",
+        "flex-1 flex flex-col items-center gap-1 transition-all relative",
         active ? "text-white" : "text-brand-navy/40 hover:text-brand-navy/60"
       )}
     >
