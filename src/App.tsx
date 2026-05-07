@@ -12326,8 +12326,8 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                   transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut', repeatDelay: 1.4 }}
                 />
               )}
-              <p className="font-black text-2xl leading-none relative z-10" style={{ color: gold ? '#fff' : '#111827' }}>{s}</p>
-              <p className="text-xs font-bold relative z-10 mt-1" style={{ color: gold ? 'rgba(255,255,255,0.85)' : '#111827' }}>Streak 🔥</p>
+              <p className="font-black text-2xl leading-none relative z-10" style={{ color: gold ? '#fff' : '#111827' }}>{s}🔥</p>
+              <p className="text-xs font-bold relative z-10 mt-1" style={{ color: gold ? 'rgba(255,255,255,0.85)' : '#6B7280' }}>Streak</p>
             </div>
           );
         })()}
@@ -12345,15 +12345,13 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                 setBirthdayOffers(snap.docs.map(d => ({ id: d.id, ...d.data() } as StoreOffer)));
                 setShowBirthdayPopup(true);
               }}
-              className="flex-1 rounded-2xl p-3 flex flex-col justify-between text-left active:scale-[0.98] transition-all relative overflow-hidden"
-              style={{ backgroundColor: bg, boxShadow: `0 4px 12px ${shadow}`, minHeight: 78 }}
+              className="flex-1 rounded-2xl p-3 flex flex-col justify-evenly text-left active:scale-[0.98] transition-all relative overflow-hidden"
+              style={{ backgroundColor: bg, boxShadow: `0 4px 12px ${shadow}`, minHeight: 80 }}
             >
-              <div>
-                <p className="text-white/70 text-[9px] font-bold uppercase tracking-wider leading-none">Birthday in:</p>
-                <p className="font-black text-white text-sm leading-snug mt-0.5">
-                  {bdayCountdown.days}d {bdayCountdown.hours}h {bdayCountdown.mins}m {bdayCountdown.secs}s
-                </p>
-              </div>
+              <p className="text-white/70 text-[9px] font-bold uppercase tracking-wider leading-none">Birthday in:</p>
+              <p className="font-black text-white text-sm leading-snug">
+                {bdayCountdown.days}d {bdayCountdown.hours}h {bdayCountdown.mins}m {bdayCountdown.secs}s
+              </p>
               <p className="text-white/70 text-[9px] font-bold uppercase tracking-wider">FREE birthday gift</p>
             </button>
           );
