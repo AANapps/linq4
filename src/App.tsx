@@ -1327,12 +1327,17 @@ export default function App() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-        >
-          <Sparkles className="w-12 h-12 text-brand-gold" />
-        </motion.div>
+        <div className="flex items-end gap-5">
+          {['load-a', 'load-b', 'load-c'].map((uid, i) => (
+            <motion.div
+              key={uid}
+              animate={{ y: [0, -28, 0] }}
+              transition={{ duration: 0.4, repeat: Infinity, repeatDelay: 0.8, delay: i * 0.4, ease: 'easeInOut' }}
+            >
+              <PixelAvatar config={deriveAvatarFromUid(uid)} uid={uid} size={56} view="full" />
+            </motion.div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -1352,9 +1357,17 @@ export default function App() {
   if (!profile) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
-        <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }}>
-          <Sparkles className="w-12 h-12 text-brand-gold" />
-        </motion.div>
+        <div className="flex items-end gap-5">
+          {['load-a', 'load-b', 'load-c'].map((uid, i) => (
+            <motion.div
+              key={uid}
+              animate={{ y: [0, -28, 0] }}
+              transition={{ duration: 0.4, repeat: Infinity, repeatDelay: 0.8, delay: i * 0.4, ease: 'easeInOut' }}
+            >
+              <PixelAvatar config={deriveAvatarFromUid(uid)} uid={uid} size={56} view="full" />
+            </motion.div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -15949,6 +15962,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
             key={chat.id}
             chat={chat}
             currentUser={currentUser}
+            isVendor={!!vendorStore}
             onClick={() => setActiveChatId(chat.id)}
           />
         ))}
@@ -15969,7 +15983,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
   );
 }
 
-function ChatListItem({ chat, currentUser, onClick }: { chat: Chat, currentUser: FirebaseUser, onClick: () => void, key?: React.Key }) {
+function ChatListItem({ chat, currentUser, isVendor = false, onClick }: { chat: Chat, currentUser: FirebaseUser, isVendor?: boolean, onClick: () => void, key?: React.Key }) {
   const [partner, setPartner] = useState<UserProfile | null>(null);
   const partnerUid = chat.isBroadcast ? null : chat.uids.find(id => id !== currentUser.uid);
   const unread = (chat.unreadCount?.[currentUser.uid] || 0);
@@ -15983,15 +15997,16 @@ function ChatListItem({ chat, currentUser, onClick }: { chat: Chat, currentUser:
     });
   }, [partnerUid]);
 
-  if (!chat.isBroadcast && !chat.businessName && !partner) return null;
+  // Vendors must wait for partner to load (their chats have businessName = their own store name)
+  if (!chat.isBroadcast && !partner && (!chat.businessName || isVendor)) return null;
 
   const displayName = chat.isBroadcast
     ? (chat.storeName || 'Business')
-    : chat.businessName
-      ? chat.businessName
-      : (partner?.name || '');
+    : isVendor
+      ? (partner?.name || '')          // vendor sees the customer's name
+      : (chat.businessName || partner?.name || '');  // consumer sees the business name
 
-  const isBusinessStyle = chat.isBroadcast || !!chat.businessName;
+  const isBusinessStyle = chat.isBroadcast || (!isVendor && !!chat.businessName);
   const businessLogo = chat.isBroadcast ? chat.storeLogoUrl : chat.businessLogoUrl;
 
   return (
@@ -17382,27 +17397,40 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
             const store = stores.find(s => s.id === card.store_id);
             if (!store) return null;
             const theme = store.theme || '#3a6fcc';
-            const filled = Math.round((card.current_stamps / store.stamps_required_for_reward) * 5);
+            const total = store.stamps_required_for_reward || 10;
+            const pct = Math.min(100, Math.round((card.current_stamps / total) * 100));
             return (
               <div
                 key={card.id}
                 onClick={() => onViewStore(store)}
-                className="p-4 rounded-2xl flex items-center justify-between cursor-pointer transition-all group"
-                style={{ background: `${theme}12`, border: `1.5px solid ${theme}30` }}
+                className="rounded-2xl overflow-hidden cursor-pointer shadow-sm active:scale-[0.98] transition-transform"
+                style={{ border: `1.5px solid ${theme}30` }}
               >
-                <div className="flex items-center gap-3 overflow-hidden">
-                  <div className="w-10 h-10 rounded-xl overflow-hidden shadow-sm shrink-0" style={{ borderColor: `${theme}40`, borderWidth: 2, borderStyle: 'solid' }}>
-                    <img src={store.logoUrl} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                {/* Vendor-colour header */}
+                <div className="flex items-center gap-3 px-4 py-3" style={{ backgroundColor: theme }}>
+                  <div className="w-9 h-9 rounded-xl overflow-hidden border-2 border-white/40 shrink-0">
+                    <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-bold text-sm truncate transition-colors" style={{ color: theme }}>{store.name}</p>
-                    <p className="text-[10px] text-brand-navy/40 uppercase font-bold tracking-widest leading-none">{card.current_stamps} / {store.stamps_required_for_reward} Stamps</p>
+                    <p className="font-bold text-white text-sm truncate leading-tight">{store.name}</p>
+                    <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">{store.category || 'Retail'}</p>
                   </div>
                 </div>
-                <div className="flex gap-0.5 shrink-0 ml-2">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className="w-1.5 h-1.5 rounded-full" style={{ background: i < filled ? theme : `${theme}25` }} />
-                  ))}
+                {/* White body with progress bar */}
+                <div className="bg-white px-4 py-3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[10px] font-bold" style={{ color: theme }}>{card.current_stamps} / {total} stamps</span>
+                    <span className="text-[10px] font-bold text-brand-navy/30">{pct}%</span>
+                  </div>
+                  <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: `${theme}20` }}>
+                    <motion.div
+                      className="h-full rounded-full"
+                      style={{ backgroundColor: theme }}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${pct}%` }}
+                      transition={{ duration: 0.6, ease: 'easeOut' }}
+                    />
+                  </div>
                 </div>
               </div>
             );
