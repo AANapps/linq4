@@ -12262,7 +12262,6 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           <div className="flex-1 min-w-0 pt-1">
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="font-display text-2xl font-bold">{profile.name}</h2>
-              <StreakBadge streak={profile.streak} size="lg" />
             </div>
             <p className="text-brand-gold font-bold text-xs uppercase tracking-[0.2em]">@{profile.handle || user.email?.split('@')[0]}</p>
             <div className="flex items-center gap-3 mt-2 text-sm">
@@ -12319,13 +12318,14 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
               setBirthdayOffers(snap.docs.map(d => ({ id: d.id, ...d.data() } as StoreOffer)));
               setShowBirthdayPopup(true);
             }}
-            className="w-full flex items-center justify-center gap-3 py-3.5 rounded-2xl active:scale-[0.98] transition-all"
+            className="w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-2xl active:scale-[0.98] transition-all"
             style={{ backgroundColor: cfg.bg, boxShadow: `0 4px 16px ${cfg.shadow}` }}
           >
             <div className="text-left">
               <p className="font-bold text-white text-sm leading-tight">{cfg.line1}</p>
               <p className="text-white/70 text-xs font-semibold mt-0.5">FREE birthday gift</p>
             </div>
+            <StreakBadge streak={profile.streak} size="lg" />
           </button>
         );
       })()}
@@ -12375,14 +12375,13 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
       {/* Birthday popup */}
       <AnimatePresence>
         {showBirthdayPopup && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[250] bg-black/50 backdrop-blur-sm flex flex-col justify-end max-w-md mx-auto"
+          <div
+            className="fixed inset-0 z-[250] bg-black/50 flex flex-col justify-end max-w-md mx-auto"
             onClick={() => setShowBirthdayPopup(false)}
           >
             <motion.div
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-              transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+              transition={{ type: 'spring', stiffness: 380, damping: 36 }}
               className="bg-white rounded-t-[2.5rem] max-h-[80vh] flex flex-col overflow-hidden"
               onClick={e => e.stopPropagation()}
             >
@@ -12432,7 +12431,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                 ))}
               </div>
             </motion.div>
-          </motion.div>
+          </div>
         )}
       </AnimatePresence>
       <AnimatePresence>
@@ -17639,7 +17638,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
 
       <div className="space-y-4">
         <h3 className="font-display text-xl font-bold px-2">Active Cards</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           {cards.map(card => {
             const store = stores.find(s => s.id === card.store_id);
             if (!store) return null;
