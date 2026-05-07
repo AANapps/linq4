@@ -14173,7 +14173,7 @@ function StoreDealsSection({ stores, onViewStore, showAll, onToggleAll }: {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.04 }}
-              className={cn('rounded-[1.5rem] overflow-hidden flex flex-col cursor-pointer active:scale-[0.97] transition-transform', showAll ? '' : 'shrink-0 w-36')}
+              className={cn('rounded-[1.5rem] overflow-hidden flex flex-col cursor-pointer active:scale-[0.97] transition-transform shadow-md shadow-black/10', showAll ? '' : 'shrink-0 w-36')}
               style={{ height: '160px' }}
               onClick={() => onViewStore && onViewStore(store)}
             >
