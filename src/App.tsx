@@ -650,7 +650,7 @@ interface AppBadge {
 // Keeps the original if it's already smaller than the compressed output.
 function compressImage(file: File, maxWidth = 1400, quality = 0.85): Promise<Blob> {
   return new Promise((resolve, reject) => {
-    const img = new Image();
+    const img = document.createElement('img') as HTMLImageElement;
     const url = URL.createObjectURL(file);
     img.onload = () => {
       URL.revokeObjectURL(url);
