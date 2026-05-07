@@ -12303,34 +12303,6 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
 
       {settingsModal}
 
-      {/* Streak card */}
-      {(() => {
-        const s = profile?.streak || 0;
-        const gold = s > 0;
-        return (
-          <div
-            className="aspect-square rounded-2xl flex flex-col items-center justify-center relative overflow-hidden"
-            style={{
-              backgroundColor: gold ? '#f5a623' : '#ffffff',
-              border: gold ? 'none' : '1.5px solid #e5e7eb',
-              boxShadow: gold ? '0 4px 14px rgba(245,166,35,0.40)' : '0 2px 8px rgba(0,0,0,0.06)',
-              width: 80,
-            }}
-          >
-            {gold && (
-              <motion.div
-                className="absolute inset-0 pointer-events-none"
-                style={{ background: 'linear-gradient(100deg, transparent 15%, rgba(255,255,255,0.28) 45%, rgba(255,255,255,0.55) 50%, rgba(255,255,255,0.28) 55%, transparent 85%)' }}
-                animate={{ x: ['-160%', '220%'] }}
-                transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut', repeatDelay: 1.4 }}
-              />
-            )}
-            <p className="font-black text-2xl leading-none relative z-10" style={{ color: gold ? '#fff' : '#111827' }}>{s}🔥</p>
-            <p className="text-xs font-bold relative z-10 mt-1" style={{ color: gold ? 'rgba(255,255,255,0.85)' : '#6B7280' }}>Streak</p>
-          </div>
-        );
-      })()}
-
       {/* Badges swipe row */}
       {earnedBadges.length > 0 && (
         <div>
