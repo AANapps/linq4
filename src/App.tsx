@@ -1328,16 +1328,14 @@ export default function App() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="flex items-end gap-5">
-          {['load-a', 'load-b', 'load-c'].map((uid, i) => (
-            <motion.div
-              key={uid}
-              animate={{ y: [0, -28, 0] }}
-              transition={{ duration: 0.4, repeat: Infinity, repeatDelay: 0.8, delay: i * 0.4, ease: 'easeInOut' }}
-            >
-              <PixelAvatar config={deriveAvatarFromUid(uid)} uid={uid} size={56} view="full" />
-            </motion.div>
-          ))}
+        <div className="relative overflow-hidden px-3 py-1 rounded-xl">
+          <span className="font-display text-5xl font-black tracking-tight text-brand-navy select-none">linq</span>
+          <motion.div
+            className="absolute inset-0 pointer-events-none"
+            style={{ background: 'linear-gradient(100deg, transparent 15%, rgba(245,166,35,0.22) 40%, rgba(255,255,255,0.72) 50%, rgba(245,166,35,0.22) 60%, transparent 85%)' }}
+            animate={{ x: ['-160%', '220%'] }}
+            transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut', repeatDelay: 0.9 }}
+          />
         </div>
       </div>
     );
@@ -1358,16 +1356,14 @@ export default function App() {
   if (!profile) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="flex items-end gap-5">
-          {['load-a', 'load-b', 'load-c'].map((uid, i) => (
-            <motion.div
-              key={uid}
-              animate={{ y: [0, -28, 0] }}
-              transition={{ duration: 0.4, repeat: Infinity, repeatDelay: 0.8, delay: i * 0.4, ease: 'easeInOut' }}
-            >
-              <PixelAvatar config={deriveAvatarFromUid(uid)} uid={uid} size={56} view="full" />
-            </motion.div>
-          ))}
+        <div className="relative overflow-hidden px-3 py-1 rounded-xl">
+          <span className="font-display text-5xl font-black tracking-tight text-brand-navy select-none">linq</span>
+          <motion.div
+            className="absolute inset-0 pointer-events-none"
+            style={{ background: 'linear-gradient(100deg, transparent 15%, rgba(245,166,35,0.22) 40%, rgba(255,255,255,0.72) 50%, rgba(245,166,35,0.22) 60%, transparent 85%)' }}
+            animate={{ x: ['-160%', '220%'] }}
+            transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut', repeatDelay: 0.9 }}
+          />
         </div>
       </div>
     );
