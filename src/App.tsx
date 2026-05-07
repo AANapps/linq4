@@ -12352,7 +12352,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
               <p className="font-black text-white text-sm leading-snug">
                 {bdayCountdown.days}d {bdayCountdown.hours}h {bdayCountdown.mins}m {bdayCountdown.secs}s
               </p>
-              <p className="text-white/70 text-[9px] font-bold uppercase tracking-wider">FREE birthday gift</p>
+              <p className="text-white/70 text-[9px] font-bold uppercase tracking-wider">FREE birthday gift 🎉</p>
             </button>
           );
         })()}
