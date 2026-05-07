@@ -20,6 +20,9 @@ import {
   signInWithEmailAndPassword,
   sendEmailVerification,
   applyActionCode,
+  signInWithPhoneNumber,
+  RecaptchaVerifier,
+  ConfirmationResult,
   User as FirebaseUser
 } from 'firebase/auth';
 import {
@@ -1602,13 +1605,17 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
   onEmailSignUp: (email: string, password: string) => Promise<string | null>;
   onEmailSignIn: (email: string, password: string) => Promise<string | null>;
 }) {
-  const [mode, setMode] = React.useState<'home' | 'signin' | 'signup'>('home');
+  const [mode, setMode] = React.useState<'home' | 'signin' | 'signup' | 'phone' | 'otp'>('home');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
   const [showPassword, setShowPassword] = React.useState(false);
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(false);
+  const [phone, setPhone] = React.useState('');
+  const [otp, setOtp] = React.useState('');
+  const [confirmResult, setConfirmResult] = React.useState<ConfirmationResult | null>(null);
+  const recaptchaVerifier = React.useRef<RecaptchaVerifier | null>(null);
 
   const handleGoogleLogin = async () => {
     setLoading(true);
@@ -1618,8 +1625,44 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
     if (err) setError(err);
   };
 
-  const reset = (next: 'home' | 'signin' | 'signup') => {
-    setError(''); setEmail(''); setPassword(''); setConfirmPassword(''); setMode(next);
+  const reset = (next: 'home' | 'signin' | 'signup' | 'phone' | 'otp') => {
+    setError(''); setEmail(''); setPassword(''); setConfirmPassword('');
+    setPhone(''); setOtp(''); setConfirmResult(null); setMode(next);
+  };
+
+  const handleSendOTP = async () => {
+    setError('');
+    const cleaned = phone.trim();
+    if (!cleaned) { setError('Enter your phone number'); return; }
+    setLoading(true);
+    try {
+      if (!recaptchaVerifier.current) {
+        recaptchaVerifier.current = new RecaptchaVerifier(auth, 'phone-recaptcha', { size: 'invisible' });
+      }
+      const result = await signInWithPhoneNumber(auth, cleaned, recaptchaVerifier.current);
+      setConfirmResult(result);
+      setMode('otp');
+    } catch (e: any) {
+      setError(e.message || 'Failed to send code. Check the number and try again.');
+      recaptchaVerifier.current?.clear();
+      recaptchaVerifier.current = null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async () => {
+    setError('');
+    if (!otp.trim()) { setError('Enter the 6-digit code'); return; }
+    if (!confirmResult) return;
+    setLoading(true);
+    try {
+      await confirmResult.confirm(otp.trim());
+    } catch {
+      setError('Invalid code — please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -1671,11 +1714,103 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
             Create Account
           </button>
           <button
+            onClick={() => reset('phone')}
+            className="w-full bg-white/15 backdrop-blur-sm text-white font-bold py-4 rounded-2xl hover:bg-white/25 transition-all border border-white/20 flex items-center justify-center gap-2"
+          >
+            <Phone size={18} /> Continue with Phone
+          </button>
+          <button
             onClick={() => reset('signin')}
             className="w-full text-white/60 text-sm py-2 hover:text-white transition-colors"
           >
             Already have an account? Sign in
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (mode === 'phone' || mode === 'otp') {
+    return (
+      <div className="min-h-screen flex flex-col px-8" style={bg}>
+        <button onClick={() => reset('home')} className="flex items-center gap-2 text-white/70 hover:text-white transition-colors pt-14 mb-8">
+          <ArrowLeft size={18} />
+          <span className="text-sm font-medium">Back</span>
+        </button>
+
+        <div className="flex-1 flex flex-col justify-center max-w-xs mx-auto w-full">
+          <div className="mb-8">
+            <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mb-4">
+              <Phone className="w-7 h-7 text-white" />
+            </div>
+            <h2 className="font-display font-bold text-2xl text-white mb-1">
+              {mode === 'phone' ? 'Your phone number' : 'Enter the code'}
+            </h2>
+            <p className="text-white/50 text-sm">
+              {mode === 'phone'
+                ? 'Include your country code, e.g. +44 7700 900000'
+                : `We sent a 6-digit code to ${phone}`}
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            {mode === 'phone' ? (
+              <div className="relative">
+                <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleSendOTP()}
+                  placeholder="+44 7700 900000"
+                  autoComplete="tel"
+                  className="w-full pl-10 pr-5 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm focus:outline-none focus:border-white/50 focus:bg-white/20"
+                />
+              </div>
+            ) : (
+              <input
+                type="number"
+                value={otp}
+                onChange={e => setOtp(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleVerifyOTP()}
+                placeholder="6-digit code"
+                autoComplete="one-time-code"
+                inputMode="numeric"
+                maxLength={6}
+                className="w-full px-5 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm text-center tracking-[0.5em] font-bold focus:outline-none focus:border-white/50 focus:bg-white/20"
+              />
+            )}
+
+            {error && (
+              <div className="flex items-center gap-2 bg-white/15 border border-white/25 rounded-2xl px-4 py-3">
+                <AlertCircle size={14} className="text-white/80 shrink-0" />
+                <p className="text-white/80 text-xs">{error}</p>
+              </div>
+            )}
+
+            {/* invisible reCAPTCHA anchor — must be in DOM before handleSendOTP is called */}
+            <div id="phone-recaptcha" />
+
+            <button
+              onClick={mode === 'phone' ? handleSendOTP : handleVerifyOTP}
+              disabled={loading}
+              className="w-full bg-white text-brand-navy font-bold py-4 rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
+            >
+              {loading
+                ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}><Sparkles size={16} /></motion.div> Please wait…</>
+                : mode === 'phone' ? 'Send Code' : 'Verify'}
+            </button>
+
+            {mode === 'otp' && (
+              <button
+                onClick={handleSendOTP}
+                disabled={loading}
+                className="w-full text-white/50 text-sm py-2 hover:text-white/80 transition-colors disabled:opacity-40"
+              >
+                Resend code
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
