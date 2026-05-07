@@ -1329,7 +1329,7 @@ export default function App() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="flex flex-col items-center gap-3">
-          <PixelAvatar config={deriveAvatarFromUid('linq-mascot')} uid="linq-mascot" size={64} view="full" />
+          <PixelAvatar config={{ skinTone: 'skin1', hairStyle: 'hair_short', hairColor: 'black', facialHair: null, top: 'top_stripes', bottom: 'bottom_jeans', shoes: 'shoes_sneakers', accessory: null, mood: 80, inventory: [] }} uid="linq-mascot" size={48} view="full" />
           <div className="relative overflow-hidden px-3 py-1 rounded-xl">
             <span className="font-display text-5xl font-black tracking-tight text-brand-navy select-none">linq</span>
             <motion.div
@@ -1360,7 +1360,7 @@ export default function App() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="flex flex-col items-center gap-3">
-          <PixelAvatar config={deriveAvatarFromUid('linq-mascot')} uid="linq-mascot" size={64} view="full" />
+          <PixelAvatar config={{ skinTone: 'skin1', hairStyle: 'hair_short', hairColor: 'black', facialHair: null, top: 'top_stripes', bottom: 'bottom_jeans', shoes: 'shoes_sneakers', accessory: null, mood: 80, inventory: [] }} uid="linq-mascot" size={48} view="full" />
           <div className="relative overflow-hidden px-3 py-1 rounded-xl">
             <span className="font-display text-5xl font-black tracking-tight text-brand-navy select-none">linq</span>
             <motion.div
@@ -12305,9 +12305,9 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         const daysUntil = isToday ? 0 : Math.ceil((nextBirthday.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
         const state = isToday ? 'birthday' : daysUntil <= 7 ? 'soon' : 'normal';
         const cfg = {
-          birthday: { bg: '#f5a623', icon: '🎂', line1: "It's your Birthday! 🎉" },
-          soon:     { bg: '#ef4444', icon: '🕯️', line1: `${daysUntil} day${daysUntil === 1 ? '' : 's'} until your birthday` },
-          normal:   { bg: '#374151', icon: '🕯️', line1: `Birthday in ${daysUntil} days` },
+          birthday: { bg: '#f5a623', line1: "It's your Birthday! 🎉" },
+          soon:     { bg: '#ef4444', line1: `${daysUntil} day${daysUntil === 1 ? '' : 's'} until your birthday` },
+          normal:   { bg: '#374151', line1: `Birthday in ${daysUntil} days` },
         }[state];
         return (
           <button
@@ -12315,7 +12315,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
             className="w-full flex items-center justify-center gap-3 py-3.5 rounded-2xl active:scale-[0.98] transition-all"
             style={{ backgroundColor: cfg.bg }}
           >
-            <span className="text-2xl leading-none">{cfg.icon}</span>
+            <span className="text-2xl leading-none">🎂</span>
             <div className="text-left">
               <p className="font-bold text-white text-sm leading-tight">{cfg.line1}</p>
               <p className="text-white/70 text-xs font-semibold mt-0.5">FREE birthday gift</p>
@@ -14492,6 +14492,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
   const [showAllSvc, setShowAllSvc] = useState(false);
   const [showAllProd, setShowAllProd] = useState(false);
   const [showOffersModal, setShowOffersModal] = useState(false);
+  const [showBirthdaySheet, setShowBirthdaySheet] = useState(false);
   const [selectedOffer, setSelectedOffer] = useState<StoreOffer | null>(null);
   const [offerIndex, setOfferIndex] = useState(0);
 
@@ -14529,6 +14530,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
   const experiences = challenges.filter(c => c.rewardTag === 'experience');
   const services = challenges.filter(c => c.rewardTag === 'service');
   const products = challenges.filter(c => c.rewardTag === 'product');
+  const birthdayOffers = storeOffers.filter(o => o.offerType === 'birthday');
 
   return (
     <>
@@ -14537,6 +14539,24 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
         <h1 className="font-display font-bold text-2xl text-brand-navy">Deals</h1>
         <p className="text-brand-navy/50 text-sm mt-0.5">Rewards waiting for you</p>
       </div>
+
+      {/* Birthday gifts banner */}
+      <button
+        onClick={() => setShowBirthdaySheet(true)}
+        className="w-full flex items-center gap-4 px-5 py-4 rounded-[1.5rem] active:scale-[0.98] transition-transform"
+        style={{ background: 'linear-gradient(135deg, #be185d 0%, #ec4899 60%, #f9a8d4 100%)' }}
+      >
+        <div className="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center shrink-0 text-2xl leading-none">
+          🎂
+        </div>
+        <div className="text-left flex-1 min-w-0">
+          <p className="font-bold text-white text-sm leading-tight">Birthday Gifts</p>
+          <p className="text-white/70 text-xs mt-0.5">
+            {birthdayOffers.length > 0 ? `${birthdayOffers.length} vendor${birthdayOffers.length !== 1 ? 's' : ''} offering free birthday gifts` : 'Free gifts from local vendors on your birthday'}
+          </p>
+        </div>
+        <ChevronRight size={18} className="text-white/60 shrink-0" />
+      </button>
 
       <StoreDealsSection
         stores={storeDeals}
@@ -14645,6 +14665,76 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
     <AnimatePresence>
       {selectedOffer && (
         <OfferDetailSheet offer={selectedOffer} currentUser={currentUser} onClose={() => setSelectedOffer(null)} />
+      )}
+    </AnimatePresence>
+
+    {/* Birthday gifts sheet */}
+    <AnimatePresence>
+      {showBirthdaySheet && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[300] bg-black/50 backdrop-blur-sm flex flex-col justify-end max-w-md mx-auto"
+          onClick={() => setShowBirthdaySheet(false)}
+        >
+          <motion.div
+            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+            transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+            className="bg-white rounded-t-[2.5rem] max-h-[82vh] flex flex-col overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="px-5 pt-6 pb-4 shrink-0" style={{ background: 'linear-gradient(135deg, #be185d 0%, #ec4899 60%, #f9a8d4 100%)' }}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl leading-none">🎂</span>
+                  <div>
+                    <h3 className="font-bold text-white text-lg leading-tight">Birthday Gifts</h3>
+                    <p className="text-white/70 text-xs">Free gifts from local vendors on your birthday</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowBirthdaySheet(false)} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                  <X size={16} className="text-white" />
+                </button>
+              </div>
+            </div>
+
+            {/* List */}
+            <div className="overflow-y-auto flex-1 p-4 space-y-3">
+              {birthdayOffers.length === 0 ? (
+                <div className="py-16 text-center text-brand-navy/25">
+                  <span className="text-5xl block mb-3">🎂</span>
+                  <p className="font-bold text-sm">No birthday offers yet</p>
+                  <p className="text-xs mt-1">Check back — vendors will add free birthday gifts here</p>
+                </div>
+              ) : birthdayOffers.map(offer => (
+                <button
+                  key={offer.id}
+                  onClick={() => { setShowBirthdaySheet(false); setSelectedOffer(offer); }}
+                  className="w-full text-left bg-white rounded-[1.25rem] overflow-hidden flex items-stretch border border-pink-100 shadow-sm active:scale-[0.98] transition-transform"
+                >
+                  {offer.imageUrl ? (
+                    <img src={offer.imageUrl} alt="" className="w-20 h-20 object-cover shrink-0" />
+                  ) : (
+                    <div className="w-20 h-20 shrink-0 flex items-center justify-center text-3xl leading-none" style={{ background: 'linear-gradient(135deg, #be185d22, #ec489922)' }}>
+                      🎂
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0 px-4 py-3">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      {offer.storeLogoUrl && <img src={offer.storeLogoUrl} alt="" className="w-4 h-4 rounded object-cover shrink-0" />}
+                      <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest truncate">{offer.storeName}</p>
+                    </div>
+                    <p className="font-bold text-brand-navy text-sm truncate">{offer.title}</p>
+                    <p className="text-xs text-brand-navy/40 mt-0.5 line-clamp-1">{offer.description}</p>
+                  </div>
+                  <div className="flex items-center pr-3 shrink-0">
+                    <ChevronRight size={16} className="text-pink-300" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        </motion.div>
       )}
     </AnimatePresence>
     </>
