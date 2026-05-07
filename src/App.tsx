@@ -12310,12 +12310,12 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           const gold = s > 0;
           return (
             <div
-              className="flex-1 rounded-2xl p-3 flex flex-col justify-between relative overflow-hidden"
+              className="aspect-square rounded-2xl flex flex-col items-center justify-center relative overflow-hidden"
               style={{
                 backgroundColor: gold ? '#f5a623' : '#ffffff',
                 border: gold ? 'none' : '1.5px solid #e5e7eb',
                 boxShadow: gold ? '0 4px 14px rgba(245,166,35,0.40)' : '0 2px 8px rgba(0,0,0,0.06)',
-                minHeight: 78,
+                width: 80, flexShrink: 0,
               }}
             >
               {gold && (
@@ -12327,7 +12327,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                 />
               )}
               <p className="font-black text-2xl leading-none relative z-10" style={{ color: gold ? '#fff' : '#111827' }}>{s}</p>
-              <p className="text-sm font-bold relative z-10" style={{ color: gold ? 'rgba(255,255,255,0.85)' : '#111827' }}>Streak 🔥</p>
+              <p className="text-xs font-bold relative z-10 mt-1" style={{ color: gold ? 'rgba(255,255,255,0.85)' : '#111827' }}>Streak 🔥</p>
             </div>
           );
         })()}
