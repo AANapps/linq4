@@ -1328,7 +1328,7 @@ export default function App() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="flex flex-col items-center gap-3">
+        <div className="flex items-end gap-2">
           <PixelAvatar config={{ skinTone: 'skin1', hairStyle: 'hair_short', hairColor: 'black', facialHair: null, top: 'top_stripes', bottom: 'bottom_jeans', shoes: 'shoes_sneakers', accessory: null, mood: 80, inventory: [] }} uid="linq-mascot" size={48} view="full" />
           <div className="relative overflow-hidden px-3 py-1 rounded-xl">
             <span className="font-display text-5xl font-black tracking-tight text-brand-navy select-none">linq</span>
@@ -1359,7 +1359,7 @@ export default function App() {
   if (!profile) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="flex flex-col items-center gap-3">
+        <div className="flex items-end gap-2">
           <PixelAvatar config={{ skinTone: 'skin1', hairStyle: 'hair_short', hairColor: 'black', facialHair: null, top: 'top_stripes', bottom: 'bottom_jeans', shoes: 'shoes_sneakers', accessory: null, mood: 80, inventory: [] }} uid="linq-mascot" size={48} view="full" />
           <div className="relative overflow-hidden px-3 py-1 rounded-xl">
             <span className="font-display text-5xl font-black tracking-tight text-brand-navy select-none">linq</span>
