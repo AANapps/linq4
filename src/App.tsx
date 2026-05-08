@@ -8968,18 +8968,11 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   const isSubscribed = store?.subscriptionStatus === 'active' || store?.subscriptionStatus === 'trialing';
   const needsPayment = store !== null && !isInTrial && !isSubscribed;
 
-  const handleSubscribe = async () => {
+  const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/aFa5kF5JZh193yT6OEd7q00';
+
+  const handleSubscribe = () => {
     if (!store?.id) return;
-    setIsLoadingCheckout(true);
-    try {
-      const fn = httpsCallable(functions, 'createCheckoutSession');
-      const result = await fn({ storeId: store.id, returnUrl: window.location.href }) as any;
-      if (result.data?.url) window.location.href = result.data.url;
-    } catch (e: any) {
-      alert('Could not start checkout: ' + (e.message || 'Unknown error'));
-    } finally {
-      setIsLoadingCheckout(false);
-    }
+    window.location.href = `${STRIPE_PAYMENT_LINK}?client_reference_id=${store.id}`;
   };
 
   const handleManageBilling = async () => {
@@ -9399,10 +9392,9 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
               </div>
               <button
                 onClick={handleSubscribe}
-                disabled={isLoadingCheckout}
-                className="bg-amber-500 text-white text-xs font-bold px-3 py-1.5 rounded-xl shrink-0 disabled:opacity-50"
+                className="bg-amber-500 text-white text-xs font-bold px-3 py-1.5 rounded-xl shrink-0 active:scale-95 transition-transform"
               >
-                {isLoadingCheckout ? '...' : 'Subscribe'}
+                Subscribe
               </button>
             </div>
           )}
@@ -9445,10 +9437,9 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                 </div>
                 <button
                   onClick={handleSubscribe}
-                  disabled={isLoadingCheckout}
-                  className="w-full bg-brand-navy text-white font-bold py-4 rounded-2xl disabled:opacity-50 transition-opacity"
+                  className="w-full bg-brand-navy text-white font-bold py-4 rounded-2xl active:scale-[0.98] transition-transform"
                 >
-                  {isLoadingCheckout ? 'Loading...' : 'Subscribe Now — $50/month'}
+                  Subscribe Now — $50/month
                 </button>
                 <p className="text-xs text-brand-navy/30">Secure payment via Stripe. Cancel anytime.</p>
               </div>

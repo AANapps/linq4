@@ -1,52 +1,39 @@
 # Stripe Subscription Setup
 
-Vendors get a 30-day free trial, then pay $50/month. This is handled by:
-- Firebase Functions (`functions/src/index.ts`) — `createCheckoutSession`, `createPortalSession`, `stripeWebhook`
-- Stripe Checkout (hosted) — collects card details
-- Stripe webhooks → Firestore updates (`subscriptionStatus` on the `stores` doc)
+Vendors get a 30-day free trial, then pay $50/month via the Stripe Payment Link already embedded in the app.
+
+The Payment Link: `https://buy.stripe.com/aFa5kF5JZh193yT6OEd7q00`
+
+When a vendor clicks Subscribe they are redirected to that link with `?client_reference_id={storeId}` appended. Stripe fires `checkout.session.completed` → the `stripeWebhook` Firebase Function updates Firestore.
 
 ---
 
-## 1. Create a Stripe account
+## What needs to be deployed
 
-Go to https://dashboard.stripe.com and create an account (or log in).
+Only two Firebase Functions are required:
+- `stripeWebhook` — HTTP endpoint, listens for Stripe events
+- `createPortalSession` — callable, opens the Stripe Billing Portal (manage/cancel)
 
----
-
-## 2. Create the $50/month product
-
-1. Stripe Dashboard → **Products** → **Add product**
-2. Name: "Linq Vendor Subscription"
-3. Pricing: **Recurring**, $50.00 USD, **Monthly**
-4. Save — copy the **Price ID** (starts with `price_…`)
+No Stripe API key is needed for checkout — the Payment Link handles it.
 
 ---
 
-## 3. Get your Stripe API keys
+## 1. Set Firebase secrets
 
-Stripe Dashboard → **Developers** → **API keys**:
-- **Secret key** (`sk_live_…` or `sk_test_…` for testing)
-
----
-
-## 4. Set Firebase secrets
-
-In your project root, run:
+You only need two secrets:
 
 ```bash
 firebase functions:secrets:set STRIPE_SECRET_KEY
-# paste your Stripe secret key when prompted
-
-firebase functions:secrets:set STRIPE_PRICE_ID
-# paste the price_… ID from step 2
+# paste your Stripe secret key (sk_live_… or sk_test_…)
+# Stripe Dashboard → Developers → API keys
 
 firebase functions:secrets:set STRIPE_WEBHOOK_SECRET
-# leave blank for now — fill in after step 6
+# leave blank for now — fill in after step 3
 ```
 
 ---
 
-## 5. Deploy the functions
+## 2. Deploy the functions
 
 ```bash
 cd functions
@@ -56,83 +43,88 @@ cd ..
 firebase deploy --only functions
 ```
 
-After deploying, note the URL for `stripeWebhook` — it looks like:
+After deploying, note the URL for `stripeWebhook`:
 ```
 https://<region>-<project-id>.cloudfunctions.net/stripeWebhook
 ```
 
 ---
 
-## 6. Register the Stripe webhook
+## 3. Register the Stripe webhook
 
 Stripe Dashboard → **Developers** → **Webhooks** → **Add endpoint**:
 
-- **Endpoint URL**: the `stripeWebhook` URL from step 5
+- **Endpoint URL**: the `stripeWebhook` URL from step 2
 - **Events to listen for**:
-  - `customer.subscription.created`
+  - `checkout.session.completed`  ← fires when Payment Link is completed
   - `customer.subscription.updated`
   - `customer.subscription.deleted`
   - `invoice.payment_failed`
 
 After saving, click the endpoint → **Signing secret** → copy it.
 
-Then update the secret:
 ```bash
 firebase functions:secrets:set STRIPE_WEBHOOK_SECRET
 # paste the whsec_… signing secret
 ```
 
-Redeploy functions to pick up the new secret:
+Redeploy:
 ```bash
 firebase deploy --only functions
 ```
 
 ---
 
-## 7. Configure the Stripe Customer Portal (optional but recommended)
+## 4. Configure Stripe Customer Portal (for Manage Billing)
 
 Stripe Dashboard → **Settings** → **Billing** → **Customer portal** → enable it.
-This lets vendors cancel or update their card via `handleManageBilling`.
+
+This lets active subscribers cancel or update their card via the "Manage" button.
 
 ---
 
-## 8. Test the flow
+## 5. Test the flow
 
-1. Create a new vendor account in the app — `trialEndsAt` is set to 30 days from now.
-2. To simulate trial expiry, manually set `trialEndsAt` to a past date in Firestore and clear `subscriptionStatus`.
-3. The paywall should appear on the dashboard.
-4. Click **Subscribe Now** — you should be redirected to Stripe Checkout.
-5. Use Stripe test card `4242 4242 4242 4242`, any future expiry, any CVC.
-6. After success, Stripe fires the webhook → Firestore `subscriptionStatus` becomes `"active"` → paywall disappears.
+1. Create a new vendor account — `trialEndsAt` is set to 30 days from now.
+2. To test the paywall: in Firestore, set `trialEndsAt` to a past date and remove `subscriptionStatus`.
+3. Click **Subscribe Now** — you'll be redirected to the Stripe Payment Link.
+4. Use test card `4242 4242 4242 4242`, any future expiry, any CVC.
+5. Stripe fires `checkout.session.completed` → webhook updates Firestore → paywall disappears.
 
 ---
 
-## How subscription status flows
+## How it works
 
 ```
 Store created  →  trialEndsAt = now + 30 days
-                  subscriptionStatus = undefined (in trial)
+                  subscriptionStatus = undefined
 
-Trial expires  →  needsPayment = true  →  paywall shown
+Trial expires  →  paywall shown in app
 
-Vendor subscribes via Stripe Checkout
+Vendor clicks Subscribe Now
        ↓
-Stripe fires  customer.subscription.created
+Redirected to:
+  https://buy.stripe.com/aFa5kF5JZh193yT6OEd7q00?client_reference_id={storeId}
        ↓
-stripeWebhook updates Firestore:
-  subscriptionStatus = "active"
-  subscriptionId = "sub_…"
-  subscriptionEnd = <current period end>
+Stripe Checkout collects card & creates subscription
+       ↓
+Stripe fires  checkout.session.completed
+       ↓
+stripeWebhook reads client_reference_id → finds store in Firestore
+Updates:  subscriptionStatus = "active"
+          subscriptionId = "sub_…"
+          stripeCustomerId = "cus_…"
+          subscriptionEnd = <period end>
        ↓
 App re-renders, paywall gone ✓
 
-Vendor cancels via portal
+Vendor cancels via Billing Portal
        ↓
 Stripe fires  customer.subscription.deleted
        ↓
 stripeWebhook: subscriptionStatus = "cancelled"
        ↓
-paywall shown again next login ✓
+Paywall shown on next load ✓
 ```
 
 ---
@@ -142,9 +134,9 @@ paywall shown again next login ✓
 | Field | Type | Set by |
 |---|---|---|
 | `trialEndsAt` | Timestamp | App on store creation |
-| `subscriptionStatus` | string (`active`, `trialing`, `past_due`, `cancelled`) | stripeWebhook function |
-| `subscriptionId` | string | stripeWebhook function |
-| `subscriptionEnd` | Timestamp | stripeWebhook function |
-| `stripeCustomerId` | string | createCheckoutSession function |
+| `subscriptionStatus` | string (`active`, `past_due`, `cancelled`) | stripeWebhook |
+| `subscriptionId` | string | stripeWebhook |
+| `subscriptionEnd` | Timestamp | stripeWebhook |
+| `stripeCustomerId` | string | stripeWebhook |
 
-Security rules prevent vendors from writing `subscriptionStatus`, `subscriptionId`, `subscriptionEnd`, or `stripeCustomerId` directly.
+Firestore rules block vendors from writing these fields directly.
