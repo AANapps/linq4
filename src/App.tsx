@@ -8970,8 +8970,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
     cutoff.setDate(cutoff.getDate() - 90);
     const q = query(
       collection(db, 'transactions'),
-      where('store_id', '==', store.id),
-      orderBy('completed_at', 'asc')
+      where('store_id', '==', store.id)
     );
     return onSnapshot(q, snap => setChartTransactions(snap.docs.map(d => ({ id: d.id, ...d.data() }))), () => {});
   }, [store?.id]);
@@ -9628,11 +9627,12 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                 return { uid, prof, totalStamps, cycles };
               }).sort((a, b) => b.totalStamps - a.totalStamps);
 
-              const stampRows = [...storeCards].filter(c => matchesSearch(c.user_id)).sort((a, b) => {
-                const ta = (a.current_stamps || 0) + ((a.total_completed_cycles || 0) * stampsPerReward);
-                const tb = (b.current_stamps || 0) + ((b.total_completed_cycles || 0) * stampsPerReward);
-                return tb - ta;
-              });
+              const stampRows = uniqueUids.filter(matchesSearch).map(uid => {
+                const cards = storeCards.filter(c => c.user_id === uid);
+                const prof = memberProfiles.get(uid);
+                const totalStamps = cards.reduce((s, c) => s + (c.current_stamps || 0) + ((c.total_completed_cycles || 0) * stampsPerReward), 0);
+                return { uid, prof, totalStamps };
+              }).sort((a, b) => b.totalStamps - a.totalStamps);
 
               const activeRows = storeCards.filter(c => !c.isArchived && matchesSearch(c.user_id)).sort((a, b) => (b.current_stamps || 0) - (a.current_stamps || 0));
 
@@ -9666,25 +9666,20 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                       </div>
                     ))}
 
-                    {statModal === 'stamps' && stampRows.map(card => {
-                      const prof = memberProfiles.get(card.user_id);
-                      const total = (card.current_stamps || 0) + ((card.total_completed_cycles || 0) * stampsPerReward);
-                      return (
-                        <div key={card.id} className="flex items-center gap-3 p-3 rounded-2xl bg-brand-bg">
-                          <div className="w-9 h-9 rounded-full overflow-hidden bg-indigo-50 shrink-0 flex items-center justify-center">
-                            <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? card.user_id} size={36} view="head" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1"><p className="font-bold text-sm truncate">{prof?.name || 'Unknown'}</p><StreakBadge streak={prof?.streak} /></div>
-                            <p className="text-[11px] text-brand-navy/40">@{prof?.handle || card.user_id.slice(0, 8)}</p>
-                          </div>
-                          <div className="text-right shrink-0">
-                            <p className="font-bold text-sm">{total} total</p>
-                            <p className="text-[11px] text-brand-navy/40">{card.current_stamps}/{stampsPerReward} current</p>
-                          </div>
+                    {statModal === 'stamps' && stampRows.map(({ uid, prof, totalStamps }) => (
+                      <div key={uid} className="flex items-center gap-3 p-3 rounded-2xl bg-brand-bg">
+                        <div className="w-9 h-9 rounded-full overflow-hidden bg-indigo-50 shrink-0 flex items-center justify-center">
+                          <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={36} view="head" />
                         </div>
-                      );
-                    })}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1"><p className="font-bold text-sm truncate">{prof?.name || 'Unknown'}</p><StreakBadge streak={prof?.streak} /></div>
+                          <p className="text-[11px] text-brand-navy/40">@{prof?.handle || uid.slice(0, 8)}</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="font-bold text-sm">{totalStamps} stamps</p>
+                        </div>
+                      </div>
+                    ))}
 
                     {statModal === 'activeCards' && activeRows.map(card => {
                       const prof = memberProfiles.get(card.user_id);
