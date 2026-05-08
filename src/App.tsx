@@ -50,7 +50,9 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { auth, db } from './firebase';
+const functions = getFunctions();
 const storage = getStorage();
 import { cn } from './lib/utils';
 import {
@@ -319,6 +321,11 @@ interface StoreProfile {
     returnRate?: boolean;
     followers?: boolean;
   };
+  trialEndsAt?: { toMillis: () => number; seconds: number } | null;
+  subscriptionStatus?: 'active' | 'trialing' | 'past_due' | 'cancelled' | string;
+  stripeCustomerId?: string;
+  subscriptionId?: string;
+  subscriptionEnd?: { toMillis: () => number; seconds: number } | null;
 }
 
 interface Card {
@@ -1321,6 +1328,7 @@ export default function App() {
         isVerified: false,
         stamps_required_for_reward: 10,
         rewardsGiven: 0,
+        trialEndsAt: Timestamp.fromDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
         ...(data.location ? { lat: data.location.lat, lng: data.location.lng, location: data.location.city ?? '' } : {}),
       });
       setProfileCollection('vendors');
@@ -8950,6 +8958,43 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   const [chartOffset, setChartOffset] = useState(0);
   const [signupsOffset, setSignupsOffset] = useState(0);
   const [chartTransactions, setChartTransactions] = useState<any[]>([]);
+  const [isLoadingCheckout, setIsLoadingCheckout] = useState(false);
+
+  const trialEndsMs = store?.trialEndsAt
+    ? (store.trialEndsAt as any).toMillis?.() ?? (store.trialEndsAt as any).seconds * 1000
+    : null;
+  const trialDaysLeft = trialEndsMs !== null ? Math.ceil((trialEndsMs - Date.now()) / 86400000) : null;
+  const isInTrial = trialDaysLeft !== null && trialDaysLeft > 0;
+  const isSubscribed = store?.subscriptionStatus === 'active' || store?.subscriptionStatus === 'trialing';
+  const needsPayment = store !== null && !isInTrial && !isSubscribed;
+
+  const handleSubscribe = async () => {
+    if (!store?.id) return;
+    setIsLoadingCheckout(true);
+    try {
+      const fn = httpsCallable(functions, 'createCheckoutSession');
+      const result = await fn({ storeId: store.id, returnUrl: window.location.href }) as any;
+      if (result.data?.url) window.location.href = result.data.url;
+    } catch (e: any) {
+      alert('Could not start checkout: ' + (e.message || 'Unknown error'));
+    } finally {
+      setIsLoadingCheckout(false);
+    }
+  };
+
+  const handleManageBilling = async () => {
+    if (!store?.id) return;
+    setIsLoadingCheckout(true);
+    try {
+      const fn = httpsCallable(functions, 'createPortalSession');
+      const result = await fn({ storeId: store.id, returnUrl: window.location.href }) as any;
+      if (result.data?.url) window.location.href = result.data.url;
+    } catch (e: any) {
+      alert('Could not open billing portal: ' + (e.message || 'Unknown error'));
+    } finally {
+      setIsLoadingCheckout(false);
+    }
+  };
 
   useEffect(() => {
     if (!store) return;
@@ -9300,7 +9345,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
               ownerUid: user.uid,
               description: 'A wonderful local shop.',
               isVerified: false,
-              stamps_required_for_reward: 10
+              stamps_required_for_reward: 10,
+              trialEndsAt: Timestamp.fromDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
             };
             await addDoc(collection(db, 'stores'), newStore);
           }}
@@ -9340,6 +9386,75 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
             <h2 className="font-display text-3xl font-bold mb-1">Dashboard</h2>
             <p className="text-brand-navy/60">{store?.name || 'Your Store'}</p>
           </header>
+
+          {/* Trial / subscription banner */}
+          {isInTrial && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3">
+              <Clock size={20} className="text-amber-500 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-amber-800 text-sm">
+                  Free trial — {trialDaysLeft} {trialDaysLeft === 1 ? 'day' : 'days'} left
+                </p>
+                <p className="text-amber-600 text-xs truncate">Subscribe before your trial ends to keep access.</p>
+              </div>
+              <button
+                onClick={handleSubscribe}
+                disabled={isLoadingCheckout}
+                className="bg-amber-500 text-white text-xs font-bold px-3 py-1.5 rounded-xl shrink-0 disabled:opacity-50"
+              >
+                {isLoadingCheckout ? '...' : 'Subscribe'}
+              </button>
+            </div>
+          )}
+          {isSubscribed && (
+            <div className="bg-green-50 border border-green-200 rounded-2xl p-3 flex items-center gap-3">
+              <CheckCircle2 size={18} className="text-green-500 shrink-0" />
+              <p className="text-green-700 text-sm font-bold flex-1">Subscription active</p>
+              <button
+                onClick={handleManageBilling}
+                disabled={isLoadingCheckout}
+                className="text-green-600 text-xs font-bold underline underline-offset-2 disabled:opacity-50"
+              >
+                Manage
+              </button>
+            </div>
+          )}
+
+          {/* Paywall — shown when trial expired and no active subscription */}
+          {needsPayment ? (
+            <div className="flex flex-col items-center justify-center py-12 space-y-6">
+              <div className="glass-card rounded-[2rem] p-8 w-full space-y-5 text-center">
+                <div className="w-16 h-16 bg-brand-navy rounded-full flex items-center justify-center mx-auto">
+                  <Lock size={28} className="text-white" />
+                </div>
+                <div>
+                  <h2 className="font-display text-2xl font-bold mb-1">Trial Ended</h2>
+                  <p className="text-brand-navy/60 text-sm">Subscribe to continue using your vendor dashboard and issue stamps.</p>
+                </div>
+                <div className="bg-brand-bg rounded-2xl p-5">
+                  <p className="font-display font-bold text-4xl">
+                    $50
+                    <span className="text-lg font-normal text-brand-navy/50">/month</span>
+                  </p>
+                  <ul className="mt-3 space-y-1 text-sm text-brand-navy/70 text-left max-w-[220px] mx-auto">
+                    <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-green-500 shrink-0" />Full vendor dashboard</li>
+                    <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-green-500 shrink-0" />Unlimited stamp issuing</li>
+                    <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-green-500 shrink-0" />Analytics &amp; reports</li>
+                    <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-green-500 shrink-0" />Customer broadcasts</li>
+                  </ul>
+                </div>
+                <button
+                  onClick={handleSubscribe}
+                  disabled={isLoadingCheckout}
+                  className="w-full bg-brand-navy text-white font-bold py-4 rounded-2xl disabled:opacity-50 transition-opacity"
+                >
+                  {isLoadingCheckout ? 'Loading...' : 'Subscribe Now — $50/month'}
+                </button>
+                <p className="text-xs text-brand-navy/30">Secure payment via Stripe. Cancel anytime.</p>
+              </div>
+            </div>
+          ) : (
+          <>
 
           {/* Stat tiles */}
           <div className="grid grid-cols-3 gap-3">
@@ -9808,6 +9923,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
               </div>
             )}
           </div>
+          </> /* end non-paywall content */
+          )} {/* end needsPayment ternary */}
         </div>
       )}
 
@@ -9985,16 +10102,6 @@ function LoyaltyCard({ card, store, onViewStore, compact = false }: { card: Card
         total_completed_cycles: newCycles,
         last_tap_timestamp: serverTimestamp()
       });
-
-      // Optimistic chart update
-      const _nowMs2 = Date.now();
-      setChartTransactions(prev => [...prev, {
-        id: `opt_${_nowMs2}`,
-        store_id: store.id,
-        user_id: auth.currentUser.uid,
-        stamp_count: qty,
-        completed_at: { toMillis: () => _nowMs2, seconds: Math.floor(_nowMs2 / 1000) },
-      }]);
 
       await updateDoc(doc(db, 'users', auth.currentUser.uid), {
         totalStamps: increment(qty)
