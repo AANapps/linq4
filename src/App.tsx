@@ -9429,12 +9429,18 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
 
           {/* User base growth chart */}
           {(() => {
-            // Cumulative unique members over time based on first transaction per user
+            // Cumulative unique members — seed from first transaction, fill gaps from card join date
             const firstTxByUser = new Map<string, number>();
             chartTransactions.forEach(tx => {
               const uid = tx.user_id;
               const ms = tx.completed_at?.toMillis?.() ?? (tx.completed_at?.seconds ?? 0) * 1000;
-              if (!firstTxByUser.has(uid) || ms < firstTxByUser.get(uid)!) firstTxByUser.set(uid, ms);
+              if (ms > 0 && (!firstTxByUser.has(uid) || ms < firstTxByUser.get(uid)!)) firstTxByUser.set(uid, ms);
+            });
+            storeCards.forEach(card => {
+              if (!firstTxByUser.has(card.user_id)) {
+                const ms = card.last_tap_timestamp?.toMillis?.() ?? (card.last_tap_timestamp?.seconds ?? 0) * 1000;
+                firstTxByUser.set(card.user_id, ms > 0 ? ms : Date.now());
+              }
             });
             const joinTimestamps = [...firstTxByUser.values()].sort((a, b) => a - b);
             if (joinTimestamps.length === 0) return null;
@@ -9496,12 +9502,18 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
 
           {/* Sign-ups per day chart */}
           {(() => {
-            // New distinct users per day (first transaction per user = sign-up proxy)
+            // New distinct users per day — first transaction if available, else card join date
             const firstTxByUser2 = new Map<string, number>();
             chartTransactions.forEach(tx => {
               const uid = tx.user_id;
               const ms = tx.completed_at?.toMillis?.() ?? (tx.completed_at?.seconds ?? 0) * 1000;
-              if (!firstTxByUser2.has(uid) || ms < firstTxByUser2.get(uid)!) firstTxByUser2.set(uid, ms);
+              if (ms > 0 && (!firstTxByUser2.has(uid) || ms < firstTxByUser2.get(uid)!)) firstTxByUser2.set(uid, ms);
+            });
+            storeCards.forEach(card => {
+              if (!firstTxByUser2.has(card.user_id)) {
+                const ms = card.last_tap_timestamp?.toMillis?.() ?? (card.last_tap_timestamp?.seconds ?? 0) * 1000;
+                firstTxByUser2.set(card.user_id, ms > 0 ? ms : Date.now());
+              }
             });
             const [signupsDays, setSignupsDays] = [14, null] as any; // static 14-day window
             const periodCount = 14;
