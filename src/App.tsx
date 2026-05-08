@@ -17410,6 +17410,32 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
   const [card, setCard] = useState<Card | null>(null);
   const [isFollowingStore, setIsFollowingStore] = useState(false);
   const [allStoreCards, setAllStoreCards] = useState<Card[]>([]);
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [distance, setDistance] = useState<number | null>(null);
+
+  useEffect(() => {
+    navigator.geolocation?.getCurrentPosition(pos => {
+      setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+    });
+  }, []);
+
+  useEffect(() => {
+    const addr = store.location || (store as any).address;
+    if (!addr || !userCoords) return;
+    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(addr)}&format=json&limit=1`)
+      .then(r => r.json())
+      .then((data: any[]) => {
+        if (!data[0]) return;
+        const sLat = parseFloat(data[0].lat);
+        const sLng = parseFloat(data[0].lon);
+        const R = 6371;
+        const dLat = (sLat - userCoords.lat) * Math.PI / 180;
+        const dLon = (sLng - userCoords.lng) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) ** 2 + Math.cos(userCoords.lat * Math.PI / 180) * Math.cos(sLat * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+        setDistance(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+      })
+      .catch(() => {});
+  }, [store.location, (store as any).address, userCoords]);
 
   useEffect(() => {
     const cardId = `${user.uid}_${store.id}`;
@@ -17685,31 +17711,68 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
         )}
       </AnimatePresence>
 
-      {/* Logo + name */}
-      <div className="flex flex-col items-center text-center gap-3 pt-2">
-        <div className="w-24 h-24 rounded-3xl overflow-hidden border-4 border-white shadow-lg bg-white">
-          {store.logoUrl
-            ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
-            : <div className="w-full h-full flex items-center justify-center bg-brand-navy/5 text-3xl">{store.name?.[0]}</div>
+      {/* Cover banner + logo */}
+      <div className="-mx-4 relative" style={{ marginTop: '-1.25rem' }}>
+        <div className="h-36 overflow-hidden">
+          {store.coverUrl
+            ? <img src={store.coverUrl} alt="" className="w-full h-full object-cover" />
+            : <div className="w-full h-full" style={{ background: `linear-gradient(135deg, ${store.theme || '#3a6fcc'}60 0%, ${store.theme || '#3a6fcc'}25 100%)` }} />
           }
         </div>
-        <div>
-          <div className="flex items-center justify-center gap-2">
-            <h2 className="text-2xl font-bold text-brand-navy">{store.name}</h2>
-            {store.isVerified && <CheckCircle2 size={18} className="text-blue-400" />}
+        <div className="absolute -bottom-10 left-5">
+          <div className="w-20 h-20 rounded-[1.5rem] overflow-hidden border-4 border-white shadow-xl bg-white">
+            {store.logoUrl
+              ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
+              : <div className="w-full h-full flex items-center justify-center bg-brand-navy/5 text-3xl">{store.name?.[0]}</div>
+            }
           </div>
-          <p className="text-sm text-brand-navy/50 mt-0.5">{store.category}{store.location || store.address ? ` · ${store.location || store.address}` : ''}</p>
-          {avgRating !== null && (
-            <div className="flex items-center justify-center gap-1.5 mt-1.5">
-              <div className="flex items-center gap-0.5">
-                {[1,2,3,4,5].map(s => (
-                  <Star key={s} size={12} className={s <= Math.round(avgRating) ? "text-brand-gold fill-brand-gold" : "text-brand-navy/20"} />
-                ))}
-              </div>
-              <span className="text-brand-navy font-bold text-xs">{avgRating.toFixed(1)}</span>
-              <span className="text-brand-navy/40 text-xs">({storeReviews.length})</span>
+        </div>
+      </div>
+
+      {/* Name + info */}
+      <div className="pt-10">
+        <div className="flex items-start gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="font-display text-2xl font-bold text-brand-navy">{store.name}</h2>
+              {store.isVerified && <CheckCircle2 size={18} className="text-blue-400" />}
             </div>
-          )}
+            <p className="text-sm text-brand-navy/50 mt-0.5">{store.category}</p>
+            {(store.location || (store as any).address) && (
+              <button
+                onClick={() => {
+                  const addr = encodeURIComponent(store.location || (store as any).address || '');
+                  if (userCoords) {
+                    window.open(`https://www.google.com/maps/dir/?api=1&origin=${userCoords.lat},${userCoords.lng}&destination=${addr}`, '_blank');
+                  } else {
+                    window.open(`https://www.google.com/maps/search/?api=1&query=${addr}`, '_blank');
+                  }
+                }}
+                className="flex items-center gap-1 mt-1.5 text-brand-gold active:opacity-70"
+              >
+                <MapPin size={13} className="shrink-0" />
+                <span className="text-xs font-medium text-left leading-tight">
+                  {store.location || (store as any).address}
+                  {distance !== null && (
+                    <span className="text-brand-navy/40 ml-1">
+                      · {distance < 1 ? `${Math.round(distance * 1000)}m` : `${distance.toFixed(1)}km`}
+                    </span>
+                  )}
+                </span>
+              </button>
+            )}
+            {avgRating !== null && (
+              <div className="flex items-center gap-1.5 mt-1.5">
+                <div className="flex items-center gap-0.5">
+                  {[1,2,3,4,5].map(s => (
+                    <Star key={s} size={12} className={s <= Math.round(avgRating) ? "text-brand-gold fill-brand-gold" : "text-brand-navy/20"} />
+                  ))}
+                </div>
+                <span className="text-brand-navy font-bold text-xs">{avgRating.toFixed(1)}</span>
+                <span className="text-brand-navy/40 text-xs">({storeReviews.length})</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
