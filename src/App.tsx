@@ -6024,6 +6024,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const [activePrograms, setActivePrograms] = useState<Challenge[]>([]);
   const [activeStandardChallenges, setActiveStandardChallenges] = useState<Challenge[]>([]);
   const [myStandardEntries, setMyStandardEntries] = useState<Map<string, any>>(new Map());
+  const [confirmLeaveChallengeId, setConfirmLeaveChallengeId] = useState<string | null>(null);
   const [joiningProgramId, setJoiningProgramId] = useState<string | null>(null);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [highlightedChallengeId, setHighlightedChallengeId] = useState<string | null>(null);
@@ -6862,16 +6863,38 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
 
                           {joined ? (
                             !isComplete && (
-                            <button
-                              onClick={async () => {
-                                if (!entry) return;
-                                await updateDoc(doc(db, 'challenges', c.id), { participantUids: arrayRemove(user.uid) });
-                                await deleteDoc(doc(db, 'challenge_entries', entry.id));
-                              }}
-                              className="w-full py-3 rounded-2xl text-sm font-bold transition-all active:scale-95 bg-red-50 text-red-500 border border-red-200"
-                            >
-                              Leave Challenge
-                            </button>
+                              confirmLeaveChallengeId === c.id ? (
+                                <div className="rounded-2xl bg-red-50 border border-red-200 p-4 space-y-3">
+                                  <p className="text-sm font-bold text-red-600 text-center">Leave this challenge?</p>
+                                  <p className="text-xs text-red-400 text-center">All your progress will be permanently lost and cannot be recovered.</p>
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => setConfirmLeaveChallengeId(null)}
+                                      className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-white text-brand-navy/60 border border-brand-navy/10 active:scale-95 transition-all"
+                                    >
+                                      Keep Going
+                                    </button>
+                                    <button
+                                      onClick={async () => {
+                                        if (!entry) return;
+                                        setConfirmLeaveChallengeId(null);
+                                        await updateDoc(doc(db, 'challenges', c.id), { participantUids: arrayRemove(user.uid) });
+                                        await deleteDoc(doc(db, 'challenge_entries', entry.id));
+                                      }}
+                                      className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-red-500 text-white active:scale-95 transition-all"
+                                    >
+                                      Yes, Leave
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setConfirmLeaveChallengeId(c.id)}
+                                  className="w-full py-3 rounded-2xl text-sm font-bold transition-all active:scale-95 bg-red-50 text-red-500 border border-red-200"
+                                >
+                                  Leave Challenge
+                                </button>
+                              )
                             )
                           ) : (
                             <>
