@@ -4179,14 +4179,28 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
     }
   };
 
-  const handleSetTrial = async (store: StoreProfile) => {
+  const isStoreTrial = (s: StoreProfile) => {
+    const ms = s.trialEndsAt
+      ? ((s.trialEndsAt as any).toMillis?.() ?? (s.trialEndsAt as any).seconds * 1000)
+      : null;
+    return ms !== null && ms > Date.now();
+  };
+
+  const handleToggleTrial = async (store: StoreProfile) => {
     setTogglingId(store.id);
     try {
-      await updateDoc(doc(db, 'stores', store.id), {
-        trialEndsAt: Timestamp.fromDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
-        subscriptionStatus: null,
-        cardEnabled: true,
-      });
+      if (isStoreTrial(store)) {
+        await updateDoc(doc(db, 'stores', store.id), {
+          trialEndsAt: Timestamp.fromDate(new Date(Date.now() - 1000)),
+          cardEnabled: false,
+        });
+      } else {
+        await updateDoc(doc(db, 'stores', store.id), {
+          trialEndsAt: Timestamp.fromDate(new Date(Date.now() + 30 * 86400_000)),
+          subscriptionStatus: null,
+          cardEnabled: true,
+        });
+      }
     } finally {
       setTogglingId(null);
     }
@@ -4295,7 +4309,39 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
                     <span className="text-[10px] text-brand-navy/30">{store.category}</span>
                   </div>
                 </div>
-                <div className="flex flex-col gap-1 shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {/* Activate / Deactivate */}
+                  <button
+                    onClick={() => handleToggleSub(store)}
+                    disabled={togglingId === store.id}
+                    className={cn(
+                      'px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all active:scale-95 disabled:opacity-50',
+                      store.subscriptionStatus === 'active' ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'
+                    )}
+                  >
+                    {togglingId === store.id ? '…' : store.subscriptionStatus === 'active' ? 'Deactivate' : 'Activate'}
+                  </button>
+
+                  {/* Trial toggle */}
+                  <div className="flex flex-col items-center gap-0.5">
+                    <span className="text-[8px] font-bold text-brand-navy/30 uppercase tracking-wide">Trial</span>
+                    <button
+                      onClick={() => handleToggleTrial(store)}
+                      disabled={togglingId === store.id}
+                      className={cn(
+                        'relative w-10 h-5 rounded-full transition-colors duration-200 disabled:opacity-50',
+                        isStoreTrial(store) ? 'bg-amber-400' : 'bg-brand-navy/15'
+                      )}
+                    >
+                      <motion.div
+                        animate={{ x: isStoreTrial(store) ? 22 : 2 }}
+                        transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                        className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm"
+                      />
+                    </button>
+                  </div>
+
+                  {/* + days */}
                   {extendingId === store.id ? (
                     <div className="flex items-center gap-1">
                       <input
@@ -4303,53 +4349,24 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
                         min="1"
                         value={extendDays}
                         onChange={e => setExtendDays(e.target.value)}
-                        className="w-12 px-1.5 py-1 rounded-lg border border-amber-300 text-[10px] font-bold text-center text-amber-700 outline-none"
+                        className="w-10 px-1 py-1 rounded-lg border border-amber-300 text-[10px] font-bold text-center text-amber-700 outline-none"
                       />
-                      <span className="text-[9px] text-brand-navy/40 font-bold">d</span>
                       <button
                         onClick={() => handleExtendTrial(store)}
                         disabled={togglingId === store.id}
-                        className="px-2 py-1 rounded-lg bg-amber-500 text-white text-[10px] font-bold disabled:opacity-50"
+                        className="px-1.5 py-1 rounded-lg bg-amber-500 text-white text-[10px] font-bold disabled:opacity-50"
                       >
                         {togglingId === store.id ? '…' : '✓'}
                       </button>
-                      <button
-                        onClick={() => setExtendingId(null)}
-                        className="px-2 py-1 rounded-lg bg-brand-navy/10 text-brand-navy/50 text-[10px] font-bold"
-                      >
-                        ✕
-                      </button>
+                      <button onClick={() => setExtendingId(null)} className="px-1.5 py-1 rounded-lg bg-brand-navy/10 text-brand-navy/50 text-[10px] font-bold">✕</button>
                     </div>
                   ) : (
-                    <>
-                      <button
-                        onClick={() => handleToggleSub(store)}
-                        disabled={togglingId === store.id}
-                        className={cn(
-                          'px-2.5 py-1 rounded-xl text-[10px] font-bold transition-all active:scale-95 disabled:opacity-50',
-                          store.subscriptionStatus === 'active'
-                            ? 'bg-red-50 text-red-500'
-                            : 'bg-green-50 text-green-600'
-                        )}
-                      >
-                        {togglingId === store.id ? '…' : store.subscriptionStatus === 'active' ? 'Deactivate' : 'Activate'}
-                      </button>
-                      <div className="flex gap-1">
-                        <button
-                          onClick={() => handleSetTrial(store)}
-                          disabled={togglingId === store.id}
-                          className="flex-1 px-2 py-1 rounded-xl text-[10px] font-bold bg-amber-50 text-amber-600 transition-all active:scale-95 disabled:opacity-50"
-                        >
-                          Trial
-                        </button>
-                        <button
-                          onClick={() => { setExtendingId(store.id); setExtendDays('30'); }}
-                          className="px-2 py-1 rounded-xl text-[10px] font-bold bg-amber-50 text-amber-600 active:scale-95 transition-all"
-                        >
-                          +d
-                        </button>
-                      </div>
-                    </>
+                    <button
+                      onClick={() => { setExtendingId(store.id); setExtendDays('30'); }}
+                      className="w-7 h-7 rounded-xl bg-amber-50 text-amber-600 text-sm font-bold flex items-center justify-center active:scale-95 transition-all"
+                    >
+                      +
+                    </button>
                   )}
                 </div>
                 <button
