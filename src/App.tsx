@@ -328,6 +328,22 @@ interface StoreProfile {
   subscriptionEnd?: { toMillis: () => number; seconds: number } | null;
 }
 
+// Returns true if the store's loyalty card should be visible to consumers.
+// Checks cardEnabled AND trial/subscription expiry so cards hide even if
+// the vendor never logged in after their trial ended.
+function storeCardActive(store: StoreProfile): boolean {
+  if (store.cardEnabled === false) return false;
+  const trialMs = store.trialEndsAt
+    ? ((store.trialEndsAt as any).toMillis?.() ?? (store.trialEndsAt as any).seconds * 1000)
+    : null;
+  if (trialMs !== null) {
+    const inTrial = trialMs > Date.now();
+    const subscribed = store.subscriptionStatus === 'active' || store.subscriptionStatus === 'trialing';
+    return inTrial || subscribed;
+  }
+  return true;
+}
+
 interface Card {
   id: string;
   user_id: string;
@@ -6269,7 +6285,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   }, [badgeDetectionReady, allBadgesGlobal, initialCards, profile, followersCountG, followingCountG, postsCountG, myStandardEntries]);
 
   const handleJoinStore = async (store: StoreProfile) => {
-    if (!user || store.cardEnabled === false) return;
+    if (!user || !storeCardActive(store)) return;
     const cardId = `${user.uid}_${store.id}`;
     const cardRef = doc(db, 'cards', cardId);
     const cardSnap = await getDoc(cardRef);
@@ -9024,12 +9040,34 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   const [signupsOffset, setSignupsOffset] = useState(0);
   const [chartTransactions, setChartTransactions] = useState<any[]>([]);
   const [isLoadingCheckout, setIsLoadingCheckout] = useState(false);
+  const [tickNow, setTickNow] = useState(Date.now());
 
   const trialEndsMs = store?.trialEndsAt
     ? (store.trialEndsAt as any).toMillis?.() ?? (store.trialEndsAt as any).seconds * 1000
     : null;
-  const trialDaysLeft = trialEndsMs !== null ? Math.ceil((trialEndsMs - Date.now()) / 86400000) : null;
+  const trialDaysLeft = trialEndsMs !== null ? Math.ceil((trialEndsMs - tickNow) / 86400000) : null;
   const isInTrial = trialDaysLeft !== null && trialDaysLeft > 0;
+
+  // Tick every minute while in trial; every second in the last hour
+  useEffect(() => {
+    if (trialEndsMs === null) return;
+    const remaining = trialEndsMs - Date.now();
+    const interval = remaining < 3600_000 ? 1_000 : 60_000;
+    const id = setInterval(() => setTickNow(Date.now()), interval);
+    return () => clearInterval(id);
+  }, [trialEndsMs, isInTrial]);
+
+  const trialCountdown = (() => {
+    if (trialEndsMs === null) return '';
+    const rem = Math.max(0, trialEndsMs - tickNow);
+    const d = Math.floor(rem / 86400_000);
+    const h = Math.floor((rem % 86400_000) / 3600_000);
+    const m = Math.floor((rem % 3600_000) / 60_000);
+    const s = Math.floor((rem % 60_000) / 1_000);
+    if (d > 0) return `${d}d ${h}h ${m}m`;
+    if (h > 0) return `${h}h ${m}m ${s}s`;
+    return `${m}m ${s}s`;
+  })();
   const isSubscribed = store?.subscriptionStatus === 'active' || store?.subscriptionStatus === 'trialing';
   const needsPayment = store !== null && !isInTrial && !isSubscribed;
 
@@ -9474,7 +9512,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
               <Clock size={20} className="text-amber-500 shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-amber-800 text-sm">
-                  Free trial — {trialDaysLeft} {trialDaysLeft === 1 ? 'day' : 'days'} left
+                  Free trial — {trialCountdown} remaining
                 </p>
                 <p className="text-amber-600 text-xs truncate">Subscribe before your trial ends to keep access.</p>
               </div>
@@ -10568,7 +10606,7 @@ function StoreCard({ store, card, onJoin, onClick }: { store: StoreProfile, card
   const finalReward = store.rewardTiers?.length
     ? [...store.rewardTiers].sort((a, b) => b.stamps - a.stamps)[0]?.reward
     : store.reward;
-  const cardEnabled = store.cardEnabled !== false;
+  const cardEnabled = storeCardActive(store);
 
   return (
     <div
@@ -10675,7 +10713,7 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
                             s.category.toLowerCase().includes(search.toLowerCase());
       const matchesCat = activeCategory === 'All' || s.category === activeCategory;
       const notJoined = !cards.some(c => c.store_id === s.id && !c.isArchived);
-      const cardOn = s.cardEnabled !== false;
+      const cardOn = storeCardActive(s);
       return matchesSearch && matchesCat && notJoined && cardOn;
     });
     if (!userCoords) return matched;
@@ -17597,7 +17635,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
             {isFollowingStore ? <UserCheck size={14} /> : <UserPlus size={14} />}
             {isFollowingStore ? 'Following' : 'Follow'}
           </button>
-          {store.cardEnabled !== false && (
+          {storeCardActive(store) && (
             <button
               onClick={card ? undefined : handleJoinStore}
               className={cn("flex items-center gap-1.5 px-4 py-2.5 rounded-2xl font-bold text-xs transition-all shadow active:scale-95", card ? "bg-green-50 text-green-600 border border-green-200 cursor-default" : "gradient-red text-white")}
