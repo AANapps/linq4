@@ -4152,6 +4152,7 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
       const isActive = store.subscriptionStatus === 'active';
       await updateDoc(doc(db, 'stores', store.id), {
         subscriptionStatus: isActive ? 'cancelled' : 'active',
+        ...(!isActive ? { cardEnabled: true } : {}),
       });
     } finally {
       setTogglingId(null);
@@ -4164,6 +4165,7 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
       await updateDoc(doc(db, 'stores', store.id), {
         trialEndsAt: Timestamp.fromDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
         subscriptionStatus: null,
+        cardEnabled: true,
       });
     } finally {
       setTogglingId(null);
@@ -9030,6 +9032,14 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   const isInTrial = trialDaysLeft !== null && trialDaysLeft > 0;
   const isSubscribed = store?.subscriptionStatus === 'active' || store?.subscriptionStatus === 'trialing';
   const needsPayment = store !== null && !isInTrial && !isSubscribed;
+
+  // Auto-disable the loyalty card when the trial ends and no subscription
+  useEffect(() => {
+    if (!store?.id) return;
+    if (needsPayment && store.cardEnabled !== false) {
+      updateDoc(doc(db, 'stores', store.id), { cardEnabled: false });
+    }
+  }, [needsPayment, store?.id]);
 
   const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/aFa5kF5JZh193yT6OEd7q00';
 
