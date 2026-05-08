@@ -13115,6 +13115,58 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         )}
       </AnimatePresence>
 
+      {/* Active cards slider */}
+      {(() => {
+        const activeCards = userCards.filter(c => !c.isArchived);
+        if (activeCards.length === 0) return null;
+        return (
+          <div className="space-y-2.5">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Active Cards</p>
+            <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-2 scrollbar-hide">
+              {activeCards.map(card => {
+                const store = (stores || []).find(s => s.id === card.store_id);
+                if (!store) return null;
+                const theme = store.theme || '#3a6fcc';
+                const total = store.stamps_required_for_reward || 10;
+                const pct = Math.min(100, Math.round((card.current_stamps / total) * 100));
+                return (
+                  <div
+                    key={card.id}
+                    className="snap-start shrink-0 w-52 rounded-2xl overflow-hidden shadow-sm"
+                    style={{ border: `1.5px solid ${theme}30` }}
+                  >
+                    <div className="flex items-center gap-3 px-4 py-3" style={{ backgroundColor: theme }}>
+                      <div className="w-9 h-9 rounded-xl overflow-hidden border-2 border-white/40 shrink-0">
+                        <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-white text-sm truncate leading-tight">{store.name}</p>
+                        <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">{store.category || 'Retail'}</p>
+                      </div>
+                    </div>
+                    <div className="bg-white px-4 py-3">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[10px] font-bold" style={{ color: theme }}>{card.current_stamps} / {total} stamps</span>
+                        <span className="text-[10px] font-bold text-brand-navy/30">{pct}%</span>
+                      </div>
+                      <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: `${theme}20` }}>
+                        <motion.div
+                          className="h-full rounded-full"
+                          style={{ backgroundColor: theme }}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${pct}%` }}
+                          transition={{ duration: 0.6, ease: 'easeOut' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* My challenges */}
       {myChallenges.length > 0 && (
         <div className="space-y-3">
@@ -18365,57 +18417,56 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
         </div>
       )}
 
-      <div className="space-y-4">
+      <div className="space-y-2.5">
         <h3 className="font-display text-xl font-bold px-2">Active Cards</h3>
-        <div className="grid grid-cols-2 gap-3">
-          {cards.map(card => {
-            const store = stores.find(s => s.id === card.store_id);
-            if (!store) return null;
-            const theme = store.theme || '#3a6fcc';
-            const total = store.stamps_required_for_reward || 10;
-            const pct = Math.min(100, Math.round((card.current_stamps / total) * 100));
-            return (
-              <div
-                key={card.id}
-                onClick={() => onViewStore(store)}
-                className="rounded-2xl overflow-hidden cursor-pointer shadow-sm active:scale-[0.98] transition-transform"
-                style={{ border: `1.5px solid ${theme}30` }}
-              >
-                {/* Vendor-colour header */}
-                <div className="flex items-center gap-3 px-4 py-3" style={{ backgroundColor: theme }}>
-                  <div className="w-9 h-9 rounded-xl overflow-hidden border-2 border-white/40 shrink-0">
-                    <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
+        {cards.length === 0 ? (
+          <div className="py-8 text-center text-brand-navy/20 bg-white/50 rounded-2xl border border-dashed border-brand-navy/5">
+            <p className="text-xs font-bold uppercase tracking-widest italic">No active loyalty cards</p>
+          </div>
+        ) : (
+          <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-2 scrollbar-hide">
+            {cards.map(card => {
+              const store = stores.find(s => s.id === card.store_id);
+              if (!store) return null;
+              const theme = store.theme || '#3a6fcc';
+              const total = store.stamps_required_for_reward || 10;
+              const pct = Math.min(100, Math.round((card.current_stamps / total) * 100));
+              return (
+                <div
+                  key={card.id}
+                  onClick={() => onViewStore(store)}
+                  className="snap-start shrink-0 w-52 rounded-2xl overflow-hidden cursor-pointer shadow-sm active:scale-[0.98] transition-transform"
+                  style={{ border: `1.5px solid ${theme}30` }}
+                >
+                  <div className="flex items-center gap-3 px-4 py-3" style={{ backgroundColor: theme }}>
+                    <div className="w-9 h-9 rounded-xl overflow-hidden border-2 border-white/40 shrink-0">
+                      <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-white text-sm truncate leading-tight">{store.name}</p>
+                      <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">{store.category || 'Retail'}</p>
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-bold text-white text-sm truncate leading-tight">{store.name}</p>
-                    <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">{store.category || 'Retail'}</p>
+                  <div className="bg-white px-4 py-3">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[10px] font-bold" style={{ color: theme }}>{card.current_stamps} / {total} stamps</span>
+                      <span className="text-[10px] font-bold text-brand-navy/30">{pct}%</span>
+                    </div>
+                    <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: `${theme}20` }}>
+                      <motion.div
+                        className="h-full rounded-full"
+                        style={{ backgroundColor: theme }}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${pct}%` }}
+                        transition={{ duration: 0.6, ease: 'easeOut' }}
+                      />
+                    </div>
                   </div>
                 </div>
-                {/* White body with progress bar */}
-                <div className="bg-white px-4 py-3">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[10px] font-bold" style={{ color: theme }}>{card.current_stamps} / {total} stamps</span>
-                    <span className="text-[10px] font-bold text-brand-navy/30">{pct}%</span>
-                  </div>
-                  <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: `${theme}20` }}>
-                    <motion.div
-                      className="h-full rounded-full"
-                      style={{ backgroundColor: theme }}
-                      initial={{ width: 0 }}
-                      animate={{ width: `${pct}%` }}
-                      transition={{ duration: 0.6, ease: 'easeOut' }}
-                    />
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-          {cards.length === 0 && (
-            <div className="col-span-1 sm:col-span-2 py-8 text-center text-brand-navy/20 bg-white/50 rounded-2xl border border-dashed border-brand-navy/5">
-              <p className="text-xs font-bold uppercase tracking-widest italic">No active loyalty cards</p>
-            </div>
-          )}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Challenges */}
