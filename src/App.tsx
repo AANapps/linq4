@@ -4126,12 +4126,37 @@ function BadgesAdminPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
+function subStatusInfo(store: StoreProfile): { label: string; color: string } {
+  if (store.subscriptionStatus === 'active') return { label: 'Active', color: 'bg-green-100 text-green-700' };
+  if (store.subscriptionStatus === 'past_due') return { label: 'Past due', color: 'bg-orange-100 text-orange-700' };
+  if (store.subscriptionStatus === 'cancelled') return { label: 'Cancelled', color: 'bg-red-100 text-red-600' };
+  const trialMs = store.trialEndsAt ? ((store.trialEndsAt as any).toMillis?.() ?? (store.trialEndsAt as any).seconds * 1000) : null;
+  if (trialMs && trialMs > Date.now()) {
+    const days = Math.ceil((trialMs - Date.now()) / 86400000);
+    return { label: `Trial · ${days}d`, color: 'bg-amber-100 text-amber-700' };
+  }
+  return { label: 'No sub', color: 'bg-brand-navy/8 text-brand-navy/40' };
+}
+
 function AdminStoresPanel({ onClose }: { onClose: () => void }) {
   const [stores, setStores] = useState<StoreProfile[]>([]);
   const [search, setSearch] = useState('');
   const [editingStore, setEditingStore] = useState<StoreProfile | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  const handleToggleSub = async (store: StoreProfile) => {
+    setTogglingId(store.id);
+    try {
+      const isActive = store.subscriptionStatus === 'active';
+      await updateDoc(doc(db, 'stores', store.id), {
+        subscriptionStatus: isActive ? 'cancelled' : 'active',
+      });
+    } finally {
+      setTogglingId(null);
+    }
+  };
 
   useEffect(() => {
     return onSnapshot(collection(db, 'stores'), snap =>
@@ -4210,8 +4235,25 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
                 </div>
                 <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setEditingStore(store)}>
                   <p className="font-bold text-sm text-brand-navy truncate">{store.name}</p>
-                  <p className="text-[10px] text-brand-navy/40">{store.category}{store.location ? ` · ${store.location}` : ''}</p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className={cn('text-[9px] font-bold px-1.5 py-0.5 rounded-full', subStatusInfo(store).color)}>
+                      {subStatusInfo(store).label}
+                    </span>
+                    <span className="text-[10px] text-brand-navy/30">{store.category}</span>
+                  </div>
                 </div>
+                <button
+                  onClick={() => handleToggleSub(store)}
+                  disabled={togglingId === store.id}
+                  className={cn(
+                    'px-2.5 py-1 rounded-xl text-[10px] font-bold transition-all active:scale-95 disabled:opacity-50',
+                    store.subscriptionStatus === 'active'
+                      ? 'bg-red-50 text-red-500'
+                      : 'bg-green-50 text-green-600'
+                  )}
+                >
+                  {togglingId === store.id ? '…' : store.subscriptionStatus === 'active' ? 'Deactivate' : 'Activate'}
+                </button>
                 <button
                   onClick={() => setEditingStore(store)}
                   className="p-2 text-brand-navy/30 hover:text-brand-navy/60 transition-colors"
