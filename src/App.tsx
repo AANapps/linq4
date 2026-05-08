@@ -7013,14 +7013,15 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
       const current = cardSnap.data()?.current_stamps || 0;
       newCycles = cardSnap.data()?.total_completed_cycles || 0;
       newStamps = current + 1;
-      if (newStamps >= limit) {
+      const cycleComplete = newStamps >= limit;
+      if (cycleComplete) {
         newCycles += 1;
         if (newStamps > limit) newStamps = limit;
-        await addDoc(collection(db, 'transactions'), {
-          user_id: user.uid, store_id: store.id, completed_at: serverTimestamp(),
-          stamps_at_completion: limit, reward_claimed: false,
-        });
       }
+      const txData1 = cycleComplete
+        ? { user_id: user.uid, store_id: store.id, completed_at: serverTimestamp(), stamp_count: 1, stamps_at_completion: limit, reward_claimed: false }
+        : { user_id: user.uid, store_id: store.id, completed_at: serverTimestamp(), stamp_count: 1 };
+      await addDoc(collection(db, 'transactions'), txData1);
       await updateDoc(cardRef, { current_stamps: newStamps, total_completed_cycles: newCycles, last_tap_timestamp: serverTimestamp() });
     }
 
@@ -9148,20 +9149,15 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
           let newStamps = data.current_stamps + qty;
           let newCycles = data.total_completed_cycles;
 
-          if (newStamps >= limit) {
+          const cycleCompleted = newStamps >= limit;
+          if (cycleCompleted) {
             newCycles += 1;
-            // Cap at limit to force redemption before starting new cycle
-            if (newStamps > limit) newStamps = limit; 
-            
-            // Record transaction
-            await addDoc(collection(db, 'transactions'), {
-              user_id: customer.uid,
-              store_id: store.id,
-              completed_at: serverTimestamp(),
-              stamps_at_completion: limit,
-              reward_claimed: false
-            });
+            if (newStamps > limit) newStamps = limit;
           }
+          const txData = cycleCompleted
+            ? { user_id: customer.uid, store_id: store.id, completed_at: serverTimestamp(), stamp_count: qty, stamps_at_completion: limit, reward_claimed: false }
+            : { user_id: customer.uid, store_id: store.id, completed_at: serverTimestamp(), stamp_count: qty };
+          await addDoc(collection(db, 'transactions'), txData);
 
           await updateDoc(cardRef, {
             current_stamps: newStamps,
@@ -9173,19 +9169,15 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
           let newStamps = qty;
           let newCycles = 0;
 
-          if (newStamps >= limit) {
+          const cycleCompleted2 = newStamps >= limit;
+          if (cycleCompleted2) {
             newCycles = 1;
-            // Cap at limit to force redemption before starting new cycle
             if (newStamps > limit) newStamps = limit;
-
-            await addDoc(collection(db, 'transactions'), {
-              user_id: customer.uid,
-              store_id: store.id,
-              completed_at: serverTimestamp(),
-              stamps_at_completion: limit,
-              reward_claimed: false
-            });
           }
+          const txData2 = cycleCompleted2
+            ? { user_id: customer.uid, store_id: store.id, completed_at: serverTimestamp(), stamp_count: qty, stamps_at_completion: limit, reward_claimed: false }
+            : { user_id: customer.uid, store_id: store.id, completed_at: serverTimestamp(), stamp_count: qty };
+          await addDoc(collection(db, 'transactions'), txData2);
 
           await setDoc(cardRef, {
             user_id: customer.uid,
@@ -9361,10 +9353,12 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
             for (let i = periodCount - 1; i >= 0; i--) {
               const end = periodEnd - i * msPerPeriod;
               const start = end - msPerPeriod;
-              const count = chartTransactions.filter(tx => {
-                const t = tx.completed_at?.toMillis?.() ?? tx.completed_at?.seconds * 1000 ?? 0;
-                return t >= start && t < end;
-              }).length;
+              const count = chartTransactions
+                .filter(tx => {
+                  const t = tx.completed_at?.toMillis?.() ?? (tx.completed_at?.seconds ?? 0) * 1000;
+                  return t >= start && t < end;
+                })
+                .reduce((sum, tx) => sum + (tx.stamp_count ?? 1), 0);
               const d = new Date(start);
               const label = chartMode === 'weeks'
                 ? `${d.getDate()}/${d.getMonth() + 1}`
@@ -9966,21 +9960,15 @@ function LoyaltyCard({ card, store, onViewStore, compact = false }: { card: Card
       let newStamps = card.current_stamps + qty;
       let newCycles = card.total_completed_cycles;
 
-      if (newStamps >= limit) {
+      const cycleCompleted3 = newStamps >= limit;
+      if (cycleCompleted3) {
         newCycles += 1;
-        // We don't modulo here if we want the user to "stop" at 10 for the popup
-        // But the requirement says "when user reaches 10... show it to shop... then stamp again"
-        // So let's cap it at limit for the completion state
-        if (newStamps > limit) newStamps = limit; 
-        
-        await addDoc(collection(db, 'transactions'), {
-          user_id: auth.currentUser.uid,
-          store_id: store.id,
-          completed_at: serverTimestamp(),
-          stamps_at_completion: limit,
-          reward_claimed: false
-        });
+        if (newStamps > limit) newStamps = limit;
       }
+      const txData3 = cycleCompleted3
+        ? { user_id: auth.currentUser.uid, store_id: store.id, completed_at: serverTimestamp(), stamp_count: qty, stamps_at_completion: limit, reward_claimed: false }
+        : { user_id: auth.currentUser.uid, store_id: store.id, completed_at: serverTimestamp(), stamp_count: qty };
+      await addDoc(collection(db, 'transactions'), txData3);
 
       await updateDoc(cardRef, {
         current_stamps: newStamps,
