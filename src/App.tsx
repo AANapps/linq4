@@ -9199,6 +9199,16 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
           });
         }
         
+        // Optimistic chart update — don't wait for onSnapshot round-trip
+        const _nowMs = Date.now();
+        setChartTransactions(prev => [...prev, {
+          id: `opt_${_nowMs}`,
+          store_id: store.id,
+          user_id: customer.uid,
+          stamp_count: qty,
+          completed_at: { toMillis: () => _nowMs, seconds: Math.floor(_nowMs / 1000) },
+        }]);
+
         await updateDoc(doc(db, 'users', customer.uid), {
           totalStamps: increment(qty)
         });
@@ -9975,6 +9985,16 @@ function LoyaltyCard({ card, store, onViewStore, compact = false }: { card: Card
         total_completed_cycles: newCycles,
         last_tap_timestamp: serverTimestamp()
       });
+
+      // Optimistic chart update
+      const _nowMs2 = Date.now();
+      setChartTransactions(prev => [...prev, {
+        id: `opt_${_nowMs2}`,
+        store_id: store.id,
+        user_id: auth.currentUser.uid,
+        stamp_count: qty,
+        completed_at: { toMillis: () => _nowMs2, seconds: Math.floor(_nowMs2 / 1000) },
+      }]);
 
       await updateDoc(doc(db, 'users', auth.currentUser.uid), {
         totalStamps: increment(qty)
