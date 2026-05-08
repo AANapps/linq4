@@ -4158,6 +4158,18 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
     }
   };
 
+  const handleSetTrial = async (store: StoreProfile) => {
+    setTogglingId(store.id);
+    try {
+      await updateDoc(doc(db, 'stores', store.id), {
+        trialEndsAt: Timestamp.fromDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
+        subscriptionStatus: null,
+      });
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
   useEffect(() => {
     return onSnapshot(collection(db, 'stores'), snap =>
       setStores(snap.docs.map(d => ({ id: d.id, ...d.data() } as StoreProfile)).sort((a, b) => (a.name || '').localeCompare(b.name || '')))
@@ -4242,18 +4254,27 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
                     <span className="text-[10px] text-brand-navy/30">{store.category}</span>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleToggleSub(store)}
-                  disabled={togglingId === store.id}
-                  className={cn(
-                    'px-2.5 py-1 rounded-xl text-[10px] font-bold transition-all active:scale-95 disabled:opacity-50',
-                    store.subscriptionStatus === 'active'
-                      ? 'bg-red-50 text-red-500'
-                      : 'bg-green-50 text-green-600'
-                  )}
-                >
-                  {togglingId === store.id ? '…' : store.subscriptionStatus === 'active' ? 'Deactivate' : 'Activate'}
-                </button>
+                <div className="flex flex-col gap-1 shrink-0">
+                  <button
+                    onClick={() => handleToggleSub(store)}
+                    disabled={togglingId === store.id}
+                    className={cn(
+                      'px-2.5 py-1 rounded-xl text-[10px] font-bold transition-all active:scale-95 disabled:opacity-50',
+                      store.subscriptionStatus === 'active'
+                        ? 'bg-red-50 text-red-500'
+                        : 'bg-green-50 text-green-600'
+                    )}
+                  >
+                    {togglingId === store.id ? '…' : store.subscriptionStatus === 'active' ? 'Deactivate' : 'Activate'}
+                  </button>
+                  <button
+                    onClick={() => handleSetTrial(store)}
+                    disabled={togglingId === store.id}
+                    className="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-amber-50 text-amber-600 transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    {togglingId === store.id ? '…' : 'Trial'}
+                  </button>
+                </div>
                 <button
                   onClick={() => setEditingStore(store)}
                   className="p-2 text-brand-navy/30 hover:text-brand-navy/60 transition-colors"
@@ -9404,6 +9425,20 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
       )}
 
       {activeTab === 'messages' && (
+        needsPayment ? (
+          <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center space-y-4">
+            <div className="w-14 h-14 bg-brand-navy/8 rounded-full flex items-center justify-center">
+              <Lock size={24} className="text-brand-navy/30" />
+            </div>
+            <div>
+              <p className="font-bold text-brand-navy">Messaging locked</p>
+              <p className="text-sm text-brand-navy/50 mt-1">Subscribe to access customer messaging.</p>
+            </div>
+            <button onClick={handleSubscribe} className="bg-brand-navy text-white font-bold px-6 py-3 rounded-2xl text-sm active:scale-95 transition-transform">
+              Subscribe to access
+            </button>
+          </div>
+        ) : (
         <MessagesScreen
           currentUser={user}
           currentProfile={profile}
@@ -9413,6 +9448,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
           vendorStore={store}
           storeCards={storeCards}
         />
+        )
       )}
 
       {activeTab === 'home' && (
@@ -9970,15 +10006,18 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
             </header>
             <div className="grid grid-cols-2 gap-4">
               <button
-                onClick={() => setVendorIssueMode('card')}
-                className="glass-card rounded-[2rem] p-6 flex flex-col items-center gap-4 active:scale-95 transition-transform text-center"
+                onClick={() => !needsPayment && setVendorIssueMode('card')}
+                className={cn(
+                  "glass-card rounded-[2rem] p-6 flex flex-col items-center gap-4 transition-transform text-center relative",
+                  needsPayment ? "opacity-50 cursor-not-allowed" : "active:scale-95"
+                )}
               >
                 <div className="w-16 h-16 gradient-logo-blue rounded-2xl flex items-center justify-center shadow-lg">
-                  <CreditCard size={28} className="text-white" />
+                  {needsPayment ? <Lock size={24} className="text-white" /> : <CreditCard size={28} className="text-white" />}
                 </div>
                 <div>
                   <p className="font-bold text-brand-navy">Card</p>
-                  <p className="text-xs text-brand-navy/50 mt-0.5">Design your loyalty card</p>
+                  <p className="text-xs text-brand-navy/50 mt-0.5">{needsPayment ? 'Subscribe to access' : 'Design your loyalty card'}</p>
                 </div>
               </button>
               <button
