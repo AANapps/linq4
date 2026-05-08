@@ -11803,7 +11803,7 @@ function OffersModal({ offers, currentUser, onClose }: { offers: StoreOffer[]; c
 
 // ─── Vendor Card Section (toggle + builder) ──────────────────────────────────
 function VendorCardSection({ store, needsPayment = false }: { store: StoreProfile | null; needsPayment?: boolean }) {
-  const enabled = store?.cardEnabled !== false; // default true
+  const enabled = !needsPayment && store?.cardEnabled !== false;
   const [toggling, setToggling] = useState(false);
 
   const toggle = async () => {
