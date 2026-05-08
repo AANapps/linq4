@@ -8972,7 +8972,12 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
       collection(db, 'transactions'),
       where('store_id', '==', store.id)
     );
-    return onSnapshot(q, snap => setChartTransactions(snap.docs.map(d => ({ id: d.id, ...d.data() }))), () => {});
+    return onSnapshot(
+      q,
+      { includeMetadataChanges: true },
+      snap => setChartTransactions(snap.docs.map(d => ({ id: d.id, ...d.data({ serverTimestamps: 'estimate' }) }))),
+      err => console.error('chartTransactions:', err)
+    );
   }, [store?.id]);
 
   useEffect(() => {
