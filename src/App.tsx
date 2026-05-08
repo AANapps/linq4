@@ -333,6 +333,8 @@ interface StoreProfile {
 // the vendor never logged in after their trial ended.
 function storeCardActive(store: StoreProfile): boolean {
   if (store.cardEnabled === false) return false;
+  // Always block cancelled/past_due regardless of trialEndsAt
+  if (store.subscriptionStatus === 'cancelled' || store.subscriptionStatus === 'past_due') return false;
   const trialMs = store.trialEndsAt
     ? ((store.trialEndsAt as any).toMillis?.() ?? (store.trialEndsAt as any).seconds * 1000)
     : null;
@@ -4161,6 +4163,8 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [extendingId, setExtendingId] = useState<string | null>(null);
+  const [extendDays, setExtendDays] = useState('30');
 
   const handleToggleSub = async (store: StoreProfile) => {
     setTogglingId(store.id);
@@ -4168,7 +4172,7 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
       const isActive = store.subscriptionStatus === 'active';
       await updateDoc(doc(db, 'stores', store.id), {
         subscriptionStatus: isActive ? 'cancelled' : 'active',
-        ...(!isActive ? { cardEnabled: true } : {}),
+        ...(!isActive ? { cardEnabled: true } : { cardEnabled: false }),
       });
     } finally {
       setTogglingId(null);
@@ -4183,6 +4187,25 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
         subscriptionStatus: null,
         cardEnabled: true,
       });
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  const handleExtendTrial = async (store: StoreProfile) => {
+    const days = parseInt(extendDays) || 0;
+    if (days <= 0) return;
+    setTogglingId(store.id);
+    try {
+      const currentEnd = store.trialEndsAt
+        ? Math.max(Date.now(), (store.trialEndsAt as any).toMillis?.() ?? (store.trialEndsAt as any).seconds * 1000)
+        : Date.now();
+      await updateDoc(doc(db, 'stores', store.id), {
+        trialEndsAt: Timestamp.fromDate(new Date(currentEnd + days * 86400_000)),
+        subscriptionStatus: store.subscriptionStatus === 'cancelled' ? null : store.subscriptionStatus,
+        cardEnabled: true,
+      });
+      setExtendingId(null);
     } finally {
       setTogglingId(null);
     }
@@ -4273,25 +4296,61 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
                   </div>
                 </div>
                 <div className="flex flex-col gap-1 shrink-0">
-                  <button
-                    onClick={() => handleToggleSub(store)}
-                    disabled={togglingId === store.id}
-                    className={cn(
-                      'px-2.5 py-1 rounded-xl text-[10px] font-bold transition-all active:scale-95 disabled:opacity-50',
-                      store.subscriptionStatus === 'active'
-                        ? 'bg-red-50 text-red-500'
-                        : 'bg-green-50 text-green-600'
-                    )}
-                  >
-                    {togglingId === store.id ? '…' : store.subscriptionStatus === 'active' ? 'Deactivate' : 'Activate'}
-                  </button>
-                  <button
-                    onClick={() => handleSetTrial(store)}
-                    disabled={togglingId === store.id}
-                    className="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-amber-50 text-amber-600 transition-all active:scale-95 disabled:opacity-50"
-                  >
-                    {togglingId === store.id ? '…' : 'Trial'}
-                  </button>
+                  {extendingId === store.id ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min="1"
+                        value={extendDays}
+                        onChange={e => setExtendDays(e.target.value)}
+                        className="w-12 px-1.5 py-1 rounded-lg border border-amber-300 text-[10px] font-bold text-center text-amber-700 outline-none"
+                      />
+                      <span className="text-[9px] text-brand-navy/40 font-bold">d</span>
+                      <button
+                        onClick={() => handleExtendTrial(store)}
+                        disabled={togglingId === store.id}
+                        className="px-2 py-1 rounded-lg bg-amber-500 text-white text-[10px] font-bold disabled:opacity-50"
+                      >
+                        {togglingId === store.id ? '…' : '✓'}
+                      </button>
+                      <button
+                        onClick={() => setExtendingId(null)}
+                        className="px-2 py-1 rounded-lg bg-brand-navy/10 text-brand-navy/50 text-[10px] font-bold"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => handleToggleSub(store)}
+                        disabled={togglingId === store.id}
+                        className={cn(
+                          'px-2.5 py-1 rounded-xl text-[10px] font-bold transition-all active:scale-95 disabled:opacity-50',
+                          store.subscriptionStatus === 'active'
+                            ? 'bg-red-50 text-red-500'
+                            : 'bg-green-50 text-green-600'
+                        )}
+                      >
+                        {togglingId === store.id ? '…' : store.subscriptionStatus === 'active' ? 'Deactivate' : 'Activate'}
+                      </button>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => handleSetTrial(store)}
+                          disabled={togglingId === store.id}
+                          className="flex-1 px-2 py-1 rounded-xl text-[10px] font-bold bg-amber-50 text-amber-600 transition-all active:scale-95 disabled:opacity-50"
+                        >
+                          Trial
+                        </button>
+                        <button
+                          onClick={() => { setExtendingId(store.id); setExtendDays('30'); }}
+                          className="px-2 py-1 rounded-xl text-[10px] font-bold bg-amber-50 text-amber-600 active:scale-95 transition-all"
+                        >
+                          +d
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
                 <button
                   onClick={() => setEditingStore(store)}
@@ -10054,18 +10113,15 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
             </header>
             <div className="grid grid-cols-2 gap-4">
               <button
-                onClick={() => !needsPayment && setVendorIssueMode('card')}
-                className={cn(
-                  "glass-card rounded-[2rem] p-6 flex flex-col items-center gap-4 transition-transform text-center relative",
-                  needsPayment ? "opacity-50 cursor-not-allowed" : "active:scale-95"
-                )}
+                onClick={() => setVendorIssueMode('card')}
+                className="glass-card rounded-[2rem] p-6 flex flex-col items-center gap-4 active:scale-95 transition-transform text-center"
               >
                 <div className="w-16 h-16 gradient-logo-blue rounded-2xl flex items-center justify-center shadow-lg">
-                  {needsPayment ? <Lock size={24} className="text-white" /> : <CreditCard size={28} className="text-white" />}
+                  <CreditCard size={28} className="text-white" />
                 </div>
                 <div>
                   <p className="font-bold text-brand-navy">Card</p>
-                  <p className="text-xs text-brand-navy/50 mt-0.5">{needsPayment ? 'Subscribe to access' : 'Design your loyalty card'}</p>
+                  <p className="text-xs text-brand-navy/50 mt-0.5">Design your loyalty card</p>
                 </div>
               </button>
               <button
@@ -10090,7 +10146,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
             >
               <ArrowLeft size={16} /> Back
             </button>
-            {vendorIssueMode === 'card' ? <VendorCardSection store={store} /> : <VendorOfferPanel store={store} />}
+            {vendorIssueMode === 'card' ? <VendorCardSection store={store} needsPayment={needsPayment} /> : <VendorOfferPanel store={store} />}
           </div>
         )
       )}
@@ -11746,12 +11802,12 @@ function OffersModal({ offers, currentUser, onClose }: { offers: StoreOffer[]; c
 }
 
 // ─── Vendor Card Section (toggle + builder) ──────────────────────────────────
-function VendorCardSection({ store }: { store: StoreProfile | null }) {
+function VendorCardSection({ store, needsPayment = false }: { store: StoreProfile | null; needsPayment?: boolean }) {
   const enabled = store?.cardEnabled !== false; // default true
   const [toggling, setToggling] = useState(false);
 
   const toggle = async () => {
-    if (!store?.id) return;
+    if (!store?.id || (needsPayment && !enabled)) return; // can turn off but not on without sub
     setToggling(true);
     try {
       await updateDoc(doc(db, 'stores', store.id), { cardEnabled: !enabled });
@@ -11772,14 +11828,16 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
         <div>
           <p className="font-bold text-brand-navy">Loyalty Card</p>
           <p className="text-xs text-brand-navy/50 mt-0.5">
-            {enabled ? 'Customers can join and collect stamps' : 'Card hidden from customers'}
+            {needsPayment && !enabled
+              ? 'Subscribe to re-enable'
+              : enabled ? 'Customers can join and collect stamps' : 'Card hidden from customers'}
           </p>
         </div>
         <button
           onClick={toggle}
-          disabled={toggling}
+          disabled={toggling || (needsPayment && !enabled)}
           className={cn(
-            'relative w-14 h-7 rounded-full transition-colors duration-200 shrink-0 disabled:opacity-60',
+            'relative w-14 h-7 rounded-full transition-colors duration-200 shrink-0 disabled:opacity-40',
             enabled ? 'bg-emerald-500' : 'bg-brand-navy/20'
           )}
         >
