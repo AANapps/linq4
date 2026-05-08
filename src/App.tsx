@@ -12988,6 +12988,21 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         </div>
       </header>
 
+      {/* Stamps / Cards / Rewards counters */}
+      <div className="flex gap-2">
+        {[
+          { val: lifetimeStamps,    label: 'Stamps'  },
+          { val: activeCardsCount,  label: 'Cards'   },
+          { val: archivedCardsCount, label: 'Rewards' },
+        ].map(s => (
+          <div key={s.label} className="flex-1 rounded-2xl px-3 py-2.5 flex flex-col items-center gap-0.5"
+               style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #2563EB 50%, #3B82F6 100%)' }}>
+            <p className="font-bold text-sm leading-none text-white">{s.val}</p>
+            <p className="text-[9px] font-bold uppercase tracking-wider text-white/60">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
       {settingsModal}
 
       {/* Badges swipe row */}
