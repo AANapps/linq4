@@ -18287,72 +18287,68 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
         Back
       </button>
 
-      <div className="glass-card p-6 rounded-[3rem] relative overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-24 bg-brand-gold/10" />
-        <div className="relative z-10">
-          {/* Row: photo left, info right */}
-          <div className="flex items-start gap-4 mb-4">
-            <div className="bg-gradient-to-b from-indigo-50 to-purple-50 rounded-[1.5rem] p-3 border-4 border-white shadow-xl shrink-0">
-              <PixelAvatar config={targetUser.avatar} uid={targetUser.uid} size={64} view="full" />
+      <header className="relative">
+        <div className="flex items-start gap-4">
+          <div className="bg-gradient-to-b from-indigo-50 to-purple-50 rounded-full p-2 border-4 border-white shadow-xl shrink-0">
+            <PixelAvatar config={targetUser.avatar} uid={targetUser.uid} size={64} view="full" />
+          </div>
+          <div className="flex-1 min-w-0 pt-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="font-display text-2xl font-bold">{targetUser.name}</h2>
+              <StreakBadge streak={targetUser.streak} size="lg" />
             </div>
-            <div className="flex-1 min-w-0 pt-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-xl font-bold leading-tight">{targetUser.name}</h2>
-                <StreakBadge streak={targetUser.streak} size="lg" />
-              </div>
-              <p className="text-brand-gold font-bold text-xs uppercase tracking-[0.2em]">@{targetUser.handle || targetUser.email?.split('@')[0]}</p>
-              <div className="flex items-center gap-3 mt-2 text-sm">
-                <span className="flex items-center gap-1 font-bold">
-                  <span>{targetFollowing}</span>
-                  <span className="text-brand-navy/40 font-normal">Following</span>
-                </span>
-                <span className="text-brand-navy/20">•</span>
-                <span className="flex items-center gap-1 font-bold">
-                  <span>{targetFollowers}</span>
-                  <span className="text-brand-navy/40 font-normal">Followers</span>
-                </span>
-              </div>
+            <p className="text-brand-gold font-bold text-xs uppercase tracking-[0.2em]">@{targetUser.handle || targetUser.email?.split('@')[0]}</p>
+            <div className="flex items-center gap-3 mt-2 text-sm">
+              <span className="flex items-center gap-1 font-bold">
+                <span>{targetFollowing}</span>
+                <span className="text-brand-navy/40 font-normal">Following</span>
+              </span>
+              <span className="text-brand-navy/20">•</span>
+              <span className="flex items-center gap-1 font-bold">
+                <span>{targetFollowers}</span>
+                <span className="text-brand-navy/40 font-normal">Followers</span>
+              </span>
             </div>
           </div>
-
-          {/* Stats — centered */}
-          <div className="flex gap-2">
-            {[
-              { val: publicUserStamps,  label: 'Stamps'  },
-              { val: cards.length,      label: 'Cards'   },
-              { val: publicUserRewards, label: 'Rewards' },
-            ].map(s => (
-              <div key={s.label} className="flex-1 rounded-2xl px-3 py-2.5 flex flex-col items-center gap-0.5"
-                   style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #2563EB 50%, #3B82F6 100%)' }}>
-                <p className="font-bold text-sm leading-none text-white">{s.val}</p>
-                <p className="text-[9px] font-bold uppercase tracking-wider text-white/60">{s.label}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Follow / Message buttons */}
-          {currentUser && currentUser.uid !== targetUser.uid && (
-            <div className="flex gap-2 mt-4">
-              <button
-                onClick={handleFollowClick}
-                className={cn(
-                  "flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm transition-all active:scale-95",
-                  isFollowing ? "bg-brand-navy/8 text-green-600 hover:bg-red-50 hover:text-red-500" : "bg-brand-navy/8 text-brand-gold hover:bg-brand-gold/10"
-                )}
-              >
-                {isFollowing ? <><UserCheck size={18} />Following</> : <><UserPlus size={18} />Follow</>}
-              </button>
-              <button
-                onClick={handleMessageClick}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-brand-navy/8 text-brand-gold font-bold text-sm transition-all active:scale-95 hover:bg-brand-gold/10"
-              >
-                <MessageCircle size={18} />
-                Message
-              </button>
-            </div>
-          )}
         </div>
+      </header>
+
+      {/* Stats */}
+      <div className="flex gap-2">
+        {[
+          { val: publicUserStamps,  label: 'Stamps'  },
+          { val: cards.length,      label: 'Cards'   },
+          { val: publicUserRewards, label: 'Rewards' },
+        ].map(s => (
+          <div key={s.label} className="flex-1 rounded-2xl px-3 py-2.5 flex flex-col items-center gap-0.5"
+               style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #2563EB 50%, #3B82F6 100%)' }}>
+            <p className="font-bold text-sm leading-none text-white">{s.val}</p>
+            <p className="text-[9px] font-bold uppercase tracking-wider text-white/60">{s.label}</p>
+          </div>
+        ))}
       </div>
+
+      {/* Follow / Message buttons */}
+      {currentUser && currentUser.uid !== targetUser.uid && (
+        <div className="flex gap-2">
+          <button
+            onClick={handleFollowClick}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm transition-all active:scale-95",
+              isFollowing ? "bg-brand-navy/8 text-green-600 hover:bg-red-50 hover:text-red-500" : "bg-brand-navy/8 text-brand-gold hover:bg-brand-gold/10"
+            )}
+          >
+            {isFollowing ? <><UserCheck size={18} />Following</> : <><UserPlus size={18} />Follow</>}
+          </button>
+          <button
+            onClick={handleMessageClick}
+            className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-brand-navy/8 text-brand-gold font-bold text-sm transition-all active:scale-95 hover:bg-brand-gold/10"
+          >
+            <MessageCircle size={18} />
+            Message
+          </button>
+        </div>
+      )}
 
 
       {/* Badges swipe row */}
