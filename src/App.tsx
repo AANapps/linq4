@@ -9355,8 +9355,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
           {(() => {
             const periodCount = chartMode === 'weeks' ? 8 : 14;
             const msPerPeriod = chartMode === 'weeks' ? 7 * 86400000 : 86400000;
-            const now = Date.now();
-            const periodEnd = now - chartOffset * periodCount * msPerPeriod;
+            const _todayMid = new Date(); _todayMid.setHours(0, 0, 0, 0);
+            const periodEnd = (_todayMid.getTime() + 86400000) - chartOffset * periodCount * msPerPeriod;
             const periods: { label: string; count: number }[] = [];
             for (let i = periodCount - 1; i >= 0; i--) {
               const end = periodEnd - i * msPerPeriod;
@@ -9440,9 +9440,9 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
             if (joinTimestamps.length === 0) return null;
             const periodCount = 10;
             const msPerDay = 86400000;
-            const now = Date.now();
+            const _todayMid2 = new Date(); _todayMid2.setHours(0, 0, 0, 0);
             const rangeMs = periodCount * msPerDay;
-            const rangeEnd = now - signupsOffset * rangeMs;
+            const rangeEnd = (_todayMid2.getTime() + 86400000) - signupsOffset * rangeMs;
             const rangeStart = rangeEnd - rangeMs;
             const points: { label: string; cumulative: number }[] = [];
             for (let i = 0; i < periodCount; i++) {
@@ -9506,8 +9506,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
             const [signupsDays, setSignupsDays] = [14, null] as any; // static 14-day window
             const periodCount = 14;
             const msPerDay = 86400000;
-            const now = Date.now();
-            const rangeEnd = now - signupsOffset * periodCount * msPerDay;
+            const _todayMid3 = new Date(); _todayMid3.setHours(0, 0, 0, 0);
+            const rangeEnd = (_todayMid3.getTime() + 86400000) - signupsOffset * periodCount * msPerDay;
             const rangeStart = rangeEnd - periodCount * msPerDay;
             const days: { label: string; count: number }[] = [];
             for (let i = 0; i < periodCount; i++) {
