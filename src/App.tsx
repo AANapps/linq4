@@ -17712,8 +17712,8 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
       </AnimatePresence>
 
       {/* Cover banner + logo */}
-      <div className="-mx-4 relative" style={{ marginTop: '-1.25rem' }}>
-        <div className="h-36 overflow-hidden">
+      <div className="relative">
+        <div className="h-36 rounded-[2rem] overflow-hidden">
           {store.coverUrl
             ? <img src={store.coverUrl} alt="" className="w-full h-full object-cover" />
             : <div className="w-full h-full" style={{ background: `linear-gradient(135deg, ${store.theme || '#3a6fcc'}60 0%, ${store.theme || '#3a6fcc'}25 100%)` }} />
