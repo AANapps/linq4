@@ -6391,7 +6391,11 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   };
 
 
-  const activeCards = initialCards.filter(c => !c.isArchived);
+  const activeCards = initialCards.filter(c => {
+    if (c.isArchived) return false;
+    const s = stores.find(st => st.id === c.store_id);
+    return !s || storeCardActive(s); // keep if store not yet loaded to avoid flicker
+  });
 
   return (
     <motion.div
