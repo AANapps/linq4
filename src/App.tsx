@@ -9398,20 +9398,27 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                     </button>
                   </div>
                 </div>
-                <div className="flex items-end gap-1 h-28">
-                  {periods.map((p, i) => (
-                    <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                      <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
-                        <motion.div
-                          initial={{ height: 0 }} animate={{ height: `${Math.round((p.count / maxVal) * 80)}px` }}
-                          transition={{ duration: 0.4, delay: i * 0.03 }}
-                          className="w-full rounded-t-lg bg-brand-gold"
-                          style={{ minHeight: p.count > 0 ? '4px' : '0' }}
-                        />
+                <div className="flex gap-1 items-end">
+                  <div className="flex flex-col justify-between text-right shrink-0 mb-3" style={{ height: '80px', minWidth: '16px' }}>
+                    <span className="text-[8px] text-brand-navy/30 font-bold leading-none">{maxVal}</span>
+                    <span className="text-[8px] text-brand-navy/30 font-bold leading-none">{Math.round(maxVal / 2)}</span>
+                    <span className="text-[8px] text-brand-navy/30 font-bold leading-none">0</span>
+                  </div>
+                  <div className="flex items-end gap-1 h-28 flex-1">
+                    {periods.map((p, i) => (
+                      <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                        <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
+                          <motion.div
+                            initial={{ height: 0 }} animate={{ height: `${Math.round((p.count / maxVal) * 80)}px` }}
+                            transition={{ duration: 0.4, delay: i * 0.03 }}
+                            className="w-full rounded-t-lg bg-brand-gold"
+                            style={{ minHeight: p.count > 0 ? '4px' : '0' }}
+                          />
+                        </div>
+                        <p className="text-[8px] text-brand-navy/30 font-bold leading-none">{p.label}</p>
                       </div>
-                      <p className="text-[8px] text-brand-navy/30 font-bold leading-none">{p.label}</p>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
                 {chartTransactions.length === 0 && (
                   <p className="text-center text-xs text-brand-navy/30 font-bold py-2">No stamp data yet</p>
@@ -9461,20 +9468,27 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                     </button>
                   </div>
                 </div>
-                <div className="flex items-end gap-1 h-28">
-                  {points.map((p, i) => (
-                    <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                      <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
-                        <motion.div
-                          initial={{ height: 0 }} animate={{ height: `${Math.round((p.cumulative / maxVal) * 80)}px` }}
-                          transition={{ duration: 0.4, delay: i * 0.03 }}
-                          className="w-full rounded-t-lg bg-blue-400"
-                          style={{ minHeight: p.cumulative > 0 ? '4px' : '0' }}
-                        />
+                <div className="flex gap-1 items-end">
+                  <div className="flex flex-col justify-between text-right shrink-0 mb-3" style={{ height: '80px', minWidth: '16px' }}>
+                    <span className="text-[8px] text-brand-navy/30 font-bold leading-none">{maxVal}</span>
+                    <span className="text-[8px] text-brand-navy/30 font-bold leading-none">{Math.round(maxVal / 2)}</span>
+                    <span className="text-[8px] text-brand-navy/30 font-bold leading-none">0</span>
+                  </div>
+                  <div className="flex items-end gap-1 h-28 flex-1">
+                    {points.map((p, i) => (
+                      <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                        <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
+                          <motion.div
+                            initial={{ height: 0 }} animate={{ height: `${Math.round((p.cumulative / maxVal) * 80)}px` }}
+                            transition={{ duration: 0.4, delay: i * 0.03 }}
+                            className="w-full rounded-t-lg bg-blue-400"
+                            style={{ minHeight: p.cumulative > 0 ? '4px' : '0' }}
+                          />
+                        </div>
+                        <p className="text-[8px] text-brand-navy/30 font-bold leading-none">{p.label}</p>
                       </div>
-                      <p className="text-[8px] text-brand-navy/30 font-bold leading-none">{p.label}</p>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
             );
@@ -9523,20 +9537,27 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                     </button>
                   </div>
                 </div>
-                <div className="flex items-end gap-1 h-28">
-                  {days.map((d, i) => (
-                    <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                      <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
-                        <motion.div
-                          initial={{ height: 0 }} animate={{ height: `${Math.round((d.count / maxVal) * 80)}px` }}
-                          transition={{ duration: 0.4, delay: i * 0.03 }}
-                          className="w-full rounded-t-lg bg-emerald-400"
-                          style={{ minHeight: d.count > 0 ? '4px' : '0' }}
-                        />
+                <div className="flex gap-1 items-end">
+                  <div className="flex flex-col justify-between text-right shrink-0 mb-3" style={{ height: '80px', minWidth: '16px' }}>
+                    <span className="text-[8px] text-brand-navy/30 font-bold leading-none">{maxVal}</span>
+                    <span className="text-[8px] text-brand-navy/30 font-bold leading-none">{Math.round(maxVal / 2)}</span>
+                    <span className="text-[8px] text-brand-navy/30 font-bold leading-none">0</span>
+                  </div>
+                  <div className="flex items-end gap-1 h-28 flex-1">
+                    {days.map((d, i) => (
+                      <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                        <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
+                          <motion.div
+                            initial={{ height: 0 }} animate={{ height: `${Math.round((d.count / maxVal) * 80)}px` }}
+                            transition={{ duration: 0.4, delay: i * 0.03 }}
+                            className="w-full rounded-t-lg bg-emerald-400"
+                            style={{ minHeight: d.count > 0 ? '4px' : '0' }}
+                          />
+                        </div>
+                        <p className="text-[8px] text-brand-navy/30 font-bold leading-none">{d.label}</p>
                       </div>
-                      <p className="text-[8px] text-brand-navy/30 font-bold leading-none">{d.label}</p>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
                 {totalNew === 0 && (
                   <p className="text-center text-xs text-brand-navy/30 font-bold py-2">No new sign-ups in this period</p>
