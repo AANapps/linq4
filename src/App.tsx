@@ -333,6 +333,10 @@ interface StoreProfile {
   stripeCustomerId?: string;
   subscriptionId?: string;
   subscriptionEnd?: { toMillis: () => number; seconds: number } | null;
+  subCardEnabled?: boolean;
+  pointsPerDollar?: number;
+  pointsToMoneyRate?: number;
+  subCardRewards?: { points: number; reward: string }[];
 }
 
 // Returns true if the store's loyalty card should be visible to consumers.
@@ -364,6 +368,11 @@ interface Card {
   isRedeemed?: boolean;
   stamps_required?: number;
   tiersCompleted?: number;
+  card_type?: 'stamp' | 'sub';
+  current_points?: number;
+  total_visits?: number;
+  total_points_earned?: number;
+  total_points_redeemed?: number;
 }
 
 interface Notification {
@@ -6744,18 +6753,35 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
     if (!cardSnap.exists() || cardSnap.data()?.isArchived) {
       const userName = profile?.name || user.displayName || user.email?.split('@')[0] || 'Loyal Customer';
       const userPhoto = profile?.photoURL || user.photoURL || '';
-      await setDoc(cardRef, {
-        user_id: user.uid,
-        store_id: store.id,
-        current_stamps: 0,
-        total_completed_cycles: 0,
-        stamps_required: store.stamps_required_for_reward || 10,
-        last_tap_timestamp: serverTimestamp(),
-        isArchived: false,
-        isRedeemed: false,
-        userName,
-        userPhoto,
-      });
+      const isSubCard = store.subCardEnabled === true && store.cardEnabled !== true;
+      if (isSubCard) {
+        await setDoc(cardRef, {
+          user_id: user.uid,
+          store_id: store.id,
+          card_type: 'sub',
+          current_points: 0,
+          total_visits: 0,
+          total_points_earned: 0,
+          total_points_redeemed: 0,
+          last_tap_timestamp: serverTimestamp(),
+          isArchived: false,
+          userName,
+          userPhoto,
+        });
+      } else {
+        await setDoc(cardRef, {
+          user_id: user.uid,
+          store_id: store.id,
+          current_stamps: 0,
+          total_completed_cycles: 0,
+          stamps_required: store.stamps_required_for_reward || 10,
+          last_tap_timestamp: serverTimestamp(),
+          isArchived: false,
+          isRedeemed: false,
+          userName,
+          userPhoto,
+        });
+      }
       await updateDoc(doc(db, 'users', user.uid), { total_cards_held: increment(1) });
       setActiveTab('home');
     }
@@ -6951,7 +6977,9 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                       const store = stores.find(s => s.id === card.store_id);
                       return (
                         <div key={card.id} className="snap-center shrink-0 w-[83vw] max-w-[340px]">
-                          <LoyaltyCard card={card} store={store} onViewStore={onViewStore} />
+                          {card.card_type === 'sub'
+                            ? <SubLoyaltyCard card={card} store={store} onViewStore={onViewStore} />
+                            : <LoyaltyCard card={card} store={store} onViewStore={onViewStore} />}
                         </div>
                       );
                     })}
@@ -6960,7 +6988,9 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                   <div className="space-y-3">
                     {activeCards.map(card => {
                       const store = stores.find(s => s.id === card.store_id);
-                      return <LoyaltyCard key={card.id} card={card} store={store} onViewStore={onViewStore} compact />;
+                      return card.card_type === 'sub'
+                        ? <SubLoyaltyCard key={card.id} card={card} store={store} onViewStore={onViewStore} compact />
+                        : <LoyaltyCard key={card.id} card={card} store={store} onViewStore={onViewStore} compact />;
                     })}
                   </div>
                 )
@@ -9531,6 +9561,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   const [isScanning, setIsScanning] = useState(false);
   const [customerHandle, setCustomerHandle] = useState('');
   const [stampQuantity, setStampQuantity] = useState(1);
+  const [transactionValue, setTransactionValue] = useState<string>('');
+  const [issueMode, setIssueMode] = useState<'stamp' | 'sub'>('stamp');
   const [isIssuing, setIsIssuing] = useState(false);
   const [lastIssueTime, setLastIssueTime] = useState(0);
   const [vendorIssueMode, setVendorIssueMode] = useState<null | 'card' | 'offer'>(null);
@@ -9778,7 +9810,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
 
   const handleIssueStamp = async () => {
     if (!customerHandle || !store) return;
-    
+
     const now = Date.now();
     if (now - lastIssueTime < 1000) {
       setIssueStatus({ type: 'error', message: 'Please wait a second between issues' });
@@ -9801,7 +9833,50 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
         const customer = querySnapshot.docs[0].data() as UserProfile;
         const cardId = `${customer.uid}_${store.id}`;
         const cardRef = doc(db, 'cards', cardId);
-        
+
+        // Handle sub/points card issuing
+        if (store.subCardEnabled) {
+          const points = Math.round(Number(transactionValue) * (store.pointsPerDollar || 1));
+          const cardDoc = await getDoc(cardRef);
+          if (cardDoc.exists() && cardDoc.data()?.card_type === 'sub') {
+            await updateDoc(cardRef, {
+              current_points: increment(points),
+              total_visits: increment(1),
+              total_points_earned: increment(points),
+              last_transaction_at: serverTimestamp(),
+            });
+          } else {
+            await setDoc(cardRef, {
+              user_id: customer.uid,
+              store_id: store.id,
+              card_type: 'sub',
+              current_points: points,
+              total_visits: 1,
+              total_points_earned: points,
+              total_points_redeemed: 0,
+              last_transaction_at: serverTimestamp(),
+              isArchived: false,
+              userName: customer.name,
+              userPhoto: customer.photoURL || '',
+            });
+            await updateDoc(doc(db, 'users', customer.uid), { total_cards_held: increment(1) });
+          }
+          await addDoc(collection(db, 'transactions'), {
+            user_id: customer.uid,
+            store_id: store.id,
+            card_type: 'sub',
+            type: 'issue',
+            points_issued: points,
+            transaction_value: Number(transactionValue),
+            issued_at: serverTimestamp(),
+          });
+          setIssueStatus({ type: 'success', message: `${points} points issued to ${customer.name}!` });
+          setCustomerHandle('');
+          setTransactionValue('');
+          return;
+        }
+
+        // Stamp card issuing (original logic)
         const cardDoc = await getDoc(cardRef);
         const qty = Number(stampQuantity);
         const limit = store.stamps_required_for_reward;
@@ -9856,7 +9931,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
             total_cards_held: increment(1)
           });
         }
-        
+
         // Optimistic chart update — don't wait for onSnapshot round-trip
         const _nowMs = Date.now();
         setChartTransactions(prev => [...prev, {
@@ -10471,8 +10546,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
 
 
           <div className="bg-brand-navy p-8 rounded-[2.5rem] text-white text-center">
-            <h3 className="font-display text-xl font-bold mb-4">Issue a Stamp</h3>
-            <p className="text-white/60 text-sm mb-8">Scan a customer's QR code or enter their handle to issue a loyalty stamp.</p>
+            <h3 className="font-display text-xl font-bold mb-4">{store?.subCardEnabled ? 'Issue Points' : 'Issue a Stamp'}</h3>
+            <p className="text-white/60 text-sm mb-8">{store?.subCardEnabled ? 'Enter the transaction value to calculate and issue points.' : "Scan a customer's QR code or enter their handle to issue a loyalty stamp."}</p>
 
             <div className="space-y-4">
               <button
@@ -10494,25 +10569,42 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                     className="w-full bg-white/10 border border-white/10 rounded-2xl py-4 pl-8 pr-4 text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
                   />
                 </div>
-                <div className="w-24">
-                  <input
-                    type="number"
-                    min="1"
-                    max="10"
-                    value={stampQuantity}
-                    onChange={(e) => setStampQuantity(parseInt(e.target.value) || 1)}
-                    className="w-full px-4 py-4 rounded-2xl bg-white/10 border border-white/10 text-white text-center focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
-                  />
-                  <p className="text-[10px] text-white/40 mt-1 font-bold uppercase">Qty</p>
-                </div>
+                {store?.subCardEnabled ? (
+                  <div className="w-32">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={transactionValue}
+                      onChange={(e) => setTransactionValue(e.target.value)}
+                      placeholder="0.00"
+                      className="w-full px-4 py-4 rounded-2xl bg-white/10 border border-white/10 text-white text-center focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
+                    />
+                    <p className="text-[10px] text-white/40 mt-1 font-bold uppercase">
+                      {transactionValue ? `${Math.round(Number(transactionValue) * (store.pointsPerDollar || 1))} pts` : '$ Value'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="w-24">
+                    <input
+                      type="number"
+                      min="1"
+                      max="10"
+                      value={stampQuantity}
+                      onChange={(e) => setStampQuantity(parseInt(e.target.value) || 1)}
+                      className="w-full px-4 py-4 rounded-2xl bg-white/10 border border-white/10 text-white text-center focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
+                    />
+                    <p className="text-[10px] text-white/40 mt-1 font-bold uppercase">Qty</p>
+                  </div>
+                )}
               </div>
 
               <button
                 onClick={handleIssueStamp}
-                disabled={isIssuing || !customerHandle}
+                disabled={isIssuing || !customerHandle || (store?.subCardEnabled ? !transactionValue : false)}
                 className="w-full bg-white text-brand-navy font-bold py-4 rounded-2xl disabled:opacity-50 transition-all"
               >
-                {isIssuing ? 'Issuing...' : 'Issue Manually'}
+                {isIssuing ? 'Issuing...' : store?.subCardEnabled ? 'Issue Points' : 'Issue Manually'}
               </button>
 
               {issueStatus && (
@@ -11101,6 +11193,227 @@ function LoyaltyCard({ card, store, onViewStore, compact = false }: { card: Card
               <p className="text-white/50 text-xs mt-2">Show this to the vendor to claim</p>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
+function SubLoyaltyCard({ card, store, onViewStore, compact = false }: { card: Card; store?: StoreProfile; onViewStore?: (s: StoreProfile) => void; compact?: boolean; key?: React.Key }) {
+  const [showRedeemSheet, setShowRedeemSheet] = useState(false);
+  const [isRedeeming, setIsRedeeming] = useState(false);
+  const [redeemError, setRedeemError] = useState<string | null>(null);
+  const [redeemSuccess, setRedeemSuccess] = useState(false);
+
+  const points = card.current_points ?? 0;
+  const visits = card.total_visits ?? 0;
+  const rate = store?.pointsToMoneyRate || 100;
+  const rewards = store?.subCardRewards ?? [];
+  const moneyValue = Math.floor(points / rate);
+
+  // Find next reward threshold
+  const sortedRewards = [...rewards].sort((a, b) => a.points - b.points);
+  const nextReward = sortedRewards.find(r => r.points > points);
+  const progressTarget = nextReward?.points || rate;
+  const progressPct = Math.min(100, (points / progressTarget) * 100);
+
+  const handleRedeem = async () => {
+    if (points < rate) {
+      setRedeemError(`You need at least ${rate} points to redeem.`);
+      return;
+    }
+    setIsRedeeming(true);
+    setRedeemError(null);
+    try {
+      const pointsToUse = Math.floor(points / rate) * rate;
+      const moneyVal = pointsToUse / rate;
+      const cardRef = doc(db, 'cards', card.id);
+      await updateDoc(cardRef, {
+        current_points: increment(-pointsToUse),
+        total_points_redeemed: increment(pointsToUse),
+      });
+      await addDoc(collection(db, 'transactions'), {
+        user_id: card.user_id,
+        store_id: card.store_id,
+        card_type: 'sub',
+        type: 'redemption',
+        points_redeemed: pointsToUse,
+        money_value: moneyVal,
+        redeemed_at: serverTimestamp(),
+      });
+      setRedeemSuccess(true);
+      setTimeout(() => {
+        setRedeemSuccess(false);
+        setShowRedeemSheet(false);
+      }, 2000);
+    } catch (err) {
+      console.error(err);
+      setRedeemError('Redemption failed. Please try again.');
+    } finally {
+      setIsRedeeming(false);
+    }
+  };
+
+  if (compact) {
+    return (
+      <div
+        className="rounded-3xl p-4 flex items-center gap-3 cursor-pointer"
+        style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4338ca 80%, #6366f1 100%)' }}
+        onClick={() => store && onViewStore && onViewStore(store)}
+      >
+        <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/30 shrink-0">
+          <img src={store?.logoUrl || `https://picsum.photos/seed/${card.store_id}/200/200`} alt="" className="w-full h-full object-cover" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-white text-sm truncate">{store?.name || 'Store'}</p>
+          <p className="text-indigo-200 text-xs">{points} pts • {visits} visits</p>
+        </div>
+        <div className="shrink-0 text-right">
+          <p className="text-xs font-bold text-indigo-200">Redeem</p>
+          <p className="text-white font-bold text-sm">${moneyValue} off</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <motion.div
+        className="relative rounded-[2rem] overflow-hidden select-none"
+        style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4338ca 80%, #6366f1 100%)', minHeight: 200 }}
+        whileTap={{ scale: 0.98 }}
+      >
+        {/* Top row */}
+        <div className="flex items-center gap-3 p-5 pb-0">
+          <div
+            className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/30 shrink-0 cursor-pointer"
+            onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}
+          >
+            <img src={store?.logoUrl || `https://picsum.photos/seed/${card.store_id}/200/200`} alt="" className="w-full h-full object-cover" />
+          </div>
+          <div
+            className="flex-1 min-w-0 cursor-pointer"
+            onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}
+          >
+            <p className="font-bold text-white text-sm truncate">{store?.name || 'Store'}</p>
+          </div>
+          <span className="shrink-0 bg-indigo-400/30 text-indigo-100 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full border border-indigo-300/30">
+            Points Card
+          </span>
+        </div>
+
+        {/* Center stats */}
+        <div className="flex items-center justify-center gap-10 py-6">
+          <div className="text-center">
+            <p className="text-white font-black text-4xl leading-none">{points.toLocaleString()}</p>
+            <p className="text-indigo-200 text-xs font-bold uppercase tracking-widest mt-1">pts</p>
+          </div>
+          <div className="w-px h-10 bg-white/20" />
+          <div className="text-center">
+            <p className="text-white font-black text-4xl leading-none">{visits}</p>
+            <p className="text-indigo-200 text-xs font-bold uppercase tracking-widest mt-1">visits</p>
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div className="px-5 pb-2">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-indigo-200 text-[10px] font-bold uppercase tracking-widest">
+              {nextReward ? `Next: ${nextReward.reward}` : `Redeem $${moneyValue} off`}
+            </p>
+            <p className="text-indigo-200 text-[10px] font-bold">{points}/{progressTarget}</p>
+          </div>
+          <div className="h-2 bg-white/15 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-indigo-300 to-white rounded-full transition-all duration-500"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Bottom row */}
+        <div className="flex items-center justify-between px-5 py-4">
+          <div className="flex items-center gap-1.5 text-indigo-200">
+            <TrendingUp size={13} />
+            <span className="text-[11px] font-bold">{store?.pointsPerDollar || 1} pts/$1</span>
+          </div>
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowRedeemSheet(true); }}
+            className="flex items-center gap-1.5 bg-white text-indigo-700 px-4 py-2 rounded-xl font-bold text-xs hover:scale-105 active:scale-95 transition-transform"
+          >
+            <Gift size={13} />
+            Redeem Points
+          </button>
+        </div>
+      </motion.div>
+
+      {/* Redeem sheet */}
+      <AnimatePresence>
+        {showRedeemSheet && (
+          <div className="fixed inset-0 z-[120] flex items-end justify-center">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setShowRedeemSheet(false)}
+            />
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+              className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-10 shadow-2xl"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="font-display text-2xl font-bold">Redeem Points</h3>
+                <button onClick={() => setShowRedeemSheet(false)} className="p-2 text-brand-navy/40 hover:text-brand-navy transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="space-y-4 mb-8">
+                <div className="glass-card p-5 rounded-2xl flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">Current Balance</p>
+                    <p className="text-3xl font-black text-brand-navy mt-1">{points.toLocaleString()} pts</p>
+                  </div>
+                  <Star className="w-8 h-8 text-indigo-400" />
+                </div>
+                <div className="glass-card p-5 rounded-2xl flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">Redeemable Value</p>
+                    <p className="text-3xl font-black text-emerald-600 mt-1">${moneyValue} off</p>
+                  </div>
+                  <Gift className="w-8 h-8 text-emerald-400" />
+                </div>
+              </div>
+
+              {redeemError && (
+                <p className="text-red-500 text-sm font-bold mb-4 text-center">{redeemError}</p>
+              )}
+
+              {redeemSuccess ? (
+                <div className="w-full bg-emerald-500 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2">
+                  <Check size={18} />
+                  Redeemed!
+                </div>
+              ) : (
+                <button
+                  onClick={handleRedeem}
+                  disabled={isRedeeming || points < rate}
+                  className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-indigo-700 transition-colors"
+                >
+                  <Gift size={18} />
+                  {isRedeeming ? 'Processing...' : `Confirm Redeem $${moneyValue}`}
+                </button>
+              )}
+
+              <p className="text-center text-xs text-brand-navy/40 mt-3">
+                {rate} pts = $1 off · {Math.floor(points / rate) * rate} pts will be used
+              </p>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </>
@@ -13038,7 +13351,9 @@ function OffersModal({ offers, currentUser, onClose }: { offers: StoreOffer[]; c
 // ─── Vendor Card Section (toggle + builder) ──────────────────────────────────
 function VendorCardSection({ store, needsPayment = false }: { store: StoreProfile | null; needsPayment?: boolean }) {
   const enabled = !needsPayment && store?.cardEnabled !== false;
+  const subEnabled = store?.subCardEnabled === true;
   const [toggling, setToggling] = useState(false);
+  const [togglingSubCard, setTogglingSubCard] = useState(false);
 
   const toggle = async () => {
     if (!store?.id || (needsPayment && !enabled)) return; // can turn off but not on without sub
@@ -13050,6 +13365,16 @@ function VendorCardSection({ store, needsPayment = false }: { store: StoreProfil
     }
   };
 
+  const toggleSubCard = async () => {
+    if (!store?.id) return;
+    setTogglingSubCard(true);
+    try {
+      await updateDoc(doc(db, 'stores', store.id), { subCardEnabled: !subEnabled });
+    } finally {
+      setTogglingSubCard(false);
+    }
+  };
+
   return (
     <div className="space-y-6 pb-20">
       <header>
@@ -13057,7 +13382,7 @@ function VendorCardSection({ store, needsPayment = false }: { store: StoreProfil
         <p className="text-brand-navy/50 text-sm">Enable your loyalty card for customers.</p>
       </header>
 
-      {/* Toggle */}
+      {/* Stamp Card Toggle */}
       <div className="glass-card rounded-[1.5rem] px-5 py-4 flex items-center justify-between gap-4">
         <div>
           <p className="font-bold text-brand-navy">Loyalty Card</p>
@@ -13102,6 +13427,41 @@ function VendorCardSection({ store, needsPayment = false }: { store: StoreProfil
           <p className="text-xs mt-1">Toggle on to set up your loyalty card.</p>
         </div>
       )}
+
+      {/* Points Card Toggle */}
+      <div className="glass-card rounded-[1.5rem] px-5 py-4 flex items-center justify-between gap-4">
+        <div>
+          <p className="font-bold text-brand-navy">Points Card</p>
+          <p className="text-xs text-brand-navy/50 mt-0.5">
+            {subEnabled ? 'Customers earn points per dollar spent' : 'Enable a points-based loyalty card'}
+          </p>
+        </div>
+        <button
+          onClick={toggleSubCard}
+          disabled={togglingSubCard}
+          className={cn(
+            'relative w-14 h-7 rounded-full transition-colors duration-200 shrink-0 disabled:opacity-40',
+            subEnabled ? 'bg-indigo-500' : 'bg-brand-navy/20'
+          )}
+        >
+          <motion.div
+            animate={{ x: subEnabled ? 28 : 2 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+            className="absolute top-1 w-5 h-5 rounded-full bg-white shadow-md"
+          />
+        </button>
+      </div>
+
+      <AnimatePresence>
+        {subEnabled && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.2 }}
+          >
+            <SubCardBuilder store={store} />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -13472,6 +13832,120 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
           {saved ? <><CheckCircle2 size={16} /> Saved!</> : saving ? 'Saving...' : <><Save size={16} /> Save — Set as New Card</>}
         </button>
       </div>
+    </div>
+  );
+}
+
+function SubCardBuilder({ store }: { store: StoreProfile | null }) {
+  const [pointsPerDollar, setPointsPerDollar] = useState(store?.pointsPerDollar ?? 10);
+  const [pointsToMoneyRate, setPointsToMoneyRate] = useState(store?.pointsToMoneyRate ?? 100);
+  const [rewards, setRewards] = useState<{ points: number; reward: string }[]>(
+    store?.subCardRewards?.length ? store.subCardRewards : [{ points: 100, reward: '' }]
+  );
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (!store) return;
+    setPointsPerDollar(store.pointsPerDollar ?? 10);
+    setPointsToMoneyRate(store.pointsToMoneyRate ?? 100);
+    setRewards(store.subCardRewards?.length ? store.subCardRewards : [{ points: 100, reward: '' }]);
+  }, [store?.id]);
+
+  const updateReward = (i: number, field: 'points' | 'reward', val: string) => {
+    setRewards(prev => prev.map((r, idx) => idx === i ? { ...r, [field]: field === 'points' ? Math.max(1, parseInt(val) || 1) : val } : r));
+  };
+
+  const addReward = () => setRewards(prev => [...prev, { points: (prev[prev.length - 1]?.points || 0) + 100, reward: '' }]);
+  const removeReward = (i: number) => setRewards(prev => prev.filter((_, idx) => idx !== i));
+
+  const handleSave = async () => {
+    if (!store) return;
+    setSaving(true);
+    try {
+      await updateDoc(doc(db, 'stores', store.id), {
+        pointsPerDollar,
+        pointsToMoneyRate,
+        subCardRewards: rewards,
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="glass-card rounded-[2rem] p-6 space-y-5">
+      <h3 className="font-display text-lg font-bold text-brand-navy">Points Card Settings</h3>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest block mb-1.5">Points per $1 spent</label>
+          <input
+            type="number"
+            min="1"
+            value={pointsPerDollar}
+            onChange={(e) => setPointsPerDollar(Math.max(1, parseInt(e.target.value) || 1))}
+            className="w-full px-4 py-3 rounded-xl border border-brand-navy/10 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400 text-brand-navy font-bold"
+          />
+        </div>
+        <div>
+          <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest block mb-1.5">Points per $1 off</label>
+          <input
+            type="number"
+            min="1"
+            value={pointsToMoneyRate}
+            onChange={(e) => setPointsToMoneyRate(Math.max(1, parseInt(e.target.value) || 1))}
+            className="w-full px-4 py-3 rounded-xl border border-brand-navy/10 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400 text-brand-navy font-bold"
+          />
+        </div>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">Reward Tiers</label>
+          <button onClick={addReward} className="text-indigo-600 text-xs font-bold hover:underline flex items-center gap-1">
+            <Plus size={12} /> Add tier
+          </button>
+        </div>
+        <div className="space-y-2">
+          {rewards.map((r, i) => (
+            <div key={i} className="flex gap-2 items-center">
+              <input
+                type="number"
+                min="1"
+                value={r.points}
+                onChange={(e) => updateReward(i, 'points', e.target.value)}
+                className="w-24 px-3 py-2.5 rounded-xl border border-brand-navy/10 bg-white focus:outline-none text-brand-navy font-bold text-sm text-center"
+                placeholder="pts"
+              />
+              <input
+                type="text"
+                value={r.reward}
+                onChange={(e) => updateReward(i, 'reward', e.target.value)}
+                placeholder="Reward description"
+                className="flex-1 px-3 py-2.5 rounded-xl border border-brand-navy/10 bg-white focus:outline-none text-brand-navy text-sm"
+              />
+              {rewards.length > 1 && (
+                <button onClick={() => removeReward(i)} className="text-red-400 hover:text-red-600 p-1">
+                  <X size={15} />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <button
+        onClick={handleSave}
+        disabled={saving}
+        className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 disabled:opacity-50 transition-all hover:bg-indigo-700"
+      >
+        {saved ? <><Check size={16} /> Saved!</> : saving ? 'Saving...' : <><Save size={16} /> Save Points Card</>}
+      </button>
     </div>
   );
 }
@@ -18770,17 +19244,34 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
     const cardId = `${user.uid}_${store.id}`;
     const userName = profile?.name || user.displayName || user.email?.split('@')[0] || 'Loyal Customer';
     const userPhoto = profile?.photoURL || user.photoURL || '';
-    await setDoc(doc(db, 'cards', cardId), {
-      user_id: user.uid,
-      store_id: store.id,
-      current_stamps: 0,
-      total_completed_cycles: 0,
-      stamps_required: store.stamps_required_for_reward || 10,
-      last_tap_timestamp: serverTimestamp(),
-      isArchived: false,
-      userName,
-      userPhoto,
-    });
+    const isSubCard = store.subCardEnabled === true && store.cardEnabled !== true;
+    if (isSubCard) {
+      await setDoc(doc(db, 'cards', cardId), {
+        user_id: user.uid,
+        store_id: store.id,
+        card_type: 'sub',
+        current_points: 0,
+        total_visits: 0,
+        total_points_earned: 0,
+        total_points_redeemed: 0,
+        last_tap_timestamp: serverTimestamp(),
+        isArchived: false,
+        userName,
+        userPhoto,
+      });
+    } else {
+      await setDoc(doc(db, 'cards', cardId), {
+        user_id: user.uid,
+        store_id: store.id,
+        current_stamps: 0,
+        total_completed_cycles: 0,
+        stamps_required: store.stamps_required_for_reward || 10,
+        last_tap_timestamp: serverTimestamp(),
+        isArchived: false,
+        userName,
+        userPhoto,
+      });
+    }
     await updateDoc(doc(db, 'users', user.uid), { total_cards_held: increment(1) });
   };
 
