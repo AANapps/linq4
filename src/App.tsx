@@ -6674,15 +6674,10 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
               transition={{ type: 'spring', stiffness: 380, damping: 36 }}
               className="bg-brand-bg flex flex-col overflow-hidden flex-1"
             >
-              <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-brand-navy/8 shrink-0">
-                <div>
-                  <h2 className="font-black text-xl text-brand-navy">Linqle</h2>
-                  <p className="text-xs text-brand-navy/40">{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-                </div>
-                <button onClick={() => setViewingLinqle(false)} className="w-9 h-9 rounded-full bg-brand-navy/8 flex items-center justify-center active:scale-90 transition-all">
-                  <X size={18} className="text-brand-navy/60" />
-                </button>
-              </div>
+              <LinqleMatrixBanner
+                onClose={() => setViewingLinqle(false)}
+                dateStr={new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
+              />
               <div className="flex-1 overflow-hidden flex flex-col">
                 <LinqleGame
                   currentUser={user}
@@ -11078,6 +11073,51 @@ const TILE_COLORS: Record<TileState, string> = {
 };
 
 const KEYBOARD_ROWS = [['Q','W','E','R','T','Y','U','I','O','P'],['A','S','D','F','G','H','J','K','L'],['ENTER','Z','X','C','V','B','N','M','⌫']];
+
+function LinqleMatrixBanner({ onClose, dateStr }: { onClose: () => void; dateStr: string }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const W = canvas.offsetWidth || 400;
+    const H = canvas.offsetHeight || 80;
+    canvas.width = W;
+    canvas.height = H;
+    const fontSize = 13;
+    const cols = Math.floor(W / fontSize);
+    const drops: number[] = Array.from({ length: cols }, () => Math.random() * -30);
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const draw = () => {
+      ctx.fillStyle = 'rgba(17, 40, 110, 0.18)';
+      ctx.fillRect(0, 0, W, H);
+      drops.forEach((y, i) => {
+        const char = chars[Math.floor(Math.random() * chars.length)];
+        const alpha = 0.5 + Math.random() * 0.5;
+        ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+        ctx.font = `bold ${fontSize}px monospace`;
+        ctx.fillText(char, i * fontSize, y);
+        if (y > H && Math.random() > 0.97) drops[i] = 0;
+        drops[i] += fontSize * 0.4;
+      });
+    };
+    const id = setInterval(draw, 55);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div className="relative flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/10 shrink-0 overflow-hidden gradient-logo-blue">
+      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" style={{ opacity: 0.35 }} />
+      <div className="relative z-10">
+        <h2 className="font-black text-xl text-white tracking-wide">Linqle</h2>
+        <p className="text-xs text-white/60">{dateStr}</p>
+      </div>
+      <button onClick={onClose} className="relative z-10 w-9 h-9 rounded-full bg-white/15 flex items-center justify-center active:scale-90 transition-all">
+        <X size={18} className="text-white" />
+      </button>
+    </div>
+  );
+}
 
 function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { currentUser: FirebaseUser; currentProfile: UserProfile | null; onClose: () => void; onPackReady?: (stickers: CollectibleSticker[]) => void }) {
   const today = new Date().toISOString().split('T')[0];
