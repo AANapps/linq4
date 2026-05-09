@@ -283,6 +283,10 @@ interface UserProfile {
   linqleCompletions?: { date: string; guesses: number; won: boolean }[];
   linqleStreak?: number;
   linqleLastCompleted?: string;
+  linqleTotalWins?: number;
+  linqleTotalPlays?: number;
+  linqleBestGuesses?: number;
+  linqleBestTime?: number;
   dogName?: string;
   lastDogFed?: any;
   lastTreeWatered?: any;
@@ -4616,18 +4620,13 @@ function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
             });
           }
         } catch (e) { console.error('user completion remove failed', e); }
-        // Decrement all-time wins if they had won
-        if (score.won) {
-          try {
-            const atSnap = await getDoc(doc(db, 'linqle_alltime', uid));
-            if (atSnap.exists()) {
-              await updateDoc(doc(db, 'linqle_alltime', uid), {
-                totalWins: Math.max(0, (atSnap.data().totalWins || 1) - 1),
-                totalPlays: Math.max(0, (atSnap.data().totalPlays || 1) - 1),
-              });
-            }
-          } catch (e) { console.error('alltime update failed', e); }
-        }
+        // Decrement all-time stats on users/{uid}
+        try {
+          await updateDoc(doc(db, 'users', uid), {
+            linqleTotalPlays: increment(-1),
+            ...(score.won ? { linqleTotalWins: increment(-1) } : {}),
+          });
+        } catch (e) { console.error('alltime decrement failed', e); }
         // Delete the score doc
         await deleteDoc(d.ref);
       }));
@@ -11128,17 +11127,28 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
   }, [today]);
 
   useEffect(() => {
-    const q = query(collection(db, 'linqle_alltime'), orderBy('totalWins', 'desc'), orderBy('bestGuesses', 'asc'), orderBy('bestTime', 'asc'), limit(20));
+    // Query users collection — no new rules needed, owner writes stats here
+    const q = query(collection(db, 'users'), where('linqleTotalWins', '>', 0), orderBy('linqleTotalWins', 'desc'), limit(30));
     const unsub = onSnapshot(q, snap => {
-      const top = snap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-      setAlltimeScores(top);
-      // If user isn't in top 20, fetch their own entry separately
-      if (!top.find((s: any) => s.uid === currentUser.uid)) {
-        getDoc(doc(db, 'linqle_alltime', currentUser.uid)).then(userSnap => {
-          if (userSnap.exists()) {
+      const top = snap.docs.map(d => {
+        const u = d.data();
+        return {
+          id: d.id, uid: d.id,
+          name: u.name || 'Anonymous', photoURL: u.photoURL || '',
+          totalWins: u.linqleTotalWins || 0, totalPlays: u.linqleTotalPlays || 0,
+          bestGuesses: u.linqleBestGuesses || 99, bestTime: u.linqleBestTime || 0,
+          streak: u.linqleStreak || 0,
+        };
+      }).sort((a, b) => b.totalWins - a.totalWins || a.bestGuesses - b.bestGuesses || a.bestTime - b.bestTime);
+      setAlltimeScores(top as any);
+      // If user not in results, fetch their own doc
+      if (!top.find(s => s.uid === currentUser.uid)) {
+        getDoc(doc(db, 'users', currentUser.uid)).then(userSnap => {
+          if (userSnap.exists() && userSnap.data().linqleTotalWins > 0) {
+            const u = userSnap.data();
             setAlltimeScores(prev => {
               if (prev.find(s => s.uid === currentUser.uid)) return prev;
-              return [...prev, { id: userSnap.id, ...userSnap.data() } as any];
+              return [...prev, { id: currentUser.uid, uid: currentUser.uid, name: u.name || 'Anonymous', photoURL: u.photoURL || '', totalWins: u.linqleTotalWins || 0, totalPlays: u.linqleTotalPlays || 0, bestGuesses: u.linqleBestGuesses || 99, bestTime: u.linqleBestTime || 0, streak: u.linqleStreak || 0 }] as any;
             });
           }
         }).catch(() => {});
@@ -11168,17 +11178,24 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
     else if (last === yesterdayStr) newStreak = prevStreak + 1;
     setUserStreak(newStreak);
 
-    // Save to user profile (streak + completion)
+    // Save to user profile (streak + completion + all-time stats — owner rule, always works)
     try {
       const existing = currentProfile?.linqleCompletions || [];
+      const prevWins = currentProfile?.linqleTotalWins || 0;
+      const prevBestGuesses = currentProfile?.linqleBestGuesses ?? 99;
+      const prevBestTime = currentProfile?.linqleBestTime ?? Infinity;
       await updateDoc(doc(db, 'users', currentUser.uid), {
         linqleCompletions: [...existing.filter((c: any) => c.date !== today), { date: today, guesses: finalGuesses.length, won: didWin }],
         linqleStreak: newStreak,
         linqleLastCompleted: today,
+        linqleTotalPlays: increment(1),
+        ...(didWin ? { linqleTotalWins: increment(1) } : {}),
+        ...(didWin ? { linqleBestGuesses: Math.min(prevBestGuesses, finalGuesses.length) } : {}),
+        ...(didWin ? { linqleBestTime: Math.min(prevBestTime === Infinity ? timeMs : prevBestTime, timeMs) } : {}),
       });
     } catch (e) { console.error('profile save failed', e); }
 
-    // Save to daily leaderboard
+    // Save to daily leaderboard (requires rules deploy)
     try {
       await setDoc(doc(db, 'linqle', today, 'scores', currentUser.uid), {
         uid: currentUser.uid, name: currentProfile?.name || 'Anonymous',
@@ -11186,24 +11203,6 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
         timeMs, won: didWin, completedAt: serverTimestamp(),
       });
     } catch (e) { console.error('leaderboard save failed', e); }
-
-    // Update all-time stats
-    try {
-      const atRef = doc(db, 'linqle_alltime', currentUser.uid);
-      const atSnap = await getDoc(atRef);
-      const prev = atSnap.exists() ? atSnap.data() : {};
-      await setDoc(atRef, {
-        uid: currentUser.uid,
-        name: currentProfile?.name || 'Anonymous',
-        photoURL: currentProfile?.photoURL || '',
-        totalWins: (prev.totalWins || 0) + (didWin ? 1 : 0),
-        totalPlays: (prev.totalPlays || 0) + 1,
-        bestGuesses: didWin ? Math.min(prev.bestGuesses ?? 99, finalGuesses.length) : (prev.bestGuesses ?? 99),
-        bestTime: didWin ? Math.min(prev.bestTime ?? Infinity, timeMs) : (prev.bestTime ?? 0),
-        streak: newStreak,
-        lastUpdated: serverTimestamp(),
-      });
-    } catch (e) { console.error('alltime save failed', e); }
 
     // Issue sticker pack
     try {
