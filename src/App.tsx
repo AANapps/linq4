@@ -6597,7 +6597,12 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                 </button>
               </div>
               <div className="flex-1 overflow-hidden flex flex-col">
-                <LinqleGame currentUser={user} currentProfile={profile} onClose={() => setViewingLinqle(false)} />
+                <LinqleGame
+                  currentUser={user}
+                  currentProfile={profile}
+                  onClose={() => setViewingLinqle(false)}
+                  onPackReady={(stickers) => { setPendingPack(stickers); setPendingPackCardId(null); }}
+                />
               </div>
             </motion.div>
           </motion.div>
@@ -10987,7 +10992,7 @@ const TILE_COLORS: Record<TileState, string> = {
 
 const KEYBOARD_ROWS = [['Q','W','E','R','T','Y','U','I','O','P'],['A','S','D','F','G','H','J','K','L'],['ENTER','Z','X','C','V','B','N','M','⌫']];
 
-function LinqleGame({ currentUser, currentProfile, onClose }: { currentUser: FirebaseUser; currentProfile: UserProfile | null; onClose: () => void }) {
+function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { currentUser: FirebaseUser; currentProfile: UserProfile | null; onClose: () => void; onPackReady?: (stickers: CollectibleSticker[]) => void }) {
   const today = new Date().toISOString().split('T')[0];
   const [answer, setAnswer] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -11050,6 +11055,15 @@ function LinqleGame({ currentUser, currentProfile, onClose }: { currentUser: Fir
         timeMs, won: didWin, completedAt: serverTimestamp(),
       });
     } catch (e) { console.error('leaderboard save failed', e); }
+    // Issue sticker pack — same as stamp flow
+    try {
+      const userName = currentProfile?.name || 'Anonymous';
+      const newStickers = await issueUserStickers(currentUser.uid, userName, 3).catch(() => [] as CollectibleSticker[]);
+      issueStickersToCard(currentUser.uid, userName, 3).catch(console.error);
+      if (newStickers.length > 0 && onPackReady) {
+        setTimeout(() => onPackReady(newStickers), 1600);
+      }
+    } catch (e) { console.error('sticker issue failed', e); }
     setSubmitting(false);
   };
 
