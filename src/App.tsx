@@ -10701,7 +10701,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false }: { card: Card
   );
 }
 
-function StoreCard({ store, card, onJoin, onClick }: { store: StoreProfile, card?: Card, onJoin: () => void, onClick?: () => void, key?: React.Key }) {
+function StoreCard({ store, card, onJoin, onClick, distance }: { store: StoreProfile, card?: Card, onJoin: () => void, onClick?: () => void, distance?: number | null, key?: React.Key }) {
   const stampsRequired = store.stamps_required_for_reward || 10;
   const finalReward = store.rewardTiers?.length
     ? [...store.rewardTiers].sort((a, b) => b.stamps - a.stamps)[0]?.reward
@@ -10723,7 +10723,7 @@ function StoreCard({ store, card, onJoin, onClick }: { store: StoreProfile, card
         </div>
         <p className="text-xs text-brand-navy/40 mb-2 flex items-center gap-1">
           <StoreCategoryIcon category={store.category} size={11} />
-          {store.category} • 1.2km away
+          {store.category}{distance != null ? ` • ${distance < 1 ? `${Math.round(distance * 1000)}m` : `${distance.toFixed(1)}km`} away` : ''}
         </p>
 
         {cardEnabled && card ? (
@@ -10888,14 +10888,20 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
           </div>
 
           <div className="space-y-4">
-            {filteredStores.map(store => (
-              <StoreCard 
-                key={store.id} 
-                store={store} 
-                onJoin={() => onJoin(store)} 
-                onClick={() => onViewStore(store)} 
-              />
-            ))}
+            {filteredStores.map(store => {
+              const dist = userCoords && store.lat != null && store.lng != null
+                ? haversineKm(userCoords.lat, userCoords.lng, store.lat, store.lng)
+                : null;
+              return (
+                <StoreCard
+                  key={store.id}
+                  store={store}
+                  onJoin={() => onJoin(store)}
+                  onClick={() => onViewStore(store)}
+                  distance={dist}
+                />
+              );
+            })}
             {filteredStores.length === 0 && (
               <div className="py-12 text-center text-brand-navy/20">
                 <Compass size={48} className="mx-auto mb-4 opacity-10" />
