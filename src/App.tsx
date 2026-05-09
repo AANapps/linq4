@@ -11409,11 +11409,15 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
 
       {/* Keyboard */}
       <div className="pb-4 px-1 space-y-1.5">
+        <button onClick={() => handleKey('ENTER')}
+          className="w-full h-11 rounded-xl gradient-logo-blue text-white text-sm font-black tracking-widest uppercase flex items-center justify-center shadow-sm active:scale-95 transition-transform">
+          Enter
+        </button>
         {KEYBOARD_ROWS.map((row, ri) => (
           <div key={ri} className="flex gap-1 justify-center">
-            {row.map(key => {
+            {row.filter(k => k !== 'ENTER').map(key => {
               const kState = keyColors[key];
-              const wide = key === 'ENTER' || key === '⌫';
+              const wide = key === '⌫';
               return (
                 <button key={key} onClick={() => handleKey(key)}
                   className={`${wide ? 'px-2 min-w-[44px]' : 'w-9'} h-12 rounded-lg text-sm font-bold flex items-center justify-center transition-colors ${kState ? TILE_COLORS[kState] : 'bg-brand-navy/10 text-brand-navy'}`}>
