@@ -4600,10 +4600,37 @@ function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
     const daysUntil = (((i - (todayDayIdx % words.length)) + words.length) % words.length);
     const playsDate = new Date(); playsDate.setDate(playsDate.getDate() + daysUntil);
     const playsDateStr = playsDate.toISOString().split('T')[0];
-    // Delete leaderboard scores for that date
+    // For each score: remove completion from user profile + decrement all-time wins if they won
     try {
       const scoresSnap = await getDocs(collection(db, 'linqle', playsDateStr, 'scores'));
-      await Promise.all(scoresSnap.docs.map(d => deleteDoc(d.ref)));
+      await Promise.all(scoresSnap.docs.map(async d => {
+        const score = d.data();
+        const uid: string = score.uid;
+        // Remove the day's entry from user profile
+        try {
+          const userSnap = await getDoc(doc(db, 'users', uid));
+          if (userSnap.exists()) {
+            const completions: any[] = userSnap.data().linqleCompletions || [];
+            await updateDoc(doc(db, 'users', uid), {
+              linqleCompletions: completions.filter((c: any) => c.date !== playsDateStr),
+            });
+          }
+        } catch (e) { console.error('user completion remove failed', e); }
+        // Decrement all-time wins if they had won
+        if (score.won) {
+          try {
+            const atSnap = await getDoc(doc(db, 'linqle_alltime', uid));
+            if (atSnap.exists()) {
+              await updateDoc(doc(db, 'linqle_alltime', uid), {
+                totalWins: Math.max(0, (atSnap.data().totalWins || 1) - 1),
+                totalPlays: Math.max(0, (atSnap.data().totalPlays || 1) - 1),
+              });
+            }
+          } catch (e) { console.error('alltime update failed', e); }
+        }
+        // Delete the score doc
+        await deleteDoc(d.ref);
+      }));
     } catch (e) { console.error('score delete failed', e); }
     saveQueue(words.filter((_, idx) => idx !== i));
   };
