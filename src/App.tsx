@@ -11127,8 +11127,8 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
   }, [today]);
 
   useEffect(() => {
-    // Query users collection — no new rules needed, owner writes stats here
-    const q = query(collection(db, 'users'), where('linqleTotalWins', '>', 0), orderBy('linqleTotalWins', 'desc'), limit(30));
+    // orderBy on a field only returns docs where that field exists — no where() needed, no composite index
+    const q = query(collection(db, 'users'), orderBy('linqleTotalWins', 'desc'), limit(30));
     const unsub = onSnapshot(q, snap => {
       const top = snap.docs.map(d => {
         const u = d.data();
