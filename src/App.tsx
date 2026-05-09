@@ -11085,6 +11085,8 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
   const [loading, setLoading] = useState(true);
   const [guesses, setGuesses] = useState<string[]>([]);
   const [tileStates, setTileStates] = useState<TileState[][]>([]);
+  const [displayStates, setDisplayStates] = useState<TileState[][]>([]);
+  const [revealingRow, setRevealingRow] = useState<number | null>(null);
   const [current, setCurrent] = useState('');
   const [gameOver, setGameOver] = useState(false);
   const [won, setWon] = useState(false);
@@ -11224,7 +11226,7 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
   };
 
   const handleKey = (key: string) => {
-    if (gameOver || !answer || alreadyDone) return;
+    if (gameOver || !answer || alreadyDone || revealingRow !== null) return;
     if (!startTime) setStartTime(Date.now());
     if (key === '⌫' || key === 'Backspace') {
       setCurrent(prev => prev.slice(0, -1));
@@ -11237,15 +11239,35 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
       const newStates = [...tileStates, states];
       setGuesses(newGuesses);
       setTileStates(newStates);
+      setCurrent('');
+
+      const rowIdx = newGuesses.length - 1;
+      setRevealingRow(rowIdx);
+      setDisplayStates(prev => [...prev, Array(LINQLE_COLS).fill('typing') as TileState[]]);
+
+      // Reveal each tile's colour at the mid-point of its flip
+      for (let c = 0; c < LINQLE_COLS; c++) {
+        setTimeout(() => {
+          setDisplayStates(prev => {
+            const next = prev.map(r => [...r]);
+            if (next[rowIdx]) next[rowIdx][c] = states[c];
+            return next;
+          });
+        }, c * 120 + 200);
+      }
+
       const didWin = current === answer;
       const isLast = newGuesses.length >= LINQLE_ROWS;
-      if (didWin || isLast) {
-        setGameOver(true);
-        setWon(didWin);
-        setElapsed(startTime ? Date.now() - startTime : 0);
-        doSubmit(newGuesses, newStates, didWin);
-      }
-      setCurrent('');
+      const revealDone = (LINQLE_COLS - 1) * 120 + 420;
+      setTimeout(() => {
+        setRevealingRow(null);
+        if (didWin || isLast) {
+          setGameOver(true);
+          setWon(didWin);
+          setElapsed(startTime ? Date.now() - startTime : 0);
+          doSubmit(newGuesses, newStates, didWin);
+        }
+      }, revealDone);
       return;
     }
     if (/^[A-Za-z]$/.test(key) && current.length < LINQLE_COLS) {
@@ -11262,10 +11284,11 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
   const fmtTime = (ms: number) => { const s = Math.floor(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 
   const keyColors: Record<string, TileState> = {};
-  tileStates.forEach((rowStates, ri) => {
+  displayStates.forEach((rowStates, ri) => {
     guesses[ri]?.split('').forEach((ch, ci) => {
-      const prev = keyColors[ch];
       const next = rowStates[ci];
+      if (next === 'typing' || next === 'empty') return;
+      const prev = keyColors[ch];
       if (!prev || next === 'correct' || (prev === 'absent' && next !== 'absent')) keyColors[ch] = next;
     });
   });
@@ -11386,18 +11409,18 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
         {Array.from({ length: LINQLE_ROWS }, (_, r) => {
           const submitted = r < guesses.length;
           const isActive = r === currentRow && !gameOver;
-          const rowStates = submitted ? tileStates[r] : null;
+          const rowDisplayStates = submitted ? displayStates[r] : null;
           return (
             <div key={r} className={`flex gap-1.5 ${isActive && shake ? 'animate-[wiggle_0.4s_ease]' : ''}`}>
               {Array.from({ length: LINQLE_COLS }, (_, c) => {
                 let letter = '';
                 let state: TileState = 'empty';
-                if (submitted) { letter = guesses[r][c]; state = rowStates![c]; }
+                if (submitted) { letter = guesses[r][c]; state = rowDisplayStates ? rowDisplayStates[c] : 'typing'; }
                 else if (isActive) { letter = current[c] || ''; state = current[c] ? 'typing' : 'empty'; }
                 return (
                   <motion.div key={c}
                     animate={submitted ? { rotateX: [0, -90, 0], transition: { delay: c * 0.12, duration: 0.4 } } : {}}
-                    className={`w-[52px] h-[52px] flex items-center justify-center rounded-xl border-2 font-black text-xl transition-colors ${TILE_COLORS[state]}`}>
+                    className={`w-[52px] h-[52px] flex items-center justify-center rounded-xl border-2 font-black text-xl ${TILE_COLORS[state]}`}>
                     {letter}
                   </motion.div>
                 );
