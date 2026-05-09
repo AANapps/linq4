@@ -11450,9 +11450,6 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady }: { curren
         className="flex-1 rounded-[1.5rem] overflow-hidden shadow-lg shadow-violet-900/20 text-left">
         <div className="h-full px-4 py-4 flex flex-col gap-3"
           style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #3730a3 40%, #6366f1 80%, #818cf8 100%)' }}>
-          <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center border border-white/20">
-            <BarChart2 size={18} className="text-white" />
-          </div>
           <div className="flex-1 min-w-0">
             <p className="text-[9px] font-bold uppercase tracking-widest text-indigo-200/70">Daily Vote</p>
             <p className="text-sm font-black text-white leading-tight mt-0.5 line-clamp-2">{voteData.question}</p>
