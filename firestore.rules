@@ -205,6 +205,16 @@ service cloud.firestore {
       allow update, delete: if isAuthenticated() && (resource.data.storeId == request.auth.uid || isStoreOwner(resource.data.storeId) || isAdmin());
     }
 
+    match /puzzles/{puzzleId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+
+      match /scores/{userId} {
+        allow read: if isAuthenticated();
+        allow create, update: if isAuthenticated() && request.auth.uid == userId;
+      }
+    }
+
     match /offer_redemptions/{redemptionId} {
       allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isStoreOwner(resource.data.storeId) || isAdmin());
       allow create: if isAuthenticated();
