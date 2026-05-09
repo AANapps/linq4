@@ -6585,8 +6585,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
             <motion.div
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', stiffness: 380, damping: 36 }}
-              className="bg-brand-bg rounded-t-[2rem] flex flex-col overflow-hidden mt-10"
-              style={{ height: '90dvh' }}
+              className="bg-brand-bg flex flex-col overflow-hidden flex-1"
             >
               <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-brand-navy/8 shrink-0">
                 <div>
