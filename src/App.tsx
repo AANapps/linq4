@@ -334,7 +334,9 @@ interface StoreProfile {
   subscriptionId?: string;
   subscriptionEnd?: { toMillis: () => number; seconds: number } | null;
   subCardEnabled?: boolean;
+  pointsEarnMode?: 'spend' | 'visit' | 'both';
   pointsPerDollar?: number;
+  pointsPerVisit?: number;
   pointsToMoneyRate?: number;
   subCardRewards?: { points: number; reward: string }[];
 }
@@ -9836,7 +9838,10 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
 
         // Handle sub/points card issuing
         if (store.subCardEnabled) {
-          const points = Math.round(Number(transactionValue) * (store.pointsPerDollar || 1));
+          const mode = store.pointsEarnMode || 'spend';
+          const spendPts = mode !== 'visit' ? Math.round(Number(transactionValue) * (store.pointsPerDollar || 1)) : 0;
+          const visitPts = mode !== 'spend' ? (store.pointsPerVisit || 0) : 0;
+          const points = spendPts + visitPts;
           const cardDoc = await getDoc(cardRef);
           if (cardDoc.exists() && cardDoc.data()?.card_type === 'sub') {
             await updateDoc(cardRef, {
@@ -9866,11 +9871,14 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
             store_id: store.id,
             card_type: 'sub',
             type: 'issue',
+            earn_mode: mode,
             points_issued: points,
-            transaction_value: Number(transactionValue),
+            spend_points: spendPts,
+            visit_points: visitPts,
+            transaction_value: mode !== 'visit' ? Number(transactionValue) : 0,
             issued_at: serverTimestamp(),
           });
-          setIssueStatus({ type: 'success', message: `${points} points issued to ${customer.name}!` });
+          setIssueStatus({ type: 'success', message: `${points} pts issued to ${customer.name}!` });
           setCustomerHandle('');
           setTransactionValue('');
           return;
@@ -10547,7 +10555,11 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
 
           <div className="bg-brand-navy p-8 rounded-[2.5rem] text-white text-center">
             <h3 className="font-display text-xl font-bold mb-4">{store?.subCardEnabled ? 'Issue Points' : 'Issue a Stamp'}</h3>
-            <p className="text-white/60 text-sm mb-8">{store?.subCardEnabled ? 'Enter the transaction value to calculate and issue points.' : "Scan a customer's QR code or enter their handle to issue a loyalty stamp."}</p>
+            <p className="text-white/60 text-sm mb-8">{store?.subCardEnabled
+              ? store.pointsEarnMode === 'visit' ? 'Issue a fixed points bonus for this visit.'
+              : store.pointsEarnMode === 'both' ? 'Enter transaction value — points are awarded for spend and visit.'
+              : 'Enter the transaction value to calculate and issue points.'
+              : "Scan a customer's QR code or enter their handle to issue a loyalty stamp."}</p>
 
             <div className="space-y-4">
               <button
@@ -10570,6 +10582,14 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                   />
                 </div>
                 {store?.subCardEnabled ? (
+                  store.pointsEarnMode === 'visit' ? (
+                    <div className="w-32 flex items-center justify-center rounded-2xl bg-indigo-500/30 border border-indigo-400/30 px-4 py-4">
+                      <div className="text-center">
+                        <p className="text-white font-black text-lg">{store.pointsPerVisit ?? 0}</p>
+                        <p className="text-[10px] text-indigo-200/70 font-bold uppercase">pts/visit</p>
+                      </div>
+                    </div>
+                  ) : (
                   <div className="w-32">
                     <input
                       type="number"
@@ -10581,9 +10601,12 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                       className="w-full px-4 py-4 rounded-2xl bg-white/10 border border-white/10 text-white text-center focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
                     />
                     <p className="text-[10px] text-white/40 mt-1 font-bold uppercase">
-                      {transactionValue ? `${Math.round(Number(transactionValue) * (store.pointsPerDollar || 1))} pts` : '$ Value'}
+                      {transactionValue
+                        ? `${Math.round(Number(transactionValue) * (store.pointsPerDollar || 1)) + (store.pointsEarnMode === 'both' ? (store.pointsPerVisit || 0) : 0)} pts`
+                        : store.pointsEarnMode === 'both' ? `+${store.pointsPerVisit ?? 0} visit` : '$ Value'}
                     </p>
                   </div>
+                  )
                 ) : (
                   <div className="w-24">
                     <input
@@ -10601,7 +10624,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
 
               <button
                 onClick={handleIssueStamp}
-                disabled={isIssuing || !customerHandle || (store?.subCardEnabled ? !transactionValue : false)}
+                disabled={isIssuing || !customerHandle || (store?.subCardEnabled && store.pointsEarnMode !== 'visit' ? !transactionValue : false)}
                 className="w-full bg-white text-brand-navy font-bold py-4 rounded-2xl disabled:opacity-50 transition-all"
               >
                 {isIssuing ? 'Issuing...' : store?.subCardEnabled ? 'Issue Points' : 'Issue Manually'}
@@ -11335,7 +11358,11 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false }: { card: C
         <div className="flex items-center justify-between px-5 py-4">
           <div className="flex items-center gap-1.5 text-indigo-200">
             <TrendingUp size={13} />
-            <span className="text-[11px] font-bold">{store?.pointsPerDollar || 1} pts/$1</span>
+            {store?.pointsEarnMode === 'visit'
+              ? <span className="text-[11px] font-bold">{store.pointsPerVisit ?? 0} pts/visit</span>
+              : store?.pointsEarnMode === 'both'
+              ? <span className="text-[11px] font-bold">{store.pointsPerDollar || 1} pts/$1 + {store.pointsPerVisit ?? 0}/visit</span>
+              : <span className="text-[11px] font-bold">{store?.pointsPerDollar || 1} pts/$1</span>}
           </div>
           <button
             onClick={(e) => { e.stopPropagation(); setShowRedeemSheet(true); }}
@@ -13837,7 +13864,9 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
 }
 
 function SubCardBuilder({ store }: { store: StoreProfile | null }) {
+  const [earnMode, setEarnMode] = useState<'spend' | 'visit' | 'both'>(store?.pointsEarnMode || 'spend');
   const [pointsPerDollar, setPointsPerDollar] = useState(store?.pointsPerDollar ?? 10);
+  const [pointsPerVisit, setPointsPerVisit] = useState(store?.pointsPerVisit ?? 50);
   const [pointsToMoneyRate, setPointsToMoneyRate] = useState(store?.pointsToMoneyRate ?? 100);
   const [rewards, setRewards] = useState<{ points: number; reward: string }[]>(
     store?.subCardRewards?.length ? store.subCardRewards : [{ points: 100, reward: '' }]
@@ -13847,7 +13876,9 @@ function SubCardBuilder({ store }: { store: StoreProfile | null }) {
 
   useEffect(() => {
     if (!store) return;
+    setEarnMode(store.pointsEarnMode || 'spend');
     setPointsPerDollar(store.pointsPerDollar ?? 10);
+    setPointsPerVisit(store.pointsPerVisit ?? 50);
     setPointsToMoneyRate(store.pointsToMoneyRate ?? 100);
     setRewards(store.subCardRewards?.length ? store.subCardRewards : [{ points: 100, reward: '' }]);
   }, [store?.id]);
@@ -13864,7 +13895,9 @@ function SubCardBuilder({ store }: { store: StoreProfile | null }) {
     setSaving(true);
     try {
       await updateDoc(doc(db, 'stores', store.id), {
+        pointsEarnMode: earnMode,
         pointsPerDollar,
+        pointsPerVisit,
         pointsToMoneyRate,
         subCardRewards: rewards,
       });
@@ -13881,23 +13914,42 @@ function SubCardBuilder({ store }: { store: StoreProfile | null }) {
     <div className="glass-card rounded-[2rem] p-6 space-y-5">
       <h3 className="font-display text-lg font-bold text-brand-navy">Points Card Settings</h3>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest block mb-1.5">Points per $1 spent</label>
-          <input
-            type="number"
-            min="1"
-            value={pointsPerDollar}
-            onChange={(e) => setPointsPerDollar(Math.max(1, parseInt(e.target.value) || 1))}
-            className="w-full px-4 py-3 rounded-xl border border-brand-navy/10 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400 text-brand-navy font-bold"
-          />
+      {/* Earn mode selector */}
+      <div>
+        <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest block mb-2">Points awarded on</label>
+        <div className="flex gap-2">
+          {(['spend', 'visit', 'both'] as const).map(m => (
+            <button key={m} onClick={() => setEarnMode(m)}
+              className={`flex-1 py-2.5 rounded-xl text-xs font-bold capitalize transition-all border ${earnMode === m ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-brand-navy/50 border-brand-navy/10'}`}>
+              {m === 'spend' ? '$ Spend' : m === 'visit' ? 'Visit' : 'Both'}
+            </button>
+          ))}
         </div>
-        <div>
+      </div>
+
+      {/* Earn rate inputs — shown conditionally */}
+      <div className="grid grid-cols-2 gap-4">
+        {(earnMode === 'spend' || earnMode === 'both') && (
+          <div>
+            <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest block mb-1.5">Points per $1 spent</label>
+            <input type="number" min="1" value={pointsPerDollar}
+              onChange={(e) => setPointsPerDollar(Math.max(1, parseInt(e.target.value) || 1))}
+              className="w-full px-4 py-3 rounded-xl border border-brand-navy/10 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400 text-brand-navy font-bold"
+            />
+          </div>
+        )}
+        {(earnMode === 'visit' || earnMode === 'both') && (
+          <div>
+            <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest block mb-1.5">Points per visit</label>
+            <input type="number" min="1" value={pointsPerVisit}
+              onChange={(e) => setPointsPerVisit(Math.max(1, parseInt(e.target.value) || 1))}
+              className="w-full px-4 py-3 rounded-xl border border-brand-navy/10 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400 text-brand-navy font-bold"
+            />
+          </div>
+        )}
+        <div className={earnMode === 'both' ? 'col-span-2' : ''}>
           <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest block mb-1.5">Points per $1 off</label>
-          <input
-            type="number"
-            min="1"
-            value={pointsToMoneyRate}
+          <input type="number" min="1" value={pointsToMoneyRate}
             onChange={(e) => setPointsToMoneyRate(Math.max(1, parseInt(e.target.value) || 1))}
             className="w-full px-4 py-3 rounded-xl border border-brand-navy/10 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400 text-brand-navy font-bold"
           />
