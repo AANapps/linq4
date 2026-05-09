@@ -11422,39 +11422,32 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady }: { curren
   return (
     <>
       <motion.button whileTap={{ scale: 0.97 }} onClick={() => setOpen(true)}
-        className="w-full rounded-[1.5rem] overflow-hidden shadow-lg shadow-violet-900/20 text-left">
-        <div className="relative overflow-hidden px-5 py-4"
-          style={{ background: 'linear-gradient(90deg, #1e1b4b 0%, #3730a3 30%, #6366f1 70%, #818cf8 100%)' }}>
-          <MatrixRainCanvas opacity={0.2} fadeColor="rgba(20,17,60,0.2)" />
-          <div className="relative z-10 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0 border border-white/20">
-              <BarChart2 size={22} className="text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-200/80">Daily Vote</p>
-              <p className="font-display text-base font-black text-white truncate leading-snug mt-0.5">{voteData.question}</p>
-              {hasVoted && userVote !== null && voteData.options[userVote] && (
-                <p className="text-[10px] text-indigo-200/70 mt-0.5">✓ {voteData.options[userVote]}</p>
-              )}
-            </div>
-            <ChevronRight size={18} className="text-white/50 shrink-0" />
+        className="flex-1 rounded-[1.5rem] overflow-hidden shadow-lg shadow-violet-900/20 text-left">
+        <div className="h-full px-4 py-4 flex flex-col gap-3"
+          style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #3730a3 40%, #6366f1 80%, #818cf8 100%)' }}>
+          <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center border border-white/20">
+            <BarChart2 size={18} className="text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[9px] font-bold uppercase tracking-widest text-indigo-200/70">Daily Vote</p>
+            <p className="text-sm font-black text-white leading-tight mt-0.5 line-clamp-2">{voteData.question}</p>
           </div>
           {hasVoted && (
-            <div className="relative z-10 mt-3 space-y-1.5">
-              {voteData.options.map((opt, i) => {
+            <div className="space-y-1">
+              {voteData.options.map((_, i) => {
                 const pct = Math.round(((voteData.voteCounts[String(i)] ?? 0) / total) * 100);
                 return (
-                  <div key={i} className="flex items-center gap-2">
-                    <span className="text-[10px] text-white/60 w-16 truncate shrink-0">{opt}</span>
-                    <div className="flex-1 h-1.5 bg-white/15 rounded-full overflow-hidden">
-                      <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.5, delay: i * 0.1 }}
-                        className={`h-full rounded-full ${userVote === i ? 'bg-white' : 'bg-white/40'}`} />
-                    </div>
-                    <span className="text-[10px] font-bold text-white/60 w-7 text-right shrink-0">{pct}%</span>
+                  <div key={i} className="h-1.5 bg-white/15 rounded-full overflow-hidden">
+                    <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.5, delay: i * 0.1 }}
+                      className={`h-full rounded-full ${userVote === i ? 'bg-white' : 'bg-white/40'}`} />
                   </div>
                 );
               })}
+              <p className="text-[9px] text-indigo-200/60 pt-0.5">{voteData.totalVotes} votes</p>
             </div>
+          )}
+          {!hasVoted && !voteData.closed && (
+            <p className="text-[10px] font-bold text-indigo-200/60">Tap to vote →</p>
           )}
         </div>
       </motion.button>
@@ -17228,36 +17221,31 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
             );
           })()}
 
-          {/* Daily Linqle entry */}
-          {onOpenLinqle && (
-            <motion.button
-              whileTap={{ scale: 0.97 }}
-              onClick={onOpenLinqle}
-              className="w-full rounded-[1.5rem] overflow-hidden shadow-lg shadow-green-900/20"
-            >
-              <div className="relative overflow-hidden px-5 py-4 flex items-center gap-4 active:opacity-90 transition-opacity"
-                style={{ background: 'linear-gradient(90deg, #022c22 0%, #064e3b 25%, #059669 65%, #34d399 100%)' }}>
-                <MatrixRainCanvas opacity={0.3} fadeColor="rgba(2,44,34,0.2)" />
-                <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0 border border-white/20">
-                  <MatrixScramble target="L" className="text-xl font-black text-white font-mono" />
+          {/* Linqle + Daily Vote — side by side */}
+          <div className="flex gap-3 items-stretch">
+            {onOpenLinqle && (
+              <motion.button whileTap={{ scale: 0.97 }} onClick={onOpenLinqle}
+                className="flex-1 rounded-[1.5rem] overflow-hidden shadow-lg shadow-green-900/20 text-left">
+                <div className="relative overflow-hidden h-full px-4 py-4 flex flex-col gap-3"
+                  style={{ background: 'linear-gradient(135deg, #022c22 0%, #064e3b 40%, #059669 80%, #34d399 100%)' }}>
+                  <MatrixRainCanvas opacity={0.3} fadeColor="rgba(2,44,34,0.2)" />
+                  <div className="relative z-10 w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center border border-white/20">
+                    <MatrixScramble target="L" className="text-lg font-black text-white font-mono" />
+                  </div>
+                  <div className="relative z-10">
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-emerald-200/70">Daily Word</p>
+                    <p className="font-display text-sm font-black text-white leading-tight mt-0.5">
+                      {currentProfile?.linqleCompletions?.find(c => c.date === new Date().toISOString().split('T')[0])
+                        ? '✓ Done' : "Today's\nLinqle"}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0 text-left">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-200/80">Daily Word Game</p>
-                  <p className="font-display text-lg font-black text-white">
-                    {currentProfile?.linqleCompletions?.find(c => c.date === new Date().toISOString().split('T')[0])
-                      ? `✓ Done · ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
-                      : "Today's Linqle"}
-                  </p>
-                </div>
-                <ChevronRight size={18} className="text-white/50 shrink-0" />
-              </div>
-            </motion.button>
-          )}
-
-          {/* Daily Vote */}
-          {currentUser && currentProfile && (
-            <DailyVoteFYPCard currentUser={currentUser} currentProfile={currentProfile} onPackReady={onPackReady} />
-          )}
+              </motion.button>
+            )}
+            {currentUser && currentProfile && (
+              <DailyVoteFYPCard currentUser={currentUser} currentProfile={currentProfile} onPackReady={onPackReady} />
+            )}
+          </div>
 
           {/* Challenges card + Leaderboard button — side by side */}
           {(feedChallenges.length > 0 || true) && (
