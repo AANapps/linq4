@@ -4527,90 +4527,122 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores,
   );
 }
 
+const LINQLE_EPOCH = new Date('2026-01-01').getTime();
+function linqleDayIndex(dateStr: string) {
+  const d = new Date(dateStr); d.setHours(0, 0, 0, 0);
+  return Math.floor((d.getTime() - LINQLE_EPOCH) / 86400000);
+}
+function linqleTodayWord(words: string[]) {
+  if (!words.length) return null;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const idx = Math.floor((today.getTime() - LINQLE_EPOCH) / 86400000);
+  return words[((idx % words.length) + words.length) % words.length].toUpperCase();
+}
+
 function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
-  const [puzzleDate, setPuzzleDate] = useState(new Date().toISOString().split('T')[0]);
-  const [word, setWord] = useState('');
+  const [words, setWords] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [input, setInput] = useState('');
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [existing, setExisting] = useState<string | null>(null);
-  const [loadingExisting, setLoadingExisting] = useState(false);
 
   useEffect(() => {
-    setExisting(null);
-    setLoadingExisting(true);
-    getDoc(doc(db, 'linqle', puzzleDate)).then(snap => {
-      if (snap.exists()) setExisting((snap.data().word as string).toUpperCase());
-      setLoadingExisting(false);
+    getDoc(doc(db, 'linqle', 'queue')).then(snap => {
+      if (snap.exists()) setWords((snap.data().words as string[]) || []);
+      setLoading(false);
     });
-  }, [puzzleDate]);
+  }, []);
 
-  const handleSave = async () => {
-    const clean = word.trim().toUpperCase();
-    if (clean.length !== 5 || !/^[A-Z]+$/.test(clean)) return;
+  const saveQueue = async (newWords: string[]) => {
     setSaving(true);
     try {
-      await setDoc(doc(db, 'linqle', puzzleDate), { word: clean, date: puzzleDate, createdAt: serverTimestamp() });
-      setSaved(true);
-      setTimeout(onClose, 900);
+      await setDoc(doc(db, 'linqle', 'queue'), { words: newWords });
+      setWords(newWords);
     } catch (e) { console.error(e); }
     finally { setSaving(false); }
   };
 
-  const clean = word.trim().toUpperCase();
-  const valid = clean.length === 5 && /^[A-Z]+$/.test(clean);
+  const handleAdd = () => {
+    const clean = input.trim().toUpperCase();
+    if (clean.length !== 5 || !/^[A-Z]+$/.test(clean)) return;
+    if (words.includes(clean)) { setInput(''); return; }
+    saveQueue([...words, clean]);
+    setInput('');
+  };
+
+  const handleRemove = (i: number) => saveQueue(words.filter((_, idx) => idx !== i));
+
+  const todayIdx = Math.floor((Date.now() - LINQLE_EPOCH) / 86400000);
+  const todayWord = words.length ? words[((todayIdx % words.length) + words.length) % words.length] : null;
+
+  const inputClean = input.trim().toUpperCase();
+  const inputValid = inputClean.length === 5 && /^[A-Z]+$/.test(inputClean);
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex flex-col max-w-md mx-auto">
-      <div className="bg-brand-bg flex-1 flex flex-col overflow-hidden rounded-t-[2rem] mt-24">
+      <div className="bg-brand-bg flex-1 flex flex-col overflow-hidden rounded-t-[2rem] mt-16">
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-brand-navy/8 shrink-0">
           <div>
-            <h2 className="font-bold text-lg text-brand-navy">Linqle — Daily Word</h2>
-            <p className="text-xs text-brand-navy/40">Set the 5-letter word for a date</p>
+            <h2 className="font-black text-lg text-brand-navy">Linqle — Word Queue</h2>
+            <p className="text-xs text-brand-navy/40">{words.length} word{words.length !== 1 ? 's' : ''} · cycles daily</p>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-full bg-brand-navy/8 flex items-center justify-center"><X size={16} /></button>
         </div>
 
-        <div className="overflow-y-auto flex-1 p-5 space-y-5">
-          <div>
-            <p className="text-[10px] font-bold text-brand-navy/50 mb-1.5 uppercase tracking-widest">Date</p>
-            <input type="date" value={puzzleDate} onChange={e => { setPuzzleDate(e.target.value); setSaved(false); setWord(''); }}
-              className="w-full px-3 py-2.5 rounded-2xl bg-white border border-brand-navy/10 text-sm text-brand-navy outline-none" />
-          </div>
-
-          {!loadingExisting && existing && (
-            <div className="px-4 py-3 rounded-2xl bg-amber-50 border border-amber-200">
-              <p className="text-xs text-amber-700 font-semibold">Word already set for this date: <span className="font-black tracking-widest">{existing}</span></p>
-              <p className="text-[11px] text-amber-600 mt-0.5">Saving will overwrite it.</p>
+        <div className="overflow-y-auto flex-1 p-5 space-y-5 pb-8">
+          {/* Today's word banner */}
+          {todayWord && (
+            <div className="px-4 py-3 rounded-2xl bg-green-50 border border-green-200 flex items-center justify-between">
+              <p className="text-xs font-semibold text-green-700">Today's word</p>
+              <p className="font-black tracking-[0.25em] text-green-700">{todayWord}</p>
             </div>
           )}
 
-          <div>
-            <p className="text-[10px] font-bold text-brand-navy/50 mb-1.5 uppercase tracking-widest">5-Letter Word</p>
+          {/* Add word */}
+          <div className="flex gap-2">
             <input
               type="text"
-              value={word}
-              onChange={e => { setWord(e.target.value.replace(/[^a-zA-Z]/g, '').slice(0, 5)); setSaved(false); }}
-              placeholder="e.g. BRAND"
+              value={input}
+              onChange={e => setInput(e.target.value.replace(/[^a-zA-Z]/g, '').slice(0, 5))}
+              onKeyDown={e => e.key === 'Enter' && handleAdd()}
+              placeholder="Add 5-letter word…"
               maxLength={5}
-              className="w-full px-3 py-2.5 rounded-2xl bg-white border border-brand-navy/10 text-sm text-brand-navy outline-none uppercase tracking-widest font-bold placeholder:font-normal placeholder:normal-case placeholder:tracking-normal"
+              className="flex-1 px-3 py-2.5 rounded-2xl bg-white border border-brand-navy/10 text-sm text-brand-navy outline-none uppercase tracking-widest font-bold placeholder:font-normal placeholder:normal-case placeholder:tracking-normal"
             />
-            <p className="text-[10px] text-brand-navy/40 mt-1.5 ml-1">{clean.length}/5 letters</p>
+            <button onClick={handleAdd} disabled={!inputValid || saving}
+              className="px-4 py-2.5 rounded-2xl bg-green-500 text-white font-bold text-sm active:scale-95 transition-all disabled:opacity-40">
+              Add
+            </button>
           </div>
 
-          {/* Preview tiles */}
-          <div className="flex gap-2 justify-center pt-1">
-            {Array.from({ length: 5 }, (_, i) => (
-              <div key={i} className={`w-12 h-12 rounded-xl flex items-center justify-center border-2 font-black text-xl ${clean[i] ? 'bg-green-500 border-green-500 text-white' : 'bg-white border-brand-navy/15 text-brand-navy/20'}`}>
-                {clean[i] || ''}
-              </div>
-            ))}
-          </div>
-
-          <button onClick={handleSave} disabled={!valid || saving || saved}
-            className="w-full py-3.5 rounded-2xl gradient-logo-blue text-white font-bold text-sm active:scale-95 transition-all disabled:opacity-40">
-            {saved ? '✓ Saved!' : saving ? 'Saving…' : 'Save Word'}
-          </button>
+          {/* Queue list */}
+          {loading ? (
+            <div className="flex justify-center py-8"><RefreshCw size={20} className="animate-spin text-brand-navy/30" /></div>
+          ) : words.length === 0 ? (
+            <p className="text-center text-sm text-brand-navy/30 py-8">No words yet — add some above</p>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">Queue ({words.length} words)</p>
+              {words.map((w, i) => {
+                const playsOn = new Date(LINQLE_EPOCH + (((i - (todayIdx % words.length)) + words.length) % words.length) * 86400000);
+                const isToday = w === todayWord;
+                return (
+                  <div key={i} className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl ${isToday ? 'bg-green-50 border border-green-200' : 'bg-white border border-brand-navy/8'}`}>
+                    <span className="text-xs font-bold text-brand-navy/30 w-5 text-right">{i + 1}</span>
+                    <span className={`flex-1 font-black tracking-[0.2em] text-sm ${isToday ? 'text-green-700' : 'text-brand-navy'}`}>{w}</span>
+                    {isToday
+                      ? <span className="text-[10px] font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">Today</span>
+                      : <span className="text-[10px] text-brand-navy/30">{playsOn.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+                    }
+                    <button onClick={() => handleRemove(i)} disabled={saving}
+                      className="w-6 h-6 rounded-full bg-brand-navy/8 flex items-center justify-center active:scale-90 transition-all disabled:opacity-40">
+                      <X size={11} className="text-brand-navy/50" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </motion.div>
@@ -10974,8 +11006,12 @@ function LinqleGame({ currentUser, currentProfile, onClose }: { currentUser: Fir
   const [showLeaderboard, setShowLeaderboard] = useState(false);
 
   useEffect(() => {
-    getDoc(doc(db, 'linqle', today)).then(snap => {
-      if (snap.exists()) setAnswer((snap.data().word as string).toUpperCase());
+    getDoc(doc(db, 'linqle', 'queue')).then(snap => {
+      if (snap.exists()) {
+        const words: string[] = snap.data().words || [];
+        const w = linqleTodayWord(words);
+        if (w) setAnswer(w);
+      }
       setLoading(false);
     });
   }, [today]);
