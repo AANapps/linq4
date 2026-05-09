@@ -11129,8 +11129,23 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
 
   useEffect(() => {
     const q = query(collection(db, 'linqle_alltime'), orderBy('totalWins', 'desc'), orderBy('bestGuesses', 'asc'), orderBy('bestTime', 'asc'), limit(20));
-    return onSnapshot(q, snap => setAlltimeScores(snap.docs.map(d => ({ id: d.id, ...d.data() } as any))));
-  }, []);
+    const unsub = onSnapshot(q, snap => {
+      const top = snap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+      setAlltimeScores(top);
+      // If user isn't in top 20, fetch their own entry separately
+      if (!top.find((s: any) => s.uid === currentUser.uid)) {
+        getDoc(doc(db, 'linqle_alltime', currentUser.uid)).then(userSnap => {
+          if (userSnap.exists()) {
+            setAlltimeScores(prev => {
+              if (prev.find(s => s.uid === currentUser.uid)) return prev;
+              return [...prev, { id: userSnap.id, ...userSnap.data() } as any];
+            });
+          }
+        }).catch(() => {});
+      }
+    });
+    return unsub;
+  }, [currentUser.uid]);
 
   useEffect(() => {
     if (!startTime || gameOver) return;
@@ -11266,11 +11281,11 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
     const displayWon = gameOver ? won : alreadyDone!.won;
     const displayGuesses = gameOver ? guesses.length : alreadyDone!.guesses;
 
-    // All-time leaderboard top 10 + user position
-    const top10 = alltimeScores.slice(0, 10);
+    // All-time leaderboard top 20 + user position
+    const top20 = alltimeScores.filter(s => s.uid !== currentUser.uid || alltimeScores.indexOf(s) < 20).slice(0, 20);
+    const userAtEntry = alltimeScores.find(s => s.uid === currentUser.uid) || null;
     const userAtIdx = alltimeScores.findIndex(s => s.uid === currentUser.uid);
-    const userAtEntry = userAtIdx !== -1 ? alltimeScores[userAtIdx] : null;
-    const userInTop10 = userAtIdx !== -1 && userAtIdx < 10;
+    const userInTop20 = userAtIdx !== -1 && userAtIdx < 20;
 
     return (
       <div className="flex flex-col h-full overflow-hidden">
@@ -11325,9 +11340,9 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
               ))
           ) : (
             <>
-              {top10.length === 0
+              {top20.length === 0
                 ? <p className="text-xs text-brand-navy/30 text-center py-8">No all-time scores yet</p>
-                : top10.map((s, idx) => (
+                : top20.map((s, idx) => (
                   <div key={s.id} className={`flex items-center gap-3 px-3 py-2 rounded-2xl ${s.uid === currentUser.uid ? 'bg-green-50 border border-green-200' : 'bg-white border border-brand-navy/6'}`}>
                     <span className="w-5 text-center font-bold text-xs text-brand-navy/40 shrink-0">{idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}</span>
                     {s.photoURL ? <img src={s.photoURL} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" /> : <div className="w-7 h-7 rounded-full bg-brand-navy/10 shrink-0" />}
@@ -11337,8 +11352,8 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
                     {(s as any).streak > 1 && <span className="text-xs shrink-0">🔥{(s as any).streak}</span>}
                   </div>
                 ))}
-              {/* User's entry if outside top 10 */}
-              {!userInTop10 && userAtEntry && (
+              {/* User's entry if outside top 20 */}
+              {!userInTop20 && userAtEntry && (
                 <>
                   <div className="text-center text-xs text-brand-navy/20 py-1">· · ·</div>
                   <div className="flex items-center gap-3 px-3 py-2 rounded-2xl bg-green-50 border border-green-200">
@@ -11347,6 +11362,7 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
                     <p className="flex-1 font-bold text-sm truncate text-brand-navy">{userAtEntry.name}</p>
                     <span className="text-xs font-bold text-green-600 shrink-0">{userAtEntry.totalWins}W</span>
                     <span className="text-xs text-brand-navy/30 shrink-0">best {userAtEntry.bestGuesses}/6</span>
+                    {(userAtEntry as any).streak > 1 && <span className="text-xs shrink-0">🔥{(userAtEntry as any).streak}</span>}
                   </div>
                 </>
               )}
