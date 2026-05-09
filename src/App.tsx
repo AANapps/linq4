@@ -11253,12 +11253,12 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
             if (next[rowIdx]) next[rowIdx][c] = states[c];
             return next;
           });
-        }, c * 120 + 200);
+        }, c * 180 + 275);
       }
 
       const didWin = current === answer;
       const isLast = newGuesses.length >= LINQLE_ROWS;
-      const revealDone = (LINQLE_COLS - 1) * 120 + 420;
+      const revealDone = (LINQLE_COLS - 1) * 180 + 580;
       setTimeout(() => {
         setRevealingRow(null);
         if (didWin || isLast) {
@@ -11419,7 +11419,7 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
                 else if (isActive) { letter = current[c] || ''; state = current[c] ? 'typing' : 'empty'; }
                 return (
                   <motion.div key={c}
-                    animate={submitted ? { rotateX: [0, -90, 0], transition: { delay: c * 0.12, duration: 0.4 } } : {}}
+                    animate={submitted ? { rotateX: [0, -90, 0], transition: { delay: c * 0.18, duration: 0.55 } } : {}}
                     className={`w-[52px] h-[52px] flex items-center justify-center rounded-xl border-2 font-black text-xl ${TILE_COLORS[state]}`}>
                     {letter}
                   </motion.div>
