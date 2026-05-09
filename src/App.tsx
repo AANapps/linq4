@@ -17718,14 +17718,14 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
       </AnimatePresence>
 
       {/* Cover banner + logo */}
-      <div className="relative">
-        <div className="h-36 rounded-[2rem] overflow-hidden">
+      <div className="-mx-4 relative">
+        <div className="h-36 overflow-hidden">
           {store.coverUrl
             ? <img src={store.coverUrl} alt="" className="w-full h-full object-cover" />
             : <div className="w-full h-full" style={{ background: `linear-gradient(135deg, ${store.theme || '#3a6fcc'}60 0%, ${store.theme || '#3a6fcc'}25 100%)` }} />
           }
         </div>
-        <div className="absolute -bottom-10 left-5">
+        <div className="absolute -bottom-10 left-9">
           <div className="w-20 h-20 rounded-[1.5rem] overflow-hidden border-4 border-white shadow-xl bg-white">
             {store.logoUrl
               ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
