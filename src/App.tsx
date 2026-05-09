@@ -10766,6 +10766,21 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+const _geocodeCache = new Map<string, { lat: number; lng: number } | null>();
+async function geocodeAddressGlobal(address: string): Promise<{ lat: number; lng: number } | null> {
+  if (_geocodeCache.has(address)) return _geocodeCache.get(address)!;
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`, { headers: { 'Accept-Language': 'en' } });
+    const data = await res.json();
+    const result = data[0] ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) } : null;
+    _geocodeCache.set(address, result);
+    return result;
+  } catch {
+    _geocodeCache.set(address, null);
+    return null;
+  }
+}
+
 function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, currentUser, currentProfile }: {
   stores: StoreProfile[];
   cards: Card[];
@@ -10781,6 +10796,7 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [activeCategory, setActiveCategory] = useState('All');
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [distancesMap, setDistancesMap] = useState<Map<string, number>>(new Map());
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -10790,6 +10806,31 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
       );
     }
   }, []);
+
+  useEffect(() => {
+    if (!userCoords || stores.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const map = new Map<string, number>();
+      for (let i = 0; i < stores.length; i++) {
+        const store = stores[i];
+        let coords: { lat: number; lng: number } | null = null;
+        if (store.lat != null && store.lng != null) {
+          coords = { lat: store.lat, lng: store.lng };
+        } else {
+          const addr = store.location || (store as any).address;
+          if (addr) {
+            coords = await geocodeAddressGlobal(addr);
+            if (i < stores.length - 1) await new Promise(r => setTimeout(r, 1100));
+          }
+        }
+        if (coords) map.set(store.id, haversineKm(userCoords.lat, userCoords.lng, coords.lat, coords.lng));
+        if (cancelled) return;
+      }
+      setDistancesMap(new Map(map));
+    })();
+    return () => { cancelled = true; };
+  }, [userCoords, stores]);
 
   useEffect(() => {
     if (searchType === 'users') {
@@ -10888,20 +10929,15 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
           </div>
 
           <div className="space-y-4">
-            {filteredStores.map(store => {
-              const dist = userCoords && store.lat != null && store.lng != null
-                ? haversineKm(userCoords.lat, userCoords.lng, store.lat, store.lng)
-                : null;
-              return (
-                <StoreCard
-                  key={store.id}
-                  store={store}
-                  onJoin={() => onJoin(store)}
-                  onClick={() => onViewStore(store)}
-                  distance={dist}
-                />
-              );
-            })}
+            {filteredStores.map(store => (
+              <StoreCard
+                key={store.id}
+                store={store}
+                onJoin={() => onJoin(store)}
+                onClick={() => onViewStore(store)}
+                distance={distancesMap.get(store.id) ?? null}
+              />
+            ))}
             {filteredStores.length === 0 && (
               <div className="py-12 text-center text-brand-navy/20">
                 <Compass size={48} className="mx-auto mb-4 opacity-10" />
