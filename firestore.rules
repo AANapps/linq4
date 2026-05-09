@@ -205,7 +205,7 @@ service cloud.firestore {
       allow update, delete: if isAuthenticated() && (resource.data.storeId == request.auth.uid || isStoreOwner(resource.data.storeId) || isAdmin());
     }
 
-    match /puzzles/{puzzleId} {
+    match /linqle/{dateId} {
       allow read: if isAuthenticated();
       allow create, update, delete: if isAdmin();
 

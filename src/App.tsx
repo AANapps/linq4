@@ -128,9 +128,7 @@ import {
   ChevronUp,
   MoveHorizontal,
   Check,
-  LayoutList,
-  Grid3X3,
-  Timer
+  LayoutList
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
@@ -282,7 +280,7 @@ interface UserProfile {
   streak?: number;
   lastStreakDate?: string;
   avatar?: UserAvatar;
-  nonogramCompletions?: { date: string; imageUrl: string; timeMs: number }[];
+  linqleCompletions?: { date: string; guesses: number; won: boolean }[];
   dogName?: string;
   lastDogFed?: any;
   lastTreeWatered?: any;
@@ -739,7 +737,7 @@ export default function App() {
   const [pendingNFCStoreId, setPendingNFCStoreId] = useState<string | null>(null);
   const [userCards, setUserCards] = useState<Card[]>([]);
   const [showSettings, setShowSettings] = useState(false);
-  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges' | 'stores' | 'users' | 'posts' | 'offers' | 'nonogram'>(null);
+  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges' | 'stores' | 'users' | 'posts' | 'offers' | 'linqle'>(null);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -1544,7 +1542,7 @@ export default function App() {
             onOpenUsers={() => setAdminView('users')}
             onOpenPosts={() => setAdminView('posts')}
             onOpenOffers={() => setAdminView('offers')}
-            onOpenNonogram={() => setAdminView('nonogram')}
+            onOpenLinqle={() => setAdminView('linqle')}
           />
         )}
         {adminView === 'challenges' && (
@@ -1565,8 +1563,8 @@ export default function App() {
         {adminView === 'offers' && (
           <AdminOffersPanel onClose={() => setAdminView('menu')} />
         )}
-        {adminView === 'nonogram' && (
-          <NonogramAdminPanel onClose={() => setAdminView('menu')} />
+        {adminView === 'linqle' && (
+          <LinqleAdminPanel onClose={() => setAdminView('menu')} />
         )}
       </AnimatePresence>
 
@@ -4406,7 +4404,7 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
-function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts, onOpenOffers, onOpenNonogram }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void; onOpenOffers: () => void; onOpenNonogram: () => void }) {
+function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts, onOpenOffers, onOpenLinqle }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void; onOpenOffers: () => void; onOpenLinqle: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -4512,15 +4510,15 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores,
 
           <motion.button
             whileTap={{ scale: 0.97 }}
-            onClick={onOpenNonogram}
+            onClick={onOpenLinqle}
             className="rounded-[2rem] bg-white border border-black/5 shadow-sm p-6 flex flex-col items-start gap-3 text-left active:bg-brand-navy/5 transition-colors"
           >
-            <div className="w-12 h-12 rounded-2xl bg-violet-100 flex items-center justify-center">
-              <Grid3X3 size={22} className="text-violet-500" />
+            <div className="w-12 h-12 rounded-2xl bg-green-100 flex items-center justify-center">
+              <span className="text-xl font-black text-green-600">Lq</span>
             </div>
             <div>
-              <p className="font-bold text-brand-navy text-sm">Nonogram</p>
-              <p className="text-[11px] text-brand-navy/40 mt-0.5">Design daily colour puzzles</p>
+              <p className="font-bold text-brand-navy text-sm">Linqle</p>
+              <p className="text-[11px] text-brand-navy/40 mt-0.5">Set the daily word puzzle</p>
             </div>
           </motion.button>
         </div>
@@ -4529,147 +4527,90 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores,
   );
 }
 
-function NonogramAdminPanel({ onClose }: { onClose: () => void }) {
-  const SIZES = [5, 10, 15] as const;
-  const PRESET_COLORS = ['#1D4ED8','#DC2626','#16A34A','#D97706','#7C3AED','#DB2777','#0891B2','#111827','#F97316','#84CC16','#EA580C','#BE185D'];
-  const [size, setSize] = useState<5|10|15>(10);
-  const [cells, setCells] = useState<{ filled: boolean; color: string }[]>(() => Array(100).fill(null).map(() => ({ filled: false, color: '#1D4ED8' })));
-  const [selectedColor, setSelectedColor] = useState('#1D4ED8');
+function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
   const [puzzleDate, setPuzzleDate] = useState(new Date().toISOString().split('T')[0]);
+  const [word, setWord] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const isDrawingRef = useRef(false);
-  const drawModeRef = useRef<'fill'|'erase'>('fill');
+  const [existing, setExisting] = useState<string | null>(null);
+  const [loadingExisting, setLoadingExisting] = useState(false);
 
   useEffect(() => {
-    setCells(Array(size * size).fill(null).map(() => ({ filled: false, color: selectedColor })));
-  }, [size]);
-
-  const getRow = (r: number) => cells.slice(r * size, (r + 1) * size).map(c => c.filled);
-  const getCol = (col: number) => cells.filter((_, i) => i % size === col).map(c => c.filled);
-  const rowClues = Array.from({ length: size }, (_, r) => computeNonogramClues(getRow(r)));
-  const colClues = Array.from({ length: size }, (_, c) => computeNonogramClues(getCol(c)));
-
-  const maxRowClueLen = Math.max(...rowClues.map(r => r.length), 1);
-  const cellPx = Math.max(14, Math.floor((Math.min(340, window.innerWidth - 40) - maxRowClueLen * 18) / size));
-  const clueW = maxRowClueLen * 18;
-
-  const applyCell = (i: number) => {
-    setCells(prev => prev.map((cell, idx) => idx === i ? { filled: drawModeRef.current === 'fill', color: selectedColor } : cell));
-  };
-
-  const handlePointerDown = (i: number, e: React.PointerEvent) => {
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    drawModeRef.current = cells[i].filled ? 'erase' : 'fill';
-    isDrawingRef.current = true;
-    applyCell(i);
-  };
-  const handlePointerEnter = (i: number) => { if (isDrawingRef.current) applyCell(i); };
-  const handlePointerUp = () => { isDrawingRef.current = false; };
+    setExisting(null);
+    setLoadingExisting(true);
+    getDoc(doc(db, 'linqle', puzzleDate)).then(snap => {
+      if (snap.exists()) setExisting((snap.data().word as string).toUpperCase());
+      setLoadingExisting(false);
+    });
+  }, [puzzleDate]);
 
   const handleSave = async () => {
+    const clean = word.trim().toUpperCase();
+    if (clean.length !== 5 || !/^[A-Z]+$/.test(clean)) return;
     setSaving(true);
     try {
-      await setDoc(doc(db, 'puzzles', puzzleDate), { date: puzzleDate, size, cells, rowClues, colClues, createdAt: serverTimestamp() });
+      await setDoc(doc(db, 'linqle', puzzleDate), { word: clean, date: puzzleDate, createdAt: serverTimestamp() });
       setSaved(true);
       setTimeout(onClose, 900);
     } catch (e) { console.error(e); }
     finally { setSaving(false); }
   };
 
+  const clean = word.trim().toUpperCase();
+  const valid = clean.length === 5 && /^[A-Z]+$/.test(clean);
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex flex-col max-w-md mx-auto">
-      <div className="bg-brand-bg flex-1 flex flex-col overflow-hidden rounded-t-[2rem] mt-10">
+      <div className="bg-brand-bg flex-1 flex flex-col overflow-hidden rounded-t-[2rem] mt-24">
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-brand-navy/8 shrink-0">
           <div>
-            <h2 className="font-bold text-lg text-brand-navy">Daily Nonogram</h2>
-            <p className="text-xs text-brand-navy/40">Draw the puzzle — colours reveal on solve</p>
+            <h2 className="font-bold text-lg text-brand-navy">Linqle — Daily Word</h2>
+            <p className="text-xs text-brand-navy/40">Set the 5-letter word for a date</p>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-full bg-brand-navy/8 flex items-center justify-center"><X size={16} /></button>
         </div>
 
-        <div className="overflow-y-auto flex-1 p-5 space-y-5" onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp}>
-          {/* Date + Size row */}
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <p className="text-[10px] font-bold text-brand-navy/50 mb-1.5 uppercase tracking-widest">Date</p>
-              <input type="date" value={puzzleDate} onChange={e => setPuzzleDate(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-2xl bg-white border border-brand-navy/10 text-sm text-brand-navy outline-none" />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-brand-navy/50 mb-1.5 uppercase tracking-widest">Size</p>
-              <select value={size} onChange={e => setSize(Number(e.target.value) as 5|10|15)}
-                className="px-3 py-2.5 rounded-2xl bg-white border border-brand-navy/10 text-sm text-brand-navy outline-none">
-                {SIZES.map(s => <option key={s} value={s}>{s}×{s}</option>)}
-              </select>
-            </div>
-          </div>
-
-          {/* Colour picker */}
+        <div className="overflow-y-auto flex-1 p-5 space-y-5">
           <div>
-            <p className="text-[10px] font-bold text-brand-navy/50 mb-2 uppercase tracking-widest">Colour</p>
-            <div className="flex flex-wrap gap-2 items-center">
-              {PRESET_COLORS.map(c => (
-                <button key={c} onClick={() => setSelectedColor(c)}
-                  className="w-8 h-8 rounded-xl transition-all"
-                  style={{ backgroundColor: c, outline: selectedColor === c ? `3px solid ${c}` : '3px solid transparent', outlineOffset: '2px', transform: selectedColor === c ? 'scale(1.2)' : undefined }} />
-              ))}
-              <label className="w-8 h-8 rounded-xl overflow-hidden cursor-pointer border-2 border-brand-navy/10" title="Custom">
-                <input type="color" value={selectedColor} onChange={e => setSelectedColor(e.target.value)} className="w-10 h-10 -m-1 cursor-pointer" />
-              </label>
-            </div>
+            <p className="text-[10px] font-bold text-brand-navy/50 mb-1.5 uppercase tracking-widest">Date</p>
+            <input type="date" value={puzzleDate} onChange={e => { setPuzzleDate(e.target.value); setSaved(false); setWord(''); }}
+              className="w-full px-3 py-2.5 rounded-2xl bg-white border border-brand-navy/10 text-sm text-brand-navy outline-none" />
           </div>
 
-          {/* Grid */}
-          <div className="select-none touch-none">
-            {/* Col clue header */}
-            <div className="flex mb-0.5" style={{ paddingLeft: clueW + 'px' }}>
-              {colClues.map((clue, c) => (
-                <div key={c} className="flex flex-col items-center justify-end" style={{ width: cellPx, minWidth: cellPx }}>
-                  {clue.map((n, i) => <span key={i} className="text-[8px] font-bold text-brand-navy/60 leading-[1.1]">{n === 0 ? '' : n}</span>)}
-                </div>
-              ))}
+          {!loadingExisting && existing && (
+            <div className="px-4 py-3 rounded-2xl bg-amber-50 border border-amber-200">
+              <p className="text-xs text-amber-700 font-semibold">Word already set for this date: <span className="font-black tracking-widest">{existing}</span></p>
+              <p className="text-[11px] text-amber-600 mt-0.5">Saving will overwrite it.</p>
             </div>
-            {/* Rows */}
-            {Array.from({ length: size }, (_, r) => (
-              <div key={r} className="flex items-center mb-0.5">
-                {/* Row clues */}
-                <div className="flex gap-0.5 items-center justify-end shrink-0" style={{ width: clueW }}>
-                  {rowClues[r].map((n, i) => <span key={i} className="text-[8px] font-bold text-brand-navy/60 w-4 text-center">{n === 0 ? '' : n}</span>)}
-                </div>
-                {/* Cells */}
-                {Array.from({ length: size }, (_, c) => {
-                  const i = r * size + c;
-                  const cell = cells[i];
-                  return (
-                    <div key={c} data-idx={i}
-                      onPointerDown={e => handlePointerDown(i, e)}
-                      onPointerEnter={() => handlePointerEnter(i)}
-                      className="border border-white/60 cursor-crosshair"
-                      style={{
-                        width: cellPx, height: cellPx, minWidth: cellPx,
-                        backgroundColor: cell.filled ? cell.color : '#e8eaf0',
-                        borderRight: (c + 1) % 5 === 0 ? '2px solid rgba(29,78,216,0.25)' : undefined,
-                        borderBottom: (r + 1) % 5 === 0 ? '2px solid rgba(29,78,216,0.25)' : undefined,
-                      }} />
-                  );
-                })}
+          )}
+
+          <div>
+            <p className="text-[10px] font-bold text-brand-navy/50 mb-1.5 uppercase tracking-widest">5-Letter Word</p>
+            <input
+              type="text"
+              value={word}
+              onChange={e => { setWord(e.target.value.replace(/[^a-zA-Z]/g, '').slice(0, 5)); setSaved(false); }}
+              placeholder="e.g. BRAND"
+              maxLength={5}
+              className="w-full px-3 py-2.5 rounded-2xl bg-white border border-brand-navy/10 text-sm text-brand-navy outline-none uppercase tracking-widest font-bold placeholder:font-normal placeholder:normal-case placeholder:tracking-normal"
+            />
+            <p className="text-[10px] text-brand-navy/40 mt-1.5 ml-1">{clean.length}/5 letters</p>
+          </div>
+
+          {/* Preview tiles */}
+          <div className="flex gap-2 justify-center pt-1">
+            {Array.from({ length: 5 }, (_, i) => (
+              <div key={i} className={`w-12 h-12 rounded-xl flex items-center justify-center border-2 font-black text-xl ${clean[i] ? 'bg-green-500 border-green-500 text-white' : 'bg-white border-brand-navy/15 text-brand-navy/20'}`}>
+                {clean[i] || ''}
               </div>
             ))}
           </div>
 
-          {/* Actions */}
-          <div className="flex gap-3 pb-4">
-            <button onClick={() => setCells(Array(size * size).fill(null).map(() => ({ filled: false, color: selectedColor })))}
-              className="flex-1 py-3 rounded-2xl bg-brand-navy/8 text-brand-navy font-bold text-sm active:scale-95 transition-all">
-              Clear
-            </button>
-            <button onClick={handleSave} disabled={saving || saved}
-              className="flex-1 py-3 rounded-2xl gradient-logo-blue text-white font-bold text-sm active:scale-95 transition-all disabled:opacity-60">
-              {saved ? '✓ Saved!' : saving ? 'Saving…' : 'Save Puzzle'}
-            </button>
-          </div>
+          <button onClick={handleSave} disabled={!valid || saving || saved}
+            className="w-full py-3.5 rounded-2xl gradient-logo-blue text-white font-bold text-sm active:scale-95 transition-all disabled:opacity-40">
+            {saved ? '✓ Saved!' : saving ? 'Saving…' : 'Save Word'}
+          </button>
         </div>
       </div>
     </motion.div>
@@ -6202,7 +6143,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const [pendingPack, setPendingPack] = useState<CollectibleSticker[] | null>(null);
   const [pendingPackCardId, setPendingPackCardId] = useState<string | null>(null);
   const [pendingCollectionCardId, setPendingCollectionCardId] = useState<string | null>(null);
-  const [viewingPuzzle, setViewingPuzzle] = useState(false);
+  const [viewingLinqle, setViewingLinqle] = useState(false);
 
   // Stamp celebration
   const [celebrationPages, setCelebrationPages] = useState<CelebrationPage[] | null>(null);
@@ -6595,7 +6536,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           onViewUser={onViewUser}
           onViewStore={onViewStore}
           onViewChallenges={() => { setActiveTab('home'); setWalletSubTab('challenges'); }}
-          onOpenPuzzle={() => setViewingPuzzle(true)}
+          onOpenLinqle={() => setViewingLinqle(true)}
           currentUser={user}
           currentProfile={profile}
           userCards={initialCards}
@@ -6603,28 +6544,29 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       )}
 
       <AnimatePresence>
-        {viewingPuzzle && (
+        {viewingLinqle && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex flex-col max-w-md mx-auto"
-            onClick={e => { if (e.target === e.currentTarget) setViewingPuzzle(false); }}
+            onClick={e => { if (e.target === e.currentTarget) setViewingLinqle(false); }}
           >
             <motion.div
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', stiffness: 380, damping: 36 }}
-              className="bg-brand-bg rounded-t-[2rem] flex-1 flex flex-col overflow-hidden mt-16"
+              className="bg-brand-bg rounded-t-[2rem] flex flex-col overflow-hidden mt-10"
+              style={{ height: '90dvh' }}
             >
               <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-brand-navy/8 shrink-0">
                 <div>
-                  <h2 className="font-bold text-lg text-brand-navy">Daily Nonogram</h2>
+                  <h2 className="font-black text-xl text-brand-navy">Linqle</h2>
                   <p className="text-xs text-brand-navy/40">{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
                 </div>
-                <button onClick={() => setViewingPuzzle(false)} className="w-9 h-9 rounded-full bg-brand-navy/8 flex items-center justify-center active:scale-90 transition-all">
+                <button onClick={() => setViewingLinqle(false)} className="w-9 h-9 rounded-full bg-brand-navy/8 flex items-center justify-center active:scale-90 transition-all">
                   <X size={18} className="text-brand-navy/60" />
                 </button>
               </div>
-              <div className="overflow-y-auto flex-1 px-4 py-5">
-                <NonogramGame currentUser={user} currentProfile={profile} onBack={() => setViewingPuzzle(false)} />
+              <div className="flex-1 overflow-hidden flex flex-col">
+                <LinqleGame currentUser={user} currentProfile={profile} onClose={() => setViewingLinqle(false)} />
               </div>
             </motion.div>
           </motion.div>
@@ -10957,26 +10899,6 @@ function StoreCard({ store, card, onJoin, onClick, distance }: { store: StorePro
   );
 }
 
-interface NonogramPuzzle {
-  id?: string;
-  date: string;
-  size: number;
-  cells: { filled: boolean; color: string }[];
-  rowClues: number[][];
-  colClues: number[][];
-}
-
-function computeNonogramClues(line: boolean[]): number[] {
-  const clues: number[] = [];
-  let count = 0;
-  for (const cell of line) {
-    if (cell) { count++; }
-    else if (count > 0) { clues.push(count); count = 0; }
-  }
-  if (count > 0) clues.push(count);
-  return clues.length > 0 ? clues : [0];
-}
-
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -11000,266 +10922,245 @@ async function geocodeAddressGlobal(address: string): Promise<{ lat: number; lng
   }
 }
 
-function NonogramGame({ currentUser, currentProfile, onBack }: { currentUser: FirebaseUser; currentProfile: UserProfile | null; onBack: () => void }) {
+interface LinqleScore { uid: string; name: string; photoURL?: string; guesses: number; timeMs: number; won: boolean; completedAt: any; }
+
+const LINQLE_ROWS = 6;
+const LINQLE_COLS = 5;
+type TileState = 'correct' | 'present' | 'absent' | 'empty' | 'typing';
+
+function scoreTileStates(guess: string, answer: string): TileState[] {
+  const result: TileState[] = Array(LINQLE_COLS).fill('absent');
+  const ansCount: Record<string, number> = {};
+  for (const ch of answer) ansCount[ch] = (ansCount[ch] || 0) + 1;
+  // First pass: correct
+  for (let i = 0; i < LINQLE_COLS; i++) {
+    if (guess[i] === answer[i]) { result[i] = 'correct'; ansCount[guess[i]]--; }
+  }
+  // Second pass: present
+  for (let i = 0; i < LINQLE_COLS; i++) {
+    if (result[i] !== 'correct' && ansCount[guess[i]] > 0) {
+      result[i] = 'present';
+      ansCount[guess[i]]--;
+    }
+  }
+  return result;
+}
+
+const TILE_COLORS: Record<TileState, string> = {
+  correct: 'bg-green-500 border-green-500 text-white',
+  present: 'bg-amber-400 border-amber-400 text-white',
+  absent: 'bg-brand-navy/60 border-brand-navy/60 text-white',
+  empty: 'bg-white border-brand-navy/15 text-brand-navy',
+  typing: 'bg-white border-brand-navy/40 text-brand-navy',
+};
+
+const KEYBOARD_ROWS = [['Q','W','E','R','T','Y','U','I','O','P'],['A','S','D','F','G','H','J','K','L'],['ENTER','Z','X','C','V','B','N','M','⌫']];
+
+function LinqleGame({ currentUser, currentProfile, onClose }: { currentUser: FirebaseUser; currentProfile: UserProfile | null; onClose: () => void }) {
   const today = new Date().toISOString().split('T')[0];
-  const [puzzle, setPuzzle] = useState<NonogramPuzzle | null>(null);
+  const [answer, setAnswer] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [userGrid, setUserGrid] = useState<boolean[]>([]);
-  const [markGrid, setMarkGrid] = useState<boolean[]>([]);
-  const [solved, setSolved] = useState(false);
+  const [guesses, setGuesses] = useState<string[]>([]);
+  const [tileStates, setTileStates] = useState<TileState[][]>([]);
+  const [current, setCurrent] = useState('');
+  const [gameOver, setGameOver] = useState(false);
+  const [won, setWon] = useState(false);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [elapsed, setElapsed] = useState(0);
-  const [scores, setScores] = useState<(NonogramScore & { id: string })[]>([]);
+  const [scores, setScores] = useState<(LinqleScore & { id: string })[]>([]);
+  const [alreadyDone, setAlreadyDone] = useState<{ guesses: number; won: boolean } | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [savedImageUrl, setSavedImageUrl] = useState<string | null>(null);
-  const [alreadyCompleted, setAlreadyCompleted] = useState<{ imageUrl: string; timeMs: number } | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const isDrawingRef = useRef(false);
-  const drawModeRef = useRef<'fill'|'erase'|'mark'>('fill');
+  const [shake, setShake] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
 
   useEffect(() => {
-    getDoc(doc(db, 'puzzles', today)).then(snap => {
-      if (snap.exists()) {
-        const data = { id: snap.id, ...snap.data() } as NonogramPuzzle;
-        setPuzzle(data);
-        setUserGrid(Array(data.size * data.size).fill(false));
-        setMarkGrid(Array(data.size * data.size).fill(false));
-      }
+    getDoc(doc(db, 'linqle', today)).then(snap => {
+      if (snap.exists()) setAnswer((snap.data().word as string).toUpperCase());
       setLoading(false);
     });
   }, [today]);
 
   useEffect(() => {
-    const done = currentProfile?.nonogramCompletions?.find(c => c.date === today);
-    if (done) setAlreadyCompleted(done);
+    const done = currentProfile?.linqleCompletions?.find(c => c.date === today);
+    if (done) setAlreadyDone(done);
   }, [currentProfile, today]);
 
   useEffect(() => {
-    const q = query(collection(db, 'puzzles', today, 'scores'), orderBy('timeMs', 'asc'), limit(10));
-    return onSnapshot(q, snap => setScores(snap.docs.map(d => ({ id: d.id, ...d.data() } as NonogramScore & { id: string }))));
+    const q = query(collection(db, 'linqle', today, 'scores'), orderBy('guesses', 'asc'), orderBy('timeMs', 'asc'), limit(20));
+    return onSnapshot(q, snap => setScores(snap.docs.map(d => ({ id: d.id, ...d.data() } as LinqleScore & { id: string }))));
   }, [today]);
 
   useEffect(() => {
-    if (!startTime || solved) return;
+    if (!startTime || gameOver) return;
     const iv = setInterval(() => setElapsed(Date.now() - startTime), 200);
     return () => clearInterval(iv);
-  }, [startTime, solved]);
+  }, [startTime, gameOver]);
 
-  const checkWin = (grid: boolean[]) => {
-    if (!puzzle) return;
-    if (puzzle.cells.every((cell, i) => cell.filled === grid[i])) doSolve(grid);
-  };
-
-  const doSolve = async (grid: boolean[]) => {
-    if (!puzzle || solved) return;
-    setSolved(true);
+  const doSubmit = async (finalGuesses: string[], finalStates: TileState[][], didWin: boolean) => {
+    if (!answer) return;
     const timeMs = startTime ? Date.now() - startTime : 0;
     setSubmitting(true);
     try {
-      const cellPx = 20;
-      const canvas = canvasRef.current!;
-      canvas.width = puzzle.size * cellPx;
-      canvas.height = puzzle.size * cellPx;
-      const ctx = canvas.getContext('2d')!;
-      ctx.fillStyle = '#f8f9ff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      puzzle.cells.forEach((cell, i) => {
-        if (cell.filled) {
-          const r = Math.floor(i / puzzle.size), c = i % puzzle.size;
-          ctx.fillStyle = cell.color;
-          ctx.fillRect(c * cellPx, r * cellPx, cellPx, cellPx);
-        }
-      });
-      const blob = await new Promise<Blob>(res => canvas.toBlob(b => res(b!), 'image/png'));
-      const sref = storageRef(storage, `nonogram-completions/${currentUser.uid}/${today}.png`);
-      await uploadBytes(sref, blob);
-      const imageUrl = await getDownloadURL(sref);
-      setSavedImageUrl(imageUrl);
-      await setDoc(doc(db, 'puzzles', today, 'scores', currentUser.uid), {
+      await setDoc(doc(db, 'linqle', today, 'scores', currentUser.uid), {
         uid: currentUser.uid, name: currentProfile?.name || 'Anonymous',
-        photoURL: currentProfile?.photoURL || '', timeMs, completedAt: serverTimestamp(), imageUrl,
+        photoURL: currentProfile?.photoURL || '', guesses: finalGuesses.length,
+        timeMs, won: didWin, completedAt: serverTimestamp(),
       });
-      const existing = currentProfile?.nonogramCompletions || [];
+      const existing = currentProfile?.linqleCompletions || [];
       await updateDoc(doc(db, 'users', currentUser.uid), {
-        nonogramCompletions: [...existing.filter(c => c.date !== today), { date: today, imageUrl, timeMs }],
+        linqleCompletions: [...existing.filter(c => c.date !== today), { date: today, guesses: finalGuesses.length, won: didWin }],
       });
     } catch (e) { console.error(e); }
     finally { setSubmitting(false); }
   };
 
-  const applyCell = (i: number, newGrid: boolean[], newMark: boolean[]) => {
+  const handleKey = (key: string) => {
+    if (gameOver || !answer || alreadyDone) return;
     if (!startTime) setStartTime(Date.now());
-    const mode = drawModeRef.current;
-    if (mode === 'mark') {
-      newMark[i] = !newMark[i];
-      if (newMark[i]) newGrid[i] = false;
-    } else {
-      newGrid[i] = mode === 'fill';
-      newMark[i] = false;
+    if (key === '⌫' || key === 'Backspace') {
+      setCurrent(prev => prev.slice(0, -1));
+      return;
+    }
+    if (key === 'Enter' || key === 'ENTER') {
+      if (current.length !== LINQLE_COLS) { setShake(true); setTimeout(() => setShake(false), 500); return; }
+      const states = scoreTileStates(current, answer);
+      const newGuesses = [...guesses, current];
+      const newStates = [...tileStates, states];
+      setGuesses(newGuesses);
+      setTileStates(newStates);
+      const didWin = current === answer;
+      const isLast = newGuesses.length >= LINQLE_ROWS;
+      if (didWin || isLast) {
+        setGameOver(true);
+        setWon(didWin);
+        setElapsed(startTime ? Date.now() - startTime : 0);
+        doSubmit(newGuesses, newStates, didWin);
+        setTimeout(() => setShowLeaderboard(true), 1800);
+      }
+      setCurrent('');
+      return;
+    }
+    if (/^[A-Za-z]$/.test(key) && current.length < LINQLE_COLS) {
+      setCurrent(prev => prev + key.toUpperCase());
     }
   };
 
-  const handlePointerDown = (i: number, e: React.PointerEvent) => {
-    if (solved) return;
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    if (e.button === 2 || e.ctrlKey) {
-      drawModeRef.current = 'mark';
-    } else {
-      drawModeRef.current = userGrid[i] ? 'erase' : 'fill';
-    }
-    isDrawingRef.current = true;
-    const g = [...userGrid], m = [...markGrid];
-    applyCell(i, g, m);
-    setUserGrid(g); setMarkGrid(m);
-    if (drawModeRef.current !== 'mark') checkWin(g);
-  };
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (!e.ctrlKey && !e.metaKey) handleKey(e.key); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [handleKey]);
 
-  const handlePointerEnter = (i: number) => {
-    if (!isDrawingRef.current || solved || drawModeRef.current === 'mark') return;
-    const g = [...userGrid], m = [...markGrid];
-    applyCell(i, g, m);
-    setUserGrid(g); setMarkGrid(m);
-    if (drawModeRef.current !== 'mark') checkWin(g);
-  };
+  const fmtTime = (ms: number) => { const s = Math.floor(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 
-  const handlePointerUp = () => { isDrawingRef.current = false; };
+  const keyColors: Record<string, TileState> = {};
+  tileStates.forEach((rowStates, ri) => {
+    guesses[ri]?.split('').forEach((ch, ci) => {
+      const prev = keyColors[ch];
+      const next = rowStates[ci];
+      if (!prev || next === 'correct' || (prev === 'absent' && next !== 'absent')) keyColors[ch] = next;
+    });
+  });
 
-  const fmtTime = (ms: number) => {
-    const s = Math.floor(ms / 1000);
-    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-  };
+  if (loading) return <div className="flex items-center justify-center py-24 text-brand-navy/30"><RefreshCw size={24} className="animate-spin" /></div>;
 
-  if (loading) return (
-    <div className="flex items-center justify-center py-24 text-brand-navy/30">
-      <RefreshCw size={24} className="animate-spin" />
-    </div>
-  );
-
-  if (!puzzle) return (
+  if (!answer) return (
     <div className="text-center py-20 text-brand-navy/30">
-      <Grid3X3 size={48} className="mx-auto mb-4 opacity-20" />
-      <p className="font-bold">No puzzle today</p>
+      <span className="text-5xl font-black text-brand-navy/10">Lq</span>
+      <p className="font-bold mt-4">No word set for today</p>
       <p className="text-xs mt-1">Check back soon</p>
     </div>
   );
 
-  const maxRowLen = Math.max(...puzzle.rowClues.map(r => r.length), 1);
-  const maxColLen = Math.max(...puzzle.colClues.map(c => c.length), 1);
-  const available = Math.min(360, window.innerWidth - 40);
-  const cellPx = Math.max(14, Math.floor((available - maxRowLen * 16) / puzzle.size));
-  const clueColW = maxRowLen * 16;
+  const currentRow = guesses.length;
 
   return (
-    <div className="space-y-5 pb-6 text-brand-navy">
-      <canvas ref={canvasRef} className="hidden" />
-
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-brand-navy/40">{!solved ? 'Fill the grid · right-click to mark' : 'Puzzle complete!'}</p>
-        <div className="flex items-center gap-1.5 text-brand-navy/60 text-sm font-bold">
-          <Timer size={15} />
-          {solved ? fmtTime(elapsed) : startTime ? fmtTime(elapsed) : '0:00'}
-        </div>
+    <div className="flex flex-col h-full">
+      {/* Grid */}
+      <div className="flex-1 flex flex-col items-center justify-center gap-1.5 py-4">
+        {Array.from({ length: LINQLE_ROWS }, (_, r) => {
+          const submitted = r < guesses.length;
+          const isActive = r === currentRow && !gameOver;
+          const rowStates = submitted ? tileStates[r] : null;
+          return (
+            <div key={r} className={`flex gap-1.5 ${isActive && shake ? 'animate-[wiggle_0.4s_ease]' : ''}`}>
+              {Array.from({ length: LINQLE_COLS }, (_, c) => {
+                let letter = '';
+                let state: TileState = 'empty';
+                if (submitted) { letter = guesses[r][c]; state = rowStates![c]; }
+                else if (isActive) { letter = current[c] || ''; state = current[c] ? 'typing' : 'empty'; }
+                return (
+                  <motion.div key={c}
+                    animate={submitted ? { rotateX: [0, -90, 0], transition: { delay: c * 0.12, duration: 0.4 } } : {}}
+                    className={`w-13 h-13 w-[52px] h-[52px] flex items-center justify-center rounded-xl border-2 font-black text-xl transition-colors ${TILE_COLORS[state]}`}>
+                    {letter}
+                  </motion.div>
+                );
+              })}
+            </div>
+          );
+        })}
       </div>
 
-      {alreadyCompleted && !solved && (
-        <div className="glass-card p-4 rounded-2xl flex items-center gap-3">
-          {alreadyCompleted.imageUrl && <img src={alreadyCompleted.imageUrl} alt="" className="w-12 h-12 rounded-xl object-cover" />}
-          <div>
-            <p className="font-bold text-sm">Already completed!</p>
-            <p className="text-xs text-brand-navy/50">Your time: {fmtTime(alreadyCompleted.timeMs)}</p>
-          </div>
+      {/* Result message */}
+      {gameOver && !showLeaderboard && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="text-center py-3 space-y-1">
+          {won ? <p className="font-black text-green-600 text-lg">Nicely done!</p> : <p className="font-black text-brand-navy/70 text-base">The word was <span className="text-brand-navy">{answer}</span></p>}
+          {submitting && <p className="text-xs text-brand-navy/40 animate-pulse">Saving…</p>}
+        </motion.div>
+      )}
+
+      {alreadyDone && !gameOver && (
+        <div className="mx-4 mb-3 px-4 py-3 rounded-2xl bg-green-50 border border-green-200 text-center">
+          <p className="text-sm font-bold text-green-700">{alreadyDone.won ? `You got it in ${alreadyDone.guesses}!` : `Better luck tomorrow`}</p>
+          <button className="text-xs text-green-600 underline mt-1" onClick={() => setShowLeaderboard(true)}>See leaderboard</button>
         </div>
       )}
 
-      {/* Grid */}
-      <div className="overflow-x-auto">
-        <div className="select-none touch-none inline-block" onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp} onContextMenu={e => e.preventDefault()}>
-          {/* Col clues */}
-          <div className="flex mb-1" style={{ paddingLeft: clueColW }}>
-            {puzzle.colClues.map((clue, c) => (
-              <div key={c} className="flex flex-col items-center justify-end" style={{ width: cellPx, minWidth: cellPx }}>
-                {Array.from({ length: maxColLen - clue.length }).map((_, i) => <span key={'e' + i} style={{ height: 12 }} />)}
-                {clue.map((n, i) => <span key={i} className="text-[9px] font-bold text-brand-navy/70 leading-[1.2]">{n === 0 ? '' : n}</span>)}
+      {/* Leaderboard overlay */}
+      {showLeaderboard && (
+        <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} className="mx-0 bg-brand-bg rounded-t-3xl border-t border-brand-navy/8 px-5 pt-4 pb-6 space-y-3 max-h-56 overflow-y-auto">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">Today's Leaderboard</p>
+            <button onClick={() => setShowLeaderboard(false)} className="text-[10px] text-brand-navy/30 underline">hide</button>
+          </div>
+          {scores.length === 0
+            ? <p className="text-xs text-brand-navy/30 text-center py-4">No completions yet</p>
+            : scores.map((s, idx) => (
+              <div key={s.id} className="flex items-center gap-3">
+                <span className="w-5 text-center font-bold text-xs text-brand-navy/40">{idx + 1}</span>
+                {s.photoURL ? <img src={s.photoURL} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" /> : <div className="w-7 h-7 rounded-full bg-brand-navy/10 shrink-0" />}
+                <p className="flex-1 font-bold text-sm truncate text-brand-navy">{s.name}</p>
+                <span className="text-xs font-bold text-brand-navy/50">{s.won ? `${s.guesses}/6` : 'X/6'}</span>
+                <span className="text-xs text-brand-navy/30">{fmtTime(s.timeMs)}</span>
+                {idx === 0 && <span>🥇</span>}
               </div>
             ))}
-          </div>
-          {/* Rows */}
-          {puzzle.rowClues.map((rowClue, r) => (
-            <div key={r} className="flex items-center mb-px">
-              <div className="flex gap-px items-center justify-end shrink-0" style={{ width: clueColW }}>
-                {Array.from({ length: maxRowLen - rowClue.length }).map((_, i) => <span key={'e' + i} style={{ width: 14 }} />)}
-                {rowClue.map((n, i) => <span key={i} className="text-[9px] font-bold text-brand-navy/70 w-4 text-center">{n === 0 ? '' : n}</span>)}
-              </div>
-              {Array.from({ length: puzzle.size }, (_, c) => {
-                const i = r * puzzle.size + c;
-                const filled = userGrid[i];
-                const marked = markGrid[i];
-                const solvedColor = solved && puzzle.cells[i].filled ? puzzle.cells[i].color : null;
+        </motion.div>
+      )}
+
+      {/* Keyboard */}
+      {!showLeaderboard && (
+        <div className="pb-4 px-1 space-y-1.5">
+          {KEYBOARD_ROWS.map((row, ri) => (
+            <div key={ri} className="flex gap-1 justify-center">
+              {row.map(key => {
+                const kState = keyColors[key];
+                const wide = key === 'ENTER' || key === '⌫';
                 return (
-                  <div key={c} data-idx={i}
-                    onPointerDown={e => handlePointerDown(i, e)}
-                    onPointerEnter={() => handlePointerEnter(i)}
-                    className="flex items-center justify-center text-brand-navy/30 font-bold"
-                    style={{
-                      width: cellPx, height: cellPx, minWidth: cellPx,
-                      fontSize: cellPx * 0.55,
-                      backgroundColor: solvedColor || (filled ? '#1D4ED8' : '#e8eaf0'),
-                      border: '1px solid rgba(255,255,255,0.6)',
-                      borderRight: (c + 1) % 5 === 0 ? '2px solid rgba(29,78,216,0.25)' : undefined,
-                      borderBottom: (r + 1) % 5 === 0 ? '2px solid rgba(29,78,216,0.25)' : undefined,
-                      transition: solved ? 'background-color 0.4s ease' : undefined,
-                    }}>
-                    {marked && !solved ? '×' : null}
-                  </div>
+                  <button key={key} onClick={() => handleKey(key)}
+                    className={`${wide ? 'px-2 min-w-[44px]' : 'w-8'} h-12 rounded-lg text-[11px] font-bold flex items-center justify-center transition-colors ${kState ? TILE_COLORS[kState] : 'bg-brand-navy/10 text-brand-navy'}`}>
+                    {key}
+                  </button>
                 );
               })}
             </div>
           ))}
         </div>
-      </div>
-
-      {/* Solved state */}
-      {solved && (
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-          <div className="glass-card p-5 rounded-3xl text-center space-y-2">
-            <p className="text-2xl">🎉</p>
-            <p className="font-bold text-lg">Puzzle solved!</p>
-            <p className="text-brand-navy/50 text-sm">Time: <span className="font-bold text-brand-navy">{fmtTime(elapsed)}</span></p>
-            {submitting && <p className="text-xs text-brand-navy/40 animate-pulse">Saving your artwork…</p>}
-            {savedImageUrl && (
-              <div className="flex justify-center pt-1">
-                <img src={savedImageUrl} alt="Your completed puzzle" className="w-24 h-24 rounded-2xl object-cover border-4 border-white shadow-lg" style={{ imageRendering: 'pixelated' }} />
-              </div>
-            )}
-          </div>
-        </motion.div>
       )}
-
-      {/* Leaderboard */}
-      <div className="space-y-3">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">Today's Leaderboard</p>
-        {scores.length === 0 ? (
-          <p className="text-xs text-brand-navy/30 text-center py-4">No completions yet — be the first!</p>
-        ) : scores.map((s, idx) => (
-          <div key={s.id} className="flex items-center gap-3 py-2">
-            <span className="w-6 text-center font-bold text-sm text-brand-navy/40">{idx + 1}</span>
-            {s.photoURL ? <img src={s.photoURL} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" /> : <div className="w-8 h-8 rounded-full bg-brand-navy/10 shrink-0" />}
-            <div className="flex-1 min-w-0">
-              <p className="font-bold text-sm truncate">{s.name}</p>
-            </div>
-            <div className="flex items-center gap-1 text-brand-navy/60 text-xs font-bold shrink-0">
-              <Timer size={11} />{fmtTime(s.timeMs)}
-            </div>
-            {s.imageUrl && <img src={s.imageUrl} alt="" className="w-8 h-8 rounded-lg object-cover shrink-0" style={{ imageRendering: 'pixelated' }} />}
-            {idx === 0 && <span className="text-base">🥇</span>}
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
-
-interface NonogramScore { uid: string; name: string; photoURL?: string; timeMs: number; completedAt: any; imageUrl?: string; }
 
 function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, currentUser, currentProfile }: {
   stores: StoreProfile[];
@@ -13689,16 +13590,16 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         );
       })()}
 
-      {/* Nonogram completions gallery */}
-      {(profile.nonogramCompletions?.length ?? 0) > 0 && (
+      {/* Linqle completions */}
+      {(profile.linqleCompletions?.length ?? 0) > 0 && (
         <div className="space-y-2.5">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Puzzle Art</p>
-          <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-2 scrollbar-hide">
-            {[...(profile.nonogramCompletions || [])].reverse().map(c => (
-              <div key={c.date} className="snap-start shrink-0 space-y-1">
-                <img src={c.imageUrl} alt="" className="w-20 h-20 rounded-2xl border-2 border-white shadow-md object-cover" style={{ imageRendering: 'pixelated' }} />
-                <p className="text-[9px] font-bold text-brand-navy/40 text-center">{c.date}</p>
-                <p className="text-[9px] font-bold text-brand-navy/60 text-center">{(() => { const s = Math.floor(c.timeMs / 1000); return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; })()}</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Linqle History</p>
+          <div className="flex gap-2 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-2 scrollbar-hide">
+            {[...(profile.linqleCompletions || [])].reverse().map(c => (
+              <div key={c.date} className={`snap-start shrink-0 w-16 px-2 py-2.5 rounded-2xl flex flex-col items-center gap-1 ${c.won ? 'bg-green-50 border border-green-200' : 'bg-brand-navy/5 border border-brand-navy/10'}`}>
+                <span className="text-lg font-black">{c.won ? '🟩' : '🟥'}</span>
+                <p className="text-[10px] font-black text-brand-navy">{c.won ? `${c.guesses}/6` : 'X/6'}</p>
+                <p className="text-[9px] text-brand-navy/40">{c.date.slice(5)}</p>
               </div>
             ))}
           </div>
@@ -16134,7 +16035,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
   );
 }
 
-function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenPuzzle, currentUser, currentProfile, userCards = [] }: { onViewUser: (u: UserProfile) => void, onViewStore?: (s: StoreProfile) => void, onViewChallenges?: () => void, onOpenPuzzle?: () => void, currentUser?: FirebaseUser, currentProfile?: UserProfile | null, userCards?: Card[] }) {
+function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle, currentUser, currentProfile, userCards = [] }: { onViewUser: (u: UserProfile) => void, onViewStore?: (s: StoreProfile) => void, onViewChallenges?: () => void, onOpenLinqle?: () => void, currentUser?: FirebaseUser, currentProfile?: UserProfile | null, userCards?: Card[] }) {
   const [globalPosts, setGlobalPosts] = useState<GlobalPost[]>([]);
   const [vendorPosts, setVendorPosts] = useState<any[]>([]);
   const [followingUids, setFollowingUids] = useState<Set<string>>(new Set());
@@ -16584,25 +16485,25 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenPuzzle,
             );
           })()}
 
-          {/* Daily Puzzle entry */}
-          {onOpenPuzzle && (
+          {/* Daily Linqle entry */}
+          {onOpenLinqle && (
             <motion.button
               whileTap={{ scale: 0.97 }}
-              onClick={onOpenPuzzle}
-              className="w-full rounded-[1.5rem] overflow-hidden shadow-lg shadow-violet-900/20"
+              onClick={onOpenLinqle}
+              className="w-full rounded-[1.5rem] overflow-hidden shadow-lg shadow-green-900/20"
             >
               <div className="relative overflow-hidden px-5 py-4 flex items-center gap-4 active:opacity-90 transition-opacity"
-                style={{ background: 'linear-gradient(135deg, #4C1D95 0%, #6D28D9 50%, #8B5CF6 100%)' }}>
+                style={{ background: 'linear-gradient(135deg, #065F46 0%, #059669 50%, #34D399 100%)' }}>
                 <div className="shine-ray" />
                 <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0 border border-white/20">
-                  <Grid3X3 size={22} className="text-white" />
+                  <span className="text-xl font-black text-white">Lq</span>
                 </div>
                 <div className="flex-1 min-w-0 text-left">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-violet-200/80">Daily Puzzle</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-200/80">Daily Word Game</p>
                   <p className="font-display text-lg font-black text-white">
-                    {currentProfile?.nonogramCompletions?.find(c => c.date === new Date().toISOString().split('T')[0])
-                      ? `✓ Solved · ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
-                      : "Today's Nonogram"}
+                    {currentProfile?.linqleCompletions?.find(c => c.date === new Date().toISOString().split('T')[0])
+                      ? `✓ Done · ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
+                      : "Today's Linqle"}
                   </p>
                 </div>
                 <ChevronRight size={18} className="text-white/50 shrink-0" />
