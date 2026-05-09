@@ -10996,22 +10996,26 @@ function LinqleGame({ currentUser, currentProfile, onClose }: { currentUser: Fir
     return () => clearInterval(iv);
   }, [startTime, gameOver]);
 
-  const doSubmit = async (finalGuesses: string[], finalStates: TileState[][], didWin: boolean) => {
+  const doSubmit = async (finalGuesses: string[], _finalStates: TileState[][], didWin: boolean) => {
     if (!answer) return;
     const timeMs = startTime ? Date.now() - startTime : 0;
     setSubmitting(true);
+    // Save to user profile first (always works via owner rule)
+    try {
+      const existing = currentProfile?.linqleCompletions || [];
+      await updateDoc(doc(db, 'users', currentUser.uid), {
+        linqleCompletions: [...existing.filter((c: any) => c.date !== today), { date: today, guesses: finalGuesses.length, won: didWin }],
+      });
+    } catch (e) { console.error('profile save failed', e); }
+    // Save to leaderboard (requires linqle rules to be deployed)
     try {
       await setDoc(doc(db, 'linqle', today, 'scores', currentUser.uid), {
         uid: currentUser.uid, name: currentProfile?.name || 'Anonymous',
         photoURL: currentProfile?.photoURL || '', guesses: finalGuesses.length,
         timeMs, won: didWin, completedAt: serverTimestamp(),
       });
-      const existing = currentProfile?.linqleCompletions || [];
-      await updateDoc(doc(db, 'users', currentUser.uid), {
-        linqleCompletions: [...existing.filter(c => c.date !== today), { date: today, guesses: finalGuesses.length, won: didWin }],
-      });
-    } catch (e) { console.error(e); }
-    finally { setSubmitting(false); }
+    } catch (e) { console.error('leaderboard save failed', e); }
+    setSubmitting(false);
   };
 
   const handleKey = (key: string) => {
