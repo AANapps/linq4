@@ -10818,7 +10818,7 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
         if (store.lat != null && store.lng != null) {
           coords = { lat: store.lat, lng: store.lng };
         } else {
-          const addr = store.location || (store as any).address;
+          const addr = store.address || store.location;
           if (addr) {
             coords = await geocodeAddressGlobal(addr);
             if (i < stores.length - 1) await new Promise(r => setTimeout(r, 1100));
@@ -10859,8 +10859,8 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
     });
     if (!userCoords) return matched;
     return [...matched].sort((a, b) => {
-      const distA = (a.lat != null && a.lng != null) ? haversineKm(userCoords.lat, userCoords.lng, a.lat, a.lng) : Infinity;
-      const distB = (b.lat != null && b.lng != null) ? haversineKm(userCoords.lat, userCoords.lng, b.lat, b.lng) : Infinity;
+      const distA = distancesMap.get(a.id) ?? Infinity;
+      const distB = distancesMap.get(b.id) ?? Infinity;
       return distA - distB;
     });
   })();
@@ -17462,22 +17462,17 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
   }, []);
 
   useEffect(() => {
-    const addr = store.location || (store as any).address;
-    if (!addr || !userCoords) return;
-    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(addr)}&format=json&limit=1`)
-      .then(r => r.json())
-      .then((data: any[]) => {
-        if (!data[0]) return;
-        const sLat = parseFloat(data[0].lat);
-        const sLng = parseFloat(data[0].lon);
-        const R = 6371;
-        const dLat = (sLat - userCoords.lat) * Math.PI / 180;
-        const dLon = (sLng - userCoords.lng) * Math.PI / 180;
-        const a = Math.sin(dLat / 2) ** 2 + Math.cos(userCoords.lat * Math.PI / 180) * Math.cos(sLat * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
-        setDistance(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
-      })
-      .catch(() => {});
-  }, [store.location, (store as any).address, userCoords]);
+    if (!userCoords) return;
+    if (store.lat != null && store.lng != null) {
+      setDistance(haversineKm(userCoords.lat, userCoords.lng, store.lat, store.lng));
+      return;
+    }
+    const addr = store.address || store.location;
+    if (!addr) return;
+    geocodeAddressGlobal(addr).then(coords => {
+      if (coords) setDistance(haversineKm(userCoords.lat, userCoords.lng, coords.lat, coords.lng));
+    });
+  }, [store.lat, store.lng, store.address, store.location, userCoords]);
 
   useEffect(() => {
     const cardId = `${user.uid}_${store.id}`;
