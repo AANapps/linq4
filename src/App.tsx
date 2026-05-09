@@ -6590,7 +6590,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
     >
-      {activeTab === 'for-you' && !viewingPuzzle && (
+      {activeTab === 'for-you' && (
         <ForYouScreen
           onViewUser={onViewUser}
           onViewStore={onViewStore}
@@ -6602,9 +6602,34 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         />
       )}
 
-      {activeTab === 'for-you' && viewingPuzzle && (
-        <NonogramGame currentUser={user} currentProfile={profile} onBack={() => setViewingPuzzle(false)} />
-      )}
+      <AnimatePresence>
+        {viewingPuzzle && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex flex-col max-w-md mx-auto"
+            onClick={e => { if (e.target === e.currentTarget) setViewingPuzzle(false); }}
+          >
+            <motion.div
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 380, damping: 36 }}
+              className="bg-brand-bg rounded-t-[2rem] flex-1 flex flex-col overflow-hidden mt-16"
+            >
+              <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-brand-navy/8 shrink-0">
+                <div>
+                  <h2 className="font-bold text-lg text-brand-navy">Daily Nonogram</h2>
+                  <p className="text-xs text-brand-navy/40">{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                </div>
+                <button onClick={() => setViewingPuzzle(false)} className="w-9 h-9 rounded-full bg-brand-navy/8 flex items-center justify-center active:scale-90 transition-all">
+                  <X size={18} className="text-brand-navy/60" />
+                </button>
+              </div>
+              <div className="overflow-y-auto flex-1 px-4 py-5">
+                <NonogramGame currentUser={user} currentProfile={profile} onBack={() => setViewingPuzzle(false)} />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {activeTab === 'messages' && (
         <MessagesScreen
@@ -11111,13 +11136,10 @@ function NonogramGame({ currentUser, currentProfile, onBack }: { currentUser: Fi
   );
 
   if (!puzzle) return (
-    <div className="space-y-6 pb-20">
-      <button onClick={onBack} className="flex items-center gap-2 text-brand-navy/60 font-bold text-sm"><ArrowLeft size={18} />Back</button>
-      <div className="text-center py-20 text-brand-navy/30">
-        <Grid3X3 size={48} className="mx-auto mb-4 opacity-20" />
-        <p className="font-bold">No puzzle today</p>
-        <p className="text-xs mt-1">Check back soon</p>
-      </div>
+    <div className="text-center py-20 text-brand-navy/30">
+      <Grid3X3 size={48} className="mx-auto mb-4 opacity-20" />
+      <p className="font-bold">No puzzle today</p>
+      <p className="text-xs mt-1">Check back soon</p>
     </div>
   );
 
@@ -11128,20 +11150,15 @@ function NonogramGame({ currentUser, currentProfile, onBack }: { currentUser: Fi
   const clueColW = maxRowLen * 16;
 
   return (
-    <div className="space-y-6 pb-20 text-brand-navy">
+    <div className="space-y-5 pb-6 text-brand-navy">
       <canvas ref={canvasRef} className="hidden" />
 
       <div className="flex items-center justify-between">
-        <button onClick={onBack} className="flex items-center gap-2 text-brand-navy/60 font-bold text-sm"><ArrowLeft size={18} />Back</button>
+        <p className="text-xs text-brand-navy/40">{!solved ? 'Fill the grid · right-click to mark' : 'Puzzle complete!'}</p>
         <div className="flex items-center gap-1.5 text-brand-navy/60 text-sm font-bold">
           <Timer size={15} />
           {solved ? fmtTime(elapsed) : startTime ? fmtTime(elapsed) : '0:00'}
         </div>
-      </div>
-
-      <div className="text-center">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">Daily Puzzle · {today}</p>
-        {!solved && <p className="text-xs text-brand-navy/40 mt-1">Fill the grid · right-click or long-press to mark</p>}
       </div>
 
       {alreadyCompleted && !solved && (
