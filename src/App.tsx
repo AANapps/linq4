@@ -11074,6 +11074,22 @@ const TILE_COLORS: Record<TileState, string> = {
 
 const KEYBOARD_ROWS = [['Q','W','E','R','T','Y','U','I','O','P'],['A','S','D','F','G','H','J','K','L'],['ENTER','Z','X','C','V','B','N','M','⌫']];
 
+function MatrixScramble({ target, className }: { target: string; className?: string }) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const [display, setDisplay] = useState(target);
+  useEffect(() => {
+    let tick = 0;
+    const id = setInterval(() => {
+      tick++;
+      // Hold the real letters every 7th frame
+      if (tick % 7 === 0) { setDisplay(target); return; }
+      setDisplay(target.split('').map(() => chars[Math.floor(Math.random() * chars.length)]).join(''));
+    }, 90);
+    return () => clearInterval(id);
+  }, [target]);
+  return <span className={className}>{display}</span>;
+}
+
 function LinqleMatrixBanner({ onClose, dateStr }: { onClose: () => void; dateStr: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -16829,7 +16845,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                 style={{ background: 'linear-gradient(90deg, #022c22 0%, #064e3b 25%, #059669 65%, #34d399 100%)' }}>
                 <div className="shine-ray" />
                 <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0 border border-white/20">
-                  <span className="text-xl font-black text-white">Lq</span>
+                  <MatrixScramble target="Lq" className="text-xl font-black text-white font-mono" />
                 </div>
                 <div className="flex-1 min-w-0 text-left">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-200/80">Daily Word Game</p>
