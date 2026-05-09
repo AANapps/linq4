@@ -4544,6 +4544,16 @@ function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(true);
   const [input, setInput] = useState('');
   const [saving, setSaving] = useState(false);
+  const todayStr = new Date().toISOString().split('T')[0];
+  const [selectedDate, setSelectedDate] = useState(todayStr);
+
+  // Build next-90-days options for the dropdown
+  const dateOptions = Array.from({ length: 90 }, (_, i) => {
+    const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + i);
+    const val = d.toISOString().split('T')[0];
+    const label = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+    return { val, label };
+  });
 
   useEffect(() => {
     getDoc(doc(db, 'linqle', 'queue')).then(snap => {
@@ -4561,21 +4571,33 @@ function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
     finally { setSaving(false); }
   };
 
+  const wordForDate = (dateStr: string, w: string[]) => {
+    if (!w.length) return null;
+    const idx = linqleDayIndex(dateStr);
+    return w[((idx % w.length) + w.length) % w.length];
+  };
+
   const handleAdd = () => {
     const clean = input.trim().toUpperCase();
     if (clean.length !== 5 || !/^[A-Z]+$/.test(clean)) return;
-    if (words.includes(clean)) { setInput(''); return; }
-    saveQueue([...words, clean]);
+    // Insert at position so it plays on selectedDate
+    const newLen = words.length + 1;
+    const targetIdx = Math.abs(linqleDayIndex(selectedDate) % newLen);
+    const updated = [...words];
+    // Remove duplicate if already exists
+    const existing = updated.indexOf(clean);
+    if (existing !== -1) updated.splice(existing, 1);
+    updated.splice(targetIdx, 0, clean);
+    saveQueue(updated);
     setInput('');
   };
 
   const handleRemove = (i: number) => saveQueue(words.filter((_, idx) => idx !== i));
 
-  const todayIdx = Math.floor((Date.now() - LINQLE_EPOCH) / 86400000);
-  const todayWord = words.length ? words[((todayIdx % words.length) + words.length) % words.length] : null;
-
   const inputClean = input.trim().toUpperCase();
   const inputValid = inputClean.length === 5 && /^[A-Z]+$/.test(inputClean);
+  const scheduledWord = wordForDate(selectedDate, words);
+  const selectedIsToday = selectedDate === todayStr;
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -4589,53 +4611,78 @@ function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
           <button onClick={onClose} className="w-8 h-8 rounded-full bg-brand-navy/8 flex items-center justify-center"><X size={16} /></button>
         </div>
 
-        <div className="overflow-y-auto flex-1 p-5 space-y-5 pb-8">
-          {/* Today's word banner */}
-          {todayWord && (
-            <div className="px-4 py-3 rounded-2xl bg-green-50 border border-green-200 flex items-center justify-between">
-              <p className="text-xs font-semibold text-green-700">Today's word</p>
-              <p className="font-black tracking-[0.25em] text-green-700">{todayWord}</p>
-            </div>
-          )}
+        <div className="overflow-y-auto flex-1 p-5 space-y-4 pb-8">
+          {/* Date selector */}
+          <div>
+            <p className="text-[10px] font-bold text-brand-navy/50 mb-1.5 uppercase tracking-widest">Schedule for date</p>
+            <select
+              value={selectedDate}
+              onChange={e => setSelectedDate(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-2xl bg-white border border-brand-navy/10 text-sm text-brand-navy outline-none"
+            >
+              {dateOptions.map(o => (
+                <option key={o.val} value={o.val}>{o.val === todayStr ? `Today — ${o.label}` : o.label}</option>
+              ))}
+            </select>
+          </div>
 
-          {/* Add word */}
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={input}
-              onChange={e => setInput(e.target.value.replace(/[^a-zA-Z]/g, '').slice(0, 5))}
-              onKeyDown={e => e.key === 'Enter' && handleAdd()}
-              placeholder="Add 5-letter word…"
-              maxLength={5}
-              className="flex-1 px-3 py-2.5 rounded-2xl bg-white border border-brand-navy/10 text-sm text-brand-navy outline-none uppercase tracking-widest font-bold placeholder:font-normal placeholder:normal-case placeholder:tracking-normal"
-            />
-            <button onClick={handleAdd} disabled={!inputValid || saving}
-              className="px-4 py-2.5 rounded-2xl bg-green-500 text-white font-bold text-sm active:scale-95 transition-all disabled:opacity-40">
-              Add
-            </button>
+          {/* Scheduled word for selected date */}
+          <div className={`px-4 py-3 rounded-2xl flex items-center justify-between ${scheduledWord ? (selectedIsToday ? 'bg-green-50 border border-green-200' : 'bg-brand-navy/4 border border-brand-navy/10') : 'bg-amber-50 border border-amber-200'}`}>
+            <p className={`text-xs font-semibold ${scheduledWord ? (selectedIsToday ? 'text-green-700' : 'text-brand-navy/60') : 'text-amber-600'}`}>
+              {scheduledWord ? (selectedIsToday ? "Today's word" : 'Scheduled word') : 'No words in queue'}
+            </p>
+            {scheduledWord
+              ? <p className={`font-black tracking-[0.25em] ${selectedIsToday ? 'text-green-700' : 'text-brand-navy'}`}>{scheduledWord}</p>
+              : <p className="text-xs text-amber-500">Add words below</p>}
+          </div>
+
+          {/* Add word for this date */}
+          <div>
+            <p className="text-[10px] font-bold text-brand-navy/50 mb-1.5 uppercase tracking-widest">Add word for this date</p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={input}
+                onChange={e => setInput(e.target.value.replace(/[^a-zA-Z]/g, '').slice(0, 5))}
+                onKeyDown={e => e.key === 'Enter' && handleAdd()}
+                placeholder="5-letter word…"
+                maxLength={5}
+                className="flex-1 px-3 py-2.5 rounded-2xl bg-white border border-brand-navy/10 text-sm text-brand-navy outline-none uppercase tracking-widest font-bold placeholder:font-normal placeholder:normal-case placeholder:tracking-normal"
+              />
+              <button onClick={handleAdd} disabled={!inputValid || saving}
+                className="px-4 py-2.5 rounded-2xl bg-green-500 text-white font-bold text-sm active:scale-95 transition-all disabled:opacity-40">
+                {saving ? '…' : 'Set'}
+              </button>
+            </div>
           </div>
 
           {/* Queue list */}
           {loading ? (
             <div className="flex justify-center py-8"><RefreshCw size={20} className="animate-spin text-brand-navy/30" /></div>
           ) : words.length === 0 ? (
-            <p className="text-center text-sm text-brand-navy/30 py-8">No words yet — add some above</p>
+            <p className="text-center text-sm text-brand-navy/30 py-6">No words yet</p>
           ) : (
             <div className="space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">Queue ({words.length} words)</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">Full queue ({words.length})</p>
               {words.map((w, i) => {
-                const playsOn = new Date(LINQLE_EPOCH + (((i - (todayIdx % words.length)) + words.length) % words.length) * 86400000);
-                const isToday = w === todayWord;
+                const todayDayIdx = linqleDayIndex(todayStr);
+                const daysUntil = (((i - (todayDayIdx % words.length)) + words.length) % words.length);
+                const playsOn = new Date(); playsOn.setDate(playsOn.getDate() + daysUntil);
+                const playsStr = playsOn.toISOString().split('T')[0];
+                const isToday = daysUntil === 0;
+                const isSelected = playsStr === selectedDate;
                 return (
-                  <div key={i} className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl ${isToday ? 'bg-green-50 border border-green-200' : 'bg-white border border-brand-navy/8'}`}>
-                    <span className="text-xs font-bold text-brand-navy/30 w-5 text-right">{i + 1}</span>
-                    <span className={`flex-1 font-black tracking-[0.2em] text-sm ${isToday ? 'text-green-700' : 'text-brand-navy'}`}>{w}</span>
+                  <div key={i} className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl border ${isToday ? 'bg-green-50 border-green-200' : isSelected ? 'bg-blue-50 border-blue-200' : 'bg-white border-brand-navy/8'}`}>
+                    <span className="text-xs font-bold text-brand-navy/30 w-5 text-right shrink-0">{i + 1}</span>
+                    <span className={`flex-1 font-black tracking-[0.2em] text-sm ${isToday ? 'text-green-700' : isSelected ? 'text-blue-700' : 'text-brand-navy'}`}>{w}</span>
                     {isToday
-                      ? <span className="text-[10px] font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">Today</span>
-                      : <span className="text-[10px] text-brand-navy/30">{playsOn.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+                      ? <span className="text-[10px] font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded-full shrink-0">Today</span>
+                      : isSelected
+                        ? <span className="text-[10px] font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full shrink-0">Selected</span>
+                        : <span className="text-[10px] text-brand-navy/30 shrink-0">{playsOn.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
                     }
                     <button onClick={() => handleRemove(i)} disabled={saving}
-                      className="w-6 h-6 rounded-full bg-brand-navy/8 flex items-center justify-center active:scale-90 transition-all disabled:opacity-40">
+                      className="w-6 h-6 rounded-full bg-brand-navy/8 flex items-center justify-center active:scale-90 transition-all disabled:opacity-40 shrink-0">
                       <X size={11} className="text-brand-navy/50" />
                     </button>
                   </div>
