@@ -16826,7 +16826,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
               className="w-full rounded-[1.5rem] overflow-hidden shadow-lg shadow-green-900/20"
             >
               <div className="relative overflow-hidden px-5 py-4 flex items-center gap-4 active:opacity-90 transition-opacity"
-                style={{ background: 'linear-gradient(135deg, #065F46 0%, #059669 50%, #34D399 100%)' }}>
+                style={{ background: 'linear-gradient(90deg, #022c22 0%, #064e3b 25%, #059669 65%, #34d399 100%)' }}>
                 <div className="shine-ray" />
                 <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0 border border-white/20">
                   <span className="text-xl font-black text-white">Lq</span>
