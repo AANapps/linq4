@@ -16848,7 +16848,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                 style={{ background: 'linear-gradient(90deg, #022c22 0%, #064e3b 25%, #059669 65%, #34d399 100%)' }}>
                 <MatrixRainCanvas opacity={0.3} fadeColor="rgba(2,44,34,0.2)" />
                 <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0 border border-white/20">
-                  <MatrixScramble target="Lq" className="text-xl font-black text-white font-mono" />
+                  <MatrixScramble target="L" className="text-xl font-black text-white font-mono" />
                 </div>
                 <div className="flex-1 min-w-0 text-left">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-200/80">Daily Word Game</p>
