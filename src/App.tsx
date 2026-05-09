@@ -11070,7 +11070,7 @@ function scoreTileStates(guess: string, answer: string): TileState[] {
 }
 
 const TILE_COLORS: Record<TileState, string> = {
-  correct: 'bg-green-500 border-green-500 text-white',
+  correct: 'bg-blue-600 border-blue-600 text-white',
   present: 'bg-amber-400 border-amber-400 text-white',
   absent: 'bg-brand-navy/60 border-brand-navy/60 text-white',
   empty: 'bg-white border-brand-navy/15 text-brand-navy',
@@ -11416,7 +11416,7 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
               const wide = key === 'ENTER' || key === '⌫';
               return (
                 <button key={key} onClick={() => handleKey(key)}
-                  className={`${wide ? 'px-2 min-w-[44px]' : 'w-8'} h-12 rounded-lg text-[11px] font-bold flex items-center justify-center transition-colors ${kState ? TILE_COLORS[kState] : 'bg-brand-navy/10 text-brand-navy'}`}>
+                  className={`${wide ? 'px-2 min-w-[44px]' : 'w-9'} h-12 rounded-lg text-sm font-bold flex items-center justify-center transition-colors ${kState ? TILE_COLORS[kState] : 'bg-brand-navy/10 text-brand-navy'}`}>
                   {key}
                 </button>
               );
