@@ -11178,22 +11178,29 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
     else if (last === yesterdayStr) newStreak = prevStreak + 1;
     setUserStreak(newStreak);
 
-    // Save to user profile (streak + completion + all-time stats — owner rule, always works)
+    // 1. Save completion + streak to user profile
     try {
       const existing = currentProfile?.linqleCompletions || [];
-      const prevWins = currentProfile?.linqleTotalWins || 0;
-      const prevBestGuesses = currentProfile?.linqleBestGuesses ?? 99;
-      const prevBestTime = currentProfile?.linqleBestTime ?? Infinity;
       await updateDoc(doc(db, 'users', currentUser.uid), {
         linqleCompletions: [...existing.filter((c: any) => c.date !== today), { date: today, guesses: finalGuesses.length, won: didWin }],
         linqleStreak: newStreak,
         linqleLastCompleted: today,
-        linqleTotalPlays: increment(1),
-        ...(didWin ? { linqleTotalWins: increment(1) } : {}),
-        ...(didWin ? { linqleBestGuesses: Math.min(prevBestGuesses, finalGuesses.length) } : {}),
-        ...(didWin ? { linqleBestTime: Math.min(prevBestTime === Infinity ? timeMs : prevBestTime, timeMs) } : {}),
       });
-    } catch (e) { console.error('profile save failed', e); }
+    } catch (e) { console.error('completion save failed', e); }
+
+    // 2. Update all-time stats separately so a failure above doesn't block this
+    try {
+      const prevBestGuesses = currentProfile?.linqleBestGuesses ?? 99;
+      const prevBestTime = typeof currentProfile?.linqleBestTime === 'number' ? currentProfile.linqleBestTime : timeMs;
+      await updateDoc(doc(db, 'users', currentUser.uid), {
+        linqleTotalPlays: increment(1),
+        ...(didWin ? {
+          linqleTotalWins: increment(1),
+          linqleBestGuesses: Math.min(prevBestGuesses, finalGuesses.length),
+          linqleBestTime: Math.min(prevBestTime, timeMs),
+        } : {}),
+      });
+    } catch (e) { console.error('alltime save failed', e); }
 
     // Save to daily leaderboard (requires rules deploy)
     try {
