@@ -11113,6 +11113,52 @@ function LinqleGame({ currentUser, currentProfile, onClose }: { currentUser: Fir
 
   const currentRow = guesses.length;
 
+  // After game over: show result screen instead of board
+  if (gameOver || alreadyDone) {
+    const displayWon = gameOver ? won : alreadyDone!.won;
+    const displayGuesses = gameOver ? guesses.length : alreadyDone!.guesses;
+    return (
+      <div className="flex flex-col h-full">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
+          className="flex-1 flex flex-col items-center justify-center px-6 gap-6 text-center">
+          <p className="text-5xl">{displayWon ? '🎉' : '😔'}</p>
+          <div>
+            <p className="text-base text-brand-navy/50 font-semibold mb-2">{displayWon ? 'The word was' : 'The answer was'}</p>
+            <div className="flex gap-2 justify-center">
+              {answer.split('').map((ch, i) => (
+                <div key={i} className="w-14 h-14 rounded-xl bg-green-500 flex items-center justify-center font-black text-2xl text-white">
+                  {ch}
+                </div>
+              ))}
+            </div>
+          </div>
+          <p className="text-brand-navy/60 text-sm">
+            {displayWon ? `Solved in ${displayGuesses} guess${displayGuesses !== 1 ? 'es' : ''}` : 'Better luck tomorrow'}
+            {gameOver && elapsed > 0 && ` · ${fmtTime(elapsed)}`}
+          </p>
+          {submitting && <p className="text-xs text-brand-navy/40 animate-pulse">Saving…</p>}
+        </motion.div>
+
+        {/* Leaderboard */}
+        <div className="border-t border-brand-navy/8 px-5 pt-4 pb-6 space-y-3 overflow-y-auto max-h-64">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">Today's Leaderboard</p>
+          {scores.length === 0
+            ? <p className="text-xs text-brand-navy/30 text-center py-4">No completions yet</p>
+            : scores.map((s, idx) => (
+              <div key={s.id} className="flex items-center gap-3">
+                <span className="w-5 text-center font-bold text-xs text-brand-navy/40">{idx + 1}</span>
+                {s.photoURL ? <img src={s.photoURL} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" /> : <div className="w-7 h-7 rounded-full bg-brand-navy/10 shrink-0" />}
+                <p className="flex-1 font-bold text-sm truncate text-brand-navy">{s.name}</p>
+                <span className="text-xs font-bold text-brand-navy/50">{s.won ? `${s.guesses}/6` : 'X/6'}</span>
+                <span className="text-xs text-brand-navy/30">{fmtTime(s.timeMs)}</span>
+                {idx === 0 && <span>🥇</span>}
+              </div>
+            ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full">
       {/* Grid */}
@@ -11131,7 +11177,7 @@ function LinqleGame({ currentUser, currentProfile, onClose }: { currentUser: Fir
                 return (
                   <motion.div key={c}
                     animate={submitted ? { rotateX: [0, -90, 0], transition: { delay: c * 0.12, duration: 0.4 } } : {}}
-                    className={`w-13 h-13 w-[52px] h-[52px] flex items-center justify-center rounded-xl border-2 font-black text-xl transition-colors ${TILE_COLORS[state]}`}>
+                    className={`w-[52px] h-[52px] flex items-center justify-center rounded-xl border-2 font-black text-xl transition-colors ${TILE_COLORS[state]}`}>
                     {letter}
                   </motion.div>
                 );
@@ -11141,62 +11187,23 @@ function LinqleGame({ currentUser, currentProfile, onClose }: { currentUser: Fir
         })}
       </div>
 
-      {/* Result message */}
-      {gameOver && !showLeaderboard && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="text-center py-3 space-y-1">
-          {won ? <p className="font-black text-green-600 text-lg">Nicely done!</p> : <p className="font-black text-brand-navy/70 text-base">The word was <span className="text-brand-navy">{answer}</span></p>}
-          {submitting && <p className="text-xs text-brand-navy/40 animate-pulse">Saving…</p>}
-        </motion.div>
-      )}
-
-      {alreadyDone && !gameOver && (
-        <div className="mx-4 mb-3 px-4 py-3 rounded-2xl bg-green-50 border border-green-200 text-center">
-          <p className="text-sm font-bold text-green-700">{alreadyDone.won ? `You got it in ${alreadyDone.guesses}!` : `Better luck tomorrow`}</p>
-          <button className="text-xs text-green-600 underline mt-1" onClick={() => setShowLeaderboard(true)}>See leaderboard</button>
-        </div>
-      )}
-
-      {/* Leaderboard overlay */}
-      {showLeaderboard && (
-        <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} className="mx-0 bg-brand-bg rounded-t-3xl border-t border-brand-navy/8 px-5 pt-4 pb-6 space-y-3 max-h-56 overflow-y-auto">
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">Today's Leaderboard</p>
-            <button onClick={() => setShowLeaderboard(false)} className="text-[10px] text-brand-navy/30 underline">hide</button>
-          </div>
-          {scores.length === 0
-            ? <p className="text-xs text-brand-navy/30 text-center py-4">No completions yet</p>
-            : scores.map((s, idx) => (
-              <div key={s.id} className="flex items-center gap-3">
-                <span className="w-5 text-center font-bold text-xs text-brand-navy/40">{idx + 1}</span>
-                {s.photoURL ? <img src={s.photoURL} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" /> : <div className="w-7 h-7 rounded-full bg-brand-navy/10 shrink-0" />}
-                <p className="flex-1 font-bold text-sm truncate text-brand-navy">{s.name}</p>
-                <span className="text-xs font-bold text-brand-navy/50">{s.won ? `${s.guesses}/6` : 'X/6'}</span>
-                <span className="text-xs text-brand-navy/30">{fmtTime(s.timeMs)}</span>
-                {idx === 0 && <span>🥇</span>}
-              </div>
-            ))}
-        </motion.div>
-      )}
-
       {/* Keyboard */}
-      {!showLeaderboard && (
-        <div className="pb-4 px-1 space-y-1.5">
-          {KEYBOARD_ROWS.map((row, ri) => (
-            <div key={ri} className="flex gap-1 justify-center">
-              {row.map(key => {
-                const kState = keyColors[key];
-                const wide = key === 'ENTER' || key === '⌫';
-                return (
-                  <button key={key} onClick={() => handleKey(key)}
-                    className={`${wide ? 'px-2 min-w-[44px]' : 'w-8'} h-12 rounded-lg text-[11px] font-bold flex items-center justify-center transition-colors ${kState ? TILE_COLORS[kState] : 'bg-brand-navy/10 text-brand-navy'}`}>
-                    {key}
-                  </button>
-                );
-              })}
-            </div>
-          ))}
-        </div>
-      )}
+      <div className="pb-4 px-1 space-y-1.5">
+        {KEYBOARD_ROWS.map((row, ri) => (
+          <div key={ri} className="flex gap-1 justify-center">
+            {row.map(key => {
+              const kState = keyColors[key];
+              const wide = key === 'ENTER' || key === '⌫';
+              return (
+                <button key={key} onClick={() => handleKey(key)}
+                  className={`${wide ? 'px-2 min-w-[44px]' : 'w-8'} h-12 rounded-lg text-[11px] font-bold flex items-center justify-center transition-colors ${kState ? TILE_COLORS[kState] : 'bg-brand-navy/10 text-brand-navy'}`}>
+                  {key}
+                </button>
+              );
+            })}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
