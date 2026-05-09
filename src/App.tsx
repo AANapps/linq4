@@ -281,6 +281,8 @@ interface UserProfile {
   lastStreakDate?: string;
   avatar?: UserAvatar;
   linqleCompletions?: { date: string; guesses: number; won: boolean }[];
+  linqleStreak?: number;
+  linqleLastCompleted?: string;
   dogName?: string;
   lastDogFed?: any;
   lastTreeWatered?: any;
@@ -4592,7 +4594,19 @@ function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
     setInput('');
   };
 
-  const handleRemove = (i: number) => saveQueue(words.filter((_, idx) => idx !== i));
+  const handleRemove = async (i: number) => {
+    // Calculate what date this word plays on before removing it
+    const todayDayIdx = linqleDayIndex(todayStr);
+    const daysUntil = (((i - (todayDayIdx % words.length)) + words.length) % words.length);
+    const playsDate = new Date(); playsDate.setDate(playsDate.getDate() + daysUntil);
+    const playsDateStr = playsDate.toISOString().split('T')[0];
+    // Delete leaderboard scores for that date
+    try {
+      const scoresSnap = await getDocs(collection(db, 'linqle', playsDateStr, 'scores'));
+      await Promise.all(scoresSnap.docs.map(d => deleteDoc(d.ref)));
+    } catch (e) { console.error('score delete failed', e); }
+    saveQueue(words.filter((_, idx) => idx !== i));
+  };
 
   const inputClean = input.trim().toUpperCase();
   const inputValid = inputClean.length === 5 && /^[A-Z]+$/.test(inputClean);
@@ -11054,7 +11068,9 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
   const [alreadyDone, setAlreadyDone] = useState<{ guesses: number; won: boolean } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [shake, setShake] = useState(false);
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [lbTab, setLbTab] = useState<'today' | 'alltime'>('today');
+  const [alltimeScores, setAlltimeScores] = useState<(LinqleScore & { id: string; totalWins: number; streak: number })[]>([]);
+  const [userStreak, setUserStreak] = useState(0);
 
   useEffect(() => {
     getDoc(doc(db, 'linqle', 'queue')).then(snap => {
@@ -11070,12 +11086,24 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
   useEffect(() => {
     const done = currentProfile?.linqleCompletions?.find(c => c.date === today);
     if (done) setAlreadyDone(done);
+    // Calculate current streak
+    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    const last = currentProfile?.linqleLastCompleted;
+    const stored = currentProfile?.linqleStreak || 0;
+    if (last === today || last === yesterdayStr) setUserStreak(stored);
+    else setUserStreak(0);
   }, [currentProfile, today]);
 
   useEffect(() => {
     const q = query(collection(db, 'linqle', today, 'scores'), orderBy('guesses', 'asc'), orderBy('timeMs', 'asc'), limit(20));
     return onSnapshot(q, snap => setScores(snap.docs.map(d => ({ id: d.id, ...d.data() } as LinqleScore & { id: string }))));
   }, [today]);
+
+  useEffect(() => {
+    const q = query(collection(db, 'linqle_alltime'), orderBy('totalWins', 'desc'), orderBy('bestGuesses', 'asc'), orderBy('bestTime', 'asc'), limit(20));
+    return onSnapshot(q, snap => setAlltimeScores(snap.docs.map(d => ({ id: d.id, ...d.data() } as any))));
+  }, []);
 
   useEffect(() => {
     if (!startTime || gameOver) return;
@@ -11087,14 +11115,28 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
     if (!answer) return;
     const timeMs = startTime ? Date.now() - startTime : 0;
     setSubmitting(true);
-    // Save to user profile first (always works via owner rule)
+
+    // Streak calculation
+    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    const last = currentProfile?.linqleLastCompleted;
+    const prevStreak = currentProfile?.linqleStreak || 0;
+    let newStreak = 1;
+    if (last === today) newStreak = prevStreak; // already played today
+    else if (last === yesterdayStr) newStreak = prevStreak + 1;
+    setUserStreak(newStreak);
+
+    // Save to user profile (streak + completion)
     try {
       const existing = currentProfile?.linqleCompletions || [];
       await updateDoc(doc(db, 'users', currentUser.uid), {
         linqleCompletions: [...existing.filter((c: any) => c.date !== today), { date: today, guesses: finalGuesses.length, won: didWin }],
+        linqleStreak: newStreak,
+        linqleLastCompleted: today,
       });
     } catch (e) { console.error('profile save failed', e); }
-    // Save to leaderboard (requires linqle rules to be deployed)
+
+    // Save to daily leaderboard
     try {
       await setDoc(doc(db, 'linqle', today, 'scores', currentUser.uid), {
         uid: currentUser.uid, name: currentProfile?.name || 'Anonymous',
@@ -11102,7 +11144,26 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
         timeMs, won: didWin, completedAt: serverTimestamp(),
       });
     } catch (e) { console.error('leaderboard save failed', e); }
-    // Issue sticker pack — same as stamp flow
+
+    // Update all-time stats
+    try {
+      const atRef = doc(db, 'linqle_alltime', currentUser.uid);
+      const atSnap = await getDoc(atRef);
+      const prev = atSnap.exists() ? atSnap.data() : {};
+      await setDoc(atRef, {
+        uid: currentUser.uid,
+        name: currentProfile?.name || 'Anonymous',
+        photoURL: currentProfile?.photoURL || '',
+        totalWins: (prev.totalWins || 0) + (didWin ? 1 : 0),
+        totalPlays: (prev.totalPlays || 0) + 1,
+        bestGuesses: didWin ? Math.min(prev.bestGuesses ?? 99, finalGuesses.length) : (prev.bestGuesses ?? 99),
+        bestTime: didWin ? Math.min(prev.bestTime ?? Infinity, timeMs) : (prev.bestTime ?? 0),
+        streak: newStreak,
+        lastUpdated: serverTimestamp(),
+      });
+    } catch (e) { console.error('alltime save failed', e); }
+
+    // Issue sticker pack
     try {
       const userName = currentProfile?.name || 'Anonymous';
       const newStickers = await issueUserStickers(currentUser.uid, userName, 3).catch(() => [] as CollectibleSticker[]);
@@ -11135,7 +11196,6 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
         setWon(didWin);
         setElapsed(startTime ? Date.now() - startTime : 0);
         doSubmit(newGuesses, newStates, didWin);
-        setTimeout(() => setShowLeaderboard(true), 1800);
       }
       setCurrent('');
       return;
@@ -11178,43 +11238,93 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
   if (gameOver || alreadyDone) {
     const displayWon = gameOver ? won : alreadyDone!.won;
     const displayGuesses = gameOver ? guesses.length : alreadyDone!.guesses;
+
+    // All-time leaderboard top 10 + user position
+    const top10 = alltimeScores.slice(0, 10);
+    const userAtIdx = alltimeScores.findIndex(s => s.uid === currentUser.uid);
+    const userAtEntry = userAtIdx !== -1 ? alltimeScores[userAtIdx] : null;
+    const userInTop10 = userAtIdx !== -1 && userAtIdx < 10;
+
     return (
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full overflow-hidden">
+        {/* Result header */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
-          className="flex-1 flex flex-col items-center justify-center px-6 gap-6 text-center">
-          <p className="text-5xl">{displayWon ? '🎉' : '😔'}</p>
+          className="flex flex-col items-center px-6 pt-6 pb-4 gap-4 text-center shrink-0">
+          <p className="text-4xl">{displayWon ? '🎉' : '😔'}</p>
           <div>
-            <p className="text-base text-brand-navy/50 font-semibold mb-2">{displayWon ? 'The word was' : 'The answer was'}</p>
-            <div className="flex gap-2 justify-center">
+            <p className="text-xs text-brand-navy/50 font-semibold mb-2">{displayWon ? 'You got it!' : 'The answer was'}</p>
+            <div className="flex gap-1.5 justify-center">
               {answer.split('').map((ch, i) => (
-                <div key={i} className="w-14 h-14 rounded-xl bg-green-500 flex items-center justify-center font-black text-2xl text-white">
+                <div key={i} className="w-12 h-12 rounded-xl bg-green-500 flex items-center justify-center font-black text-xl text-white">
                   {ch}
                 </div>
               ))}
             </div>
           </div>
-          <p className="text-brand-navy/60 text-sm">
-            {displayWon ? `Solved in ${displayGuesses} guess${displayGuesses !== 1 ? 'es' : ''}` : 'Better luck tomorrow'}
-            {gameOver && elapsed > 0 && ` · ${fmtTime(elapsed)}`}
-          </p>
+          <div className="flex items-center gap-4 text-sm">
+            {displayWon
+              ? <span className="text-brand-navy/60">{displayGuesses} guess{displayGuesses !== 1 ? 'es' : ''}{gameOver && elapsed > 0 ? ` · ${fmtTime(elapsed)}` : ''}</span>
+              : <span className="text-brand-navy/50">Better luck tomorrow</span>}
+            <span className={`flex items-center gap-1 font-bold px-3 py-1 rounded-full text-xs ${userStreak > 0 ? 'bg-orange-100 text-orange-600' : 'bg-brand-navy/8 text-brand-navy/40'}`}>
+              🔥 {userStreak} day streak
+            </span>
+          </div>
           {submitting && <p className="text-xs text-brand-navy/40 animate-pulse">Saving…</p>}
         </motion.div>
 
-        {/* Leaderboard */}
-        <div className="border-t border-brand-navy/8 px-5 pt-4 pb-6 space-y-3 overflow-y-auto max-h-64">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">Today's Leaderboard</p>
-          {scores.length === 0
-            ? <p className="text-xs text-brand-navy/30 text-center py-4">No completions yet</p>
-            : scores.map((s, idx) => (
-              <div key={s.id} className="flex items-center gap-3">
-                <span className="w-5 text-center font-bold text-xs text-brand-navy/40">{idx + 1}</span>
-                {s.photoURL ? <img src={s.photoURL} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" /> : <div className="w-7 h-7 rounded-full bg-brand-navy/10 shrink-0" />}
-                <p className="flex-1 font-bold text-sm truncate text-brand-navy">{s.name}</p>
-                <span className="text-xs font-bold text-brand-navy/50">{s.won ? `${s.guesses}/6` : 'X/6'}</span>
-                <span className="text-xs text-brand-navy/30">{fmtTime(s.timeMs)}</span>
-                {idx === 0 && <span>🥇</span>}
-              </div>
-            ))}
+        {/* Leaderboard tabs */}
+        <div className="flex gap-1 mx-5 mb-3 shrink-0">
+          {(['today', 'alltime'] as const).map(tab => (
+            <button key={tab} onClick={() => setLbTab(tab)}
+              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${lbTab === tab ? 'bg-brand-navy text-white' : 'bg-brand-navy/8 text-brand-navy/50'}`}>
+              {tab === 'today' ? "Today" : "All Time"}
+            </button>
+          ))}
+        </div>
+
+        {/* Leaderboard body */}
+        <div className="flex-1 overflow-y-auto px-5 pb-6 space-y-2">
+          {lbTab === 'today' ? (
+            scores.length === 0
+              ? <p className="text-xs text-brand-navy/30 text-center py-8">No completions today yet</p>
+              : scores.map((s, idx) => (
+                <div key={s.id} className={`flex items-center gap-3 px-3 py-2 rounded-2xl ${s.uid === currentUser.uid ? 'bg-green-50 border border-green-200' : 'bg-white border border-brand-navy/6'}`}>
+                  <span className="w-5 text-center font-bold text-xs text-brand-navy/40 shrink-0">{idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}</span>
+                  {s.photoURL ? <img src={s.photoURL} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" /> : <div className="w-7 h-7 rounded-full bg-brand-navy/10 shrink-0" />}
+                  <p className="flex-1 font-bold text-sm truncate text-brand-navy">{s.name}</p>
+                  <span className="text-xs font-bold text-brand-navy/50 shrink-0">{s.won ? `${s.guesses}/6` : 'X/6'}</span>
+                  <span className="text-xs text-brand-navy/30 shrink-0">{fmtTime(s.timeMs)}</span>
+                </div>
+              ))
+          ) : (
+            <>
+              {top10.length === 0
+                ? <p className="text-xs text-brand-navy/30 text-center py-8">No all-time scores yet</p>
+                : top10.map((s, idx) => (
+                  <div key={s.id} className={`flex items-center gap-3 px-3 py-2 rounded-2xl ${s.uid === currentUser.uid ? 'bg-green-50 border border-green-200' : 'bg-white border border-brand-navy/6'}`}>
+                    <span className="w-5 text-center font-bold text-xs text-brand-navy/40 shrink-0">{idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}</span>
+                    {s.photoURL ? <img src={s.photoURL} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" /> : <div className="w-7 h-7 rounded-full bg-brand-navy/10 shrink-0" />}
+                    <p className="flex-1 font-bold text-sm truncate text-brand-navy">{s.name}</p>
+                    <span className="text-xs font-bold text-green-600 shrink-0">{s.totalWins}W</span>
+                    <span className="text-xs text-brand-navy/30 shrink-0">best {s.bestGuesses}/6</span>
+                    {(s as any).streak > 1 && <span className="text-xs shrink-0">🔥{(s as any).streak}</span>}
+                  </div>
+                ))}
+              {/* User's entry if outside top 10 */}
+              {!userInTop10 && userAtEntry && (
+                <>
+                  <div className="text-center text-xs text-brand-navy/20 py-1">· · ·</div>
+                  <div className="flex items-center gap-3 px-3 py-2 rounded-2xl bg-green-50 border border-green-200">
+                    <span className="w-5 text-center font-bold text-xs text-brand-navy/40 shrink-0">#{userAtIdx + 1}</span>
+                    {userAtEntry.photoURL ? <img src={userAtEntry.photoURL} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" /> : <div className="w-7 h-7 rounded-full bg-brand-navy/10 shrink-0" />}
+                    <p className="flex-1 font-bold text-sm truncate text-brand-navy">{userAtEntry.name}</p>
+                    <span className="text-xs font-bold text-green-600 shrink-0">{userAtEntry.totalWins}W</span>
+                    <span className="text-xs text-brand-navy/30 shrink-0">best {userAtEntry.bestGuesses}/6</span>
+                  </div>
+                </>
+              )}
+            </>
+          )}
         </div>
       </div>
     );

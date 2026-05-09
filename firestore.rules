@@ -212,7 +212,13 @@ service cloud.firestore {
       match /scores/{userId} {
         allow read: if isAuthenticated();
         allow create, update: if isAuthenticated() && request.auth.uid == userId;
+        allow delete: if isAdmin();
       }
+    }
+
+    match /linqle_alltime/{userId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && request.auth.uid == userId;
     }
 
     match /offer_redemptions/{redemptionId} {
