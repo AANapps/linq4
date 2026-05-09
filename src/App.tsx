@@ -11090,7 +11090,7 @@ function MatrixScramble({ target, className }: { target: string; className?: str
   return <span className={className}>{display}</span>;
 }
 
-function LinqleMatrixBanner({ onClose, dateStr }: { onClose: () => void; dateStr: string }) {
+function MatrixRainCanvas({ opacity = 0.35, fadeColor = 'rgba(17,40,110,0.18)' }: { opacity?: number; fadeColor?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -11106,12 +11106,11 @@ function LinqleMatrixBanner({ onClose, dateStr }: { onClose: () => void; dateStr
     const drops: number[] = Array.from({ length: cols }, () => Math.random() * -30);
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     const draw = () => {
-      ctx.fillStyle = 'rgba(17, 40, 110, 0.18)';
+      ctx.fillStyle = fadeColor;
       ctx.fillRect(0, 0, W, H);
       drops.forEach((y, i) => {
         const char = chars[Math.floor(Math.random() * chars.length)];
-        const alpha = 0.5 + Math.random() * 0.5;
-        ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+        ctx.fillStyle = `rgba(255,255,255,${0.5 + Math.random() * 0.5})`;
         ctx.font = `bold ${fontSize}px monospace`;
         ctx.fillText(char, i * fontSize, y);
         if (y > H && Math.random() > 0.97) drops[i] = 0;
@@ -11121,9 +11120,13 @@ function LinqleMatrixBanner({ onClose, dateStr }: { onClose: () => void; dateStr
     const id = setInterval(draw, 55);
     return () => clearInterval(id);
   }, []);
+  return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" style={{ opacity }} />;
+}
+
+function LinqleMatrixBanner({ onClose, dateStr }: { onClose: () => void; dateStr: string }) {
   return (
     <div className="relative flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/10 shrink-0 overflow-hidden gradient-logo-blue">
-      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" style={{ opacity: 0.35 }} />
+      <MatrixRainCanvas />
       <div className="relative z-10">
         <h2 className="font-black text-xl text-white tracking-wide">Linqle</h2>
         <p className="text-xs text-white/60">{dateStr}</p>
@@ -16843,7 +16846,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
             >
               <div className="relative overflow-hidden px-5 py-4 flex items-center gap-4 active:opacity-90 transition-opacity"
                 style={{ background: 'linear-gradient(90deg, #022c22 0%, #064e3b 25%, #059669 65%, #34d399 100%)' }}>
-                <div className="shine-ray" />
+                <MatrixRainCanvas opacity={0.3} fadeColor="rgba(2,44,34,0.2)" />
                 <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0 border border-white/20">
                   <MatrixScramble target="Lq" className="text-xl font-black text-white font-mono" />
                 </div>
