@@ -11227,7 +11227,6 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
   const [userVote, setUserVote] = useState<number | null>(null);
   const [comments, setComments] = useState<DailyVoteComment[]>([]);
   const [commentText, setCommentText] = useState('');
-  const [tab, setTab] = useState<'vote' | 'comments'>('vote');
   const [voting, setVoting] = useState(false);
   const [posting, setPosting] = useState(false);
 
@@ -11287,6 +11286,15 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
   const total = Math.max(voteData.totalVotes, 1);
   const hasVoted = userVote !== null;
   const isClosed = voteData.closed;
+  const BAR_MAX_H = 120;
+  const barColors = [
+    'linear-gradient(to top, #1e40af, #93c5fd)',
+    'linear-gradient(to top, #991b1b, #fca5a5)',
+  ];
+  const btnColors = [
+    { border: 'border-blue-300', selBg: 'bg-blue-50', selText: 'text-blue-700' },
+    { border: 'border-red-300', selBg: 'bg-red-50', selText: 'text-red-700' },
+  ];
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -11319,86 +11327,103 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
               )}
             </div>
           )}
-          <div className="relative z-10 flex gap-1 px-5 pb-4">
-            {(['vote', 'comments'] as const).map(t => (
-              <button key={t} onClick={() => setTab(t)}
-                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${tab === t ? 'bg-white text-indigo-700' : 'bg-white/15 text-white/70'}`}>
-                {t === 'vote' ? `Vote · ${voteData.totalVotes}` : `Comments · ${voteData.commentCount ?? comments.length}`}
-              </button>
-            ))}
+          <div className="relative z-10 px-5 pb-4 flex gap-3 text-xs font-bold text-white/60">
+            <span>{voteData.totalVotes} votes</span>
+            <span>·</span>
+            <span>{voteData.commentCount ?? comments.length} comments</span>
           </div>
         </div>
 
-        <div className="flex-1 overflow-hidden flex flex-col">
-          {tab === 'vote' ? (
-            <div className="flex-1 overflow-y-auto px-5 py-5 space-y-3">
+        <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-4">
+          {/* Vertical bar graph */}
+          {(hasVoted || isClosed) && (
+            <div className="flex items-end gap-4 px-2" style={{ height: 160 }}>
               {voteData.options.map((opt, i) => {
                 const count = voteData.voteCounts[String(i)] ?? 0;
                 const pct = Math.round((count / total) * 100);
-                const isWinner = isClosed && voteData.winner === i;
-                const isMyVote = userVote === i;
-                const showBar = hasVoted || isClosed;
+                const barH = Math.max((pct / 100) * BAR_MAX_H, 4);
                 return (
-                  <button key={i} onClick={() => castVote(i)} disabled={hasVoted || isClosed || voting}
-                    className={`w-full rounded-2xl border-2 text-left relative overflow-hidden transition-all active:scale-[0.98]
-                      ${isWinner ? 'border-indigo-400 bg-indigo-50' : isMyVote ? 'border-indigo-300 bg-indigo-50/60' : 'border-brand-navy/10 bg-white'}
-                      ${!hasVoted && !isClosed ? 'active:border-indigo-300' : ''}`}>
-                    {showBar && (
-                      <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.6, ease: 'easeOut' }}
-                        className={`absolute inset-y-0 left-0 ${isWinner ? 'bg-indigo-100' : 'bg-brand-navy/5'}`} />
-                    )}
-                    <div className="relative z-10 flex items-center gap-3 px-4 py-3.5">
-                      {isMyVote && <Check size={15} className="text-indigo-600 shrink-0" />}
-                      <span className={`flex-1 font-bold text-sm ${isWinner ? 'text-indigo-700' : 'text-brand-navy'}`}>{opt}</span>
-                      {showBar && <span className="text-xs font-black text-brand-navy/50">{pct}%</span>}
+                  <div key={i} className="flex-1 flex flex-col items-center">
+                    <span className="text-xs font-black text-brand-navy/50 mb-1">{pct}%</span>
+                    <div className="w-full flex items-end" style={{ height: BAR_MAX_H }}>
+                      <motion.div className="w-full rounded-t-2xl"
+                        style={{ background: barColors[i % 2] }}
+                        initial={{ height: 0 }}
+                        animate={{ height: barH }}
+                        transition={{ duration: 0.7, ease: 'easeOut' }}
+                      />
                     </div>
-                  </button>
+                    <p className="text-[11px] font-bold text-brand-navy/60 text-center mt-1.5 leading-tight">{opt}</p>
+                  </div>
                 );
               })}
-              <p className="text-center text-xs text-brand-navy/30 pt-1">
-                {isClosed ? 'Voting closed' : hasVoted ? `${voteData.totalVotes} votes · updating live` : 'Tap an option to vote'}
-              </p>
-            </div>
-          ) : (
-            <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="shrink-0 px-5 py-3 border-b border-brand-navy/6 flex gap-2 items-center">
-                <input value={commentText} onChange={e => setCommentText(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); postComment(); } }}
-                  placeholder="Add a comment…"
-                  className="flex-1 bg-brand-navy/5 rounded-2xl px-4 py-2.5 text-sm text-brand-navy placeholder:text-brand-navy/30 outline-none" />
-                <button onClick={postComment} disabled={!commentText.trim() || posting}
-                  className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center disabled:opacity-40 active:scale-90 transition-all">
-                  <Send size={15} className="text-white" />
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto divide-y divide-brand-navy/5">
-                {comments.length === 0 && <p className="text-center text-brand-navy/30 text-sm py-12">No comments yet</p>}
-                {comments.map(c => {
-                  const liked = c.likes.includes(currentUser.uid);
-                  const ts = c.createdAt?.toDate?.();
-                  return (
-                    <div key={c.id} className="flex gap-3 px-5 py-3.5">
-                      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 text-xs font-black text-indigo-600">
-                        {c.name?.[0]?.toUpperCase() ?? '?'}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-xs font-bold text-brand-navy">{c.name}</span>
-                          {ts && <span className="text-[10px] text-brand-navy/30">{ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
-                        </div>
-                        <p className="text-sm text-brand-navy/80 mt-0.5 leading-snug">{c.text}</p>
-                      </div>
-                      <button onClick={() => updateDoc(doc(db, 'daily_vote', today, 'comments', c.id), { likes: liked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid) })}
-                        className="flex flex-col items-center gap-0.5 shrink-0 active:scale-90 transition-all pt-1">
-                        <Heart size={15} className={liked ? 'text-rose-500 fill-rose-500' : 'text-brand-navy/30'} />
-                        {c.likes.length > 0 && <span className="text-[10px] font-bold text-brand-navy/40">{c.likes.length}</span>}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
             </div>
           )}
+
+          {/* Vote buttons */}
+          <div className="flex flex-col gap-2">
+            {voteData.options.map((opt, i) => {
+              const isMyVote = userVote === i;
+              const isWinner = isClosed && voteData.winner === i;
+              const c = btnColors[i % 2];
+              return (
+                <button key={i} onClick={() => castVote(i)} disabled={hasVoted || isClosed || voting}
+                  className={`w-full rounded-2xl border-2 text-left px-4 py-3.5 font-bold text-sm transition-all active:scale-[0.98]
+                    ${isMyVote || isWinner ? `${c.border} ${c.selBg} ${c.selText}` : 'border-brand-navy/10 bg-white text-brand-navy'}
+                    ${!hasVoted && !isClosed ? 'hover:border-brand-navy/20' : ''}`}>
+                  <div className="flex items-center gap-2">
+                    {isMyVote && <Check size={15} className="shrink-0" />}
+                    <span className="flex-1">{opt}</span>
+                    {isWinner && <Trophy size={14} className="text-yellow-500 shrink-0" />}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <p className="text-center text-xs text-brand-navy/30">
+            {isClosed ? 'Voting closed' : hasVoted ? `${voteData.totalVotes} votes · updating live` : 'Tap an option to vote'}
+          </p>
+
+          {/* Comment input */}
+          <div className="border-t border-brand-navy/6 pt-4 flex gap-2 items-center">
+            <input value={commentText} onChange={e => setCommentText(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); postComment(); } }}
+              placeholder="Add a comment…"
+              className="flex-1 bg-brand-navy/5 rounded-2xl px-4 py-2.5 text-sm text-brand-navy placeholder:text-brand-navy/30 outline-none" />
+            <button onClick={postComment} disabled={!commentText.trim() || posting}
+              className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center disabled:opacity-40 active:scale-90 transition-all">
+              <Send size={15} className="text-white" />
+            </button>
+          </div>
+
+          {/* Comments */}
+          <div className="divide-y divide-brand-navy/5">
+            {comments.length === 0 && <p className="text-center text-brand-navy/30 text-sm py-6">No comments yet</p>}
+            {comments.map(c => {
+              const liked = c.likes.includes(currentUser.uid);
+              const ts = c.createdAt?.toDate?.();
+              return (
+                <div key={c.id} className="flex gap-3 py-3.5">
+                  <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 text-xs font-black text-indigo-600">
+                    {c.name?.[0]?.toUpperCase() ?? '?'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-xs font-bold text-brand-navy">{c.name}</span>
+                      {ts && <span className="text-[10px] text-brand-navy/30">{ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
+                    </div>
+                    <p className="text-sm text-brand-navy/80 mt-0.5 leading-snug">{c.text}</p>
+                  </div>
+                  <button onClick={() => updateDoc(doc(db, 'daily_vote', today, 'comments', c.id), { likes: liked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid) })}
+                    className="flex flex-col items-center gap-0.5 shrink-0 active:scale-90 transition-all pt-1">
+                    <Heart size={15} className={liked ? 'text-rose-500 fill-rose-500' : 'text-brand-navy/30'} />
+                    {c.likes.length > 0 && <span className="text-[10px] font-bold text-brand-navy/40">{c.likes.length}</span>}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </motion.div>
     </motion.div>
