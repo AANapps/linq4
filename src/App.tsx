@@ -743,7 +743,7 @@ export default function App() {
   const [pendingNFCStoreId, setPendingNFCStoreId] = useState<string | null>(null);
   const [userCards, setUserCards] = useState<Card[]>([]);
   const [showSettings, setShowSettings] = useState(false);
-  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges' | 'stores' | 'users' | 'posts' | 'offers' | 'linqle'>(null);
+  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges' | 'stores' | 'users' | 'posts' | 'offers' | 'linqle' | 'daily-vote'>(null);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -1549,6 +1549,7 @@ export default function App() {
             onOpenPosts={() => setAdminView('posts')}
             onOpenOffers={() => setAdminView('offers')}
             onOpenLinqle={() => setAdminView('linqle')}
+            onOpenDailyVote={() => setAdminView('daily-vote')}
           />
         )}
         {adminView === 'challenges' && (
@@ -1571,6 +1572,9 @@ export default function App() {
         )}
         {adminView === 'linqle' && (
           <LinqleAdminPanel onClose={() => setAdminView('menu')} />
+        )}
+        {adminView === 'daily-vote' && (
+          <DailyVoteAdmin onClose={() => setAdminView('menu')} />
         )}
       </AnimatePresence>
 
@@ -4410,7 +4414,7 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
-function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts, onOpenOffers, onOpenLinqle }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void; onOpenOffers: () => void; onOpenLinqle: () => void }) {
+function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts, onOpenOffers, onOpenLinqle, onOpenDailyVote }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void; onOpenOffers: () => void; onOpenLinqle: () => void; onOpenDailyVote: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -4525,6 +4529,20 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores,
             <div>
               <p className="font-bold text-brand-navy text-sm">Linqle</p>
               <p className="text-[11px] text-brand-navy/40 mt-0.5">Set the daily word puzzle</p>
+            </div>
+          </motion.button>
+
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={onOpenDailyVote}
+            className="rounded-[2rem] bg-white border border-black/5 shadow-sm p-6 flex flex-col items-start gap-3 text-left active:bg-brand-navy/5 transition-colors"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center">
+              <BarChart2 size={22} className="text-indigo-500" />
+            </div>
+            <div>
+              <p className="font-bold text-brand-navy text-sm">Daily Vote</p>
+              <p className="text-[11px] text-brand-navy/40 mt-0.5">Create today's poll question</p>
             </div>
           </motion.button>
         </div>
@@ -4729,6 +4747,134 @@ function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
                 );
               })}
             </div>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+interface DailyVoteData {
+  question: string;
+  options: string[];
+  voteCounts: Record<string, number>;
+  totalVotes: number;
+  closed: boolean;
+  winner: number | null;
+  commentCount?: number;
+}
+interface DailyVoteComment { id: string; uid: string; name: string; photoURL?: string; text: string; createdAt: any; likes: string[]; }
+
+function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
+  const today = new Date().toISOString().split('T')[0];
+  const [voteData, setVoteData] = useState<DailyVoteData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [question, setQuestion] = useState('');
+  const [options, setOptions] = useState(['', '']);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    getDoc(doc(db, 'daily_vote', today)).then(snap => {
+      if (snap.exists()) setVoteData(snap.data() as DailyVoteData);
+      setLoading(false);
+    });
+  }, [today]);
+
+  const createVote = async () => {
+    const cleanOpts = options.map(o => o.trim()).filter(Boolean);
+    if (!question.trim() || cleanOpts.length < 2) return;
+    setSaving(true);
+    const voteCounts: Record<string, number> = {};
+    cleanOpts.forEach((_, i) => { voteCounts[String(i)] = 0; });
+    try {
+      await setDoc(doc(db, 'daily_vote', today), { question: question.trim(), options: cleanOpts, voteCounts, totalVotes: 0, closed: false, winner: null, commentCount: 0, createdAt: serverTimestamp() });
+      const snap = await getDoc(doc(db, 'daily_vote', today));
+      setVoteData(snap.data() as DailyVoteData);
+    } catch (e) { console.error(e); }
+    setSaving(false);
+  };
+
+  const closeVote = async () => {
+    if (!voteData || voteData.closed) return;
+    setSaving(true);
+    const winner = voteData.options.reduce((best, _, i) =>
+      (voteData.voteCounts[String(i)] ?? 0) > (voteData.voteCounts[String(best)] ?? 0) ? i : best, 0);
+    try {
+      await updateDoc(doc(db, 'daily_vote', today), { closed: true, winner });
+      setVoteData(prev => prev ? { ...prev, closed: true, winner } : prev);
+    } catch (e) { console.error(e); }
+    setSaving(false);
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex flex-col max-w-md mx-auto">
+      <div className="flex-1 overflow-y-auto bg-brand-bg">
+        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm px-5 pt-5 pb-4 border-b border-black/5 z-10 flex items-center justify-between">
+          <div>
+            <h2 className="font-display text-2xl font-bold text-brand-navy">Daily Vote</h2>
+            <p className="text-xs text-brand-navy/50 mt-0.5">{today}</p>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm active:scale-95 transition-all">
+            <X size={18} className="text-brand-navy/60" />
+          </button>
+        </div>
+        <div className="p-5 space-y-5">
+          {loading ? (
+            <div className="flex justify-center py-12"><RefreshCw size={24} className="animate-spin text-brand-navy/30" /></div>
+          ) : voteData ? (
+            <>
+              <div className="bg-indigo-50 rounded-2xl p-4 border border-indigo-100">
+                <p className="font-black text-brand-navy">{voteData.question}</p>
+                <p className="text-xs text-brand-navy/50 mt-1">{voteData.totalVotes} votes · {voteData.closed ? `Closed — winner: ${voteData.winner !== null ? voteData.options[voteData.winner] : '?'}` : 'Open'}</p>
+              </div>
+              {voteData.options.map((opt, i) => (
+                <div key={i} className="bg-white rounded-2xl border border-brand-navy/8 px-4 py-3">
+                  <p className="font-bold text-brand-navy text-sm">{opt}</p>
+                  <p className="text-xs text-brand-navy/40 mt-0.5">{voteData.voteCounts[String(i)] ?? 0} votes</p>
+                </div>
+              ))}
+              {!voteData.closed && (
+                <button onClick={closeVote} disabled={saving}
+                  className="w-full py-3 rounded-2xl bg-rose-500 text-white font-bold text-sm active:scale-95 transition-all disabled:opacity-50">
+                  {saving ? 'Closing…' : 'Close Vote & Announce Winner'}
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-wider">Question</label>
+                <input value={question} onChange={e => setQuestion(e.target.value)} placeholder="e.g. Best way to commute?"
+                  className="w-full bg-brand-navy/5 rounded-2xl px-4 py-3 text-sm text-brand-navy outline-none placeholder:text-brand-navy/30" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-wider">Options (2–4)</label>
+                {options.map((opt, i) => (
+                  <div key={i} className="flex gap-2 items-center">
+                    <input value={opt} onChange={e => { const n = [...options]; n[i] = e.target.value; setOptions(n); }}
+                      placeholder={`Option ${i + 1}`}
+                      className="flex-1 bg-brand-navy/5 rounded-2xl px-4 py-3 text-sm text-brand-navy outline-none placeholder:text-brand-navy/30" />
+                    {options.length > 2 && (
+                      <button onClick={() => setOptions(prev => prev.filter((_, j) => j !== i))}
+                        className="w-9 h-9 rounded-2xl bg-rose-100 flex items-center justify-center active:scale-90 transition-all">
+                        <X size={13} className="text-rose-500" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {options.length < 4 && (
+                  <button onClick={() => setOptions(prev => [...prev, ''])}
+                    className="flex items-center gap-1.5 text-xs font-bold text-brand-navy/40 px-1 py-1 active:opacity-60">
+                    <Plus size={13} /> Add option
+                  </button>
+                )}
+              </div>
+              <button onClick={createVote} disabled={saving || !question.trim() || options.filter(o => o.trim()).length < 2}
+                className="w-full py-3 rounded-2xl gradient-logo-blue text-white font-bold text-sm active:scale-95 transition-all disabled:opacity-50">
+                {saving ? 'Creating…' : "Create Today's Vote"}
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -6656,6 +6802,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           onViewStore={onViewStore}
           onViewChallenges={() => { setActiveTab('home'); setWalletSubTab('challenges'); }}
           onOpenLinqle={() => setViewingLinqle(true)}
+          onPackReady={(stickers) => { setPendingPack(stickers); setPendingPackCardId(null); }}
           currentUser={user}
           currentProfile={profile}
           userCards={initialCards}
@@ -11073,6 +11220,250 @@ const TILE_COLORS: Record<TileState, string> = {
 };
 
 const KEYBOARD_ROWS = [['Q','W','E','R','T','Y','U','I','O','P'],['A','S','D','F','G','H','J','K','L'],['ENTER','Z','X','C','V','B','N','M','⌫']];
+
+function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: { currentUser: FirebaseUser; currentProfile: UserProfile | null; onClose: () => void; onPackReady?: (s: CollectibleSticker[]) => void }) {
+  const today = new Date().toISOString().split('T')[0];
+  const [voteData, setVoteData] = useState<DailyVoteData | null>(null);
+  const [userVote, setUserVote] = useState<number | null>(null);
+  const [comments, setComments] = useState<DailyVoteComment[]>([]);
+  const [commentText, setCommentText] = useState('');
+  const [tab, setTab] = useState<'vote' | 'comments'>('vote');
+  const [voting, setVoting] = useState(false);
+  const [posting, setPosting] = useState(false);
+
+  useEffect(() => onSnapshot(doc(db, 'daily_vote', today), snap => { if (snap.exists()) setVoteData(snap.data() as DailyVoteData); }), [today]);
+  useEffect(() => onSnapshot(doc(db, 'daily_vote', today, 'votes', currentUser.uid), snap => { if (snap.exists()) setUserVote(snap.data().optionIdx as number); }), [today, currentUser.uid]);
+  useEffect(() => {
+    const q = query(collection(db, 'daily_vote', today, 'comments'), orderBy('createdAt', 'desc'), limit(50));
+    return onSnapshot(q, snap => setComments(snap.docs.map(d => ({ id: d.id, ...d.data() } as DailyVoteComment))));
+  }, [today]);
+
+  useEffect(() => {
+    if (!voteData?.closed || voteData.winner === null || userVote === null || userVote !== voteData.winner) return;
+    const voteRef = doc(db, 'daily_vote', today, 'votes', currentUser.uid);
+    getDoc(voteRef).then(async snap => {
+      if (!snap.exists() || snap.data().rewardClaimed) return;
+      try {
+        const name = currentProfile?.name || 'Anonymous';
+        const newStickers = await issueUserStickers(currentUser.uid, name, 3).catch(() => [] as CollectibleSticker[]);
+        issueStickersToCard(currentUser.uid, name, 3).catch(console.error);
+        await updateDoc(voteRef, { rewardClaimed: true });
+        if (newStickers.length > 0) onPackReady?.(newStickers);
+      } catch (e) { console.error('vote reward', e); }
+    });
+  }, [voteData?.closed, voteData?.winner, userVote]);
+
+  const castVote = async (idx: number) => {
+    if (voting || userVote !== null || voteData?.closed) return;
+    setVoting(true);
+    try {
+      const voteRef = doc(db, 'daily_vote', today, 'votes', currentUser.uid);
+      const snap = await getDoc(voteRef);
+      if (snap.exists()) { setUserVote(snap.data().optionIdx); setVoting(false); return; }
+      await setDoc(voteRef, { optionIdx: idx, uid: currentUser.uid, name: currentProfile?.name || 'Anonymous', votedAt: serverTimestamp(), rewardClaimed: false });
+      await updateDoc(doc(db, 'daily_vote', today), { [`voteCounts.${idx}`]: increment(1), totalVotes: increment(1) });
+    } catch (e) { console.error('castVote', e); }
+    setVoting(false);
+  };
+
+  const postComment = async () => {
+    if (!commentText.trim() || posting) return;
+    setPosting(true);
+    try {
+      await addDoc(collection(db, 'daily_vote', today, 'comments'), { uid: currentUser.uid, name: currentProfile?.name || 'Anonymous', photoURL: currentProfile?.photoURL || '', text: commentText.trim(), createdAt: serverTimestamp(), likes: [] });
+      await updateDoc(doc(db, 'daily_vote', today), { commentCount: increment(1) });
+      setCommentText('');
+    } catch (e) { console.error('postComment', e); }
+    setPosting(false);
+  };
+
+  if (!voteData) return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[160] bg-black/60 backdrop-blur-sm flex items-center justify-center max-w-md mx-auto">
+      <RefreshCw size={24} className="animate-spin text-white/50" />
+    </motion.div>
+  );
+
+  const total = Math.max(voteData.totalVotes, 1);
+  const hasVoted = userVote !== null;
+  const isClosed = voteData.closed;
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[160] bg-black/60 backdrop-blur-sm flex flex-col max-w-md mx-auto"
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+        transition={{ type: 'spring', stiffness: 380, damping: 36 }}
+        className="bg-brand-bg flex flex-col overflow-hidden flex-1">
+        {/* Header */}
+        <div className="relative overflow-hidden shrink-0" style={{ background: 'linear-gradient(90deg, #1e1b4b 0%, #3730a3 35%, #6366f1 70%, #818cf8 100%)' }}>
+          <MatrixRainCanvas opacity={0.22} fadeColor="rgba(20,17,60,0.2)" />
+          <div className="relative z-10 flex items-start justify-between px-5 pt-5 pb-3">
+            <div className="flex-1 pr-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-200/70">Daily Vote</p>
+              <h2 className="font-black text-lg text-white leading-snug mt-0.5">{voteData.question}</h2>
+            </div>
+            <button onClick={onClose} className="shrink-0 w-9 h-9 rounded-full bg-white/15 flex items-center justify-center active:scale-90 transition-all">
+              <X size={18} className="text-white" />
+            </button>
+          </div>
+          {isClosed && voteData.winner !== null && (
+            <div className="relative z-10 mx-5 mb-3 px-4 py-2.5 bg-white/15 rounded-2xl flex items-center gap-3 border border-white/20">
+              <Trophy size={16} className="text-yellow-300 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-bold text-white/60 uppercase tracking-wider">Winning answer</p>
+                <p className="text-sm font-black text-white truncate">{voteData.options[voteData.winner]}</p>
+              </div>
+              {hasVoted && userVote === voteData.winner && (
+                <span className="text-[10px] font-bold bg-yellow-400/20 text-yellow-300 px-2 py-1 rounded-full whitespace-nowrap">🎁 Pack earned!</span>
+              )}
+            </div>
+          )}
+          <div className="relative z-10 flex gap-1 px-5 pb-4">
+            {(['vote', 'comments'] as const).map(t => (
+              <button key={t} onClick={() => setTab(t)}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${tab === t ? 'bg-white text-indigo-700' : 'bg-white/15 text-white/70'}`}>
+                {t === 'vote' ? `Vote · ${voteData.totalVotes}` : `Comments · ${voteData.commentCount ?? comments.length}`}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-hidden flex flex-col">
+          {tab === 'vote' ? (
+            <div className="flex-1 overflow-y-auto px-5 py-5 space-y-3">
+              {voteData.options.map((opt, i) => {
+                const count = voteData.voteCounts[String(i)] ?? 0;
+                const pct = Math.round((count / total) * 100);
+                const isWinner = isClosed && voteData.winner === i;
+                const isMyVote = userVote === i;
+                const showBar = hasVoted || isClosed;
+                return (
+                  <button key={i} onClick={() => castVote(i)} disabled={hasVoted || isClosed || voting}
+                    className={`w-full rounded-2xl border-2 text-left relative overflow-hidden transition-all active:scale-[0.98]
+                      ${isWinner ? 'border-indigo-400 bg-indigo-50' : isMyVote ? 'border-indigo-300 bg-indigo-50/60' : 'border-brand-navy/10 bg-white'}
+                      ${!hasVoted && !isClosed ? 'active:border-indigo-300' : ''}`}>
+                    {showBar && (
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.6, ease: 'easeOut' }}
+                        className={`absolute inset-y-0 left-0 ${isWinner ? 'bg-indigo-100' : 'bg-brand-navy/5'}`} />
+                    )}
+                    <div className="relative z-10 flex items-center gap-3 px-4 py-3.5">
+                      {isMyVote && <Check size={15} className="text-indigo-600 shrink-0" />}
+                      <span className={`flex-1 font-bold text-sm ${isWinner ? 'text-indigo-700' : 'text-brand-navy'}`}>{opt}</span>
+                      {showBar && <span className="text-xs font-black text-brand-navy/50">{pct}%</span>}
+                    </div>
+                  </button>
+                );
+              })}
+              <p className="text-center text-xs text-brand-navy/30 pt-1">
+                {isClosed ? 'Voting closed' : hasVoted ? `${voteData.totalVotes} votes · updating live` : 'Tap an option to vote'}
+              </p>
+            </div>
+          ) : (
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="shrink-0 px-5 py-3 border-b border-brand-navy/6 flex gap-2 items-center">
+                <input value={commentText} onChange={e => setCommentText(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); postComment(); } }}
+                  placeholder="Add a comment…"
+                  className="flex-1 bg-brand-navy/5 rounded-2xl px-4 py-2.5 text-sm text-brand-navy placeholder:text-brand-navy/30 outline-none" />
+                <button onClick={postComment} disabled={!commentText.trim() || posting}
+                  className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center disabled:opacity-40 active:scale-90 transition-all">
+                  <Send size={15} className="text-white" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto divide-y divide-brand-navy/5">
+                {comments.length === 0 && <p className="text-center text-brand-navy/30 text-sm py-12">No comments yet</p>}
+                {comments.map(c => {
+                  const liked = c.likes.includes(currentUser.uid);
+                  const ts = c.createdAt?.toDate?.();
+                  return (
+                    <div key={c.id} className="flex gap-3 px-5 py-3.5">
+                      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 text-xs font-black text-indigo-600">
+                        {c.name?.[0]?.toUpperCase() ?? '?'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-xs font-bold text-brand-navy">{c.name}</span>
+                          {ts && <span className="text-[10px] text-brand-navy/30">{ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
+                        </div>
+                        <p className="text-sm text-brand-navy/80 mt-0.5 leading-snug">{c.text}</p>
+                      </div>
+                      <button onClick={() => updateDoc(doc(db, 'daily_vote', today, 'comments', c.id), { likes: liked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid) })}
+                        className="flex flex-col items-center gap-0.5 shrink-0 active:scale-90 transition-all pt-1">
+                        <Heart size={15} className={liked ? 'text-rose-500 fill-rose-500' : 'text-brand-navy/30'} />
+                        {c.likes.length > 0 && <span className="text-[10px] font-bold text-brand-navy/40">{c.likes.length}</span>}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady }: { currentUser: FirebaseUser; currentProfile: UserProfile | null; onPackReady?: (s: CollectibleSticker[]) => void }) {
+  const today = new Date().toISOString().split('T')[0];
+  const [voteData, setVoteData] = useState<DailyVoteData | null>(null);
+  const [userVote, setUserVote] = useState<number | null>(null);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => onSnapshot(doc(db, 'daily_vote', today), snap => { if (snap.exists()) setVoteData(snap.data() as DailyVoteData); }), [today]);
+  useEffect(() => onSnapshot(doc(db, 'daily_vote', today, 'votes', currentUser.uid), snap => { if (snap.exists()) setUserVote(snap.data().optionIdx as number); }), [today, currentUser.uid]);
+
+  if (!voteData) return null;
+
+  const total = Math.max(voteData.totalVotes, 1);
+  const hasVoted = userVote !== null;
+
+  return (
+    <>
+      <motion.button whileTap={{ scale: 0.97 }} onClick={() => setOpen(true)}
+        className="w-full rounded-[1.5rem] overflow-hidden shadow-lg shadow-violet-900/20 text-left">
+        <div className="relative overflow-hidden px-5 py-4"
+          style={{ background: 'linear-gradient(90deg, #1e1b4b 0%, #3730a3 30%, #6366f1 70%, #818cf8 100%)' }}>
+          <MatrixRainCanvas opacity={0.2} fadeColor="rgba(20,17,60,0.2)" />
+          <div className="relative z-10 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0 border border-white/20">
+              <BarChart2 size={22} className="text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-200/80">Daily Vote</p>
+              <p className="font-display text-base font-black text-white truncate leading-snug mt-0.5">{voteData.question}</p>
+              {hasVoted && userVote !== null && voteData.options[userVote] && (
+                <p className="text-[10px] text-indigo-200/70 mt-0.5">✓ {voteData.options[userVote]}</p>
+              )}
+            </div>
+            <ChevronRight size={18} className="text-white/50 shrink-0" />
+          </div>
+          {hasVoted && (
+            <div className="relative z-10 mt-3 space-y-1.5">
+              {voteData.options.map((opt, i) => {
+                const pct = Math.round(((voteData.voteCounts[String(i)] ?? 0) / total) * 100);
+                return (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="text-[10px] text-white/60 w-16 truncate shrink-0">{opt}</span>
+                    <div className="flex-1 h-1.5 bg-white/15 rounded-full overflow-hidden">
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.5, delay: i * 0.1 }}
+                        className={`h-full rounded-full ${userVote === i ? 'bg-white' : 'bg-white/40'}`} />
+                    </div>
+                    <span className="text-[10px] font-bold text-white/60 w-7 text-right shrink-0">{pct}%</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </motion.button>
+      <AnimatePresence>
+        {open && <DailyVoteModal currentUser={currentUser} currentProfile={currentProfile} onClose={() => setOpen(false)} onPackReady={onPackReady} />}
+      </AnimatePresence>
+    </>
+  );
+}
 
 function MatrixScramble({ target, className }: { target: string; className?: string }) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -16387,7 +16778,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
   );
 }
 
-function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle, currentUser, currentProfile, userCards = [] }: { onViewUser: (u: UserProfile) => void, onViewStore?: (s: StoreProfile) => void, onViewChallenges?: () => void, onOpenLinqle?: () => void, currentUser?: FirebaseUser, currentProfile?: UserProfile | null, userCards?: Card[] }) {
+function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle, onPackReady, currentUser, currentProfile, userCards = [] }: { onViewUser: (u: UserProfile) => void, onViewStore?: (s: StoreProfile) => void, onViewChallenges?: () => void, onOpenLinqle?: () => void, onPackReady?: (s: CollectibleSticker[]) => void, currentUser?: FirebaseUser, currentProfile?: UserProfile | null, userCards?: Card[] }) {
   const [globalPosts, setGlobalPosts] = useState<GlobalPost[]>([]);
   const [vendorPosts, setVendorPosts] = useState<any[]>([]);
   const [followingUids, setFollowingUids] = useState<Set<string>>(new Set());
@@ -16861,6 +17252,11 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                 <ChevronRight size={18} className="text-white/50 shrink-0" />
               </div>
             </motion.button>
+          )}
+
+          {/* Daily Vote */}
+          {currentUser && currentProfile && (
+            <DailyVoteFYPCard currentUser={currentUser} currentProfile={currentProfile} onPackReady={onPackReady} />
           )}
 
           {/* Challenges card + Leaderboard button — side by side */}
