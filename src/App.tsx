@@ -128,7 +128,9 @@ import {
   ChevronUp,
   MoveHorizontal,
   Check,
-  LayoutList
+  LayoutList,
+  Grid3X3,
+  Timer
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
@@ -280,6 +282,7 @@ interface UserProfile {
   streak?: number;
   lastStreakDate?: string;
   avatar?: UserAvatar;
+  nonogramCompletions?: { date: string; imageUrl: string; timeMs: number }[];
   dogName?: string;
   lastDogFed?: any;
   lastTreeWatered?: any;
@@ -736,7 +739,7 @@ export default function App() {
   const [pendingNFCStoreId, setPendingNFCStoreId] = useState<string | null>(null);
   const [userCards, setUserCards] = useState<Card[]>([]);
   const [showSettings, setShowSettings] = useState(false);
-  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges' | 'stores' | 'users' | 'posts' | 'offers'>(null);
+  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges' | 'stores' | 'users' | 'posts' | 'offers' | 'nonogram'>(null);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -1541,6 +1544,7 @@ export default function App() {
             onOpenUsers={() => setAdminView('users')}
             onOpenPosts={() => setAdminView('posts')}
             onOpenOffers={() => setAdminView('offers')}
+            onOpenNonogram={() => setAdminView('nonogram')}
           />
         )}
         {adminView === 'challenges' && (
@@ -1560,6 +1564,9 @@ export default function App() {
         )}
         {adminView === 'offers' && (
           <AdminOffersPanel onClose={() => setAdminView('menu')} />
+        )}
+        {adminView === 'nonogram' && (
+          <NonogramAdminPanel onClose={() => setAdminView('menu')} />
         )}
       </AnimatePresence>
 
@@ -4399,7 +4406,7 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
-function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts, onOpenOffers }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void; onOpenOffers: () => void }) {
+function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts, onOpenOffers, onOpenNonogram }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void; onOpenOffers: () => void; onOpenNonogram: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -4502,6 +4509,167 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores,
               <p className="text-[11px] text-brand-navy/40 mt-0.5">View & delete all store offers</p>
             </div>
           </motion.button>
+
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={onOpenNonogram}
+            className="rounded-[2rem] bg-white border border-black/5 shadow-sm p-6 flex flex-col items-start gap-3 text-left active:bg-brand-navy/5 transition-colors"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-violet-100 flex items-center justify-center">
+              <Grid3X3 size={22} className="text-violet-500" />
+            </div>
+            <div>
+              <p className="font-bold text-brand-navy text-sm">Nonogram</p>
+              <p className="text-[11px] text-brand-navy/40 mt-0.5">Design daily colour puzzles</p>
+            </div>
+          </motion.button>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function NonogramAdminPanel({ onClose }: { onClose: () => void }) {
+  const SIZES = [5, 10, 15] as const;
+  const PRESET_COLORS = ['#1D4ED8','#DC2626','#16A34A','#D97706','#7C3AED','#DB2777','#0891B2','#111827','#F97316','#84CC16','#EA580C','#BE185D'];
+  const [size, setSize] = useState<5|10|15>(10);
+  const [cells, setCells] = useState<{ filled: boolean; color: string }[]>(() => Array(100).fill(null).map(() => ({ filled: false, color: '#1D4ED8' })));
+  const [selectedColor, setSelectedColor] = useState('#1D4ED8');
+  const [puzzleDate, setPuzzleDate] = useState(new Date().toISOString().split('T')[0]);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const isDrawingRef = useRef(false);
+  const drawModeRef = useRef<'fill'|'erase'>('fill');
+
+  useEffect(() => {
+    setCells(Array(size * size).fill(null).map(() => ({ filled: false, color: selectedColor })));
+  }, [size]);
+
+  const getRow = (r: number) => cells.slice(r * size, (r + 1) * size).map(c => c.filled);
+  const getCol = (col: number) => cells.filter((_, i) => i % size === col).map(c => c.filled);
+  const rowClues = Array.from({ length: size }, (_, r) => computeNonogramClues(getRow(r)));
+  const colClues = Array.from({ length: size }, (_, c) => computeNonogramClues(getCol(c)));
+
+  const maxRowClueLen = Math.max(...rowClues.map(r => r.length), 1);
+  const cellPx = Math.max(14, Math.floor((Math.min(340, window.innerWidth - 40) - maxRowClueLen * 18) / size));
+  const clueW = maxRowClueLen * 18;
+
+  const applyCell = (i: number) => {
+    setCells(prev => prev.map((cell, idx) => idx === i ? { filled: drawModeRef.current === 'fill', color: selectedColor } : cell));
+  };
+
+  const handlePointerDown = (i: number, e: React.PointerEvent) => {
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    drawModeRef.current = cells[i].filled ? 'erase' : 'fill';
+    isDrawingRef.current = true;
+    applyCell(i);
+  };
+  const handlePointerEnter = (i: number) => { if (isDrawingRef.current) applyCell(i); };
+  const handlePointerUp = () => { isDrawingRef.current = false; };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await setDoc(doc(db, 'puzzles', puzzleDate), { date: puzzleDate, size, cells, rowClues, colClues, createdAt: serverTimestamp() });
+      setSaved(true);
+      setTimeout(onClose, 900);
+    } catch (e) { console.error(e); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex flex-col max-w-md mx-auto">
+      <div className="bg-brand-bg flex-1 flex flex-col overflow-hidden rounded-t-[2rem] mt-10">
+        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-brand-navy/8 shrink-0">
+          <div>
+            <h2 className="font-bold text-lg text-brand-navy">Daily Nonogram</h2>
+            <p className="text-xs text-brand-navy/40">Draw the puzzle — colours reveal on solve</p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-brand-navy/8 flex items-center justify-center"><X size={16} /></button>
+        </div>
+
+        <div className="overflow-y-auto flex-1 p-5 space-y-5" onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp}>
+          {/* Date + Size row */}
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <p className="text-[10px] font-bold text-brand-navy/50 mb-1.5 uppercase tracking-widest">Date</p>
+              <input type="date" value={puzzleDate} onChange={e => setPuzzleDate(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-2xl bg-white border border-brand-navy/10 text-sm text-brand-navy outline-none" />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-brand-navy/50 mb-1.5 uppercase tracking-widest">Size</p>
+              <select value={size} onChange={e => setSize(Number(e.target.value) as 5|10|15)}
+                className="px-3 py-2.5 rounded-2xl bg-white border border-brand-navy/10 text-sm text-brand-navy outline-none">
+                {SIZES.map(s => <option key={s} value={s}>{s}×{s}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Colour picker */}
+          <div>
+            <p className="text-[10px] font-bold text-brand-navy/50 mb-2 uppercase tracking-widest">Colour</p>
+            <div className="flex flex-wrap gap-2 items-center">
+              {PRESET_COLORS.map(c => (
+                <button key={c} onClick={() => setSelectedColor(c)}
+                  className="w-8 h-8 rounded-xl transition-all"
+                  style={{ backgroundColor: c, outline: selectedColor === c ? `3px solid ${c}` : '3px solid transparent', outlineOffset: '2px', transform: selectedColor === c ? 'scale(1.2)' : undefined }} />
+              ))}
+              <label className="w-8 h-8 rounded-xl overflow-hidden cursor-pointer border-2 border-brand-navy/10" title="Custom">
+                <input type="color" value={selectedColor} onChange={e => setSelectedColor(e.target.value)} className="w-10 h-10 -m-1 cursor-pointer" />
+              </label>
+            </div>
+          </div>
+
+          {/* Grid */}
+          <div className="select-none touch-none">
+            {/* Col clue header */}
+            <div className="flex mb-0.5" style={{ paddingLeft: clueW + 'px' }}>
+              {colClues.map((clue, c) => (
+                <div key={c} className="flex flex-col items-center justify-end" style={{ width: cellPx, minWidth: cellPx }}>
+                  {clue.map((n, i) => <span key={i} className="text-[8px] font-bold text-brand-navy/60 leading-[1.1]">{n === 0 ? '' : n}</span>)}
+                </div>
+              ))}
+            </div>
+            {/* Rows */}
+            {Array.from({ length: size }, (_, r) => (
+              <div key={r} className="flex items-center mb-0.5">
+                {/* Row clues */}
+                <div className="flex gap-0.5 items-center justify-end shrink-0" style={{ width: clueW }}>
+                  {rowClues[r].map((n, i) => <span key={i} className="text-[8px] font-bold text-brand-navy/60 w-4 text-center">{n === 0 ? '' : n}</span>)}
+                </div>
+                {/* Cells */}
+                {Array.from({ length: size }, (_, c) => {
+                  const i = r * size + c;
+                  const cell = cells[i];
+                  return (
+                    <div key={c} data-idx={i}
+                      onPointerDown={e => handlePointerDown(i, e)}
+                      onPointerEnter={() => handlePointerEnter(i)}
+                      className="border border-white/60 cursor-crosshair"
+                      style={{
+                        width: cellPx, height: cellPx, minWidth: cellPx,
+                        backgroundColor: cell.filled ? cell.color : '#e8eaf0',
+                        borderRight: (c + 1) % 5 === 0 ? '2px solid rgba(29,78,216,0.25)' : undefined,
+                        borderBottom: (r + 1) % 5 === 0 ? '2px solid rgba(29,78,216,0.25)' : undefined,
+                      }} />
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 pb-4">
+            <button onClick={() => setCells(Array(size * size).fill(null).map(() => ({ filled: false, color: selectedColor })))}
+              className="flex-1 py-3 rounded-2xl bg-brand-navy/8 text-brand-navy font-bold text-sm active:scale-95 transition-all">
+              Clear
+            </button>
+            <button onClick={handleSave} disabled={saving || saved}
+              className="flex-1 py-3 rounded-2xl gradient-logo-blue text-white font-bold text-sm active:scale-95 transition-all disabled:opacity-60">
+              {saved ? '✓ Saved!' : saving ? 'Saving…' : 'Save Puzzle'}
+            </button>
+          </div>
         </div>
       </div>
     </motion.div>
@@ -6034,6 +6202,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const [pendingPack, setPendingPack] = useState<CollectibleSticker[] | null>(null);
   const [pendingPackCardId, setPendingPackCardId] = useState<string | null>(null);
   const [pendingCollectionCardId, setPendingCollectionCardId] = useState<string | null>(null);
+  const [viewingPuzzle, setViewingPuzzle] = useState(false);
 
   // Stamp celebration
   const [celebrationPages, setCelebrationPages] = useState<CelebrationPage[] | null>(null);
@@ -6421,15 +6590,20 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
     >
-      {activeTab === 'for-you' && (
+      {activeTab === 'for-you' && !viewingPuzzle && (
         <ForYouScreen
           onViewUser={onViewUser}
           onViewStore={onViewStore}
           onViewChallenges={() => { setActiveTab('home'); setWalletSubTab('challenges'); }}
+          onOpenPuzzle={() => setViewingPuzzle(true)}
           currentUser={user}
           currentProfile={profile}
           userCards={initialCards}
         />
+      )}
+
+      {activeTab === 'for-you' && viewingPuzzle && (
+        <NonogramGame currentUser={user} currentProfile={profile} onBack={() => setViewingPuzzle(false)} />
       )}
 
       {activeTab === 'messages' && (
@@ -10758,6 +10932,26 @@ function StoreCard({ store, card, onJoin, onClick, distance }: { store: StorePro
   );
 }
 
+interface NonogramPuzzle {
+  id?: string;
+  date: string;
+  size: number;
+  cells: { filled: boolean; color: string }[];
+  rowClues: number[][];
+  colClues: number[][];
+}
+
+function computeNonogramClues(line: boolean[]): number[] {
+  const clues: number[] = [];
+  let count = 0;
+  for (const cell of line) {
+    if (cell) { count++; }
+    else if (count > 0) { clues.push(count); count = 0; }
+  }
+  if (count > 0) clues.push(count);
+  return clues.length > 0 ? clues : [0];
+}
+
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -10780,6 +10974,275 @@ async function geocodeAddressGlobal(address: string): Promise<{ lat: number; lng
     return null;
   }
 }
+
+function NonogramGame({ currentUser, currentProfile, onBack }: { currentUser: FirebaseUser; currentProfile: UserProfile | null; onBack: () => void }) {
+  const today = new Date().toISOString().split('T')[0];
+  const [puzzle, setPuzzle] = useState<NonogramPuzzle | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [userGrid, setUserGrid] = useState<boolean[]>([]);
+  const [markGrid, setMarkGrid] = useState<boolean[]>([]);
+  const [solved, setSolved] = useState(false);
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [elapsed, setElapsed] = useState(0);
+  const [scores, setScores] = useState<(NonogramScore & { id: string })[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [savedImageUrl, setSavedImageUrl] = useState<string | null>(null);
+  const [alreadyCompleted, setAlreadyCompleted] = useState<{ imageUrl: string; timeMs: number } | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const isDrawingRef = useRef(false);
+  const drawModeRef = useRef<'fill'|'erase'|'mark'>('fill');
+
+  useEffect(() => {
+    getDoc(doc(db, 'puzzles', today)).then(snap => {
+      if (snap.exists()) {
+        const data = { id: snap.id, ...snap.data() } as NonogramPuzzle;
+        setPuzzle(data);
+        setUserGrid(Array(data.size * data.size).fill(false));
+        setMarkGrid(Array(data.size * data.size).fill(false));
+      }
+      setLoading(false);
+    });
+  }, [today]);
+
+  useEffect(() => {
+    const done = currentProfile?.nonogramCompletions?.find(c => c.date === today);
+    if (done) setAlreadyCompleted(done);
+  }, [currentProfile, today]);
+
+  useEffect(() => {
+    const q = query(collection(db, 'puzzles', today, 'scores'), orderBy('timeMs', 'asc'), limit(10));
+    return onSnapshot(q, snap => setScores(snap.docs.map(d => ({ id: d.id, ...d.data() } as NonogramScore & { id: string }))));
+  }, [today]);
+
+  useEffect(() => {
+    if (!startTime || solved) return;
+    const iv = setInterval(() => setElapsed(Date.now() - startTime), 200);
+    return () => clearInterval(iv);
+  }, [startTime, solved]);
+
+  const checkWin = (grid: boolean[]) => {
+    if (!puzzle) return;
+    if (puzzle.cells.every((cell, i) => cell.filled === grid[i])) doSolve(grid);
+  };
+
+  const doSolve = async (grid: boolean[]) => {
+    if (!puzzle || solved) return;
+    setSolved(true);
+    const timeMs = startTime ? Date.now() - startTime : 0;
+    setSubmitting(true);
+    try {
+      const cellPx = 20;
+      const canvas = canvasRef.current!;
+      canvas.width = puzzle.size * cellPx;
+      canvas.height = puzzle.size * cellPx;
+      const ctx = canvas.getContext('2d')!;
+      ctx.fillStyle = '#f8f9ff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      puzzle.cells.forEach((cell, i) => {
+        if (cell.filled) {
+          const r = Math.floor(i / puzzle.size), c = i % puzzle.size;
+          ctx.fillStyle = cell.color;
+          ctx.fillRect(c * cellPx, r * cellPx, cellPx, cellPx);
+        }
+      });
+      const blob = await new Promise<Blob>(res => canvas.toBlob(b => res(b!), 'image/png'));
+      const sref = storageRef(storage, `nonogram-completions/${currentUser.uid}/${today}.png`);
+      await uploadBytes(sref, blob);
+      const imageUrl = await getDownloadURL(sref);
+      setSavedImageUrl(imageUrl);
+      await setDoc(doc(db, 'puzzles', today, 'scores', currentUser.uid), {
+        uid: currentUser.uid, name: currentProfile?.name || 'Anonymous',
+        photoURL: currentProfile?.photoURL || '', timeMs, completedAt: serverTimestamp(), imageUrl,
+      });
+      const existing = currentProfile?.nonogramCompletions || [];
+      await updateDoc(doc(db, 'users', currentUser.uid), {
+        nonogramCompletions: [...existing.filter(c => c.date !== today), { date: today, imageUrl, timeMs }],
+      });
+    } catch (e) { console.error(e); }
+    finally { setSubmitting(false); }
+  };
+
+  const applyCell = (i: number, newGrid: boolean[], newMark: boolean[]) => {
+    if (!startTime) setStartTime(Date.now());
+    const mode = drawModeRef.current;
+    if (mode === 'mark') {
+      newMark[i] = !newMark[i];
+      if (newMark[i]) newGrid[i] = false;
+    } else {
+      newGrid[i] = mode === 'fill';
+      newMark[i] = false;
+    }
+  };
+
+  const handlePointerDown = (i: number, e: React.PointerEvent) => {
+    if (solved) return;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    if (e.button === 2 || e.ctrlKey) {
+      drawModeRef.current = 'mark';
+    } else {
+      drawModeRef.current = userGrid[i] ? 'erase' : 'fill';
+    }
+    isDrawingRef.current = true;
+    const g = [...userGrid], m = [...markGrid];
+    applyCell(i, g, m);
+    setUserGrid(g); setMarkGrid(m);
+    if (drawModeRef.current !== 'mark') checkWin(g);
+  };
+
+  const handlePointerEnter = (i: number) => {
+    if (!isDrawingRef.current || solved || drawModeRef.current === 'mark') return;
+    const g = [...userGrid], m = [...markGrid];
+    applyCell(i, g, m);
+    setUserGrid(g); setMarkGrid(m);
+    if (drawModeRef.current !== 'mark') checkWin(g);
+  };
+
+  const handlePointerUp = () => { isDrawingRef.current = false; };
+
+  const fmtTime = (ms: number) => {
+    const s = Math.floor(ms / 1000);
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  };
+
+  if (loading) return (
+    <div className="flex items-center justify-center py-24 text-brand-navy/30">
+      <RefreshCw size={24} className="animate-spin" />
+    </div>
+  );
+
+  if (!puzzle) return (
+    <div className="space-y-6 pb-20">
+      <button onClick={onBack} className="flex items-center gap-2 text-brand-navy/60 font-bold text-sm"><ArrowLeft size={18} />Back</button>
+      <div className="text-center py-20 text-brand-navy/30">
+        <Grid3X3 size={48} className="mx-auto mb-4 opacity-20" />
+        <p className="font-bold">No puzzle today</p>
+        <p className="text-xs mt-1">Check back soon</p>
+      </div>
+    </div>
+  );
+
+  const maxRowLen = Math.max(...puzzle.rowClues.map(r => r.length), 1);
+  const maxColLen = Math.max(...puzzle.colClues.map(c => c.length), 1);
+  const available = Math.min(360, window.innerWidth - 40);
+  const cellPx = Math.max(14, Math.floor((available - maxRowLen * 16) / puzzle.size));
+  const clueColW = maxRowLen * 16;
+
+  return (
+    <div className="space-y-6 pb-20 text-brand-navy">
+      <canvas ref={canvasRef} className="hidden" />
+
+      <div className="flex items-center justify-between">
+        <button onClick={onBack} className="flex items-center gap-2 text-brand-navy/60 font-bold text-sm"><ArrowLeft size={18} />Back</button>
+        <div className="flex items-center gap-1.5 text-brand-navy/60 text-sm font-bold">
+          <Timer size={15} />
+          {solved ? fmtTime(elapsed) : startTime ? fmtTime(elapsed) : '0:00'}
+        </div>
+      </div>
+
+      <div className="text-center">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">Daily Puzzle · {today}</p>
+        {!solved && <p className="text-xs text-brand-navy/40 mt-1">Fill the grid · right-click or long-press to mark</p>}
+      </div>
+
+      {alreadyCompleted && !solved && (
+        <div className="glass-card p-4 rounded-2xl flex items-center gap-3">
+          {alreadyCompleted.imageUrl && <img src={alreadyCompleted.imageUrl} alt="" className="w-12 h-12 rounded-xl object-cover" />}
+          <div>
+            <p className="font-bold text-sm">Already completed!</p>
+            <p className="text-xs text-brand-navy/50">Your time: {fmtTime(alreadyCompleted.timeMs)}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Grid */}
+      <div className="overflow-x-auto">
+        <div className="select-none touch-none inline-block" onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp} onContextMenu={e => e.preventDefault()}>
+          {/* Col clues */}
+          <div className="flex mb-1" style={{ paddingLeft: clueColW }}>
+            {puzzle.colClues.map((clue, c) => (
+              <div key={c} className="flex flex-col items-center justify-end" style={{ width: cellPx, minWidth: cellPx }}>
+                {Array.from({ length: maxColLen - clue.length }).map((_, i) => <span key={'e' + i} style={{ height: 12 }} />)}
+                {clue.map((n, i) => <span key={i} className="text-[9px] font-bold text-brand-navy/70 leading-[1.2]">{n === 0 ? '' : n}</span>)}
+              </div>
+            ))}
+          </div>
+          {/* Rows */}
+          {puzzle.rowClues.map((rowClue, r) => (
+            <div key={r} className="flex items-center mb-px">
+              <div className="flex gap-px items-center justify-end shrink-0" style={{ width: clueColW }}>
+                {Array.from({ length: maxRowLen - rowClue.length }).map((_, i) => <span key={'e' + i} style={{ width: 14 }} />)}
+                {rowClue.map((n, i) => <span key={i} className="text-[9px] font-bold text-brand-navy/70 w-4 text-center">{n === 0 ? '' : n}</span>)}
+              </div>
+              {Array.from({ length: puzzle.size }, (_, c) => {
+                const i = r * puzzle.size + c;
+                const filled = userGrid[i];
+                const marked = markGrid[i];
+                const solvedColor = solved && puzzle.cells[i].filled ? puzzle.cells[i].color : null;
+                return (
+                  <div key={c} data-idx={i}
+                    onPointerDown={e => handlePointerDown(i, e)}
+                    onPointerEnter={() => handlePointerEnter(i)}
+                    className="flex items-center justify-center text-brand-navy/30 font-bold"
+                    style={{
+                      width: cellPx, height: cellPx, minWidth: cellPx,
+                      fontSize: cellPx * 0.55,
+                      backgroundColor: solvedColor || (filled ? '#1D4ED8' : '#e8eaf0'),
+                      border: '1px solid rgba(255,255,255,0.6)',
+                      borderRight: (c + 1) % 5 === 0 ? '2px solid rgba(29,78,216,0.25)' : undefined,
+                      borderBottom: (r + 1) % 5 === 0 ? '2px solid rgba(29,78,216,0.25)' : undefined,
+                      transition: solved ? 'background-color 0.4s ease' : undefined,
+                    }}>
+                    {marked && !solved ? '×' : null}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Solved state */}
+      {solved && (
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+          <div className="glass-card p-5 rounded-3xl text-center space-y-2">
+            <p className="text-2xl">🎉</p>
+            <p className="font-bold text-lg">Puzzle solved!</p>
+            <p className="text-brand-navy/50 text-sm">Time: <span className="font-bold text-brand-navy">{fmtTime(elapsed)}</span></p>
+            {submitting && <p className="text-xs text-brand-navy/40 animate-pulse">Saving your artwork…</p>}
+            {savedImageUrl && (
+              <div className="flex justify-center pt-1">
+                <img src={savedImageUrl} alt="Your completed puzzle" className="w-24 h-24 rounded-2xl object-cover border-4 border-white shadow-lg" style={{ imageRendering: 'pixelated' }} />
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Leaderboard */}
+      <div className="space-y-3">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">Today's Leaderboard</p>
+        {scores.length === 0 ? (
+          <p className="text-xs text-brand-navy/30 text-center py-4">No completions yet — be the first!</p>
+        ) : scores.map((s, idx) => (
+          <div key={s.id} className="flex items-center gap-3 py-2">
+            <span className="w-6 text-center font-bold text-sm text-brand-navy/40">{idx + 1}</span>
+            {s.photoURL ? <img src={s.photoURL} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" /> : <div className="w-8 h-8 rounded-full bg-brand-navy/10 shrink-0" />}
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-sm truncate">{s.name}</p>
+            </div>
+            <div className="flex items-center gap-1 text-brand-navy/60 text-xs font-bold shrink-0">
+              <Timer size={11} />{fmtTime(s.timeMs)}
+            </div>
+            {s.imageUrl && <img src={s.imageUrl} alt="" className="w-8 h-8 rounded-lg object-cover shrink-0" style={{ imageRendering: 'pixelated' }} />}
+            {idx === 0 && <span className="text-base">🥇</span>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+interface NonogramScore { uid: string; name: string; photoURL?: string; timeMs: number; completedAt: any; imageUrl?: string; }
 
 function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, currentUser, currentProfile }: {
   stores: StoreProfile[];
@@ -13208,6 +13671,22 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           </div>
         );
       })()}
+
+      {/* Nonogram completions gallery */}
+      {(profile.nonogramCompletions?.length ?? 0) > 0 && (
+        <div className="space-y-2.5">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Puzzle Art</p>
+          <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-2 scrollbar-hide">
+            {[...(profile.nonogramCompletions || [])].reverse().map(c => (
+              <div key={c.date} className="snap-start shrink-0 space-y-1">
+                <img src={c.imageUrl} alt="" className="w-20 h-20 rounded-2xl border-2 border-white shadow-md object-cover" style={{ imageRendering: 'pixelated' }} />
+                <p className="text-[9px] font-bold text-brand-navy/40 text-center">{c.date}</p>
+                <p className="text-[9px] font-bold text-brand-navy/60 text-center">{(() => { const s = Math.floor(c.timeMs / 1000); return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; })()}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* My challenges */}
       {myChallenges.length > 0 && (
@@ -15638,7 +16117,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
   );
 }
 
-function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, currentProfile, userCards = [] }: { onViewUser: (u: UserProfile) => void, onViewStore?: (s: StoreProfile) => void, onViewChallenges?: () => void, currentUser?: FirebaseUser, currentProfile?: UserProfile | null, userCards?: Card[] }) {
+function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenPuzzle, currentUser, currentProfile, userCards = [] }: { onViewUser: (u: UserProfile) => void, onViewStore?: (s: StoreProfile) => void, onViewChallenges?: () => void, onOpenPuzzle?: () => void, currentUser?: FirebaseUser, currentProfile?: UserProfile | null, userCards?: Card[] }) {
   const [globalPosts, setGlobalPosts] = useState<GlobalPost[]>([]);
   const [vendorPosts, setVendorPosts] = useState<any[]>([]);
   const [followingUids, setFollowingUids] = useState<Set<string>>(new Set());
@@ -16087,6 +16566,32 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, currentUser, 
               </motion.div>
             );
           })()}
+
+          {/* Daily Puzzle entry */}
+          {onOpenPuzzle && (
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={onOpenPuzzle}
+              className="w-full rounded-[1.5rem] overflow-hidden shadow-lg shadow-violet-900/20"
+            >
+              <div className="relative overflow-hidden px-5 py-4 flex items-center gap-4 active:opacity-90 transition-opacity"
+                style={{ background: 'linear-gradient(135deg, #4C1D95 0%, #6D28D9 50%, #8B5CF6 100%)' }}>
+                <div className="shine-ray" />
+                <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0 border border-white/20">
+                  <Grid3X3 size={22} className="text-white" />
+                </div>
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-violet-200/80">Daily Puzzle</p>
+                  <p className="font-display text-lg font-black text-white">
+                    {currentProfile?.nonogramCompletions?.find(c => c.date === new Date().toISOString().split('T')[0])
+                      ? `✓ Solved · ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
+                      : "Today's Nonogram"}
+                  </p>
+                </div>
+                <ChevronRight size={18} className="text-white/50 shrink-0" />
+              </div>
+            </motion.button>
+          )}
 
           {/* Challenges card + Leaderboard button — side by side */}
           {(feedChallenges.length > 0 || true) && (
