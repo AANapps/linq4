@@ -12230,7 +12230,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
     <>
       <motion.div
         whileTap={{ scale: 0.97 }}
-        onClick={() => !isCompleted && !card.isRedeemed && setShowQR(true)}
+        onClick={() => !isCompleted && !card.isRedeemed && setShowCardScan(true)}
         className={cn(
           "relative rounded-[2rem] overflow-hidden shadow-xl w-full select-none h-full flex flex-col",
           !isCompleted && !card.isRedeemed ? "cursor-pointer" : ""
