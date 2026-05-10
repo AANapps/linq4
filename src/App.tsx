@@ -7628,7 +7628,7 @@ function BadgeNotifCard({ badge, queueCount, onDismiss }: { badge: AppBadge; que
 // --- NFC Stamp Modal ---
 
 async function processNFCStamp(storeId: string, user: FirebaseUser, profile: UserProfile | null,
-  onStatus: (state: 'processing' | 'success' | 'error', msg: string) => void): Promise<CollectibleSticker[]> {
+  onStatus: (state: 'processing' | 'success' | 'error', msg: string) => void, qty = 1): Promise<CollectibleSticker[]> {
   onStatus('processing', 'Verifying stamp...');
   try {
     const storeSnap = await getDoc(doc(db, 'stores', storeId));
@@ -7659,7 +7659,7 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
     let newCycles: number;
 
     if (!cardSnap.exists() || cardSnap.data()?.isArchived) {
-      newStamps = 1; newCycles = 0;
+      newStamps = Math.min(qty, limit); newCycles = 0;
       await setDoc(cardRef, {
         user_id: user.uid, store_id: store.id, current_stamps: newStamps,
         total_completed_cycles: newCycles, stamps_required: limit,
@@ -7669,20 +7669,20 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
     } else {
       const current = cardSnap.data()?.current_stamps || 0;
       newCycles = cardSnap.data()?.total_completed_cycles || 0;
-      newStamps = current + 1;
+      newStamps = current + qty;
       const cycleComplete = newStamps >= limit;
       if (cycleComplete) {
         newCycles += 1;
         if (newStamps > limit) newStamps = limit;
       }
       const txData1 = cycleComplete
-        ? { user_id: user.uid, store_id: store.id, completed_at: serverTimestamp(), stamp_count: 1, stamps_at_completion: limit, reward_claimed: false }
-        : { user_id: user.uid, store_id: store.id, completed_at: serverTimestamp(), stamp_count: 1 };
+        ? { user_id: user.uid, store_id: store.id, completed_at: serverTimestamp(), stamp_count: qty, stamps_at_completion: limit, reward_claimed: false }
+        : { user_id: user.uid, store_id: store.id, completed_at: serverTimestamp(), stamp_count: qty };
       await addDoc(collection(db, 'transactions'), txData1);
       await updateDoc(cardRef, { current_stamps: newStamps, total_completed_cycles: newCycles, last_tap_timestamp: serverTimestamp() });
     }
 
-    await updateDoc(doc(db, 'users', user.uid), { totalStamps: increment(1) });
+    await updateDoc(doc(db, 'users', user.uid), { totalStamps: increment(qty) });
     bumpStreak(user.uid).catch(console.error);
 
     // Update avatar mood on every stamp (food stores give a bigger boost)
@@ -7900,10 +7900,11 @@ function NFCStampModal({ user, profile, onClose, autoStoreId, onPackReady }: {
 function CardScanSheet({ card, store, onClose, onPackReady }: {
   card: Card; store?: StoreProfile; onClose: () => void; onPackReady?: (s: CollectibleSticker[]) => void;
 }) {
-  type SS = 'scanning' | 'processing' | 'success' | 'error';
-  const [scanState, setScanState] = useState<SS>('scanning');
+  type SS = 'idle' | 'scanning' | 'processing' | 'success' | 'error';
+  const [scanState, setScanState] = useState<SS>('idle');
   const [statusMsg, setStatusMsg] = useState('');
   const [testId, setTestId] = useState('');
+  const [qty, setQty] = useState(1);
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const hasNFC = 'NDEFReader' in window;
   const abortRef = useRef<AbortController | null>(null);
@@ -7921,7 +7922,7 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
     const user = auth.currentUser;
     if (!user) return;
     setScanState('processing');
-    const stickers = await processNFCStamp(storeId, user, null, (s, m) => { setScanState(s); setStatusMsg(m); });
+    const stickers = await processNFCStamp(storeId, user, null, (s, m) => { setScanState(s); setStatusMsg(m); }, qty);
     if (stickers.length > 0) onPackReady?.(stickers);
   };
 
@@ -7954,10 +7955,7 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
     }
   };
 
-  // Auto-start NFC listener when sheet opens (Android only)
-  useEffect(() => {
-    if (!isIOS) startScan();
-  }, []);
+  // No auto-start — user picks qty first, then taps Scan
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -7980,14 +7978,43 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
           </div>
         </div>
 
-        {/* Stamps remaining */}
-        <div className="bg-brand-bg rounded-2xl p-5 mb-6 text-center">
-          <p className="text-brand-navy/40 text-[10px] font-bold uppercase tracking-widest mb-1">Stamps to collect</p>
-          <p className="font-black text-6xl text-brand-navy leading-none">{remaining}</p>
-          {scanState === 'success' && (
-            <p className="text-emerald-600 font-black text-sm mt-2 flex items-center justify-center gap-1"><Check size={14} /> Stamp added!</p>
-          )}
-        </div>
+        {scanState === 'idle' && (
+          <>
+            {/* Qty stepper */}
+            <div className="bg-brand-bg rounded-2xl p-5 mb-5 text-center">
+              <p className="text-brand-navy/40 text-[10px] font-bold uppercase tracking-widest mb-4">How many stamps?</p>
+              <div className="flex items-center justify-center gap-6">
+                <button
+                  onClick={() => setQty(q => Math.max(1, q - 1))}
+                  className="w-12 h-12 rounded-full bg-white shadow font-black text-2xl text-brand-navy flex items-center justify-center active:scale-90 transition-transform"
+                >−</button>
+                <span className="font-black text-6xl text-brand-navy leading-none w-16 text-center">{qty}</span>
+                <button
+                  onClick={() => setQty(q => Math.min(remaining, q + 1))}
+                  className="w-12 h-12 rounded-full bg-white shadow font-black text-2xl text-brand-navy flex items-center justify-center active:scale-90 transition-transform"
+                >+</button>
+              </div>
+              <p className="text-brand-navy/30 text-[10px] font-bold mt-3">{remaining} remaining to reward</p>
+            </div>
+            <button
+              onClick={startScan}
+              className="w-full flex items-center justify-center gap-2.5 text-white py-4 rounded-2xl font-black text-base mb-4 active:scale-[0.98] transition-transform"
+              style={{ backgroundColor: cardTheme }}
+            >
+              <Wifi size={18} className="-rotate-90" /> Scan NFC Tag
+            </button>
+            {/* Test input */}
+            <div className="flex gap-2 mb-3">
+              <input value={testId} onChange={e => setTestId(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && testId.trim() && processId(testId.trim())}
+                placeholder="Test: type shop ID"
+                className="flex-1 bg-brand-bg rounded-xl px-4 py-2.5 text-sm font-medium outline-none text-brand-navy" />
+              <button onClick={() => processId(testId.trim())} disabled={!testId.trim()}
+                className="bg-brand-navy text-white px-4 py-2.5 rounded-xl font-bold text-sm disabled:opacity-30">Go</button>
+            </div>
+            <button onClick={onClose} className="w-full text-brand-navy/40 text-sm font-bold py-2">Close</button>
+          </>
+        )}
 
         {scanState === 'scanning' && (
           <div className="text-center py-2">
@@ -8011,16 +8038,7 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
                 <p className="font-bold text-brand-navy mb-1">Hold near NFC tag</p>
               </>
             )}
-            {/* Test input always visible while scanning */}
-            <div className="flex gap-2 mb-3">
-              <input value={testId} onChange={e => setTestId(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && testId.trim() && processId(testId.trim())}
-                placeholder="Test: type shop ID"
-                className="flex-1 bg-brand-bg rounded-xl px-4 py-2.5 text-sm font-medium outline-none text-brand-navy" />
-              <button onClick={() => processId(testId.trim())} disabled={!testId.trim()}
-                className="bg-brand-navy text-white px-4 py-2.5 rounded-xl font-bold text-sm disabled:opacity-30">Go</button>
-            </div>
-            <button onClick={onClose} className="w-full text-brand-navy/40 text-sm font-bold py-2">Cancel</button>
+            <button onClick={() => { abortRef.current?.abort(); setScanState('idle'); }} className="w-full text-brand-navy/40 text-sm font-bold py-2">Cancel</button>
           </div>
         )}
         {scanState === 'processing' && (
@@ -8038,16 +8056,8 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
         {scanState === 'error' && (
           <div className="text-center">
             <p className="text-red-500 font-medium text-sm mb-4">{statusMsg}</p>
-            <button onClick={startScan} className="w-full bg-brand-navy/10 text-brand-navy py-3 rounded-2xl font-bold text-sm mb-2">Try Again</button>
-            <div className="flex gap-2 mt-2">
-              <input value={testId} onChange={e => setTestId(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && testId.trim() && processId(testId.trim())}
-                placeholder="Test: type shop ID"
-                className="flex-1 bg-brand-bg rounded-xl px-4 py-2.5 text-sm font-medium outline-none text-brand-navy" />
-              <button onClick={() => processId(testId.trim())} disabled={!testId.trim()}
-                className="bg-brand-navy text-white px-4 py-2.5 rounded-xl font-bold text-sm disabled:opacity-30">Go</button>
-            </div>
-            <button onClick={onClose} className="text-brand-navy/40 text-sm font-bold mt-3">Close</button>
+            <button onClick={() => setScanState('idle')} className="w-full bg-brand-navy/10 text-brand-navy py-3 rounded-2xl font-bold text-sm mb-2">Try Again</button>
+            <button onClick={onClose} className="text-brand-navy/40 text-sm font-bold mt-2">Close</button>
           </div>
         )}
       </motion.div>
