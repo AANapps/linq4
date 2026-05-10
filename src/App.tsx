@@ -11270,14 +11270,6 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
             <h4 className="font-bold text-white text-lg leading-tight">{store?.name || 'Store'}</h4>
             <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mt-0.5">{membershipName}</p>
           </div>
-          {membershipType === 'spend' && auth.currentUser?.uid && (
-            <div className="relative z-10 w-full px-6 mt-1">
-              <div className="bg-white/90 rounded-xl px-3 py-2">
-                <BarcodeDisplay value={auth.currentUser.uid} height={36} />
-                <p className="text-center text-[8px] text-brand-navy/40 font-mono tracking-wider mt-0.5">{auth.currentUser.uid.slice(0, 20)}…</p>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* White content section — same structure as stamp card stamp grid area */}
@@ -11897,15 +11889,6 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                   <h4 className="font-bold text-white text-lg leading-tight">{store?.name || 'Store'}</h4>
                   <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mt-0.5">{store?.category || 'Retail'}</p>
                 </div>
-                {/* Barcode strip */}
-                {auth.currentUser?.uid && (
-                  <div className="relative z-10 w-full px-6 mt-1">
-                    <div className="bg-white/90 rounded-xl px-3 py-2">
-                      <BarcodeDisplay value={auth.currentUser.uid} height={36} />
-                      <p className="text-center text-[8px] text-brand-navy/40 font-mono tracking-wider mt-0.5">{auth.currentUser.uid.slice(0, 20)}…</p>
-                    </div>
-                  </div>
-                )}
               </div>
               {stampGrid(3, 'gap-3', 'px-8 pt-7 pb-6 flex-1', 22, 'text-[15px]')}
             </div>
@@ -11974,13 +11957,6 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
               className="glass-panel w-full max-w-xs p-8 rounded-[3rem] text-center relative z-10"
             >
               <h3 className="font-display text-2xl font-bold mb-2">{store?.name}</h3>
-              <p className="text-brand-navy/60 text-sm mb-4">Show this barcode to the vendor to receive your stamp.</p>
-              {auth.currentUser?.uid && (
-                <div className="bg-white p-5 rounded-3xl mb-4 border border-brand-rose/20">
-                  <BarcodeDisplay value={auth.currentUser.uid} height={70} />
-                  <p className="text-center text-[9px] text-brand-navy/30 font-mono tracking-wider mt-2 break-all">{auth.currentUser.uid}</p>
-                </div>
-              )}
               <div className="bg-white/80 p-4 rounded-2xl mb-6 flex justify-center border border-brand-rose/20">
                 <QRCodeSVG value={`stamp:${auth.currentUser?.uid}:${card.store_id}`} size={140} />
               </div>
