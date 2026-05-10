@@ -6990,7 +6990,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                     {activeCards.map(card => {
                       const store = stores.find(s => s.id === card.store_id);
                       return (
-                        <div key={card.id} className="snap-center shrink-0 w-[83vw] max-w-[340px] flex flex-col">
+                        <div key={card.id} className="snap-center shrink-0 w-[83vw] max-w-[340px] flex flex-col rounded-[2rem] shadow-xl">
                           {card.card_type === 'membership'
                             ? <MembershipCard card={card} store={store} onViewStore={onViewStore} />
                             : card.card_type === 'sub'
@@ -7004,11 +7004,15 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                   <div className="space-y-3">
                     {activeCards.map(card => {
                       const store = stores.find(s => s.id === card.store_id);
-                      return card.card_type === 'membership'
-                        ? <MembershipCard key={card.id} card={card} store={store} onViewStore={onViewStore} compact />
-                        : card.card_type === 'sub'
-                        ? <SubLoyaltyCard key={card.id} card={card} store={store} onViewStore={onViewStore} compact />
-                        : <LoyaltyCard key={card.id} card={card} store={store} onViewStore={onViewStore} compact />;
+                      return (
+                        <div key={card.id} className="rounded-3xl shadow-xl overflow-hidden">
+                          {card.card_type === 'membership'
+                            ? <MembershipCard card={card} store={store} onViewStore={onViewStore} compact />
+                            : card.card_type === 'sub'
+                            ? <SubLoyaltyCard card={card} store={store} onViewStore={onViewStore} compact />
+                            : <LoyaltyCard card={card} store={store} onViewStore={onViewStore} compact />}
+                        </div>
+                      );
                     })}
                   </div>
                 )
