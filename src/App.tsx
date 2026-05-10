@@ -10978,6 +10978,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen }:
         redeemed_at: serverTimestamp(),
       });
       setMenuConfirm(null);
+      setShowRedeemSheet(true);
     } catch (err) { console.error(err); }
     setRedeemingMenuItem(null);
   };
@@ -11099,10 +11100,9 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen }:
   );
 
   if (compact) {
-    const openCompact = () => setShowRedeemSheet(true);
     return (
       <>
-      <div className="rounded-3xl overflow-hidden cursor-pointer" onClick={openCompact}>
+      <div className="rounded-3xl overflow-hidden">
         {/* Colored header — mirrors compact LoyaltyCard header */}
         <div className="relative overflow-hidden flex items-center gap-3 px-4 py-3" style={{ backgroundColor: color }}>
           <span className="card-shine-ray" aria-hidden="true" />
@@ -11240,7 +11240,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen }:
               <p className="text-xs text-brand-navy/40 mb-6">Tap your phone on the NFC reader to earn points</p>
               <p className="text-brand-navy font-black text-2xl mb-1">{membershipVisits} points</p>
               {nextVisitReward && <p className="text-brand-navy/40 text-xs mb-5">{nextVisitReward.visits - membershipVisits} more pts to: {nextVisitReward.reward}</p>}
-              <button onClick={() => setShowNfc(false)} className="w-full bg-brand-navy text-white py-3.5 rounded-2xl font-bold text-sm">Done</button>
+              <button onClick={() => { setShowNfc(false); setShowRedeemSheet(true); }} className="w-full bg-brand-navy text-white py-3.5 rounded-2xl font-bold text-sm">Done</button>
             </motion.div>
           </div>
         )}
@@ -11454,7 +11454,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen }:
               <div className="px-8 pb-10 space-y-6">
                 {/* Scan NFC */}
                 <button
-                  onClick={() => setShowNfc(true)}
+                  onClick={() => { setShowRedeemSheet(false); setShowNfc(true); }}
                   className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl font-bold text-white text-sm active:scale-95 transition-all"
                   style={{ background: `linear-gradient(135deg, ${color}ff 0%, ${color}99 100%)` }}
                 >
@@ -11473,7 +11473,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen }:
                         return (
                           <button
                             key={item.id}
-                            onClick={() => canAfford && setMenuConfirm(item)}
+                            onClick={() => canAfford && (setShowRedeemSheet(false), setMenuConfirm(item))}
                             disabled={!canAfford || !!redeemingMenuItem}
                             className={cn(
                               'w-full flex items-center justify-between px-4 py-4 rounded-2xl transition-all text-left',
@@ -11539,7 +11539,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen }:
       <AnimatePresence>
         {menuConfirm && (
           <div className="fixed inset-0 z-[130] flex items-end justify-center">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMenuConfirm(null)} />
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setMenuConfirm(null); setShowRedeemSheet(true); }} />
             <motion.div
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', stiffness: 380, damping: 38 }}
@@ -11561,7 +11561,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen }:
               >
                 {redeemingMenuItem ? 'Redeeming…' : 'Confirm Redeem'}
               </button>
-              <button onClick={() => setMenuConfirm(null)} className="w-full text-brand-navy/40 font-bold text-sm py-2">Cancel</button>
+              <button onClick={() => { setMenuConfirm(null); setShowRedeemSheet(true); }} className="w-full text-brand-navy/40 font-bold text-sm py-2">Cancel</button>
             </motion.div>
           </div>
         )}
@@ -11594,7 +11594,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen }:
               <p className="text-xs text-brand-navy/40 mb-6">Tap your phone on the NFC reader to earn points</p>
               <p className="text-brand-navy font-black text-2xl mb-1">{membershipVisits} points</p>
               {nextVisitReward && <p className="text-brand-navy/40 text-xs mb-5">{nextVisitReward.visits - membershipVisits} more pts to: {nextVisitReward.reward}</p>}
-              <button onClick={() => setShowNfc(false)} className="w-full bg-brand-navy text-white py-3.5 rounded-2xl font-bold text-sm">Done</button>
+              <button onClick={() => { setShowNfc(false); setShowRedeemSheet(true); }} className="w-full bg-brand-navy text-white py-3.5 rounded-2xl font-bold text-sm">Done</button>
             </motion.div>
           </div>
         )}
