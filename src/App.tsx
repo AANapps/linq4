@@ -11329,7 +11329,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
 
       {/* Points & Redemption sheet (spend-based) */}
       <AnimatePresence>
-        {showRedeemSheet && (
+        {showRedeemSheet && membershipType === 'spend' && (
           <div className="fixed inset-0 z-[120] flex items-end justify-center">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowRedeemSheet(false)} />
             <motion.div
