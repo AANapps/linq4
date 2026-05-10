@@ -350,8 +350,7 @@ interface StoreProfile {
   membershipSpendThreshold?: number;
   membershipSpendReward?: string;
   membershipPointsRate?: number;
-  membershipPointsToMoney?: number;
-  membershipRedemptionOptions?: { points: number; reward: string }[];
+  membershipRedemptionRate?: number;
 }
 
 function storeCardActive(store: StoreProfile): boolean {
@@ -10029,14 +10028,16 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
         const newSpent = prevSpent + txAmount;
         const threshold = store.membershipSpendThreshold || 0;
         const newRewards = threshold > 0 ? Math.floor(newSpent / threshold) : 0;
+        const earnedPts = Math.round(txAmount * (store.membershipPointsRate ?? 0));
         if (cardDoc.exists()) {
-          await updateDoc(cardRef, { total_spent: increment(txAmount), earned_rewards: newRewards, last_transaction_at: serverTimestamp() });
+          await updateDoc(cardRef, { total_spent: increment(txAmount), earned_rewards: newRewards, membership_points: increment(earnedPts), last_transaction_at: serverTimestamp() });
         } else {
-          await setDoc(cardRef, { user_id: customer.uid, store_id: store.id, card_type: 'membership', membership_type: 'spend', total_spent: txAmount, earned_rewards: newRewards, isArchived: false, last_transaction_at: serverTimestamp(), userName: customer.name, userPhoto: customer.photoURL || '' });
+          await setDoc(cardRef, { user_id: customer.uid, store_id: store.id, card_type: 'membership', membership_type: 'spend', total_spent: txAmount, earned_rewards: newRewards, membership_points: earnedPts, isArchived: false, last_transaction_at: serverTimestamp(), userName: customer.name, userPhoto: customer.photoURL || '' });
           await updateDoc(doc(db, 'users', customer.uid), { total_cards_held: increment(1) });
         }
-        await addDoc(collection(db, 'transactions'), { user_id: customer.uid, store_id: store.id, card_type: 'membership', membership_type: 'spend', transaction_amount: txAmount, rewards_earned: newRewards - Math.floor(prevSpent / (threshold || 1)), issued_at: serverTimestamp() });
-        setStatus({ type: 'success', message: `$${txAmount.toFixed(2)} added — ${customer.name} has spent $${newSpent.toFixed(2)}` });
+        await addDoc(collection(db, 'transactions'), { user_id: customer.uid, store_id: store.id, card_type: 'membership', membership_type: 'spend', transaction_amount: txAmount, points_earned: earnedPts, rewards_earned: newRewards - Math.floor(prevSpent / (threshold || 1)), issued_at: serverTimestamp() });
+        const ptsTxt = earnedPts > 0 ? ` · +${earnedPts} pts` : '';
+        setStatus({ type: 'success', message: `$${txAmount.toFixed(2)} added — $${newSpent.toFixed(2)} total${ptsTxt}` });
       } else {
         if (cardDoc.exists()) {
           await updateDoc(cardRef, { membership_visits: increment(1), last_transaction_at: serverTimestamp() });
@@ -10874,7 +10875,6 @@ function MembershipCard({ card, store, onViewStore, compact = false }: { card: C
   const [showHistory, setShowHistory] = useState(false);
   const [showEarnInfo, setShowEarnInfo] = useState(false);
   const [showRedeemSheet, setShowRedeemSheet] = useState(false);
-  const [isRedeeming, setIsRedeeming] = useState(false);
 
   const membershipType = card.membership_type ?? store?.membershipType ?? 'spend';
   const color = store?.membershipColor || '#0f4c81';
@@ -10883,30 +10883,10 @@ function MembershipCard({ card, store, onViewStore, compact = false }: { card: C
   const totalSpent = card.total_spent ?? 0;
   const earnedRewards = card.earned_rewards ?? 0;
   const membershipVisits = card.membership_visits ?? 0;
-
-  const handleRedeem = async (option: { points: number; reward: string }) => {
-    if (membershipPoints < option.points) return;
-    setIsRedeeming(true);
-    try {
-      await updateDoc(doc(db, 'cards', card.id), {
-        membership_points: increment(-option.points),
-      });
-      await addDoc(collection(db, 'transactions'), {
-        user_id: card.user_id,
-        store_id: card.store_id,
-        card_type: 'membership',
-        type: 'redemption',
-        points_redeemed: option.points,
-        reward: option.reward,
-        redeemed_at: serverTimestamp(),
-      });
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsRedeeming(false);
-      setShowRedeemSheet(false);
-    }
-  };
+  const membershipPoints = card.membership_points ?? 0;
+  const pointsRate = store?.membershipPointsRate ?? 0;
+  const redemptionRate = store?.membershipRedemptionRate ?? 0;
+  const redeemableValue = redemptionRate > 0 ? membershipPoints / redemptionRate : 0;
 
   if (compact) {
     return (
@@ -10925,8 +10905,10 @@ function MembershipCard({ card, store, onViewStore, compact = false }: { card: C
         <div className="shrink-0 text-right">
           {membershipType === 'spend' ? (
             <>
-              <p className="text-white font-bold text-sm">${totalSpent.toFixed(2)}</p>
-              <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest">spent</p>
+              <p className="text-white font-bold text-sm">{membershipPoints.toLocaleString()} pts</p>
+              <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest">
+                {redeemableValue > 0 ? `≈ $${redeemableValue.toFixed(2)}` : `$${totalSpent.toFixed(0)} spent`}
+              </p>
             </>
           ) : (
             <>
@@ -10968,32 +10950,38 @@ function MembershipCard({ card, store, onViewStore, compact = false }: { card: C
         {/* Spend-based layout */}
         {membershipType === 'spend' && (
           <>
-            <div className="flex items-center justify-center gap-10 py-6">
-              <div className="text-center">
-                <p className="text-white font-black text-4xl leading-none">${totalSpent.toFixed(2)}</p>
-                <p className="text-white/70 text-xs font-bold uppercase tracking-widest mt-1">Total Spent</p>
+            <button className="w-full text-left" onClick={(e) => { e.stopPropagation(); setShowRedeemSheet(true); }}>
+              <div className="flex items-center justify-center gap-8 py-6 px-5">
+                <div className="text-center">
+                  <p className="text-white font-black text-4xl leading-none">{membershipPoints.toLocaleString()}</p>
+                  <p className="text-white/70 text-xs font-bold uppercase tracking-widest mt-1">Points</p>
+                </div>
+                {redeemableValue > 0 && (
+                  <>
+                    <div className="w-px h-10 bg-white/20" />
+                    <div className="text-center">
+                      <p className="text-white font-black text-4xl leading-none">${redeemableValue.toFixed(2)}</p>
+                      <p className="text-white/70 text-xs font-bold uppercase tracking-widest mt-1">Value</p>
+                    </div>
+                  </>
+                )}
+                {earnedRewards > 0 && (
+                  <>
+                    <div className="w-px h-10 bg-white/20" />
+                    <div className="text-center">
+                      <p className="text-white font-black text-4xl leading-none">{earnedRewards}</p>
+                      <p className="text-white/70 text-xs font-bold uppercase tracking-widest mt-1">Rewards</p>
+                    </div>
+                  </>
+                )}
               </div>
-              <div className="w-px h-10 bg-white/20" />
-              <div className="text-center">
-                <p className="text-white font-black text-4xl leading-none">{earnedRewards}</p>
-                <p className="text-white/70 text-xs font-bold uppercase tracking-widest mt-1">Rewards</p>
+              <div className="flex items-center justify-between px-5 pb-5">
+                <p className="text-white/50 text-xs">${totalSpent.toFixed(2)} spent total</p>
+                <span className="text-white/60 text-xs font-bold flex items-center gap-1">
+                  <Gift size={11} /> Tap to redeem
+                </span>
               </div>
-            </div>
-            <div className="flex items-center justify-between px-5 pb-5">
-              {store?.membershipSpendReward && (
-                <p className="text-white/70 text-xs">
-                  <span className="font-bold text-white">{store.membershipSpendReward}</span>
-                  {store.membershipSpendThreshold ? ` every $${store.membershipSpendThreshold}` : ''}
-                </p>
-              )}
-              <button
-                onClick={(e) => { e.stopPropagation(); setShowHistory(true); }}
-                className="ml-auto flex items-center gap-1 text-white/70 text-xs font-bold hover:text-white transition-colors"
-              >
-                <History size={12} />
-                Rewards history
-              </button>
-            </div>
+            </button>
           </>
         )}
 
@@ -11011,34 +10999,84 @@ function MembershipCard({ card, store, onViewStore, compact = false }: { card: C
         )}
       </motion.div>
 
-      {/* History sheet (spend-based) */}
+      {/* Points & Redemption sheet (spend-based) */}
       <AnimatePresence>
-        {showHistory && (
+        {showRedeemSheet && (
           <div className="fixed inset-0 z-[120] flex items-end justify-center">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowHistory(false)} />
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowRedeemSheet(false)} />
             <motion.div
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', stiffness: 350, damping: 35 }}
               className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-10 shadow-2xl"
             >
               <div className="flex items-center justify-between mb-6">
-                <h3 className="font-display text-2xl font-bold">Rewards History</h3>
-                <button onClick={() => setShowHistory(false)} className="p-2 text-brand-navy/40 hover:text-brand-navy"><X size={20} /></button>
+                <div>
+                  <h3 className="font-display text-2xl font-bold">{membershipName}</h3>
+                  <p className="text-brand-navy/40 text-xs mt-0.5">Points & Redemption</p>
+                </div>
+                <button onClick={() => setShowRedeemSheet(false)} className="p-2 text-brand-navy/40 hover:text-brand-navy"><X size={20} /></button>
               </div>
-              <div className="glass-card p-5 rounded-2xl flex items-center justify-between mb-4">
+
+              {/* Balance row */}
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                <div className="glass-card p-5 rounded-2xl">
+                  <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest mb-1">Points</p>
+                  <p className="text-3xl font-black text-brand-navy">{membershipPoints.toLocaleString()}</p>
+                  {pointsRate > 0 && <p className="text-[10px] text-brand-navy/40 mt-1">{pointsRate} pts per $1</p>}
+                </div>
+                <div className="glass-card p-5 rounded-2xl">
+                  <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest mb-1">Value</p>
+                  <p className="text-3xl font-black text-emerald-600">${redeemableValue.toFixed(2)}</p>
+                  {redemptionRate > 0 && <p className="text-[10px] text-brand-navy/40 mt-1">{redemptionRate} pts = $1</p>}
+                </div>
+              </div>
+
+              {/* Spend summary */}
+              <div className="glass-card p-4 rounded-2xl flex items-center justify-between mb-4">
                 <div>
                   <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">Total Spent</p>
-                  <p className="text-3xl font-black text-brand-navy mt-1">${totalSpent.toFixed(2)}</p>
+                  <p className="text-2xl font-black text-brand-navy mt-0.5">${totalSpent.toFixed(2)}</p>
                 </div>
-                <DollarSign className="w-8 h-8 text-emerald-400" />
+                {earnedRewards > 0 && (
+                  <div className="text-right">
+                    <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">Rewards</p>
+                    <p className="text-2xl font-black text-emerald-600 mt-0.5">{earnedRewards}</p>
+                  </div>
+                )}
               </div>
-              <div className="glass-card p-5 rounded-2xl flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">Rewards Earned</p>
-                  <p className="text-3xl font-black text-emerald-600 mt-1">{earnedRewards}</p>
+
+              {/* Earn rate info */}
+              {(pointsRate > 0 || redemptionRate > 0) && (
+                <div className="bg-brand-bg rounded-2xl p-4 mb-4 space-y-2">
+                  <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest mb-3">How it works</p>
+                  {pointsRate > 0 && (
+                    <div className="flex items-center gap-3">
+                      <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                        <DollarSign size={13} className="text-blue-600" />
+                      </div>
+                      <p className="text-sm text-brand-navy">Earn <span className="font-bold">{pointsRate} points</span> for every $1 spent</p>
+                    </div>
+                  )}
+                  {redemptionRate > 0 && (
+                    <div className="flex items-center gap-3">
+                      <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                        <Gift size={13} className="text-emerald-600" />
+                      </div>
+                      <p className="text-sm text-brand-navy">Redeem <span className="font-bold">{redemptionRate} points</span> for $1 off</p>
+                    </div>
+                  )}
+                  {store?.membershipSpendThreshold && store.membershipSpendReward && (
+                    <div className="flex items-center gap-3">
+                      <div className="w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                        <Award size={13} className="text-amber-600" />
+                      </div>
+                      <p className="text-sm text-brand-navy"><span className="font-bold">{store.membershipSpendReward}</span> every ${store.membershipSpendThreshold} spent</p>
+                    </div>
+                  )}
                 </div>
-                <Gift className="w-8 h-8 text-emerald-400" />
-              </div>
+              )}
+
+              <p className="text-center text-xs text-brand-navy/40">Show your balance to the vendor to redeem</p>
             </motion.div>
           </div>
         )}
@@ -14215,6 +14253,9 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
   // Spend-based fields
   const [spendThreshold, setSpendThreshold] = useState(store?.membershipSpendThreshold?.toString() || '100');
   const [spendReward, setSpendReward] = useState(store?.membershipSpendReward || '');
+  const [pointsRate, setPointsRate] = useState(store?.membershipPointsRate?.toString() || '10');
+  const [redemptionRate, setRedemptionRate] = useState(store?.membershipRedemptionRate?.toString() || '100');
+  const [calcSpend, setCalcSpend] = useState('50');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -14226,6 +14267,8 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
     setMembershipDescription(store.membershipDescription || '');
     setSpendThreshold(store.membershipSpendThreshold?.toString() || '100');
     setSpendReward(store.membershipSpendReward || '');
+    setPointsRate(store.membershipPointsRate?.toString() || '10');
+    setRedemptionRate(store.membershipRedemptionRate?.toString() || '100');
   }, [store?.id]);
 
   const MEMBER_COLORS = ['#0f4c81', '#7c3aed', '#0e7490', '#065f46', '#92400e', '#9f1239'];
@@ -14241,6 +14284,8 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
         membershipDescription,
         membershipSpendThreshold: parseFloat(spendThreshold) || 100,
         membershipSpendReward: spendReward,
+        membershipPointsRate: parseFloat(pointsRate) || 0,
+        membershipRedemptionRate: parseFloat(redemptionRate) || 0,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -14330,25 +14375,86 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
 
         {/* Spend-based fields */}
         {membershipType === 'spend' && (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Reward every $</label>
-              <input
-                type="number"
-                value={spendThreshold}
-                onChange={e => setSpendThreshold(e.target.value)}
-                className="w-full px-5 py-4 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
-                placeholder="e.g. 100"
-              />
+          <div className="space-y-5">
+            {/* Points earning */}
+            <div>
+              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40 mb-3 block">Points System</label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest">Points per $1 spent</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={pointsRate}
+                    onChange={e => setPointsRate(e.target.value)}
+                    className="w-full px-4 py-3 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+                    placeholder="e.g. 10"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest">Points per $1 off</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={redemptionRate}
+                    onChange={e => setRedemptionRate(e.target.value)}
+                    className="w-full px-4 py-3 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+                    placeholder="e.g. 100"
+                  />
+                </div>
+              </div>
+              {/* Calculator */}
+              {parseFloat(pointsRate) > 0 && parseFloat(redemptionRate) > 0 && (
+                <div className="mt-3 bg-brand-bg rounded-2xl p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-bold text-brand-navy/50 uppercase tracking-widest">Calculator — spend $</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={calcSpend}
+                      onChange={e => setCalcSpend(e.target.value)}
+                      className="w-20 px-3 py-1.5 rounded-xl bg-white border border-brand-navy/10 text-sm font-bold text-right focus:outline-none"
+                    />
+                  </div>
+                  {(() => {
+                    const spend = parseFloat(calcSpend) || 0;
+                    const pts = Math.round(spend * (parseFloat(pointsRate) || 0));
+                    const val = parseFloat(redemptionRate) > 0 ? pts / parseFloat(redemptionRate) : 0;
+                    return (
+                      <div className="flex items-center justify-between pt-1 border-t border-brand-navy/10">
+                        <span className="text-sm font-bold text-brand-navy">= {pts.toLocaleString()} pts</span>
+                        <span className="text-sm font-bold text-emerald-600">≈ ${val.toFixed(2)} off</span>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Reward Description</label>
-              <input
-                value={spendReward}
-                onChange={e => setSpendReward(e.target.value)}
-                className="w-full px-5 py-4 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
-                placeholder="e.g. Free coffee, 10% off"
-              />
+
+            {/* Milestone reward */}
+            <div>
+              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40 mb-3 block">Milestone Reward (optional)</label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest">Reward every $</label>
+                  <input
+                    type="number"
+                    value={spendThreshold}
+                    onChange={e => setSpendThreshold(e.target.value)}
+                    className="w-full px-4 py-3 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+                    placeholder="e.g. 100"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest">Reward</label>
+                  <input
+                    value={spendReward}
+                    onChange={e => setSpendReward(e.target.value)}
+                    className="w-full px-4 py-3 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+                    placeholder="e.g. Free coffee"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -19848,26 +19954,37 @@ function ProfileCardRow({ store, card, membershipCard, userId, userProfile, onJo
               <p className="text-brand-navy/40 text-xs mb-5">{store.name}</p>
 
               {memType === 'spend' ? (
-                /* Spend-based: show barcode for vendor to scan + enter amount */
-                <>
-                  <p className="text-brand-navy/40 text-xs -mt-3 mb-4">Show barcode — vendor enters your spend</p>
-                  <div className="bg-white p-5 rounded-3xl mb-4 border border-brand-rose/20">
-                    <BarcodeDisplay value={auth.currentUser?.uid || userId} height={64} />
-                    <p className="text-center text-[9px] text-brand-navy/30 font-mono tracking-wider mt-2 break-all">{userId}</p>
-                  </div>
-                  <div className="rounded-2xl px-4 py-3 mb-5 text-white" style={{ background: linqGrad }}>
-                    <div className="flex items-center justify-between">
-                      <div className="text-left">
-                        <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest">Spent</p>
-                        <p className="text-xl font-black">${membershipSpent.toFixed(0)}</p>
+                /* Spend-based: barcode + points summary */
+                (() => {
+                  const pts = membershipCard.membership_points ?? 0;
+                  const rRate = store.membershipRedemptionRate ?? 0;
+                  const redeemVal = rRate > 0 ? pts / rRate : 0;
+                  return (
+                    <>
+                      <p className="text-brand-navy/40 text-xs -mt-3 mb-4">Show barcode — vendor enters your spend</p>
+                      <div className="bg-white p-5 rounded-3xl mb-4 border border-brand-rose/20">
+                        <BarcodeDisplay value={auth.currentUser?.uid || userId} height={64} />
+                        <p className="text-center text-[9px] text-brand-navy/30 font-mono tracking-wider mt-2 break-all">{userId}</p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest">Rewards</p>
-                        <p className="text-xl font-black">{membershipCard.earned_rewards ?? 0}</p>
+                      <div className="rounded-2xl px-4 py-3 mb-5 text-white" style={{ background: linqGrad }}>
+                        <div className="grid grid-cols-3 divide-x divide-white/20">
+                          <div className="text-center pr-2">
+                            <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">Spent</p>
+                            <p className="text-lg font-black">${membershipSpent.toFixed(0)}</p>
+                          </div>
+                          <div className="text-center px-2">
+                            <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">Points</p>
+                            <p className="text-lg font-black">{pts.toLocaleString()}</p>
+                          </div>
+                          <div className="text-center pl-2">
+                            <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">Value</p>
+                            <p className="text-lg font-black">${redeemVal.toFixed(2)}</p>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </>
+                    </>
+                  );
+                })()
               ) : (
                 /* Visit-based: NFC reader prompt */
                 <>
