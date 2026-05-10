@@ -354,22 +354,8 @@ interface StoreProfile {
   membershipRedemptionOptions?: { points: number; reward: string }[];
 }
 
-// Returns true if the store's loyalty card should be visible to consumers.
-// Checks cardEnabled AND trial/subscription expiry so cards hide even if
-// the vendor never logged in after their trial ended.
 function storeCardActive(store: StoreProfile): boolean {
-  if (store.cardEnabled === false) return false;
-  // Always block cancelled/past_due regardless of trialEndsAt
-  if (store.subscriptionStatus === 'cancelled' || store.subscriptionStatus === 'past_due') return false;
-  const trialMs = store.trialEndsAt
-    ? ((store.trialEndsAt as any).toMillis?.() ?? (store.trialEndsAt as any).seconds * 1000)
-    : null;
-  if (trialMs !== null) {
-    const inTrial = trialMs > Date.now();
-    const subscribed = store.subscriptionStatus === 'active' || store.subscriptionStatus === 'trialing';
-    return inTrial || subscribed;
-  }
-  return true;
+  return store.cardEnabled !== false;
 }
 
 interface Card {
@@ -9643,13 +9629,6 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   const isSubscribed = store?.subscriptionStatus === 'active' || store?.subscriptionStatus === 'trialing';
   const needsPayment = store !== null && !isInTrial && !isSubscribed;
 
-  // Auto-disable the loyalty card when the trial ends and no subscription
-  useEffect(() => {
-    if (!store?.id) return;
-    if (needsPayment && store.cardEnabled !== false) {
-      updateDoc(doc(db, 'stores', store.id), { cardEnabled: false });
-    }
-  }, [needsPayment, store?.id]);
 
   const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/aFa5kF5JZh193yT6OEd7q00';
 
@@ -10740,7 +10719,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
             >
               <ArrowLeft size={16} /> Back
             </button>
-            {vendorIssueMode === 'card' ? <VendorCardSection store={store} needsPayment={needsPayment} /> : <VendorOfferPanel store={store} />}
+            {vendorIssueMode === 'card' ? <VendorCardSection store={store} /> : <VendorOfferPanel store={store} />}
           </div>
         )
       )}
@@ -13736,31 +13715,19 @@ function OffersModal({ offers, currentUser, onClose }: { offers: StoreOffer[]; c
 }
 
 // ─── Vendor Card Section (toggle + builder) ──────────────────────────────────
-function VendorCardSection({ store, needsPayment = false }: { store: StoreProfile | null; needsPayment?: boolean }) {
-  const enabled = !needsPayment && store?.cardEnabled !== false;
-  const subEnabled = store?.subCardEnabled === true;
+function VendorCardSection({ store }: { store: StoreProfile | null }) {
+  const enabled = store?.cardEnabled !== false;
   const membershipEnabled = store?.membershipEnabled === true;
   const [toggling, setToggling] = useState(false);
-  const [togglingSubCard, setTogglingSubCard] = useState(false);
   const [togglingMembership, setTogglingMembership] = useState(false);
 
   const toggle = async () => {
-    if (!store?.id || (needsPayment && !enabled)) return;
+    if (!store?.id) return;
     setToggling(true);
     try {
       await updateDoc(doc(db, 'stores', store.id), { cardEnabled: !enabled });
     } finally {
       setToggling(false);
-    }
-  };
-
-  const toggleSubCard = async () => {
-    if (!store?.id) return;
-    setTogglingSubCard(true);
-    try {
-      await updateDoc(doc(db, 'stores', store.id), { subCardEnabled: !subEnabled });
-    } finally {
-      setTogglingSubCard(false);
     }
   };
 
@@ -13788,14 +13755,12 @@ function VendorCardSection({ store, needsPayment = false }: { store: StoreProfil
           <div>
             <p className="font-bold text-brand-navy">Stamp Card</p>
             <p className="text-xs text-brand-navy/50 mt-0.5">
-              {needsPayment && !enabled
-                ? 'Subscribe to re-enable'
-                : enabled ? 'Customers can collect stamps' : 'Hidden from customers'}
+              {enabled ? 'Customers can collect stamps' : 'Hidden from customers'}
             </p>
           </div>
           <button
             onClick={toggle}
-            disabled={toggling || (needsPayment && !enabled)}
+            disabled={toggling}
             className={cn('relative w-14 h-7 rounded-full transition-colors duration-200 shrink-0 disabled:opacity-40', enabled ? 'bg-emerald-500' : 'bg-brand-navy/20')}
           >
             <motion.div animate={{ x: enabled ? 28 : 2 }} transition={{ type: 'spring', stiffness: 500, damping: 35 }} className="absolute top-1 w-5 h-5 rounded-full bg-white shadow-md" />
@@ -13815,29 +13780,6 @@ function VendorCardSection({ store, needsPayment = false }: { store: StoreProfil
             <p className="text-xs mt-1">Toggle on to set up your loyalty card.</p>
           </div>
         )}
-
-        <div className="glass-card rounded-[1.5rem] px-5 py-4 flex items-center justify-between gap-4">
-          <div>
-            <p className="font-bold text-brand-navy">Points Card</p>
-            <p className="text-xs text-brand-navy/50 mt-0.5">
-              {subEnabled ? 'Customers earn points per spend' : 'Enable a points-based card'}
-            </p>
-          </div>
-          <button
-            onClick={toggleSubCard}
-            disabled={togglingSubCard}
-            className={cn('relative w-14 h-7 rounded-full transition-colors duration-200 shrink-0 disabled:opacity-40', subEnabled ? 'bg-indigo-500' : 'bg-brand-navy/20')}
-          >
-            <motion.div animate={{ x: subEnabled ? 28 : 2 }} transition={{ type: 'spring', stiffness: 500, damping: 35 }} className="absolute top-1 w-5 h-5 rounded-full bg-white shadow-md" />
-          </button>
-        </div>
-        <AnimatePresence>
-          {subEnabled && (
-            <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
-              <SubCardBuilder store={store} />
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
 
       {/* ─── Membership Card ─── */}
