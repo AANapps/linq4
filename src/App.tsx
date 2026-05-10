@@ -7900,8 +7900,8 @@ function NFCStampModal({ user, profile, onClose, autoStoreId, onPackReady }: {
 function CardScanSheet({ card, store, onClose, onPackReady }: {
   card: Card; store?: StoreProfile; onClose: () => void; onPackReady?: (s: CollectibleSticker[]) => void;
 }) {
-  type SS = 'idle' | 'scanning' | 'processing' | 'success' | 'error';
-  const [scanState, setScanState] = useState<SS>('idle');
+  type SS = 'scanning' | 'processing' | 'success' | 'error';
+  const [scanState, setScanState] = useState<SS>('scanning');
   const [statusMsg, setStatusMsg] = useState('');
   const [testId, setTestId] = useState('');
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -7909,7 +7909,7 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
   const abortRef = useRef<AbortController | null>(null);
   const limit = card.stamps_required || store?.stamps_required_for_reward || 10;
   const current = card.current_stamps || 0;
-  const pct = Math.min(100, (current / limit) * 100);
+  const remaining = limit - current;
   const cardTheme = store?.theme || '#3a6fcc';
 
   useEffect(() => () => { abortRef.current?.abort(); }, []);
@@ -7954,6 +7954,11 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
     }
   };
 
+  // Auto-start NFC listener when sheet opens (Android only)
+  useEffect(() => {
+    if (!isIOS) startScan();
+  }, []);
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="fixed inset-0 z-[130] flex items-end justify-center" onClick={onClose}>
@@ -7975,38 +7980,39 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
           </div>
         </div>
 
-        {/* Stamp counter */}
-        <div className="bg-brand-bg rounded-2xl p-5 mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-baseline gap-2">
-              <span className="font-black text-4xl text-brand-navy">{current}</span>
-              <span className="text-brand-navy/30 font-black text-xl">/ {limit}</span>
-            </div>
-            {scanState === 'success' && (
-              <span className="text-emerald-600 font-black text-sm flex items-center gap-1"><Check size={14} /> +1 stamp!</span>
-            )}
-          </div>
-          <div className="h-2.5 bg-brand-navy/10 rounded-full overflow-hidden">
-            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: cardTheme }} />
-          </div>
-          <p className="text-brand-navy/40 text-[10px] font-bold mt-1.5 uppercase tracking-widest">{limit - current} more to reward</p>
+        {/* Stamps remaining */}
+        <div className="bg-brand-bg rounded-2xl p-5 mb-6 text-center">
+          <p className="text-brand-navy/40 text-[10px] font-bold uppercase tracking-widest mb-1">Stamps to collect</p>
+          <p className="font-black text-6xl text-brand-navy leading-none">{remaining}</p>
+          {scanState === 'success' && (
+            <p className="text-emerald-600 font-black text-sm mt-2 flex items-center justify-center gap-1"><Check size={14} /> Stamp added!</p>
+          )}
         </div>
 
-        {scanState === 'idle' && (
-          <>
+        {scanState === 'scanning' && (
+          <div className="text-center py-2">
             {isIOS ? (
-              <div className="bg-brand-bg rounded-2xl p-4 mb-4 text-center">
-                <Smartphone size={28} className="text-brand-navy mx-auto mb-2" />
-                <p className="text-sm text-brand-navy/60">Hold the top of your iPhone near the store's NFC tag</p>
+              <div className="mb-4">
+                <Smartphone size={36} className="text-brand-navy mx-auto mb-3" />
+                <p className="font-bold text-brand-navy mb-1">Hold near NFC tag</p>
+                <p className="text-brand-navy/40 text-xs">Hold the top of your iPhone near the store's NFC tag</p>
               </div>
             ) : (
-              <button onClick={startScan}
-                className="w-full flex items-center justify-center gap-2.5 text-white py-4 rounded-2xl font-black text-base mb-4 active:scale-[0.98] transition-transform"
-                style={{ backgroundColor: cardTheme }}>
-                <Wifi size={18} className="-rotate-90" /> Scan NFC Tag
-              </button>
+              <>
+                <div className="relative w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+                  <motion.div className="absolute inset-0 rounded-full border-2 border-brand-navy/20"
+                    animate={{ scale: [1, 1.6, 1], opacity: [0.6, 0, 0.6] }} transition={{ duration: 1.5, repeat: Infinity }} />
+                  <motion.div className="absolute inset-0 rounded-full border-2 border-brand-navy/10"
+                    animate={{ scale: [1, 2, 1], opacity: [0.4, 0, 0.4] }} transition={{ duration: 1.5, repeat: Infinity, delay: 0.3 }} />
+                  <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ backgroundColor: cardTheme }}>
+                    <Wifi size={30} className="text-white -rotate-90" />
+                  </div>
+                </div>
+                <p className="font-bold text-brand-navy mb-1">Hold near NFC tag</p>
+              </>
             )}
-            <div className="flex gap-2">
+            {/* Test input always visible while scanning */}
+            <div className="flex gap-2 mb-3">
               <input value={testId} onChange={e => setTestId(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && testId.trim() && processId(testId.trim())}
                 placeholder="Test: type shop ID"
@@ -8014,21 +8020,7 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
               <button onClick={() => processId(testId.trim())} disabled={!testId.trim()}
                 className="bg-brand-navy text-white px-4 py-2.5 rounded-xl font-bold text-sm disabled:opacity-30">Go</button>
             </div>
-            <button onClick={onClose} className="w-full text-brand-navy/40 text-sm font-bold py-3 mt-2">Close</button>
-          </>
-        )}
-        {scanState === 'scanning' && (
-          <div className="text-center py-2">
-            <div className="relative w-20 h-20 mx-auto mb-4 flex items-center justify-center">
-              <motion.div className="absolute inset-0 rounded-full border-2 border-brand-navy/20"
-                animate={{ scale: [1, 1.6, 1], opacity: [0.6, 0, 0.6] }} transition={{ duration: 1.5, repeat: Infinity }} />
-              <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ backgroundColor: cardTheme }}>
-                <Wifi size={30} className="text-white -rotate-90" />
-              </div>
-            </div>
-            <p className="font-bold text-brand-navy mb-1">Ready to scan…</p>
-            <p className="text-brand-navy/40 text-xs">Hold near the store's NFC tag</p>
-            <button onClick={onClose} className="w-full text-brand-navy/40 text-sm font-bold py-3 mt-4">Cancel</button>
+            <button onClick={onClose} className="w-full text-brand-navy/40 text-sm font-bold py-2">Cancel</button>
           </div>
         )}
         {scanState === 'processing' && (
@@ -8046,8 +8038,16 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
         {scanState === 'error' && (
           <div className="text-center">
             <p className="text-red-500 font-medium text-sm mb-4">{statusMsg}</p>
-            <button onClick={() => setScanState('idle')} className="w-full bg-brand-navy/10 text-brand-navy py-3 rounded-2xl font-bold text-sm mb-2">Try Again</button>
-            <button onClick={onClose} className="text-brand-navy/40 text-sm font-bold">Close</button>
+            <button onClick={startScan} className="w-full bg-brand-navy/10 text-brand-navy py-3 rounded-2xl font-bold text-sm mb-2">Try Again</button>
+            <div className="flex gap-2 mt-2">
+              <input value={testId} onChange={e => setTestId(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && testId.trim() && processId(testId.trim())}
+                placeholder="Test: type shop ID"
+                className="flex-1 bg-brand-bg rounded-xl px-4 py-2.5 text-sm font-medium outline-none text-brand-navy" />
+              <button onClick={() => processId(testId.trim())} disabled={!testId.trim()}
+                className="bg-brand-navy text-white px-4 py-2.5 rounded-xl font-bold text-sm disabled:opacity-30">Go</button>
+            </div>
+            <button onClick={onClose} className="text-brand-navy/40 text-sm font-bold mt-3">Close</button>
           </div>
         )}
       </motion.div>
