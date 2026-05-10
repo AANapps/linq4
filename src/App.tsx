@@ -9582,7 +9582,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   const [issueMode, setIssueMode] = useState<'stamp' | 'sub'>('stamp');
   const [isIssuing, setIsIssuing] = useState(false);
   const [lastIssueTime, setLastIssueTime] = useState(0);
-  const [vendorIssueMode, setVendorIssueMode] = useState<null | 'card' | 'offer'>(null);
+  const [vendorIssueMode, setVendorIssueMode] = useState<null | 'card' | 'offer' | 'scan-user'>(null);
   const [issueStatus, setIssueStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
   const [cardStampsInput, setCardStampsInput] = useState('');
@@ -10004,6 +10004,55 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
       setIssueStatus({ type: 'error', message: 'Failed to issue stamp' });
     } finally {
       setIsIssuing(false);
+    }
+  };
+
+  const handleIssueMembershipPoints = async (handle: string, amount: string, setStatus: (s: { type: 'success' | 'error'; message: string } | null) => void, setWorking: (b: boolean) => void) => {
+    if (!handle || !store?.membershipEnabled) return;
+    setWorking(true);
+    setStatus(null);
+    try {
+      const cleanHandle = handle.replace(/^@/, '').toLowerCase().trim();
+      const q = query(collection(db, 'users'), where('handle', '==', cleanHandle));
+      const snap = await getDocs(q);
+      if (snap.empty) { setStatus({ type: 'error', message: 'User not found' }); return; }
+      const customer = snap.docs[0].data() as UserProfile;
+      const cardId = `${customer.uid}_${store.id}_membership`;
+      const cardRef = doc(db, 'cards', cardId);
+      const cardDoc = await getDoc(cardRef);
+      const txAmount = Number(amount) || 0;
+      const memType = store.membershipType ?? 'spend';
+
+      if (memType === 'spend') {
+        const prevSpent = (cardDoc.data()?.total_spent as number) ?? 0;
+        const newSpent = prevSpent + txAmount;
+        const threshold = store.membershipSpendThreshold || 0;
+        const newRewards = threshold > 0 ? Math.floor(newSpent / threshold) : 0;
+        if (cardDoc.exists()) {
+          await updateDoc(cardRef, { total_spent: increment(txAmount), earned_rewards: newRewards, last_transaction_at: serverTimestamp() });
+        } else {
+          await setDoc(cardRef, { user_id: customer.uid, store_id: store.id, card_type: 'membership', membership_type: 'spend', total_spent: txAmount, earned_rewards: newRewards, isArchived: false, last_transaction_at: serverTimestamp(), userName: customer.name, userPhoto: customer.photoURL || '' });
+          await updateDoc(doc(db, 'users', customer.uid), { total_cards_held: increment(1) });
+        }
+        await addDoc(collection(db, 'transactions'), { user_id: customer.uid, store_id: store.id, card_type: 'membership', membership_type: 'spend', transaction_amount: txAmount, rewards_earned: newRewards - Math.floor(prevSpent / (threshold || 1)), issued_at: serverTimestamp() });
+        setStatus({ type: 'success', message: `$${txAmount.toFixed(2)} added — ${customer.name} has spent $${newSpent.toFixed(2)}` });
+      } else {
+        const rate = store.membershipPointsRate ?? 1;
+        const pts = Math.round(txAmount * rate);
+        if (cardDoc.exists()) {
+          await updateDoc(cardRef, { membership_points: increment(pts), last_earned: pts, last_transaction_at: serverTimestamp() });
+        } else {
+          await setDoc(cardRef, { user_id: customer.uid, store_id: store.id, card_type: 'membership', membership_type: 'points', membership_points: pts, last_earned: pts, isArchived: false, last_transaction_at: serverTimestamp(), userName: customer.name, userPhoto: customer.photoURL || '' });
+          await updateDoc(doc(db, 'users', customer.uid), { total_cards_held: increment(1) });
+        }
+        await addDoc(collection(db, 'transactions'), { user_id: customer.uid, store_id: store.id, card_type: 'membership', membership_type: 'points', transaction_amount: txAmount, points_issued: pts, issued_at: serverTimestamp() });
+        setStatus({ type: 'success', message: `${pts} pts issued to ${customer.name}!` });
+      }
+    } catch (err) {
+      console.error(err);
+      setStatus({ type: 'error', message: 'Failed to issue points' });
+    } finally {
+      setWorking(false);
     }
   };
 
@@ -10709,6 +10758,20 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                   <p className="text-xs text-brand-navy/50 mt-0.5">Create deals for customers</p>
                 </div>
               </button>
+              {store?.membershipEnabled && (
+                <button
+                  onClick={() => setVendorIssueMode('scan-user')}
+                  className="glass-card rounded-[2rem] p-6 flex flex-col items-center gap-4 active:scale-95 transition-transform text-center col-span-2"
+                >
+                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(135deg, #0f766e, #14b8a6)' }}>
+                    <Smartphone size={28} className="text-white" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-brand-navy">Scan User</p>
+                    <p className="text-xs text-brand-navy/50 mt-0.5">Issue membership points manually</p>
+                  </div>
+                </button>
+              )}
             </div>
           </div>
         ) : (
@@ -10719,7 +10782,9 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
             >
               <ArrowLeft size={16} /> Back
             </button>
-            {vendorIssueMode === 'card' ? <VendorCardSection store={store} /> : <VendorOfferPanel store={store} />}
+            {vendorIssueMode === 'card' ? <VendorCardSection store={store} />
+              : vendorIssueMode === 'scan-user' ? <ScanUserPanel store={store} onIssue={handleIssueMembershipPoints} />
+              : <VendorOfferPanel store={store} />}
           </div>
         )
       )}
@@ -13711,6 +13776,80 @@ function OffersModal({ offers, currentUser, onClose }: { offers: StoreOffer[]; c
         )}
       </AnimatePresence>
     </>
+  );
+}
+
+// ─── Scan User Panel — vendor issues membership points by handle ──────────────
+function ScanUserPanel({ store, onIssue }: {
+  store: StoreProfile | null;
+  onIssue: (handle: string, amount: string, setStatus: (s: { type: 'success' | 'error'; message: string } | null) => void, setWorking: (b: boolean) => void) => void;
+}) {
+  const [handle, setHandle] = useState('');
+  const [amount, setAmount] = useState('');
+  const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [working, setWorking] = useState(false);
+
+  const memType = store?.membershipType ?? 'spend';
+  const rate = store?.membershipPointsRate ?? 1;
+  const previewPts = amount && memType === 'points' ? Math.round(Number(amount) * rate) : null;
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="font-display text-2xl font-bold mb-1">Scan User</h3>
+        <p className="text-brand-navy/50 text-sm">Issue {store?.membershipName || 'membership'} points by customer handle.</p>
+      </div>
+      <div className="glass-card rounded-[2rem] p-6 space-y-4">
+        <div>
+          <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest mb-2 block">Customer @handle</label>
+          <div className="flex items-center gap-3 bg-white rounded-2xl px-4 py-3 border border-brand-navy/10">
+            <Hash size={16} className="text-brand-navy/30 shrink-0" />
+            <input
+              value={handle}
+              onChange={e => { setHandle(e.target.value); setStatus(null); }}
+              placeholder="handle"
+              className="flex-1 text-sm text-brand-navy outline-none placeholder:text-brand-navy/30"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest mb-2 block">Transaction Amount ($)</label>
+          <div className="flex items-center gap-3 bg-white rounded-2xl px-4 py-3 border border-brand-navy/10">
+            <DollarSign size={16} className="text-brand-navy/30 shrink-0" />
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={amount}
+              onChange={e => { setAmount(e.target.value); setStatus(null); }}
+              placeholder="0.00"
+              className="flex-1 text-sm text-brand-navy outline-none placeholder:text-brand-navy/30"
+            />
+            {previewPts !== null && (
+              <span className="text-xs font-bold text-brand-navy/40 shrink-0">{previewPts} pts</span>
+            )}
+          </div>
+          {memType === 'spend' && store?.membershipSpendThreshold && (
+            <p className="text-[10px] text-brand-navy/40 mt-1.5 font-bold">
+              Reward every ${store.membershipSpendThreshold} spent · {store.membershipSpendReward || 'Reward'}
+            </p>
+          )}
+        </div>
+        <button
+          onClick={() => onIssue(handle, amount, setStatus, setWorking)}
+          disabled={working || !handle || !amount}
+          className="w-full py-4 rounded-2xl font-bold text-sm text-white disabled:opacity-40 transition-all active:scale-95"
+          style={{ background: 'linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 40%, #2563eb 70%, #3b82f6 100%)' }}
+        >
+          {working ? 'Issuing…' : `Issue ${memType === 'points' ? 'Points' : 'Spend'}`}
+        </button>
+        {status && (
+          <p className={`text-sm font-bold text-center ${status.type === 'success' ? 'text-emerald-600' : 'text-red-500'}`}>
+            {status.message}
+          </p>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -19835,90 +19974,102 @@ function ProfileCardRow({ store, card, membershipCard, userId, userProfile, onJo
           )
         )}
 
-      {/* Loyalty popup — barcode + NFC hint */}
+      {/* Loyalty popup — NFC reader prompt */}
       <AnimatePresence>
         {showLoyaltyPopup && card && (
           <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowLoyaltyPopup(false)} className="absolute inset-0 bg-brand-navy/90 backdrop-blur-sm" />
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-xs p-8 rounded-[3rem] text-center relative z-10">
-              <h3 className="font-display text-xl font-bold mb-1">{store.name}</h3>
-              <p className="text-brand-navy/50 text-xs mb-5">Show barcode to collect a stamp</p>
-              <div className="bg-white p-5 rounded-3xl mb-5 border border-brand-rose/20">
-                <BarcodeDisplay value={auth.currentUser?.uid || userId} height={64} />
-                <p className="text-center text-[9px] text-brand-navy/30 font-mono tracking-wider mt-2 break-all">{userId}</p>
+              <div className="flex items-center justify-center gap-2 mb-1">
+                {store.logoUrl
+                  ? <img src={store.logoUrl} alt="" className="w-6 h-6 rounded-full object-cover" />
+                  : <div className="w-6 h-6 rounded-full bg-brand-navy/10 flex items-center justify-center text-[10px] font-bold text-brand-navy">{store.name?.[0]}</div>
+                }
+                <h3 className="font-display text-lg font-bold">{store.name}</h3>
               </div>
-              <div className="mb-5">
-                <div
-                  className="grid gap-2 mb-2"
-                  style={{ gridTemplateColumns: `repeat(${Math.min(loyaltyLimit, 10)}, 1fr)` }}
-                >
+              <p className="text-brand-navy/40 text-xs mb-8">Loyalty Card</p>
+              {/* NFC animation */}
+              <div className="relative flex items-center justify-center mb-8">
+                <motion.div
+                  animate={{ scale: [1, 1.6, 1], opacity: [0.3, 0, 0.3] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                  className="absolute w-28 h-28 rounded-full border-2 border-brand-navy/30"
+                />
+                <motion.div
+                  animate={{ scale: [1, 1.35, 1], opacity: [0.4, 0, 0.4] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
+                  className="absolute w-20 h-20 rounded-full border-2 border-brand-navy/40"
+                />
+                <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: linqGrad }}>
+                  <Wifi size={26} className="text-white -rotate-90" />
+                </div>
+              </div>
+              <p className="font-bold text-brand-navy text-base mb-1">Hold near stamp terminal</p>
+              <p className="text-xs text-brand-navy/40 mb-6">Tap your phone on the NFC reader to collect a stamp</p>
+              {/* Stamp dots */}
+              <div className="mb-6">
+                <div className="grid gap-1.5 mb-2" style={{ gridTemplateColumns: `repeat(${Math.min(loyaltyLimit, 10)}, 1fr)` }}>
                   {Array.from({ length: loyaltyLimit }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="aspect-square rounded-full flex items-center justify-center"
-                      style={i < stamps ? { background: linqGrad } : { border: '2px solid #e2e8f0' }}
-                    >
+                    <div key={i} className="aspect-square rounded-full flex items-center justify-center"
+                      style={i < stamps ? { background: linqGrad } : { border: '2px solid #e2e8f0' }}>
                       {i < stamps && <span className="text-white text-[8px]">★</span>}
                     </div>
                   ))}
                 </div>
-                <p className="text-[10px] text-brand-navy/40 font-bold text-center">{stamps}/{loyaltyLimit} stamps · {loyaltyLimit - stamps} to go</p>
+                <p className="text-[10px] text-brand-navy/40 font-bold">{stamps}/{loyaltyLimit} stamps</p>
               </div>
-              <button onClick={() => setShowLoyaltyPopup(false)} className="w-full bg-brand-navy text-white py-3.5 rounded-2xl font-bold text-sm">Close</button>
+              <button onClick={() => setShowLoyaltyPopup(false)} className="w-full bg-brand-navy text-white py-3.5 rounded-2xl font-bold text-sm">Done</button>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
 
-      {/* Membership popup — balance + remove */}
+      {/* Membership popup — barcode for vendor to scan */}
       <AnimatePresence>
         {showMembershipPopup && membershipCard && (
-          <div className="fixed inset-0 z-[120] flex items-end justify-center">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowMembershipPopup(false)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-            <motion.div
-              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-              transition={{ type: 'spring', stiffness: 350, damping: 35 }}
-              className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-10 shadow-2xl"
-            >
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h3 className="font-display text-2xl font-bold">{store.membershipName || 'Membership'}</h3>
-                  <p className="text-brand-navy/40 text-xs mt-0.5">{store.name}</p>
-                </div>
-                <button onClick={() => setShowMembershipPopup(false)} className="p-2 text-brand-navy/40 hover:text-brand-navy"><X size={20} /></button>
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowMembershipPopup(false)} className="absolute inset-0 bg-brand-navy/90 backdrop-blur-sm" />
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-xs p-8 rounded-[3rem] text-center relative z-10">
+              <h3 className="font-display text-xl font-bold mb-0.5">{store.membershipName || 'Membership'}</h3>
+              <p className="text-brand-navy/40 text-xs mb-5">{store.name} · Show to collect points</p>
+              <div className="bg-white p-5 rounded-3xl mb-4 border border-brand-rose/20">
+                <BarcodeDisplay value={auth.currentUser?.uid || userId} height={64} />
+                <p className="text-center text-[9px] text-brand-navy/30 font-mono tracking-wider mt-2 break-all">{userId}</p>
               </div>
-
-              <div className="rounded-2xl p-5 mb-6 text-white" style={{ background: linqGrad }}>
+              {/* Balance summary */}
+              <div className="rounded-2xl px-4 py-3 mb-5 text-white" style={{ background: linqGrad }}>
                 {memType === 'spend' ? (
                   <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-white/60 text-xs font-bold uppercase tracking-widest">Total Spent</p>
-                      <p className="text-3xl font-black mt-1">${membershipSpent.toFixed(2)}</p>
+                    <div className="text-left">
+                      <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest">Spent</p>
+                      <p className="text-xl font-black">${membershipSpent.toFixed(0)}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-white/60 text-xs font-bold uppercase tracking-widest">Rewards</p>
-                      <p className="text-3xl font-black mt-1">{membershipCard.earned_rewards ?? 0}</p>
+                      <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest">Rewards</p>
+                      <p className="text-xl font-black">{membershipCard.earned_rewards ?? 0}</p>
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center">
-                    <p className="text-white/60 text-xs font-bold uppercase tracking-widest mb-1">Points Balance</p>
-                    <p className="text-4xl font-black">{membershipPts.toLocaleString()}</p>
+                  <div className="flex items-center justify-between">
+                    <div className="text-left">
+                      <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest">Points</p>
+                      <p className="text-xl font-black">{membershipPts.toLocaleString()}</p>
+                    </div>
                     {(membershipCard.last_earned ?? 0) > 0 && (
-                      <p className="text-white/60 text-xs mt-2">+{membershipCard.last_earned} pts last earned</p>
+                      <p className="text-white/60 text-xs">+{membershipCard.last_earned} last</p>
                     )}
                   </div>
                 )}
               </div>
-
               <button
                 onClick={() => { handleRemoveMembership(); setShowMembershipPopup(false); }}
                 disabled={removingMembership}
-                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border border-red-200 text-red-500 font-bold text-sm hover:bg-red-50 transition-colors disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-red-200 text-red-500 font-bold text-sm mb-3 disabled:opacity-50"
               >
-                <Trash2 size={15} />
+                <Trash2 size={14} />
                 {removingMembership ? 'Removing…' : 'Leave Membership'}
               </button>
+              <button onClick={() => setShowMembershipPopup(false)} className="w-full bg-brand-navy text-white py-3.5 rounded-2xl font-bold text-sm">Close</button>
             </motion.div>
           </div>
         )}
