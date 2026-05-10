@@ -10894,30 +10894,75 @@ function MembershipCard({ card, store, onViewStore, compact = false }: { card: C
 
   if (compact) {
     return (
-      <div
-        className="rounded-3xl p-4 flex items-center gap-3 cursor-pointer"
-        style={{ background: `linear-gradient(135deg, ${color}ee 0%, ${color}99 100%)` }}
-        onClick={() => store && onViewStore && onViewStore(store)}
-      >
-        <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/30 shrink-0">
-          <img src={store?.logoUrl || `https://picsum.photos/seed/${card.store_id}/200/200`} alt="" className="w-full h-full object-cover" />
+      <div className="rounded-3xl overflow-hidden">
+        {/* Colored header — mirrors compact LoyaltyCard header */}
+        <div className="relative overflow-hidden flex items-center gap-3 px-4 py-3" style={{ backgroundColor: color }}>
+          <span className="card-shine-ray" aria-hidden="true" />
+          <div
+            className="relative z-10 w-10 h-10 rounded-full overflow-hidden border-2 border-white/50 shrink-0 cursor-pointer shadow-md"
+            onClick={() => store && onViewStore && onViewStore(store)}
+          >
+            <img src={store?.logoUrl || `https://picsum.photos/seed/${card.store_id}/200/200`} alt="" className="w-full h-full object-cover" />
+          </div>
+          <div
+            className="relative z-10 flex-1 min-w-0 cursor-pointer"
+            onClick={() => store && onViewStore && onViewStore(store)}
+          >
+            <h4 className="font-bold text-white text-sm leading-tight truncate">{store?.name || 'Store'}</h4>
+            <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">{membershipName}</p>
+          </div>
+          <div className="relative z-10 shrink-0">
+            <span className="bg-white/20 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest border border-white/30">
+              {membershipType === 'visit' ? 'Per Visit' : 'Spend'}
+            </span>
+          </div>
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-bold text-white text-sm truncate">{store?.name || 'Store'}</p>
-          <p className="text-white/70 text-xs">{membershipName}</p>
-        </div>
-        <div className="shrink-0 text-right">
+        {/* White content section — mirrors compact LoyaltyCard stampGrid section */}
+        <div className="bg-white px-4 pt-4 pb-4">
           {membershipType === 'spend' ? (
             <>
-              <p className="text-white font-bold text-sm">{membershipPoints.toLocaleString()} pts</p>
-              <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest">
-                {redeemableValue > 0 ? `≈ $${redeemableValue.toFixed(2)}` : `$${totalSpent.toFixed(0)} spent`}
-              </p>
+              <div className="flex items-end justify-between mb-2">
+                <div>
+                  <p className="text-brand-navy font-black text-2xl leading-none">{membershipPoints.toLocaleString()}</p>
+                  <p className="text-brand-navy/40 text-[9px] font-bold uppercase tracking-widest mt-0.5">points</p>
+                </div>
+                {redeemableValue > 0 && (
+                  <div className="text-right">
+                    <p className="text-brand-navy font-black text-lg leading-none">≈ ${redeemableValue.toFixed(2)}</p>
+                    <p className="text-brand-navy/40 text-[9px] font-bold uppercase tracking-widest mt-0.5">redeemable</p>
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-brand-navy/35 text-[10px] font-bold">${totalSpent.toFixed(2)} spent{earnedRewards > 0 ? ` · ${earnedRewards} rewards` : ''}</span>
+                <span className="text-brand-navy/35 text-[10px] font-bold flex items-center gap-1"><Gift size={9} /> Tap to redeem</span>
+              </div>
             </>
           ) : (
             <>
-              <p className="text-white font-bold text-sm">{membershipVisits}</p>
-              <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest">visits</p>
+              <div className="flex items-end justify-between mb-2">
+                <div>
+                  <p className="text-brand-navy font-black text-2xl leading-none">{membershipVisits}</p>
+                  <p className="text-brand-navy/40 text-[9px] font-bold uppercase tracking-widest mt-0.5">visits</p>
+                </div>
+                {nextVisitReward && (
+                  <div className="text-right">
+                    <p className="text-brand-navy font-black text-sm leading-tight">{nextVisitReward.visits - membershipVisits} more</p>
+                    <p className="text-brand-navy/40 text-[9px] font-bold uppercase tracking-widest mt-0.5 max-w-[110px] truncate">{nextVisitReward.reward}</p>
+                  </div>
+                )}
+              </div>
+              {nextVisitReward && (
+                <div className="h-1.5 bg-brand-navy/10 rounded-full overflow-hidden mt-1">
+                  <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, (membershipVisits / nextVisitReward.visits) * 100)}%`, backgroundColor: color }} />
+                </div>
+              )}
+              {!nextVisitReward && (
+                <div className="flex items-center justify-between">
+                  <span className="text-brand-navy/35 text-[10px] font-bold">{lastVisitReward ? `Last: ${lastVisitReward.reward}` : 'Tap card to scan a visit'}</span>
+                  <span className="text-brand-navy/35 text-[10px] font-bold flex items-center gap-1"><Wifi size={9} className="-rotate-90" /> Scan</span>
+                </div>
+              )}
             </>
           )}
         </div>
