@@ -10929,92 +10929,89 @@ function MembershipCard({ card, store, onViewStore, compact = false }: { card: C
     <>
       <motion.div
         className="relative rounded-[2rem] overflow-hidden select-none"
-        style={{ background: `linear-gradient(135deg, ${color}ff 0%, ${color}bb 50%, ${color}88 100%)`, minHeight: membershipType === 'visit' ? 220 : 240 }}
+        onClick={() => membershipType === 'visit' ? setShowNfc(true) : setShowRedeemSheet(true)}
         whileTap={{ scale: 0.98 }}
       >
-        {/* Top row */}
-        <div className="flex items-center gap-3 p-5 pb-0">
+        {/* Gradient header — same structure as stamp card */}
+        <div
+          className="relative overflow-hidden pt-10 pb-8 flex flex-col items-center gap-2"
+          style={{ background: `linear-gradient(160deg, ${color}ff 0%, ${color}dd 60%, ${color}aa 100%)` }}
+        >
+          <span className="card-shine-ray" aria-hidden="true" />
           <div
-            className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/30 shrink-0 cursor-pointer"
-            onClick={() => store && onViewStore && onViewStore(store)}
+            className="relative z-10 w-[72px] h-[72px] rounded-full overflow-hidden border-[3px] border-white/60 shadow-xl cursor-pointer"
+            onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}
           >
             <img src={store?.logoUrl || `https://picsum.photos/seed/${card.store_id}/200/200`} alt="" className="w-full h-full object-cover" />
           </div>
           <div
-            className="flex-1 min-w-0 cursor-pointer"
-            onClick={() => store && onViewStore && onViewStore(store)}
+            className="relative z-10 text-center cursor-pointer"
+            onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}
           >
-            <p className="font-bold text-white text-sm truncate">{store?.name || 'Store'}</p>
+            <h4 className="font-bold text-white text-lg leading-tight">{store?.name || 'Store'}</h4>
+            <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mt-0.5">{membershipName}</p>
           </div>
-          <span className="shrink-0 bg-white/20 text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full border border-white/30">
-            {membershipName}
-          </span>
+          {membershipType === 'spend' && auth.currentUser?.uid ? (
+            <div className="relative z-10 w-full px-6 mt-1">
+              <div className="bg-white/90 rounded-xl px-3 py-2">
+                <BarcodeDisplay value={auth.currentUser.uid} height={36} />
+                <p className="text-center text-[8px] text-brand-navy/40 font-mono tracking-wider mt-0.5">{auth.currentUser.uid.slice(0, 20)}…</p>
+              </div>
+            </div>
+          ) : (
+            <div className="relative z-10 flex items-center justify-center mt-1">
+              <div className="w-14 h-14 rounded-full bg-white/20 border-2 border-white/40 flex items-center justify-center">
+                <Wifi size={24} className="text-white -rotate-90" />
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Spend-based layout */}
-        {membershipType === 'spend' && (
-          <>
-            <button className="w-full text-left" onClick={(e) => { e.stopPropagation(); setShowRedeemSheet(true); }}>
-              <div className="text-center py-5 px-5">
-                <p className="text-white font-black text-6xl leading-none tracking-tight">{membershipPoints.toLocaleString()}</p>
-                <p className="text-white/60 text-xs font-bold uppercase tracking-widest mt-1.5">points</p>
+        {/* White content section — same structure as stamp card stamp grid area */}
+        <div className="bg-white px-8 pt-7 pb-6">
+          {membershipType === 'spend' ? (
+            <>
+              <div className="text-center mb-4">
+                <p className="text-brand-navy font-black text-5xl leading-none tracking-tight">{membershipPoints.toLocaleString()}</p>
+                <p className="text-brand-navy/40 text-xs font-bold uppercase tracking-widest mt-1.5">points</p>
                 {redeemableValue > 0 && (
-                  <p className="text-white/80 text-2xl font-black mt-2 leading-none">≈ ${redeemableValue.toFixed(2)} off</p>
+                  <p className="text-brand-navy text-2xl font-black mt-2 leading-none">≈ ${redeemableValue.toFixed(2)} off</p>
                 )}
               </div>
-              <div className="flex items-center justify-between px-5 pb-5">
-                <p className="text-white/50 text-xs">${totalSpent.toFixed(2)} spent{earnedRewards > 0 ? ` · ${earnedRewards} rewards` : ''}</p>
-                <span className="text-white/60 text-xs font-bold flex items-center gap-1">
-                  <Gift size={11} /> Tap to redeem
-                </span>
+              <div className="flex items-center justify-between">
+                <span className="text-brand-navy/35 text-[11px] font-bold">${totalSpent.toFixed(2)} spent{earnedRewards > 0 ? ` · ${earnedRewards} rewards` : ''}</span>
+                <span className="text-brand-navy/40 text-[10px] font-bold flex items-center gap-1"><Gift size={11} /> Tap to redeem</span>
               </div>
-            </button>
-          </>
-        )}
-
-        {/* Visit layout */}
-        {membershipType === 'visit' && (
-          <button className="w-full text-left" onClick={(e) => { e.stopPropagation(); setShowNfc(true); }}>
-            <div className="flex items-center justify-center gap-8 py-5 px-5">
-              <div className="text-center">
-                <p className="text-white font-black text-6xl leading-none">{membershipVisits}</p>
-                <p className="text-white/70 text-xs font-bold uppercase tracking-widest mt-1.5">visits</p>
+            </>
+          ) : (
+            <>
+              <div className="text-center mb-4">
+                <p className="text-brand-navy font-black text-5xl leading-none tracking-tight">{membershipVisits}</p>
+                <p className="text-brand-navy/40 text-xs font-bold uppercase tracking-widest mt-1.5">visits</p>
+                {nextVisitReward && (
+                  <p className="text-brand-navy/60 text-sm mt-2 leading-snug">
+                    {nextVisitReward.visits - membershipVisits} more → <span className="font-bold" style={{ color }}>{nextVisitReward.reward}</span>
+                  </p>
+                )}
               </div>
               {nextVisitReward && (
-                <>
-                  <div className="w-px h-10 bg-white/20" />
-                  <div className="text-center">
-                    <p className="text-white font-black text-2xl leading-none">{nextVisitReward.visits - membershipVisits}</p>
-                    <p className="text-white/70 text-xs font-bold uppercase tracking-widest mt-1.5">to next</p>
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-brand-navy/40 text-[10px] font-bold uppercase tracking-widest truncate pr-2">{nextVisitReward.reward}</p>
+                    <p className="text-brand-navy/30 text-[10px] font-bold shrink-0">{membershipVisits}/{nextVisitReward.visits}</p>
                   </div>
-                </>
+                  <div className="h-2 bg-brand-navy/10 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, (membershipVisits / nextVisitReward.visits) * 100)}%`, backgroundColor: color }} />
+                  </div>
+                </div>
               )}
-            </div>
-            {nextVisitReward && (
-              <div className="px-5 pb-2">
-                <div className="flex items-center justify-between mb-1.5">
-                  <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest truncate pr-2">
-                    {nextVisitReward.reward}
-                  </p>
-                  <p className="text-white/50 text-[10px] font-bold shrink-0">{membershipVisits}/{nextVisitReward.visits}</p>
-                </div>
-                <div className="h-2 bg-white/15 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-white/70 rounded-full transition-all duration-500"
-                    style={{ width: `${Math.min(100, (membershipVisits / nextVisitReward.visits) * 100)}%` }}
-                  />
-                </div>
+              <div className="flex items-center justify-between">
+                <span className="text-brand-navy/35 text-[11px] font-bold">{lastVisitReward ? `Last: ${lastVisitReward.reward}` : 'Tap card to scan a visit'}</span>
+                <span className="text-brand-navy/40 text-[10px] font-bold flex items-center gap-1"><Wifi size={11} className="-rotate-90" /> Scan</span>
               </div>
-            )}
-            <div className="flex items-center justify-between px-5 pb-4 pt-2">
-              {lastVisitReward
-                ? <p className="text-white/50 text-xs">Last: {lastVisitReward.reward}</p>
-                : <p className="text-white/50 text-xs">Tap to scan a visit</p>
-              }
-              <span className="text-white/60 text-xs font-bold flex items-center gap-1"><Wifi size={11} className="-rotate-90" /> Scan visit</span>
-            </div>
-          </button>
-        )}
+            </>
+          )}
+        </div>
       </motion.div>
 
       {/* Points & Redemption sheet (spend-based) */}
