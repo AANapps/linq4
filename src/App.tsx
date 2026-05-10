@@ -20385,7 +20385,8 @@ function ProfileCardRow({ store, card, membershipCard, userId, userProfile, onJo
   onJoinMembership: () => void;
 }) {
   const [showLoyaltyPopup, setShowLoyaltyPopup] = useState(false);
-  const [showMembershipPopup, setShowMembershipPopup] = useState(false);
+  // Incrementing key forces MembershipCard to remount (and re-apply autoOpen) on every tap
+  const [membershipPopupKey, setMembershipPopupKey] = useState(0);
   const [removingMembership, setRemovingMembership] = useState(false);
 
   const loyaltyLimit = card?.stamps_required || store.stamps_required_for_reward || 10;
@@ -20409,12 +20410,12 @@ function ProfileCardRow({ store, card, membershipCard, userId, userProfile, onJo
 
   return (
     <>
-      {/* Show exactly one card type: membership if enabled, otherwise loyalty */}
+      {/* Show exactly one card type — compact full-width tile */}
       {store.membershipEnabled ? (
         membershipCard ? (
           memType === 'visit' ? (
             <button
-              onClick={() => setShowMembershipPopup(true)}
+              onClick={() => setMembershipPopupKey(k => k + 1)}
               className="w-full relative overflow-hidden flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm text-white shadow-lg active:scale-95 transition-all"
               style={{ background: linqGrad }}
             >
@@ -20425,7 +20426,7 @@ function ProfileCardRow({ store, card, membershipCard, userId, userProfile, onJo
             </button>
           ) : (
             <button
-              onClick={() => setShowMembershipPopup(true)}
+              onClick={() => setMembershipPopupKey(k => k + 1)}
               className="w-full relative overflow-hidden flex items-center justify-between px-4 py-3 rounded-2xl text-white shadow-lg active:scale-95 transition-all"
               style={{ background: linqGrad }}
             >
@@ -20450,36 +20451,14 @@ function ProfileCardRow({ store, card, membershipCard, userId, userProfile, onJo
         card ? (
           <button
             onClick={() => setShowLoyaltyPopup(true)}
-            className="w-full rounded-2xl overflow-hidden shadow-lg active:scale-[0.98] transition-all text-left"
+            className="w-full relative overflow-hidden flex items-center justify-between px-4 py-3 rounded-2xl text-white shadow-lg active:scale-95 transition-all"
+            style={{ background: linqGrad }}
           >
-            <div className="flex items-center gap-3 px-4 py-3" style={{ background: linqGrad }}>
-              {store.logoUrl
-                ? <img src={store.logoUrl} alt="" className="w-8 h-8 rounded-full border-2 border-white/30 object-cover shrink-0" />
-                : <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shrink-0 text-white font-bold text-sm">{store.name?.[0]}</div>
-              }
-              <span className="font-bold text-white text-sm flex-1 truncate">{store.name}</span>
-              <div className="flex items-center gap-1 shrink-0">
-                <Check size={13} className="text-white/70" />
-                <span className="text-white/70 text-[10px] font-bold uppercase tracking-widest">Loyalty</span>
-              </div>
+            <div className="flex items-center gap-2">
+              <Check size={15} className="text-white/80" />
+              <span className="font-bold text-sm">Loyalty Card</span>
             </div>
-            <div className="bg-white px-4 pt-3 pb-3">
-              <div
-                className="grid gap-1.5 mb-2"
-                style={{ gridTemplateColumns: `repeat(${Math.min(loyaltyLimit, 10)}, 1fr)` }}
-              >
-                {Array.from({ length: loyaltyLimit }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="aspect-square rounded-full flex items-center justify-center"
-                    style={i < stamps ? { background: linqGrad } : { border: '2px solid #e2e8f0' }}
-                  >
-                    {i < stamps && <span className="text-white text-[8px]">★</span>}
-                  </div>
-                ))}
-              </div>
-              <p className="text-[10px] text-brand-navy/40 font-bold">{stamps}/{loyaltyLimit} stamps · tap to scan</p>
-            </div>
+            <span className="text-white/60 text-xs font-bold">{stamps}/{loyaltyLimit} stamps</span>
           </button>
         ) : (
           <button
@@ -20493,7 +20472,7 @@ function ProfileCardRow({ store, card, membershipCard, userId, userProfile, onJo
         )
       ) : null}
 
-      {/* Loyalty popup — reuses wallet LoyaltyCard popup */}
+      {/* Loyalty popup */}
       {showLoyaltyPopup && card && (
         <LoyaltyCard
           key={`loyalty-popup-${card.id}`}
@@ -20504,17 +20483,15 @@ function ProfileCardRow({ store, card, membershipCard, userId, userProfile, onJo
         />
       )}
 
-      {/* Membership popup — barcode (spend) or NFC (visit) */}
-      <AnimatePresence>
-        {showMembershipPopup && membershipCard && (
-          <MembershipCard
-            key={`popup-${membershipCard.id}`}
-            card={membershipCard}
-            store={store}
-            autoOpen={memType === 'visit' ? 'nfc' : 'spend'}
-          />
-        )}
-      </AnimatePresence>
+      {/* Membership popup — remounts on each tap via key, re-applying autoOpen */}
+      {membershipPopupKey > 0 && membershipCard && (
+        <MembershipCard
+          key={membershipPopupKey}
+          card={membershipCard}
+          store={store}
+          autoOpen={memType === 'visit' ? 'nfc' : 'spend'}
+        />
+      )}
     </>
   );
 }
