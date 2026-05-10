@@ -19721,6 +19721,182 @@ function AdminStoreEditModal({ store, onClose }: { store: StoreProfile; onClose:
   );
 }
 
+// ─── Small card pills shown on vendor profile when user has joined ────────────
+function ProfileCardRow({ store, card, membershipCard, userId, userProfile, onJoinLoyalty, onJoinMembership }: {
+  store: StoreProfile;
+  card: Card | null;
+  membershipCard: Card | null;
+  userId: string;
+  userProfile: UserProfile | null;
+  onJoinLoyalty: () => void;
+  onJoinMembership: () => void;
+}) {
+  const [showLoyaltyPopup, setShowLoyaltyPopup] = useState(false);
+  const [showMembershipPopup, setShowMembershipPopup] = useState(false);
+  const [removingMembership, setRemovingMembership] = useState(false);
+
+  const loyaltyLimit = card?.stamps_required || store.stamps_required_for_reward || 10;
+  const stamps = card?.current_stamps ?? 0;
+  const membershipPts = membershipCard?.membership_points ?? 0;
+  const membershipSpent = membershipCard?.total_spent ?? 0;
+  const memType = membershipCard?.membership_type ?? store.membershipType ?? 'spend';
+  const memColor = store.membershipColor || '#1e1b4b';
+
+  const handleRemoveMembership = async () => {
+    if (!membershipCard) return;
+    setRemovingMembership(true);
+    try {
+      await updateDoc(doc(db, 'cards', membershipCard.id), { isArchived: true });
+      await updateDoc(doc(db, 'users', userId), { total_cards_held: increment(-1) });
+    } catch (err) { console.error(err); }
+    setRemovingMembership(false);
+  };
+
+  const linqGrad = 'linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 40%, #2563eb 70%, #3b82f6 100%)';
+
+  return (
+    <>
+      {/* Join / joined row */}
+      <div className="flex gap-3">
+        {storeCardActive(store) && (
+          card ? (
+            <button
+              onClick={() => setShowLoyaltyPopup(true)}
+              className="flex-1 relative overflow-hidden flex items-center justify-between px-4 py-3 rounded-2xl text-white shadow-lg active:scale-95 transition-all"
+              style={{ background: linqGrad }}
+            >
+              <div className="flex items-center gap-2">
+                <Check size={15} className="text-white/80" />
+                <span className="font-bold text-sm">Loyalty</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-white/70 text-xs font-bold">{stamps}/{loyaltyLimit} stamps</span>
+                <div className="w-16 h-1.5 bg-white/20 rounded-full overflow-hidden">
+                  <div className="h-full bg-white rounded-full" style={{ width: `${Math.min(100, (stamps / loyaltyLimit) * 100)}%` }} />
+                </div>
+              </div>
+            </button>
+          ) : (
+            <button
+              onClick={onJoinLoyalty}
+              className="flex-1 relative overflow-hidden flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm text-white shadow-lg active:scale-95 transition-all"
+              style={{ background: linqGrad }}
+            >
+              <Plus size={15} />
+              Join Loyalty Card
+            </button>
+          )
+        )}
+        {store.membershipEnabled && (
+          membershipCard ? (
+            <button
+              onClick={() => setShowMembershipPopup(true)}
+              className="flex-1 relative overflow-hidden flex items-center justify-between px-4 py-3 rounded-2xl text-white shadow-lg active:scale-95 transition-all"
+              style={{ background: linqGrad }}
+            >
+              <div className="flex items-center gap-2">
+                <Check size={15} className="text-white/80" />
+                <span className="font-bold text-sm">{store.membershipName || 'Membership'}</span>
+              </div>
+              <span className="text-white/70 text-xs font-bold">
+                {memType === 'spend' ? `$${membershipSpent.toFixed(0)} spent` : `${membershipPts.toLocaleString()} pts`}
+              </span>
+            </button>
+          ) : (
+            <button
+              onClick={onJoinMembership}
+              className="flex-1 relative overflow-hidden flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm text-white shadow-lg active:scale-95 transition-all"
+              style={{ background: linqGrad }}
+            >
+              <Plus size={15} />
+              Join {store.membershipName || 'Membership'}
+            </button>
+          )
+        )}
+      </div>
+
+      {/* Loyalty popup — barcode + NFC hint */}
+      <AnimatePresence>
+        {showLoyaltyPopup && card && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowLoyaltyPopup(false)} className="absolute inset-0 bg-brand-navy/90 backdrop-blur-sm" />
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-xs p-8 rounded-[3rem] text-center relative z-10">
+              <h3 className="font-display text-xl font-bold mb-1">{store.name}</h3>
+              <p className="text-brand-navy/50 text-xs mb-5">Show barcode to collect a stamp</p>
+              <div className="bg-white p-5 rounded-3xl mb-5 border border-brand-rose/20">
+                <BarcodeDisplay value={auth.currentUser?.uid || userId} height={64} />
+                <p className="text-center text-[9px] text-brand-navy/30 font-mono tracking-wider mt-2 break-all">{userId}</p>
+              </div>
+              <div className="flex items-center justify-between text-xs text-brand-navy/50 mb-5 px-1">
+                <span className="font-bold">{stamps} / {loyaltyLimit} stamps</span>
+                <div className="flex-1 mx-3 h-1.5 bg-brand-navy/10 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full" style={{ width: `${Math.min(100, (stamps / loyaltyLimit) * 100)}%`, background: linqGrad }} />
+                </div>
+                <span>{loyaltyLimit - stamps} to go</span>
+              </div>
+              <button onClick={() => setShowLoyaltyPopup(false)} className="w-full bg-brand-navy text-white py-3.5 rounded-2xl font-bold text-sm">Close</button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Membership popup — balance + remove */}
+      <AnimatePresence>
+        {showMembershipPopup && membershipCard && (
+          <div className="fixed inset-0 z-[120] flex items-end justify-center">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowMembershipPopup(false)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <motion.div
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+              className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-10 shadow-2xl"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="font-display text-2xl font-bold">{store.membershipName || 'Membership'}</h3>
+                  <p className="text-brand-navy/40 text-xs mt-0.5">{store.name}</p>
+                </div>
+                <button onClick={() => setShowMembershipPopup(false)} className="p-2 text-brand-navy/40 hover:text-brand-navy"><X size={20} /></button>
+              </div>
+
+              <div className="rounded-2xl p-5 mb-6 text-white" style={{ background: linqGrad }}>
+                {memType === 'spend' ? (
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-white/60 text-xs font-bold uppercase tracking-widest">Total Spent</p>
+                      <p className="text-3xl font-black mt-1">${membershipSpent.toFixed(2)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-white/60 text-xs font-bold uppercase tracking-widest">Rewards</p>
+                      <p className="text-3xl font-black mt-1">{membershipCard.earned_rewards ?? 0}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center">
+                    <p className="text-white/60 text-xs font-bold uppercase tracking-widest mb-1">Points Balance</p>
+                    <p className="text-4xl font-black">{membershipPts.toLocaleString()}</p>
+                    {(membershipCard.last_earned ?? 0) > 0 && (
+                      <p className="text-white/60 text-xs mt-2">+{membershipCard.last_earned} pts last earned</p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={() => { handleRemoveMembership(); setShowMembershipPopup(false); }}
+                disabled={removingMembership}
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border border-red-200 text-red-500 font-bold text-sm hover:bg-red-50 transition-colors disabled:opacity-50"
+              >
+                <Trash2 size={15} />
+                {removingMembership ? 'Removing…' : 'Leave Membership'}
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
 function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage }: { store: StoreProfile, onBack: () => void, user: FirebaseUser, profile: UserProfile | null, onViewUser: (u: UserProfile) => void, onMessage?: (chatId: string) => void, key?: React.Key }) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [vendorGlobalPosts, setVendorGlobalPosts] = useState<GlobalPost[]>([]);
@@ -20190,8 +20366,8 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
         )}
       </div>
 
-      {/* Reward tiers slider */}
-      {tiers.length > 0 && (
+      {/* Reward tiers — only shown when not yet joined */}
+      {tiers.length > 0 && !card && (
         <div className="glass-card p-5 rounded-[2rem] space-y-3">
           <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">
             {tiers.length > 1 ? `Reward ${tierSlideIdx + 1} of ${tiers.length}` : 'Reward'}
@@ -20216,25 +20392,15 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
           </div>
           {tiers.length > 1 && (
             <div className="flex items-center justify-between pt-1">
-              <button
-                onClick={() => setTierSlideIdx(i => Math.max(0, i - 1))}
-                disabled={tierSlideIdx === 0}
-                className="p-1.5 rounded-xl bg-brand-navy/8 disabled:opacity-20 active:scale-90 transition-all"
-              >
+              <button onClick={() => setTierSlideIdx(i => Math.max(0, i - 1))} disabled={tierSlideIdx === 0} className="p-1.5 rounded-xl bg-brand-navy/8 disabled:opacity-20 active:scale-90 transition-all">
                 <ChevronLeft size={16} className="text-brand-navy" />
               </button>
               <div className="flex gap-1.5">
                 {tiers.map((_, i) => (
-                  <button key={i} onClick={() => setTierSlideIdx(i)}
-                    className={cn('h-1.5 rounded-full transition-all', i === tierSlideIdx ? 'w-4 bg-brand-navy' : 'w-1.5 bg-brand-navy/20')}
-                  />
+                  <button key={i} onClick={() => setTierSlideIdx(i)} className={cn('h-1.5 rounded-full transition-all', i === tierSlideIdx ? 'w-4 bg-brand-navy' : 'w-1.5 bg-brand-navy/20')} />
                 ))}
               </div>
-              <button
-                onClick={() => setTierSlideIdx(i => Math.min(tiers.length - 1, i + 1))}
-                disabled={tierSlideIdx === tiers.length - 1}
-                className="p-1.5 rounded-xl bg-brand-navy/8 disabled:opacity-20 active:scale-90 transition-all"
-              >
+              <button onClick={() => setTierSlideIdx(i => Math.min(tiers.length - 1, i + 1))} disabled={tierSlideIdx === tiers.length - 1} className="p-1.5 rounded-xl bg-brand-navy/8 disabled:opacity-20 active:scale-90 transition-all">
                 <ChevronRight size={16} className="text-brand-navy" />
               </button>
             </div>
@@ -20242,70 +20408,17 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
         </div>
       )}
 
-      {/* Join buttons */}
+      {/* Join / joined buttons */}
       {store.ownerUid !== user.uid && (storeCardActive(store) || store.membershipEnabled) && (
-        <div className="flex gap-3">
-          {storeCardActive(store) && (
-            card ? (
-              <div className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-green-50 border border-green-200">
-                <Check size={15} className="text-green-500" />
-                <span className="text-green-600 font-bold text-sm">Loyalty Joined</span>
-              </div>
-            ) : (
-              <button
-                onClick={handleJoinStore}
-                className="flex-1 relative overflow-hidden flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm text-white shadow-lg active:scale-95 transition-all"
-                style={{ background: 'linear-gradient(135deg, #3a6fcc 0%, #5b8ee8 50%, #3a6fcc 100%)' }}
-              >
-                <span className="absolute inset-0 bg-white/10 opacity-0 hover:opacity-100 transition-opacity" />
-                <CreditCard size={15} />
-                Join Loyalty Card
-              </button>
-            )
-          )}
-          {store.membershipEnabled && (
-            membershipCard ? (
-              <div className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-purple-50 border border-purple-200">
-                <Check size={15} className="text-purple-500" />
-                <span className="text-purple-600 font-bold text-sm">{store.membershipName || 'Membership'} Joined</span>
-              </div>
-            ) : (
-              <button
-                onClick={handleJoinMembership}
-                className="flex-1 relative overflow-hidden flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm text-white shadow-lg active:scale-95 transition-all"
-                style={{ background: store.membershipColor ? `linear-gradient(135deg, ${store.membershipColor} 0%, ${store.membershipColor}cc 100%)` : 'linear-gradient(135deg, #1e1b4b 0%, #4338ca 100%)' }}
-              >
-                <span className="absolute inset-0 bg-white/10 opacity-0 hover:opacity-100 transition-opacity" />
-                <Star size={15} />
-                Join {store.membershipName || 'Membership'}
-              </button>
-            )
-          )}
-        </div>
-      )}
-
-      {/* Card previews */}
-      {store.ownerUid !== user.uid && (
-        <div className="space-y-3">
-
-          {/* Loyalty card preview */}
-          {card && (
-            <div className="space-y-1">
-              <p className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest px-1">Your Loyalty Card</p>
-              {card.card_type === 'sub'
-                ? <SubLoyaltyCard card={card} store={store} onViewStore={() => {}} />
-                : <LoyaltyCard card={card} store={store} onViewStore={() => {}} />}
-            </div>
-          )}
-
-          {/* Membership card preview */}
-          {membershipCard && (
-            <div className="space-y-1">
-              <p className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest px-1">Your Membership Card</p>
-              <MembershipCard card={membershipCard} store={store} onViewStore={() => {}} />
-            </div>
-          )}
-        </div>
+        <ProfileCardRow
+          store={store}
+          card={card}
+          membershipCard={membershipCard}
+          userId={user.uid}
+          userProfile={profile}
+          onJoinLoyalty={handleJoinStore}
+          onJoinMembership={handleJoinMembership}
+        />
       )}
 
       {/* Top collectors */}
