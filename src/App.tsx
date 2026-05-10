@@ -12148,7 +12148,18 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                   </button>
                 </div>
               </div>
-              {stampGrid(5, 'gap-1.5', 'px-4 pt-4 pb-4', 15, 'text-[11px]')}
+              {stampGrid(5, 'gap-1.5', 'px-4 pt-4 pb-2', 15, 'text-[11px]')}
+              {!isCompleted && !card.isRedeemed && (
+                <div className="bg-white px-4 pb-4">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowCardScan(true); }}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-white text-sm active:scale-[0.98] transition-transform"
+                    style={{ backgroundColor: cardTheme }}
+                  >
+                    <Wifi size={14} className="-rotate-90" /> Scan
+                  </button>
+                </div>
+              )}
             </div>
           );
 
