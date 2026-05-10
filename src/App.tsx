@@ -10897,20 +10897,21 @@ function MembershipCard({ card, store, onViewStore, compact = false }: { card: C
   const lastVisitReward = visitRewards.filter(r => r.visits <= membershipVisits).pop();
 
   if (compact) {
+    const openCompact = () => membershipType === 'visit' ? setShowNfc(true) : setShowRedeemSheet(true);
     return (
-      <div className="rounded-3xl overflow-hidden">
+      <>
+      <div className="rounded-3xl overflow-hidden cursor-pointer" onClick={openCompact}>
         {/* Colored header — mirrors compact LoyaltyCard header */}
         <div className="relative overflow-hidden flex items-center gap-3 px-4 py-3" style={{ backgroundColor: color }}>
           <span className="card-shine-ray" aria-hidden="true" />
           <div
-            className="relative z-10 w-10 h-10 rounded-full overflow-hidden border-2 border-white/50 shrink-0 cursor-pointer shadow-md"
-            onClick={() => store && onViewStore && onViewStore(store)}
+            className="relative z-10 w-10 h-10 rounded-full overflow-hidden border-2 border-white/50 shrink-0 shadow-md"
+            onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}
           >
             <img src={store?.logoUrl || `https://picsum.photos/seed/${card.store_id}/200/200`} alt="" className="w-full h-full object-cover" />
           </div>
           <div
-            className="relative z-10 flex-1 min-w-0 cursor-pointer"
-            onClick={() => store && onViewStore && onViewStore(store)}
+            className="relative z-10 flex-1 min-w-0"
           >
             <h4 className="font-bold text-white text-sm leading-tight truncate">{store?.name || 'Store'}</h4>
             <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">{membershipName}</p>
@@ -10971,6 +10972,69 @@ function MembershipCard({ card, store, onViewStore, compact = false }: { card: C
           )}
         </div>
       </div>
+      {/* Shared sheets — same as non-compact */}
+      <AnimatePresence>
+        {showRedeemSheet && membershipType === 'spend' && (
+          <div className="fixed inset-0 z-[120] flex items-end justify-center">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowRedeemSheet(false)} />
+            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 350, damping: 35 }} className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-10 shadow-2xl">
+              <div className="flex items-center justify-between mb-6">
+                <div><h3 className="font-display text-2xl font-bold">{membershipName}</h3><p className="text-brand-navy/40 text-xs mt-0.5">Points & Redemption</p></div>
+                <button onClick={() => setShowRedeemSheet(false)} className="p-2 text-brand-navy/40 hover:text-brand-navy"><X size={20} /></button>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                <div className="glass-card p-5 rounded-2xl">
+                  <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest mb-1">Points</p>
+                  <p className="text-3xl font-black text-brand-navy">{membershipPoints.toLocaleString()}</p>
+                  {pointsRate > 0 && <p className="text-[10px] text-brand-navy/40 mt-1">{pointsRate} pts per $1</p>}
+                </div>
+                <div className="glass-card p-5 rounded-2xl">
+                  <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest mb-1">Value</p>
+                  <p className="text-3xl font-black text-emerald-600">${redeemableValue.toFixed(2)}</p>
+                  {redemptionRate > 0 && <p className="text-[10px] text-brand-navy/40 mt-1">{redemptionRate} pts = $1</p>}
+                </div>
+              </div>
+              <div className="glass-card rounded-2xl p-4 mb-6 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-brand-navy/50 text-xs font-bold uppercase tracking-widest">Total Spent</span>
+                  <span className="text-brand-navy font-black">${totalSpent.toFixed(2)}</span>
+                </div>
+                {earnedRewards > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-brand-navy/50 text-xs font-bold uppercase tracking-widest">Rewards Earned</span>
+                    <span className="text-brand-navy font-black">{earnedRewards}</span>
+                  </div>
+                )}
+              </div>
+              <button onClick={() => setShowRedeemSheet(false)} className="w-full bg-brand-navy text-white py-3.5 rounded-2xl font-bold text-sm">Done</button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showNfc && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowNfc(false)} className="absolute inset-0 bg-brand-navy/90 backdrop-blur-sm" />
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-xs p-8 rounded-[3rem] text-center relative z-10">
+              <h3 className="font-display text-xl font-bold mb-0.5">{membershipName}</h3>
+              <p className="text-brand-navy/40 text-xs mb-6">{store?.name}</p>
+              <div className="relative flex items-center justify-center mb-6">
+                <motion.div animate={{ scale: [1, 1.6, 1], opacity: [0.3, 0, 0.3] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }} className="absolute w-28 h-28 rounded-full border-2 border-brand-navy/30" />
+                <motion.div animate={{ scale: [1, 1.35, 1], opacity: [0.4, 0, 0.4] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }} className="absolute w-20 h-20 rounded-full border-2 border-brand-navy/40" />
+                <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: 'linear-gradient(160deg,#1e3a8a,#1d4ed8,#2563eb,#3b82f6)' }}>
+                  <Wifi size={26} className="text-white -rotate-90" />
+                </div>
+              </div>
+              <p className="font-bold text-brand-navy mb-1">Hold near membership terminal</p>
+              <p className="text-xs text-brand-navy/40 mb-6">Tap your phone on the NFC reader to record your visit</p>
+              <p className="text-brand-navy font-black text-2xl mb-1">{membershipVisits} visits</p>
+              {nextVisitReward && <p className="text-brand-navy/40 text-xs mb-5">{nextVisitReward.visits - membershipVisits} more to: {nextVisitReward.reward}</p>}
+              <button onClick={() => setShowNfc(false)} className="w-full bg-brand-navy text-white py-3.5 rounded-2xl font-bold text-sm">Done</button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+      </>
     );
   }
 
