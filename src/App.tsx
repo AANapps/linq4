@@ -10929,7 +10929,7 @@ function MembershipCard({ card, store, onViewStore, compact = false }: { card: C
     <>
       <motion.div
         className="relative rounded-[2rem] overflow-hidden select-none"
-        style={{ background: `linear-gradient(135deg, ${color}ff 0%, ${color}bb 50%, ${color}88 100%)`, minHeight: membershipType === 'visit' ? undefined : 240 }}
+        style={{ background: `linear-gradient(135deg, ${color}ff 0%, ${color}bb 50%, ${color}88 100%)`, minHeight: membershipType === 'visit' ? 220 : 240 }}
         whileTap={{ scale: 0.98 }}
       >
         {/* Top row */}
@@ -10974,7 +10974,7 @@ function MembershipCard({ card, store, onViewStore, compact = false }: { card: C
 
         {/* Visit layout */}
         {membershipType === 'visit' && (
-          <button className="w-full text-left" onClick={(e) => { e.stopPropagation(); setShowRedeemSheet(true); }}>
+          <button className="w-full text-left" onClick={(e) => { e.stopPropagation(); setShowNfc(true); }}>
             <div className="flex items-center justify-center gap-8 py-5 px-5">
               <div className="text-center">
                 <p className="text-white font-black text-6xl leading-none">{membershipVisits}</p>
@@ -20037,19 +20037,30 @@ function ProfileCardRow({ store, card, membershipCard, userId, userProfile, onJo
         )}
         {store.membershipEnabled && (
           membershipCard ? (
-            <button
-              onClick={() => setShowMembershipPopup(true)}
-              className="w-full relative overflow-hidden flex items-center justify-between px-4 py-3 rounded-2xl text-white shadow-lg active:scale-95 transition-all"
-              style={{ background: linqGrad }}
-            >
-              <div className="flex items-center gap-2">
-                <Check size={15} className="text-white/80" />
-                <span className="font-bold text-sm">{store.membershipName || 'Membership'}</span>
-              </div>
-              <span className="text-white/70 text-xs font-bold">
-                {memType === 'spend' ? `$${membershipSpent.toFixed(0)} spent` : `${membershipVisitCount} visits`}
-              </span>
-            </button>
+            memType === 'visit' ? (
+              <button
+                onClick={() => setShowMembershipPopup(true)}
+                className="w-full relative overflow-hidden flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm text-white shadow-lg active:scale-95 transition-all"
+                style={{ background: linqGrad }}
+              >
+                <span className="card-shine-ray" />
+                <Wifi size={15} className="-rotate-90" />
+                Stamp Visit
+                <span className="absolute right-4 text-white/60 text-xs">{membershipVisitCount} visits</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowMembershipPopup(true)}
+                className="w-full relative overflow-hidden flex items-center justify-between px-4 py-3 rounded-2xl text-white shadow-lg active:scale-95 transition-all"
+                style={{ background: linqGrad }}
+              >
+                <div className="flex items-center gap-2">
+                  <Check size={15} className="text-white/80" />
+                  <span className="font-bold text-sm">{store.membershipName || 'Membership'}</span>
+                </div>
+                <span className="text-white/70 text-xs font-bold">${membershipSpent.toFixed(0)} spent</span>
+              </button>
+            )
           ) : (
             <button
               onClick={onJoinMembership}
