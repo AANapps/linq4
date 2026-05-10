@@ -14199,8 +14199,12 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
   const membershipEnabled = store?.membershipEnabled === true;
   const [toggling, setToggling] = useState(false);
   const [togglingMembership, setTogglingMembership] = useState(false);
-  const [activeTab, setActiveTab] = useState<'loyalty' | 'membership'>('loyalty');
+  // Initialise from Firestore: membership tab if membership is the active type
+  const [activeTab, setActiveTab] = useState<'loyalty' | 'membership'>(
+    store?.membershipEnabled === true ? 'membership' : 'loyalty'
+  );
   const [pendingTab, setPendingTab] = useState<'loyalty' | 'membership' | null>(null);
+  const [switching, setSwitching] = useState(false);
 
   const toggle = async () => {
     if (!store?.id) return;
@@ -14227,8 +14231,20 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
     setPendingTab(tab);
   };
 
-  const confirmSwitch = () => {
-    if (pendingTab) setActiveTab(pendingTab);
+  const confirmSwitch = async () => {
+    if (!pendingTab || !store?.id) return;
+    setSwitching(true);
+    try {
+      // Disable the outgoing card type so it disappears from the vendor profile
+      if (pendingTab === 'membership') {
+        await updateDoc(doc(db, 'stores', store.id), { cardEnabled: false });
+      } else {
+        await updateDoc(doc(db, 'stores', store.id), { membershipEnabled: false });
+      }
+    } finally {
+      setSwitching(false);
+    }
+    setActiveTab(pendingTab);
     setPendingTab(null);
   };
 
@@ -14275,20 +14291,22 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
                 <h3 className="font-display text-lg font-bold text-brand-navy">Switch card type?</h3>
               </div>
               <p className="text-sm text-brand-navy/60">
-                Switching to the <span className="font-bold text-brand-navy">{pendingTab === 'loyalty' ? 'Loyalty' : 'Membership'}</span> card view may cause you to lose any unsaved changes on the current card.
+                Switching to <span className="font-bold text-brand-navy">{pendingTab === 'loyalty' ? 'Loyalty' : 'Membership'}</span> will disable your current <span className="font-bold text-brand-navy">{pendingTab === 'loyalty' ? 'Membership' : 'Loyalty'}</span> card. Customers will no longer see it on your profile until you switch back.
               </p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setPendingTab(null)}
-                  className="flex-1 py-3 rounded-2xl border border-brand-navy/10 text-sm font-bold text-brand-navy/60 hover:bg-brand-navy/5 transition-colors"
+                  disabled={switching}
+                  className="flex-1 py-3 rounded-2xl border border-brand-navy/10 text-sm font-bold text-brand-navy/60 hover:bg-brand-navy/5 transition-colors disabled:opacity-40"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={confirmSwitch}
-                  className="flex-1 py-3 rounded-2xl bg-brand-navy text-white text-sm font-bold hover:bg-brand-navy/90 transition-colors"
+                  disabled={switching}
+                  className="flex-1 py-3 rounded-2xl bg-brand-navy text-white text-sm font-bold hover:bg-brand-navy/90 transition-colors disabled:opacity-40"
                 >
-                  Switch anyway
+                  {switching ? 'Switching…' : 'Switch anyway'}
                 </button>
               </div>
             </div>
@@ -20356,14 +20374,49 @@ function ProfileCardRow({ store, card, membershipCard, userId, userProfile, onJo
 
   return (
     <>
-      {/* Loyalty card — stamp grid when joined, join button when not */}
-      {storeCardActive(store) && (
+      {/* Show exactly one card type: membership if enabled, otherwise loyalty */}
+      {store.membershipEnabled ? (
+        membershipCard ? (
+          memType === 'visit' ? (
+            <button
+              onClick={() => setShowMembershipPopup(true)}
+              className="w-full relative overflow-hidden flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm text-white shadow-lg active:scale-95 transition-all"
+              style={{ background: linqGrad }}
+            >
+              <span className="card-shine-ray" />
+              <Wifi size={15} className="-rotate-90" />
+              Stamp Visit
+              <span className="absolute right-4 text-white/60 text-xs">{membershipVisitCount} visits</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowMembershipPopup(true)}
+              className="w-full relative overflow-hidden flex items-center justify-between px-4 py-3 rounded-2xl text-white shadow-lg active:scale-95 transition-all"
+              style={{ background: linqGrad }}
+            >
+              <div className="flex items-center gap-2">
+                <Check size={15} className="text-white/80" />
+                <span className="font-bold text-sm">{store.membershipName || 'Membership'}</span>
+              </div>
+              <span className="text-white/70 text-xs font-bold">${membershipSpent.toFixed(0)} spent</span>
+            </button>
+          )
+        ) : (
+          <button
+            onClick={onJoinMembership}
+            className="w-full relative overflow-hidden flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm text-white shadow-lg active:scale-95 transition-all"
+            style={{ background: linqGrad }}
+          >
+            <Plus size={15} />
+            Join {store.membershipName || 'Membership'}
+          </button>
+        )
+      ) : storeCardActive(store) ? (
         card ? (
           <button
             onClick={() => setShowLoyaltyPopup(true)}
             className="w-full rounded-2xl overflow-hidden shadow-lg active:scale-[0.98] transition-all text-left"
           >
-            {/* Card header */}
             <div className="flex items-center gap-3 px-4 py-3" style={{ background: linqGrad }}>
               {store.logoUrl
                 ? <img src={store.logoUrl} alt="" className="w-8 h-8 rounded-full border-2 border-white/30 object-cover shrink-0" />
@@ -20375,7 +20428,6 @@ function ProfileCardRow({ store, card, membershipCard, userId, userProfile, onJo
                 <span className="text-white/70 text-[10px] font-bold uppercase tracking-widest">Loyalty</span>
               </div>
             </div>
-            {/* Stamp grid */}
             <div className="bg-white px-4 pt-3 pb-3">
               <div
                 className="grid gap-1.5 mb-2"
@@ -20385,10 +20437,7 @@ function ProfileCardRow({ store, card, membershipCard, userId, userProfile, onJo
                   <div
                     key={i}
                     className="aspect-square rounded-full flex items-center justify-center"
-                    style={i < stamps
-                      ? { background: linqGrad }
-                      : { border: '2px solid #e2e8f0' }
-                    }
+                    style={i < stamps ? { background: linqGrad } : { border: '2px solid #e2e8f0' }}
                   >
                     {i < stamps && <span className="text-white text-[8px]">★</span>}
                   </div>
@@ -20398,53 +20447,16 @@ function ProfileCardRow({ store, card, membershipCard, userId, userProfile, onJo
             </div>
           </button>
         ) : (
-            <button
-              onClick={onJoinLoyalty}
-              className="w-full relative overflow-hidden flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm text-white shadow-lg active:scale-95 transition-all"
-              style={{ background: linqGrad }}
-            >
-              <Plus size={15} />
-              Join Loyalty Card
-            </button>
-          )
-        )}
-        {store.membershipEnabled && (
-          membershipCard ? (
-            memType === 'visit' ? (
-              <button
-                onClick={() => setShowMembershipPopup(true)}
-                className="w-full relative overflow-hidden flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm text-white shadow-lg active:scale-95 transition-all"
-                style={{ background: linqGrad }}
-              >
-                <span className="card-shine-ray" />
-                <Wifi size={15} className="-rotate-90" />
-                Stamp Visit
-                <span className="absolute right-4 text-white/60 text-xs">{membershipVisitCount} visits</span>
-              </button>
-            ) : (
-              <button
-                onClick={() => setShowMembershipPopup(true)}
-                className="w-full relative overflow-hidden flex items-center justify-between px-4 py-3 rounded-2xl text-white shadow-lg active:scale-95 transition-all"
-                style={{ background: linqGrad }}
-              >
-                <div className="flex items-center gap-2">
-                  <Check size={15} className="text-white/80" />
-                  <span className="font-bold text-sm">{store.membershipName || 'Membership'}</span>
-                </div>
-                <span className="text-white/70 text-xs font-bold">${membershipSpent.toFixed(0)} spent</span>
-              </button>
-            )
-          ) : (
-            <button
-              onClick={onJoinMembership}
-              className="w-full relative overflow-hidden flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm text-white shadow-lg active:scale-95 transition-all"
-              style={{ background: linqGrad }}
-            >
-              <Plus size={15} />
-              Join {store.membershipName || 'Membership'}
-            </button>
-          )
-        )}
+          <button
+            onClick={onJoinLoyalty}
+            className="w-full relative overflow-hidden flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm text-white shadow-lg active:scale-95 transition-all"
+            style={{ background: linqGrad }}
+          >
+            <Plus size={15} />
+            Join Loyalty Card
+          </button>
+        )
+      ) : null}
 
       {/* Loyalty popup — reuses wallet LoyaltyCard popup */}
       {showLoyaltyPopup && card && (
