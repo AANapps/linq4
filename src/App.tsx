@@ -351,6 +351,7 @@ interface StoreProfile {
   membershipSpendReward?: string;
   membershipPointsRate?: number;
   membershipRedemptionRate?: number;
+  membershipVisitRewards?: { visits: number; reward: string }[];
 }
 
 function storeCardActive(store: StoreProfile): boolean {
@@ -10872,9 +10873,8 @@ function BarcodeDisplay({ value, height = 60 }: { value: string; height?: number
 }
 
 function MembershipCard({ card, store, onViewStore, compact = false }: { card: Card; store?: StoreProfile; onViewStore?: (s: StoreProfile) => void; compact?: boolean; key?: React.Key }) {
-  const [showHistory, setShowHistory] = useState(false);
-  const [showEarnInfo, setShowEarnInfo] = useState(false);
   const [showRedeemSheet, setShowRedeemSheet] = useState(false);
+  const [showNfc, setShowNfc] = useState(false);
 
   const membershipType = card.membership_type ?? store?.membershipType ?? 'spend';
   const color = store?.membershipColor || '#0f4c81';
@@ -10887,6 +10887,10 @@ function MembershipCard({ card, store, onViewStore, compact = false }: { card: C
   const pointsRate = store?.membershipPointsRate ?? 0;
   const redemptionRate = store?.membershipRedemptionRate ?? 0;
   const redeemableValue = redemptionRate > 0 ? membershipPoints / redemptionRate : 0;
+
+  const visitRewards = (store?.membershipVisitRewards ?? []).slice().sort((a, b) => a.visits - b.visits);
+  const nextVisitReward = visitRewards.find(r => r.visits > membershipVisits);
+  const lastVisitReward = visitRewards.filter(r => r.visits <= membershipVisits).pop();
 
   if (compact) {
     return (
@@ -10925,7 +10929,7 @@ function MembershipCard({ card, store, onViewStore, compact = false }: { card: C
     <>
       <motion.div
         className="relative rounded-[2rem] overflow-hidden select-none"
-        style={{ background: `linear-gradient(135deg, ${color}ff 0%, ${color}bb 50%, ${color}88 100%)`, minHeight: 240 }}
+        style={{ background: `linear-gradient(135deg, ${color}ff 0%, ${color}bb 50%, ${color}88 100%)`, minHeight: membershipType === 'visit' ? undefined : 240 }}
         whileTap={{ scale: 0.98 }}
       >
         {/* Top row */}
@@ -10970,15 +10974,46 @@ function MembershipCard({ card, store, onViewStore, compact = false }: { card: C
 
         {/* Visit layout */}
         {membershipType === 'visit' && (
-          <>
-            <div className="text-center py-6 px-5">
-              <p className="text-white font-black text-5xl leading-none">{membershipVisits}</p>
-              <p className="text-white/70 text-xs font-bold uppercase tracking-widest mt-2">Total Visits</p>
+          <button className="w-full text-left" onClick={(e) => { e.stopPropagation(); setShowRedeemSheet(true); }}>
+            <div className="flex items-center justify-center gap-8 py-5 px-5">
+              <div className="text-center">
+                <p className="text-white font-black text-6xl leading-none">{membershipVisits}</p>
+                <p className="text-white/70 text-xs font-bold uppercase tracking-widest mt-1.5">visits</p>
+              </div>
+              {nextVisitReward && (
+                <>
+                  <div className="w-px h-10 bg-white/20" />
+                  <div className="text-center">
+                    <p className="text-white font-black text-2xl leading-none">{nextVisitReward.visits - membershipVisits}</p>
+                    <p className="text-white/70 text-xs font-bold uppercase tracking-widest mt-1.5">to next</p>
+                  </div>
+                </>
+              )}
             </div>
-            <div className="px-5 pb-5">
-              <p className="text-white/60 text-xs text-center">Visit the store and tap your phone to earn</p>
+            {nextVisitReward && (
+              <div className="px-5 pb-2">
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest truncate pr-2">
+                    {nextVisitReward.reward}
+                  </p>
+                  <p className="text-white/50 text-[10px] font-bold shrink-0">{membershipVisits}/{nextVisitReward.visits}</p>
+                </div>
+                <div className="h-2 bg-white/15 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-white/70 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, (membershipVisits / nextVisitReward.visits) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
+            <div className="flex items-center justify-between px-5 pb-4 pt-2">
+              {lastVisitReward
+                ? <p className="text-white/50 text-xs">Last: {lastVisitReward.reward}</p>
+                : <p className="text-white/50 text-xs">Tap to scan a visit</p>
+              }
+              <span className="text-white/60 text-xs font-bold flex items-center gap-1"><Wifi size={11} className="-rotate-90" /> Scan visit</span>
             </div>
-          </>
+          </button>
         )}
       </motion.div>
 
@@ -11060,6 +11095,109 @@ function MembershipCard({ card, store, onViewStore, compact = false }: { card: C
               )}
 
               <p className="text-center text-xs text-brand-navy/40">Show your balance to the vendor to redeem</p>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Visit detail sheet */}
+      <AnimatePresence>
+        {showRedeemSheet && membershipType === 'visit' && (
+          <div className="fixed inset-0 z-[120] flex items-end justify-center">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowRedeemSheet(false)} />
+            <motion.div
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+              className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-10 shadow-2xl"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="font-display text-2xl font-bold">{membershipName}</h3>
+                  <p className="text-brand-navy/40 text-xs mt-0.5">{membershipVisits} visits total</p>
+                </div>
+                <button onClick={() => setShowRedeemSheet(false)} className="p-2 text-brand-navy/40 hover:text-brand-navy"><X size={20} /></button>
+              </div>
+
+              {/* Scan visit button */}
+              <button
+                onClick={() => setShowNfc(true)}
+                className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl font-bold text-white text-sm mb-6 active:scale-95 transition-all"
+                style={{ background: `linear-gradient(135deg, ${color}ff 0%, ${color}99 100%)` }}
+              >
+                <Wifi size={18} className="-rotate-90" />
+                Scan Visit
+              </button>
+
+              {/* Next reward progress */}
+              {nextVisitReward && (
+                <div className="glass-card p-5 rounded-2xl mb-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="font-bold text-brand-navy text-sm">{nextVisitReward.reward}</p>
+                    <p className="text-brand-navy/40 text-xs font-bold">{membershipVisits}/{nextVisitReward.visits} visits</p>
+                  </div>
+                  <div className="h-2.5 bg-brand-navy/10 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{ width: `${Math.min(100, (membershipVisits / nextVisitReward.visits) * 100)}%`, background: `linear-gradient(90deg, ${color}cc, ${color}ff)` }}
+                    />
+                  </div>
+                  <p className="text-[10px] text-brand-navy/40 mt-2 font-bold">{nextVisitReward.visits - membershipVisits} more visits to unlock</p>
+                </div>
+              )}
+
+              {/* All rewards list */}
+              {visitRewards.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest mb-3">All Rewards</p>
+                  {visitRewards.map((r, i) => (
+                    <div key={i} className={`flex items-center gap-3 p-3 rounded-2xl ${membershipVisits >= r.visits ? 'bg-emerald-50' : 'bg-brand-bg'}`}>
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${membershipVisits >= r.visits ? 'bg-emerald-500' : 'bg-brand-navy/10'}`}>
+                        {membershipVisits >= r.visits
+                          ? <Check size={14} className="text-white" />
+                          : <span className="text-[10px] font-black text-brand-navy/40">{r.visits}</span>
+                        }
+                      </div>
+                      <div className="flex-1">
+                        <p className={`text-sm font-bold ${membershipVisits >= r.visits ? 'text-emerald-700' : 'text-brand-navy'}`}>{r.reward}</p>
+                        <p className="text-[10px] text-brand-navy/40">{r.visits} visits</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* NFC scan prompt */}
+      <AnimatePresence>
+        {showNfc && (
+          <div className="fixed inset-0 z-[130] flex items-center justify-center p-6">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowNfc(false)} className="absolute inset-0 bg-brand-navy/90 backdrop-blur-sm" />
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-xs p-8 rounded-[3rem] text-center relative z-10">
+              <h3 className="font-display text-lg font-bold mb-0.5">{membershipName}</h3>
+              <p className="text-brand-navy/40 text-xs mb-8">Visit</p>
+              <div className="relative flex items-center justify-center mb-8">
+                <motion.div
+                  animate={{ scale: [1, 1.6, 1], opacity: [0.3, 0, 0.3] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                  className="absolute w-28 h-28 rounded-full border-2 border-brand-navy/30"
+                />
+                <motion.div
+                  animate={{ scale: [1, 1.35, 1], opacity: [0.4, 0, 0.4] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
+                  className="absolute w-20 h-20 rounded-full border-2 border-brand-navy/40"
+                />
+                <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${color}ff, ${color}99)` }}>
+                  <Wifi size={26} className="text-white -rotate-90" />
+                </div>
+              </div>
+              <p className="font-bold text-brand-navy mb-1">Hold near membership terminal</p>
+              <p className="text-xs text-brand-navy/40 mb-6">Tap your phone on the NFC reader to record your visit</p>
+              <p className="text-brand-navy font-black text-2xl mb-1">{membershipVisits} visits</p>
+              {nextVisitReward && <p className="text-brand-navy/40 text-xs mb-5">{nextVisitReward.visits - membershipVisits} more to: {nextVisitReward.reward}</p>}
+              <button onClick={() => setShowNfc(false)} className="w-full bg-brand-navy text-white py-3.5 rounded-2xl font-bold text-sm">Done</button>
             </motion.div>
           </div>
         )}
@@ -14239,6 +14377,7 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
   const [pointsRate, setPointsRate] = useState(store?.membershipPointsRate?.toString() || '10');
   const [redemptionRate, setRedemptionRate] = useState(store?.membershipRedemptionRate?.toString() || '100');
   const [calcSpend, setCalcSpend] = useState('50');
+  const [visitRewards, setVisitRewards] = useState<{ visits: number; reward: string }[]>(store?.membershipVisitRewards || []);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -14252,6 +14391,7 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
     setSpendReward(store.membershipSpendReward || '');
     setPointsRate(store.membershipPointsRate?.toString() || '10');
     setRedemptionRate(store.membershipRedemptionRate?.toString() || '100');
+    setVisitRewards(store.membershipVisitRewards || []);
   }, [store?.id]);
 
   const MEMBER_COLORS = ['#0f4c81', '#7c3aed', '#0e7490', '#065f46', '#92400e', '#9f1239'];
@@ -14269,6 +14409,7 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
         membershipSpendReward: spendReward,
         membershipPointsRate: parseFloat(pointsRate) || 0,
         membershipRedemptionRate: parseFloat(redemptionRate) || 0,
+        membershipVisitRewards: visitRewards.filter(r => r.reward.trim()).sort((a, b) => a.visits - b.visits),
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -14442,7 +14583,51 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
           </div>
         )}
 
-        {/* Visit-based: no extra config needed */}
+        {/* Visit-based: rewards */}
+        {membershipType === 'visit' && (
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Rewards</label>
+              {visitRewards.length < 10 && (
+                <button
+                  onClick={() => setVisitRewards(r => [...r, { visits: (r[r.length - 1]?.visits ?? 0) + 5, reward: '' }])}
+                  className="text-xs font-bold text-brand-navy flex items-center gap-1 px-3 py-1.5 bg-brand-bg rounded-xl border border-brand-navy/10 hover:border-brand-navy/30 transition-colors"
+                >
+                  <Plus size={12} /> Add Reward
+                </button>
+              )}
+            </div>
+            {visitRewards.length === 0 && (
+              <p className="text-xs text-brand-navy/30 text-center py-4">No rewards yet — add up to 10</p>
+            )}
+            <div className="space-y-2">
+              {visitRewards.map((r, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 bg-brand-bg rounded-2xl px-3 py-3 border border-brand-navy/10 w-24 shrink-0">
+                    <span className="text-[10px] font-bold text-brand-navy/40">@</span>
+                    <input
+                      type="number"
+                      min="1"
+                      value={r.visits}
+                      onChange={e => setVisitRewards(prev => prev.map((x, idx) => idx === i ? { ...x, visits: Math.max(1, parseInt(e.target.value) || 1) } : x))}
+                      className="w-full text-sm font-bold text-brand-navy bg-transparent outline-none"
+                      placeholder="5"
+                    />
+                  </div>
+                  <input
+                    value={r.reward}
+                    onChange={e => setVisitRewards(prev => prev.map((x, idx) => idx === i ? { ...x, reward: e.target.value } : x))}
+                    className="flex-1 px-4 py-3 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-bold text-brand-navy outline-none focus:border-brand-navy/30"
+                    placeholder="e.g. Free coffee, 10% off"
+                  />
+                  <button onClick={() => setVisitRewards(prev => prev.filter((_, idx) => idx !== i))} className="p-2 text-red-400 shrink-0">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Preview */}
         <div className="space-y-2">
