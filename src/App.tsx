@@ -128,11 +128,14 @@ import {
   ChevronUp,
   MoveHorizontal,
   Check,
-  LayoutList
+  LayoutList,
+  History,
+  DollarSign
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 import { format } from 'date-fns';
+import JsBarcode from 'jsbarcode';
 
 // --- Types ---
 
@@ -339,6 +342,16 @@ interface StoreProfile {
   pointsPerVisit?: number;
   pointsToMoneyRate?: number;
   subCardRewards?: { points: number; reward: string }[];
+  membershipEnabled?: boolean;
+  membershipType?: 'spend' | 'points';
+  membershipName?: string;
+  membershipColor?: string;
+  membershipDescription?: string;
+  membershipSpendThreshold?: number;
+  membershipSpendReward?: string;
+  membershipPointsRate?: number;
+  membershipPointsToMoney?: number;
+  membershipRedemptionOptions?: { points: number; reward: string }[];
 }
 
 // Returns true if the store's loyalty card should be visible to consumers.
@@ -370,11 +383,18 @@ interface Card {
   isRedeemed?: boolean;
   stamps_required?: number;
   tiersCompleted?: number;
-  card_type?: 'stamp' | 'sub';
+  card_type?: 'stamp' | 'sub' | 'membership';
   current_points?: number;
   total_visits?: number;
   total_points_earned?: number;
   total_points_redeemed?: number;
+  membership_type?: 'spend' | 'points';
+  total_spent?: number;
+  earned_rewards?: number;
+  membership_points?: number;
+  last_earned?: number;
+  userName?: string;
+  userPhoto?: string;
 }
 
 interface Notification {
@@ -6979,7 +6999,9 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                       const store = stores.find(s => s.id === card.store_id);
                       return (
                         <div key={card.id} className="snap-center shrink-0 w-[83vw] max-w-[340px]">
-                          {card.card_type === 'sub'
+                          {card.card_type === 'membership'
+                            ? <MembershipCard card={card} store={store} onViewStore={onViewStore} />
+                            : card.card_type === 'sub'
                             ? <SubLoyaltyCard card={card} store={store} onViewStore={onViewStore} />
                             : <LoyaltyCard card={card} store={store} onViewStore={onViewStore} />}
                         </div>
@@ -6990,7 +7012,9 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                   <div className="space-y-3">
                     {activeCards.map(card => {
                       const store = stores.find(s => s.id === card.store_id);
-                      return card.card_type === 'sub'
+                      return card.card_type === 'membership'
+                        ? <MembershipCard key={card.id} card={card} store={store} onViewStore={onViewStore} compact />
+                        : card.card_type === 'sub'
                         ? <SubLoyaltyCard key={card.id} card={card} store={store} onViewStore={onViewStore} compact />
                         : <LoyaltyCard key={card.id} card={card} store={store} onViewStore={onViewStore} compact />;
                     })}
@@ -10777,6 +10801,326 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
 
 // --- UI Components ---
 
+function BarcodeDisplay({ value, height = 60 }: { value: string; height?: number }) {
+  const svgRef = useRef<SVGSVGElement>(null);
+  useEffect(() => {
+    if (!svgRef.current) return;
+    try {
+      JsBarcode(svgRef.current, value, {
+        format: 'CODE128',
+        displayValue: false,
+        width: 1.6,
+        height,
+        margin: 0,
+        background: 'transparent',
+        lineColor: '#1e3a5f',
+      });
+    } catch {
+      // ignore invalid chars
+    }
+  }, [value, height]);
+  return <svg ref={svgRef} className="w-full" />;
+}
+
+function MembershipCard({ card, store, onViewStore, compact = false }: { card: Card; store?: StoreProfile; onViewStore?: (s: StoreProfile) => void; compact?: boolean; key?: React.Key }) {
+  const [showHistory, setShowHistory] = useState(false);
+  const [showEarnInfo, setShowEarnInfo] = useState(false);
+  const [showRedeemSheet, setShowRedeemSheet] = useState(false);
+  const [isRedeeming, setIsRedeeming] = useState(false);
+
+  const membershipType = card.membership_type ?? store?.membershipType ?? 'spend';
+  const color = store?.membershipColor || '#0f4c81';
+  const membershipName = store?.membershipName || 'Membership';
+
+  const totalSpent = card.total_spent ?? 0;
+  const earnedRewards = card.earned_rewards ?? 0;
+  const membershipPoints = card.membership_points ?? 0;
+  const lastEarned = card.last_earned ?? 0;
+
+  const rate = store?.membershipPointsToMoney || 100;
+  const redemptionOptions = store?.membershipRedemptionOptions ?? [];
+  const sortedOptions = [...redemptionOptions].sort((a, b) => a.points - b.points);
+  const nextOption = sortedOptions.find(o => o.points > membershipPoints);
+
+  const handleRedeem = async (option: { points: number; reward: string }) => {
+    if (membershipPoints < option.points) return;
+    setIsRedeeming(true);
+    try {
+      await updateDoc(doc(db, 'cards', card.id), {
+        membership_points: increment(-option.points),
+      });
+      await addDoc(collection(db, 'transactions'), {
+        user_id: card.user_id,
+        store_id: card.store_id,
+        card_type: 'membership',
+        type: 'redemption',
+        points_redeemed: option.points,
+        reward: option.reward,
+        redeemed_at: serverTimestamp(),
+      });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsRedeeming(false);
+      setShowRedeemSheet(false);
+    }
+  };
+
+  if (compact) {
+    return (
+      <div
+        className="rounded-3xl p-4 flex items-center gap-3 cursor-pointer"
+        style={{ background: `linear-gradient(135deg, ${color}ee 0%, ${color}99 100%)` }}
+        onClick={() => store && onViewStore && onViewStore(store)}
+      >
+        <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/30 shrink-0">
+          <img src={store?.logoUrl || `https://picsum.photos/seed/${card.store_id}/200/200`} alt="" className="w-full h-full object-cover" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-white text-sm truncate">{store?.name || 'Store'}</p>
+          <p className="text-white/70 text-xs">{membershipName}</p>
+        </div>
+        <div className="shrink-0 text-right">
+          {membershipType === 'spend' ? (
+            <>
+              <p className="text-white font-bold text-sm">${totalSpent.toFixed(2)}</p>
+              <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest">spent</p>
+            </>
+          ) : (
+            <>
+              <p className="text-white font-bold text-sm">{membershipPoints.toLocaleString()}</p>
+              <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest">pts</p>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <motion.div
+        className="relative rounded-[2rem] overflow-hidden select-none"
+        style={{ background: `linear-gradient(135deg, ${color}ff 0%, ${color}bb 50%, ${color}88 100%)`, minHeight: 200 }}
+        whileTap={{ scale: 0.98 }}
+      >
+        {/* Top row */}
+        <div className="flex items-center gap-3 p-5 pb-0">
+          <div
+            className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/30 shrink-0 cursor-pointer"
+            onClick={() => store && onViewStore && onViewStore(store)}
+          >
+            <img src={store?.logoUrl || `https://picsum.photos/seed/${card.store_id}/200/200`} alt="" className="w-full h-full object-cover" />
+          </div>
+          <div
+            className="flex-1 min-w-0 cursor-pointer"
+            onClick={() => store && onViewStore && onViewStore(store)}
+          >
+            <p className="font-bold text-white text-sm truncate">{store?.name || 'Store'}</p>
+          </div>
+          <span className="shrink-0 bg-white/20 text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full border border-white/30">
+            {membershipName}
+          </span>
+        </div>
+
+        {/* Spend-based layout */}
+        {membershipType === 'spend' && (
+          <>
+            <div className="flex items-center justify-center gap-10 py-6">
+              <div className="text-center">
+                <p className="text-white font-black text-4xl leading-none">${totalSpent.toFixed(2)}</p>
+                <p className="text-white/70 text-xs font-bold uppercase tracking-widest mt-1">Total Spent</p>
+              </div>
+              <div className="w-px h-10 bg-white/20" />
+              <div className="text-center">
+                <p className="text-white font-black text-4xl leading-none">{earnedRewards}</p>
+                <p className="text-white/70 text-xs font-bold uppercase tracking-widest mt-1">Rewards</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-between px-5 pb-5">
+              {store?.membershipSpendReward && (
+                <p className="text-white/70 text-xs">
+                  <span className="font-bold text-white">{store.membershipSpendReward}</span>
+                  {store.membershipSpendThreshold ? ` every $${store.membershipSpendThreshold}` : ''}
+                </p>
+              )}
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowHistory(true); }}
+                className="ml-auto flex items-center gap-1 text-white/70 text-xs font-bold hover:text-white transition-colors"
+              >
+                <History size={12} />
+                Rewards history
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* Points layout */}
+        {membershipType === 'points' && (
+          <>
+            <div className="text-center py-6 px-5">
+              <p className="text-white font-black text-5xl leading-none">{membershipPoints.toLocaleString()}</p>
+              <p className="text-white/70 text-xs font-bold uppercase tracking-widest mt-2">Points Balance</p>
+              {lastEarned > 0 && (
+                <p className="text-white/60 text-xs mt-1">+{lastEarned} pts last earned</p>
+              )}
+            </div>
+            <div className="flex items-center justify-between px-5 pb-5">
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowEarnInfo(true); }}
+                className="flex items-center gap-1 text-white/70 text-xs font-bold hover:text-white transition-colors"
+              >
+                <TrendingUp size={12} />
+                How to earn more
+              </button>
+              {(redemptionOptions.length > 0 || rate > 0) && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowRedeemSheet(true); }}
+                  className="flex items-center gap-1.5 bg-white text-brand-navy px-4 py-2 rounded-xl font-bold text-xs hover:scale-105 active:scale-95 transition-transform"
+                  style={{ color }}
+                >
+                  <Gift size={13} />
+                  Redeem
+                </button>
+              )}
+            </div>
+          </>
+        )}
+      </motion.div>
+
+      {/* History sheet (spend-based) */}
+      <AnimatePresence>
+        {showHistory && (
+          <div className="fixed inset-0 z-[120] flex items-end justify-center">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowHistory(false)} />
+            <motion.div
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+              className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-10 shadow-2xl"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="font-display text-2xl font-bold">Rewards History</h3>
+                <button onClick={() => setShowHistory(false)} className="p-2 text-brand-navy/40 hover:text-brand-navy"><X size={20} /></button>
+              </div>
+              <div className="glass-card p-5 rounded-2xl flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">Total Spent</p>
+                  <p className="text-3xl font-black text-brand-navy mt-1">${totalSpent.toFixed(2)}</p>
+                </div>
+                <DollarSign className="w-8 h-8 text-emerald-400" />
+              </div>
+              <div className="glass-card p-5 rounded-2xl flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">Rewards Earned</p>
+                  <p className="text-3xl font-black text-emerald-600 mt-1">{earnedRewards}</p>
+                </div>
+                <Gift className="w-8 h-8 text-emerald-400" />
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Earn info sheet (points) */}
+      <AnimatePresence>
+        {showEarnInfo && (
+          <div className="fixed inset-0 z-[120] flex items-end justify-center">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowEarnInfo(false)} />
+            <motion.div
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+              className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-10 shadow-2xl"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="font-display text-2xl font-bold">How to Earn</h3>
+                <button onClick={() => setShowEarnInfo(false)} className="p-2 text-brand-navy/40 hover:text-brand-navy"><X size={20} /></button>
+              </div>
+              <div className="space-y-3">
+                {store?.membershipPointsRate && (
+                  <div className="glass-card p-4 rounded-2xl flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                      <DollarSign size={18} className="text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-brand-navy">{store.membershipPointsRate} pts per $1 spent</p>
+                      <p className="text-xs text-brand-navy/40 mt-0.5">Earn on every purchase</p>
+                    </div>
+                  </div>
+                )}
+                {nextOption && (
+                  <div className="glass-card p-4 rounded-2xl flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
+                      <Gift size={18} className="text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-brand-navy">Next reward: {nextOption.reward}</p>
+                      <p className="text-xs text-brand-navy/40 mt-0.5">{nextOption.points - membershipPoints} more pts needed</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Redeem sheet (points) */}
+      <AnimatePresence>
+        {showRedeemSheet && (
+          <div className="fixed inset-0 z-[120] flex items-end justify-center">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowRedeemSheet(false)} />
+            <motion.div
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+              className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-10 shadow-2xl"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="font-display text-2xl font-bold">Redeem Points</h3>
+                <button onClick={() => setShowRedeemSheet(false)} className="p-2 text-brand-navy/40 hover:text-brand-navy"><X size={20} /></button>
+              </div>
+              <div className="glass-card p-5 rounded-2xl flex items-center justify-between mb-6">
+                <div>
+                  <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">Balance</p>
+                  <p className="text-3xl font-black text-brand-navy mt-1">{membershipPoints.toLocaleString()} pts</p>
+                </div>
+                <Star className="w-8 h-8 text-amber-400" />
+              </div>
+              {redemptionOptions.length > 0 ? (
+                <div className="space-y-3">
+                  {sortedOptions.map((opt, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleRedeem(opt)}
+                      disabled={isRedeeming || membershipPoints < opt.points}
+                      className={cn(
+                        "w-full flex items-center justify-between p-4 rounded-2xl border transition-all",
+                        membershipPoints >= opt.points
+                          ? "border-brand-gold/40 bg-brand-gold/5 hover:bg-brand-gold/10 active:scale-98"
+                          : "border-brand-navy/10 bg-brand-navy/3 opacity-50 cursor-not-allowed"
+                      )}
+                    >
+                      <div className="text-left">
+                        <p className="font-bold text-brand-navy">{opt.reward}</p>
+                        <p className="text-xs text-brand-navy/40">{opt.points.toLocaleString()} pts</p>
+                      </div>
+                      <Gift size={18} className={membershipPoints >= opt.points ? 'text-brand-gold' : 'text-brand-navy/20'} />
+                    </button>
+                  ))}
+                </div>
+              ) : rate > 0 ? (
+                <div className="text-center py-4 text-brand-navy/40 text-sm">
+                  <p className="font-bold">{rate} pts = $1 off</p>
+                  <p className="text-xs mt-1">Show this to the vendor to redeem</p>
+                </div>
+              ) : null}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
 function LoyaltyCard({ card, store, onViewStore, compact = false }: { card: Card, store?: StoreProfile, onViewStore?: (s: StoreProfile) => void, compact?: boolean, key?: React.Key }) {
   const [showQR, setShowQR] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
@@ -11094,6 +11438,15 @@ function LoyaltyCard({ card, store, onViewStore, compact = false }: { card: Card
                   <h4 className="font-bold text-white text-lg leading-tight">{store?.name || 'Store'}</h4>
                   <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mt-0.5">{store?.category || 'Retail'}</p>
                 </div>
+                {/* Barcode strip */}
+                {auth.currentUser?.uid && (
+                  <div className="relative z-10 w-full px-6 mt-1">
+                    <div className="bg-white/90 rounded-xl px-3 py-2">
+                      <BarcodeDisplay value={auth.currentUser.uid} height={36} />
+                      <p className="text-center text-[8px] text-brand-navy/40 font-mono tracking-wider mt-0.5">{auth.currentUser.uid.slice(0, 20)}…</p>
+                    </div>
+                  </div>
+                )}
               </div>
               {stampGrid(3, 'gap-3', 'px-8 pt-7 pb-6', 22, 'text-[15px]')}
             </div>
@@ -11162,9 +11515,15 @@ function LoyaltyCard({ card, store, onViewStore, compact = false }: { card: Card
               className="glass-panel w-full max-w-xs p-8 rounded-[3rem] text-center relative z-10"
             >
               <h3 className="font-display text-2xl font-bold mb-2">{store?.name}</h3>
-              <p className="text-brand-navy/60 text-sm mb-8">Show this code to the vendor to receive your stamp.</p>
-              <div className="bg-white/80 p-6 rounded-3xl mb-8 flex justify-center border border-brand-rose/20">
-                <QRCodeSVG value={`stamp:${auth.currentUser?.uid}:${card.store_id}`} size={200} />
+              <p className="text-brand-navy/60 text-sm mb-4">Show this barcode to the vendor to receive your stamp.</p>
+              {auth.currentUser?.uid && (
+                <div className="bg-white p-5 rounded-3xl mb-4 border border-brand-rose/20">
+                  <BarcodeDisplay value={auth.currentUser.uid} height={70} />
+                  <p className="text-center text-[9px] text-brand-navy/30 font-mono tracking-wider mt-2 break-all">{auth.currentUser.uid}</p>
+                </div>
+              )}
+              <div className="bg-white/80 p-4 rounded-2xl mb-6 flex justify-center border border-brand-rose/20">
+                <QRCodeSVG value={`stamp:${auth.currentUser?.uid}:${card.store_id}`} size={140} />
               </div>
 
               {/* Test Controls */}
@@ -11492,13 +11851,10 @@ function StoreCard({ store, card, onJoin, onClick, distance }: { store: StorePro
           </div>
         ) : null}
       </div>
-      {cardEnabled && !card && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onJoin(); }}
-          className="px-4 py-2 gradient-logo-blue text-white text-xs font-bold rounded-2xl active:scale-95 transition-all shrink-0 shadow"
-        >
-          Join
-        </button>
+      {cardEnabled && card && (
+        <div className="px-3 py-1.5 bg-green-50 border border-green-200 rounded-2xl shrink-0">
+          <span className="text-[10px] font-bold text-green-600">Joined</span>
+        </div>
       )}
     </div>
   );
@@ -12341,9 +12697,8 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
       const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase()) ||
                             s.category.toLowerCase().includes(search.toLowerCase());
       const matchesCat = activeCategory === 'All' || s.category === activeCategory;
-      const notJoined = !cards.some(c => c.store_id === s.id && !c.isArchived);
       const cardOn = storeCardActive(s);
-      return matchesSearch && matchesCat && notJoined && cardOn;
+      return matchesSearch && matchesCat && cardOn;
     });
     if (!userCoords) return matched;
     return [...matched].sort((a, b) => {
@@ -13379,11 +13734,13 @@ function OffersModal({ offers, currentUser, onClose }: { offers: StoreOffer[]; c
 function VendorCardSection({ store, needsPayment = false }: { store: StoreProfile | null; needsPayment?: boolean }) {
   const enabled = !needsPayment && store?.cardEnabled !== false;
   const subEnabled = store?.subCardEnabled === true;
+  const membershipEnabled = store?.membershipEnabled === true;
   const [toggling, setToggling] = useState(false);
   const [togglingSubCard, setTogglingSubCard] = useState(false);
+  const [togglingMembership, setTogglingMembership] = useState(false);
 
   const toggle = async () => {
-    if (!store?.id || (needsPayment && !enabled)) return; // can turn off but not on without sub
+    if (!store?.id || (needsPayment && !enabled)) return;
     setToggling(true);
     try {
       await updateDoc(doc(db, 'stores', store.id), { cardEnabled: !enabled });
@@ -13402,93 +13759,115 @@ function VendorCardSection({ store, needsPayment = false }: { store: StoreProfil
     }
   };
 
+  const toggleMembership = async () => {
+    if (!store?.id) return;
+    setTogglingMembership(true);
+    try {
+      await updateDoc(doc(db, 'stores', store.id), { membershipEnabled: !membershipEnabled });
+    } finally {
+      setTogglingMembership(false);
+    }
+  };
+
   return (
     <div className="space-y-6 pb-20">
       <header>
-        <h2 className="font-display text-3xl font-bold mb-1">Card</h2>
-        <p className="text-brand-navy/50 text-sm">Enable your loyalty card for customers.</p>
+        <h2 className="font-display text-3xl font-bold mb-1">Cards</h2>
+        <p className="text-brand-navy/50 text-sm">Manage your loyalty and membership cards.</p>
       </header>
 
-      {/* Stamp Card Toggle */}
-      <div className="glass-card rounded-[1.5rem] px-5 py-4 flex items-center justify-between gap-4">
-        <div>
-          <p className="font-bold text-brand-navy">Loyalty Card</p>
-          <p className="text-xs text-brand-navy/50 mt-0.5">
-            {needsPayment && !enabled
-              ? 'Subscribe to re-enable'
-              : enabled ? 'Customers can join and collect stamps' : 'Card hidden from customers'}
-          </p>
+      {/* ─── Loyalty Card ─── */}
+      <div className="space-y-4">
+        <p className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Loyalty Card</p>
+        <div className="glass-card rounded-[1.5rem] px-5 py-4 flex items-center justify-between gap-4">
+          <div>
+            <p className="font-bold text-brand-navy">Stamp Card</p>
+            <p className="text-xs text-brand-navy/50 mt-0.5">
+              {needsPayment && !enabled
+                ? 'Subscribe to re-enable'
+                : enabled ? 'Customers can collect stamps' : 'Hidden from customers'}
+            </p>
+          </div>
+          <button
+            onClick={toggle}
+            disabled={toggling || (needsPayment && !enabled)}
+            className={cn('relative w-14 h-7 rounded-full transition-colors duration-200 shrink-0 disabled:opacity-40', enabled ? 'bg-emerald-500' : 'bg-brand-navy/20')}
+          >
+            <motion.div animate={{ x: enabled ? 28 : 2 }} transition={{ type: 'spring', stiffness: 500, damping: 35 }} className="absolute top-1 w-5 h-5 rounded-full bg-white shadow-md" />
+          </button>
         </div>
-        <button
-          onClick={toggle}
-          disabled={toggling || (needsPayment && !enabled)}
-          className={cn(
-            'relative w-14 h-7 rounded-full transition-colors duration-200 shrink-0 disabled:opacity-40',
-            enabled ? 'bg-emerald-500' : 'bg-brand-navy/20'
+        <AnimatePresence>
+          {enabled && (
+            <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
+              <CardBuilder store={store} />
+            </motion.div>
           )}
-        >
-          <motion.div
-            animate={{ x: enabled ? 28 : 2 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-            className="absolute top-1 w-5 h-5 rounded-full bg-white shadow-md"
-          />
-        </button>
+        </AnimatePresence>
+        {!enabled && (
+          <div className="py-8 text-center text-brand-navy/25">
+            <CreditCard size={36} className="mx-auto mb-2 opacity-30" />
+            <p className="font-bold text-sm">Stamp card disabled</p>
+            <p className="text-xs mt-1">Toggle on to set up your loyalty card.</p>
+          </div>
+        )}
+
+        <div className="glass-card rounded-[1.5rem] px-5 py-4 flex items-center justify-between gap-4">
+          <div>
+            <p className="font-bold text-brand-navy">Points Card</p>
+            <p className="text-xs text-brand-navy/50 mt-0.5">
+              {subEnabled ? 'Customers earn points per spend' : 'Enable a points-based card'}
+            </p>
+          </div>
+          <button
+            onClick={toggleSubCard}
+            disabled={togglingSubCard}
+            className={cn('relative w-14 h-7 rounded-full transition-colors duration-200 shrink-0 disabled:opacity-40', subEnabled ? 'bg-indigo-500' : 'bg-brand-navy/20')}
+          >
+            <motion.div animate={{ x: subEnabled ? 28 : 2 }} transition={{ type: 'spring', stiffness: 500, damping: 35 }} className="absolute top-1 w-5 h-5 rounded-full bg-white shadow-md" />
+          </button>
+        </div>
+        <AnimatePresence>
+          {subEnabled && (
+            <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
+              <SubCardBuilder store={store} />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* Card builder — only when enabled */}
-      <AnimatePresence>
-        {enabled && (
-          <motion.div
-            initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.2 }}
+      {/* ─── Membership Card ─── */}
+      <div className="space-y-4">
+        <p className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Membership Card</p>
+        <div className="glass-card rounded-[1.5rem] px-5 py-4 flex items-center justify-between gap-4">
+          <div>
+            <p className="font-bold text-brand-navy">Membership</p>
+            <p className="text-xs text-brand-navy/50 mt-0.5">
+              {membershipEnabled ? 'Customers can join your membership programme' : 'Enable a membership card'}
+            </p>
+          </div>
+          <button
+            onClick={toggleMembership}
+            disabled={togglingMembership}
+            className={cn('relative w-14 h-7 rounded-full transition-colors duration-200 shrink-0 disabled:opacity-40', membershipEnabled ? 'bg-purple-500' : 'bg-brand-navy/20')}
           >
-            <CardBuilder store={store} />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {!enabled && (
-        <div className="py-10 text-center text-brand-navy/25">
-          <CreditCard size={40} className="mx-auto mb-3 opacity-30" />
-          <p className="font-bold text-sm">Card is disabled</p>
-          <p className="text-xs mt-1">Toggle on to set up your loyalty card.</p>
+            <motion.div animate={{ x: membershipEnabled ? 28 : 2 }} transition={{ type: 'spring', stiffness: 500, damping: 35 }} className="absolute top-1 w-5 h-5 rounded-full bg-white shadow-md" />
+          </button>
         </div>
-      )}
-
-      {/* Points Card Toggle */}
-      <div className="glass-card rounded-[1.5rem] px-5 py-4 flex items-center justify-between gap-4">
-        <div>
-          <p className="font-bold text-brand-navy">Points Card</p>
-          <p className="text-xs text-brand-navy/50 mt-0.5">
-            {subEnabled ? 'Customers earn points per dollar spent' : 'Enable a points-based loyalty card'}
-          </p>
-        </div>
-        <button
-          onClick={toggleSubCard}
-          disabled={togglingSubCard}
-          className={cn(
-            'relative w-14 h-7 rounded-full transition-colors duration-200 shrink-0 disabled:opacity-40',
-            subEnabled ? 'bg-indigo-500' : 'bg-brand-navy/20'
+        <AnimatePresence>
+          {membershipEnabled && (
+            <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
+              <MembershipCardBuilder store={store} />
+            </motion.div>
           )}
-        >
-          <motion.div
-            animate={{ x: subEnabled ? 28 : 2 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-            className="absolute top-1 w-5 h-5 rounded-full bg-white shadow-md"
-          />
-        </button>
-      </div>
-
-      <AnimatePresence>
-        {subEnabled && (
-          <motion.div
-            initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.2 }}
-          >
-            <SubCardBuilder store={store} />
-          </motion.div>
+        </AnimatePresence>
+        {!membershipEnabled && (
+          <div className="py-8 text-center text-brand-navy/25">
+            <Star size={36} className="mx-auto mb-2 opacity-30" />
+            <p className="font-bold text-sm">Membership disabled</p>
+            <p className="text-xs mt-1">Toggle on to set up your membership card.</p>
+          </div>
         )}
-      </AnimatePresence>
+      </div>
     </div>
   );
 }
@@ -13857,6 +14236,247 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
         <button onClick={handleSave} disabled={saving}
           className="w-full bg-brand-navy text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 disabled:opacity-50 transition-all">
           {saved ? <><CheckCircle2 size={16} /> Saved!</> : saving ? 'Saving...' : <><Save size={16} /> Save — Set as New Card</>}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
+  const [membershipType, setMembershipType] = useState<'spend' | 'points'>(store?.membershipType || 'spend');
+  const [membershipName, setMembershipName] = useState(store?.membershipName || 'Membership');
+  const [membershipColor, setMembershipColor] = useState(store?.membershipColor || '#0f4c81');
+  const [membershipDescription, setMembershipDescription] = useState(store?.membershipDescription || '');
+  // Spend-based fields
+  const [spendThreshold, setSpendThreshold] = useState(store?.membershipSpendThreshold?.toString() || '100');
+  const [spendReward, setSpendReward] = useState(store?.membershipSpendReward || '');
+  // Points fields
+  const [pointsRate, setPointsRate] = useState(store?.membershipPointsRate?.toString() || '1');
+  const [pointsToMoney, setPointsToMoney] = useState(store?.membershipPointsToMoney?.toString() || '100');
+  const [redemptionOptions, setRedemptionOptions] = useState<{ points: number; reward: string }[]>(store?.membershipRedemptionOptions || [{ points: 500, reward: '' }]);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (!store) return;
+    setMembershipType(store.membershipType || 'spend');
+    setMembershipName(store.membershipName || 'Membership');
+    setMembershipColor(store.membershipColor || '#0f4c81');
+    setMembershipDescription(store.membershipDescription || '');
+    setSpendThreshold(store.membershipSpendThreshold?.toString() || '100');
+    setSpendReward(store.membershipSpendReward || '');
+    setPointsRate(store.membershipPointsRate?.toString() || '1');
+    setPointsToMoney(store.membershipPointsToMoney?.toString() || '100');
+    setRedemptionOptions(store.membershipRedemptionOptions || [{ points: 500, reward: '' }]);
+  }, [store?.id]);
+
+  const MEMBER_COLORS = ['#0f4c81', '#7c3aed', '#0e7490', '#065f46', '#92400e', '#9f1239'];
+
+  const handleSave = async () => {
+    if (!store) return;
+    setSaving(true);
+    try {
+      await updateDoc(doc(db, 'stores', store.id), {
+        membershipType,
+        membershipName,
+        membershipColor,
+        membershipDescription,
+        membershipSpendThreshold: parseFloat(spendThreshold) || 100,
+        membershipSpendReward: spendReward,
+        membershipPointsRate: parseFloat(pointsRate) || 1,
+        membershipPointsToMoney: parseFloat(pointsToMoney) || 100,
+        membershipRedemptionOptions: redemptionOptions.filter(o => o.reward.trim()),
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6 pb-4">
+      <header>
+        <h2 className="font-display text-2xl font-bold mb-1">Membership Builder</h2>
+        <p className="text-brand-navy/60 text-sm">Customise your membership card.</p>
+      </header>
+
+      <div className="glass-card p-6 rounded-[2.5rem] space-y-6">
+
+        {/* Name */}
+        <div className="space-y-2">
+          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Card Name</label>
+          <input
+            value={membershipName}
+            onChange={e => setMembershipName(e.target.value)}
+            placeholder="e.g. VIP Membership, Gold Card"
+            className="w-full px-5 py-4 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+          />
+        </div>
+
+        {/* Description */}
+        <div className="space-y-2">
+          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Description</label>
+          <textarea
+            value={membershipDescription}
+            onChange={e => setMembershipDescription(e.target.value)}
+            placeholder="Tell members what they get..."
+            rows={2}
+            className="w-full px-5 py-4 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-gold/30 resize-none"
+          />
+        </div>
+
+        {/* Type */}
+        <div className="space-y-2">
+          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Membership Type</label>
+          <div className="grid grid-cols-2 gap-3">
+            {(['spend', 'points'] as const).map(t => (
+              <button
+                key={t}
+                onClick={() => setMembershipType(t)}
+                className={cn(
+                  "py-3 rounded-2xl text-sm font-bold border transition-all",
+                  membershipType === t ? "bg-brand-navy text-white border-brand-navy" : "bg-brand-bg text-brand-navy/50 border-brand-navy/10 hover:border-brand-navy/30"
+                )}
+              >
+                {t === 'spend' ? 'Spend-Based' : 'Points'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Color */}
+        <div className="space-y-2">
+          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Card Color</label>
+          <div className="flex gap-3 flex-wrap">
+            {MEMBER_COLORS.map(c => (
+              <button
+                key={c}
+                onClick={() => setMembershipColor(c)}
+                className={cn("w-10 h-10 rounded-full border-4 transition-all", membershipColor === c ? "border-brand-navy scale-110" : "border-transparent")}
+                style={{ backgroundColor: c }}
+              />
+            ))}
+            <div className="relative">
+              <input
+                type="color"
+                value={membershipColor}
+                onChange={e => setMembershipColor(e.target.value)}
+                className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+              />
+              <div className="w-10 h-10 rounded-full border-4 border-dashed border-brand-navy/20 flex items-center justify-center text-brand-navy/30" style={{ backgroundColor: membershipColor }}>
+                <Plus size={14} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Spend-based fields */}
+        {membershipType === 'spend' && (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Reward every $</label>
+              <input
+                type="number"
+                value={spendThreshold}
+                onChange={e => setSpendThreshold(e.target.value)}
+                className="w-full px-5 py-4 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+                placeholder="e.g. 100"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Reward Description</label>
+              <input
+                value={spendReward}
+                onChange={e => setSpendReward(e.target.value)}
+                className="w-full px-5 py-4 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+                placeholder="e.g. Free coffee, 10% off"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Points fields */}
+        {membershipType === 'points' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Pts per $1</label>
+                <input
+                  type="number"
+                  value={pointsRate}
+                  onChange={e => setPointsRate(e.target.value)}
+                  className="w-full px-4 py-4 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Pts for $1 off</label>
+                <input
+                  type="number"
+                  value={pointsToMoney}
+                  onChange={e => setPointsToMoney(e.target.value)}
+                  className="w-full px-4 py-4 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Redemption Options</label>
+                <button
+                  onClick={() => setRedemptionOptions(o => [...o, { points: 0, reward: '' }])}
+                  className="text-xs font-bold text-brand-gold flex items-center gap-1"
+                >
+                  <Plus size={12} /> Add
+                </button>
+              </div>
+              {redemptionOptions.map((opt, i) => (
+                <div key={i} className="flex gap-2 items-center">
+                  <input
+                    type="number"
+                    value={opt.points}
+                    onChange={e => setRedemptionOptions(prev => prev.map((o, idx) => idx === i ? { ...o, points: parseInt(e.target.value) || 0 } : o))}
+                    className="w-24 px-3 py-3 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+                    placeholder="pts"
+                  />
+                  <input
+                    value={opt.reward}
+                    onChange={e => setRedemptionOptions(prev => prev.map((o, idx) => idx === i ? { ...o, reward: e.target.value } : o))}
+                    className="flex-1 px-3 py-3 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+                    placeholder="Reward description"
+                  />
+                  <button onClick={() => setRedemptionOptions(prev => prev.filter((_, idx) => idx !== i))} className="p-2 text-red-400">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Preview */}
+        <div className="space-y-2">
+          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Preview</label>
+          <div className="rounded-2xl overflow-hidden">
+            <div className="p-4 flex items-center gap-3" style={{ background: `linear-gradient(135deg, ${membershipColor}ff 0%, ${membershipColor}99 100%)` }}>
+              <div className="w-10 h-10 rounded-full bg-white/20 border-2 border-white/30 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-white text-sm">{store?.name || 'Your Store'}</p>
+              </div>
+              <span className="bg-white/20 text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full border border-white/30">
+                {membershipName}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="w-full py-4 rounded-2xl bg-brand-navy text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50 hover:scale-[1.01] active:scale-[0.99] transition-all"
+        >
+          {saved ? <><Check size={16} /> Saved!</> : saving ? 'Saving...' : 'Save Membership Card'}
         </button>
       </div>
     </div>
@@ -19170,6 +19790,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
   const [isPosting, setIsPosting] = useState(false);
   const [showAdminEdit, setShowAdminEdit] = useState(false);
   const [card, setCard] = useState<Card | null>(null);
+  const [membershipCard, setMembershipCard] = useState<Card | null>(null);
   const [isFollowingStore, setIsFollowingStore] = useState(false);
   const [allStoreCards, setAllStoreCards] = useState<Card[]>([]);
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -19197,12 +19818,23 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
   useEffect(() => {
     const cardId = `${user.uid}_${store.id}`;
     return onSnapshot(doc(db, 'cards', cardId), (snap) => {
-      if (snap.exists() && !snap.data()?.isArchived) {
+      if (snap.exists() && !snap.data()?.isArchived && snap.data()?.card_type !== 'membership') {
         setCard({ id: snap.id, ...snap.data() } as Card);
       } else {
         setCard(null);
       }
     }, (err) => console.error("Card detail listener:", err));
+  }, [user.uid, store.id]);
+
+  useEffect(() => {
+    const membershipId = `${user.uid}_${store.id}_membership`;
+    return onSnapshot(doc(db, 'cards', membershipId), (snap) => {
+      if (snap.exists() && !snap.data()?.isArchived) {
+        setMembershipCard({ id: snap.id, ...snap.data() } as Card);
+      } else {
+        setMembershipCard(null);
+      }
+    }, (err) => console.error("Membership card listener:", err));
   }, [user.uid, store.id]);
 
   useEffect(() => {
@@ -19324,6 +19956,27 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
         userPhoto,
       });
     }
+    await updateDoc(doc(db, 'users', user.uid), { total_cards_held: increment(1) });
+  };
+
+  const handleJoinMembership = async () => {
+    const membershipId = `${user.uid}_${store.id}_membership`;
+    const userName = profile?.name || user.displayName || user.email?.split('@')[0] || 'Member';
+    const userPhoto = profile?.photoURL || user.photoURL || '';
+    await setDoc(doc(db, 'cards', membershipId), {
+      user_id: user.uid,
+      store_id: store.id,
+      card_type: 'membership',
+      membership_type: store.membershipType || 'spend',
+      total_spent: 0,
+      earned_rewards: 0,
+      membership_points: 0,
+      last_earned: 0,
+      last_tap_timestamp: serverTimestamp(),
+      isArchived: false,
+      userName,
+      userPhoto,
+    });
     await updateDoc(doc(db, 'users', user.uid), { total_cards_held: increment(1) });
   };
 
@@ -19628,26 +20281,45 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
 
       {/* Action buttons */}
       {store.ownerUid !== user.uid && (
-        <div className="flex gap-2">
-          {onMessage && store.ownerUid && (
-            <button onClick={handleMessageStore} className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl gradient-red text-white font-bold text-xs shadow active:scale-95 transition-all">
-              <MessageCircle size={14} /> Message
-            </button>
-          )}
-          <button
-            onClick={handleFollowStore}
-            className={cn("flex items-center gap-1.5 px-4 py-2.5 rounded-2xl font-bold text-xs transition-all shadow active:scale-95", isFollowingStore ? "bg-brand-navy/8 text-brand-navy border border-brand-navy/15" : "gradient-red text-white")}
-          >
-            {isFollowingStore ? <UserCheck size={14} /> : <UserPlus size={14} />}
-            {isFollowingStore ? 'Following' : 'Follow'}
-          </button>
-          {storeCardActive(store) && (
+        <div className="space-y-3">
+          <div className="flex gap-2 flex-wrap">
+            {onMessage && store.ownerUid && (
+              <button onClick={handleMessageStore} className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl gradient-red text-white font-bold text-xs shadow active:scale-95 transition-all">
+                <MessageCircle size={14} /> Message
+              </button>
+            )}
             <button
-              onClick={card ? undefined : handleJoinStore}
-              className={cn("flex items-center gap-1.5 px-4 py-2.5 rounded-2xl font-bold text-xs transition-all shadow active:scale-95", card ? "bg-green-50 text-green-600 border border-green-200 cursor-default" : "gradient-red text-white")}
+              onClick={handleFollowStore}
+              className={cn("flex items-center gap-1.5 px-4 py-2.5 rounded-2xl font-bold text-xs transition-all shadow active:scale-95", isFollowingStore ? "bg-brand-navy/8 text-brand-navy border border-brand-navy/15" : "gradient-red text-white")}
             >
-              {card ? <><UserCheck size={14} /> Member</> : <><Plus size={14} /> Join</>}
+              {isFollowingStore ? <UserCheck size={14} /> : <UserPlus size={14} />}
+              {isFollowingStore ? 'Following' : 'Follow'}
             </button>
+          </div>
+
+          {/* Card join buttons */}
+          <div className="flex gap-2 flex-wrap">
+            {storeCardActive(store) && (
+              <button
+                onClick={card ? undefined : handleJoinStore}
+                className={cn("flex items-center gap-1.5 px-4 py-2.5 rounded-2xl font-bold text-xs transition-all shadow active:scale-95", card ? "bg-green-50 text-green-600 border border-green-200 cursor-default" : "gradient-logo-blue text-white")}
+              >
+                {card ? <><UserCheck size={14} /> Loyalty Member</> : <><CreditCard size={14} /> Join Loyalty Card</>}
+              </button>
+            )}
+            {store.membershipEnabled && (
+              <button
+                onClick={membershipCard ? undefined : handleJoinMembership}
+                className={cn("flex items-center gap-1.5 px-4 py-2.5 rounded-2xl font-bold text-xs transition-all shadow active:scale-95", membershipCard ? "bg-purple-50 text-purple-600 border border-purple-200 cursor-default" : "bg-brand-navy text-white")}
+              >
+                {membershipCard ? <><UserCheck size={14} /> {store.membershipName || 'Member'}</> : <><Star size={14} /> Join {store.membershipName || 'Membership'}</>}
+              </button>
+            )}
+          </div>
+
+          {/* Show membership card preview if joined */}
+          {membershipCard && (
+            <MembershipCard card={membershipCard} store={store} onViewStore={() => {}} />
           )}
         </div>
       )}
