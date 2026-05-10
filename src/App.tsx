@@ -6980,10 +6980,11 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                   </div>
                   <button
                     onClick={() => setShowNFCStamp(true)}
-                    className="flex items-center gap-1.5 gradient-red text-white px-3 py-2 rounded-xl font-bold text-xs"
+                    className="flex items-center gap-2 text-white px-5 py-2.5 rounded-xl font-black text-sm shadow-lg active:scale-95 transition-transform"
+                    style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 50%, #3b82f6 100%)' }}
                   >
-                    <Wifi size={13} />
-                    Collect
+                    <Wifi size={16} className="-rotate-90" />
+                    Scan
                   </button>
                 </div>
               </div>
@@ -6995,10 +6996,10 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                       return (
                         <div key={card.id} className="snap-center shrink-0 w-[83vw] max-w-[340px] flex flex-col rounded-[2rem] shadow-xl">
                           {card.card_type === 'membership'
-                            ? <MembershipCard card={card} store={store} onViewStore={onViewStore} />
+                            ? <MembershipCard card={card} store={store} onViewStore={onViewStore} onScan={() => setShowNFCStamp(true)} />
                             : card.card_type === 'sub'
-                            ? <SubLoyaltyCard card={card} store={store} onViewStore={onViewStore} />
-                            : <LoyaltyCard card={card} store={store} onViewStore={onViewStore} />}
+                            ? <SubLoyaltyCard card={card} store={store} onViewStore={onViewStore} onScan={() => setShowNFCStamp(true)} />
+                            : <LoyaltyCard card={card} store={store} onViewStore={onViewStore} onScan={() => setShowNFCStamp(true)} />}
                         </div>
                       );
                     })}
@@ -7010,10 +7011,10 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                       return (
                         <div key={card.id} className="rounded-3xl shadow-xl overflow-hidden">
                           {card.card_type === 'membership'
-                            ? <MembershipCard card={card} store={store} onViewStore={onViewStore} compact />
+                            ? <MembershipCard card={card} store={store} onViewStore={onViewStore} compact onScan={() => setShowNFCStamp(true)} />
                             : card.card_type === 'sub'
-                            ? <SubLoyaltyCard card={card} store={store} onViewStore={onViewStore} compact />
-                            : <LoyaltyCard card={card} store={store} onViewStore={onViewStore} compact />}
+                            ? <SubLoyaltyCard card={card} store={store} onViewStore={onViewStore} compact onScan={() => setShowNFCStamp(true)} />
+                            : <LoyaltyCard card={card} store={store} onViewStore={onViewStore} compact onScan={() => setShowNFCStamp(true)} />}
                         </div>
                       );
                     })}
@@ -7703,6 +7704,20 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
     const newStickers = await issueUserStickers(user.uid, userName, 3).catch(() => [] as CollectibleSticker[]);
     issueStickersToCard(user.uid, userName, 3).catch(console.error);
     updateChallengeProgress(user.uid, store.id, 1).catch(console.error);
+
+    // Also issue membership points if store has a visit-type membership card
+    if (store.membershipEnabled && store.membershipType === 'visit') {
+      const membershipId = `${user.uid}_${store.id}_membership`;
+      const memSnap = await getDoc(doc(db, 'cards', membershipId));
+      if (memSnap.exists() && !memSnap.data()?.isArchived) {
+        const stampsPerVisit = store.membershipStampsPerVisit || 1;
+        await updateDoc(doc(db, 'cards', membershipId), {
+          membership_visits: increment(stampsPerVisit),
+          last_transaction_at: serverTimestamp(),
+        });
+      }
+    }
+
     onStatus('success', `Stamp added at ${store.name}!`);
     return newStickers;
   } catch (err: any) {
@@ -10932,9 +10947,8 @@ function SwipeConfirm({ onConfirm }: { onConfirm: () => void }) {
   );
 }
 
-function MembershipCard({ card, store, onViewStore, compact = false, autoOpen }: { card: Card; store?: StoreProfile; onViewStore?: (s: StoreProfile) => void; compact?: boolean; autoOpen?: 'spend' | 'nfc'; key?: React.Key }) {
+function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, onScan }: { card: Card; store?: StoreProfile; onViewStore?: (s: StoreProfile) => void; compact?: boolean; autoOpen?: 'spend' | 'nfc'; onScan?: () => void; key?: React.Key }) {
   const [showRedeemSheet, setShowRedeemSheet] = useState(autoOpen === 'spend' || autoOpen === 'nfc');
-  const [showNfc, setShowNfc] = useState(false);
   const [showRedeemFlow, setShowRedeemFlow] = useState(false);
   const [redeemDollars, setRedeemDollars] = useState('');
   const [redeemStage, setRedeemStage] = useState<'input' | 'swipe' | 'success'>('input');
@@ -11160,16 +11174,20 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen }:
                 )}
               </div>
               {nextVisitReward && (
-                <div className="h-1.5 bg-brand-navy/10 rounded-full overflow-hidden mt-1">
+                <div className="h-1.5 bg-brand-navy/10 rounded-full overflow-hidden mt-1 mb-2">
                   <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, (membershipVisits / nextVisitReward.visits) * 100)}%`, backgroundColor: color }} />
                 </div>
               )}
-              {!nextVisitReward && (
-                <div className="flex items-center justify-between">
-                  <span className="text-brand-navy/35 text-[10px] font-bold">{lastVisitReward ? `Last: ${lastVisitReward.reward}` : 'Tap to view points'}</span>
-                  <span className="text-brand-navy/35 text-[10px] font-bold flex items-center gap-1"><Wifi size={9} className="-rotate-90" /> Scan</span>
-                </div>
-              )}
+              <div className="flex items-center justify-between mt-1">
+                <span className="text-brand-navy/35 text-[10px] font-bold">{lastVisitReward ? `Last: ${lastVisitReward.reward}` : ''}</span>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onScan?.(); }}
+                  className="flex items-center gap-1 text-white text-[10px] font-black px-3 py-1 rounded-lg active:scale-95 transition-transform"
+                  style={{ background: `linear-gradient(135deg, ${color}ff, ${color}bb)` }}
+                >
+                  <Wifi size={10} className="-rotate-90" /> Scan
+                </button>
+              </div>
             </>
           )}
         </div>
@@ -11222,29 +11240,6 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen }:
         )}
       </AnimatePresence>
       {redeemFlowModal}
-      <AnimatePresence>
-        {showNfc && (
-          <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowNfc(false)} className="absolute inset-0 bg-brand-navy/90 backdrop-blur-sm" />
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-xs p-8 rounded-[3rem] text-center relative z-10">
-              <h3 className="font-display text-xl font-bold mb-0.5">{membershipName}</h3>
-              <p className="text-brand-navy/40 text-xs mb-6">{store?.name}</p>
-              <div className="relative flex items-center justify-center mb-6">
-                <motion.div animate={{ scale: [1, 1.6, 1], opacity: [0.3, 0, 0.3] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }} className="absolute w-28 h-28 rounded-full border-2 border-brand-navy/30" />
-                <motion.div animate={{ scale: [1, 1.35, 1], opacity: [0.4, 0, 0.4] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }} className="absolute w-20 h-20 rounded-full border-2 border-brand-navy/40" />
-                <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: 'linear-gradient(160deg,#1e3a8a,#1d4ed8,#2563eb,#3b82f6)' }}>
-                  <Wifi size={26} className="text-white -rotate-90" />
-                </div>
-              </div>
-              <p className="font-bold text-brand-navy mb-1">Hold near membership terminal</p>
-              <p className="text-xs text-brand-navy/40 mb-6">Tap your phone on the NFC reader to earn points</p>
-              <p className="text-brand-navy font-black text-2xl mb-1">{membershipVisits} points</p>
-              {nextVisitReward && <p className="text-brand-navy/40 text-xs mb-5">{nextVisitReward.visits - membershipVisits} more pts to: {nextVisitReward.reward}</p>}
-              <button onClick={() => { setShowNfc(false); setShowRedeemSheet(true); }} className="w-full bg-brand-navy text-white py-3.5 rounded-2xl font-bold text-sm">Done</button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
       </>
     );
   }
@@ -11516,7 +11511,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen }:
 
                 {/* Scan NFC — at the bottom so menu items are seen first */}
                 <button
-                  onClick={() => { setShowRedeemSheet(false); setShowNfc(true); }}
+                  onClick={() => { setShowRedeemSheet(false); onScan?.(); }}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-white/90 text-xs active:scale-95 transition-all"
                   style={{ background: `linear-gradient(135deg, ${color}99 0%, ${color}66 100%)` }}
                 >
@@ -11561,43 +11556,11 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen }:
         )}
       </AnimatePresence>
 
-      {/* NFC scan prompt */}
-      <AnimatePresence>
-        {showNfc && (
-          <div className="fixed inset-0 z-[130] flex items-center justify-center p-6">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowNfc(false)} className="absolute inset-0 bg-brand-navy/90 backdrop-blur-sm" />
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-xs p-8 rounded-[3rem] text-center relative z-10">
-              <h3 className="font-display text-lg font-bold mb-0.5">{membershipName}</h3>
-              <p className="text-brand-navy/40 text-xs mb-8">Visit</p>
-              <div className="relative flex items-center justify-center mb-8">
-                <motion.div
-                  animate={{ scale: [1, 1.6, 1], opacity: [0.3, 0, 0.3] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                  className="absolute w-28 h-28 rounded-full border-2 border-brand-navy/30"
-                />
-                <motion.div
-                  animate={{ scale: [1, 1.35, 1], opacity: [0.4, 0, 0.4] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
-                  className="absolute w-20 h-20 rounded-full border-2 border-brand-navy/40"
-                />
-                <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${color}ff, ${color}99)` }}>
-                  <Wifi size={26} className="text-white -rotate-90" />
-                </div>
-              </div>
-              <p className="font-bold text-brand-navy mb-1">Hold near membership terminal</p>
-              <p className="text-xs text-brand-navy/40 mb-6">Tap your phone on the NFC reader to earn points</p>
-              <p className="text-brand-navy font-black text-2xl mb-1">{membershipVisits} points</p>
-              {nextVisitReward && <p className="text-brand-navy/40 text-xs mb-5">{nextVisitReward.visits - membershipVisits} more pts to: {nextVisitReward.reward}</p>}
-              <button onClick={() => { setShowNfc(false); setShowRedeemSheet(true); }} className="w-full bg-brand-navy text-white py-3.5 rounded-2xl font-bold text-sm">Done</button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </>
   );
 }
 
-function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = false, onClose }: { card: Card, store?: StoreProfile, onViewStore?: (s: StoreProfile) => void, compact?: boolean, autoOpen?: boolean, onClose?: () => void, key?: React.Key }) {
+function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = false, onClose, onScan }: { card: Card, store?: StoreProfile, onViewStore?: (s: StoreProfile) => void, compact?: boolean, autoOpen?: boolean, onClose?: () => void, onScan?: () => void, key?: React.Key }) {
   const [showQR, setShowQR] = useState(autoOpen);
   const [showOptions, setShowOptions] = useState(false);
   const [showCompletionPopup, setShowCompletionPopup] = useState(false);
@@ -11892,6 +11855,14 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                 <div className="relative z-10 flex items-center gap-1.5 shrink-0">
                   {isCompleted && !card.isRedeemed && <div className="bg-white/25 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest animate-pulse">Ready!</div>}
                   {card.isRedeemed && <div className="bg-green-400 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">Claimed</div>}
+                  {onScan && !isCompleted && !card.isRedeemed && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onScan(); }}
+                      className="flex items-center gap-1 text-white text-[10px] font-black px-2.5 py-1 rounded-lg active:scale-95 transition-transform bg-white/20 border border-white/30"
+                    >
+                      <Wifi size={10} className="-rotate-90" /> Scan
+                    </button>
+                  )}
                   <button onClick={(e) => { e.stopPropagation(); setShowOptions(!showOptions); }} className="p-1 text-white/50 hover:text-white/80 transition-colors">
                     <MoreVertical size={15} />
                   </button>
@@ -12092,7 +12063,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
   );
 }
 
-function SubLoyaltyCard({ card, store, onViewStore, compact = false }: { card: Card; store?: StoreProfile; onViewStore?: (s: StoreProfile) => void; compact?: boolean; key?: React.Key }) {
+function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: { card: Card; store?: StoreProfile; onViewStore?: (s: StoreProfile) => void; compact?: boolean; onScan?: () => void; key?: React.Key }) {
   const [showRedeemSheet, setShowRedeemSheet] = useState(false);
   const [isRedeeming, setIsRedeeming] = useState(false);
   const [redeemError, setRedeemError] = useState<string | null>(null);
@@ -12150,20 +12121,30 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false }: { card: C
   if (compact) {
     return (
       <div
-        className="rounded-3xl p-4 flex items-center gap-3 cursor-pointer"
+        className="rounded-3xl p-4 flex items-center gap-3"
         style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4338ca 80%, #6366f1 100%)' }}
-        onClick={() => store && onViewStore && onViewStore(store)}
       >
-        <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/30 shrink-0">
+        <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/30 shrink-0 cursor-pointer"
+          onClick={() => store && onViewStore && onViewStore(store)}>
           <img src={store?.logoUrl || `https://picsum.photos/seed/${card.store_id}/200/200`} alt="" className="w-full h-full object-cover" />
         </div>
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => store && onViewStore && onViewStore(store)}>
           <p className="font-bold text-white text-sm truncate">{store?.name || 'Store'}</p>
           <p className="text-indigo-200 text-xs">{points} pts • {visits} visits</p>
         </div>
-        <div className="shrink-0 text-right">
-          <p className="text-xs font-bold text-indigo-200">Redeem</p>
-          <p className="text-white font-bold text-sm">${moneyValue} off</p>
+        <div className="shrink-0 flex items-center gap-2">
+          {onScan && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onScan(); }}
+              className="flex items-center gap-1 text-white text-[10px] font-black px-2.5 py-1 rounded-lg active:scale-95 transition-transform bg-white/20 border border-white/30"
+            >
+              <Wifi size={10} className="-rotate-90" /> Scan
+            </button>
+          )}
+          <div className="text-right cursor-pointer" onClick={() => store && onViewStore && onViewStore(store)}>
+            <p className="text-xs font-bold text-indigo-200">Redeem</p>
+            <p className="text-white font-bold text-sm">${moneyValue} off</p>
+          </div>
         </div>
       </div>
     );
