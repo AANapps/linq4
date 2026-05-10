@@ -20401,7 +20401,7 @@ function AdminStoreEditModal({ store, onClose }: { store: StoreProfile; onClose:
 }
 
 // ─── Small card pills shown on vendor profile when user has joined ────────────
-function ProfileCardRow({ store, card, membershipCard, userId, userProfile, onJoinLoyalty, onJoinMembership }: {
+function ProfileCardRow({ store, card, membershipCard, onJoinLoyalty, onJoinMembership }: {
   store: StoreProfile;
   card: Card | null;
   membershipCard: Card | null;
@@ -20410,138 +20410,37 @@ function ProfileCardRow({ store, card, membershipCard, userId, userProfile, onJo
   onJoinLoyalty: () => void;
   onJoinMembership: () => void;
 }) {
-  const [showLoyaltyPopup, setShowLoyaltyPopup] = useState(false);
-  const [membershipPopupKey, setMembershipPopupKey] = useState(0);
-
   const loyaltyEnabled = storeCardActive(store);
   const membershipEnabled = !!store.membershipEnabled;
-  const hasLoyalty = loyaltyEnabled && !!card;
-  const hasMembership = membershipEnabled && !!membershipCard;
-
-  const [activeView, setActiveView] = useState<'stamps' | 'membership'>(
-    hasMembership ? 'membership' : 'stamps'
-  );
-
-  const loyaltyLimit = card?.stamps_required || store.stamps_required_for_reward || 10;
-  const stamps = card?.current_stamps ?? 0;
-  const stampPct = Math.min(100, (stamps / loyaltyLimit) * 100);
-  const membershipVisitCount = membershipCard?.membership_visits ?? 0;
-  const membershipSpent = membershipCard?.total_spent ?? 0;
-  const membershipPoints = membershipCard?.membership_points ?? 0;
-  const memType = membershipCard?.membership_type ?? store.membershipType ?? 'spend';
-  const memColor = store.membershipColor || '#1e1b4b';
+  const isJoined = (loyaltyEnabled && !!card) || (membershipEnabled && !!membershipCard);
 
   if (!loyaltyEnabled && !membershipEnabled) return null;
 
-  // Neither joined yet — show join prompts
-  if (!hasLoyalty && !hasMembership) {
+  if (isJoined) {
     return (
-      <div className="flex gap-2">
-        {loyaltyEnabled && (
-          <button
-            onClick={onJoinLoyalty}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl border border-brand-navy/15 text-brand-navy text-sm font-bold bg-brand-bg active:scale-[0.98] transition-all"
-          >
-            <Plus size={13} /> Loyalty Card
-          </button>
-        )}
-        {membershipEnabled && (
-          <button
-            onClick={onJoinMembership}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl border border-brand-navy/15 text-brand-navy text-sm font-bold bg-brand-bg active:scale-[0.98] transition-all"
-          >
-            <Plus size={13} /> {store.membershipName || 'Membership'}
-          </button>
-        )}
+      <div
+        className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-white text-sm font-bold shadow-sm"
+        style={{ background: 'linear-gradient(135deg, #064e3b 0%, #065f46 60%, #059669 100%)' }}
+      >
+        <Check size={15} strokeWidth={3} />
+        Member
       </div>
     );
   }
 
-  const showDropdown = hasLoyalty && hasMembership;
+  const handleJoin = membershipEnabled ? onJoinMembership : onJoinLoyalty;
+  const joinLabel = membershipEnabled ? (store.membershipName || 'Membership') : 'Loyalty Card';
 
   return (
-    <>
-      <div className="w-full space-y-2">
-        {/* Dropdown — only when both card types are active */}
-        {showDropdown && (
-          <div className="relative">
-            <select
-              value={activeView}
-              onChange={e => setActiveView(e.target.value as 'stamps' | 'membership')}
-              className="w-full appearance-none px-4 py-2.5 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-bold text-brand-navy focus:outline-none cursor-pointer pr-8"
-            >
-              <option value="stamps">Stamp Progress</option>
-              <option value="membership">Member Card {memType === 'visit' ? 'Visits' : 'Points'}</option>
-            </select>
-            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-navy/40 pointer-events-none" />
-          </div>
-        )}
-
-        {/* Join prompt for the card type not yet joined */}
-        {loyaltyEnabled && !card && (
-          <button onClick={onJoinLoyalty} className="text-xs text-brand-navy/40 font-bold flex items-center gap-1">
-            <Plus size={11} /> Join Loyalty Card
-          </button>
-        )}
-        {membershipEnabled && !membershipCard && (
-          <button onClick={onJoinMembership} className="text-xs text-brand-navy/40 font-bold flex items-center gap-1">
-            <Plus size={11} /> Join {store.membershipName || 'Membership'}
-          </button>
-        )}
-
-        {/* Stamp progress panel */}
-        {(activeView === 'stamps' || !hasMembership) && hasLoyalty && (
-          <button
-            onClick={() => setShowLoyaltyPopup(true)}
-            className="w-full flex items-center justify-between px-4 py-3 rounded-2xl bg-brand-bg border border-brand-navy/10 active:scale-[0.99] transition-all"
-          >
-            <span className="text-sm font-bold text-brand-navy">Stamp Progress</span>
-            <div className="flex items-center gap-2.5">
-              <div className="h-1.5 w-20 bg-brand-navy/10 rounded-full overflow-hidden">
-                <div className="h-full bg-brand-navy rounded-full transition-all" style={{ width: `${stampPct}%` }} />
-              </div>
-              <span className="text-xs font-bold text-brand-navy/50 tabular-nums">{stamps}/{loyaltyLimit}</span>
-            </div>
-          </button>
-        )}
-
-        {/* Membership panel */}
-        {(activeView === 'membership' || !hasLoyalty) && hasMembership && (
-          <button
-            onClick={() => setMembershipPopupKey(k => k + 1)}
-            className="w-full flex items-center justify-between px-4 py-3 rounded-2xl bg-brand-bg border border-brand-navy/10 active:scale-[0.99] transition-all"
-          >
-            <span className="text-sm font-bold text-brand-navy">{store.membershipName || 'Membership'}</span>
-            <span className="text-xs font-bold" style={{ color: memColor }}>
-              {memType === 'visit'
-                ? `${membershipVisitCount} visit${membershipVisitCount !== 1 ? 's' : ''}`
-                : `${membershipPoints.toLocaleString()} pts`}
-            </span>
-          </button>
-        )}
-      </div>
-
-      {/* Loyalty popup */}
-      {showLoyaltyPopup && card && (
-        <LoyaltyCard
-          key={`loyalty-popup-${card.id}`}
-          card={card}
-          store={store}
-          autoOpen
-          onClose={() => setShowLoyaltyPopup(false)}
-        />
-      )}
-
-      {/* Membership popup — remounts on each tap via key */}
-      {membershipPopupKey > 0 && membershipCard && (
-        <MembershipCard
-          key={membershipPopupKey}
-          card={membershipCard}
-          store={store}
-          autoOpen={memType === 'visit' ? 'nfc' : 'spend'}
-        />
-      )}
-    </>
+    <button
+      onClick={handleJoin}
+      className="w-full relative overflow-hidden flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm text-white shadow-lg active:scale-[0.98] transition-all"
+      style={{ background: 'linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 40%, #2563eb 70%, #3b82f6 100%)' }}
+    >
+      <span className="card-shine-ray" />
+      <Plus size={15} />
+      Join {joinLabel}
+    </button>
   );
 }
 
