@@ -353,6 +353,7 @@ interface StoreProfile {
   membershipPointsRate?: number;
   membershipRedemptionRate?: number;
   membershipVisitRewards?: { visits: number; reward: string }[];
+  membershipStampsPerVisit?: number;
 }
 
 function storeCardActive(store: StoreProfile): boolean {
@@ -10045,14 +10046,15 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
         const ptsTxt = earnedPts > 0 ? ` · +${earnedPts} pts` : '';
         setStatus({ type: 'success', message: `$${txAmount.toFixed(2)} added — $${newSpent.toFixed(2)} total${ptsTxt}` });
       } else {
+        const stampsThisVisit = store.membershipStampsPerVisit || 1;
         if (cardDoc.exists()) {
-          await updateDoc(cardRef, { membership_visits: increment(1), last_transaction_at: serverTimestamp() });
+          await updateDoc(cardRef, { membership_visits: increment(stampsThisVisit), last_transaction_at: serverTimestamp() });
         } else {
-          await setDoc(cardRef, { user_id: customer.uid, store_id: store.id, card_type: 'membership', membership_type: 'visit', membership_visits: 1, isArchived: false, last_transaction_at: serverTimestamp(), userName: customer.name, userPhoto: customer.photoURL || '' });
+          await setDoc(cardRef, { user_id: customer.uid, store_id: store.id, card_type: 'membership', membership_type: 'visit', membership_visits: stampsThisVisit, isArchived: false, last_transaction_at: serverTimestamp(), userName: customer.name, userPhoto: customer.photoURL || '' });
           await updateDoc(doc(db, 'users', customer.uid), { total_cards_held: increment(1) });
         }
-        await addDoc(collection(db, 'transactions'), { user_id: customer.uid, store_id: store.id, card_type: 'membership', membership_type: 'visit', issued_at: serverTimestamp() });
-        setStatus({ type: 'success', message: `Visit recorded for ${customer.name}!` });
+        await addDoc(collection(db, 'transactions'), { user_id: customer.uid, store_id: store.id, card_type: 'membership', membership_type: 'visit', stamps_per_visit: stampsThisVisit, issued_at: serverTimestamp() });
+        setStatus({ type: 'success', message: `Visit recorded for ${customer.name}! (+${stampsThisVisit})` });
       }
     } catch (err) {
       console.error(err);
@@ -14811,6 +14813,7 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
   const [redemptionRate, setRedemptionRate] = useState(store?.membershipRedemptionRate?.toString() || '100');
   const [calcSpend, setCalcSpend] = useState('50');
   const [visitRewards, setVisitRewards] = useState<{ visits: number; reward: string }[]>(store?.membershipVisitRewards || []);
+  const [stampsPerVisit, setStampsPerVisit] = useState(store?.membershipStampsPerVisit?.toString() || '1');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -14825,6 +14828,7 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
     setPointsRate(store.membershipPointsRate?.toString() || '10');
     setRedemptionRate(store.membershipRedemptionRate?.toString() || '100');
     setVisitRewards(store.membershipVisitRewards || []);
+    setStampsPerVisit(store.membershipStampsPerVisit?.toString() || '1');
   }, [store?.id]);
 
   const MEMBER_COLORS = ['#0f4c81', '#7c3aed', '#0e7490', '#065f46', '#92400e', '#9f1239'];
@@ -14843,6 +14847,7 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
         membershipPointsRate: parseFloat(pointsRate) || 0,
         membershipRedemptionRate: parseFloat(redemptionRate) || 0,
         membershipVisitRewards: visitRewards.filter(r => r.reward.trim()).sort((a, b) => a.visits - b.visits),
+        membershipStampsPerVisit: parseInt(stampsPerVisit) || 1,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -15013,6 +15018,23 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Visit-based: stamps per visit */}
+        {membershipType === 'visit' && (
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Stamps Per Visit</label>
+            <input
+              type="number"
+              min="1"
+              max="20"
+              value={stampsPerVisit}
+              onChange={e => setStampsPerVisit(e.target.value)}
+              className="w-full px-5 py-4 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+              placeholder="1"
+            />
+            <p className="text-[10px] text-brand-navy/40 font-medium">How many stamps to award each time a member visits.</p>
           </div>
         )}
 
@@ -20389,92 +20411,115 @@ function ProfileCardRow({ store, card, membershipCard, userId, userProfile, onJo
   onJoinMembership: () => void;
 }) {
   const [showLoyaltyPopup, setShowLoyaltyPopup] = useState(false);
-  // Incrementing key forces MembershipCard to remount (and re-apply autoOpen) on every tap
   const [membershipPopupKey, setMembershipPopupKey] = useState(0);
-  const [removingMembership, setRemovingMembership] = useState(false);
+
+  const loyaltyEnabled = storeCardActive(store);
+  const membershipEnabled = !!store.membershipEnabled;
+  const hasLoyalty = loyaltyEnabled && !!card;
+  const hasMembership = membershipEnabled && !!membershipCard;
+
+  const [activeView, setActiveView] = useState<'stamps' | 'membership'>(
+    hasMembership ? 'membership' : 'stamps'
+  );
 
   const loyaltyLimit = card?.stamps_required || store.stamps_required_for_reward || 10;
   const stamps = card?.current_stamps ?? 0;
+  const stampPct = Math.min(100, (stamps / loyaltyLimit) * 100);
   const membershipVisitCount = membershipCard?.membership_visits ?? 0;
   const membershipSpent = membershipCard?.total_spent ?? 0;
+  const membershipPoints = membershipCard?.membership_points ?? 0;
   const memType = membershipCard?.membership_type ?? store.membershipType ?? 'spend';
   const memColor = store.membershipColor || '#1e1b4b';
 
-  const handleRemoveMembership = async () => {
-    if (!membershipCard) return;
-    setRemovingMembership(true);
-    try {
-      await updateDoc(doc(db, 'cards', membershipCard.id), { isArchived: true });
-      await updateDoc(doc(db, 'users', userId), { total_cards_held: increment(-1) });
-    } catch (err) { console.error(err); }
-    setRemovingMembership(false);
-  };
+  if (!loyaltyEnabled && !membershipEnabled) return null;
 
-  const linqGrad = 'linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 40%, #2563eb 70%, #3b82f6 100%)';
+  // Neither joined yet — show join prompts
+  if (!hasLoyalty && !hasMembership) {
+    return (
+      <div className="flex gap-2">
+        {loyaltyEnabled && (
+          <button
+            onClick={onJoinLoyalty}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl border border-brand-navy/15 text-brand-navy text-sm font-bold bg-brand-bg active:scale-[0.98] transition-all"
+          >
+            <Plus size={13} /> Loyalty Card
+          </button>
+        )}
+        {membershipEnabled && (
+          <button
+            onClick={onJoinMembership}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl border border-brand-navy/15 text-brand-navy text-sm font-bold bg-brand-bg active:scale-[0.98] transition-all"
+          >
+            <Plus size={13} /> {store.membershipName || 'Membership'}
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  const showDropdown = hasLoyalty && hasMembership;
 
   return (
     <>
-      {/* Show exactly one card type — compact full-width tile */}
-      {store.membershipEnabled ? (
-        membershipCard ? (
-          memType === 'visit' ? (
-            <button
-              onClick={() => setMembershipPopupKey(k => k + 1)}
-              className="w-full relative overflow-hidden flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm text-white shadow-lg active:scale-95 transition-all"
-              style={{ background: linqGrad }}
+      <div className="w-full space-y-2">
+        {/* Dropdown — only when both card types are active */}
+        {showDropdown && (
+          <div className="relative">
+            <select
+              value={activeView}
+              onChange={e => setActiveView(e.target.value as 'stamps' | 'membership')}
+              className="w-full appearance-none px-4 py-2.5 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-bold text-brand-navy focus:outline-none cursor-pointer pr-8"
             >
-              <span className="card-shine-ray" />
-              <Wifi size={15} className="-rotate-90" />
-              Stamp Visit
-              <span className="absolute right-4 text-white/60 text-xs">{membershipVisitCount} visits</span>
-            </button>
-          ) : (
-            <button
-              onClick={() => setMembershipPopupKey(k => k + 1)}
-              className="w-full relative overflow-hidden flex items-center justify-between px-4 py-3 rounded-2xl text-white shadow-lg active:scale-95 transition-all"
-              style={{ background: linqGrad }}
-            >
-              <div className="flex items-center gap-2">
-                <Check size={15} className="text-white/80" />
-                <span className="font-bold text-sm">{store.membershipName || 'Membership'}</span>
-              </div>
-              <span className="text-white/70 text-xs font-bold">${membershipSpent.toFixed(0)} spent</span>
-            </button>
-          )
-        ) : (
-          <button
-            onClick={onJoinMembership}
-            className="w-full relative overflow-hidden flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm text-white shadow-lg active:scale-95 transition-all"
-            style={{ background: linqGrad }}
-          >
-            <Plus size={15} />
-            Join {store.membershipName || 'Membership'}
+              <option value="stamps">Stamp Progress</option>
+              <option value="membership">Member Card {memType === 'visit' ? 'Visits' : 'Points'}</option>
+            </select>
+            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-navy/40 pointer-events-none" />
+          </div>
+        )}
+
+        {/* Join prompt for the card type not yet joined */}
+        {loyaltyEnabled && !card && (
+          <button onClick={onJoinLoyalty} className="text-xs text-brand-navy/40 font-bold flex items-center gap-1">
+            <Plus size={11} /> Join Loyalty Card
           </button>
-        )
-      ) : storeCardActive(store) ? (
-        card ? (
+        )}
+        {membershipEnabled && !membershipCard && (
+          <button onClick={onJoinMembership} className="text-xs text-brand-navy/40 font-bold flex items-center gap-1">
+            <Plus size={11} /> Join {store.membershipName || 'Membership'}
+          </button>
+        )}
+
+        {/* Stamp progress panel */}
+        {(activeView === 'stamps' || !hasMembership) && hasLoyalty && (
           <button
             onClick={() => setShowLoyaltyPopup(true)}
-            className="w-full relative overflow-hidden flex items-center justify-between px-4 py-3 rounded-2xl text-white shadow-lg active:scale-95 transition-all"
-            style={{ background: linqGrad }}
+            className="w-full flex items-center justify-between px-4 py-3 rounded-2xl bg-brand-bg border border-brand-navy/10 active:scale-[0.99] transition-all"
           >
-            <div className="flex items-center gap-2">
-              <Check size={15} className="text-white/80" />
-              <span className="font-bold text-sm">Loyalty Card</span>
+            <span className="text-sm font-bold text-brand-navy">Stamp Progress</span>
+            <div className="flex items-center gap-2.5">
+              <div className="h-1.5 w-20 bg-brand-navy/10 rounded-full overflow-hidden">
+                <div className="h-full bg-brand-navy rounded-full transition-all" style={{ width: `${stampPct}%` }} />
+              </div>
+              <span className="text-xs font-bold text-brand-navy/50 tabular-nums">{stamps}/{loyaltyLimit}</span>
             </div>
-            <span className="text-white/60 text-xs font-bold">{stamps}/{loyaltyLimit} stamps</span>
           </button>
-        ) : (
+        )}
+
+        {/* Membership panel */}
+        {(activeView === 'membership' || !hasLoyalty) && hasMembership && (
           <button
-            onClick={onJoinLoyalty}
-            className="w-full relative overflow-hidden flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm text-white shadow-lg active:scale-95 transition-all"
-            style={{ background: linqGrad }}
+            onClick={() => setMembershipPopupKey(k => k + 1)}
+            className="w-full flex items-center justify-between px-4 py-3 rounded-2xl bg-brand-bg border border-brand-navy/10 active:scale-[0.99] transition-all"
           >
-            <Plus size={15} />
-            Join Loyalty Card
+            <span className="text-sm font-bold text-brand-navy">{store.membershipName || 'Membership'}</span>
+            <span className="text-xs font-bold" style={{ color: memColor }}>
+              {memType === 'visit'
+                ? `${membershipVisitCount} visit${membershipVisitCount !== 1 ? 's' : ''}`
+                : `${membershipPoints.toLocaleString()} pts`}
+            </span>
           </button>
-        )
-      ) : null}
+        )}
+      </div>
 
       {/* Loyalty popup */}
       {showLoyaltyPopup && card && (
@@ -20487,7 +20532,7 @@ function ProfileCardRow({ store, card, membershipCard, userId, userProfile, onJo
         />
       )}
 
-      {/* Membership popup — remounts on each tap via key, re-applying autoOpen */}
+      {/* Membership popup — remounts on each tap via key */}
       {membershipPopupKey > 0 && membershipCard && (
         <MembershipCard
           key={membershipPopupKey}
