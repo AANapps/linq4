@@ -11246,6 +11246,129 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
         )}
       </AnimatePresence>
       {redeemFlowModal}
+      {/* Visit detail sheet */}
+      <AnimatePresence>
+        {showRedeemSheet && membershipType === 'visit' && (
+          <div className="fixed inset-0 z-[120] flex items-end justify-center">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowRedeemSheet(false)} />
+            <motion.div
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+              className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] shadow-2xl max-h-[90vh] overflow-y-auto"
+            >
+              <div className="sticky top-0 bg-white rounded-t-[2.5rem] px-8 pt-8 pb-4 z-10">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-display text-2xl font-bold">{membershipName}</h3>
+                    <p className="text-brand-navy/40 text-xs mt-0.5">{membershipVisits} points available</p>
+                  </div>
+                  <button onClick={() => setShowRedeemSheet(false)} className="p-2 text-brand-navy/40"><X size={20} /></button>
+                </div>
+              </div>
+              <div className="px-8 pb-10 space-y-6">
+                {menuItems.length > 0 && (
+                  <div>
+                    <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest mb-3">Redeem Points</p>
+                    <div className="space-y-2">
+                      {menuItems.map(item => {
+                        const canAfford = membershipVisits >= item.points;
+                        const isRedeeming = redeemingMenuItem === item.id;
+                        return (
+                          <button
+                            key={item.id}
+                            onClick={() => canAfford && (setShowRedeemSheet(false), setMenuConfirm(item))}
+                            disabled={!canAfford || !!redeemingMenuItem}
+                            className={cn('w-full flex items-center justify-between px-4 py-4 rounded-2xl transition-all text-left', canAfford ? 'bg-brand-bg active:scale-[0.99] cursor-pointer' : 'bg-brand-bg/50 opacity-50 cursor-default')}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold text-brand-navy truncate">{item.name}</p>
+                              {item.description && <p className="text-[11px] text-brand-navy/40 mt-0.5 truncate">{item.description}</p>}
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0 ml-3">
+                              <span className="text-xs font-black" style={{ color }}>{item.points} pts</span>
+                              {canAfford && !isRedeeming && <ChevronRight size={14} className="text-brand-navy/30" />}
+                              {isRedeeming && <span className="text-[10px] text-brand-navy/40">Redeeming…</span>}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {visitRewards.length > 0 && (
+                  <div>
+                    <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest mb-3">Milestone Rewards</p>
+                    {nextVisitReward && (
+                      <div className="glass-card p-4 rounded-2xl mb-2">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="font-bold text-brand-navy text-sm">{nextVisitReward.reward}</p>
+                          <p className="text-brand-navy/40 text-xs font-bold">{membershipVisits}/{nextVisitReward.visits} pts</p>
+                        </div>
+                        <div className="h-2 bg-brand-navy/10 rounded-full overflow-hidden">
+                          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, (membershipVisits / nextVisitReward.visits) * 100)}%`, background: `linear-gradient(90deg, ${color}cc, ${color}ff)` }} />
+                        </div>
+                        <p className="text-[10px] text-brand-navy/40 mt-1.5 font-bold">{nextVisitReward.visits - membershipVisits} more points to unlock</p>
+                      </div>
+                    )}
+                    <div className="space-y-1.5">
+                      {visitRewards.map((r, i) => (
+                        <div key={i} className={`flex items-center gap-3 p-3 rounded-2xl ${membershipVisits >= r.visits ? 'bg-emerald-50' : 'bg-brand-bg'}`}>
+                          <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${membershipVisits >= r.visits ? 'bg-emerald-500' : 'bg-brand-navy/10'}`}>
+                            {membershipVisits >= r.visits ? <Check size={13} className="text-white" /> : <span className="text-[9px] font-black text-brand-navy/40">{r.visits}</span>}
+                          </div>
+                          <div className="flex-1">
+                            <p className={`text-sm font-bold ${membershipVisits >= r.visits ? 'text-emerald-700' : 'text-brand-navy'}`}>{r.reward}</p>
+                            <p className="text-[10px] text-brand-navy/40">{r.visits} pts to unlock</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <button
+                  onClick={() => { setShowRedeemSheet(false); onScan?.(); }}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-white/90 text-xs active:scale-95 transition-all"
+                  style={{ background: `linear-gradient(135deg, ${color}99 0%, ${color}66 100%)` }}
+                >
+                  <Wifi size={14} className="-rotate-90" />
+                  Scan NFC to Earn Points
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+      {/* Menu item confirm sheet */}
+      <AnimatePresence>
+        {menuConfirm && (
+          <div className="fixed inset-0 z-[130] flex items-end justify-center">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setMenuConfirm(null); setShowRedeemSheet(true); }} />
+            <motion.div
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 380, damping: 38 }}
+              className="relative z-10 w-full max-w-md bg-white rounded-t-[2rem] p-8 pb-10 shadow-2xl"
+            >
+              <div className="text-center mb-6">
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3" style={{ background: `linear-gradient(135deg, ${color}33, ${color}66)` }}>
+                  <Gift size={24} style={{ color }} />
+                </div>
+                <h3 className="font-display text-xl font-bold">{menuConfirm.name}</h3>
+                <p className="text-brand-navy/40 text-sm mt-1">Redeem for <span className="font-black" style={{ color }}>{menuConfirm.points} points</span></p>
+                <p className="text-brand-navy/30 text-xs mt-0.5">{membershipVisits - menuConfirm.points} points remaining after</p>
+              </div>
+              <button
+                onClick={() => handleMenuRedeem(menuConfirm)}
+                disabled={!!redeemingMenuItem}
+                className="w-full py-4 rounded-2xl font-bold text-sm text-white mb-3 active:scale-[0.98] transition-all disabled:opacity-50"
+                style={{ background: `linear-gradient(135deg, ${color}ff, ${color}cc)` }}
+              >
+                {redeemingMenuItem ? 'Redeeming…' : 'Confirm Redeem'}
+              </button>
+              <button onClick={() => { setMenuConfirm(null); setShowRedeemSheet(true); }} className="w-full text-brand-navy/40 font-bold text-sm py-2">Cancel</button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
       </>
     );
   }
