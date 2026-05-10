@@ -11275,17 +11275,11 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen }:
             <h4 className="font-bold text-white text-lg leading-tight">{store?.name || 'Store'}</h4>
             <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mt-0.5">{membershipName}</p>
           </div>
-          {membershipType === 'spend' && auth.currentUser?.uid ? (
+          {membershipType === 'spend' && auth.currentUser?.uid && (
             <div className="relative z-10 w-full px-6 mt-1">
               <div className="bg-white/90 rounded-xl px-3 py-2">
                 <BarcodeDisplay value={auth.currentUser.uid} height={36} />
                 <p className="text-center text-[8px] text-brand-navy/40 font-mono tracking-wider mt-0.5">{auth.currentUser.uid.slice(0, 20)}…</p>
-              </div>
-            </div>
-          ) : (
-            <div className="relative z-10 flex items-center justify-center mt-1">
-              <div className="w-14 h-14 rounded-full bg-white/20 border-2 border-white/40 flex items-center justify-center">
-                <Wifi size={24} className="text-white -rotate-90" />
               </div>
             </div>
           )}
@@ -11452,16 +11446,6 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen }:
               </div>
 
               <div className="px-8 pb-10 space-y-6">
-                {/* Scan NFC */}
-                <button
-                  onClick={() => { setShowRedeemSheet(false); setShowNfc(true); }}
-                  className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl font-bold text-white text-sm active:scale-95 transition-all"
-                  style={{ background: `linear-gradient(135deg, ${color}ff 0%, ${color}99 100%)` }}
-                >
-                  <Wifi size={18} className="-rotate-90" />
-                  Scan NFC to Earn Points
-                </button>
-
                 {/* Menu items */}
                 {menuItems.length > 0 && (
                   <div>
@@ -11529,6 +11513,16 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen }:
                     </div>
                   </div>
                 )}
+
+                {/* Scan NFC — at the bottom so menu items are seen first */}
+                <button
+                  onClick={() => { setShowRedeemSheet(false); setShowNfc(true); }}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-white/90 text-xs active:scale-95 transition-all"
+                  style={{ background: `linear-gradient(135deg, ${color}99 0%, ${color}66 100%)` }}
+                >
+                  <Wifi size={14} className="-rotate-90" />
+                  Scan NFC to Earn Points
+                </button>
               </div>
             </motion.div>
           </div>
