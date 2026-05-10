@@ -132,7 +132,7 @@ import {
   History,
   DollarSign
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 import { format } from 'date-fns';
 import JsBarcode from 'jsbarcode';
@@ -10877,25 +10877,50 @@ function BarcodeDisplay({ value, height = 60 }: { value: string; height?: number
 }
 
 function SwipeConfirm({ onConfirm }: { onConfirm: () => void }) {
+  const THUMB = 48; // w-12
+  const PAD = 4;   // left-1 / top-1
   const trackRef = useRef<HTMLDivElement>(null);
+  const [trackWidth, setTrackWidth] = useState(0);
   const [done, setDone] = useState(false);
+  const x = useMotionValue(0);
+  const maxX = Math.max(0, trackWidth - THUMB - PAD * 2);
+  const fillPct = useTransform(x, [0, maxX], ['0%', '100%']);
+
+  useEffect(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    const measure = () => setTrackWidth(el.clientWidth);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const handleDragEnd = () => {
+    if (x.get() >= maxX * 0.75) {
+      animate(x, maxX, { type: 'spring', stiffness: 500, damping: 40 });
+      setDone(true);
+      onConfirm();
+    } else {
+      animate(x, 0, { type: 'spring', stiffness: 500, damping: 40 });
+    }
+  };
+
   return (
     <div ref={trackRef} className="relative h-14 bg-emerald-50 rounded-full overflow-hidden border-2 border-emerald-200 select-none">
+      <motion.div className="absolute inset-y-0 left-0 bg-emerald-200/60 rounded-full" style={{ width: fillPct }} />
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <span className="text-emerald-600/50 text-sm font-bold tracking-wide">Slide to redeem →</span>
+        <span className="text-emerald-700/50 text-sm font-bold tracking-wide">Slide to redeem →</span>
       </div>
       <motion.div
         drag={done ? false : 'x'}
-        dragConstraints={trackRef}
+        dragConstraints={{ left: 0, right: maxX }}
         dragElastic={0}
         dragMomentum={false}
-        onDragEnd={(_, info) => {
-          const trackWidth = trackRef.current?.clientWidth ?? 300;
-          if (info.offset.x > trackWidth * 0.6) { setDone(true); onConfirm(); }
-        }}
-        className="absolute left-1 top-1 w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg z-10"
-        style={{ cursor: done ? 'default' : 'grab' }}
-        whileTap={{ scale: 0.95 }}
+        style={{ x }}
+        onDragEnd={handleDragEnd}
+        className="absolute left-1 top-1 w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg z-10 touch-none cursor-grab active:cursor-grabbing"
+        whileTap={{ scale: 0.97 }}
       >
         {done ? <Check size={20} className="text-white" /> : <ChevronRight size={20} className="text-white" />}
       </motion.div>
