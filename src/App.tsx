@@ -12305,7 +12305,7 @@ async function geocodeAddressGlobal(address: string): Promise<{ lat: number; lng
   }
 }
 
-interface LinqleScore { uid: string; name: string; handle?: string; photoURL?: string; guesses: number; timeMs: number; won: boolean; completedAt: any; }
+interface LinqleScore { uid: string; name: string; handle?: string; photoURL?: string; avatar?: any; guesses: number; timeMs: number; won: boolean; completedAt: any; }
 
 const LINQLE_ROWS = 6;
 const LINQLE_COLS = 5;
@@ -12792,6 +12792,7 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
       await setDoc(doc(db, 'linqle', today, 'scores', currentUser.uid), {
         uid: currentUser.uid, name: currentProfile?.name || 'Anonymous',
         handle: currentProfile?.handle || '', photoURL: currentProfile?.photoURL || '',
+        avatar: currentProfile?.avatar ?? null,
         guesses: finalGuesses.length, timeMs, won: didWin, completedAt: serverTimestamp(),
       });
     } catch (e) { console.error('leaderboard save failed', e); }
@@ -12944,7 +12945,9 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
               : scores.map((s, idx) => (
                 <div key={s.id} className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl ${s.uid === currentUser.uid ? 'bg-green-50 border border-green-200' : 'bg-white border border-brand-navy/6'}`}>
                   <span className="w-5 text-center font-bold text-xs text-brand-navy/40 shrink-0">{idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}</span>
-                  {s.photoURL ? <img src={s.photoURL} alt="" className="w-9 h-9 rounded-full object-cover shrink-0 border border-brand-navy/10" /> : <div className="w-9 h-9 rounded-full bg-brand-navy/10 shrink-0 flex items-center justify-center text-xs font-bold text-brand-navy/40">{(s.name || '?')[0].toUpperCase()}</div>}
+                  <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-brand-navy/10 bg-indigo-50 flex items-center justify-center">
+                    <PixelAvatar config={s.avatar} uid={s.uid} size={36} view="head" />
+                  </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-sm truncate text-brand-navy">{s.name}</p>
                     {s.handle && <p className="text-[10px] text-brand-navy/40 truncate">@{s.handle}</p>}
@@ -12960,7 +12963,9 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
                 : top20.map((s, idx) => (
                   <div key={s.id} className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl ${s.uid === currentUser.uid ? 'bg-green-50 border border-green-200' : 'bg-white border border-brand-navy/6'}`}>
                     <span className="w-5 text-center font-bold text-xs text-brand-navy/40 shrink-0">{idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}</span>
-                    {s.photoURL ? <img src={s.photoURL} alt="" className="w-9 h-9 rounded-full object-cover shrink-0 border border-brand-navy/10" /> : <div className="w-9 h-9 rounded-full bg-brand-navy/10 shrink-0 flex items-center justify-center text-xs font-bold text-brand-navy/40">{(s.name || '?')[0].toUpperCase()}</div>}
+                    <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-brand-navy/10 bg-indigo-50 flex items-center justify-center">
+                      <PixelAvatar config={(s as any).avatar} uid={s.uid} size={36} view="head" />
+                    </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-sm truncate text-brand-navy">{s.name}</p>
                       {(s as any).handle && <p className="text-[10px] text-brand-navy/40 truncate">@{(s as any).handle}</p>}
@@ -12976,7 +12981,9 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
                   <div className="text-center text-xs text-brand-navy/20 py-1">· · ·</div>
                   <div className="flex items-center gap-3 px-3 py-2.5 rounded-2xl bg-green-50 border border-green-200">
                     <span className="w-5 text-center font-bold text-xs text-brand-navy/40 shrink-0">#{userAtIdx + 1}</span>
-                    {userAtEntry.photoURL ? <img src={userAtEntry.photoURL} alt="" className="w-9 h-9 rounded-full object-cover shrink-0 border border-brand-navy/10" /> : <div className="w-9 h-9 rounded-full bg-brand-navy/10 shrink-0 flex items-center justify-center text-xs font-bold text-brand-navy/40">{(userAtEntry.name || '?')[0].toUpperCase()}</div>}
+                    <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-brand-navy/10 bg-indigo-50 flex items-center justify-center">
+                      <PixelAvatar config={(userAtEntry as any).avatar} uid={userAtEntry.uid} size={36} view="head" />
+                    </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-sm truncate text-brand-navy">{userAtEntry.name}</p>
                       {(userAtEntry as any).handle && <p className="text-[10px] text-brand-navy/40 truncate">@{(userAtEntry as any).handle}</p>}
@@ -19261,8 +19268,8 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                               return (
                                 <div key={u.uid} className="flex flex-col items-center w-[30%]" onClick={() => { setShowLeaderboard(false); onViewUser(u); }} style={{ cursor: 'pointer' }}>
                                   <span className="text-lg mb-0.5">{podiumMedals[col]}</span>
-                                  <div className={cn('w-12 h-12 rounded-2xl overflow-hidden border-2 mb-1', rank === 0 ? 'border-brand-gold shadow-lg shadow-brand-gold/30' : 'border-brand-navy/10')}>
-                                    {u.photoURL ? <img src={u.photoURL} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full bg-indigo-100 flex items-center justify-center text-base font-bold text-indigo-600">{(u.name || '?')[0].toUpperCase()}</div>}
+                                  <div className={cn('w-12 h-12 rounded-2xl overflow-hidden border-2 mb-1 bg-indigo-50', rank === 0 ? 'border-brand-gold shadow-lg shadow-brand-gold/30' : 'border-brand-navy/10')}>
+                                    <PixelAvatar config={u.avatar} uid={u.uid} size={48} view="head" />
                                   </div>
                                   <p className="text-[10px] font-bold text-brand-navy text-center leading-tight line-clamp-1 w-full">{u.name}</p>
                                   {u.handle && <p className="text-[9px] text-brand-navy/40 text-center truncate w-full">@{u.handle}</p>}
@@ -19278,8 +19285,8 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                             {sorted.slice(3).map((u, i) => (
                               <div key={u.uid} onClick={() => { setShowLeaderboard(false); onViewUser(u); }} className="glass-card p-3 rounded-2xl flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-transform">
                                 <div className="w-6 font-display font-bold text-brand-navy/30 text-sm text-center shrink-0">#{i + 4}</div>
-                                <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-brand-navy/10">
-                                  {u.photoURL ? <img src={u.photoURL} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-600">{(u.name || '?')[0].toUpperCase()}</div>}
+                                <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-brand-navy/10 bg-indigo-50 flex items-center justify-center">
+                                  <PixelAvatar config={u.avatar} uid={u.uid} size={36} view="head" />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-1"><p className="font-bold text-xs truncate">{u.name}</p><StreakBadge streak={u.streak} /></div>
@@ -19472,10 +19479,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                       {medal ?? `${i + 1}`}
                     </span>
                     <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-white/20 border border-white/20">
-                      {u.photoURL
-                        ? <img src={u.photoURL} alt="" className="w-full h-full object-cover" />
-                        : <div className="w-full h-full flex items-center justify-center text-sm font-bold text-white/70">{(u.displayName || u.handle || '?')[0].toUpperCase()}</div>
-                      }
+                      <PixelAvatar config={u.avatar} uid={u.uid} size={40} view="head" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-white truncate">
