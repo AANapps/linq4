@@ -6834,6 +6834,11 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
 
   const activeCards = initialCards.filter(c => {
     if (c.isArchived) return false;
+    // Membership cards have their own enable flag; skip the loyalty-card check
+    if (c.card_type === 'membership') {
+      const s = stores.find(st => st.id === c.store_id);
+      return !s || s.membershipEnabled === true;
+    }
     const s = stores.find(st => st.id === c.store_id);
     return !s || storeCardActive(s); // keep if store not yet loaded to avoid flicker
   });
@@ -19818,7 +19823,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
   useEffect(() => {
     const cardId = `${user.uid}_${store.id}`;
     return onSnapshot(doc(db, 'cards', cardId), (snap) => {
-      if (snap.exists() && !snap.data()?.isArchived && snap.data()?.card_type !== 'membership') {
+      if (snap.exists() && !snap.data()?.isArchived) {
         setCard({ id: snap.id, ...snap.data() } as Card);
       } else {
         setCard(null);
@@ -20297,29 +20302,56 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
             </button>
           </div>
 
-          {/* Card join buttons */}
-          <div className="flex gap-2 flex-wrap">
-            {storeCardActive(store) && (
-              <button
-                onClick={card ? undefined : handleJoinStore}
-                className={cn("flex items-center gap-1.5 px-4 py-2.5 rounded-2xl font-bold text-xs transition-all shadow active:scale-95", card ? "bg-green-50 text-green-600 border border-green-200 cursor-default" : "gradient-logo-blue text-white")}
-              >
-                {card ? <><UserCheck size={14} /> Loyalty Member</> : <><CreditCard size={14} /> Join Loyalty Card</>}
-              </button>
-            )}
-            {store.membershipEnabled && (
-              <button
-                onClick={membershipCard ? undefined : handleJoinMembership}
-                className={cn("flex items-center gap-1.5 px-4 py-2.5 rounded-2xl font-bold text-xs transition-all shadow active:scale-95", membershipCard ? "bg-purple-50 text-purple-600 border border-purple-200 cursor-default" : "bg-brand-navy text-white")}
-              >
-                {membershipCard ? <><UserCheck size={14} /> {store.membershipName || 'Member'}</> : <><Star size={14} /> Join {store.membershipName || 'Membership'}</>}
-              </button>
-            )}
-          </div>
+          {/* Card join buttons — only shown when vendor has that card type enabled */}
+          {(storeCardActive(store) || store.membershipEnabled) && (
+            <div className="flex gap-2 flex-wrap">
+              {storeCardActive(store) && (
+                <button
+                  onClick={card ? undefined : handleJoinStore}
+                  disabled={!!card}
+                  className={cn(
+                    "flex items-center gap-1.5 px-4 py-2.5 rounded-2xl font-bold text-xs transition-all shadow active:scale-95",
+                    card ? "bg-green-50 text-green-600 border border-green-200 cursor-default" : "gradient-logo-blue text-white"
+                  )}
+                >
+                  {card ? <><UserCheck size={14} /> Loyalty Joined</> : <><CreditCard size={14} /> Join Loyalty Card</>}
+                </button>
+              )}
+              {store.membershipEnabled && (
+                <button
+                  onClick={membershipCard ? undefined : handleJoinMembership}
+                  disabled={!!membershipCard}
+                  className={cn(
+                    "flex items-center gap-1.5 px-4 py-2.5 rounded-2xl font-bold text-xs transition-all shadow active:scale-95",
+                    membershipCard
+                      ? "bg-purple-50 text-purple-600 border border-purple-200 cursor-default"
+                      : "bg-brand-navy text-white"
+                  )}
+                >
+                  {membershipCard
+                    ? <><UserCheck size={14} /> {store.membershipName || 'Membership'} Joined</>
+                    : <><Star size={14} /> Join {store.membershipName || 'Membership'}</>}
+                </button>
+              )}
+            </div>
+          )}
 
-          {/* Show membership card preview if joined */}
+          {/* Loyalty card preview */}
+          {card && (
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest px-1">Your Loyalty Card</p>
+              {card.card_type === 'sub'
+                ? <SubLoyaltyCard card={card} store={store} onViewStore={() => {}} />
+                : <LoyaltyCard card={card} store={store} onViewStore={() => {}} />}
+            </div>
+          )}
+
+          {/* Membership card preview */}
           {membershipCard && (
-            <MembershipCard card={membershipCard} store={store} onViewStore={() => {}} />
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest px-1">Your Membership Card</p>
+              <MembershipCard card={membershipCard} store={store} onViewStore={() => {}} />
+            </div>
           )}
         </div>
       )}
