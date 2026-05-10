@@ -11506,56 +11506,23 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
             </span>
           </div>
         </div>
-        {/* White content section — mirrors compact LoyaltyCard stampGrid section */}
-        <div className="bg-white px-4 pt-4 pb-4">
+        {/* White content section — centred points display */}
+        <div className="bg-white px-4 py-5 flex flex-col items-center text-center">
           {membershipType === 'spend' ? (
             <>
-              <div className="flex items-end justify-between mb-2">
-                <div>
-                  <p className="text-brand-navy font-black text-2xl leading-none">{membershipPoints.toLocaleString()}</p>
-                  <p className="text-brand-navy/40 text-[9px] font-bold uppercase tracking-widest mt-0.5">points</p>
-                </div>
-                {redeemableValue > 0 && (
-                  <div className="text-right">
-                    <p className="text-brand-navy font-black text-lg leading-none">≈ ${redeemableValue.toFixed(2)}</p>
-                    <p className="text-brand-navy/40 text-[9px] font-bold uppercase tracking-widest mt-0.5">redeemable</p>
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-brand-navy/35 text-[10px] font-bold">${totalSpent.toFixed(2)} spent{earnedRewards > 0 ? ` · ${earnedRewards} rewards` : ''}</span>
-                <span className="text-brand-navy/35 text-[10px] font-bold flex items-center gap-1"><Gift size={9} /> Tap to redeem</span>
-              </div>
+              <p className="text-brand-navy font-black text-4xl leading-none">{membershipPoints.toLocaleString()}</p>
+              <p className="text-brand-navy/40 text-[9px] font-bold uppercase tracking-widest mt-1">points</p>
+              {redeemableValue > 0 && (
+                <p className="text-brand-navy/60 font-bold text-xs mt-1.5">≈ ${redeemableValue.toFixed(2)} redeemable</p>
+              )}
             </>
           ) : (
             <>
-              <div className="flex items-end justify-between mb-2">
-                <div>
-                  <p className="text-brand-navy font-black text-2xl leading-none">{membershipVisits}</p>
-                  <p className="text-brand-navy/40 text-[9px] font-bold uppercase tracking-widest mt-0.5">points</p>
-                </div>
-                {nextVisitReward && (
-                  <div className="text-right">
-                    <p className="text-brand-navy font-black text-sm leading-tight">{nextVisitReward.visits - membershipVisits} more</p>
-                    <p className="text-brand-navy/40 text-[9px] font-bold uppercase tracking-widest mt-0.5 max-w-[110px] truncate">{nextVisitReward.reward}</p>
-                  </div>
-                )}
-              </div>
+              <p className="text-brand-navy font-black text-4xl leading-none">{membershipVisits}</p>
+              <p className="text-brand-navy/40 text-[9px] font-bold uppercase tracking-widest mt-1">points</p>
               {nextVisitReward && (
-                <div className="h-1.5 bg-brand-navy/10 rounded-full overflow-hidden mt-1 mb-2">
-                  <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, (membershipVisits / nextVisitReward.visits) * 100)}%`, backgroundColor: color }} />
-                </div>
+                <p className="text-brand-navy/50 text-xs font-bold mt-1.5">{nextVisitReward.visits - membershipVisits} more → {nextVisitReward.reward}</p>
               )}
-              <div className="flex items-center justify-between mt-1">
-                <span className="text-brand-navy/35 text-[10px] font-bold">{lastVisitReward ? `Last: ${lastVisitReward.reward}` : ''}</span>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setShowVisitScan(true); }}
-                  className="flex items-center gap-1 text-white text-[10px] font-black px-3 py-1 rounded-lg active:scale-95 transition-transform"
-                  style={{ background: `linear-gradient(135deg, ${color}ff, ${color}bb)` }}
-                >
-                  <Wifi size={10} className="-rotate-90" /> Scan
-                </button>
-              </div>
             </>
           )}
         </div>
@@ -12349,31 +12316,12 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                 <div className="relative z-10 flex items-center gap-1.5 shrink-0">
                   {isCompleted && !card.isRedeemed && <div className="bg-white/25 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest animate-pulse">Ready!</div>}
                   {card.isRedeemed && <div className="bg-green-400 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">Claimed</div>}
-                  {!isCompleted && !card.isRedeemed && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setShowCardScan(true); }}
-                      className="flex items-center gap-1 text-white text-[10px] font-black px-2.5 py-1 rounded-lg active:scale-95 transition-transform bg-white/20 border border-white/30"
-                    >
-                      <Wifi size={10} className="-rotate-90" /> Scan
-                    </button>
-                  )}
                   <button onClick={(e) => { e.stopPropagation(); setShowOptions(!showOptions); }} className="p-1 text-white/50 hover:text-white/80 transition-colors">
                     <MoreVertical size={15} />
                   </button>
                 </div>
               </div>
-              {stampGrid(5, 'gap-1.5', 'px-4 pt-4 pb-2', 15, 'text-[11px]')}
-              {!isCompleted && !card.isRedeemed && (
-                <div className="bg-white px-4 pb-4">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setShowCardScan(true); }}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-white text-sm active:scale-[0.98] transition-transform"
-                    style={{ backgroundColor: cardTheme }}
-                  >
-                    <Wifi size={14} className="-rotate-90" /> Scan
-                  </button>
-                </div>
-              )}
+              {stampGrid(5, 'gap-1.5', 'px-4 pt-4 pb-4', 15, 'text-[11px]')}
             </div>
           );
 
@@ -12403,18 +12351,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                   <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mt-0.5">{store?.category || 'Retail'}</p>
                 </div>
               </div>
-              {stampGrid(3, 'gap-3', 'px-8 pt-7 pb-4', 22, 'text-[15px]')}
-              {!isCompleted && !card.isRedeemed && (
-                <div className="bg-white px-8 pb-6">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setShowCardScan(true); }}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-black text-white text-sm active:scale-[0.98] transition-transform"
-                    style={{ backgroundColor: cardTheme }}
-                  >
-                    <Wifi size={15} className="-rotate-90" /> Scan
-                  </button>
-                </div>
-              )}
+              {stampGrid(3, 'gap-3', 'px-8 pt-7 pb-6', 22, 'text-[15px]')}
             </div>
           );
         })()}
@@ -12639,14 +12576,6 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
           <p className="text-indigo-200 text-xs">{points} pts • {visits} visits</p>
         </div>
         <div className="shrink-0 flex items-center gap-2">
-          {onScan && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onScan(); }}
-              className="flex items-center gap-1 text-white text-[10px] font-black px-2.5 py-1 rounded-lg active:scale-95 transition-transform bg-white/20 border border-white/30"
-            >
-              <Wifi size={10} className="-rotate-90" /> Scan
-            </button>
-          )}
           <div className="text-right cursor-pointer" onClick={() => store && onViewStore && onViewStore(store)}>
             <p className="text-xs font-bold text-indigo-200">Redeem</p>
             <p className="text-white font-bold text-sm">${moneyValue} off</p>
