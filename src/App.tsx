@@ -10876,9 +10876,40 @@ function BarcodeDisplay({ value, height = 60 }: { value: string; height?: number
   return <svg ref={svgRef} className="w-full" />;
 }
 
+function SwipeConfirm({ onConfirm }: { onConfirm: () => void }) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [done, setDone] = useState(false);
+  return (
+    <div ref={trackRef} className="relative h-14 bg-emerald-50 rounded-full overflow-hidden border-2 border-emerald-200 select-none">
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <span className="text-emerald-600/50 text-sm font-bold tracking-wide">Slide to redeem →</span>
+      </div>
+      <motion.div
+        drag={done ? false : 'x'}
+        dragConstraints={trackRef}
+        dragElastic={0}
+        dragMomentum={false}
+        onDragEnd={(_, info) => {
+          const trackWidth = trackRef.current?.clientWidth ?? 300;
+          if (info.offset.x > trackWidth * 0.6) { setDone(true); onConfirm(); }
+        }}
+        className="absolute left-1 top-1 w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg z-10"
+        style={{ cursor: done ? 'default' : 'grab' }}
+        whileTap={{ scale: 0.95 }}
+      >
+        {done ? <Check size={20} className="text-white" /> : <ChevronRight size={20} className="text-white" />}
+      </motion.div>
+    </div>
+  );
+}
+
 function MembershipCard({ card, store, onViewStore, compact = false }: { card: Card; store?: StoreProfile; onViewStore?: (s: StoreProfile) => void; compact?: boolean; key?: React.Key }) {
   const [showRedeemSheet, setShowRedeemSheet] = useState(false);
   const [showNfc, setShowNfc] = useState(false);
+  const [showRedeemFlow, setShowRedeemFlow] = useState(false);
+  const [redeemDollars, setRedeemDollars] = useState('');
+  const [redeemStage, setRedeemStage] = useState<'input' | 'swipe' | 'success'>('input');
+  const [redeeming, setRedeeming] = useState(false);
 
   const membershipType = card.membership_type ?? store?.membershipType ?? 'spend';
   const color = store?.membershipColor || '#0f4c81';
@@ -10895,6 +10926,122 @@ function MembershipCard({ card, store, onViewStore, compact = false }: { card: C
   const visitRewards = (store?.membershipVisitRewards ?? []).slice().sort((a, b) => a.visits - b.visits);
   const nextVisitReward = visitRewards.find(r => r.visits > membershipVisits);
   const lastVisitReward = visitRewards.filter(r => r.visits <= membershipVisits).pop();
+
+  const redeemDollarNum = parseFloat(redeemDollars) || 0;
+  const pointsToDeduct = redemptionRate > 0 ? Math.round(redeemDollarNum * redemptionRate) : 0;
+  const maxRedeemDollars = redemptionRate > 0 ? membershipPoints / redemptionRate : 0;
+  const canProceedRedeem = redeemDollarNum > 0 && pointsToDeduct > 0 && pointsToDeduct <= membershipPoints;
+
+  const closeRedeemFlow = () => { setShowRedeemFlow(false); setRedeemDollars(''); setRedeemStage('input'); };
+
+  const handleRedeem = async () => {
+    if (redeeming || !canProceedRedeem) return;
+    setRedeeming(true);
+    try {
+      await updateDoc(doc(db, 'cards', card.id), {
+        membership_points: increment(-pointsToDeduct),
+        last_redeemed_at: serverTimestamp(),
+      });
+      setRedeemStage('success');
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setRedeeming(false);
+    }
+  };
+
+  /* Redemption flow modal — shared by compact and non-compact */
+  const redeemFlowModal = (
+    <AnimatePresence>
+      {showRedeemFlow && (
+        <div className="fixed inset-0 z-[130] flex items-end justify-center">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={redeemStage !== 'success' ? closeRedeemFlow : undefined} />
+          <motion.div
+            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+            transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+            className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-10 shadow-2xl"
+          >
+            {redeemStage === 'input' && (
+              <>
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="font-display text-2xl font-bold">Redeem Points</h3>
+                    <p className="text-brand-navy/40 text-xs mt-0.5">{membershipPoints.toLocaleString()} pts available · up to ${maxRedeemDollars.toFixed(2)} off</p>
+                  </div>
+                  <button onClick={closeRedeemFlow} className="p-2 text-brand-navy/40 hover:text-brand-navy"><X size={20} /></button>
+                </div>
+                <div className="flex items-center gap-2 bg-brand-bg rounded-2xl px-5 py-4 mb-3">
+                  <span className="text-brand-navy font-black text-3xl">$</span>
+                  <input
+                    type="number" min="0" step="0.50"
+                    value={redeemDollars}
+                    onChange={e => setRedeemDollars(e.target.value)}
+                    className="flex-1 bg-transparent font-black text-3xl text-brand-navy outline-none w-full"
+                    placeholder="0.00"
+                    autoFocus
+                  />
+                </div>
+                {redeemDollarNum > 0 && (
+                  <div className={`rounded-2xl p-3 mb-4 text-center ${canProceedRedeem ? 'bg-emerald-50 border border-emerald-100' : 'bg-red-50 border border-red-100'}`}>
+                    <p className={`font-bold text-sm ${canProceedRedeem ? 'text-emerald-600' : 'text-red-500'}`}>
+                      {canProceedRedeem
+                        ? `= ${pointsToDeduct} pts · ${membershipPoints - pointsToDeduct} remaining`
+                        : `Not enough points (max $${maxRedeemDollars.toFixed(2)})`}
+                    </p>
+                  </div>
+                )}
+                <button
+                  onClick={() => setRedeemStage('swipe')}
+                  disabled={!canProceedRedeem}
+                  className="w-full bg-emerald-500 text-white py-3.5 rounded-2xl font-bold text-sm disabled:opacity-40 mb-3"
+                >
+                  Continue
+                </button>
+                <button onClick={closeRedeemFlow} className="w-full text-brand-navy/40 text-sm font-bold py-2">Cancel</button>
+              </>
+            )}
+            {redeemStage === 'swipe' && (
+              <>
+                <div className="text-center mb-6">
+                  <h3 className="font-display text-2xl font-bold mb-1">Show Staff to Authorize</h3>
+                  <p className="text-brand-navy/40 text-sm">Ask a staff member to confirm then swipe</p>
+                </div>
+                <div className="bg-emerald-50 rounded-3xl p-6 text-center mb-6 border border-emerald-100">
+                  <p className="text-emerald-600/60 text-[10px] font-bold uppercase tracking-widest mb-1">Redeeming</p>
+                  <p className="text-emerald-600 font-black text-5xl">${redeemDollarNum.toFixed(2)}</p>
+                  <p className="text-emerald-600/60 text-sm mt-1 font-bold">{pointsToDeduct} points</p>
+                </div>
+                <SwipeConfirm onConfirm={handleRedeem} />
+                <button onClick={() => setRedeemStage('input')} className="w-full text-brand-navy/40 text-sm font-bold py-3 mt-2">← Back</button>
+              </>
+            )}
+            {redeemStage === 'success' && (
+              <>
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Check size={28} className="text-emerald-500" />
+                  </div>
+                  <h3 className="font-display text-2xl font-bold mb-1">Redeemed!</h3>
+                  <p className="text-brand-navy/40 text-sm mb-6">${redeemDollarNum.toFixed(2)} off applied</p>
+                  <div className="glass-card rounded-2xl p-4 mb-6 grid grid-cols-2 gap-3">
+                    <div className="text-center">
+                      <p className="text-brand-navy/40 text-[9px] font-bold uppercase tracking-widest">Points Used</p>
+                      <p className="text-brand-navy font-black text-xl">{pointsToDeduct}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-brand-navy/40 text-[9px] font-bold uppercase tracking-widest">Remaining</p>
+                      <p className="text-brand-navy font-black text-xl">{membershipPoints - pointsToDeduct}</p>
+                    </div>
+                  </div>
+                  <button onClick={() => { closeRedeemFlow(); setShowRedeemSheet(false); }} className="w-full bg-brand-navy text-white py-3.5 rounded-2xl font-bold text-sm">Done</button>
+                </div>
+              </>
+            )}
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
 
   if (compact) {
     const openCompact = () => membershipType === 'visit' ? setShowNfc(true) : setShowRedeemSheet(true);
@@ -11006,11 +11153,20 @@ function MembershipCard({ card, store, onViewStore, compact = false }: { card: C
                   </div>
                 )}
               </div>
-              <button onClick={() => setShowRedeemSheet(false)} className="w-full bg-brand-navy text-white py-3.5 rounded-2xl font-bold text-sm">Done</button>
+              {redeemableValue > 0 && (
+                <button
+                  onClick={() => { setShowRedeemSheet(false); setShowRedeemFlow(true); }}
+                  className="w-full bg-emerald-500 text-white py-3.5 rounded-2xl font-bold text-sm mb-3 flex items-center justify-center gap-2"
+                >
+                  <Gift size={15} /> Redeem Points
+                </button>
+              )}
+              <button onClick={() => setShowRedeemSheet(false)} className="w-full text-brand-navy/40 text-sm font-bold py-2">Close</button>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
+      {redeemFlowModal}
       <AnimatePresence>
         {showNfc && (
           <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
@@ -11204,11 +11360,21 @@ function MembershipCard({ card, store, onViewStore, compact = false }: { card: C
                 </div>
               )}
 
-              <p className="text-center text-xs text-brand-navy/40">Show your balance to the vendor to redeem</p>
+              {redeemableValue > 0 && (
+                <button
+                  onClick={() => { setShowRedeemSheet(false); setShowRedeemFlow(true); }}
+                  className="w-full bg-emerald-500 text-white py-3.5 rounded-2xl font-bold text-sm mb-3 flex items-center justify-center gap-2"
+                >
+                  <Gift size={15} /> Redeem Points
+                </button>
+              )}
+              <button onClick={() => setShowRedeemSheet(false)} className="w-full text-brand-navy/40 text-sm font-bold py-2">Close</button>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
+
+      {redeemFlowModal}
 
       {/* Visit detail sheet */}
       <AnimatePresence>
