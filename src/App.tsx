@@ -10054,7 +10054,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
           await updateDoc(doc(db, 'users', customer.uid), { total_cards_held: increment(1) });
         }
         await addDoc(collection(db, 'transactions'), { user_id: customer.uid, store_id: store.id, card_type: 'membership', membership_type: 'visit', stamps_per_visit: stampsThisVisit, issued_at: serverTimestamp() });
-        setStatus({ type: 'success', message: `Visit recorded for ${customer.name}! (+${stampsThisVisit})` });
+        setStatus({ type: 'success', message: `+${stampsThisVisit} points issued to ${customer.name}!` });
       }
     } catch (err) {
       console.error(err);
@@ -10775,8 +10775,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                     <Smartphone size={28} className="text-white" />
                   </div>
                   <div>
-                    <p className="font-bold text-brand-navy">{store.membershipType === 'visit' ? 'Stamp Member' : 'Scan User'}</p>
-                    <p className="text-xs text-brand-navy/50 mt-0.5">{store.membershipType === 'visit' ? 'Record a membership visit' : 'Issue spend to membership card'}</p>
+                    <p className="font-bold text-brand-navy">{store.membershipType === 'visit' ? 'Issue Points' : 'Scan User'}</p>
+                    <p className="text-xs text-brand-navy/50 mt-0.5">{store.membershipType === 'visit' ? 'Scan NFC to issue visit points' : 'Issue spend to membership card'}</p>
                   </div>
                 </button>
               )}
@@ -11093,7 +11093,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen }:
           </div>
           <div className="relative z-10 shrink-0">
             <span className="bg-white/20 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest border border-white/30">
-              {membershipType === 'visit' ? 'Per Visit' : 'Spend'}
+              {membershipType === 'visit' ? 'Points' : 'Spend'}
             </span>
           </div>
         </div>
@@ -11123,7 +11123,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen }:
               <div className="flex items-end justify-between mb-2">
                 <div>
                   <p className="text-brand-navy font-black text-2xl leading-none">{membershipVisits}</p>
-                  <p className="text-brand-navy/40 text-[9px] font-bold uppercase tracking-widest mt-0.5">visits</p>
+                  <p className="text-brand-navy/40 text-[9px] font-bold uppercase tracking-widest mt-0.5">points</p>
                 </div>
                 {nextVisitReward && (
                   <div className="text-right">
@@ -11139,7 +11139,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen }:
               )}
               {!nextVisitReward && (
                 <div className="flex items-center justify-between">
-                  <span className="text-brand-navy/35 text-[10px] font-bold">{lastVisitReward ? `Last: ${lastVisitReward.reward}` : 'Tap card to scan a visit'}</span>
+                  <span className="text-brand-navy/35 text-[10px] font-bold">{lastVisitReward ? `Last: ${lastVisitReward.reward}` : 'Tap to view points'}</span>
                   <span className="text-brand-navy/35 text-[10px] font-bold flex items-center gap-1"><Wifi size={9} className="-rotate-90" /> Scan</span>
                 </div>
               )}
@@ -11210,9 +11210,9 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen }:
                 </div>
               </div>
               <p className="font-bold text-brand-navy mb-1">Hold near membership terminal</p>
-              <p className="text-xs text-brand-navy/40 mb-6">Tap your phone on the NFC reader to record your visit</p>
-              <p className="text-brand-navy font-black text-2xl mb-1">{membershipVisits} visits</p>
-              {nextVisitReward && <p className="text-brand-navy/40 text-xs mb-5">{nextVisitReward.visits - membershipVisits} more to: {nextVisitReward.reward}</p>}
+              <p className="text-xs text-brand-navy/40 mb-6">Tap your phone on the NFC reader to earn points</p>
+              <p className="text-brand-navy font-black text-2xl mb-1">{membershipVisits} points</p>
+              {nextVisitReward && <p className="text-brand-navy/40 text-xs mb-5">{nextVisitReward.visits - membershipVisits} more pts to: {nextVisitReward.reward}</p>}
               <button onClick={() => setShowNfc(false)} className="w-full bg-brand-navy text-white py-3.5 rounded-2xl font-bold text-sm">Done</button>
             </motion.div>
           </div>
@@ -11284,10 +11284,10 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen }:
             <>
               <div className="text-center mb-4">
                 <p className="text-brand-navy font-black text-5xl leading-none tracking-tight">{membershipVisits}</p>
-                <p className="text-brand-navy/40 text-xs font-bold uppercase tracking-widest mt-1.5">visits</p>
+                <p className="text-brand-navy/40 text-xs font-bold uppercase tracking-widest mt-1.5">points</p>
                 {nextVisitReward && (
                   <p className="text-brand-navy/60 text-sm mt-2 leading-snug">
-                    {nextVisitReward.visits - membershipVisits} more → <span className="font-bold" style={{ color }}>{nextVisitReward.reward}</span>
+                    {nextVisitReward.visits - membershipVisits} more pts → <span className="font-bold" style={{ color }}>{nextVisitReward.reward}</span>
                   </p>
                 )}
               </div>
@@ -11295,7 +11295,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen }:
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-1.5">
                     <p className="text-brand-navy/40 text-[10px] font-bold uppercase tracking-widest truncate pr-2">{nextVisitReward.reward}</p>
-                    <p className="text-brand-navy/30 text-[10px] font-bold shrink-0">{membershipVisits}/{nextVisitReward.visits}</p>
+                    <p className="text-brand-navy/30 text-[10px] font-bold shrink-0">{membershipVisits}/{nextVisitReward.visits} pts</p>
                   </div>
                   <div className="h-2 bg-brand-navy/10 rounded-full overflow-hidden">
                     <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, (membershipVisits / nextVisitReward.visits) * 100)}%`, backgroundColor: color }} />
@@ -11303,7 +11303,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen }:
                 </div>
               )}
               <div className="flex items-center justify-between">
-                <span className="text-brand-navy/35 text-[11px] font-bold">{lastVisitReward ? `Last: ${lastVisitReward.reward}` : 'Tap card to scan a visit'}</span>
+                <span className="text-brand-navy/35 text-[11px] font-bold">{lastVisitReward ? `Last: ${lastVisitReward.reward}` : 'Tap card to scan'}</span>
                 <span className="text-brand-navy/40 text-[10px] font-bold flex items-center gap-1"><Wifi size={11} className="-rotate-90" /> Scan</span>
               </div>
             </>
@@ -11417,19 +11417,19 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen }:
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h3 className="font-display text-2xl font-bold">{membershipName}</h3>
-                  <p className="text-brand-navy/40 text-xs mt-0.5">{membershipVisits} visits total</p>
+                  <p className="text-brand-navy/40 text-xs mt-0.5">{membershipVisits} points total</p>
                 </div>
                 <button onClick={() => setShowRedeemSheet(false)} className="p-2 text-brand-navy/40 hover:text-brand-navy"><X size={20} /></button>
               </div>
 
-              {/* Scan visit button */}
+              {/* Scan NFC button */}
               <button
                 onClick={() => setShowNfc(true)}
                 className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl font-bold text-white text-sm mb-6 active:scale-95 transition-all"
                 style={{ background: `linear-gradient(135deg, ${color}ff 0%, ${color}99 100%)` }}
               >
                 <Wifi size={18} className="-rotate-90" />
-                Scan Visit
+                Scan NFC
               </button>
 
               {/* Next reward progress */}
@@ -11437,7 +11437,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen }:
                 <div className="glass-card p-5 rounded-2xl mb-4">
                   <div className="flex items-center justify-between mb-3">
                     <p className="font-bold text-brand-navy text-sm">{nextVisitReward.reward}</p>
-                    <p className="text-brand-navy/40 text-xs font-bold">{membershipVisits}/{nextVisitReward.visits} visits</p>
+                    <p className="text-brand-navy/40 text-xs font-bold">{membershipVisits}/{nextVisitReward.visits} pts</p>
                   </div>
                   <div className="h-2.5 bg-brand-navy/10 rounded-full overflow-hidden">
                     <div
@@ -11445,7 +11445,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen }:
                       style={{ width: `${Math.min(100, (membershipVisits / nextVisitReward.visits) * 100)}%`, background: `linear-gradient(90deg, ${color}cc, ${color}ff)` }}
                     />
                   </div>
-                  <p className="text-[10px] text-brand-navy/40 mt-2 font-bold">{nextVisitReward.visits - membershipVisits} more visits to unlock</p>
+                  <p className="text-[10px] text-brand-navy/40 mt-2 font-bold">{nextVisitReward.visits - membershipVisits} more points to unlock</p>
                 </div>
               )}
 
@@ -11463,7 +11463,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen }:
                       </div>
                       <div className="flex-1">
                         <p className={`text-sm font-bold ${membershipVisits >= r.visits ? 'text-emerald-700' : 'text-brand-navy'}`}>{r.reward}</p>
-                        <p className="text-[10px] text-brand-navy/40">{r.visits} visits</p>
+                        <p className="text-[10px] text-brand-navy/40">{r.visits} pts to unlock</p>
                       </div>
                     </div>
                   ))}
@@ -11498,9 +11498,9 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen }:
                 </div>
               </div>
               <p className="font-bold text-brand-navy mb-1">Hold near membership terminal</p>
-              <p className="text-xs text-brand-navy/40 mb-6">Tap your phone on the NFC reader to record your visit</p>
-              <p className="text-brand-navy font-black text-2xl mb-1">{membershipVisits} visits</p>
-              {nextVisitReward && <p className="text-brand-navy/40 text-xs mb-5">{nextVisitReward.visits - membershipVisits} more to: {nextVisitReward.reward}</p>}
+              <p className="text-xs text-brand-navy/40 mb-6">Tap your phone on the NFC reader to earn points</p>
+              <p className="text-brand-navy font-black text-2xl mb-1">{membershipVisits} points</p>
+              {nextVisitReward && <p className="text-brand-navy/40 text-xs mb-5">{nextVisitReward.visits - membershipVisits} more pts to: {nextVisitReward.reward}</p>}
               <button onClick={() => setShowNfc(false)} className="w-full bg-brand-navy text-white py-3.5 rounded-2xl font-bold text-sm">Done</button>
             </motion.div>
           </div>
@@ -14170,21 +14170,88 @@ function ScanUserPanel({ store, onIssue }: {
   const [amount, setAmount] = useState('');
   const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [working, setWorking] = useState(false);
+  const [nfcScanning, setNfcScanning] = useState(false);
 
   const memType = store?.membershipType ?? 'spend';
   const isVisit = memType === 'visit';
+  const pointsPerVisit = store?.membershipStampsPerVisit || 1;
+
+  const handleNFCScan = async () => {
+    if (!('NDEFReader' in window)) {
+      setStatus({ type: 'error', message: 'NFC not supported on this device' });
+      return;
+    }
+    setNfcScanning(true);
+    setStatus(null);
+    try {
+      const ndef = new (window as any).NDEFReader();
+      await ndef.scan();
+      ndef.addEventListener('reading', async ({ message }: any) => {
+        setNfcScanning(false);
+        for (const record of message.records) {
+          const decoder = new TextDecoder();
+          let uid = '';
+          if (record.recordType === 'text') {
+            uid = decoder.decode(record.data).trim();
+          } else if (record.recordType === 'url') {
+            const url = decoder.decode(record.data);
+            const match = url.match(/[?&]uid=([^&]+)/);
+            if (match) uid = match[1];
+          }
+          if (uid) {
+            // Look up user by UID
+            const userSnap = await getDoc(doc(db, 'users', uid));
+            if (userSnap.exists()) {
+              const u = userSnap.data() as UserProfile;
+              const h = u.handle || '';
+              setHandle(h);
+              if (h) onIssue(h, '', setStatus, setWorking);
+            } else {
+              setStatus({ type: 'error', message: 'User not found for this NFC tag' });
+            }
+            return;
+          }
+        }
+        setStatus({ type: 'error', message: 'Could not read user info from NFC tag' });
+      });
+      ndef.addEventListener('readingerror', () => {
+        setNfcScanning(false);
+        setStatus({ type: 'error', message: 'NFC read error — try again' });
+      });
+    } catch (err: any) {
+      setNfcScanning(false);
+      setStatus({ type: 'error', message: err?.message || 'NFC scan failed' });
+    }
+  };
 
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="font-display text-2xl font-bold mb-1">{isVisit ? 'Stamp Member' : 'Issue Spend'}</h3>
+        <h3 className="font-display text-2xl font-bold mb-1">{isVisit ? 'Issue Points' : 'Issue Spend'}</h3>
         <p className="text-brand-navy/50 text-sm">
           {isVisit
-            ? `Record a visit on the customer's ${store?.membershipName || 'membership'} card.`
+            ? `Issue ${pointsPerVisit} point${pointsPerVisit !== 1 ? 's' : ''} per visit on the customer's ${store?.membershipName || 'membership'} card.`
             : `Add spend to the customer's ${store?.membershipName || 'membership'} card.`}
         </p>
       </div>
+
+      {/* NFC scan button — visit type only */}
+      {isVisit && (
+        <button
+          onClick={handleNFCScan}
+          disabled={nfcScanning || working}
+          className="w-full relative overflow-hidden flex items-center justify-center gap-3 py-5 rounded-2xl font-bold text-white text-sm shadow-lg active:scale-[0.98] transition-all disabled:opacity-60"
+          style={{ background: 'linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 40%, #2563eb 70%, #3b82f6 100%)' }}
+        >
+          <span className="card-shine-ray" />
+          {nfcScanning
+            ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full" /> Scanning…</>
+            : <><Wifi size={18} className="-rotate-90" /> Scan NFC to Issue Points</>}
+        </button>
+      )}
+
       <div className="glass-card rounded-[2rem] p-6 space-y-4">
+        <p className="text-xs font-bold text-brand-navy/40 uppercase tracking-widest">Or enter manually</p>
         <div>
           <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest mb-2 block">Customer @handle</label>
           <div className="flex items-center gap-3 bg-white rounded-2xl px-4 py-3 border border-brand-navy/10">
@@ -14225,7 +14292,7 @@ function ScanUserPanel({ store, onIssue }: {
           className="w-full py-4 rounded-2xl font-bold text-sm text-white disabled:opacity-40 transition-all active:scale-95"
           style={{ background: 'linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 40%, #2563eb 70%, #3b82f6 100%)' }}
         >
-          {working ? 'Issuing…' : isVisit ? 'Record Visit' : 'Issue Spend'}
+          {working ? 'Issuing…' : isVisit ? 'Issue Points' : 'Issue Spend'}
         </button>
         {status && (
           <p className={`text-sm font-bold text-center ${status.type === 'success' ? 'text-emerald-600' : 'text-red-500'}`}>
@@ -14903,7 +14970,7 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
                   membershipType === t ? "bg-brand-navy text-white border-brand-navy" : "bg-brand-bg text-brand-navy/50 border-brand-navy/10 hover:border-brand-navy/30"
                 )}
               >
-                {t === 'spend' ? 'Spend-Based' : 'Per Visit'}
+                {t === 'spend' ? 'Spend-Based' : 'Points (Per Visit)'}
               </button>
             ))}
           </div>
@@ -15024,7 +15091,7 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
         {/* Visit-based: stamps per visit */}
         {membershipType === 'visit' && (
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Stamps Per Visit</label>
+            <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Points Per Visit</label>
             <input
               type="number"
               min="1"
@@ -15034,7 +15101,7 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
               className="w-full px-5 py-4 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
               placeholder="1"
             />
-            <p className="text-[10px] text-brand-navy/40 font-medium">How many stamps to award each time a member visits.</p>
+            <p className="text-[10px] text-brand-navy/40 font-medium">Points awarded each time a member visits.</p>
           </div>
         )}
 
