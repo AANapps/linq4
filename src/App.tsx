@@ -8065,6 +8065,175 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
   );
 }
 
+function VisitScanSheet({ card, store, onClose }: { card: Card; store?: StoreProfile; onClose: () => void }) {
+  type SS = 'idle' | 'scanning' | 'processing' | 'success' | 'error';
+  const [scanState, setScanState] = useState<SS>('idle');
+  const [statusMsg, setStatusMsg] = useState('');
+  const [testId, setTestId] = useState('');
+  const [qty, setQty] = useState(store?.membershipStampsPerVisit || 1);
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const hasNFC = 'NDEFReader' in window;
+  const abortRef = useRef<AbortController | null>(null);
+  const color = store?.membershipColor || '#0f4c81';
+  const membershipVisits = card.membership_visits ?? 0;
+
+  useEffect(() => () => { abortRef.current?.abort(); }, []);
+
+  const processId = async (storeId: string) => {
+    if (storeId !== card.store_id) {
+      setScanState('error'); setStatusMsg('Wrong store — hold near the correct NFC tag.'); return;
+    }
+    setScanState('processing');
+    try {
+      await updateDoc(doc(db, 'cards', card.id), {
+        membership_visits: increment(qty),
+        last_transaction_at: serverTimestamp(),
+      });
+      await addDoc(collection(db, 'transactions'), {
+        user_id: card.user_id, store_id: card.store_id,
+        card_type: 'membership', membership_type: 'visit',
+        type: 'nfc_scan', points_earned: qty, issued_at: serverTimestamp(),
+      });
+      setScanState('success');
+      setStatusMsg(`+${qty} point${qty !== 1 ? 's' : ''} added!`);
+    } catch (err: any) {
+      setScanState('error'); setStatusMsg(err?.message || 'Something went wrong.');
+    }
+  };
+
+  const startScan = async () => {
+    if (!hasNFC) { setScanState('error'); setStatusMsg('NFC not supported on this device.'); return; }
+    setScanState('scanning');
+    const ctrl = new AbortController(); abortRef.current = ctrl;
+    try {
+      const reader = new (window as any).NDEFReader();
+      reader.onreadingerror = () => { setScanState('error'); setStatusMsg('Could not read tag. Try again.'); };
+      reader.onreading = async (ev: any) => {
+        ctrl.abort();
+        let storeId: string | null = null;
+        for (const rec of ev.message.records) {
+          if (rec.recordType === 'text') {
+            const t = new TextDecoder(rec.encoding || 'utf-8').decode(rec.data);
+            if (t.startsWith('linq4:')) { storeId = t.slice(6).trim(); break; }
+          }
+          if (rec.recordType === 'url') {
+            const u = new TextDecoder().decode(rec.data);
+            const m = u.match(/[?&]stamp=([^&]+)/); if (m) { storeId = m[1]; break; }
+          }
+        }
+        if (!storeId) { setScanState('error'); setStatusMsg('Not a valid Linq tag.'); return; }
+        await processId(storeId);
+      };
+      await reader.scan({ signal: ctrl.signal });
+    } catch (err: any) {
+      if (err.name !== 'AbortError') { setScanState('error'); setStatusMsg(err?.message || 'Could not start scan.'); }
+    }
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[130] flex items-end justify-center" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+        transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+        className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-12 shadow-2xl"
+        onClick={e => e.stopPropagation()}>
+        <div className="bg-brand-navy/20 rounded-full mx-auto mb-6" style={{ width: 40, height: 4 }} />
+        {/* Store header */}
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-12 h-12 rounded-2xl overflow-hidden shrink-0">
+            <img src={store?.logoUrl || `https://picsum.photos/seed/${card.store_id}/200/200`} alt="" className="w-full h-full object-cover" />
+          </div>
+          <div>
+            <h3 className="font-display text-lg font-bold text-brand-navy">{store?.name || 'Store'}</h3>
+            <p className="text-brand-navy/40 text-xs">{store?.membershipName || 'Membership'} · {membershipVisits} pts</p>
+          </div>
+        </div>
+        {scanState === 'idle' && (
+          <>
+            <div className="bg-brand-bg rounded-2xl p-5 mb-5 text-center">
+              <p className="text-brand-navy/40 text-[10px] font-bold uppercase tracking-widest mb-4">Points to collect</p>
+              <div className="flex items-center justify-center gap-6">
+                <button onClick={() => setQty(q => Math.max(1, q - 1))}
+                  className="w-12 h-12 rounded-full bg-white shadow font-black text-2xl text-brand-navy flex items-center justify-center active:scale-90 transition-transform">−</button>
+                <span className="font-black text-6xl text-brand-navy leading-none w-16 text-center">{qty}</span>
+                <button onClick={() => setQty(q => q + 1)}
+                  className="w-12 h-12 rounded-full bg-white shadow font-black text-2xl text-brand-navy flex items-center justify-center active:scale-90 transition-transform">+</button>
+              </div>
+            </div>
+            {isIOS ? (
+              <div className="bg-brand-bg rounded-2xl p-4 mb-4 text-center">
+                <Smartphone size={28} className="text-brand-navy mx-auto mb-2" />
+                <p className="text-sm text-brand-navy/60">Hold the top of your iPhone near the store's NFC tag</p>
+              </div>
+            ) : (
+              <button onClick={startScan}
+                className="w-full flex items-center justify-center gap-2.5 text-white py-4 rounded-2xl font-black text-base mb-4 active:scale-[0.98] transition-transform"
+                style={{ backgroundColor: color }}>
+                <Wifi size={18} className="-rotate-90" /> Scan NFC Tag
+              </button>
+            )}
+            <div className="flex gap-2 mb-3">
+              <input value={testId} onChange={e => setTestId(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && testId.trim() && processId(testId.trim())}
+                placeholder="Test: type shop ID"
+                className="flex-1 bg-brand-bg rounded-xl px-4 py-2.5 text-sm font-medium outline-none text-brand-navy" />
+              <button onClick={() => processId(testId.trim())} disabled={!testId.trim()}
+                className="bg-brand-navy text-white px-4 py-2.5 rounded-xl font-bold text-sm disabled:opacity-30">Go</button>
+            </div>
+            <button onClick={onClose} className="w-full text-brand-navy/40 text-sm font-bold py-2">Close</button>
+          </>
+        )}
+        {scanState === 'scanning' && (
+          <div className="text-center py-2">
+            {isIOS ? (
+              <div className="mb-4">
+                <Smartphone size={36} className="text-brand-navy mx-auto mb-3" />
+                <p className="font-bold text-brand-navy mb-1">Hold near NFC tag</p>
+              </div>
+            ) : (
+              <>
+                <div className="relative w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+                  <motion.div className="absolute inset-0 rounded-full border-2 border-brand-navy/20"
+                    animate={{ scale: [1, 1.6, 1], opacity: [0.6, 0, 0.6] }} transition={{ duration: 1.5, repeat: Infinity }} />
+                  <motion.div className="absolute inset-0 rounded-full border-2 border-brand-navy/10"
+                    animate={{ scale: [1, 2, 1], opacity: [0.4, 0, 0.4] }} transition={{ duration: 1.5, repeat: Infinity, delay: 0.3 }} />
+                  <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ backgroundColor: color }}>
+                    <Wifi size={30} className="text-white -rotate-90" />
+                  </div>
+                </div>
+                <p className="font-bold text-brand-navy mb-1">Hold near NFC tag</p>
+              </>
+            )}
+            <p className="text-brand-navy/40 text-xs mb-4">Listening for store tag…</p>
+            <button onClick={() => { abortRef.current?.abort(); setScanState('idle'); }} className="w-full text-brand-navy/40 text-sm font-bold py-2">Cancel</button>
+          </div>
+        )}
+        {scanState === 'processing' && (
+          <div className="text-center py-4"><p className="text-brand-navy/60 font-medium">Processing…</p></div>
+        )}
+        {scanState === 'success' && (
+          <div className="text-center">
+            <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3" style={{ backgroundColor: `${color}20` }}>
+              <Check size={26} style={{ color }} />
+            </div>
+            <p className="text-brand-navy font-bold text-base mb-1">{statusMsg}</p>
+            <p className="text-brand-navy/40 text-sm">{membershipVisits + qty} total points</p>
+            <button onClick={onClose} className="w-full bg-brand-navy text-white py-3.5 rounded-2xl font-bold text-sm mt-4">Done</button>
+          </div>
+        )}
+        {scanState === 'error' && (
+          <div className="text-center">
+            <p className="text-red-500 font-medium text-sm mb-4">{statusMsg}</p>
+            <button onClick={() => setScanState('idle')} className="w-full bg-brand-navy/10 text-brand-navy py-3 rounded-2xl font-bold text-sm mb-2">Try Again</button>
+            <button onClick={onClose} className="text-brand-navy/40 text-sm font-bold mt-2">Close</button>
+          </div>
+        )}
+      </motion.div>
+    </motion.div>
+  );
+}
+
 const PAGE_ICONS: Record<string, string> = { stamp: '⭐', challenge: '🏆', challenge_done: '🎉', upsell: '🎯', monopoly_pack: '🎰', challenges_list: '🏃', upsell_list: '🎯', stage_reward: '🎁', collectible_promo: '🎴' };
 const PAGE_ANIM: Record<string, CelebAnimType> = { stamp: 'confetti', challenge: 'sparkles', challenge_done: 'fireworks', upsell: 'burst', monopoly_pack: 'sparks', challenges_list: 'sparkles', upsell_list: 'burst', stage_reward: 'fireworks', collectible_promo: 'sparks' };
 const CTA_LABELS = ['Keep smashing it! 🚀', 'You\'re on fire! 🔥', 'Unstoppable! 💪', 'Legend! ⭐', 'Amazing work! 🎉'];
@@ -11120,6 +11289,7 @@ function SwipeConfirm({ onConfirm }: { onConfirm: () => void }) {
 
 function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, onScan }: { card: Card; store?: StoreProfile; onViewStore?: (s: StoreProfile) => void; compact?: boolean; autoOpen?: 'spend' | 'nfc'; onScan?: () => void; key?: React.Key }) {
   const [showRedeemSheet, setShowRedeemSheet] = useState(autoOpen === 'spend' || autoOpen === 'nfc');
+  const [showVisitScan, setShowVisitScan] = useState(false);
   const [showRedeemFlow, setShowRedeemFlow] = useState(false);
   const [redeemDollars, setRedeemDollars] = useState('');
   const [redeemStage, setRedeemStage] = useState<'input' | 'swipe' | 'success'>('input');
@@ -11355,7 +11525,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               <div className="flex items-center justify-between mt-1">
                 <span className="text-brand-navy/35 text-[10px] font-bold">{lastVisitReward ? `Last: ${lastVisitReward.reward}` : ''}</span>
                 <button
-                  onClick={(e) => { e.stopPropagation(); onScan?.(); }}
+                  onClick={(e) => { e.stopPropagation(); setShowVisitScan(true); }}
                   className="flex items-center gap-1 text-white text-[10px] font-black px-3 py-1 rounded-lg active:scale-95 transition-transform"
                   style={{ background: `linear-gradient(135deg, ${color}ff, ${color}bb)` }}
                 >
@@ -11494,7 +11664,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                   </div>
                 )}
                 <button
-                  onClick={() => { setShowRedeemSheet(false); onScan?.(); }}
+                  onClick={() => { setShowRedeemSheet(false); setShowVisitScan(true); }}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-white/90 text-xs active:scale-95 transition-all"
                   style={{ background: `linear-gradient(135deg, ${color}99 0%, ${color}66 100%)` }}
                 >
@@ -11535,6 +11705,11 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               <button onClick={() => { setMenuConfirm(null); setShowRedeemSheet(true); }} className="w-full text-brand-navy/40 font-bold text-sm py-2">Cancel</button>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showVisitScan && (
+          <VisitScanSheet card={card} store={store} onClose={() => setShowVisitScan(false)} />
         )}
       </AnimatePresence>
       </>
@@ -11800,7 +11975,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
 
                 {/* Scan NFC — at the bottom so menu items are seen first */}
                 <button
-                  onClick={() => { setShowRedeemSheet(false); onScan?.(); }}
+                  onClick={() => { setShowRedeemSheet(false); setShowVisitScan(true); }}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-white/90 text-xs active:scale-95 transition-all"
                   style={{ background: `linear-gradient(135deg, ${color}99 0%, ${color}66 100%)` }}
                 >
@@ -11842,6 +12017,11 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               <button onClick={() => { setMenuConfirm(null); setShowRedeemSheet(true); }} className="w-full text-brand-navy/40 font-bold text-sm py-2">Cancel</button>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showVisitScan && (
+          <VisitScanSheet card={card} store={store} onClose={() => setShowVisitScan(false)} />
         )}
       </AnimatePresence>
 
@@ -15938,7 +16118,7 @@ function StickerListPanel({ uid }: { uid: string }) {
 }
 
 function StoreLeaderboard({ storeId, storeName, logoUrl, type, userId }: {
-  storeId: string; storeName: string; logoUrl?: string; type: 'points' | 'visit'; userId: string;
+  storeId: string; storeName: string; logoUrl?: string; type: 'points' | 'visit'; userId: string; key?: React.Key;
 }) {
   type Entry = { id: string; userId: string; userName: string; score: number };
   const [entries, setEntries] = useState<Entry[]>([]);
