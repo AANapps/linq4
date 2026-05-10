@@ -1,0 +1,32 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // All images are publicly readable (served via download URLs)
+    match /{allPaths=**} {
+      allow read: if true;
+    }
+
+    // Store logos — only the owning user may upload
+    match /store_logos/{uid}/{fileName} {
+      allow write: if request.auth != null
+                   && request.auth.uid == uid
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    // Offer images — any authenticated vendor may upload
+    match /offer_images/{storeId}/{fileName} {
+      allow write: if request.auth != null
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    // Challenge images — any authenticated user (admin) may upload
+    match /challenge_images/{fileName} {
+      allow write: if request.auth != null
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+  }
+}
