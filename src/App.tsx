@@ -19756,30 +19756,51 @@ function ProfileCardRow({ store, card, membershipCard, userId, userProfile, onJo
 
   return (
     <>
-      {/* Join / joined row */}
-      <div className="flex gap-3">
-        {storeCardActive(store) && (
-          card ? (
-            <button
-              onClick={() => setShowLoyaltyPopup(true)}
-              className="flex-1 relative overflow-hidden flex items-center justify-between px-4 py-3 rounded-2xl text-white shadow-lg active:scale-95 transition-all"
-              style={{ background: linqGrad }}
-            >
-              <div className="flex items-center gap-2">
-                <Check size={15} className="text-white/80" />
-                <span className="font-bold text-sm">Loyalty</span>
+      {/* Loyalty card — stamp grid when joined, join button when not */}
+      {storeCardActive(store) && (
+        card ? (
+          <button
+            onClick={() => setShowLoyaltyPopup(true)}
+            className="w-full rounded-2xl overflow-hidden shadow-lg active:scale-[0.98] transition-all text-left"
+          >
+            {/* Card header */}
+            <div className="flex items-center gap-3 px-4 py-3" style={{ background: linqGrad }}>
+              {store.logoUrl
+                ? <img src={store.logoUrl} alt="" className="w-8 h-8 rounded-full border-2 border-white/30 object-cover shrink-0" />
+                : <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shrink-0 text-white font-bold text-sm">{store.name?.[0]}</div>
+              }
+              <span className="font-bold text-white text-sm flex-1 truncate">{store.name}</span>
+              <div className="flex items-center gap-1 shrink-0">
+                <Check size={13} className="text-white/70" />
+                <span className="text-white/70 text-[10px] font-bold uppercase tracking-widest">Loyalty</span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-white/70 text-xs font-bold">{stamps}/{loyaltyLimit} stamps</span>
-                <div className="w-16 h-1.5 bg-white/20 rounded-full overflow-hidden">
-                  <div className="h-full bg-white rounded-full" style={{ width: `${Math.min(100, (stamps / loyaltyLimit) * 100)}%` }} />
-                </div>
+            </div>
+            {/* Stamp grid */}
+            <div className="bg-white px-4 pt-3 pb-3">
+              <div
+                className="grid gap-1.5 mb-2"
+                style={{ gridTemplateColumns: `repeat(${Math.min(loyaltyLimit, 10)}, 1fr)` }}
+              >
+                {Array.from({ length: loyaltyLimit }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="aspect-square rounded-full flex items-center justify-center"
+                    style={i < stamps
+                      ? { background: linqGrad }
+                      : { border: '2px solid #e2e8f0' }
+                    }
+                  >
+                    {i < stamps && <span className="text-white text-[8px]">★</span>}
+                  </div>
+                ))}
               </div>
-            </button>
-          ) : (
+              <p className="text-[10px] text-brand-navy/40 font-bold">{stamps}/{loyaltyLimit} stamps · tap to scan</p>
+            </div>
+          </button>
+        ) : (
             <button
               onClick={onJoinLoyalty}
-              className="flex-1 relative overflow-hidden flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm text-white shadow-lg active:scale-95 transition-all"
+              className="w-full relative overflow-hidden flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm text-white shadow-lg active:scale-95 transition-all"
               style={{ background: linqGrad }}
             >
               <Plus size={15} />
@@ -19791,7 +19812,7 @@ function ProfileCardRow({ store, card, membershipCard, userId, userProfile, onJo
           membershipCard ? (
             <button
               onClick={() => setShowMembershipPopup(true)}
-              className="flex-1 relative overflow-hidden flex items-center justify-between px-4 py-3 rounded-2xl text-white shadow-lg active:scale-95 transition-all"
+              className="w-full relative overflow-hidden flex items-center justify-between px-4 py-3 rounded-2xl text-white shadow-lg active:scale-95 transition-all"
               style={{ background: linqGrad }}
             >
               <div className="flex items-center gap-2">
@@ -19805,7 +19826,7 @@ function ProfileCardRow({ store, card, membershipCard, userId, userProfile, onJo
           ) : (
             <button
               onClick={onJoinMembership}
-              className="flex-1 relative overflow-hidden flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm text-white shadow-lg active:scale-95 transition-all"
+              className="w-full relative overflow-hidden flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm text-white shadow-lg active:scale-95 transition-all"
               style={{ background: linqGrad }}
             >
               <Plus size={15} />
@@ -19813,7 +19834,6 @@ function ProfileCardRow({ store, card, membershipCard, userId, userProfile, onJo
             </button>
           )
         )}
-      </div>
 
       {/* Loyalty popup — barcode + NFC hint */}
       <AnimatePresence>
@@ -19827,12 +19847,22 @@ function ProfileCardRow({ store, card, membershipCard, userId, userProfile, onJo
                 <BarcodeDisplay value={auth.currentUser?.uid || userId} height={64} />
                 <p className="text-center text-[9px] text-brand-navy/30 font-mono tracking-wider mt-2 break-all">{userId}</p>
               </div>
-              <div className="flex items-center justify-between text-xs text-brand-navy/50 mb-5 px-1">
-                <span className="font-bold">{stamps} / {loyaltyLimit} stamps</span>
-                <div className="flex-1 mx-3 h-1.5 bg-brand-navy/10 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full" style={{ width: `${Math.min(100, (stamps / loyaltyLimit) * 100)}%`, background: linqGrad }} />
+              <div className="mb-5">
+                <div
+                  className="grid gap-2 mb-2"
+                  style={{ gridTemplateColumns: `repeat(${Math.min(loyaltyLimit, 10)}, 1fr)` }}
+                >
+                  {Array.from({ length: loyaltyLimit }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="aspect-square rounded-full flex items-center justify-center"
+                      style={i < stamps ? { background: linqGrad } : { border: '2px solid #e2e8f0' }}
+                    >
+                      {i < stamps && <span className="text-white text-[8px]">★</span>}
+                    </div>
+                  ))}
                 </div>
-                <span>{loyaltyLimit - stamps} to go</span>
+                <p className="text-[10px] text-brand-navy/40 font-bold text-center">{stamps}/{loyaltyLimit} stamps · {loyaltyLimit - stamps} to go</p>
               </div>
               <button onClick={() => setShowLoyaltyPopup(false)} className="w-full bg-brand-navy text-white py-3.5 rounded-2xl font-bold text-sm">Close</button>
             </motion.div>
