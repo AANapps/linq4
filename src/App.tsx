@@ -10925,7 +10925,7 @@ function MembershipCard({ card, store, onViewStore, compact = false }: { card: C
     <>
       <motion.div
         className="relative rounded-[2rem] overflow-hidden select-none"
-        style={{ background: `linear-gradient(135deg, ${color}ff 0%, ${color}bb 50%, ${color}88 100%)`, minHeight: 200 }}
+        style={{ background: `linear-gradient(135deg, ${color}ff 0%, ${color}bb 50%, ${color}88 100%)`, minHeight: 240 }}
         whileTap={{ scale: 0.98 }}
       >
         {/* Top row */}
@@ -10951,32 +10951,15 @@ function MembershipCard({ card, store, onViewStore, compact = false }: { card: C
         {membershipType === 'spend' && (
           <>
             <button className="w-full text-left" onClick={(e) => { e.stopPropagation(); setShowRedeemSheet(true); }}>
-              <div className="flex items-center justify-center gap-8 py-6 px-5">
-                <div className="text-center">
-                  <p className="text-white font-black text-4xl leading-none">{membershipPoints.toLocaleString()}</p>
-                  <p className="text-white/70 text-xs font-bold uppercase tracking-widest mt-1">Points</p>
-                </div>
+              <div className="text-center py-5 px-5">
+                <p className="text-white font-black text-6xl leading-none tracking-tight">{membershipPoints.toLocaleString()}</p>
+                <p className="text-white/60 text-xs font-bold uppercase tracking-widest mt-1.5">points</p>
                 {redeemableValue > 0 && (
-                  <>
-                    <div className="w-px h-10 bg-white/20" />
-                    <div className="text-center">
-                      <p className="text-white font-black text-4xl leading-none">${redeemableValue.toFixed(2)}</p>
-                      <p className="text-white/70 text-xs font-bold uppercase tracking-widest mt-1">Value</p>
-                    </div>
-                  </>
-                )}
-                {earnedRewards > 0 && (
-                  <>
-                    <div className="w-px h-10 bg-white/20" />
-                    <div className="text-center">
-                      <p className="text-white font-black text-4xl leading-none">{earnedRewards}</p>
-                      <p className="text-white/70 text-xs font-bold uppercase tracking-widest mt-1">Rewards</p>
-                    </div>
-                  </>
+                  <p className="text-white/80 text-2xl font-black mt-2 leading-none">≈ ${redeemableValue.toFixed(2)} off</p>
                 )}
               </div>
               <div className="flex items-center justify-between px-5 pb-5">
-                <p className="text-white/50 text-xs">${totalSpent.toFixed(2)} spent total</p>
+                <p className="text-white/50 text-xs">${totalSpent.toFixed(2)} spent{earnedRewards > 0 ? ` · ${earnedRewards} rewards` : ''}</p>
                 <span className="text-white/60 text-xs font-bold flex items-center gap-1">
                   <Gift size={11} /> Tap to redeem
                 </span>
@@ -11626,7 +11609,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false }: { card: C
     <>
       <motion.div
         className="relative rounded-[2rem] overflow-hidden select-none"
-        style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4338ca 80%, #6366f1 100%)', minHeight: 200 }}
+        style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4338ca 80%, #6366f1 100%)', minHeight: 240 }}
         whileTap={{ scale: 0.98 }}
       >
         {/* Top row */}
