@@ -21610,11 +21610,24 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
   const returningUsers = allStoreCards.filter(c => (c.total_completed_cycles || 0) > 0).length;
   const returnRate = totalMembers > 0 ? Math.round((returningUsers / totalMembers) * 100) : 0;
   const showStats = vis ? Object.values(vis).some(Boolean) : true;
-  // Leaderboard: lifetime stamps per customer = current progress + completed cycles × stamps required.
-  // Sorted client-side so redemptions don't knock customers off the board.
+  // Leaderboard: type-aware — stamps for loyalty, visits for visit membership, spend for spend membership.
+  const lbType = store.membershipEnabled && !store.cardEnabled
+    ? (store.membershipType === 'spend' ? 'spend' : 'visit')
+    : 'loyalty';
   const leaderboard = allStoreCards
-    .filter(c => !c.isArchived)
-    .map(c => ({ ...c, lifetimeStamps: (c.current_stamps || 0) + (c.total_completed_cycles || 0) * stampsReq }))
+    .filter(c => !c.isArchived && (
+      lbType === 'loyalty' ? (c.card_type !== 'membership' && c.card_type !== 'sub') :
+      lbType === 'visit'   ? (c.card_type === 'membership' && c.membership_type === 'visit') :
+                             (c.card_type === 'membership' && c.membership_type === 'spend')
+    ))
+    .map(c => ({
+      ...c,
+      lifetimeStamps: lbType === 'loyalty'
+        ? (c.current_stamps || 0) + (c.total_completed_cycles || 0) * stampsReq
+        : lbType === 'visit'
+          ? (c.membership_visits || 0)
+          : (c.total_spent || c.membership_points || 0),
+    }))
     .sort((a, b) => b.lifetimeStamps - a.lifetimeStamps)
     .slice(0, 5);
   const storeTiersPublic = store.rewardTiers?.length || Math.max(...allStoreCards.map(c => c.tiersCompleted || 0), 1);
@@ -21820,13 +21833,23 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
       {/* Top collectors */}
       <div className="glass-card p-5 rounded-[2rem] space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-bold">Top Collectors</h3>
+          <h3 className="font-bold">{lbType === 'loyalty' ? 'Top Collectors' : lbType === 'visit' ? 'Top Visitors' : 'Top Spenders'}</h3>
           <Trophy size={18} className="text-brand-gold" />
         </div>
         <div className="space-y-3">
           {leaderboard.map((entry, index) => {
             const lbProfile = leaderboardProfiles.get(entry.user_id);
             const displayName = lbProfile?.name || entry.userName || 'Loyal Customer';
+            const scoreLabel = lbType === 'loyalty'
+              ? `${entry.lifetimeStamps} Stamps`
+              : lbType === 'visit'
+                ? `${entry.lifetimeStamps} Points`
+                : `£${(entry.lifetimeStamps as number).toFixed(2)} Spent`;
+            const subLabel = lbType === 'loyalty'
+              ? `${entry.total_completed_cycles || 0} Rewards Earned`
+              : lbType === 'visit'
+                ? `${entry.membership_visits || 0} Visits`
+                : `${entry.membership_points || 0} Points`;
             return (
               <div
                 key={`lb-${entry.id}`}
@@ -21840,11 +21863,11 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                   </div>
                   <div>
                     <p className="font-bold text-sm group-hover:text-brand-gold transition-colors">{displayName}</p>
-                    <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest">{entry.total_completed_cycles || 0} Rewards Earned</p>
+                    <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest">{subLabel}</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-bold text-brand-navy">{entry.lifetimeStamps} Stamps</p>
+                  <p className="text-sm font-bold text-brand-navy">{scoreLabel}</p>
                 </div>
               </div>
             );
