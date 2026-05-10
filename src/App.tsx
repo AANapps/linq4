@@ -6990,7 +6990,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                     {activeCards.map(card => {
                       const store = stores.find(s => s.id === card.store_id);
                       return (
-                        <div key={card.id} className="snap-center shrink-0 w-[83vw] max-w-[340px]">
+                        <div key={card.id} className="snap-center shrink-0 w-[83vw] max-w-[340px] flex flex-col">
                           {card.card_type === 'membership'
                             ? <MembershipCard card={card} store={store} onViewStore={onViewStore} />
                             : card.card_type === 'sub'
@@ -10928,7 +10928,7 @@ function MembershipCard({ card, store, onViewStore, compact = false }: { card: C
   return (
     <>
       <motion.div
-        className="relative rounded-[2rem] overflow-hidden select-none"
+        className="relative rounded-[2rem] overflow-hidden select-none h-full flex flex-col"
         onClick={() => membershipType === 'visit' ? setShowNfc(true) : setShowRedeemSheet(true)}
         whileTap={{ scale: 0.98 }}
       >
@@ -10968,7 +10968,7 @@ function MembershipCard({ card, store, onViewStore, compact = false }: { card: C
         </div>
 
         {/* White content section — same structure as stamp card stamp grid area */}
-        <div className="bg-white px-8 pt-7 pb-6">
+        <div className="bg-white px-8 pt-7 pb-6 flex-1">
           {membershipType === 'spend' ? (
             <>
               <div className="text-center mb-4">
@@ -11373,7 +11373,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false }: { card: Card
         whileTap={{ scale: 0.97 }}
         onClick={() => !isCompleted && !card.isRedeemed && setShowQR(true)}
         className={cn(
-          "relative rounded-[2rem] overflow-hidden shadow-xl w-full select-none",
+          "relative rounded-[2rem] overflow-hidden shadow-xl w-full select-none h-full flex flex-col",
           !isCompleted && !card.isRedeemed ? "cursor-pointer" : ""
         )}
       >
@@ -11497,7 +11497,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false }: { card: Card
 
           /* ── Carousel portrait card ── */
           return (
-            <div>
+            <div className="flex flex-col h-full">
               <div className="relative overflow-hidden pt-10 pb-8 flex flex-col items-center gap-2" style={{ backgroundColor: cardTheme }}>
                 <span className="card-shine-ray" aria-hidden="true" />
                 {cardPattern !== 'solid' && <div className="absolute inset-0 pointer-events-none" style={getCardPatternStyle(cardPattern)} />}
@@ -11530,7 +11530,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false }: { card: Card
                   </div>
                 )}
               </div>
-              {stampGrid(3, 'gap-3', 'px-8 pt-7 pb-6', 22, 'text-[15px]')}
+              {stampGrid(3, 'gap-3', 'px-8 pt-7 pb-6 flex-1', 22, 'text-[15px]')}
             </div>
           );
         })()}
@@ -11743,8 +11743,8 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false }: { card: C
   return (
     <>
       <motion.div
-        className="relative rounded-[2rem] overflow-hidden select-none"
-        style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4338ca 80%, #6366f1 100%)', minHeight: 240 }}
+        className="relative rounded-[2rem] overflow-hidden select-none h-full"
+        style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4338ca 80%, #6366f1 100%)' }}
         whileTap={{ scale: 0.98 }}
       >
         {/* Top row */}
