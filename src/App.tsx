@@ -8173,13 +8173,7 @@ function VisitScanSheet({ card, store, onClose }: { card: Card; store?: StorePro
           <>
             <div className="bg-brand-bg rounded-2xl p-5 mb-5 text-center">
               <p className="text-brand-navy/40 text-[10px] font-bold uppercase tracking-widest mb-4">Points to collect</p>
-              <div className="flex items-center justify-center gap-6">
-                <button onClick={() => setQty(q => Math.max(1, q - 1))}
-                  className="w-12 h-12 rounded-full bg-white shadow font-black text-2xl text-brand-navy flex items-center justify-center active:scale-90 transition-transform">−</button>
-                <span className="font-black text-6xl text-brand-navy leading-none w-16 text-center">{qty}</span>
-                <button onClick={() => setQty(q => q + 1)}
-                  className="w-12 h-12 rounded-full bg-white shadow font-black text-2xl text-brand-navy flex items-center justify-center active:scale-90 transition-transform">+</button>
-              </div>
+              <span className="font-black text-6xl text-brand-navy leading-none">{qty}</span>
             </div>
             {isIOS ? (
               <div className="bg-brand-bg rounded-2xl p-4 mb-4 text-center">
