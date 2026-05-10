@@ -7897,6 +7897,164 @@ function NFCStampModal({ user, profile, onClose, autoStoreId, onPackReady }: {
   );
 }
 
+function CardScanSheet({ card, store, onClose, onPackReady }: {
+  card: Card; store?: StoreProfile; onClose: () => void; onPackReady?: (s: CollectibleSticker[]) => void;
+}) {
+  type SS = 'idle' | 'scanning' | 'processing' | 'success' | 'error';
+  const [scanState, setScanState] = useState<SS>('idle');
+  const [statusMsg, setStatusMsg] = useState('');
+  const [testId, setTestId] = useState('');
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const hasNFC = 'NDEFReader' in window;
+  const abortRef = useRef<AbortController | null>(null);
+  const limit = card.stamps_required || store?.stamps_required_for_reward || 10;
+  const current = card.current_stamps || 0;
+  const pct = Math.min(100, (current / limit) * 100);
+  const cardTheme = store?.theme || '#3a6fcc';
+
+  useEffect(() => () => { abortRef.current?.abort(); }, []);
+
+  const processId = async (storeId: string) => {
+    if (storeId !== card.store_id) {
+      setScanState('error'); setStatusMsg('Wrong store — hold near the correct NFC tag.'); return;
+    }
+    const user = auth.currentUser;
+    if (!user) return;
+    setScanState('processing');
+    const stickers = await processNFCStamp(storeId, user, null, (s, m) => { setScanState(s); setStatusMsg(m); });
+    if (stickers.length > 0) onPackReady?.(stickers);
+  };
+
+  const startScan = async () => {
+    if (!hasNFC) { setScanState('error'); setStatusMsg('NFC not supported on this device.'); return; }
+    setScanState('scanning');
+    const ctrl = new AbortController(); abortRef.current = ctrl;
+    try {
+      const reader = new (window as any).NDEFReader();
+      reader.onreadingerror = () => { setScanState('error'); setStatusMsg('Could not read tag. Try again.'); };
+      reader.onreading = async (ev: any) => {
+        ctrl.abort();
+        let storeId: string | null = null;
+        for (const rec of ev.message.records) {
+          if (rec.recordType === 'text') {
+            const t = new TextDecoder(rec.encoding || 'utf-8').decode(rec.data);
+            if (t.startsWith('linq4:')) { storeId = t.slice(6).trim(); break; }
+          }
+          if (rec.recordType === 'url') {
+            const u = new TextDecoder().decode(rec.data);
+            const m = u.match(/[?&]stamp=([^&]+)/); if (m) { storeId = m[1]; break; }
+          }
+        }
+        if (!storeId) { setScanState('error'); setStatusMsg('Not a valid Linq tag.'); return; }
+        await processId(storeId);
+      };
+      await reader.scan({ signal: ctrl.signal });
+    } catch (err: any) {
+      if (err.name !== 'AbortError') { setScanState('error'); setStatusMsg(err?.message || 'Could not start scan.'); }
+    }
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[130] flex items-end justify-center" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+        transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+        className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-12 shadow-2xl"
+        onClick={e => e.stopPropagation()}>
+        <div className="bg-brand-navy/20 rounded-full mx-auto mb-6" style={{ width: 40, height: 4 }} />
+
+        {/* Store header */}
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-12 h-12 rounded-2xl overflow-hidden shrink-0">
+            <img src={store?.logoUrl || `https://picsum.photos/seed/${card.store_id}/200/200`} alt="" className="w-full h-full object-cover" />
+          </div>
+          <div>
+            <h3 className="font-display text-lg font-bold text-brand-navy">{store?.name || 'Store'}</h3>
+            <p className="text-brand-navy/40 text-xs">Stamp Card</p>
+          </div>
+        </div>
+
+        {/* Stamp counter */}
+        <div className="bg-brand-bg rounded-2xl p-5 mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-baseline gap-2">
+              <span className="font-black text-4xl text-brand-navy">{current}</span>
+              <span className="text-brand-navy/30 font-black text-xl">/ {limit}</span>
+            </div>
+            {scanState === 'success' && (
+              <span className="text-emerald-600 font-black text-sm flex items-center gap-1"><Check size={14} /> +1 stamp!</span>
+            )}
+          </div>
+          <div className="h-2.5 bg-brand-navy/10 rounded-full overflow-hidden">
+            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: cardTheme }} />
+          </div>
+          <p className="text-brand-navy/40 text-[10px] font-bold mt-1.5 uppercase tracking-widest">{limit - current} more to reward</p>
+        </div>
+
+        {scanState === 'idle' && (
+          <>
+            {isIOS ? (
+              <div className="bg-brand-bg rounded-2xl p-4 mb-4 text-center">
+                <Smartphone size={28} className="text-brand-navy mx-auto mb-2" />
+                <p className="text-sm text-brand-navy/60">Hold the top of your iPhone near the store's NFC tag</p>
+              </div>
+            ) : (
+              <button onClick={startScan}
+                className="w-full flex items-center justify-center gap-2.5 text-white py-4 rounded-2xl font-black text-base mb-4 active:scale-[0.98] transition-transform"
+                style={{ backgroundColor: cardTheme }}>
+                <Wifi size={18} className="-rotate-90" /> Scan NFC Tag
+              </button>
+            )}
+            <div className="flex gap-2">
+              <input value={testId} onChange={e => setTestId(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && testId.trim() && processId(testId.trim())}
+                placeholder="Test: type shop ID"
+                className="flex-1 bg-brand-bg rounded-xl px-4 py-2.5 text-sm font-medium outline-none text-brand-navy" />
+              <button onClick={() => processId(testId.trim())} disabled={!testId.trim()}
+                className="bg-brand-navy text-white px-4 py-2.5 rounded-xl font-bold text-sm disabled:opacity-30">Go</button>
+            </div>
+            <button onClick={onClose} className="w-full text-brand-navy/40 text-sm font-bold py-3 mt-2">Close</button>
+          </>
+        )}
+        {scanState === 'scanning' && (
+          <div className="text-center py-2">
+            <div className="relative w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+              <motion.div className="absolute inset-0 rounded-full border-2 border-brand-navy/20"
+                animate={{ scale: [1, 1.6, 1], opacity: [0.6, 0, 0.6] }} transition={{ duration: 1.5, repeat: Infinity }} />
+              <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ backgroundColor: cardTheme }}>
+                <Wifi size={30} className="text-white -rotate-90" />
+              </div>
+            </div>
+            <p className="font-bold text-brand-navy mb-1">Ready to scan…</p>
+            <p className="text-brand-navy/40 text-xs">Hold near the store's NFC tag</p>
+            <button onClick={onClose} className="w-full text-brand-navy/40 text-sm font-bold py-3 mt-4">Cancel</button>
+          </div>
+        )}
+        {scanState === 'processing' && (
+          <div className="text-center py-4"><p className="text-brand-navy/60 font-medium">Processing…</p></div>
+        )}
+        {scanState === 'success' && (
+          <div className="text-center">
+            <div className="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <Check size={26} className="text-emerald-500" />
+            </div>
+            <p className="text-brand-navy font-bold text-base mb-1">{statusMsg}</p>
+            <button onClick={onClose} className="w-full bg-brand-navy text-white py-3.5 rounded-2xl font-bold text-sm mt-4">Done</button>
+          </div>
+        )}
+        {scanState === 'error' && (
+          <div className="text-center">
+            <p className="text-red-500 font-medium text-sm mb-4">{statusMsg}</p>
+            <button onClick={() => setScanState('idle')} className="w-full bg-brand-navy/10 text-brand-navy py-3 rounded-2xl font-bold text-sm mb-2">Try Again</button>
+            <button onClick={onClose} className="text-brand-navy/40 text-sm font-bold">Close</button>
+          </div>
+        )}
+      </motion.div>
+    </motion.div>
+  );
+}
+
 const PAGE_ICONS: Record<string, string> = { stamp: '⭐', challenge: '🏆', challenge_done: '🎉', upsell: '🎯', monopoly_pack: '🎰', challenges_list: '🏃', upsell_list: '🎯', stage_reward: '🎁', collectible_promo: '🎴' };
 const PAGE_ANIM: Record<string, CelebAnimType> = { stamp: 'confetti', challenge: 'sparkles', challenge_done: 'fireworks', upsell: 'burst', monopoly_pack: 'sparks', challenges_list: 'sparkles', upsell_list: 'burst', stage_reward: 'fireworks', collectible_promo: 'sparks' };
 const CTA_LABELS = ['Keep smashing it! 🚀', 'You\'re on fire! 🔥', 'Unstoppable! 💪', 'Legend! ⭐', 'Amazing work! 🎉'];
@@ -11685,6 +11843,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
   const [showQR, setShowQR] = useState(autoOpen);
   const [showOptions, setShowOptions] = useState(false);
   const [showCompletionPopup, setShowCompletionPopup] = useState(false);
+  const [showCardScan, setShowCardScan] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [testQty, setTestQty] = useState(1);
@@ -11976,9 +12135,9 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                 <div className="relative z-10 flex items-center gap-1.5 shrink-0">
                   {isCompleted && !card.isRedeemed && <div className="bg-white/25 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest animate-pulse">Ready!</div>}
                   {card.isRedeemed && <div className="bg-green-400 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">Claimed</div>}
-                  {onScan && !isCompleted && !card.isRedeemed && (
+                  {!isCompleted && !card.isRedeemed && (
                     <button
-                      onClick={(e) => { e.stopPropagation(); onScan(); }}
+                      onClick={(e) => { e.stopPropagation(); setShowCardScan(true); }}
                       className="flex items-center gap-1 text-white text-[10px] font-black px-2.5 py-1 rounded-lg active:scale-95 transition-transform bg-white/20 border border-white/30"
                     >
                       <Wifi size={10} className="-rotate-90" /> Scan
@@ -12019,11 +12178,28 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                   <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mt-0.5">{store?.category || 'Retail'}</p>
                 </div>
               </div>
-              {stampGrid(3, 'gap-3', 'px-8 pt-7 pb-6 flex-1', 22, 'text-[15px]')}
+              {stampGrid(3, 'gap-3', 'px-8 pt-7 pb-4', 22, 'text-[15px]')}
+              {!isCompleted && !card.isRedeemed && (
+                <div className="bg-white px-8 pb-6">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowCardScan(true); }}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-black text-white text-sm active:scale-[0.98] transition-transform"
+                    style={{ backgroundColor: cardTheme }}
+                  >
+                    <Wifi size={15} className="-rotate-90" /> Scan
+                  </button>
+                </div>
+              )}
             </div>
           );
         })()}
       </motion.div>
+
+      <AnimatePresence>
+        {showCardScan && (
+          <CardScanSheet card={card} store={store} onClose={() => setShowCardScan(false)} />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showCompletionPopup && (
@@ -15740,6 +15916,72 @@ function StickerListPanel({ uid }: { uid: string }) {
   );
 }
 
+function StoreLeaderboard({ storeId, storeName, logoUrl, type, userId }: {
+  storeId: string; storeName: string; logoUrl?: string; type: 'points' | 'visit'; userId: string;
+}) {
+  type Entry = { id: string; userId: string; userName: string; score: number };
+  const [entries, setEntries] = useState<Entry[]>([]);
+  const scoreField = type === 'visit' ? 'membership_visits' : 'current_points';
+  const cardType = type === 'visit' ? 'membership' : 'sub';
+
+  useEffect(() => {
+    const q = query(
+      collection(db, 'cards'),
+      where('store_id', '==', storeId),
+      where('card_type', '==', cardType),
+      orderBy(scoreField, 'desc'),
+      limit(10)
+    );
+    return onSnapshot(q, snap => {
+      setEntries(
+        snap.docs
+          .filter(d => !d.data().isArchived && (type !== 'visit' || d.data().membership_type === 'visit'))
+          .map(d => ({
+            id: d.id,
+            userId: d.data().user_id,
+            userName: d.data().userName || 'Member',
+            score: d.data()[scoreField] || 0,
+          }))
+          .filter(e => e.score > 0)
+      );
+    });
+  }, [storeId, type]);
+
+  if (entries.length === 0) return null;
+  const myRank = entries.findIndex(e => e.userId === userId) + 1;
+
+  return (
+    <div className="bg-white rounded-3xl p-5 shadow-sm border border-brand-navy/5">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-9 h-9 rounded-xl overflow-hidden shrink-0">
+          <img src={logoUrl || `https://picsum.photos/seed/${storeId}/100/100`} alt="" className="w-full h-full object-cover" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h4 className="font-bold text-brand-navy text-sm truncate">{storeName}</h4>
+          <p className="text-brand-navy/40 text-[9px] font-bold uppercase tracking-widest">{type === 'visit' ? 'Points' : 'Points'} Leaderboard</p>
+        </div>
+        {myRank > 0 && (
+          <span className="text-brand-navy/50 text-xs font-bold shrink-0">#{myRank}</span>
+        )}
+      </div>
+      <div className="space-y-1.5">
+        {entries.map((e, i) => (
+          <div key={e.id} className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl ${e.userId === userId ? 'bg-blue-50 border border-blue-100' : 'bg-brand-bg'}`}>
+            <span className="text-[10px] font-black text-brand-navy/30 w-4 text-center shrink-0">
+              {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`}
+            </span>
+            <div className="w-7 h-7 rounded-full overflow-hidden bg-brand-navy/10 shrink-0 flex items-center justify-center">
+              <LivePixelAvatar uid={e.userId} size={28} view="head" />
+            </div>
+            <p className="text-xs font-bold text-brand-navy flex-1 truncate">{e.userId === userId ? 'You' : e.userName}</p>
+            <span className="font-black text-sm text-brand-navy shrink-0">{e.score.toLocaleString()}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, onViewUser, onGoToDeals, user }: { profile: UserProfile | null, userCards: Card[], stores?: StoreProfile[], onLogout: () => void, onDeleteAccount: () => Promise<void>, onViewUser: (u: UserProfile) => void, onGoToDeals?: () => void, user: FirebaseUser }) {
   const [activeSubTab, setActiveSubTab] = useState<'posts' | 'interactions'>('posts');
   const [profileRedeemingChallenge, setProfileRedeemingChallenge] = useState<{ challenge: Challenge; entry: any; userName: string } | null>(null);
@@ -16425,6 +16667,26 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                 );
               })}
             </div>
+          </div>
+        );
+      })()}
+
+      {/* Leaderboards for visit and points cards */}
+      {(() => {
+        const visitCards = userCards.filter(c => !c.isArchived && c.card_type === 'membership' && (c.membership_type === 'visit' || (stores || []).find(s => s.id === c.store_id)?.membershipType === 'visit'));
+        const subCards = userCards.filter(c => !c.isArchived && c.card_type === 'sub');
+        if (visitCards.length === 0 && subCards.length === 0) return null;
+        return (
+          <div className="space-y-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Leaderboards</p>
+            {visitCards.map(card => {
+              const store = (stores || []).find(s => s.id === card.store_id);
+              return <StoreLeaderboard key={card.id} storeId={card.store_id} storeName={store?.name || 'Store'} logoUrl={store?.logoUrl} type="visit" userId={profile.uid} />;
+            })}
+            {subCards.map(card => {
+              const store = (stores || []).find(s => s.id === card.store_id);
+              return <StoreLeaderboard key={card.id} storeId={card.store_id} storeName={store?.name || 'Store'} logoUrl={store?.logoUrl} type="points" userId={profile.uid} />;
+            })}
           </div>
         );
       })()}
