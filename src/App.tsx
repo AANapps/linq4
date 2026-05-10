@@ -6949,6 +6949,17 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
             );
           })()}
 
+          {/* Scan button — full width, below tabs */}
+          <button
+            onClick={() => setShowNFCStamp(true)}
+            className="relative w-full flex items-center justify-center gap-2.5 text-white py-3.5 rounded-2xl font-black text-base shadow-xl active:scale-[0.98] transition-transform overflow-hidden"
+            style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 40%, #2563eb 70%, #3b82f6 100%)' }}
+          >
+            <span className="card-shine-ray" aria-hidden="true" />
+            <Wifi size={18} className="relative z-10 -rotate-90" />
+            <span className="relative z-10">Scan</span>
+          </button>
+
           {/* Stamps sub-tab */}
           {walletSubTab === 'stamps' && (
             <div className="space-y-4">
@@ -6978,14 +6989,6 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                       List
                     </button>
                   </div>
-                  <button
-                    onClick={() => setShowNFCStamp(true)}
-                    className="flex items-center gap-2 text-white px-5 py-2.5 rounded-xl font-black text-sm shadow-lg active:scale-95 transition-transform"
-                    style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 50%, #3b82f6 100%)' }}
-                  >
-                    <Wifi size={16} className="-rotate-90" />
-                    Scan
-                  </button>
                 </div>
               </div>
               {activeCards.length > 0 ? (
