@@ -6949,17 +6949,6 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
             );
           })()}
 
-          {/* Scan button — full width, below tabs */}
-          <button
-            onClick={() => setShowNFCStamp(true)}
-            className="relative w-full flex items-center justify-center gap-2.5 text-white py-3.5 rounded-2xl font-black text-base shadow-xl active:scale-[0.98] transition-transform overflow-hidden"
-            style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 40%, #2563eb 70%, #3b82f6 100%)' }}
-          >
-            <span className="card-shine-ray" aria-hidden="true" />
-            <Wifi size={18} className="relative z-10 -rotate-90" />
-            <span className="relative z-10">Scan</span>
-          </button>
-
           {/* Stamps sub-tab */}
           {walletSubTab === 'stamps' && (
             <div className="space-y-4">
@@ -7904,6 +7893,7 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
   const [scanState, setScanState] = useState<SS>('idle');
   const [statusMsg, setStatusMsg] = useState('');
   const [testId, setTestId] = useState('');
+  const [scannedUID, setScannedUID] = useState('');
   const [qty, setQty] = useState(1);
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const hasNFC = 'NDEFReader' in window;
@@ -7935,6 +7925,8 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
       reader.onreadingerror = () => { setScanState('error'); setStatusMsg('Could not read tag. Try again.'); };
       reader.onreading = async (ev: any) => {
         ctrl.abort();
+        const uid = ev.serialNumber || '';
+        setScannedUID(uid);
         let storeId: string | null = null;
         for (const rec of ev.message.records) {
           if (rec.recordType === 'text') {
@@ -7947,6 +7939,7 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
           }
         }
         if (!storeId) { setScanState('error'); setStatusMsg('Not a valid Linq tag.'); return; }
+        setTestId(storeId);
         await processId(storeId);
       };
       await reader.scan({ signal: ctrl.signal });
@@ -8004,7 +7997,7 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
               <Wifi size={18} className="-rotate-90" /> Scan NFC Tag
             </button>
             {/* Test input */}
-            <div className="flex gap-2 mb-3">
+            <div className="flex gap-2 mb-2">
               <input value={testId} onChange={e => setTestId(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && testId.trim() && processId(testId.trim())}
                 placeholder="Test: type shop ID"
@@ -8012,6 +8005,12 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
               <button onClick={() => processId(testId.trim())} disabled={!testId.trim()}
                 className="bg-brand-navy text-white px-4 py-2.5 rounded-xl font-bold text-sm disabled:opacity-30">Go</button>
             </div>
+            {scannedUID && (
+              <button onClick={() => navigator.clipboard?.writeText(scannedUID)}
+                className="w-full text-left text-[11px] font-mono text-brand-navy/30 bg-brand-bg px-3 py-2 rounded-xl mb-3 truncate">
+                UID: {scannedUID}
+              </button>
+            )}
             <button onClick={onClose} className="w-full text-brand-navy/40 text-sm font-bold py-2">Close</button>
           </>
         )}
@@ -8042,7 +8041,15 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
           </div>
         )}
         {scanState === 'processing' && (
-          <div className="text-center py-4"><p className="text-brand-navy/60 font-medium">Processing…</p></div>
+          <div className="text-center py-4">
+            <p className="text-brand-navy/60 font-medium">Processing…</p>
+            {scannedUID && (
+              <button onClick={() => navigator.clipboard?.writeText(scannedUID)}
+                className="mt-3 text-[11px] font-mono text-brand-navy/30 bg-brand-bg px-3 py-1.5 rounded-lg truncate max-w-full">
+                UID: {scannedUID}
+              </button>
+            )}
+          </div>
         )}
         {scanState === 'success' && (
           <div className="text-center">
@@ -8050,12 +8057,24 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
               <Check size={26} className="text-emerald-500" />
             </div>
             <p className="text-brand-navy font-bold text-base mb-1">{statusMsg}</p>
+            {scannedUID && (
+              <button onClick={() => navigator.clipboard?.writeText(scannedUID)}
+                className="mt-1 text-[11px] font-mono text-brand-navy/30 bg-brand-bg px-3 py-1.5 rounded-lg truncate max-w-full">
+                UID: {scannedUID}
+              </button>
+            )}
             <button onClick={onClose} className="w-full bg-brand-navy text-white py-3.5 rounded-2xl font-bold text-sm mt-4">Done</button>
           </div>
         )}
         {scanState === 'error' && (
           <div className="text-center">
-            <p className="text-red-500 font-medium text-sm mb-4">{statusMsg}</p>
+            <p className="text-red-500 font-medium text-sm mb-3">{statusMsg}</p>
+            {scannedUID && (
+              <button onClick={() => navigator.clipboard?.writeText(scannedUID)}
+                className="mb-3 text-[11px] font-mono text-brand-navy/30 bg-brand-bg px-3 py-1.5 rounded-lg truncate max-w-full">
+                UID: {scannedUID}
+              </button>
+            )}
             <button onClick={() => setScanState('idle')} className="w-full bg-brand-navy/10 text-brand-navy py-3 rounded-2xl font-bold text-sm mb-2">Try Again</button>
             <button onClick={onClose} className="text-brand-navy/40 text-sm font-bold mt-2">Close</button>
           </div>
@@ -8070,6 +8089,7 @@ function VisitScanSheet({ card, store, onClose }: { card: Card; store?: StorePro
   const [scanState, setScanState] = useState<SS>('idle');
   const [statusMsg, setStatusMsg] = useState('');
   const [testId, setTestId] = useState('');
+  const [scannedUID, setScannedUID] = useState('');
   const [qty, setQty] = useState(store?.membershipStampsPerVisit || 1);
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const hasNFC = 'NDEFReader' in window;
