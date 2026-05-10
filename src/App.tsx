@@ -7965,9 +7965,14 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
           <div className="w-12 h-12 rounded-2xl overflow-hidden shrink-0">
             <img src={store?.logoUrl || `https://picsum.photos/seed/${card.store_id}/200/200`} alt="" className="w-full h-full object-cover" />
           </div>
-          <div>
+          <div className="min-w-0">
             <h3 className="font-display text-lg font-bold text-brand-navy">{store?.name || 'Store'}</h3>
             <p className="text-brand-navy/40 text-xs">Stamp Card</p>
+            <button
+              onClick={() => navigator.clipboard?.writeText(card.store_id)}
+              className="text-[10px] font-mono text-brand-navy/25 truncate max-w-full text-left active:text-brand-navy/50 transition-colors"
+              title="Tap to copy shop ID"
+            >{card.store_id}</button>
           </div>
         </div>
 
@@ -8164,9 +8169,14 @@ function VisitScanSheet({ card, store, onClose }: { card: Card; store?: StorePro
           <div className="w-12 h-12 rounded-2xl overflow-hidden shrink-0">
             <img src={store?.logoUrl || `https://picsum.photos/seed/${card.store_id}/200/200`} alt="" className="w-full h-full object-cover" />
           </div>
-          <div>
+          <div className="min-w-0">
             <h3 className="font-display text-lg font-bold text-brand-navy">{store?.name || 'Store'}</h3>
             <p className="text-brand-navy/40 text-xs">{store?.membershipName || 'Membership'} · {membershipVisits} pts</p>
+            <button
+              onClick={() => navigator.clipboard?.writeText(card.store_id)}
+              className="text-[10px] font-mono text-brand-navy/25 truncate max-w-full text-left active:text-brand-navy/50 transition-colors"
+              title="Tap to copy shop ID"
+            >{card.store_id}</button>
           </div>
         </div>
         {scanState === 'idle' && (
