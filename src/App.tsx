@@ -11507,8 +11507,8 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen }:
   );
 }
 
-function LoyaltyCard({ card, store, onViewStore, compact = false }: { card: Card, store?: StoreProfile, onViewStore?: (s: StoreProfile) => void, compact?: boolean, key?: React.Key }) {
-  const [showQR, setShowQR] = useState(false);
+function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = false }: { card: Card, store?: StoreProfile, onViewStore?: (s: StoreProfile) => void, compact?: boolean, autoOpen?: boolean, key?: React.Key }) {
+  const [showQR, setShowQR] = useState(autoOpen);
   const [showOptions, setShowOptions] = useState(false);
   const [showCompletionPopup, setShowCompletionPopup] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
@@ -20374,55 +20374,15 @@ function ProfileCardRow({ store, card, membershipCard, userId, userProfile, onJo
           )
         )}
 
-      {/* Loyalty popup — NFC reader prompt */}
-      <AnimatePresence>
-        {showLoyaltyPopup && card && (
-          <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowLoyaltyPopup(false)} className="absolute inset-0 bg-brand-navy/90 backdrop-blur-sm" />
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-xs p-8 rounded-[3rem] text-center relative z-10">
-              <div className="flex items-center justify-center gap-2 mb-1">
-                {store.logoUrl
-                  ? <img src={store.logoUrl} alt="" className="w-6 h-6 rounded-full object-cover" />
-                  : <div className="w-6 h-6 rounded-full bg-brand-navy/10 flex items-center justify-center text-[10px] font-bold text-brand-navy">{store.name?.[0]}</div>
-                }
-                <h3 className="font-display text-lg font-bold">{store.name}</h3>
-              </div>
-              <p className="text-brand-navy/40 text-xs mb-8">Loyalty Card</p>
-              {/* NFC animation */}
-              <div className="relative flex items-center justify-center mb-8">
-                <motion.div
-                  animate={{ scale: [1, 1.6, 1], opacity: [0.3, 0, 0.3] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                  className="absolute w-28 h-28 rounded-full border-2 border-brand-navy/30"
-                />
-                <motion.div
-                  animate={{ scale: [1, 1.35, 1], opacity: [0.4, 0, 0.4] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
-                  className="absolute w-20 h-20 rounded-full border-2 border-brand-navy/40"
-                />
-                <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: linqGrad }}>
-                  <Wifi size={26} className="text-white -rotate-90" />
-                </div>
-              </div>
-              <p className="font-bold text-brand-navy text-base mb-1">Hold near stamp terminal</p>
-              <p className="text-xs text-brand-navy/40 mb-6">Tap your phone on the NFC reader to collect a stamp</p>
-              {/* Stamp dots */}
-              <div className="mb-6">
-                <div className="grid gap-1.5 mb-2" style={{ gridTemplateColumns: `repeat(${Math.min(loyaltyLimit, 10)}, 1fr)` }}>
-                  {Array.from({ length: loyaltyLimit }).map((_, i) => (
-                    <div key={i} className="aspect-square rounded-full flex items-center justify-center"
-                      style={i < stamps ? { background: linqGrad } : { border: '2px solid #e2e8f0' }}>
-                      {i < stamps && <span className="text-white text-[8px]">★</span>}
-                    </div>
-                  ))}
-                </div>
-                <p className="text-[10px] text-brand-navy/40 font-bold">{stamps}/{loyaltyLimit} stamps</p>
-              </div>
-              <button onClick={() => setShowLoyaltyPopup(false)} className="w-full bg-brand-navy text-white py-3.5 rounded-2xl font-bold text-sm">Done</button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      {/* Loyalty popup — reuses wallet LoyaltyCard popup */}
+      {showLoyaltyPopup && card && (
+        <LoyaltyCard
+          key={`loyalty-popup-${card.id}`}
+          card={card}
+          store={store}
+          autoOpen
+        />
+      )}
 
       {/* Membership popup — barcode (spend) or NFC (visit) */}
       <AnimatePresence>
