@@ -14480,30 +14480,30 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
                 </div>
                 <span className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest">Stage {i + 1}</span>
               </div>
-              <div className="flex gap-2 items-center">
+              <div className="flex gap-2 items-center min-w-0">
                 <input
                   type="number"
                   min="1"
                   value={tier.stamps}
                   onChange={e => updateTier(i, 'stamps', e.target.value)}
-                  className="w-16 px-2 py-2.5 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm font-bold text-center focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+                  className="w-14 shrink-0 px-2 py-2.5 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm font-bold text-center focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
                   placeholder="Stamps"
                 />
                 <input
                   value={tier.reward}
                   onChange={e => updateTier(i, 'reward', e.target.value)}
                   placeholder={i === numTiers - 1 ? 'e.g. Free coffee' : `Stage ${i + 1} reward`}
-                  className="flex-1 px-3 py-2.5 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+                  className="flex-1 min-w-0 px-3 py-2.5 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
                 />
-                <div className="relative flex items-center">
-                  <span className="absolute left-3 text-xs font-bold text-emerald-600">{currencySymbol(currency)}</span>
+                <div className="relative flex items-center shrink-0">
+                  <span className="absolute left-2.5 text-xs font-bold text-emerald-600">{currencySymbol(currency)}</span>
                   <input
                     type="number"
                     min="0"
                     step="0.01"
                     value={tier.value ?? ''}
                     onChange={e => updateTier(i, 'value', e.target.value)}
-                    className="w-20 pl-7 pr-2 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-sm font-bold text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                    className="w-16 pl-6 pr-1.5 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-sm font-bold text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-300"
                     placeholder="0.00"
                   />
                 </div>
