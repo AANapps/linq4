@@ -130,7 +130,8 @@ import {
   Check,
   LayoutList,
   History,
-  DollarSign
+  DollarSign,
+  AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
@@ -14198,6 +14199,8 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
   const membershipEnabled = store?.membershipEnabled === true;
   const [toggling, setToggling] = useState(false);
   const [togglingMembership, setTogglingMembership] = useState(false);
+  const [activeTab, setActiveTab] = useState<'loyalty' | 'membership'>('loyalty');
+  const [pendingTab, setPendingTab] = useState<'loyalty' | 'membership' | null>(null);
 
   const toggle = async () => {
     if (!store?.id) return;
@@ -14219,6 +14222,16 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
     }
   };
 
+  const handleTabClick = (tab: 'loyalty' | 'membership') => {
+    if (tab === activeTab) return;
+    setPendingTab(tab);
+  };
+
+  const confirmSwitch = () => {
+    if (pendingTab) setActiveTab(pendingTab);
+    setPendingTab(null);
+  };
+
   return (
     <div className="space-y-6 pb-20">
       <header>
@@ -14226,73 +14239,132 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
         <p className="text-brand-navy/50 text-sm">Manage your loyalty and membership cards.</p>
       </header>
 
-      {/* ─── Loyalty Card ─── */}
-      <div className="space-y-4">
-        <p className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Loyalty Card</p>
-        <div className="glass-card rounded-[1.5rem] px-5 py-4 flex items-center justify-between gap-4">
-          <div>
-            <p className="font-bold text-brand-navy">Stamp Card</p>
-            <p className="text-xs text-brand-navy/50 mt-0.5">
-              {enabled ? 'Customers can collect stamps' : 'Hidden from customers'}
-            </p>
-          </div>
+      {/* ─── Tab selector ─── */}
+      <div className="flex gap-1 p-1 bg-brand-navy/5 rounded-2xl">
+        {(['loyalty', 'membership'] as const).map(tab => (
           <button
-            onClick={toggle}
-            disabled={toggling}
-            className={cn('relative w-14 h-7 rounded-full transition-colors duration-200 shrink-0 disabled:opacity-40', enabled ? 'bg-emerald-500' : 'bg-brand-navy/20')}
+            key={tab}
+            onClick={() => handleTabClick(tab)}
+            className={cn(
+              'flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-200',
+              activeTab === tab
+                ? 'bg-white text-brand-navy shadow-sm'
+                : 'text-brand-navy/40 hover:text-brand-navy/70'
+            )}
           >
-            <motion.div animate={{ x: enabled ? 28 : 2 }} transition={{ type: 'spring', stiffness: 500, damping: 35 }} className="absolute top-1 w-5 h-5 rounded-full bg-white shadow-md" />
+            {tab === 'loyalty' ? 'Loyalty Card' : 'Membership Card'}
           </button>
-        </div>
-        <AnimatePresence>
-          {enabled && (
-            <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
-              <CardBuilder store={store} />
-            </motion.div>
-          )}
-        </AnimatePresence>
-        {!enabled && (
-          <div className="py-8 text-center text-brand-navy/25">
-            <CreditCard size={36} className="mx-auto mb-2 opacity-30" />
-            <p className="font-bold text-sm">Stamp card disabled</p>
-            <p className="text-xs mt-1">Toggle on to set up your loyalty card.</p>
-          </div>
-        )}
+        ))}
       </div>
 
-      {/* ─── Membership Card ─── */}
-      <div className="space-y-4">
-        <p className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Membership Card</p>
-        <div className="glass-card rounded-[1.5rem] px-5 py-4 flex items-center justify-between gap-4">
-          <div>
-            <p className="font-bold text-brand-navy">Membership</p>
-            <p className="text-xs text-brand-navy/50 mt-0.5">
-              {membershipEnabled ? 'Customers can join your membership programme' : 'Enable a membership card'}
-            </p>
-          </div>
-          <button
-            onClick={toggleMembership}
-            disabled={togglingMembership}
-            className={cn('relative w-14 h-7 rounded-full transition-colors duration-200 shrink-0 disabled:opacity-40', membershipEnabled ? 'bg-purple-500' : 'bg-brand-navy/20')}
+      {/* ─── Warning dialog ─── */}
+      <AnimatePresence>
+        {pendingTab && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm"
           >
-            <motion.div animate={{ x: membershipEnabled ? 28 : 2 }} transition={{ type: 'spring', stiffness: 500, damping: 35 }} className="absolute top-1 w-5 h-5 rounded-full bg-white shadow-md" />
-          </button>
-        </div>
-        <AnimatePresence>
-          {membershipEnabled && (
-            <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
-              <MembershipCardBuilder store={store} />
-            </motion.div>
-          )}
-        </AnimatePresence>
-        {!membershipEnabled && (
-          <div className="py-8 text-center text-brand-navy/25">
-            <Star size={36} className="mx-auto mb-2 opacity-30" />
-            <p className="font-bold text-sm">Membership disabled</p>
-            <p className="text-xs mt-1">Toggle on to set up your membership card.</p>
-          </div>
+            <div className="glass-card rounded-[2rem] p-6 w-full max-w-sm space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+                  <AlertTriangle size={20} className="text-amber-500" />
+                </div>
+                <h3 className="font-display text-lg font-bold text-brand-navy">Switch card type?</h3>
+              </div>
+              <p className="text-sm text-brand-navy/60">
+                Switching to the <span className="font-bold text-brand-navy">{pendingTab === 'loyalty' ? 'Loyalty' : 'Membership'}</span> card view may cause you to lose any unsaved changes on the current card.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setPendingTab(null)}
+                  className="flex-1 py-3 rounded-2xl border border-brand-navy/10 text-sm font-bold text-brand-navy/60 hover:bg-brand-navy/5 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmSwitch}
+                  className="flex-1 py-3 rounded-2xl bg-brand-navy text-white text-sm font-bold hover:bg-brand-navy/90 transition-colors"
+                >
+                  Switch anyway
+                </button>
+              </div>
+            </div>
+          </motion.div>
         )}
-      </div>
+      </AnimatePresence>
+
+      {/* ─── Loyalty Card tab ─── */}
+      {activeTab === 'loyalty' && (
+        <div className="space-y-4">
+          <div className="glass-card rounded-[1.5rem] px-5 py-4 flex items-center justify-between gap-4">
+            <div>
+              <p className="font-bold text-brand-navy">Stamp Card</p>
+              <p className="text-xs text-brand-navy/50 mt-0.5">
+                {enabled ? 'Customers can collect stamps' : 'Hidden from customers'}
+              </p>
+            </div>
+            <button
+              onClick={toggle}
+              disabled={toggling}
+              className={cn('relative w-14 h-7 rounded-full transition-colors duration-200 shrink-0 disabled:opacity-40', enabled ? 'bg-emerald-500' : 'bg-brand-navy/20')}
+            >
+              <motion.div animate={{ x: enabled ? 28 : 2 }} transition={{ type: 'spring', stiffness: 500, damping: 35 }} className="absolute top-1 w-5 h-5 rounded-full bg-white shadow-md" />
+            </button>
+          </div>
+          <AnimatePresence>
+            {enabled && (
+              <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
+                <CardBuilder store={store} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+          {!enabled && (
+            <div className="py-8 text-center text-brand-navy/25">
+              <CreditCard size={36} className="mx-auto mb-2 opacity-30" />
+              <p className="font-bold text-sm">Stamp card disabled</p>
+              <p className="text-xs mt-1">Toggle on to set up your loyalty card.</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ─── Membership Card tab ─── */}
+      {activeTab === 'membership' && (
+        <div className="space-y-4">
+          <div className="glass-card rounded-[1.5rem] px-5 py-4 flex items-center justify-between gap-4">
+            <div>
+              <p className="font-bold text-brand-navy">Membership</p>
+              <p className="text-xs text-brand-navy/50 mt-0.5">
+                {membershipEnabled ? 'Customers can join your membership programme' : 'Enable a membership card'}
+              </p>
+            </div>
+            <button
+              onClick={toggleMembership}
+              disabled={togglingMembership}
+              className={cn('relative w-14 h-7 rounded-full transition-colors duration-200 shrink-0 disabled:opacity-40', membershipEnabled ? 'bg-purple-500' : 'bg-brand-navy/20')}
+            >
+              <motion.div animate={{ x: membershipEnabled ? 28 : 2 }} transition={{ type: 'spring', stiffness: 500, damping: 35 }} className="absolute top-1 w-5 h-5 rounded-full bg-white shadow-md" />
+            </button>
+          </div>
+          <AnimatePresence>
+            {membershipEnabled && (
+              <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
+                <MembershipCardBuilder store={store} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+          {!membershipEnabled && (
+            <div className="py-8 text-center text-brand-navy/25">
+              <Star size={36} className="mx-auto mb-2 opacity-30" />
+              <p className="font-bold text-sm">Membership disabled</p>
+              <p className="text-xs mt-1">Toggle on to set up your membership card.</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
