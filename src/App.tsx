@@ -10928,9 +10928,9 @@ function SwipeConfirm({ onConfirm }: { onConfirm: () => void }) {
   );
 }
 
-function MembershipCard({ card, store, onViewStore, compact = false }: { card: Card; store?: StoreProfile; onViewStore?: (s: StoreProfile) => void; compact?: boolean; key?: React.Key }) {
-  const [showRedeemSheet, setShowRedeemSheet] = useState(false);
-  const [showNfc, setShowNfc] = useState(false);
+function MembershipCard({ card, store, onViewStore, compact = false, autoOpen }: { card: Card; store?: StoreProfile; onViewStore?: (s: StoreProfile) => void; compact?: boolean; autoOpen?: 'spend' | 'nfc'; key?: React.Key }) {
+  const [showRedeemSheet, setShowRedeemSheet] = useState(autoOpen === 'spend');
+  const [showNfc, setShowNfc] = useState(autoOpen === 'nfc');
   const [showRedeemFlow, setShowRedeemFlow] = useState(false);
   const [redeemDollars, setRedeemDollars] = useState('');
   const [redeemStage, setRedeemStage] = useState<'input' | 'swipe' | 'success'>('input');
@@ -20427,82 +20427,12 @@ function ProfileCardRow({ store, card, membershipCard, userId, userProfile, onJo
       {/* Membership popup — barcode (spend) or NFC (visit) */}
       <AnimatePresence>
         {showMembershipPopup && membershipCard && (
-          <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowMembershipPopup(false)} className="absolute inset-0 bg-brand-navy/90 backdrop-blur-sm" />
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-xs p-8 rounded-[3rem] text-center relative z-10">
-              <h3 className="font-display text-xl font-bold mb-0.5">{store.membershipName || 'Membership'}</h3>
-              <p className="text-brand-navy/40 text-xs mb-5">{store.name}</p>
-
-              {memType === 'spend' ? (
-                /* Spend-based: barcode + points summary */
-                (() => {
-                  const pts = membershipCard.membership_points ?? 0;
-                  const rRate = store.membershipRedemptionRate ?? 0;
-                  const redeemVal = rRate > 0 ? pts / rRate : 0;
-                  return (
-                    <>
-                      <p className="text-brand-navy/40 text-xs -mt-3 mb-4">Show barcode — vendor enters your spend</p>
-                      <div className="bg-white p-5 rounded-3xl mb-4 border border-brand-rose/20">
-                        <BarcodeDisplay value={auth.currentUser?.uid || userId} height={64} />
-                        <p className="text-center text-[9px] text-brand-navy/30 font-mono tracking-wider mt-2 break-all">{userId}</p>
-                      </div>
-                      <div className="rounded-2xl px-4 py-3 mb-5 text-white" style={{ background: linqGrad }}>
-                        <div className="grid grid-cols-3 divide-x divide-white/20">
-                          <div className="text-center pr-2">
-                            <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">Spent</p>
-                            <p className="text-lg font-black">${membershipSpent.toFixed(0)}</p>
-                          </div>
-                          <div className="text-center px-2">
-                            <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">Points</p>
-                            <p className="text-lg font-black">{pts.toLocaleString()}</p>
-                          </div>
-                          <div className="text-center pl-2">
-                            <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">Value</p>
-                            <p className="text-lg font-black">${redeemVal.toFixed(2)}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  );
-                })()
-              ) : (
-                /* Visit-based: NFC reader prompt */
-                <>
-                  <p className="text-brand-navy/40 text-xs -mt-3 mb-6">Tap your phone to record a visit</p>
-                  <div className="relative flex items-center justify-center mb-6">
-                    <motion.div
-                      animate={{ scale: [1, 1.6, 1], opacity: [0.3, 0, 0.3] }}
-                      transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                      className="absolute w-28 h-28 rounded-full border-2 border-brand-navy/30"
-                    />
-                    <motion.div
-                      animate={{ scale: [1, 1.35, 1], opacity: [0.4, 0, 0.4] }}
-                      transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
-                      className="absolute w-20 h-20 rounded-full border-2 border-brand-navy/40"
-                    />
-                    <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: linqGrad }}>
-                      <Wifi size={26} className="text-white -rotate-90" />
-                    </div>
-                  </div>
-                  <p className="font-bold text-brand-navy mb-1">Hold near membership terminal</p>
-                  <div className="rounded-2xl px-4 py-3 mb-5 text-white" style={{ background: linqGrad }}>
-                    <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest">Total Visits</p>
-                    <p className="text-3xl font-black">{membershipCard.membership_visits ?? 0}</p>
-                  </div>
-                </>
-              )}
-
-              <button
-                onClick={() => { handleRemoveMembership(); setShowMembershipPopup(false); }}
-                disabled={removingMembership}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-red-200 text-red-500 font-bold text-sm mb-3 disabled:opacity-50"
-              >
-                <Trash2 size={14} />
-                {removingMembership ? 'Removing…' : 'Leave Membership'}
-              </button>
-              <button onClick={() => setShowMembershipPopup(false)} className="w-full bg-brand-navy text-white py-3.5 rounded-2xl font-bold text-sm">Close</button>
-            </motion.div>
-          </div>
+          <MembershipCard
+            key={`popup-${membershipCard.id}`}
+            card={membershipCard}
+            store={store}
+            autoOpen={memType === 'visit' ? 'nfc' : 'spend'}
+          />
         )}
       </AnimatePresence>
     </>
