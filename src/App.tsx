@@ -11508,7 +11508,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen }:
   );
 }
 
-function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = false }: { card: Card, store?: StoreProfile, onViewStore?: (s: StoreProfile) => void, compact?: boolean, autoOpen?: boolean, key?: React.Key }) {
+function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = false, onClose }: { card: Card, store?: StoreProfile, onViewStore?: (s: StoreProfile) => void, compact?: boolean, autoOpen?: boolean, onClose?: () => void, key?: React.Key }) {
   const [showQR, setShowQR] = useState(autoOpen);
   const [showOptions, setShowOptions] = useState(false);
   const [showCompletionPopup, setShowCompletionPopup] = useState(false);
@@ -11520,7 +11520,13 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
   const limit = card.stamps_required || store?.stamps_required_for_reward || 10;
   const isCompleted = card.current_stamps >= limit;
   const [unlockedReward, setUnlockedReward] = useState<string | null>(null);
+  const [stampJustAdded, setStampJustAdded] = useState(false);
   const prevStampsRef = useRef(card.current_stamps);
+
+  const closeQR = () => {
+    setShowQR(false);
+    onClose?.();
+  };
 
   // Show completion popup when card is completed
   useEffect(() => {
@@ -11529,12 +11535,18 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
     }
   }, [isCompleted, card.isArchived, card.isRedeemed]);
 
-  // Fire confetti when any reward tier is reached
+  // Notify + confetti whenever stamps increase (real-time or test)
   useEffect(() => {
     const prev = prevStampsRef.current;
     const curr = card.current_stamps;
     prevStampsRef.current = curr;
     if (curr <= prev || card.isArchived) return;
+    // Haptic feedback
+    if ('vibrate' in navigator) navigator.vibrate([80, 40, 120]);
+    // "Stamp added" banner
+    setStampJustAdded(true);
+    setTimeout(() => setStampJustAdded(false), 2500);
+    // Confetti + tier unlock popup when a reward tier is hit
     const tiers = store?.rewardTiers?.length ? store.rewardTiers : [{ stamps: limit, reward: store?.reward || 'Reward Unlocked!' }];
     const hit = tiers.find(t => t.stamps > prev && t.stamps <= curr);
     if (hit) {
@@ -11587,7 +11599,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
       updateChallengeProgress(auth.currentUser.uid, store.id, qty).catch(console.error);
 
       if (newStamps >= limit) {
-        setShowQR(false);
+        closeQR();
       }
     } catch (error) {
       console.error(error);
@@ -11892,7 +11904,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setShowQR(false)}
+              onClick={closeQR}
               className="absolute inset-0 bg-brand-navy/90 backdrop-blur-sm"
             />
             <motion.div 
@@ -11936,13 +11948,36 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
               </div>
 
               <button 
-                onClick={() => setShowQR(false)}
+                onClick={closeQR}
                 className="w-full bg-brand-navy text-white py-4 rounded-2xl font-bold"
               >
                 Close
               </button>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Stamp added banner */}
+      <AnimatePresence>
+        {stampJustAdded && (
+          <motion.div
+            initial={{ opacity: 0, y: -24 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -24 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+            className="fixed top-6 inset-x-0 z-[210] flex justify-center pointer-events-none px-6"
+          >
+            <div className="flex items-center gap-3 bg-brand-navy text-white px-5 py-3 rounded-2xl shadow-2xl">
+              <div className="w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
+                <Check size={14} className="text-white" />
+              </div>
+              <div>
+                <p className="font-bold text-sm leading-tight">Stamp Added!</p>
+                <p className="text-white/50 text-[11px] leading-tight">{store?.name}</p>
+              </div>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
 
@@ -20465,6 +20500,7 @@ function ProfileCardRow({ store, card, membershipCard, userId, userProfile, onJo
           card={card}
           store={store}
           autoOpen
+          onClose={() => setShowLoyaltyPopup(false)}
         />
       )}
 
