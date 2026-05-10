@@ -20103,56 +20103,9 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
         </div>
       </div>
 
-      {/* Name + info */}
-      <div className="pt-10">
-        <div className="flex items-start gap-2">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="font-display text-2xl font-bold text-brand-navy">{store.name}</h2>
-              {store.isVerified && <CheckCircle2 size={18} className="text-blue-400" />}
-            </div>
-            <p className="text-sm text-brand-navy/50 mt-0.5">{store.category}</p>
-            {(store.location || (store as any).address) && (
-              <button
-                onClick={() => {
-                  const addr = encodeURIComponent(store.location || (store as any).address || '');
-                  if (userCoords) {
-                    window.open(`https://www.google.com/maps/dir/?api=1&origin=${userCoords.lat},${userCoords.lng}&destination=${addr}`, '_blank');
-                  } else {
-                    window.open(`https://www.google.com/maps/search/?api=1&query=${addr}`, '_blank');
-                  }
-                }}
-                className="flex items-center gap-1 mt-1.5 text-brand-gold active:opacity-70"
-              >
-                <MapPin size={13} className="shrink-0" />
-                <span className="text-xs font-medium text-left leading-tight">
-                  {store.location || (store as any).address}
-                  {distance !== null && (
-                    <span className="text-brand-navy/40 ml-1">
-                      · {distance < 1 ? `${Math.round(distance * 1000)}m` : `${distance.toFixed(1)}km`}
-                    </span>
-                  )}
-                </span>
-              </button>
-            )}
-            {avgRating !== null && (
-              <div className="flex items-center gap-1.5 mt-1.5">
-                <div className="flex items-center gap-0.5">
-                  {[1,2,3,4,5].map(s => (
-                    <Star key={s} size={12} className={s <= Math.round(avgRating) ? "text-brand-gold fill-brand-gold" : "text-brand-navy/20"} />
-                  ))}
-                </div>
-                <span className="text-brand-navy font-bold text-xs">{avgRating.toFixed(1)}</span>
-                <span className="text-brand-navy/40 text-xs">({storeReviews.length})</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Stats */}
+      {/* Stats — top of page, directly after cover */}
       {showStats && (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="pt-10 grid grid-cols-3 gap-3">
           {(vis?.members !== false) && (
             <div className="glass-card p-4 rounded-3xl text-center">
               <p className="text-lg font-bold text-brand-navy">{totalMembers}</p>
@@ -20173,6 +20126,69 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
           )}
         </div>
       )}
+      {!showStats && <div className="pt-10" />}
+
+      {/* Name + info row with message/follow on RHS */}
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h2 className="font-display text-2xl font-bold text-brand-navy">{store.name}</h2>
+            {store.isVerified && <CheckCircle2 size={18} className="text-blue-400" />}
+          </div>
+          <p className="text-sm text-brand-navy/50 mt-0.5">{store.category}</p>
+          {(store.location || (store as any).address) && (
+            <button
+              onClick={() => {
+                const addr = encodeURIComponent(store.location || (store as any).address || '');
+                if (userCoords) {
+                  window.open(`https://www.google.com/maps/dir/?api=1&origin=${userCoords.lat},${userCoords.lng}&destination=${addr}`, '_blank');
+                } else {
+                  window.open(`https://www.google.com/maps/search/?api=1&query=${addr}`, '_blank');
+                }
+              }}
+              className="flex items-center gap-1 mt-1.5 text-brand-gold active:opacity-70"
+            >
+              <MapPin size={13} className="shrink-0" />
+              <span className="text-xs font-medium text-left leading-tight">
+                {store.location || (store as any).address}
+                {distance !== null && (
+                  <span className="text-brand-navy/40 ml-1">
+                    · {distance < 1 ? `${Math.round(distance * 1000)}m` : `${distance.toFixed(1)}km`}
+                  </span>
+                )}
+              </span>
+            </button>
+          )}
+          {avgRating !== null && (
+            <div className="flex items-center gap-1.5 mt-1.5">
+              <div className="flex items-center gap-0.5">
+                {[1,2,3,4,5].map(s => (
+                  <Star key={s} size={12} className={s <= Math.round(avgRating) ? "text-brand-gold fill-brand-gold" : "text-brand-navy/20"} />
+                ))}
+              </div>
+              <span className="text-brand-navy font-bold text-xs">{avgRating.toFixed(1)}</span>
+              <span className="text-brand-navy/40 text-xs">({storeReviews.length})</span>
+            </div>
+          )}
+        </div>
+        {/* Message + Follow on RHS */}
+        {store.ownerUid !== user.uid && (
+          <div className="flex flex-col gap-2 shrink-0 pt-1">
+            {onMessage && store.ownerUid && (
+              <button onClick={handleMessageStore} className="flex items-center gap-1.5 px-3 py-2 rounded-2xl gradient-red text-white font-bold text-xs shadow active:scale-95 transition-all">
+                <MessageCircle size={13} /> Message
+              </button>
+            )}
+            <button
+              onClick={handleFollowStore}
+              className={cn("flex items-center gap-1.5 px-3 py-2 rounded-2xl font-bold text-xs transition-all shadow active:scale-95", isFollowingStore ? "bg-brand-navy/8 text-brand-navy border border-brand-navy/15" : "gradient-red text-white")}
+            >
+              {isFollowingStore ? <UserCheck size={13} /> : <UserPlus size={13} />}
+              {isFollowingStore ? 'Following' : 'Follow'}
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Reward tiers slider */}
       {tiers.length > 0 && (
@@ -20226,57 +20242,51 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
         </div>
       )}
 
-      {/* Action buttons */}
+      {/* Join buttons */}
+      {store.ownerUid !== user.uid && (storeCardActive(store) || store.membershipEnabled) && (
+        <div className="flex gap-3">
+          {storeCardActive(store) && (
+            card ? (
+              <div className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-green-50 border border-green-200">
+                <Check size={15} className="text-green-500" />
+                <span className="text-green-600 font-bold text-sm">Loyalty Joined</span>
+              </div>
+            ) : (
+              <button
+                onClick={handleJoinStore}
+                className="flex-1 relative overflow-hidden flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm text-white shadow-lg active:scale-95 transition-all"
+                style={{ background: 'linear-gradient(135deg, #3a6fcc 0%, #5b8ee8 50%, #3a6fcc 100%)' }}
+              >
+                <span className="absolute inset-0 bg-white/10 opacity-0 hover:opacity-100 transition-opacity" />
+                <CreditCard size={15} />
+                Join Loyalty Card
+              </button>
+            )
+          )}
+          {store.membershipEnabled && (
+            membershipCard ? (
+              <div className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-purple-50 border border-purple-200">
+                <Check size={15} className="text-purple-500" />
+                <span className="text-purple-600 font-bold text-sm">{store.membershipName || 'Membership'} Joined</span>
+              </div>
+            ) : (
+              <button
+                onClick={handleJoinMembership}
+                className="flex-1 relative overflow-hidden flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm text-white shadow-lg active:scale-95 transition-all"
+                style={{ background: store.membershipColor ? `linear-gradient(135deg, ${store.membershipColor} 0%, ${store.membershipColor}cc 100%)` : 'linear-gradient(135deg, #1e1b4b 0%, #4338ca 100%)' }}
+              >
+                <span className="absolute inset-0 bg-white/10 opacity-0 hover:opacity-100 transition-opacity" />
+                <Star size={15} />
+                Join {store.membershipName || 'Membership'}
+              </button>
+            )
+          )}
+        </div>
+      )}
+
+      {/* Card previews */}
       {store.ownerUid !== user.uid && (
         <div className="space-y-3">
-          <div className="flex gap-2 flex-wrap">
-            {onMessage && store.ownerUid && (
-              <button onClick={handleMessageStore} className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl gradient-red text-white font-bold text-xs shadow active:scale-95 transition-all">
-                <MessageCircle size={14} /> Message
-              </button>
-            )}
-            <button
-              onClick={handleFollowStore}
-              className={cn("flex items-center gap-1.5 px-4 py-2.5 rounded-2xl font-bold text-xs transition-all shadow active:scale-95", isFollowingStore ? "bg-brand-navy/8 text-brand-navy border border-brand-navy/15" : "gradient-red text-white")}
-            >
-              {isFollowingStore ? <UserCheck size={14} /> : <UserPlus size={14} />}
-              {isFollowingStore ? 'Following' : 'Follow'}
-            </button>
-          </div>
-
-          {/* Card join buttons — only shown when vendor has that card type enabled */}
-          {(storeCardActive(store) || store.membershipEnabled) && (
-            <div className="flex gap-2 flex-wrap">
-              {storeCardActive(store) && (
-                <button
-                  onClick={card ? undefined : handleJoinStore}
-                  disabled={!!card}
-                  className={cn(
-                    "flex items-center gap-1.5 px-4 py-2.5 rounded-2xl font-bold text-xs transition-all shadow active:scale-95",
-                    card ? "bg-green-50 text-green-600 border border-green-200 cursor-default" : "gradient-logo-blue text-white"
-                  )}
-                >
-                  {card ? <><UserCheck size={14} /> Loyalty Joined</> : <><CreditCard size={14} /> Join Loyalty Card</>}
-                </button>
-              )}
-              {store.membershipEnabled && (
-                <button
-                  onClick={membershipCard ? undefined : handleJoinMembership}
-                  disabled={!!membershipCard}
-                  className={cn(
-                    "flex items-center gap-1.5 px-4 py-2.5 rounded-2xl font-bold text-xs transition-all shadow active:scale-95",
-                    membershipCard
-                      ? "bg-purple-50 text-purple-600 border border-purple-200 cursor-default"
-                      : "bg-brand-navy text-white"
-                  )}
-                >
-                  {membershipCard
-                    ? <><UserCheck size={14} /> {store.membershipName || 'Membership'} Joined</>
-                    : <><Star size={14} /> Join {store.membershipName || 'Membership'}</>}
-                </button>
-              )}
-            </div>
-          )}
 
           {/* Loyalty card preview */}
           {card && (
