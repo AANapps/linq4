@@ -21626,7 +21626,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
         ? (c.current_stamps || 0) + (c.total_completed_cycles || 0) * stampsReq
         : lbType === 'visit'
           ? (c.membership_visits || 0)
-          : (c.total_spent || c.membership_points || 0),
+          : (c.membership_points || 0),
     }))
     .sort((a, b) => b.lifetimeStamps - a.lifetimeStamps)
     .slice(0, 5);
@@ -21842,14 +21842,12 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
             const displayName = lbProfile?.name || entry.userName || 'Loyal Customer';
             const scoreLabel = lbType === 'loyalty'
               ? `${entry.lifetimeStamps} Stamps`
-              : lbType === 'visit'
-                ? `${entry.lifetimeStamps} Points`
-                : `£${(entry.lifetimeStamps as number).toFixed(2)} Spent`;
+              : `${entry.lifetimeStamps} Points`;
             const subLabel = lbType === 'loyalty'
               ? `${entry.total_completed_cycles || 0} Rewards Earned`
               : lbType === 'visit'
                 ? `${entry.membership_visits || 0} Visits`
-                : `${entry.membership_points || 0} Points`;
+                : `£${(entry.total_spent || 0).toFixed(2)} Spent`;
             return (
               <div
                 key={`lb-${entry.id}`}
