@@ -13681,8 +13681,8 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
       const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase()) ||
                             s.category.toLowerCase().includes(search.toLowerCase());
       const matchesCat = activeCategory === 'All' || s.category === activeCategory;
-      const cardOn = storeCardActive(s);
-      return matchesSearch && matchesCat && cardOn;
+      const hasAnyCard = storeCardActive(s) || s.membershipEnabled === true || s.subCardEnabled === true;
+      return matchesSearch && matchesCat && hasAnyCard;
     });
     if (!userCoords) return matched;
     return [...matched].sort((a, b) => {
