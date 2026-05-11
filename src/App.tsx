@@ -11267,7 +11267,7 @@ function SwipeConfirm({ onConfirm }: { onConfirm: () => void }) {
   const [done, setDone] = useState(false);
   const x = useMotionValue(0);
   const maxX = Math.max(0, trackWidth - THUMB - PAD * 2);
-  const fillPct = useTransform(x, [0, maxX], ['0%', '100%']);
+  const fillPct = useTransform(x, [0, Math.max(1, maxX)], ['0%', '100%']);
 
   useEffect(() => {
     const el = trackRef.current;
@@ -11280,6 +11280,7 @@ function SwipeConfirm({ onConfirm }: { onConfirm: () => void }) {
   }, []);
 
   const handleDragEnd = () => {
+    if (maxX === 0) return;
     if (x.get() >= maxX * 0.75) {
       animate(x, maxX, { type: 'spring', stiffness: 500, damping: 40 });
       setDone(true);
@@ -11296,7 +11297,7 @@ function SwipeConfirm({ onConfirm }: { onConfirm: () => void }) {
         <span className="text-emerald-700/50 text-sm font-bold tracking-wide">Slide to redeem →</span>
       </div>
       <motion.div
-        drag={done ? false : 'x'}
+        drag={done || maxX === 0 ? false : 'x'}
         dragConstraints={{ left: 0, right: maxX }}
         dragElastic={0}
         dragMomentum={false}
