@@ -6988,7 +6988,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                       return (
                         <div key={card.id} className="snap-center shrink-0 w-[83vw] max-w-[340px] flex flex-col rounded-[2rem] shadow-xl">
                           {card.card_type === 'membership'
-                            ? <MembershipCard card={card} store={store} onViewStore={onViewStore} onScan={() => setShowNFCStamp(true)} />
+                            ? <MembershipCard card={card} store={store} onViewStore={onViewStore} onScan={() => setShowNFCStamp(true)} userHandle={profile?.handle} />
                             : card.card_type === 'sub'
                             ? <SubLoyaltyCard card={card} store={store} onViewStore={onViewStore} onScan={() => setShowNFCStamp(true)} />
                             : <LoyaltyCard card={card} store={store} onViewStore={onViewStore} onScan={() => setShowNFCStamp(true)} />}
@@ -7003,7 +7003,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                       return (
                         <div key={card.id} className="rounded-3xl shadow-xl overflow-hidden">
                           {card.card_type === 'membership'
-                            ? <MembershipCard card={card} store={store} onViewStore={onViewStore} compact onScan={() => setShowNFCStamp(true)} />
+                            ? <MembershipCard card={card} store={store} onViewStore={onViewStore} compact onScan={() => setShowNFCStamp(true)} userHandle={profile?.handle} />
                             : card.card_type === 'sub'
                             ? <SubLoyaltyCard card={card} store={store} onViewStore={onViewStore} compact onScan={() => setShowNFCStamp(true)} />
                             : <LoyaltyCard card={card} store={store} onViewStore={onViewStore} compact onScan={() => setShowNFCStamp(true)} />}
@@ -11311,7 +11311,7 @@ function SwipeConfirm({ onConfirm }: { onConfirm: () => void }) {
   );
 }
 
-function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, onScan }: { card: Card; store?: StoreProfile; onViewStore?: (s: StoreProfile) => void; compact?: boolean; autoOpen?: 'spend' | 'nfc'; onScan?: () => void; key?: React.Key }) {
+function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, onScan, userHandle }: { card: Card; store?: StoreProfile; onViewStore?: (s: StoreProfile) => void; compact?: boolean; autoOpen?: 'spend' | 'nfc'; onScan?: () => void; userHandle?: string; key?: React.Key }) {
   const [showRedeemSheet, setShowRedeemSheet] = useState(autoOpen === 'spend' || autoOpen === 'nfc');
   const [showVisitScan, setShowVisitScan] = useState(false);
   const [showRedeemFlow, setShowRedeemFlow] = useState(false);
@@ -11515,6 +11515,13 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               {redeemableValue > 0 && (
                 <p className="text-brand-navy/60 font-bold text-xs mt-1.5">≈ ${redeemableValue.toFixed(2)} redeemable</p>
               )}
+              {userHandle && (
+                <div className="mt-3 w-full bg-brand-navy/5 rounded-2xl px-3 py-2.5">
+                  <p className="text-brand-navy/40 text-[9px] font-bold uppercase tracking-widest mb-0.5">Your handle</p>
+                  <p className="text-brand-navy font-black text-sm">@{userHandle}</p>
+                  <p className="text-brand-navy/40 text-[9px] mt-0.5">Give this to the vendor when you spend</p>
+                </div>
+              )}
             </>
           ) : (
             <>
@@ -11537,6 +11544,17 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 <div><h3 className="font-display text-2xl font-bold">{membershipName}</h3><p className="text-brand-navy/40 text-xs mt-0.5">Points & Redemption</p></div>
                 <button onClick={() => setShowRedeemSheet(false)} className="p-2 text-brand-navy/40 hover:text-brand-navy"><X size={20} /></button>
               </div>
+              {userHandle && (
+                <div className="bg-brand-navy rounded-2xl px-5 py-4 mb-6 flex items-center gap-4">
+                  <div className="flex-1">
+                    <p className="text-white/50 text-[9px] font-bold uppercase tracking-widest mb-0.5">Your handle</p>
+                    <p className="text-white font-black text-xl">@{userHandle}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-white/60 text-[10px] font-bold leading-tight">Give this to the<br />vendor when you spend</p>
+                  </div>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3 mb-6">
                 <div className="glass-card p-5 rounded-2xl">
                   <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest mb-1">Points</p>
@@ -11746,6 +11764,12 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                   <p className="text-brand-navy text-2xl font-black mt-2 leading-none">≈ ${redeemableValue.toFixed(2)} off</p>
                 )}
               </div>
+              {userHandle && (
+                <div className="bg-brand-navy/5 rounded-2xl px-4 py-3 mb-3 text-center">
+                  <p className="text-brand-navy/40 text-[9px] font-bold uppercase tracking-widest mb-0.5">Your handle — give this to the vendor</p>
+                  <p className="text-brand-navy font-black text-lg">@{userHandle}</p>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <span className="text-brand-navy/35 text-[11px] font-bold">${totalSpent.toFixed(2)} spent{earnedRewards > 0 ? ` · ${earnedRewards} rewards` : ''}</span>
                 <span className="text-brand-navy/40 text-[10px] font-bold flex items-center gap-1"><Gift size={11} /> Tap to redeem</span>
@@ -11799,6 +11823,19 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 </div>
                 <button onClick={() => setShowRedeemSheet(false)} className="p-2 text-brand-navy/40 hover:text-brand-navy"><X size={20} /></button>
               </div>
+
+              {/* Handle — give to vendor */}
+              {userHandle && (
+                <div className="bg-brand-navy rounded-2xl px-5 py-4 mb-6 flex items-center gap-4">
+                  <div className="flex-1">
+                    <p className="text-white/50 text-[9px] font-bold uppercase tracking-widest mb-0.5">Your handle</p>
+                    <p className="text-white font-black text-xl">@{userHandle}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-white/60 text-[10px] font-bold leading-tight">Give this to the<br />vendor when you spend</p>
+                  </div>
+                </div>
+              )}
 
               {/* Balance row */}
               <div className="grid grid-cols-2 gap-3 mb-6">
@@ -21757,6 +21794,19 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
           onJoinLoyalty={handleJoinStore}
           onJoinMembership={handleJoinMembership}
         />
+      )}
+
+      {/* Spend card info — show handle to give vendor */}
+      {membershipCard && store.membershipType === 'spend' && profile?.handle && (
+        <div className="bg-brand-navy rounded-2xl px-5 py-4 flex items-center gap-4">
+          <div className="flex-1 min-w-0">
+            <p className="text-white/50 text-[9px] font-bold uppercase tracking-widest mb-0.5">Your handle</p>
+            <p className="text-white font-black text-xl truncate">@{profile.handle}</p>
+          </div>
+          <div className="text-right shrink-0">
+            <p className="text-white/70 text-[10px] font-bold leading-tight">Give this to the<br />vendor when you spend</p>
+          </div>
+        </div>
       )}
 
       {/* Top collectors */}
