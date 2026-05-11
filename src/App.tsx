@@ -11484,7 +11484,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
       <>
       <div
         className="rounded-3xl overflow-hidden"
-        onClick={membershipType === 'visit' ? () => setShowRedeemSheet(true) : undefined}
+        onClick={() => setShowRedeemSheet(true)}
       >
         {/* Colored header — mirrors compact LoyaltyCard header */}
         <div className="relative overflow-hidden flex items-center gap-3 px-4 py-3" style={{ backgroundColor: color }}>
