@@ -7213,7 +7213,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
 
               {activeStandardChallenges.length > 0 && (
                 <div className="space-y-3">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75 px-1">Challenges</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/90 px-1">Challenges</p>
                   {activeStandardChallenges.map(c => {
                     const joined = (c.participantUids || []).includes(user.uid);
                     const entry = myStandardEntries.get(c.id);
@@ -16707,10 +16707,10 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           { val: activeCardsCount,  label: 'Cards'   },
           { val: archivedCardsCount, label: 'Rewards' },
         ].map(s => (
-          <div key={s.label} className="flex-1 rounded-2xl px-3 py-2.5 flex flex-col items-center gap-0.5"
+          <div key={s.label} className="flex-1 rounded-2xl px-3 py-2.5 flex flex-col items-center gap-0.5 shadow-md"
                style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #2563EB 50%, #3B82F6 100%)' }}>
             <p className="font-bold text-sm leading-none text-white">{s.val}</p>
-            <p className="text-[9px] font-bold uppercase tracking-wider text-white/60">{s.label}</p>
+            <p className="text-[9px] font-bold uppercase tracking-wider text-white/80">{s.label}</p>
           </div>
         ))}
       </div>
@@ -16720,7 +16720,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
       {/* Badges swipe row */}
       {earnedBadges.length > 0 && (
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75 mb-2.5 text-center">Badges</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/90 mb-2.5 text-center">Badges</p>
           <BadgeSwipeRow badges={earnedBadges} onSelectBadge={setSelectedBadge} />
         </div>
       )}
@@ -22824,12 +22824,12 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
             <div className="flex items-center gap-3 mt-2 text-sm">
               <span className="flex items-center gap-1 font-bold">
                 <span>{targetFollowing}</span>
-                <span className="text-brand-navy/75 font-normal">Following</span>
+                <span className="text-brand-navy/90 font-normal">Following</span>
               </span>
-              <span className="text-brand-navy/32">•</span>
+              <span className="text-brand-navy/50">•</span>
               <span className="flex items-center gap-1 font-bold">
                 <span>{targetFollowers}</span>
-                <span className="text-brand-navy/75 font-normal">Followers</span>
+                <span className="text-brand-navy/90 font-normal">Followers</span>
               </span>
             </div>
           </div>
@@ -22843,10 +22843,10 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
           { val: cards.length,      label: 'Cards'   },
           { val: publicUserRewards, label: 'Rewards' },
         ].map(s => (
-          <div key={s.label} className="flex-1 rounded-2xl px-3 py-2.5 flex flex-col items-center gap-0.5"
+          <div key={s.label} className="flex-1 rounded-2xl px-3 py-2.5 flex flex-col items-center gap-0.5 shadow-md"
                style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #2563EB 50%, #3B82F6 100%)' }}>
             <p className="font-bold text-sm leading-none text-white">{s.val}</p>
-            <p className="text-[9px] font-bold uppercase tracking-wider text-white/60">{s.label}</p>
+            <p className="text-[9px] font-bold uppercase tracking-wider text-white/80">{s.label}</p>
           </div>
         ))}
       </div>
@@ -22877,7 +22877,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
       {/* Badges swipe row */}
       {earnedBadges.length > 0 && (
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75 mb-2.5 text-center">Badges</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/90 mb-2.5 text-center">Badges</p>
           <BadgeSwipeRow badges={earnedBadges} onSelectBadge={setSelectedBadge} />
         </div>
       )}
@@ -22939,7 +22939,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
       <div className="space-y-2.5">
         <h3 className="font-display text-xl font-bold px-2">Active Cards</h3>
         {cards.length === 0 ? (
-          <div className="py-8 text-center text-brand-navy/32 bg-white/50 rounded-2xl border border-dashed border-brand-navy/5">
+          <div className="py-8 text-center text-brand-navy/60 bg-white/50 rounded-2xl border border-dashed border-brand-navy/5">
             <p className="text-xs font-bold uppercase tracking-widest italic">No active loyalty cards</p>
           </div>
         ) : (
@@ -22969,7 +22969,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
                   <div className="bg-white px-4 py-3">
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="text-[10px] font-bold" style={{ color: theme }}>{card.current_stamps} / {total} stamps</span>
-                      <span className="text-[10px] font-bold text-brand-navy/72">{pct}%</span>
+                      <span className="text-[10px] font-bold text-brand-navy/90">{pct}%</span>
                     </div>
                     <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: `${theme}20` }}>
                       <motion.div
@@ -22994,7 +22994,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
         if (theirChallenges.length === 0) return null;
         return (
           <div className="space-y-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75 px-1">Challenges</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/90 px-1">Challenges</p>
             {theirChallenges.map(c => {
               const entry = publicEntries.get(c.id);
               let progress = 0;
@@ -23034,14 +23034,14 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
       <div className="flex p-1 glass-card rounded-2xl">
         <button
           onClick={() => setProfileTab('wall')}
-          className={cn("flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5", profileTab === 'wall' ? "bg-brand-navy text-white shadow" : "text-brand-navy/75")}
+          className={cn("flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5", profileTab === 'wall' ? "bg-brand-navy text-white shadow" : "text-brand-navy/90")}
         >
           <MessageSquare size={13} />
           Wall
         </button>
         <button
           onClick={() => setProfileTab('posts')}
-          className={cn("flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5", profileTab === 'posts' ? "bg-brand-navy text-white shadow" : "text-brand-navy/75")}
+          className={cn("flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5", profileTab === 'posts' ? "bg-brand-navy text-white shadow" : "text-brand-navy/90")}
         >
           <Zap size={13} />
           Posts {userPosts.length > 0 && `(${userPosts.length})`}
@@ -23073,7 +23073,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
               <WallPostItem key={review.id} post={review} currentUser={currentUser} wallOwnerUid={targetUser.uid} onViewUser={onViewUser} />
             ))}
             {reviews.length === 0 && (
-              <p className="text-center py-12 text-xs text-brand-navy/32 font-bold uppercase tracking-widest italic">No wall posts yet</p>
+              <p className="text-center py-12 text-xs text-brand-navy/60 font-bold uppercase tracking-widest italic">No wall posts yet</p>
             )}
           </div>
         </div>
@@ -23106,7 +23106,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
             />
           ))}
           {userPosts.length === 0 && (
-            <p className="text-center py-12 text-xs text-brand-navy/32 font-bold uppercase tracking-widest italic">No posts yet</p>
+            <p className="text-center py-12 text-xs text-brand-navy/60 font-bold uppercase tracking-widest italic">No posts yet</p>
           )}
         </div>
       )}
