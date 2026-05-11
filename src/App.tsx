@@ -21290,6 +21290,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
   const [card, setCard] = useState<Card | null>(null);
   const [membershipCard, setMembershipCard] = useState<Card | null>(null);
   const [showSpendSheet, setShowSpendSheet] = useState(false);
+  const [showVisitSheet, setShowVisitSheet] = useState(false);
   const [showRedeemFlow, setShowRedeemFlow] = useState(false);
   const [redeemDollars, setRedeemDollars] = useState('');
   const [redeemStage, setRedeemStage] = useState<'input' | 'swipe' | 'success'>('input');
@@ -22127,6 +22128,123 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                         <button onClick={() => { closeRedeem(); setShowSpendSheet(false); }} className="w-full bg-brand-navy text-white py-3.5 rounded-2xl font-bold text-sm">Done</button>
                       </div>
                     )}
+                  </motion.div>
+                </div>
+              )}
+            </AnimatePresence>
+          </>
+        );
+      })()}
+
+      {/* Visit card tile */}
+      {membershipCard && store.membershipType === 'visit' && (() => {
+        const mc = membershipCard;
+        const visits = mc.membership_visits ?? 0;
+        const color = store.membershipColor || '#0f4c81';
+        const visitRewards = (store.membershipVisitRewards ?? []).slice().sort((a: any, b: any) => a.visits - b.visits);
+        const nextReward = visitRewards.find((r: any) => r.visits > visits);
+        const menuItems = store.membershipMenuItems ?? [];
+
+        return (
+          <>
+            <button
+              onClick={() => setShowVisitSheet(true)}
+              className="w-full rounded-[2rem] overflow-hidden shadow-lg active:scale-[0.98] transition-transform text-left"
+            >
+              <div className="relative overflow-hidden px-5 py-4 flex items-center gap-3" style={{ backgroundColor: color }}>
+                <span className="card-shine-ray" aria-hidden="true" />
+                <div className="relative z-10 w-10 h-10 rounded-full overflow-hidden border-2 border-white/50 shrink-0">
+                  <img src={store.logoUrl || `https://picsum.photos/seed/${store.id}/200/200`} alt="" className="w-full h-full object-cover" />
+                </div>
+                <div className="relative z-10 flex-1 min-w-0">
+                  <p className="text-white font-black text-sm">{store.membershipName || 'Membership'}</p>
+                  <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">Visit Points</p>
+                </div>
+                <div className="relative z-10 text-right shrink-0">
+                  <p className="text-white font-black text-2xl leading-none">{fmtK(visits)}</p>
+                  <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">pts</p>
+                </div>
+              </div>
+              <div className="bg-white px-5 py-3 flex items-center justify-between">
+                {nextReward
+                  ? <span className="text-brand-navy/40 text-[10px] font-bold">{nextReward.visits - visits} more → {nextReward.reward}</span>
+                  : <span className="text-brand-navy/30 text-[10px] font-bold">Tap for details</span>}
+                {nextReward && (
+                  <span className="text-brand-navy/30 text-[10px] font-bold">{visits}/{nextReward.visits} pts</span>
+                )}
+              </div>
+            </button>
+
+            <AnimatePresence>
+              {showVisitSheet && (
+                <div className="fixed inset-0 z-[120] flex items-end justify-center">
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowVisitSheet(false)} />
+                  <motion.div
+                    initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+                    transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+                    className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-10 shadow-2xl max-h-[90vh] overflow-y-auto"
+                  >
+                    <div className="w-10 h-1 bg-brand-navy/15 rounded-full mx-auto mb-6" />
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <h3 className="font-display text-2xl font-bold">{store.membershipName || 'Membership'}</h3>
+                        <p className="text-brand-navy/40 text-xs mt-0.5">{fmtK(visits)} points available</p>
+                      </div>
+                      <button onClick={() => setShowVisitSheet(false)} className="p-2 text-brand-navy/40"><X size={20} /></button>
+                    </div>
+
+                    {/* Points + next reward */}
+                    <div className="glass-card p-5 rounded-2xl mb-4 text-center">
+                      <p className="text-brand-navy font-black text-5xl leading-none">{fmtK(visits)}</p>
+                      <p className="text-brand-navy/40 text-xs font-bold uppercase tracking-widest mt-1.5">Points</p>
+                      {nextReward && (
+                        <>
+                          <p className="text-brand-navy/60 text-sm mt-3 font-bold">{nextReward.visits - visits} more → {nextReward.reward}</p>
+                          <div className="mt-3 h-2 bg-brand-navy/10 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, (visits / nextReward.visits) * 100)}%`, backgroundColor: color }} />
+                          </div>
+                          <p className="text-brand-navy/30 text-[10px] font-bold mt-1">{visits}/{nextReward.visits} pts</p>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Reward tiers */}
+                    {visitRewards.length > 0 && (
+                      <div className="mb-4">
+                        <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest mb-3">Reward Tiers</p>
+                        <div className="space-y-2">
+                          {visitRewards.map((r: any) => {
+                            const earned = visits >= r.visits;
+                            return (
+                              <div key={r.visits} className={cn('flex items-center justify-between px-4 py-3 rounded-2xl', earned ? 'bg-emerald-50 border border-emerald-100' : 'bg-brand-bg')}>
+                                <span className={cn('font-bold text-sm', earned ? 'text-emerald-700' : 'text-brand-navy')}>{r.reward}</span>
+                                <span className={cn('text-xs font-bold', earned ? 'text-emerald-500' : 'text-brand-navy/40')}>{earned ? '✓' : `${r.visits} pts`}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Menu items */}
+                    {menuItems.length > 0 && (
+                      <div>
+                        <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest mb-3">Redeem Points</p>
+                        <div className="space-y-2">
+                          {menuItems.map((item: any) => {
+                            const canAfford = visits >= item.points;
+                            return (
+                              <div key={item.id} className={cn('flex items-center justify-between px-4 py-3 rounded-2xl', canAfford ? 'bg-brand-bg' : 'bg-brand-bg/50 opacity-50')}>
+                                <span className="font-bold text-sm text-brand-navy">{item.name}</span>
+                                <span className="text-xs font-bold text-brand-navy/50">{item.points} pts</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    <button onClick={() => setShowVisitSheet(false)} className="w-full text-brand-navy/40 text-sm font-bold py-3 mt-4">Close</button>
                   </motion.div>
                 </div>
               )}
