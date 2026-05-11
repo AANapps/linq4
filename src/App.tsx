@@ -21582,6 +21582,39 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
   const returningUsers = allStoreCards.filter(c => (c.total_completed_cycles || 0) > 0).length;
   const returnRate = totalMembers > 0 ? Math.round((returningUsers / totalMembers) * 100) : 0;
   const showStats = vis ? Object.values(vis).some(Boolean) : true;
+
+  // Per-card-type stat slides for swipeable stats section
+  const stampCardsAll = allStoreCards.filter(c => !c.isArchived && c.card_type !== 'membership' && c.card_type !== 'sub');
+  const visitMemberCardsAll = allStoreCards.filter(c => !c.isArchived && c.card_type === 'membership' && c.membership_type === 'visit');
+  const spendMemberCardsAll = allStoreCards.filter(c => !c.isArchived && c.card_type === 'membership' && c.membership_type === 'spend');
+  const statSlides: Array<{ label: string; members: number; metric: number; metricLabel: string; rewards: number }> = [];
+  if (store.cardEnabled) {
+    statSlides.push({
+      label: 'Stamp Card',
+      members: new Set(stampCardsAll.map(c => c.user_id)).size,
+      metric: stampCardsAll.reduce((s, c) => s + (c.current_stamps || 0) + (c.total_completed_cycles || 0) * stampsReq, 0),
+      metricLabel: 'Stamps',
+      rewards: stampCardsAll.reduce((s, c) => s + (c.total_completed_cycles || 0), 0),
+    });
+  }
+  if (store.membershipEnabled && store.membershipType === 'visit') {
+    statSlides.push({
+      label: store.membershipName || 'Visit Card',
+      members: new Set(visitMemberCardsAll.map(c => c.user_id)).size,
+      metric: visitMemberCardsAll.reduce((s, c) => s + (c.membership_visits || 0), 0),
+      metricLabel: 'Points',
+      rewards: visitMemberCardsAll.reduce((s, c) => s + (c.earned_rewards || 0), 0),
+    });
+  }
+  if (store.membershipEnabled && store.membershipType === 'spend') {
+    statSlides.push({
+      label: store.membershipName || 'Spend Card',
+      members: new Set(spendMemberCardsAll.map(c => c.user_id)).size,
+      metric: spendMemberCardsAll.reduce((s, c) => s + (c.membership_points || 0), 0),
+      metricLabel: 'Points',
+      rewards: spendMemberCardsAll.reduce((s, c) => s + (c.earned_rewards || 0), 0),
+    });
+  }
   // Leaderboard: type-aware — stamps for loyalty, visits for visit membership, spend for spend membership.
   const lbType = store.membershipEnabled && !store.cardEnabled
     ? (store.membershipType === 'spend' ? 'spend' : 'visit')
@@ -21662,23 +21695,49 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
 
       {/* Stats — top of page, directly after cover */}
       {showStats && (
-        <div className="pt-10 grid grid-cols-3 gap-3">
-          {(vis?.members !== false) && (
-            <div className="glass-card p-4 rounded-3xl text-center">
-              <p className="text-lg font-bold text-brand-navy">{totalMembers}</p>
-              <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest mt-0.5">Members</p>
+        <div className={cn('pt-10', statSlides.length > 0 ? 'w-full' : '')}>
+          {statSlides.length > 0 ? (
+            <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 -mx-6 px-6 pb-1 scrollbar-hide">
+              {statSlides.map((slide, i) => (
+                <div key={i} className="snap-center shrink-0 w-[calc(100vw-48px)] max-w-[380px] glass-card rounded-[2rem] p-5">
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/40 mb-4">{slide.label}</p>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <p className="text-2xl font-black text-brand-navy">{slide.members}</p>
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/40 mt-0.5">Members</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-black text-brand-navy">{slide.metric.toLocaleString()}</p>
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/40 mt-0.5">{slide.metricLabel}</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-black text-brand-navy">{slide.rewards}</p>
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/40 mt-0.5">Redeemed</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
-          )}
-          {store.ownerUid !== user.uid && (vis?.stamps !== false) && (
-            <div className="glass-card p-4 rounded-3xl text-center">
-              <p className="text-lg font-bold text-brand-navy">{totalStampsGiven}</p>
-              <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest mt-0.5">Stamps</p>
-            </div>
-          )}
-          {store.ownerUid !== user.uid && (
-            <div className="glass-card p-4 rounded-3xl text-center">
-              <p className="text-lg font-bold text-brand-navy">{publicStoreRewards}</p>
-              <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest mt-0.5">Rewards</p>
+          ) : (
+            <div className="grid grid-cols-3 gap-3">
+              {(vis?.members !== false) && (
+                <div className="glass-card p-4 rounded-3xl text-center">
+                  <p className="text-lg font-bold text-brand-navy">{totalMembers}</p>
+                  <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest mt-0.5">Members</p>
+                </div>
+              )}
+              {store.ownerUid !== user.uid && (vis?.stamps !== false) && (
+                <div className="glass-card p-4 rounded-3xl text-center">
+                  <p className="text-lg font-bold text-brand-navy">{totalStampsGiven}</p>
+                  <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest mt-0.5">Stamps</p>
+                </div>
+              )}
+              {store.ownerUid !== user.uid && (
+                <div className="glass-card p-4 rounded-3xl text-center">
+                  <p className="text-lg font-bold text-brand-navy">{publicStoreRewards}</p>
+                  <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest mt-0.5">Rewards</p>
+                </div>
+              )}
             </div>
           )}
         </div>
