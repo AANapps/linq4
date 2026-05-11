@@ -95,52 +95,24 @@ function accessoryPixels(id: string, color: string): CR[] {
   }
 }
 
-function facePixels(skin: string, hairColor: string, mood: number): CR[] {
+function facePixels(skin: string, hairColor: string, _mood: number): CR[] {
   const pixels: CR[] = [];
   const dark  = '#1A1010';
   const white = '#FFFFFF';
-  const blush = '#FFB6C1';
-  const lip   = '#E07090'; // pink lips
+  const lip   = '#E07090';
 
-  const sadMood   = mood < 30;
-  const happyMood = mood >= 60;
-  const grinMood  = mood >= 85;
+  // eyebrows
+  pixels.push(px(4, 4, 3, 1, hairColor), px(9, 4, 3, 1, hairColor));
 
-  // eyebrows — inward shift when sad
-  const browLx = sadMood ? 5 : 4;
-  const browRx = sadMood ? 8 : 9;
-  pixels.push(px(browLx, 4, 3, 1, hairColor), px(browRx, 4, 3, 1, hairColor));
-
-  // eye whites
+  // eyes
   pixels.push(px(4, 5, 3, 2, white), px(9, 5, 3, 2, white));
-  if (happyMood || grinMood) {
-    pixels.push(px(4, 5, 3, 1, skin), px(9, 5, 3, 1, skin)); // squint
-  }
-  const pupilCol = grinMood ? '#F59E0B' : dark;
-  pixels.push(px(5, 6, 1, 1, pupilCol), px(10, 6, 1, 1, pupilCol));
+  pixels.push(px(5, 6, 1, 1, dark), px(10, 6, 1, 1, dark));
 
-  // cheeks
-  if (happyMood || grinMood) {
-    pixels.push(px(3, 7, 2, 1, blush), px(11, 7, 2, 1, blush));
-  }
-
-  // mouth — pink lips, 4 px wide
-  if (grinMood) {
-    pixels.push(
-      px(4, 7, 8, 1, dark),           // top lip outline
-      px(4, 8, 2, 1, lip), px(10, 8, 2, 1, lip), // lip corners
-      px(6, 8, 4, 1, white),          // teeth
-    );
-  } else if (happyMood) {
-    pixels.push(
-      px(5, 7, 1, 1, dark), px(10, 7, 1, 1, dark), // smile corners
-      px(6, 8, 4, 1, lip),
-    );
-  } else if (sadMood) {
-    pixels.push(px(6, 7, 4, 1, lip), px(5, 8, 1, 1, dark), px(10, 8, 1, 1, dark));
-  } else {
-    pixels.push(px(6, 8, 4, 1, lip)); // neutral: pink lip line
-  }
+  // mouth — gentle smile
+  pixels.push(
+    px(5, 7, 1, 1, dark), px(10, 7, 1, 1, dark),
+    px(6, 8, 4, 1, lip),
+  );
 
   return pixels;
 }
@@ -377,9 +349,6 @@ export function AvatarCustomiserModal({ avatar, onSave, onClose }: AvatarCustomi
         <div className="bg-gradient-to-b from-indigo-100 to-purple-50 rounded-[2rem] p-4 shadow-inner">
           <PixelAvatar config={draft} size={72} view="tall" />
         </div>
-        <p className="text-xs text-brand-navy/40 mt-2 font-bold">
-          Mood {Math.round(draft.mood)}% {draft.mood < 30 ? '😔' : draft.mood < 60 ? '😐' : draft.mood < 85 ? '😊' : '🤩'}
-        </p>
       </div>
 
       {/* Tabs */}
