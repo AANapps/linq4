@@ -21280,6 +21280,8 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
   const [redeemDollars, setRedeemDollars] = useState('');
   const [redeemStage, setRedeemStage] = useState<'input' | 'swipe' | 'success'>('input');
   const [redeeming, setRedeeming] = useState(false);
+  const [redeemingMenuItem, setRedeemingMenuItem] = useState<string | null>(null);
+  const [menuConfirm, setMenuConfirm] = useState<{ id: string; name: string; points: number } | null>(null);
   const [isFollowingStore, setIsFollowingStore] = useState(false);
   const [allStoreCards, setAllStoreCards] = useState<Card[]>([]);
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -22132,6 +22134,29 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
         const nextReward = visitRewards.find((r: any) => r.visits > visits);
         const menuItems = store.membershipMenuItems ?? [];
 
+        const handleMenuRedeem = async (item: { id: string; name: string; points: number }) => {
+          if (redeemingMenuItem || netVisits < item.points) return;
+          setRedeemingMenuItem(item.id);
+          try {
+            await updateDoc(doc(db, 'cards', mc.id), {
+              total_visits_redeemed: increment(item.points),
+              last_redeemed_at: serverTimestamp(),
+            });
+            await addDoc(collection(db, 'transactions'), {
+              user_id: mc.user_id,
+              store_id: mc.store_id,
+              card_type: 'membership',
+              membership_type: 'visit',
+              type: 'menu_redeem',
+              item_name: item.name,
+              points_redeemed: item.points,
+              redeemed_at: serverTimestamp(),
+            });
+            setMenuConfirm(null);
+          } catch (err) { console.error(err); }
+          setRedeemingMenuItem(null);
+        };
+
         return (
           <>
             <button
@@ -22221,10 +22246,15 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                           {menuItems.map((item: any) => {
                             const canAfford = netVisits >= item.points;
                             return (
-                              <div key={item.id} className={cn('flex items-center justify-between px-4 py-3 rounded-2xl', canAfford ? 'bg-brand-bg' : 'bg-brand-bg/50 opacity-50')}>
+                              <button
+                                key={item.id}
+                                disabled={!canAfford}
+                                onClick={() => { setMenuConfirm(item); setShowVisitSheet(false); }}
+                                className={cn('w-full flex items-center justify-between px-4 py-3 rounded-2xl text-left active:scale-[0.98] transition-all', canAfford ? 'bg-brand-bg' : 'bg-brand-bg/50 opacity-50')}
+                              >
                                 <span className="font-bold text-sm text-brand-navy">{item.name}</span>
                                 <span className="text-xs font-bold text-brand-navy/80">{item.points} pts</span>
-                              </div>
+                              </button>
                             );
                           })}
                         </div>
@@ -22239,6 +22269,66 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
           </>
         );
       })()}
+
+      {/* Visit menu item confirm sheet */}
+      <AnimatePresence>
+        {menuConfirm && membershipCard && store.membershipType === 'visit' && (() => {
+          const color = store.membershipColor || '#0f4c81';
+          const visits = membershipCard.membership_visits ?? 0;
+          const visitsAlreadyRedeemed = membershipCard.total_visits_redeemed ?? 0;
+          const netVisits = Math.max(0, visits - visitsAlreadyRedeemed);
+          const handleMenuRedeem = async (item: { id: string; name: string; points: number }) => {
+            if (redeemingMenuItem || netVisits < item.points) return;
+            setRedeemingMenuItem(item.id);
+            try {
+              await updateDoc(doc(db, 'cards', membershipCard.id), {
+                total_visits_redeemed: increment(item.points),
+                last_redeemed_at: serverTimestamp(),
+              });
+              await addDoc(collection(db, 'transactions'), {
+                user_id: membershipCard.user_id,
+                store_id: membershipCard.store_id,
+                card_type: 'membership',
+                membership_type: 'visit',
+                type: 'menu_redeem',
+                item_name: item.name,
+                points_redeemed: item.points,
+                redeemed_at: serverTimestamp(),
+              });
+              setMenuConfirm(null);
+            } catch (err) { console.error(err); }
+            setRedeemingMenuItem(null);
+          };
+          return (
+            <div key="menu-confirm" className="fixed inset-0 z-[130] flex items-end justify-center">
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setMenuConfirm(null); setShowVisitSheet(true); }} />
+              <motion.div
+                initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+                transition={{ type: 'spring', stiffness: 380, damping: 38 }}
+                className="relative z-10 w-full max-w-md bg-white rounded-t-[2rem] p-8 pb-10 shadow-2xl"
+              >
+                <div className="text-center mb-6">
+                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3" style={{ background: `linear-gradient(135deg, ${color}33, ${color}66)` }}>
+                    <Gift size={24} style={{ color }} />
+                  </div>
+                  <h3 className="font-display text-xl font-bold">{menuConfirm.name}</h3>
+                  <p className="text-brand-navy/75 text-sm mt-1">Redeem for <span className="font-black" style={{ color }}>{menuConfirm.points} points</span></p>
+                  <p className="text-brand-navy/72 text-xs mt-0.5">{netVisits - menuConfirm.points} points remaining after</p>
+                </div>
+                <button
+                  onClick={() => handleMenuRedeem(menuConfirm)}
+                  disabled={!!redeemingMenuItem}
+                  className="w-full py-4 rounded-2xl font-bold text-sm text-white mb-3 active:scale-[0.98] transition-all disabled:opacity-50"
+                  style={{ background: `linear-gradient(135deg, ${color}ff, ${color}cc)` }}
+                >
+                  {redeemingMenuItem ? 'Redeeming…' : 'Confirm Redeem'}
+                </button>
+                <button onClick={() => { setMenuConfirm(null); setShowVisitSheet(true); }} className="w-full text-brand-navy/75 font-bold text-sm py-2">Cancel</button>
+              </motion.div>
+            </div>
+          );
+        })()}
+      </AnimatePresence>
 
       {/* Top collectors */}
       <div className="glass-card p-5 rounded-[2rem] space-y-4">
