@@ -15956,7 +15956,7 @@ function BadgeSwipeRow({ badges, onSelectBadge }: { badges: AppBadge[]; onSelect
                 {b.icon}
               </div>
             </div>
-            <span className="text-[11px] font-bold text-brand-navy/90 text-center w-16 leading-tight line-clamp-2">{b.name}</span>
+            <span className="text-[11px] font-bold text-brand-navy/90 text-center w-16 leading-tight line-clamp-2 pt-1.5">{b.name}</span>
           </button>
         ))}
       </div>
