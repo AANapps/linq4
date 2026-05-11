@@ -15936,20 +15936,27 @@ function BadgeSwipeRow({ badges, onSelectBadge }: { badges: AppBadge[]; onSelect
   if (badges.length === 0) return null;
   return (
     <div className="overflow-x-auto no-scrollbar -mx-5 px-5">
-      <div className={cn('flex gap-3 pb-1', badges.length <= 5 ? 'justify-center' : 'w-max')}>
+      <div className={cn('flex gap-5 pb-1 pt-2', badges.length <= 4 ? 'justify-center' : 'w-max')}>
         {badges.map(b => (
           <button
             key={b.id}
             onClick={() => onSelectBadge(b)}
-            className="flex flex-col items-center gap-1 shrink-0 active:scale-95 transition-transform"
+            className="flex flex-col items-center gap-2.5 shrink-0 active:scale-95 transition-transform"
           >
             <div
-              className="w-12 h-12 rounded-[1rem] flex items-center justify-center text-2xl shadow-sm"
-              style={{ background: `linear-gradient(135deg, ${b.color}ee, ${b.color}99)` }}
+              className="relative w-14 h-14 rotate-45 rounded-lg overflow-hidden"
+              style={{
+                background: `linear-gradient(135deg, ${b.color}ee, ${b.color}99)`,
+                border: '2.5px solid #FBBF24',
+                boxShadow: '0 0 0 1px #F59E0B55, 0 6px 16px -4px rgba(0,0,0,0.25)',
+              }}
             >
-              {b.icon}
+              <span className="badge-shine-ray" aria-hidden="true" />
+              <div className="-rotate-45 flex items-center justify-center w-full h-full text-2xl">
+                {b.icon}
+              </div>
             </div>
-            <span className="text-[9px] font-bold text-brand-navy/80 text-center w-12 leading-tight line-clamp-2">{b.name}</span>
+            <span className="text-[9px] font-bold text-brand-navy/90 text-center w-16 leading-tight line-clamp-2">{b.name}</span>
           </button>
         ))}
       </div>

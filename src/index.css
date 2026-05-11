@@ -55,6 +55,30 @@
   background: linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 40%, #2563eb 70%, #3b82f6 100%);
 }
 
+@keyframes badge-shine-sweep {
+  0%   { transform: translateX(-160%) skewX(-15deg); opacity: 0; }
+  10%  { opacity: 1; }
+  36%  { transform: translateX(260%) skewX(-15deg); opacity: 0.9; }
+  37%  { opacity: 0; }
+  100% { transform: translateX(260%) skewX(-15deg); opacity: 0; }
+}
+
+.badge-shine-ray {
+  position: absolute;
+  top: -30%;
+  left: 0;
+  width: 35%;
+  height: 160%;
+  background: linear-gradient(
+    105deg,
+    transparent 10%,
+    rgba(255, 255, 255, 0.9) 50%,
+    transparent 90%
+  );
+  animation: badge-shine-sweep 2.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
 @keyframes shine-sweep {
   0%   { transform: translateX(-120%) skewX(-20deg); opacity: 0; }
   8%   { opacity: 1; }
