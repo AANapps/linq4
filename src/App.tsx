@@ -11341,7 +11341,10 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
   const membershipPoints = card.membership_points ?? 0;
   const pointsRate = store?.membershipPointsRate ?? 0;
   const redemptionRate = store?.membershipRedemptionRate ?? 0;
-  const redeemableValue = redemptionRate > 0 ? membershipPoints / redemptionRate : 0;
+  const totalValueRedeemed = card.total_value_redeemed ?? 0;
+  const pointsAlreadyRedeemed = Math.round(totalValueRedeemed * redemptionRate);
+  const netAvailablePoints = Math.max(0, membershipPoints - pointsAlreadyRedeemed);
+  const redeemableValue = redemptionRate > 0 ? netAvailablePoints / redemptionRate : 0;
 
   const visitRewards = (store?.membershipVisitRewards ?? []).slice().sort((a, b) => a.visits - b.visits);
   const nextVisitReward = visitRewards.find(r => r.visits > membershipVisits);
@@ -11374,8 +11377,8 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
 
   const redeemDollarNum = parseFloat(redeemDollars) || 0;
   const pointsToDeduct = redemptionRate > 0 ? Math.round(redeemDollarNum * redemptionRate) : 0;
-  const maxRedeemDollars = redemptionRate > 0 ? membershipPoints / redemptionRate : 0;
-  const canProceedRedeem = redeemDollarNum > 0 && pointsToDeduct > 0 && pointsToDeduct <= membershipPoints;
+  const maxRedeemDollars = redemptionRate > 0 ? netAvailablePoints / redemptionRate : 0;
+  const canProceedRedeem = redeemDollarNum > 0 && pointsToDeduct > 0 && pointsToDeduct <= netAvailablePoints;
 
   const closeRedeemFlow = () => { setShowRedeemFlow(false); setRedeemDollars(''); setRedeemStage('input'); };
 
@@ -11384,7 +11387,6 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
     setRedeeming(true);
     try {
       await updateDoc(doc(db, 'cards', card.id), {
-        membership_points: increment(-pointsToDeduct),
         total_value_redeemed: increment(redeemDollarNum),
         last_redeemed_at: serverTimestamp(),
       });
@@ -11431,7 +11433,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                   <div className={`rounded-2xl p-3 mb-4 text-center ${canProceedRedeem ? 'bg-emerald-50 border border-emerald-100' : 'bg-red-50 border border-red-100'}`}>
                     <p className={`font-bold text-sm ${canProceedRedeem ? 'text-emerald-600' : 'text-red-500'}`}>
                       {canProceedRedeem
-                        ? `= ${pointsToDeduct} pts · ${membershipPoints - pointsToDeduct} remaining`
+                        ? `= ${pointsToDeduct} pts · ${netAvailablePoints - pointsToDeduct} remaining`
                         : `Not enough points (max $${maxRedeemDollars.toFixed(2)})`}
                     </p>
                   </div>
@@ -11476,7 +11478,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                     </div>
                     <div className="text-center">
                       <p className="text-brand-navy/40 text-[9px] font-bold uppercase tracking-widest">Remaining</p>
-                      <p className="text-brand-navy font-black text-xl">{membershipPoints - pointsToDeduct}</p>
+                      <p className="text-brand-navy font-black text-xl">{netAvailablePoints - pointsToDeduct}</p>
                     </div>
                   </div>
                   <button onClick={() => { closeRedeemFlow(); setShowRedeemSheet(false); }} className="w-full bg-brand-navy text-white py-3.5 rounded-2xl font-bold text-sm">Done</button>
@@ -21885,13 +21887,15 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
         const rewards = mc.earned_rewards ?? 0;
         const pointsRate = store.membershipPointsRate ?? 0;
         const redemptionRate = store.membershipRedemptionRate ?? 0;
-        const redeemableValue = redemptionRate > 0 ? pts / redemptionRate : 0;
+        const spvPointsAlreadyRedeemed = Math.round((mc.total_value_redeemed ?? 0) * redemptionRate);
+        const spvNetAvailable = Math.max(0, pts - spvPointsAlreadyRedeemed);
+        const redeemableValue = redemptionRate > 0 ? spvNetAvailable / redemptionRate : 0;
         const color = store.membershipColor || '#0f4c81';
 
         const redeemDollarNum = parseFloat(redeemDollars) || 0;
         const pointsToDeduct = redemptionRate > 0 ? Math.round(redeemDollarNum * redemptionRate) : 0;
-        const maxRedeemDollars = redemptionRate > 0 ? pts / redemptionRate : 0;
-        const canProceed = redeemDollarNum > 0 && pointsToDeduct > 0 && pointsToDeduct <= pts;
+        const maxRedeemDollars = redemptionRate > 0 ? spvNetAvailable / redemptionRate : 0;
+        const canProceed = redeemDollarNum > 0 && pointsToDeduct > 0 && pointsToDeduct <= spvNetAvailable;
 
         const closeRedeem = () => { setShowRedeemFlow(false); setRedeemDollars(''); setRedeemStage('input'); setRedeeming(false); };
 
@@ -21900,7 +21904,6 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
           setRedeeming(true);
           try {
             await updateDoc(doc(db, 'cards', mc.id), {
-              membership_points: increment(-pointsToDeduct),
               total_value_redeemed: increment(redeemDollarNum),
               last_redeemed_at: serverTimestamp(),
             });
@@ -22074,7 +22077,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                           <div className={`rounded-2xl p-3 mb-4 text-center ${canProceed ? 'bg-emerald-50 border border-emerald-100' : 'bg-red-50 border border-red-100'}`}>
                             <p className={`font-bold text-sm ${canProceed ? 'text-emerald-600' : 'text-red-500'}`}>
                               {canProceed
-                                ? `= ${pointsToDeduct} pts lost · ${pts - pointsToDeduct} remaining`
+                                ? `= ${pointsToDeduct} pts · ${spvNetAvailable - pointsToDeduct} remaining`
                                 : `Not enough points (max £${maxRedeemDollars.toFixed(2)})`}
                             </p>
                           </div>
@@ -22118,7 +22121,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                           </div>
                           <div className="text-center">
                             <p className="text-brand-navy/40 text-[9px] font-bold uppercase tracking-widest">Remaining</p>
-                            <p className="text-brand-navy font-black text-xl">{pts - pointsToDeduct}</p>
+                            <p className="text-brand-navy font-black text-xl">{spvNetAvailable - pointsToDeduct}</p>
                           </div>
                         </div>
                         <button onClick={() => { closeRedeem(); setShowSpendSheet(false); }} className="w-full bg-brand-navy text-white py-3.5 rounded-2xl font-bold text-sm">Done</button>
