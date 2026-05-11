@@ -21277,6 +21277,10 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
   const [card, setCard] = useState<Card | null>(null);
   const [membershipCard, setMembershipCard] = useState<Card | null>(null);
   const [showSpendSheet, setShowSpendSheet] = useState(false);
+  const [showRedeemFlow, setShowRedeemFlow] = useState(false);
+  const [redeemDollars, setRedeemDollars] = useState('');
+  const [redeemStage, setRedeemStage] = useState<'input' | 'swipe' | 'success'>('input');
+  const [redeeming, setRedeeming] = useState(false);
   const [isFollowingStore, setIsFollowingStore] = useState(false);
   const [allStoreCards, setAllStoreCards] = useState<Card[]>([]);
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -21807,6 +21811,27 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
         const redemptionRate = store.membershipRedemptionRate ?? 0;
         const redeemableValue = redemptionRate > 0 ? pts / redemptionRate : 0;
         const color = store.membershipColor || '#0f4c81';
+
+        const redeemDollarNum = parseFloat(redeemDollars) || 0;
+        const pointsToDeduct = redemptionRate > 0 ? Math.round(redeemDollarNum * redemptionRate) : 0;
+        const maxRedeemDollars = redemptionRate > 0 ? pts / redemptionRate : 0;
+        const canProceed = redeemDollarNum > 0 && pointsToDeduct > 0 && pointsToDeduct <= pts;
+
+        const closeRedeem = () => { setShowRedeemFlow(false); setRedeemDollars(''); setRedeemStage('input'); setRedeeming(false); };
+
+        const handleRedeem = async () => {
+          if (redeeming || !canProceed) return;
+          setRedeeming(true);
+          try {
+            await updateDoc(doc(db, 'cards', mc.id), {
+              membership_points: increment(-pointsToDeduct),
+              last_redeemed_at: serverTimestamp(),
+            });
+            setRedeemStage('success');
+          } catch (err) { console.error(err); }
+          finally { setRedeeming(false); }
+        };
+
         return (
           <>
             <button
@@ -21835,6 +21860,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
               </div>
             </button>
 
+            {/* Detail sheet */}
             <AnimatePresence>
               {showSpendSheet && (
                 <div className="fixed inset-0 z-[120] flex items-end justify-center">
@@ -21894,7 +21920,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
 
                     {/* How it works */}
                     {(pointsRate > 0 || redemptionRate > 0 || store.membershipSpendThreshold) && (
-                      <div className="bg-brand-bg rounded-2xl p-4 space-y-3">
+                      <div className="bg-brand-bg rounded-2xl p-4 space-y-3 mb-6">
                         <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">How it works</p>
                         {pointsRate > 0 && (
                           <div className="flex items-center gap-3">
@@ -21923,7 +21949,104 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                       </div>
                     )}
 
-                    <button onClick={() => setShowSpendSheet(false)} className="w-full text-brand-navy/40 text-sm font-bold py-3 mt-4">Close</button>
+                    {redeemableValue > 0 && (
+                      <button
+                        onClick={() => { setShowRedeemFlow(true); }}
+                        className="w-full bg-emerald-500 text-white py-3.5 rounded-2xl font-bold text-sm mb-3 flex items-center justify-center gap-2"
+                      >
+                        <Gift size={15} /> Redeem Points
+                      </button>
+                    )}
+                    <button onClick={() => setShowSpendSheet(false)} className="w-full text-brand-navy/40 text-sm font-bold py-2">Close</button>
+                  </motion.div>
+                </div>
+              )}
+            </AnimatePresence>
+
+            {/* Redeem flow modal */}
+            <AnimatePresence>
+              {showRedeemFlow && (
+                <div className="fixed inset-0 z-[130] flex items-end justify-center">
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={redeemStage !== 'success' ? closeRedeem : undefined} />
+                  <motion.div
+                    initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+                    transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+                    className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-10 shadow-2xl"
+                  >
+                    {redeemStage === 'input' && (
+                      <>
+                        <div className="flex items-center justify-between mb-6">
+                          <div>
+                            <h3 className="font-display text-2xl font-bold">Redeem Points</h3>
+                            <p className="text-brand-navy/40 text-xs mt-0.5">{pts.toLocaleString()} pts · up to £{maxRedeemDollars.toFixed(2)} off</p>
+                          </div>
+                          <button onClick={closeRedeem} className="p-2 text-brand-navy/40"><X size={20} /></button>
+                        </div>
+                        <div className="flex items-center gap-2 bg-brand-bg rounded-2xl px-5 py-4 mb-3">
+                          <span className="text-brand-navy font-black text-3xl">£</span>
+                          <input
+                            type="number" min="0" step="0.50"
+                            value={redeemDollars}
+                            onChange={e => setRedeemDollars(e.target.value)}
+                            className="flex-1 bg-transparent font-black text-3xl text-brand-navy outline-none w-full"
+                            placeholder="0.00"
+                            autoFocus
+                          />
+                        </div>
+                        {redeemDollarNum > 0 && (
+                          <div className={`rounded-2xl p-3 mb-4 text-center ${canProceed ? 'bg-emerald-50 border border-emerald-100' : 'bg-red-50 border border-red-100'}`}>
+                            <p className={`font-bold text-sm ${canProceed ? 'text-emerald-600' : 'text-red-500'}`}>
+                              {canProceed
+                                ? `= ${pointsToDeduct} pts lost · ${pts - pointsToDeduct} remaining`
+                                : `Not enough points (max £${maxRedeemDollars.toFixed(2)})`}
+                            </p>
+                          </div>
+                        )}
+                        <button
+                          onClick={() => setRedeemStage('swipe')}
+                          disabled={!canProceed}
+                          className="w-full bg-emerald-500 text-white py-3.5 rounded-2xl font-bold text-sm disabled:opacity-40 mb-3"
+                        >
+                          Continue
+                        </button>
+                        <button onClick={closeRedeem} className="w-full text-brand-navy/40 text-sm font-bold py-2">Cancel</button>
+                      </>
+                    )}
+                    {redeemStage === 'swipe' && (
+                      <>
+                        <div className="text-center mb-6">
+                          <h3 className="font-display text-2xl font-bold mb-1">Show Staff to Authorize</h3>
+                          <p className="text-brand-navy/40 text-sm">Ask a staff member to confirm then swipe</p>
+                        </div>
+                        <div className="bg-emerald-50 rounded-3xl p-6 text-center mb-6 border border-emerald-100">
+                          <p className="text-emerald-600/60 text-[10px] font-bold uppercase tracking-widest mb-1">Redeeming</p>
+                          <p className="text-emerald-600 font-black text-5xl">£{redeemDollarNum.toFixed(2)}</p>
+                          <p className="text-emerald-600/60 text-sm mt-1 font-bold">{pointsToDeduct} points</p>
+                        </div>
+                        <SwipeConfirm onConfirm={handleRedeem} />
+                        <button onClick={() => setRedeemStage('input')} className="w-full text-brand-navy/40 text-sm font-bold py-3 mt-2">← Back</button>
+                      </>
+                    )}
+                    {redeemStage === 'success' && (
+                      <div className="text-center">
+                        <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Check size={28} className="text-emerald-500" />
+                        </div>
+                        <h3 className="font-display text-2xl font-bold mb-1">Redeemed!</h3>
+                        <p className="text-brand-navy/40 text-sm mb-6">£{redeemDollarNum.toFixed(2)} off applied</p>
+                        <div className="glass-card rounded-2xl p-4 mb-6 grid grid-cols-2 gap-3">
+                          <div className="text-center">
+                            <p className="text-brand-navy/40 text-[9px] font-bold uppercase tracking-widest">Points Used</p>
+                            <p className="text-brand-navy font-black text-xl">{pointsToDeduct}</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-brand-navy/40 text-[9px] font-bold uppercase tracking-widest">Remaining</p>
+                            <p className="text-brand-navy font-black text-xl">{pts - pointsToDeduct}</p>
+                          </div>
+                        </div>
+                        <button onClick={() => { closeRedeem(); setShowSpendSheet(false); }} className="w-full bg-brand-navy text-white py-3.5 rounded-2xl font-bold text-sm">Done</button>
+                      </div>
+                    )}
                   </motion.div>
                 </div>
               )}
