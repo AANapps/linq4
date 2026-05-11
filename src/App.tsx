@@ -391,6 +391,7 @@ interface Card {
   earned_rewards?: number;
   membership_points?: number;
   total_value_redeemed?: number;
+  total_visits_redeemed?: number;
   last_earned?: number;
   userName?: string;
   userPhoto?: string;
@@ -11351,12 +11352,15 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
   const lastVisitReward = visitRewards.filter(r => r.visits <= membershipVisits).pop();
   const menuItems = store?.membershipMenuItems ?? [];
 
+  const totalVisitsRedeemed = card.total_visits_redeemed ?? 0;
+  const netAvailableVisits = Math.max(0, membershipVisits - totalVisitsRedeemed);
+
   const handleMenuRedeem = async (item: { id: string; name: string; points: number }) => {
-    if (redeemingMenuItem || membershipVisits < item.points) return;
+    if (redeemingMenuItem || netAvailableVisits < item.points) return;
     setRedeemingMenuItem(item.id);
     try {
       await updateDoc(doc(db, 'cards', card.id), {
-        membership_visits: increment(-item.points),
+        total_visits_redeemed: increment(item.points),
         last_redeemed_at: serverTimestamp(),
       });
       await addDoc(collection(db, 'transactions'), {
@@ -11620,7 +11624,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-display text-2xl font-bold">{membershipName}</h3>
-                    <p className="text-brand-navy/75 text-xs mt-0.5">{membershipVisits} points available</p>
+                    <p className="text-brand-navy/75 text-xs mt-0.5">{netAvailableVisits} points available</p>
                   </div>
                   <button onClick={() => setShowRedeemSheet(false)} className="p-2 text-brand-navy/75"><X size={20} /></button>
                 </div>
@@ -11631,7 +11635,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                     <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-3">Redeem Points</p>
                     <div className="space-y-2">
                       {menuItems.map(item => {
-                        const canAfford = membershipVisits >= item.points;
+                        const canAfford = netAvailableVisits >= item.points;
                         const isRedeeming = redeemingMenuItem === item.id;
                         return (
                           <button
@@ -11939,7 +11943,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-display text-2xl font-bold">{membershipName}</h3>
-                    <p className="text-brand-navy/75 text-xs mt-0.5">{membershipVisits} points available</p>
+                    <p className="text-brand-navy/75 text-xs mt-0.5">{netAvailableVisits} points available</p>
                   </div>
                   <button onClick={() => setShowRedeemSheet(false)} className="p-2 text-brand-navy/75"><X size={20} /></button>
                 </div>
@@ -11952,7 +11956,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                     <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-3">Redeem Points</p>
                     <div className="space-y-2">
                       {menuItems.map(item => {
-                        const canAfford = membershipVisits >= item.points;
+                        const canAfford = netAvailableVisits >= item.points;
                         const isRedeeming = redeemingMenuItem === item.id;
                         return (
                           <button
@@ -21598,8 +21602,8 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
       members: new Set(visitMemberCardsAll.map(c => c.user_id)).size,
       metric: visitMemberCardsAll.reduce((s, c) => s + (c.total_points_earned || c.membership_visits || 0), 0),
       metricLabel: 'Points Earned',
-      rewards: visitMemberCardsAll.reduce((s, c) => s + (c.earned_rewards || 0), 0),
-      rewardsLabel: 'Redeemed',
+      rewards: visitMemberCardsAll.reduce((s, c) => s + (c.total_visits_redeemed || 0), 0),
+      rewardsLabel: 'Pts Redeemed',
     });
   }
   if (store.membershipEnabled && store.membershipType === 'spend') {
@@ -22121,6 +22125,8 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
       {membershipCard && store.membershipType === 'visit' && (() => {
         const mc = membershipCard;
         const visits = mc.membership_visits ?? 0;
+        const visitsAlreadyRedeemed = mc.total_visits_redeemed ?? 0;
+        const netVisits = Math.max(0, visits - visitsAlreadyRedeemed);
         const color = store.membershipColor || '#0f4c81';
         const visitRewards = (store.membershipVisitRewards ?? []).slice().sort((a: any, b: any) => a.visits - b.visits);
         const nextReward = visitRewards.find((r: any) => r.visits > visits);
@@ -22169,14 +22175,14 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                     <div className="flex items-center justify-between mb-6">
                       <div>
                         <h3 className="font-display text-2xl font-bold">{store.membershipName || 'Membership'}</h3>
-                        <p className="text-brand-navy/75 text-xs mt-0.5">{fmtK(visits)} points available</p>
+                        <p className="text-brand-navy/75 text-xs mt-0.5">{fmtK(netVisits)} points available</p>
                       </div>
                       <button onClick={() => setShowVisitSheet(false)} className="p-2 text-brand-navy/75"><X size={20} /></button>
                     </div>
 
                     {/* Points + next reward */}
                     <div className="glass-card p-5 rounded-2xl mb-4 text-center">
-                      <p className="text-brand-navy font-black text-5xl leading-none">{fmtK(visits)}</p>
+                      <p className="text-brand-navy font-black text-5xl leading-none">{fmtK(netVisits)}</p>
                       <p className="text-brand-navy/75 text-xs font-bold uppercase tracking-widest mt-1.5">Points</p>
                       {nextReward && (
                         <>
@@ -22213,7 +22219,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                         <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-3">Redeem Points</p>
                         <div className="space-y-2">
                           {menuItems.map((item: any) => {
-                            const canAfford = visits >= item.points;
+                            const canAfford = netVisits >= item.points;
                             return (
                               <div key={item.id} className={cn('flex items-center justify-between px-4 py-3 rounded-2xl', canAfford ? 'bg-brand-bg' : 'bg-brand-bg/50 opacity-50')}>
                                 <span className="font-bold text-sm text-brand-navy">{item.name}</span>
