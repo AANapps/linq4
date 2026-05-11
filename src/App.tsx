@@ -382,6 +382,7 @@ interface Card {
   total_spent?: number;
   earned_rewards?: number;
   membership_points?: number;
+  total_value_redeemed?: number;
   last_earned?: number;
   userName?: string;
   userPhoto?: string;
@@ -11376,6 +11377,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
     try {
       await updateDoc(doc(db, 'cards', card.id), {
         membership_points: increment(-pointsToDeduct),
+        total_value_redeemed: increment(redeemDollarNum),
         last_redeemed_at: serverTimestamp(),
       });
       setRedeemStage('success');
@@ -21587,7 +21589,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
   const stampCardsAll = allStoreCards.filter(c => !c.isArchived && c.card_type !== 'membership' && c.card_type !== 'sub');
   const visitMemberCardsAll = allStoreCards.filter(c => !c.isArchived && c.card_type === 'membership' && c.membership_type === 'visit');
   const spendMemberCardsAll = allStoreCards.filter(c => !c.isArchived && c.card_type === 'membership' && c.membership_type === 'spend');
-  const statSlides: Array<{ label: string; members: number; metric: number; metricLabel: string; rewards: number }> = [];
+  const statSlides: Array<{ label: string; members: number; metric: number; metricLabel: string; rewards: number; rewardsLabel: string; rewardsPrefix?: string }> = [];
   if (store.cardEnabled) {
     statSlides.push({
       label: 'Stamp Card',
@@ -21595,6 +21597,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
       metric: stampCardsAll.reduce((s, c) => s + (c.current_stamps || 0) + (c.total_completed_cycles || 0) * stampsReq, 0),
       metricLabel: 'Stamps',
       rewards: stampCardsAll.reduce((s, c) => s + (c.total_completed_cycles || 0), 0),
+      rewardsLabel: 'Redeemed',
     });
   }
   if (store.membershipEnabled && store.membershipType === 'visit') {
@@ -21604,6 +21607,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
       metric: visitMemberCardsAll.reduce((s, c) => s + (c.membership_visits || 0), 0),
       metricLabel: 'Points',
       rewards: visitMemberCardsAll.reduce((s, c) => s + (c.earned_rewards || 0), 0),
+      rewardsLabel: 'Redeemed',
     });
   }
   if (store.membershipEnabled && store.membershipType === 'spend') {
@@ -21612,7 +21616,9 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
       members: new Set(spendMemberCardsAll.map(c => c.user_id)).size,
       metric: spendMemberCardsAll.reduce((s, c) => s + (c.membership_points || 0), 0),
       metricLabel: 'Points',
-      rewards: spendMemberCardsAll.reduce((s, c) => s + (c.earned_rewards || 0), 0),
+      rewards: spendMemberCardsAll.reduce((s, c) => s + (c.total_value_redeemed || 0), 0),
+      rewardsLabel: '£ Redeemed',
+      rewardsPrefix: '£',
     });
   }
   // Leaderboard: type-aware — stamps for loyalty, visits for visit membership, spend for spend membership.
@@ -21711,8 +21717,10 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                       <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/40 mt-0.5">{slide.metricLabel}</p>
                     </div>
                     <div>
-                      <p className="text-2xl font-black text-brand-navy">{slide.rewards}</p>
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/40 mt-0.5">Redeemed</p>
+                      <p className="text-2xl font-black text-brand-navy">
+                        {slide.rewardsPrefix}{slide.rewardsPrefix ? slide.rewards.toFixed(2) : slide.rewards}
+                      </p>
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/40 mt-0.5">{slide.rewardsLabel}</p>
                     </div>
                   </div>
                 </div>
@@ -21885,6 +21893,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
           try {
             await updateDoc(doc(db, 'cards', mc.id), {
               membership_points: increment(-pointsToDeduct),
+              total_value_redeemed: increment(redeemDollarNum),
               last_redeemed_at: serverTimestamp(),
             });
             setRedeemStage('success');
