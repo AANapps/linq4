@@ -21276,6 +21276,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
   const [showAdminEdit, setShowAdminEdit] = useState(false);
   const [card, setCard] = useState<Card | null>(null);
   const [membershipCard, setMembershipCard] = useState<Card | null>(null);
+  const [showSpendSheet, setShowSpendSheet] = useState(false);
   const [isFollowingStore, setIsFollowingStore] = useState(false);
   const [allStoreCards, setAllStoreCards] = useState<Card[]>([]);
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -21796,18 +21797,140 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
         />
       )}
 
-      {/* Spend card info — show handle to give vendor */}
-      {membershipCard && store.membershipType === 'spend' && profile?.handle && (
-        <div className="bg-brand-navy rounded-2xl px-5 py-4 flex items-center gap-4">
-          <div className="flex-1 min-w-0">
-            <p className="text-white/50 text-[9px] font-bold uppercase tracking-widest mb-0.5">Your handle</p>
-            <p className="text-white font-black text-xl truncate">@{profile.handle}</p>
-          </div>
-          <div className="text-right shrink-0">
-            <p className="text-white/70 text-[10px] font-bold leading-tight">Give this to the<br />vendor when you spend</p>
-          </div>
-        </div>
-      )}
+      {/* Spend card — collect points tile */}
+      {membershipCard && store.membershipType === 'spend' && (() => {
+        const mc = membershipCard;
+        const pts = mc.membership_points ?? 0;
+        const spent = mc.total_spent ?? 0;
+        const rewards = mc.earned_rewards ?? 0;
+        const pointsRate = store.membershipPointsRate ?? 0;
+        const redemptionRate = store.membershipRedemptionRate ?? 0;
+        const redeemableValue = redemptionRate > 0 ? pts / redemptionRate : 0;
+        const color = store.membershipColor || '#0f4c81';
+        return (
+          <>
+            <button
+              onClick={() => setShowSpendSheet(true)}
+              className="w-full rounded-[2rem] overflow-hidden shadow-lg active:scale-[0.98] transition-transform text-left"
+            >
+              <div className="relative overflow-hidden px-5 py-4 flex items-center gap-3" style={{ backgroundColor: color }}>
+                <span className="card-shine-ray" aria-hidden="true" />
+                <div className="relative z-10 w-10 h-10 rounded-full overflow-hidden border-2 border-white/50 shrink-0">
+                  <img src={store.logoUrl || `https://picsum.photos/seed/${store.id}/200/200`} alt="" className="w-full h-full object-cover" />
+                </div>
+                <div className="relative z-10 flex-1 min-w-0">
+                  <p className="text-white font-black text-sm">{store.membershipName || 'Membership'}</p>
+                  <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">Collect Points</p>
+                </div>
+                <div className="relative z-10 text-right shrink-0">
+                  <p className="text-white font-black text-2xl leading-none">{pts.toLocaleString()}</p>
+                  <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">pts</p>
+                </div>
+              </div>
+              <div className="bg-white px-5 py-3 flex items-center justify-between">
+                <span className="text-brand-navy/40 text-[10px] font-bold">£{spent.toFixed(2)} spent{rewards > 0 ? ` · ${rewards} rewards` : ''}</span>
+                {redeemableValue > 0
+                  ? <span className="text-emerald-600 font-black text-xs">≈ £{redeemableValue.toFixed(2)} off</span>
+                  : <span className="text-brand-navy/30 text-[10px] font-bold">Tap for details</span>}
+              </div>
+            </button>
+
+            <AnimatePresence>
+              {showSpendSheet && (
+                <div className="fixed inset-0 z-[120] flex items-end justify-center">
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowSpendSheet(false)} />
+                  <motion.div
+                    initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+                    transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+                    className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-10 shadow-2xl"
+                  >
+                    <div className="w-10 h-1 bg-brand-navy/15 rounded-full mx-auto mb-6" />
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <h3 className="font-display text-2xl font-bold">{store.membershipName || 'Membership'}</h3>
+                        <p className="text-brand-navy/40 text-xs mt-0.5">Points & Details</p>
+                      </div>
+                      <button onClick={() => setShowSpendSheet(false)} className="p-2 text-brand-navy/40"><X size={20} /></button>
+                    </div>
+
+                    {/* Handle banner */}
+                    {profile?.handle && (
+                      <div className="bg-brand-navy rounded-2xl px-5 py-4 mb-6 flex items-center gap-4">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white/50 text-[9px] font-bold uppercase tracking-widest mb-0.5">Your handle</p>
+                          <p className="text-white font-black text-xl truncate">@{profile.handle}</p>
+                        </div>
+                        <p className="text-white/60 text-[10px] font-bold leading-tight text-right shrink-0">Give this to the<br />vendor when you spend</p>
+                      </div>
+                    )}
+
+                    {/* Balance */}
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <div className="glass-card p-5 rounded-2xl">
+                        <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest mb-1">Points</p>
+                        <p className="text-3xl font-black text-brand-navy">{pts.toLocaleString()}</p>
+                        {pointsRate > 0 && <p className="text-[10px] text-brand-navy/40 mt-1">{pointsRate} pts per £1</p>}
+                      </div>
+                      <div className="glass-card p-5 rounded-2xl">
+                        <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest mb-1">Value</p>
+                        <p className="text-3xl font-black text-emerald-600">£{redeemableValue.toFixed(2)}</p>
+                        {redemptionRate > 0 && <p className="text-[10px] text-brand-navy/40 mt-1">{redemptionRate} pts = £1</p>}
+                      </div>
+                    </div>
+
+                    {/* Spend summary */}
+                    <div className="glass-card p-4 rounded-2xl flex items-center justify-between mb-4">
+                      <div>
+                        <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">Total Spent</p>
+                        <p className="text-2xl font-black text-brand-navy mt-0.5">£{spent.toFixed(2)}</p>
+                      </div>
+                      {rewards > 0 && (
+                        <div className="text-right">
+                          <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">Rewards</p>
+                          <p className="text-2xl font-black text-emerald-600 mt-0.5">{rewards}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* How it works */}
+                    {(pointsRate > 0 || redemptionRate > 0 || store.membershipSpendThreshold) && (
+                      <div className="bg-brand-bg rounded-2xl p-4 space-y-3">
+                        <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">How it works</p>
+                        {pointsRate > 0 && (
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-xl bg-brand-navy/8 flex items-center justify-center shrink-0">
+                              <Star size={14} className="text-brand-navy/60" />
+                            </div>
+                            <p className="text-sm text-brand-navy/70">Earn <span className="font-bold text-brand-navy">{pointsRate} points</span> for every £1 spent</p>
+                          </div>
+                        )}
+                        {redemptionRate > 0 && (
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
+                              <Gift size={14} className="text-emerald-600" />
+                            </div>
+                            <p className="text-sm text-brand-navy/70">Redeem <span className="font-bold text-brand-navy">{redemptionRate} points</span> for £1 off</p>
+                          </div>
+                        )}
+                        {store.membershipSpendThreshold && store.membershipSpendReward && (
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-xl bg-brand-gold/10 flex items-center justify-center shrink-0">
+                              <Trophy size={14} className="text-brand-gold" />
+                            </div>
+                            <p className="text-sm text-brand-navy/70">Get <span className="font-bold text-brand-navy">{store.membershipSpendReward}</span> every £{store.membershipSpendThreshold} spent</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <button onClick={() => setShowSpendSheet(false)} className="w-full text-brand-navy/40 text-sm font-bold py-3 mt-4">Close</button>
+                  </motion.div>
+                </div>
+              )}
+            </AnimatePresence>
+          </>
+        );
+      })()}
 
       {/* Top collectors */}
       <div className="glass-card p-5 rounded-[2rem] space-y-4">
