@@ -361,6 +361,14 @@ function storeCardActive(store: StoreProfile): boolean {
   return store.cardEnabled !== false;
 }
 
+function fmtK(n: number): string {
+  if (n >= 1000) {
+    const k = n / 1000;
+    return (k % 1 === 0 ? k.toFixed(0) : k.toFixed(1).replace(/\.0$/, '')) + 'k';
+  }
+  return n.toLocaleString();
+}
+
 interface Card {
   id: string;
   user_id: string;
@@ -10418,9 +10426,9 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
         const newRewards = threshold > 0 ? Math.floor(newSpent / threshold) : 0;
         const earnedPts = Math.round(txAmount * (store.membershipPointsRate ?? 0));
         if (cardDoc.exists()) {
-          await updateDoc(cardRef, { total_spent: increment(txAmount), earned_rewards: newRewards, membership_points: increment(earnedPts), last_transaction_at: serverTimestamp() });
+          await updateDoc(cardRef, { total_spent: increment(txAmount), earned_rewards: newRewards, membership_points: increment(earnedPts), total_points_earned: increment(earnedPts), last_transaction_at: serverTimestamp() });
         } else {
-          await setDoc(cardRef, { user_id: customer.uid, store_id: store.id, card_type: 'membership', membership_type: 'spend', total_spent: txAmount, earned_rewards: newRewards, membership_points: earnedPts, isArchived: false, last_transaction_at: serverTimestamp(), userName: customer.name, userPhoto: customer.photoURL || '' });
+          await setDoc(cardRef, { user_id: customer.uid, store_id: store.id, card_type: 'membership', membership_type: 'spend', total_spent: txAmount, earned_rewards: newRewards, membership_points: earnedPts, total_points_earned: earnedPts, isArchived: false, last_transaction_at: serverTimestamp(), userName: customer.name, userPhoto: customer.photoURL || '' });
           await updateDoc(doc(db, 'users', customer.uid), { total_cards_held: increment(1) });
         }
         await addDoc(collection(db, 'transactions'), { user_id: customer.uid, store_id: store.id, card_type: 'membership', membership_type: 'spend', transaction_amount: txAmount, points_earned: earnedPts, rewards_earned: newRewards - Math.floor(prevSpent / (threshold || 1)), issued_at: serverTimestamp() });
@@ -10429,9 +10437,9 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
       } else {
         const stampsThisVisit = store.membershipStampsPerVisit || 1;
         if (cardDoc.exists()) {
-          await updateDoc(cardRef, { membership_visits: increment(stampsThisVisit), last_transaction_at: serverTimestamp() });
+          await updateDoc(cardRef, { membership_visits: increment(stampsThisVisit), total_points_earned: increment(stampsThisVisit), last_transaction_at: serverTimestamp() });
         } else {
-          await setDoc(cardRef, { user_id: customer.uid, store_id: store.id, card_type: 'membership', membership_type: 'visit', membership_visits: stampsThisVisit, isArchived: false, last_transaction_at: serverTimestamp(), userName: customer.name, userPhoto: customer.photoURL || '' });
+          await setDoc(cardRef, { user_id: customer.uid, store_id: store.id, card_type: 'membership', membership_type: 'visit', membership_visits: stampsThisVisit, total_points_earned: stampsThisVisit, isArchived: false, last_transaction_at: serverTimestamp(), userName: customer.name, userPhoto: customer.photoURL || '' });
           await updateDoc(doc(db, 'users', customer.uid), { total_cards_held: increment(1) });
         }
         await addDoc(collection(db, 'transactions'), { user_id: customer.uid, store_id: store.id, card_type: 'membership', membership_type: 'visit', stamps_per_visit: stampsThisVisit, issued_at: serverTimestamp() });
@@ -21604,8 +21612,8 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
     statSlides.push({
       label: store.membershipName || 'Visit Card',
       members: new Set(visitMemberCardsAll.map(c => c.user_id)).size,
-      metric: visitMemberCardsAll.reduce((s, c) => s + (c.membership_visits || 0), 0),
-      metricLabel: 'Points',
+      metric: visitMemberCardsAll.reduce((s, c) => s + (c.total_points_earned || c.membership_visits || 0), 0),
+      metricLabel: 'Points Earned',
       rewards: visitMemberCardsAll.reduce((s, c) => s + (c.earned_rewards || 0), 0),
       rewardsLabel: 'Redeemed',
     });
@@ -21614,8 +21622,8 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
     statSlides.push({
       label: store.membershipName || 'Spend Card',
       members: new Set(spendMemberCardsAll.map(c => c.user_id)).size,
-      metric: spendMemberCardsAll.reduce((s, c) => s + (c.membership_points || 0), 0),
-      metricLabel: 'Points',
+      metric: spendMemberCardsAll.reduce((s, c) => s + (c.total_points_earned || c.membership_points || 0), 0),
+      metricLabel: 'Points Earned',
       rewards: spendMemberCardsAll.reduce((s, c) => s + (c.total_value_redeemed || 0), 0),
       rewardsLabel: '£ Redeemed',
       rewardsPrefix: '£',
@@ -21713,12 +21721,12 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                       <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/40 mt-0.5">Members</p>
                     </div>
                     <div>
-                      <p className="text-2xl font-black text-brand-navy">{slide.metric.toLocaleString()}</p>
+                      <p className="text-2xl font-black text-brand-navy">{fmtK(slide.metric)}</p>
                       <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/40 mt-0.5">{slide.metricLabel}</p>
                     </div>
                     <div>
                       <p className="text-2xl font-black text-brand-navy">
-                        {slide.rewardsPrefix}{slide.rewardsPrefix ? slide.rewards.toFixed(2) : slide.rewards}
+                        {slide.rewardsPrefix}{slide.rewardsPrefix ? slide.rewards.toFixed(2) : fmtK(slide.rewards)}
                       </p>
                       <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/40 mt-0.5">{slide.rewardsLabel}</p>
                     </div>
