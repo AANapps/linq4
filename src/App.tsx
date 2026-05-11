@@ -1665,7 +1665,7 @@ export default function App() {
               <span className="card-shine-ray" aria-hidden="true" />
               <Wallet size={26} className="text-white relative z-10" />
             </div>
-            <span className={cn("text-[10px] font-bold uppercase tracking-wider", activeTab === 'home' ? "text-brand-gold" : "text-brand-navy/40")}>Wallet</span>
+            <span className={cn("text-[10px] font-bold uppercase tracking-wider", activeTab === 'home' ? "text-brand-gold" : "text-brand-navy/55")}>Wallet</span>
           </button>
         ) : (
           <NavButton
@@ -2213,11 +2213,11 @@ function EmailVerificationScreen({ user, onCheck, onResend, onLogout }: {
           <Mail className="w-8 h-8 text-brand-gold" />
         </div>
         <h2 className="font-display font-bold text-2xl text-brand-navy mb-2">Check your inbox</h2>
-        <p className="text-brand-navy/50 text-sm mb-2">
+        <p className="text-brand-navy/65 text-sm mb-2">
           We sent a verification email to
         </p>
         <p className="font-bold text-brand-navy text-sm mb-8">{user.email}</p>
-        <p className="text-brand-navy/40 text-xs mb-8">Click the link in the email, then come back here and tap the button below.</p>
+        <p className="text-brand-navy/55 text-xs mb-8">Click the link in the email, then come back here and tap the button below.</p>
 
         {notVerified && (
           <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 mb-4">
@@ -2240,12 +2240,12 @@ function EmailVerificationScreen({ user, onCheck, onResend, onLogout }: {
           <button
             onClick={handleResend}
             disabled={resent}
-            className="w-full py-3 text-sm text-brand-navy/50 hover:text-brand-navy/80 transition-colors disabled:opacity-50"
+            className="w-full py-3 text-sm text-brand-navy/65 hover:text-brand-navy/80 transition-colors disabled:opacity-50"
           >
             {resent ? 'Email sent!' : 'Resend verification email'}
           </button>
 
-          <button onClick={onLogout} className="w-full py-3 text-xs text-brand-navy/30 hover:text-brand-navy/50 transition-colors">
+          <button onClick={onLogout} className="w-full py-3 text-xs text-brand-navy/45 hover:text-brand-navy/65 transition-colors">
             Sign out
           </button>
         </div>
@@ -2271,7 +2271,7 @@ function LocationStep({ locationData, locationStatus, onRequest }: {
         </button>
       )}
       {locationStatus === 'requesting' && (
-        <div className="flex items-center justify-center gap-3 py-4 text-brand-navy/50">
+        <div className="flex items-center justify-center gap-3 py-4 text-brand-navy/65">
           <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
             <Sparkles size={18} className="text-brand-gold" />
           </motion.div>
@@ -2402,7 +2402,7 @@ function OnboardingScreen({ user, onComplete }: {
         <UserCheck className="w-7 h-7 text-brand-gold" />
       </div>
       <h2 className="font-display font-bold text-2xl text-brand-navy mb-1">Set up your profile</h2>
-      <p className="text-sm text-brand-navy/40 mb-8">Your name and handle help businesses and friends recognise you</p>
+      <p className="text-sm text-brand-navy/55 mb-8">Your name and handle help businesses and friends recognise you</p>
       <div className="w-full space-y-3 text-left">
         <div>
           <input
@@ -2410,23 +2410,23 @@ function OnboardingScreen({ user, onComplete }: {
             value={fullName}
             onChange={e => setFullName(e.target.value)}
             placeholder="Full name"
-            className="w-full px-5 py-4 rounded-2xl bg-white border-2 border-brand-navy/10 text-brand-navy font-bold text-base focus:outline-none focus:border-brand-gold/60 placeholder:font-normal placeholder:text-brand-navy/30"
+            className="w-full px-5 py-4 rounded-2xl bg-white border-2 border-brand-navy/10 text-brand-navy font-bold text-base focus:outline-none focus:border-brand-gold/60 placeholder:font-normal placeholder:text-brand-navy/45"
           />
         </div>
         <div>
           <div className="relative">
-            <span className="absolute left-5 top-1/2 -translate-y-1/2 text-brand-navy/40 font-bold text-sm">@</span>
+            <span className="absolute left-5 top-1/2 -translate-y-1/2 text-brand-navy/55 font-bold text-sm">@</span>
             <input
               type="text"
               value={handle}
               onChange={e => validateHandle(e.target.value)}
               placeholder="yourhandle"
-              className={`w-full pl-9 pr-8 py-4 rounded-2xl bg-white border-2 text-brand-navy text-sm font-medium focus:outline-none focus:border-brand-gold/60 placeholder:text-brand-navy/30 ${handleError ? 'border-red-300' : handle.length >= 3 && !handleChecking && !handleError ? 'border-green-400' : 'border-brand-navy/10'}`}
+              className={`w-full pl-9 pr-8 py-4 rounded-2xl bg-white border-2 text-brand-navy text-sm font-medium focus:outline-none focus:border-brand-gold/60 placeholder:text-brand-navy/45 ${handleError ? 'border-red-300' : handle.length >= 3 && !handleChecking && !handleError ? 'border-green-400' : 'border-brand-navy/10'}`}
             />
             {handle.length >= 3 && (
               <span className="absolute right-4 top-1/2 -translate-y-1/2">
                 {handleChecking
-                  ? <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}><Sparkles size={13} className="text-brand-navy/30" /></motion.div>
+                  ? <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}><Sparkles size={13} className="text-brand-navy/45" /></motion.div>
                   : handleError ? <AlertCircle size={13} className="text-red-400" />
                   : <CheckCircle2 size={13} className="text-green-500" />}
               </span>
@@ -2435,11 +2435,11 @@ function OnboardingScreen({ user, onComplete }: {
           {handleError ? (
             <p className="text-xs text-red-500 mt-1.5 pl-1">{handleError}</p>
           ) : handleChecking ? (
-            <p className="text-xs text-brand-navy/30 mt-1.5 pl-1">Checking availability…</p>
+            <p className="text-xs text-brand-navy/45 mt-1.5 pl-1">Checking availability…</p>
           ) : handle.length >= 3 ? (
             <p className="text-xs text-green-500 mt-1.5 pl-1">@{handle} is available</p>
           ) : (
-            <p className="text-xs text-brand-navy/30 mt-1.5 pl-1">This cannot be changed later</p>
+            <p className="text-xs text-brand-navy/45 mt-1.5 pl-1">This cannot be changed later</p>
           )}
         </div>
       </div>
@@ -2450,7 +2450,7 @@ function OnboardingScreen({ user, onComplete }: {
         <UserCheck className="w-7 h-7 text-brand-gold" />
       </div>
       <h2 className="font-display font-bold text-2xl text-brand-navy mb-1">What's your gender?</h2>
-      <p className="text-sm text-brand-navy/40 mb-8">Help us personalise your experience</p>
+      <p className="text-sm text-brand-navy/55 mb-8">Help us personalise your experience</p>
       <div className="w-full space-y-3">
         {GENDERS.map(g => (
           <button
@@ -2472,7 +2472,7 @@ function OnboardingScreen({ user, onComplete }: {
         <Calendar className="w-7 h-7 text-brand-gold" />
       </div>
       <h2 className="font-display font-bold text-2xl text-brand-navy mb-1">When's your birthday?</h2>
-      <p className="text-sm text-brand-navy/40 mb-8">Get exclusive birthday rewards from businesses</p>
+      <p className="text-sm text-brand-navy/55 mb-8">Get exclusive birthday rewards from businesses</p>
       <div className="w-full">
         <input
           type="date"
@@ -2489,7 +2489,7 @@ function OnboardingScreen({ user, onComplete }: {
         <MapPin className="w-7 h-7 text-brand-gold" />
       </div>
       <h2 className="font-display font-bold text-2xl text-brand-navy mb-1">Find nearby deals</h2>
-      <p className="text-sm text-brand-navy/40 mb-8">Allow location access to discover businesses around you</p>
+      <p className="text-sm text-brand-navy/55 mb-8">Allow location access to discover businesses around you</p>
       <LocationStep locationData={locationData} locationStatus={locationStatus} onRequest={requestLocation} />
     </>
   ];
@@ -2501,21 +2501,21 @@ function OnboardingScreen({ user, onComplete }: {
         <Building2 className="w-7 h-7 text-brand-gold" />
       </div>
       <h2 className="font-display font-bold text-2xl text-brand-navy mb-1">Your business name</h2>
-      <p className="text-sm text-brand-navy/40 mb-8">This is how customers will find you on Linq</p>
+      <p className="text-sm text-brand-navy/55 mb-8">This is how customers will find you on Linq</p>
       <div className="w-full space-y-3">
         <input
           type="text"
           value={businessName}
           onChange={e => setBusinessName(e.target.value)}
           placeholder="e.g. The Coffee House"
-          className="w-full px-5 py-4 rounded-2xl bg-white border-2 border-brand-navy/10 text-brand-navy font-bold text-base focus:outline-none focus:border-brand-gold/60 placeholder:font-normal placeholder:text-brand-navy/30"
+          className="w-full px-5 py-4 rounded-2xl bg-white border-2 border-brand-navy/10 text-brand-navy font-bold text-base focus:outline-none focus:border-brand-gold/60 placeholder:font-normal placeholder:text-brand-navy/45"
         />
         <textarea
           value={description}
           onChange={e => setDescription(e.target.value)}
           placeholder="Short description of your business (optional)"
           rows={3}
-          className="w-full px-5 py-4 rounded-2xl bg-white border-2 border-brand-navy/10 text-brand-navy text-sm focus:outline-none focus:border-brand-gold/60 placeholder:text-brand-navy/30 resize-none"
+          className="w-full px-5 py-4 rounded-2xl bg-white border-2 border-brand-navy/10 text-brand-navy text-sm focus:outline-none focus:border-brand-gold/60 placeholder:text-brand-navy/45 resize-none"
         />
       </div>
     </>,
@@ -2525,7 +2525,7 @@ function OnboardingScreen({ user, onComplete }: {
         <Hash className="w-7 h-7 text-brand-gold" />
       </div>
       <h2 className="font-display font-bold text-2xl text-brand-navy mb-1">Business category</h2>
-      <p className="text-sm text-brand-navy/40 mb-8">Help customers find you in the right section</p>
+      <p className="text-sm text-brand-navy/55 mb-8">Help customers find you in the right section</p>
       <div className="w-full grid grid-cols-2 gap-3">
         {CATEGORIES.map(cat => (
           <button
@@ -2547,26 +2547,26 @@ function OnboardingScreen({ user, onComplete }: {
         <Phone className="w-7 h-7 text-brand-gold" />
       </div>
       <h2 className="font-display font-bold text-2xl text-brand-navy mb-1">Contact details</h2>
-      <p className="text-sm text-brand-navy/40 mb-8">Your address and phone number for customers</p>
+      <p className="text-sm text-brand-navy/55 mb-8">Your address and phone number for customers</p>
       <div className="w-full space-y-3">
         <div className="relative">
-          <MapPin size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-navy/30" />
+          <MapPin size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-navy/45" />
           <input
             type="text"
             value={address}
             onChange={e => setAddress(e.target.value)}
             placeholder="Business address"
-            className="w-full pl-10 pr-5 py-4 rounded-2xl bg-white border-2 border-brand-navy/10 text-brand-navy text-sm focus:outline-none focus:border-brand-gold/60 placeholder:text-brand-navy/30"
+            className="w-full pl-10 pr-5 py-4 rounded-2xl bg-white border-2 border-brand-navy/10 text-brand-navy text-sm focus:outline-none focus:border-brand-gold/60 placeholder:text-brand-navy/45"
           />
         </div>
         <div className="relative">
-          <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-navy/30" />
+          <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-navy/45" />
           <input
             type="tel"
             value={phone}
             onChange={e => setPhone(e.target.value)}
             placeholder="Phone number"
-            className="w-full pl-10 pr-5 py-4 rounded-2xl bg-white border-2 border-brand-navy/10 text-brand-navy text-sm focus:outline-none focus:border-brand-gold/60 placeholder:text-brand-navy/30"
+            className="w-full pl-10 pr-5 py-4 rounded-2xl bg-white border-2 border-brand-navy/10 text-brand-navy text-sm focus:outline-none focus:border-brand-gold/60 placeholder:text-brand-navy/45"
           />
         </div>
       </div>
@@ -2577,7 +2577,7 @@ function OnboardingScreen({ user, onComplete }: {
         <MapPin className="w-7 h-7 text-brand-gold" />
       </div>
       <h2 className="font-display font-bold text-2xl text-brand-navy mb-1">Pin your location</h2>
-      <p className="text-sm text-brand-navy/40 mb-8">Allow location access so customers nearby can discover you</p>
+      <p className="text-sm text-brand-navy/55 mb-8">Allow location access so customers nearby can discover you</p>
       <LocationStep locationData={locationData} locationStatus={locationStatus} onRequest={requestLocation} />
     </>
   ];
@@ -2588,7 +2588,7 @@ function OnboardingScreen({ user, onComplete }: {
         <Sparkles className="w-7 h-7 text-white" />
       </div>
       <h2 className="font-display font-bold text-2xl text-brand-navy mb-1">Welcome to <span className="text-brand-gold">Li</span>nq</h2>
-      <p className="text-sm text-brand-navy/40 mb-8">How would you like to use Linq?</p>
+      <p className="text-sm text-brand-navy/55 mb-8">How would you like to use Linq?</p>
       <div className="w-full space-y-4">
         <button
           onClick={() => setRole('consumer')}
@@ -2599,7 +2599,7 @@ function OnboardingScreen({ user, onComplete }: {
           </div>
           <div>
             <p className="font-bold text-brand-navy text-base">I'm a Customer</p>
-            <p className="text-xs text-brand-navy/40 mt-0.5">Collect stamps & earn rewards</p>
+            <p className="text-xs text-brand-navy/55 mt-0.5">Collect stamps & earn rewards</p>
           </div>
           {role === 'consumer' && <CheckCircle2 className="w-5 h-5 text-brand-gold ml-auto shrink-0" />}
         </button>
@@ -2663,7 +2663,7 @@ function OnboardingScreen({ user, onComplete }: {
             : !isLastStep ? 'Continue' : isVendor ? 'Launch My Business' : 'Get Started'}
         </button>
         {step > 1 && !isLastStep && !isVendor && (
-          <button onClick={() => setStep(s => s + 1)} className="w-full py-3 text-xs text-brand-navy/30 hover:text-brand-navy/50 transition-colors">
+          <button onClick={() => setStep(s => s + 1)} className="w-full py-3 text-xs text-brand-navy/45 hover:text-brand-navy/65 transition-colors">
             Skip for now
           </button>
         )}
@@ -2743,7 +2743,7 @@ function NavButton({ active, onClick, icon, label, badgeCount }: { active: boole
       onClick={onClick}
       className={cn(
         "flex-1 flex flex-col items-center gap-1 transition-all relative",
-        active ? "text-white" : "text-brand-navy/40 hover:text-brand-navy/60"
+        active ? "text-white" : "text-brand-navy/55 hover:text-brand-navy/60"
       )}
     >
       <div className={cn(
@@ -2991,7 +2991,7 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
                 <h2 className="font-display text-xl font-bold text-brand-navy">
                   {programme?.title || 'Sticker Collection'}
                 </h2>
-                <p className="text-xs text-brand-navy/50 mt-0.5">
+                <p className="text-xs text-brand-navy/65 mt-0.5">
                   {stickerCard.stickers.length} sticker{stickerCard.stickers.length !== 1 ? 's' : ''} collected
                 </p>
               </div>
@@ -3005,7 +3005,7 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
           <div className="p-5 space-y-7">
             {topPlayers.length > 0 && (
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/55 mb-3">
                   Top Players
                 </p>
                 <div className="space-y-2">
@@ -3014,7 +3014,7 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
                     return (
                       <div key={p.uid} className="bg-brand-navy/5 rounded-2xl px-3 py-2.5">
                         <div className="flex items-center gap-2.5 mb-1.5">
-                          <span className="text-[10px] font-black text-brand-navy/30 w-4 text-center shrink-0">{i + 1}</span>
+                          <span className="text-[10px] font-black text-brand-navy/45 w-4 text-center shrink-0">{i + 1}</span>
                           <div className="w-6 h-6 rounded-full overflow-hidden bg-brand-navy/10 shrink-0 flex items-center justify-center">
                             <LivePixelAvatar uid={p.uid} size={24} view="head" />
                           </div>
@@ -3033,7 +3033,7 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
 
             {/* Card collection — 3 variants per tier, collect 3 sets to win */}
             <div className="space-y-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/55">
                 Collect 1 of each animal to complete all tiers
               </p>
               {STICKER_ORDER.map(tier => {
@@ -3097,7 +3097,7 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
 
             {unrevealed.length > 0 && (
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/55 mb-3">
                   Unrevealed ({unrevealed.length})
                 </p>
                 <div className="flex flex-wrap gap-3">
@@ -3110,7 +3110,7 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
 
             {revealed.length > 0 && (
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/55 mb-3">
                   Revealed ({revealed.length})
                 </p>
                 <div className="flex flex-wrap gap-3">
@@ -3130,7 +3130,7 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
             )}
 
             {stickerCard.stickers.length === 0 && (
-              <p className="text-sm text-brand-navy/40 text-center py-10">No stickers yet. Collect stamps to earn some!</p>
+              <p className="text-sm text-brand-navy/55 text-center py-10">No stickers yet. Collect stamps to earn some!</p>
             )}
           </div>
           </div>{/* end overflow-y-auto */}
@@ -3178,8 +3178,8 @@ function UserStickerPanel({ uid, isOwnProfile = false, onOpenPack }: {
     if (!isOwnProfile) return null;
     return (
       <div className="glass-card rounded-[2rem] p-5">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-3">Animal Cards</p>
-        <p className="text-xs text-brand-navy/40 text-center py-6">Collect stamps to earn your first animal cards!</p>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/55 mb-3">Animal Cards</p>
+        <p className="text-xs text-brand-navy/55 text-center py-6">Collect stamps to earn your first animal cards!</p>
       </div>
     );
   }
@@ -3193,8 +3193,8 @@ function UserStickerPanel({ uid, isOwnProfile = false, onOpenPack }: {
   return (
     <div className="glass-card rounded-[2rem] p-5 space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">Animal Cards</p>
-        <span className="text-[10px] font-bold text-brand-navy/40">{panelSets}/14 · {col.stickers.length} total</span>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/55">Animal Cards</p>
+        <span className="text-[10px] font-bold text-brand-navy/55">{panelSets}/14 · {col.stickers.length} total</span>
       </div>
 
       {/* Compact tier overview — one row per tier showing variants */}
@@ -3252,7 +3252,7 @@ function UserStickerPanel({ uid, isOwnProfile = false, onOpenPack }: {
       {/* Recent revealed cards */}
       {recentRevealed.length > 0 && (
         <div>
-          <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/30 mb-2">
+          <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/45 mb-2">
             Recent {isOwnProfile ? '' : 'cards'}
           </p>
           <div className="flex gap-2 flex-wrap">
@@ -3266,7 +3266,7 @@ function UserStickerPanel({ uid, isOwnProfile = false, onOpenPack }: {
       {/* Unrevealed cards for own profile (in-place reveal) */}
       {isOwnProfile && unrevealed.length > 0 && (
         <div>
-          <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/30 mb-2">Tap to reveal</p>
+          <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/45 mb-2">Tap to reveal</p>
           <div className="flex gap-2 flex-wrap">
             {unrevealed.slice(0, 6).map(s => (
               <StickerCard key={s.id} sticker={s} isRevealed={false} onReveal={() => handleReveal(s.id)} size="sm" />
@@ -3526,7 +3526,7 @@ function ChallengeRedeemModal({ challenge, entry, userName, onClose }: {
             <div className="space-y-3">
               <div className="rounded-2xl bg-brand-navy/5 p-4 text-center space-y-1">
                 <p className="font-bold text-sm text-brand-navy">📸 Screenshot &amp; share on your story</p>
-                <p className="text-xs text-brand-navy/50">Tag <span className="font-bold">@joinlinq</span> to show off your reward!</p>
+                <p className="text-xs text-brand-navy/65">Tag <span className="font-bold">@joinlinq</span> to show off your reward!</p>
               </div>
               <button
                 onClick={handleMark}
@@ -3945,8 +3945,8 @@ function BadgesAdminPanel({ onClose }: { onClose: () => void }) {
   const [editColor, setEditColor] = useState(BADGE_COLORS[0]);
   const [editIcon, setEditIcon] = useState(BADGE_ICONS[0]);
 
-  const inputCls = 'w-full bg-white border border-brand-navy/15 rounded-2xl px-4 py-3 text-sm text-brand-navy placeholder:text-brand-navy/30 focus:outline-none focus:ring-2 focus:ring-brand-gold/40';
-  const editInputCls = 'w-full bg-brand-bg border border-brand-navy/10 rounded-2xl px-4 py-3 text-sm text-brand-navy placeholder:text-brand-navy/30 focus:outline-none focus:ring-2 focus:ring-brand-gold/40';
+  const inputCls = 'w-full bg-white border border-brand-navy/15 rounded-2xl px-4 py-3 text-sm text-brand-navy placeholder:text-brand-navy/45 focus:outline-none focus:ring-2 focus:ring-brand-gold/40';
+  const editInputCls = 'w-full bg-brand-bg border border-brand-navy/10 rounded-2xl px-4 py-3 text-sm text-brand-navy placeholder:text-brand-navy/45 focus:outline-none focus:ring-2 focus:ring-brand-gold/40';
 
   useEffect(() => {
     return onSnapshot(
@@ -4004,7 +4004,7 @@ function BadgesAdminPanel({ onClose }: { onClose: () => void }) {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-display text-2xl font-bold text-brand-navy">Badges</h2>
-              <p className="text-xs text-brand-navy/50 mt-0.5">Create & manage achievement badges</p>
+              <p className="text-xs text-brand-navy/65 mt-0.5">Create & manage achievement badges</p>
             </div>
             <button onClick={onClose} className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm active:scale-95 transition-all">
               <X size={18} className="text-brand-navy/60" />
@@ -4042,7 +4042,7 @@ function BadgesAdminPanel({ onClose }: { onClose: () => void }) {
 
             {/* Colour picker */}
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2">Colour</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/55 mb-2">Colour</p>
               <div className="flex flex-wrap gap-2">
                 {BADGE_COLORS.map(c => (
                   <button key={c} onClick={() => setColor(c)}
@@ -4054,7 +4054,7 @@ function BadgesAdminPanel({ onClose }: { onClose: () => void }) {
 
             {/* Icon picker */}
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2">Icon</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/55 mb-2">Icon</p>
               <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
                 {BADGE_ICONS.map((ic, idx) => (
                   <button key={idx} onClick={() => setIcon(ic)}
@@ -4082,7 +4082,7 @@ function BadgesAdminPanel({ onClose }: { onClose: () => void }) {
               >
                 <span className="text-sm font-bold text-brand-navy">{showList ? 'Hide badges' : `View all badges (${badges.length})`}</span>
                 <motion.div animate={{ rotate: showList ? 180 : 0 }} transition={{ duration: 0.2 }}>
-                  <ChevronDown size={16} className="text-brand-navy/40" />
+                  <ChevronDown size={16} className="text-brand-navy/55" />
                 </motion.div>
               </button>
 
@@ -4104,18 +4104,18 @@ function BadgesAdminPanel({ onClose }: { onClose: () => void }) {
                           >{editingId === b.id ? editIcon : b.icon}</div>
                           <div className="flex-1 min-w-0">
                             <p className="font-bold text-brand-navy text-sm leading-tight">{b.name}</p>
-                            <p className="text-xs text-brand-navy/50 mt-0.5">{BADGE_METRIC_LABELS[b.metric]} ≥ {b.threshold}</p>
-                            {b.description ? <p className="text-[10px] text-brand-navy/40 mt-0.5 line-clamp-1">{b.description}</p> : null}
+                            <p className="text-xs text-brand-navy/65 mt-0.5">{BADGE_METRIC_LABELS[b.metric]} ≥ {b.threshold}</p>
+                            {b.description ? <p className="text-[10px] text-brand-navy/55 mt-0.5 line-clamp-1">{b.description}</p> : null}
                           </div>
                           <div className="flex gap-1.5 shrink-0">
                             {editingId !== b.id && (
                               <button onClick={() => startEdit(b)} className="p-1.5 rounded-xl bg-brand-navy/8 active:scale-90 transition-transform">
-                                <Pencil size={13} className="text-brand-navy/50" />
+                                <Pencil size={13} className="text-brand-navy/65" />
                               </button>
                             )}
                             {confirmDelete === b.id ? (
                               <div className="flex gap-1.5">
-                                <button onClick={() => setConfirmDelete(null)} className="text-[10px] font-bold text-brand-navy/40 px-2 py-1 rounded-lg bg-brand-navy/5">Cancel</button>
+                                <button onClick={() => setConfirmDelete(null)} className="text-[10px] font-bold text-brand-navy/55 px-2 py-1 rounded-lg bg-brand-navy/5">Cancel</button>
                                 <button onClick={() => handleDelete(b.id)} disabled={deletingId === b.id} className="text-[10px] font-bold text-white px-2 py-1 rounded-lg bg-brand-rose disabled:opacity-50">
                                   {deletingId === b.id ? '…' : 'Delete'}
                                 </button>
@@ -4148,7 +4148,7 @@ function BadgesAdminPanel({ onClose }: { onClose: () => void }) {
                                 <input value={editThreshold} onChange={e => setEditThreshold(e.target.value)} placeholder="Amount" type="number" min="1" className={cn(editInputCls, 'w-24')} />
                               </div>
                               <div>
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2">Colour</p>
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/55 mb-2">Colour</p>
                                 <div className="flex flex-wrap gap-2">
                                   {BADGE_COLORS.map(c => (
                                     <button key={c} onClick={() => setEditColor(c)}
@@ -4158,7 +4158,7 @@ function BadgesAdminPanel({ onClose }: { onClose: () => void }) {
                                 </div>
                               </div>
                               <div>
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2">Icon</p>
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/55 mb-2">Icon</p>
                                 <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
                                   {BADGE_ICONS.map((ic, idx) => (
                                     <button key={idx} onClick={() => setEditIcon(ic)}
@@ -4198,7 +4198,7 @@ function subStatusInfo(store: StoreProfile): { label: string; color: string } {
     const days = Math.ceil((trialMs - Date.now()) / 86400000);
     return { label: `Trial · ${days}d`, color: 'bg-amber-100 text-amber-700' };
   }
-  return { label: 'No sub', color: 'bg-brand-navy/8 text-brand-navy/40' };
+  return { label: 'No sub', color: 'bg-brand-navy/8 text-brand-navy/55' };
 }
 
 function AdminStoresPanel({ onClose }: { onClose: () => void }) {
@@ -4301,7 +4301,7 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
       <header className="glass-panel px-5 py-4 flex items-center gap-3">
         <button onClick={onClose} className="p-2 -ml-2 text-brand-navy/60"><ArrowLeft size={22} /></button>
         <div className="flex-1">
-          <p className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest">Admin</p>
+          <p className="text-[10px] font-bold text-brand-navy/55 uppercase tracking-widest">Admin</p>
           <h2 className="font-bold text-brand-navy text-base">Businesses</h2>
         </div>
       </header>
@@ -4343,7 +4343,7 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
                 >
                   {store.logoUrl
                     ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
-                    : <Building2 size={18} className="m-auto mt-2.5 text-brand-navy/20" />}
+                    : <Building2 size={18} className="m-auto mt-2.5 text-brand-navy/32" />}
                 </div>
                 <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setEditingStore(store)}>
                   <p className="font-bold text-sm text-brand-navy truncate">{store.name}</p>
@@ -4351,7 +4351,7 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
                     <span className={cn('text-[9px] font-bold px-1.5 py-0.5 rounded-full', subStatusInfo(store).color)}>
                       {subStatusInfo(store).label}
                     </span>
-                    <span className="text-[10px] text-brand-navy/30">{store.category}</span>
+                    <span className="text-[10px] text-brand-navy/45">{store.category}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
@@ -4369,7 +4369,7 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
 
                   {/* Trial toggle */}
                   <div className="flex flex-col items-center gap-0.5">
-                    <span className="text-[8px] font-bold text-brand-navy/30 uppercase tracking-wide">Trial</span>
+                    <span className="text-[8px] font-bold text-brand-navy/45 uppercase tracking-wide">Trial</span>
                     <button
                       onClick={() => handleToggleTrial(store)}
                       disabled={togglingId === store.id}
@@ -4403,7 +4403,7 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
                       >
                         {togglingId === store.id ? '…' : '✓'}
                       </button>
-                      <button onClick={() => setExtendingId(null)} className="px-1.5 py-1 rounded-lg bg-brand-navy/10 text-brand-navy/50 text-[10px] font-bold">✕</button>
+                      <button onClick={() => setExtendingId(null)} className="px-1.5 py-1 rounded-lg bg-brand-navy/10 text-brand-navy/65 text-[10px] font-bold">✕</button>
                     </div>
                   ) : (
                     <button
@@ -4416,7 +4416,7 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
                 </div>
                 <button
                   onClick={() => setEditingStore(store)}
-                  className="p-2 text-brand-navy/30 hover:text-brand-navy/60 transition-colors"
+                  className="p-2 text-brand-navy/45 hover:text-brand-navy/60 transition-colors"
                 >
                   <Edit3 size={14} />
                 </button>
@@ -4431,7 +4431,7 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
           </div>
         ))}
         {filtered.length === 0 && (
-          <p className="text-center text-brand-navy/30 text-sm py-10">No businesses found</p>
+          <p className="text-center text-brand-navy/45 text-sm py-10">No businesses found</p>
         )}
       </div>
 
@@ -4455,7 +4455,7 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores,
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-display text-2xl font-bold text-brand-navy">Admin</h2>
-              <p className="text-xs text-brand-navy/50 mt-0.5">Platform management</p>
+              <p className="text-xs text-brand-navy/65 mt-0.5">Platform management</p>
             </div>
             <button onClick={onClose} className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm active:scale-95 transition-all">
               <X size={18} className="text-brand-navy/60" />
@@ -4474,7 +4474,7 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores,
             </div>
             <div>
               <p className="font-bold text-brand-navy text-sm">Challenges</p>
-              <p className="text-[11px] text-brand-navy/40 mt-0.5">Create & manage active challenges</p>
+              <p className="text-[11px] text-brand-navy/55 mt-0.5">Create & manage active challenges</p>
             </div>
           </motion.button>
 
@@ -4488,7 +4488,7 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores,
             </div>
             <div>
               <p className="font-bold text-brand-navy text-sm">Badges</p>
-              <p className="text-[11px] text-brand-navy/40 mt-0.5">Design achievement badges</p>
+              <p className="text-[11px] text-brand-navy/55 mt-0.5">Design achievement badges</p>
             </div>
           </motion.button>
 
@@ -4502,7 +4502,7 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores,
             </div>
             <div>
               <p className="font-bold text-brand-navy text-sm">Businesses</p>
-              <p className="text-[11px] text-brand-navy/40 mt-0.5">Edit & delete business profiles</p>
+              <p className="text-[11px] text-brand-navy/55 mt-0.5">Edit & delete business profiles</p>
             </div>
           </motion.button>
 
@@ -4516,7 +4516,7 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores,
             </div>
             <div>
               <p className="font-bold text-brand-navy text-sm">Users</p>
-              <p className="text-[11px] text-brand-navy/40 mt-0.5">Search & delete user accounts</p>
+              <p className="text-[11px] text-brand-navy/55 mt-0.5">Search & delete user accounts</p>
             </div>
           </motion.button>
 
@@ -4530,7 +4530,7 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores,
             </div>
             <div>
               <p className="font-bold text-brand-navy text-sm">Posts</p>
-              <p className="text-[11px] text-brand-navy/40 mt-0.5">All posts & flagged content</p>
+              <p className="text-[11px] text-brand-navy/55 mt-0.5">All posts & flagged content</p>
             </div>
           </motion.button>
 
@@ -4544,7 +4544,7 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores,
             </div>
             <div>
               <p className="font-bold text-brand-navy text-sm">Offers</p>
-              <p className="text-[11px] text-brand-navy/40 mt-0.5">View & delete all store offers</p>
+              <p className="text-[11px] text-brand-navy/55 mt-0.5">View & delete all store offers</p>
             </div>
           </motion.button>
 
@@ -4558,7 +4558,7 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores,
             </div>
             <div>
               <p className="font-bold text-brand-navy text-sm">Linqle</p>
-              <p className="text-[11px] text-brand-navy/40 mt-0.5">Set the daily word puzzle</p>
+              <p className="text-[11px] text-brand-navy/55 mt-0.5">Set the daily word puzzle</p>
             </div>
           </motion.button>
 
@@ -4572,7 +4572,7 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores,
             </div>
             <div>
               <p className="font-bold text-brand-navy text-sm">Daily Vote</p>
-              <p className="text-[11px] text-brand-navy/40 mt-0.5">Create today's poll question</p>
+              <p className="text-[11px] text-brand-navy/55 mt-0.5">Create today's poll question</p>
             </div>
           </motion.button>
         </div>
@@ -4694,7 +4694,7 @@ function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-brand-navy/8 shrink-0">
           <div>
             <h2 className="font-black text-lg text-brand-navy">Linqle — Word Queue</h2>
-            <p className="text-xs text-brand-navy/40">{words.length} word{words.length !== 1 ? 's' : ''} · cycles daily</p>
+            <p className="text-xs text-brand-navy/55">{words.length} word{words.length !== 1 ? 's' : ''} · cycles daily</p>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-full bg-brand-navy/8 flex items-center justify-center"><X size={16} /></button>
         </div>
@@ -4702,7 +4702,7 @@ function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
         <div className="overflow-y-auto flex-1 p-5 space-y-4 pb-8">
           {/* Date selector */}
           <div>
-            <p className="text-[10px] font-bold text-brand-navy/50 mb-1.5 uppercase tracking-widest">Schedule for date</p>
+            <p className="text-[10px] font-bold text-brand-navy/65 mb-1.5 uppercase tracking-widest">Schedule for date</p>
             <select
               value={selectedDate}
               onChange={e => setSelectedDate(e.target.value)}
@@ -4726,7 +4726,7 @@ function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
 
           {/* Add word for this date */}
           <div>
-            <p className="text-[10px] font-bold text-brand-navy/50 mb-1.5 uppercase tracking-widest">Add word for this date</p>
+            <p className="text-[10px] font-bold text-brand-navy/65 mb-1.5 uppercase tracking-widest">Add word for this date</p>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -4746,12 +4746,12 @@ function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
 
           {/* Queue list */}
           {loading ? (
-            <div className="flex justify-center py-8"><RefreshCw size={20} className="animate-spin text-brand-navy/30" /></div>
+            <div className="flex justify-center py-8"><RefreshCw size={20} className="animate-spin text-brand-navy/45" /></div>
           ) : words.length === 0 ? (
-            <p className="text-center text-sm text-brand-navy/30 py-6">No words yet</p>
+            <p className="text-center text-sm text-brand-navy/45 py-6">No words yet</p>
           ) : (
             <div className="space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">Full queue ({words.length})</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/55">Full queue ({words.length})</p>
               {words.map((w, i) => {
                 const todayDayIdx = linqleDayIndex(todayStr);
                 const daysUntil = (((i - (todayDayIdx % words.length)) + words.length) % words.length);
@@ -4761,17 +4761,17 @@ function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
                 const isSelected = playsStr === selectedDate;
                 return (
                   <div key={i} className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl border ${isToday ? 'bg-green-50 border-green-200' : isSelected ? 'bg-blue-50 border-blue-200' : 'bg-white border-brand-navy/8'}`}>
-                    <span className="text-xs font-bold text-brand-navy/30 w-5 text-right shrink-0">{i + 1}</span>
+                    <span className="text-xs font-bold text-brand-navy/45 w-5 text-right shrink-0">{i + 1}</span>
                     <span className={`flex-1 font-black tracking-[0.2em] text-sm ${isToday ? 'text-green-700' : isSelected ? 'text-blue-700' : 'text-brand-navy'}`}>{w}</span>
                     {isToday
                       ? <span className="text-[10px] font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded-full shrink-0">Today</span>
                       : isSelected
                         ? <span className="text-[10px] font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full shrink-0">Selected</span>
-                        : <span className="text-[10px] text-brand-navy/30 shrink-0">{playsOn.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+                        : <span className="text-[10px] text-brand-navy/45 shrink-0">{playsOn.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
                     }
                     <button onClick={() => handleRemove(i)} disabled={saving}
                       className="w-6 h-6 rounded-full bg-brand-navy/8 flex items-center justify-center active:scale-90 transition-all disabled:opacity-40 shrink-0">
-                      <X size={11} className="text-brand-navy/50" />
+                      <X size={11} className="text-brand-navy/65" />
                     </button>
                   </div>
                 );
@@ -4843,7 +4843,7 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
         <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm px-5 pt-5 pb-4 border-b border-black/5 z-10 flex items-center justify-between">
           <div>
             <h2 className="font-display text-2xl font-bold text-brand-navy">Daily Vote</h2>
-            <p className="text-xs text-brand-navy/50 mt-0.5">{today}</p>
+            <p className="text-xs text-brand-navy/65 mt-0.5">{today}</p>
           </div>
           <button onClick={onClose} className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm active:scale-95 transition-all">
             <X size={18} className="text-brand-navy/60" />
@@ -4851,17 +4851,17 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
         </div>
         <div className="p-5 space-y-5">
           {loading ? (
-            <div className="flex justify-center py-12"><RefreshCw size={24} className="animate-spin text-brand-navy/30" /></div>
+            <div className="flex justify-center py-12"><RefreshCw size={24} className="animate-spin text-brand-navy/45" /></div>
           ) : voteData ? (
             <>
               <div className="bg-indigo-50 rounded-2xl p-4 border border-indigo-100">
                 <p className="font-black text-brand-navy">{voteData.question}</p>
-                <p className="text-xs text-brand-navy/50 mt-1">{voteData.totalVotes} votes · {voteData.closed ? `Closed — winner: ${voteData.winner !== null ? voteData.options[voteData.winner] : '?'}` : 'Open'}</p>
+                <p className="text-xs text-brand-navy/65 mt-1">{voteData.totalVotes} votes · {voteData.closed ? `Closed — winner: ${voteData.winner !== null ? voteData.options[voteData.winner] : '?'}` : 'Open'}</p>
               </div>
               {voteData.options.map((opt, i) => (
                 <div key={i} className="bg-white rounded-2xl border border-brand-navy/8 px-4 py-3">
                   <p className="font-bold text-brand-navy text-sm">{opt}</p>
-                  <p className="text-xs text-brand-navy/40 mt-0.5">{voteData.voteCounts[String(i)] ?? 0} votes</p>
+                  <p className="text-xs text-brand-navy/55 mt-0.5">{voteData.voteCounts[String(i)] ?? 0} votes</p>
                 </div>
               ))}
               {!voteData.closed && (
@@ -4874,17 +4874,17 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
           ) : (
             <>
               <div className="space-y-2">
-                <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-wider">Question</label>
+                <label className="text-xs font-bold text-brand-navy/65 uppercase tracking-wider">Question</label>
                 <input value={question} onChange={e => setQuestion(e.target.value)} placeholder="e.g. Best way to commute?"
-                  className="w-full bg-brand-navy/5 rounded-2xl px-4 py-3 text-sm text-brand-navy outline-none placeholder:text-brand-navy/30" />
+                  className="w-full bg-brand-navy/5 rounded-2xl px-4 py-3 text-sm text-brand-navy outline-none placeholder:text-brand-navy/45" />
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-wider">Options (2–4)</label>
+                <label className="text-xs font-bold text-brand-navy/65 uppercase tracking-wider">Options (2–4)</label>
                 {options.map((opt, i) => (
                   <div key={i} className="flex gap-2 items-center">
                     <input value={opt} onChange={e => { const n = [...options]; n[i] = e.target.value; setOptions(n); }}
                       placeholder={`Option ${i + 1}`}
-                      className="flex-1 bg-brand-navy/5 rounded-2xl px-4 py-3 text-sm text-brand-navy outline-none placeholder:text-brand-navy/30" />
+                      className="flex-1 bg-brand-navy/5 rounded-2xl px-4 py-3 text-sm text-brand-navy outline-none placeholder:text-brand-navy/45" />
                     {options.length > 2 && (
                       <button onClick={() => setOptions(prev => prev.filter((_, j) => j !== i))}
                         className="w-9 h-9 rounded-2xl bg-rose-100 flex items-center justify-center active:scale-90 transition-all">
@@ -4895,7 +4895,7 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
                 ))}
                 {options.length < 4 && (
                   <button onClick={() => setOptions(prev => [...prev, ''])}
-                    className="flex items-center gap-1.5 text-xs font-bold text-brand-navy/40 px-1 py-1 active:opacity-60">
+                    className="flex items-center gap-1.5 text-xs font-bold text-brand-navy/55 px-1 py-1 active:opacity-60">
                     <Plus size={13} /> Add option
                   </button>
                 )}
@@ -4960,10 +4960,10 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
       <header className="glass-panel px-5 py-4 flex items-center gap-3">
         <button onClick={onClose} className="p-2 -ml-2 text-brand-navy/60"><ArrowLeft size={22} /></button>
         <div className="flex-1">
-          <p className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest">Admin</p>
+          <p className="text-[10px] font-bold text-brand-navy/55 uppercase tracking-widest">Admin</p>
           <h2 className="font-bold text-brand-navy text-base">Users</h2>
         </div>
-        <span className="text-xs text-brand-navy/40 font-semibold">{users.length} total</span>
+        <span className="text-xs text-brand-navy/55 font-semibold">{users.length} total</span>
       </header>
 
       <div className="px-5 pt-3 pb-2">
@@ -5000,14 +5000,14 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
                 <div className="w-9 h-9 rounded-xl overflow-hidden bg-brand-navy/5 shrink-0">
                   {u.photoURL
                     ? <img src={u.photoURL} alt="" className="w-full h-full object-cover" />
-                    : <UserIcon size={16} className="m-auto mt-2 text-brand-navy/20" />}
+                    : <UserIcon size={16} className="m-auto mt-2 text-brand-navy/32" />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 min-w-0">
                     <p className="font-bold text-sm text-brand-navy truncate">{u.name || '—'}</p>
                     <span className={cn('text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0', roleColor[u.role] || 'bg-brand-navy/10 text-brand-navy/60')}>{u.role}</span>
                   </div>
-                  <p className="text-[10px] text-brand-navy/40 truncate">{u.handle ? `@${u.handle}` : u.email}</p>
+                  <p className="text-[10px] text-brand-navy/55 truncate">{u.handle ? `@${u.handle}` : u.email}</p>
                 </div>
                 <button
                   onClick={() => setConfirmDeleteUid(u.uid)}
@@ -5020,7 +5020,7 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
           </div>
         ))}
         {filtered.length === 0 && (
-          <p className="text-center text-brand-navy/30 text-sm py-10">No users found</p>
+          <p className="text-center text-brand-navy/45 text-sm py-10">No users found</p>
         )}
       </div>
     </motion.div>
@@ -5077,10 +5077,10 @@ function AdminOffersPanel({ onClose }: { onClose: () => void }) {
       <header className="glass-panel px-5 py-4 flex items-center gap-3">
         <button onClick={onClose} className="p-2 -ml-2 text-brand-navy/60"><ArrowLeft size={22} /></button>
         <div className="flex-1">
-          <p className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest">Admin</p>
+          <p className="text-[10px] font-bold text-brand-navy/55 uppercase tracking-widest">Admin</p>
           <h2 className="font-bold text-brand-navy text-base">Offers</h2>
         </div>
-        <span className="text-xs font-bold text-brand-navy/40">{offers.length} total</span>
+        <span className="text-xs font-bold text-brand-navy/55">{offers.length} total</span>
       </header>
 
       <div className="px-5 pt-3 pb-2">
@@ -5115,9 +5115,9 @@ function AdminOffersPanel({ onClose }: { onClose: () => void }) {
                 <div className="px-4 py-3 flex items-start gap-3">
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-brand-navy text-sm truncate">{offer.title}</p>
-                    <p className="text-[11px] text-brand-navy/50 truncate">{offer.storeName}</p>
+                    <p className="text-[11px] text-brand-navy/65 truncate">{offer.storeName}</p>
                     <div className="flex items-center gap-2 mt-1 flex-wrap">
-                      <span className={cn('text-[10px] font-black px-2 py-0.5 rounded-full', offer.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-brand-navy/10 text-brand-navy/40')}>
+                      <span className={cn('text-[10px] font-black px-2 py-0.5 rounded-full', offer.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-brand-navy/10 text-brand-navy/55')}>
                         {offer.status === 'active' ? 'Live' : 'Paused'}
                       </span>
                       {offer.offerType === 'birthday' && <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-pink-100 text-pink-600">🎂 Birthday</span>}
@@ -5219,7 +5219,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
       <header className="glass-panel px-5 py-4 flex items-center gap-3">
         <button onClick={onClose} className="p-2 -ml-2 text-brand-navy/60"><ArrowLeft size={22} /></button>
         <div className="flex-1">
-          <p className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest">Admin</p>
+          <p className="text-[10px] font-bold text-brand-navy/55 uppercase tracking-widest">Admin</p>
           <h2 className="font-bold text-brand-navy text-base">Posts</h2>
         </div>
         {tab === 'flagged' && reportedPostIds.size > 0 && (
@@ -5241,7 +5241,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
               onClick={() => setTab(t)}
               className={cn(
                 'flex-1 py-2 rounded-2xl text-xs font-bold transition-all',
-                tab === t ? 'bg-brand-navy text-white' : 'bg-white border border-brand-navy/10 text-brand-navy/50'
+                tab === t ? 'bg-brand-navy text-white' : 'bg-white border border-brand-navy/10 text-brand-navy/65'
               )}
             >
               {t === 'all' ? 'All Posts' : `Flagged${reportedPostIds.size > 0 ? ` (${reportedPostIds.size})` : ''}`}
@@ -5276,7 +5276,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
                   <div className="w-7 h-7 rounded-full overflow-hidden bg-brand-navy/5 shrink-0 mt-0.5">
                     {post.authorPhoto
                       ? <img src={post.authorPhoto} alt="" className="w-full h-full object-cover" />
-                      : <UserIcon size={12} className="m-auto mt-1 text-brand-navy/20" />}
+                      : <UserIcon size={12} className="m-auto mt-1 text-brand-navy/32" />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
@@ -5284,7 +5284,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
                       {reportedPostIds.has(post.id) && (
                         <span className="text-[9px] font-bold text-rose-500 bg-rose-50 px-1.5 py-0.5 rounded-full">Flagged</span>
                       )}
-                      <span className="text-[10px] text-brand-navy/30 ml-auto">{formatAge(post.createdAt)}</span>
+                      <span className="text-[10px] text-brand-navy/45 ml-auto">{formatAge(post.createdAt)}</span>
                     </div>
                     <p className="text-xs text-brand-navy/70 mt-0.5 line-clamp-2">{post.content}</p>
                   </div>
@@ -5300,7 +5300,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
           </div>
         ))}
         {filtered.length === 0 && (
-          <p className="text-center text-brand-navy/30 text-sm py-10">
+          <p className="text-center text-brand-navy/45 text-sm py-10">
             {tab === 'flagged' ? 'No flagged posts' : 'No posts found'}
           </p>
         )}
@@ -5509,7 +5509,7 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
     }
   };
 
-  const inputCls = 'w-full px-3 py-2 rounded-xl bg-white border border-brand-navy/10 text-sm text-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-gold/40 placeholder:text-brand-navy/30';
+  const inputCls = 'w-full px-3 py-2 rounded-xl bg-white border border-brand-navy/10 text-sm text-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-gold/40 placeholder:text-brand-navy/45';
 
   const ChallengeCard = ({ c }: { c: Challenge; key?: React.Key }) => {
     const isActive = c.status === 'active';
@@ -5526,7 +5526,7 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
                   isActive ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600')}>
                   {c.status || 'active'}
                 </span>
-                <span className="bg-brand-navy/5 text-brand-navy/50 px-1.5 py-0.5 rounded-full">
+                <span className="bg-brand-navy/5 text-brand-navy/65 px-1.5 py-0.5 rounded-full">
                   {playerCount} player{playerCount !== 1 ? 's' : ''}
                 </span>
                 <span className="bg-brand-gold/10 text-brand-gold font-semibold px-1.5 py-0.5 rounded-full">
@@ -5573,15 +5573,15 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
           </div>
 
           <div className="flex items-center gap-1.5 px-1">
-            <Clock size={11} className="text-brand-navy/30 flex-shrink-0" />
+            <Clock size={11} className="text-brand-navy/45 flex-shrink-0" />
             <input
               type="datetime-local"
               defaultValue={c.endsAt?.toDate ? c.endsAt.toDate().toISOString().slice(0, 16) : ''}
               onChange={e => handleSetEndsAt(c.id, e.target.value)}
-              className="flex-1 text-[10px] text-brand-navy/50 bg-transparent border-none outline-none"
+              className="flex-1 text-[10px] text-brand-navy/65 bg-transparent border-none outline-none"
             />
             {c.endsAt && (
-              <span className="text-[10px] font-bold text-brand-navy/40 flex-shrink-0">
+              <span className="text-[10px] font-bold text-brand-navy/55 flex-shrink-0">
                 <CountdownTimer endsAt={c.endsAt} />
               </span>
             )}
@@ -5598,9 +5598,9 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
               >
                 <div className="pt-1 space-y-1.5 max-h-60 overflow-y-auto">
                   {playerCount === 0 ? (
-                    <p className="text-xs text-brand-navy/40 text-center py-3">No players yet.</p>
+                    <p className="text-xs text-brand-navy/55 text-center py-3">No players yet.</p>
                   ) : loadingPlayers ? (
-                    <p className="text-xs text-brand-navy/40 text-center py-3">Loading...</p>
+                    <p className="text-xs text-brand-navy/55 text-center py-3">Loading...</p>
                   ) : (
                     (c.participantUids || []).map(uid => {
                       const p = playerProfiles.get(uid);
@@ -5614,13 +5614,13 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-bold text-brand-navy truncate">{p?.name || 'Player'}</p>
-                            {p?.handle && <p className="text-[10px] text-brand-navy/40">@{p.handle}</p>}
+                            {p?.handle && <p className="text-[10px] text-brand-navy/55">@{p.handle}</p>}
                             {c.goal && (
                               <div className="mt-1.5 space-y-0.5">
                                 <div className="h-1 rounded-full bg-brand-navy/10 overflow-hidden">
                                   <div className="h-full rounded-full bg-brand-navy/40 transition-all" style={{ width: `${pct}%` }} />
                                 </div>
-                                <p className="text-[10px] text-brand-navy/40">{count}/{c.goal} {c.unit}</p>
+                                <p className="text-[10px] text-brand-navy/55">{count}/{c.goal} {c.unit}</p>
                               </div>
                             )}
                           </div>
@@ -5682,7 +5682,7 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-display text-2xl font-bold text-brand-navy">Admin Panel</h2>
-              <p className="text-xs text-brand-navy/50 mt-0.5">Manage challenges</p>
+              <p className="text-xs text-brand-navy/65 mt-0.5">Manage challenges</p>
             </div>
             <button onClick={onClose} className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm active:scale-95 transition-all">
               <X size={18} className="text-brand-navy/60" />
@@ -5693,10 +5693,10 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
         <div className="p-5 space-y-6">
           <div className="rounded-3xl overflow-hidden border-2 border-dashed border-brand-navy/20 p-5 space-y-3 bg-white">
             <div className="flex items-center gap-2">
-              <Star className="w-5 h-5 text-brand-navy/50" />
+              <Star className="w-5 h-5 text-brand-navy/65" />
               <h3 className="font-bold text-brand-navy text-sm">Standard Challenge</h3>
             </div>
-            <p className="text-xs text-brand-navy/50">
+            <p className="text-xs text-brand-navy/65">
               Goal-based challenge — players track progress toward a target number.
             </p>
             <input value={stdTitle} onChange={e => setStdTitle(e.target.value)} placeholder="Challenge name" className={inputCls} />
@@ -5726,7 +5726,7 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
               <option value="service">Service</option>
             </select>
             <div className="flex items-center gap-2">
-              <label className="text-xs text-brand-navy/50 flex-shrink-0">End date</label>
+              <label className="text-xs text-brand-navy/65 flex-shrink-0">End date</label>
               <input type="datetime-local" value={stdEndsAt} onChange={e => setStdEndsAt(e.target.value)} className={cn(inputCls, 'flex-1 text-xs')} />
             </div>
 
@@ -5737,14 +5737,14 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
                 onClick={() => setVendorPickerOpen(p => !p)}
                 className={cn(inputCls, 'w-full flex items-center justify-between text-left')}
               >
-                <span className={stdVendorIds.length === 0 ? 'text-brand-navy/40' : 'text-brand-navy'}>
+                <span className={stdVendorIds.length === 0 ? 'text-brand-navy/55' : 'text-brand-navy'}>
                   {stdVendorIds.length === 0
                     ? 'Include vendors (default: all)'
                     : allSelected
                       ? 'All vendors'
                       : `${stdVendorIds.length} vendor${stdVendorIds.length > 1 ? 's' : ''} selected`}
                 </span>
-                <ChevronDown size={14} className={cn('text-brand-navy/40 transition-transform', vendorPickerOpen && 'rotate-180')} />
+                <ChevronDown size={14} className={cn('text-brand-navy/55 transition-transform', vendorPickerOpen && 'rotate-180')} />
               </button>
               {vendorPickerOpen && (
                 <div className="absolute z-20 top-full mt-1 left-0 right-0 bg-white border border-brand-navy/10 rounded-2xl shadow-lg overflow-hidden max-h-52 overflow-y-auto">
@@ -5803,9 +5803,9 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
 
             {/* Challenge image upload */}
             <div className="space-y-2">
-              <label className="text-xs font-bold text-brand-navy/50">Challenge image (optional)</label>
+              <label className="text-xs font-bold text-brand-navy/65">Challenge image (optional)</label>
               <div className="flex items-center gap-3">
-                <label className={cn('flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl border-2 border-dashed border-brand-navy/20 text-sm font-semibold text-brand-navy/50 cursor-pointer transition-all', stdImageUploading ? 'opacity-50 pointer-events-none' : 'hover:border-brand-gold/50 hover:text-brand-navy active:scale-[0.98]')}>
+                <label className={cn('flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl border-2 border-dashed border-brand-navy/20 text-sm font-semibold text-brand-navy/65 cursor-pointer transition-all', stdImageUploading ? 'opacity-50 pointer-events-none' : 'hover:border-brand-gold/50 hover:text-brand-navy active:scale-[0.98]')}>
                   {stdImageUploading ? 'Uploading...' : '📁 Upload image'}
                   <input type="file" accept="image/*" className="hidden" onChange={async e => {
                     const file = e.target.files?.[0];
@@ -6048,13 +6048,13 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
 
           {challenges.length > 0 && (
             <div className="space-y-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Standard Challenges</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/55 px-1">Standard Challenges</p>
               {challenges.map(c => <ChallengeCard key={c.id} c={c} />)}
             </div>
           )}
 
           {challenges.length === 0 && collectibles.length === 0 && (
-            <p className="text-center text-brand-navy/40 text-sm py-8">No challenges yet. Deploy one above.</p>
+            <p className="text-center text-brand-navy/55 text-sm py-8">No challenges yet. Deploy one above.</p>
           )}
         </div>
       </div>
@@ -6933,7 +6933,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                     'flex-1 py-2.5 rounded-xl text-sm font-bold transition-all',
                     walletSubTab === 'stamps'
                       ? 'bg-white text-brand-navy shadow-sm'
-                      : 'bg-white/50 text-brand-navy/50'
+                      : 'bg-white/50 text-brand-navy/65'
                   )}
                 >
                   Wallet
@@ -6970,7 +6970,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                       onClick={() => setWalletLayout('carousel')}
                       className={cn(
                         'flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all',
-                        walletLayout === 'carousel' ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/40'
+                        walletLayout === 'carousel' ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/55'
                       )}
                     >
                       <MoveHorizontal size={12} />
@@ -6980,7 +6980,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                       onClick={() => setWalletLayout('list')}
                       className={cn(
                         'flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all',
-                        walletLayout === 'list' ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/40'
+                        walletLayout === 'list' ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/55'
                       )}
                     >
                       <LayoutList size={12} />
@@ -7024,7 +7024,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
               ) : (
                 <div className="glass-card p-10 rounded-[2.5rem] border-2 border-dashed border-brand-rose/40 text-center">
                   <div className="w-16 h-16 bg-brand-bg rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Wallet className="w-8 h-8 text-brand-navy/20" />
+                    <Wallet className="w-8 h-8 text-brand-navy/32" />
                   </div>
                   <p className="text-brand-navy/60 mb-6">Your wallet is empty.</p>
                   <button
@@ -7083,7 +7083,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                                       )}
                                     </div>
                                     {prog.endsAt && (
-                                      <div className="flex items-center gap-1 text-brand-navy/40 text-[10px] mt-0.5">
+                                      <div className="flex items-center gap-1 text-brand-navy/55 text-[10px] mt-0.5">
                                         <Clock size={9} /><CountdownTimer endsAt={prog.endsAt} />
                                       </div>
                                     )}
@@ -7121,7 +7121,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                                       transition={{ duration: 0.6, ease: 'easeOut' }}
                                     />
                                   </div>
-                                  <span className="text-[10px] font-bold text-brand-navy/40 shrink-0">{pct}%</span>
+                                  <span className="text-[10px] font-bold text-brand-navy/55 shrink-0">{pct}%</span>
                                 </div>
                                 {isComplete && (
                                   <p className="text-[10px] font-bold text-amber-600 mt-1">🏆 Complete! Claim: {prog.reward}</p>
@@ -7151,9 +7151,9 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                             <div key={prog.id} className="px-4 py-3 flex items-center gap-3">
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-bold text-brand-navy truncate">{prog.title}</p>
-                                <p className="text-[10px] text-brand-navy/40 mt-0.5">🏆 {prog.reward}</p>
+                                <p className="text-[10px] text-brand-navy/55 mt-0.5">🏆 {prog.reward}</p>
                                 {prog.endsAt && (
-                                  <div className="flex items-center gap-1 text-brand-navy/40 text-[10px] mt-0.5">
+                                  <div className="flex items-center gap-1 text-brand-navy/55 text-[10px] mt-0.5">
                                     <Clock size={9} /><CountdownTimer endsAt={prog.endsAt} />
                                   </div>
                                 )}
@@ -7190,7 +7190,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                 if (redeemedChallenges.length === 0) return null;
                 return (
                   <div className="space-y-2">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Redeemed</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/55 px-1">Redeemed</p>
                     {redeemedChallenges.map(c => {
                       const entry = myStandardEntries.get(c.id);
                       return (
@@ -7200,7 +7200,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-bold text-sm text-brand-navy truncate">{c.title}</p>
-                            <p className="text-[10px] text-brand-navy/40 mt-0.5">🎁 {c.reward}</p>
+                            <p className="text-[10px] text-brand-navy/55 mt-0.5">🎁 {c.reward}</p>
                           </div>
                           <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full shrink-0">Redeemed</span>
                         </div>
@@ -7212,7 +7212,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
 
               {activeStandardChallenges.length > 0 && (
                 <div className="space-y-3">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Challenges</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/55 px-1">Challenges</p>
                   {activeStandardChallenges.map(c => {
                     const joined = (c.participantUids || []).includes(user.uid);
                     const entry = myStandardEntries.get(c.id);
@@ -7267,10 +7267,10 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
 
                           {c.vendorIds?.length ? (
                             <div>
-                              <p className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest mb-1.5">Participating stores</p>
+                              <p className="text-[10px] font-bold text-brand-navy/55 uppercase tracking-widest mb-1.5">Participating stores</p>
                               {stores.length > 0 && c.vendorIds.length >= stores.length ? (
                                 <div className="flex items-center gap-1.5 bg-brand-navy/5 rounded-full px-2.5 py-1 w-fit">
-                                  <Store size={10} className="text-brand-navy/40 shrink-0" />
+                                  <Store size={10} className="text-brand-navy/55 shrink-0" />
                                   <span className="text-[10px] font-bold text-brand-navy/70">All vendors</span>
                                 </div>
                               ) : (
@@ -7281,7 +7281,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                                       <div key={vid} className="flex items-center gap-1.5 bg-brand-navy/5 rounded-full px-2.5 py-1">
                                         {s.logoUrl
                                           ? <img src={s.logoUrl} alt="" className="w-4 h-4 rounded-full object-cover shrink-0" />
-                                          : <Store size={10} className="text-brand-navy/40 shrink-0" />}
+                                          : <Store size={10} className="text-brand-navy/55 shrink-0" />}
                                         <span className="text-[10px] font-bold text-brand-navy/70">{s.name}</span>
                                       </div>
                                     ) : null;
@@ -7297,7 +7297,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                                 <p className="text-xs font-bold text-brand-navy/60">
                                   {stampsProgress} / {c.goal} {c.unit}
                                 </p>
-                                <p className="text-xs font-bold text-brand-navy/40">{progressPct}%</p>
+                                <p className="text-xs font-bold text-brand-navy/55">{progressPct}%</p>
                               </div>
                               <div className="h-2.5 bg-brand-navy/5 rounded-full overflow-hidden">
                                 <motion.div
@@ -7392,7 +7392,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                                 }}
                                 className={cn(
                                   'w-full py-3 rounded-2xl text-sm font-bold transition-all active:scale-95',
-                                  joinedCount >= 5 ? 'bg-brand-navy/20 text-brand-navy/40 cursor-not-allowed' : 'bg-brand-navy text-white'
+                                  joinedCount >= 5 ? 'bg-brand-navy/20 text-brand-navy/55 cursor-not-allowed' : 'bg-brand-navy text-white'
                                 )}
                               >
                                 Join Challenge
@@ -7606,10 +7606,10 @@ function BadgeNotifCard({ badge, queueCount, onDismiss }: { badge: AppBadge; que
               className="text-sm text-brand-navy/60 leading-relaxed">{badge.description}</motion.p>
           )}
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.45 }}
-            className="text-xs text-brand-navy/40">{BADGE_METRIC_LABELS[badge.metric]} ≥ {badge.threshold}</motion.p>
+            className="text-xs text-brand-navy/55">{BADGE_METRIC_LABELS[badge.metric]} ≥ {badge.threshold}</motion.p>
         </div>
         {queueCount > 1 && (
-          <p className="text-center text-[10px] text-brand-navy/30 font-medium">+{queueCount - 1} more badge{queueCount - 1 > 1 ? 's' : ''} unlocked!</p>
+          <p className="text-center text-[10px] text-brand-navy/45 font-medium">+{queueCount - 1} more badge{queueCount - 1 > 1 ? 's' : ''} unlocked!</p>
         )}
         <motion.button
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
@@ -7838,7 +7838,7 @@ function NFCStampModal({ user, profile, onClose, autoStoreId, onPackReady }: {
             <p className="text-brand-navy/60 text-sm mb-4 leading-relaxed">
               Hold the top of your iPhone near the store's NFC tag. Your iPhone will show a notification — tap it to collect your stamp.
             </p>
-            <p className="text-[11px] text-brand-navy/30 font-bold uppercase tracking-widest">iPhone reads NFC automatically</p>
+            <p className="text-[11px] text-brand-navy/45 font-bold uppercase tracking-widest">iPhone reads NFC automatically</p>
           </>
         )}
 
@@ -7976,10 +7976,10 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
           </div>
           <div className="min-w-0">
             <h3 className="font-display text-lg font-bold text-brand-navy">{store?.name || 'Store'}</h3>
-            <p className="text-brand-navy/40 text-xs">Stamp Card</p>
+            <p className="text-brand-navy/55 text-xs">Stamp Card</p>
             <button
               onClick={() => navigator.clipboard?.writeText(card.store_id)}
-              className="text-[10px] font-mono text-brand-navy/25 truncate max-w-full text-left active:text-brand-navy/50 transition-colors"
+              className="text-[10px] font-mono text-brand-navy/25 truncate max-w-full text-left active:text-brand-navy/65 transition-colors"
               title="Tap to copy shop ID"
             >{card.store_id}</button>
           </div>
@@ -7989,7 +7989,7 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
           <>
             {/* Qty stepper */}
             <div className="bg-brand-bg rounded-2xl p-5 mb-5 text-center">
-              <p className="text-brand-navy/40 text-[10px] font-bold uppercase tracking-widest mb-4">How many stamps?</p>
+              <p className="text-brand-navy/55 text-[10px] font-bold uppercase tracking-widest mb-4">How many stamps?</p>
               <div className="flex items-center justify-center gap-6">
                 <button
                   onClick={() => setQty(q => Math.max(1, q - 1))}
@@ -8001,7 +8001,7 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
                   className="w-12 h-12 rounded-full bg-white shadow font-black text-2xl text-brand-navy flex items-center justify-center active:scale-90 transition-transform"
                 >+</button>
               </div>
-              <p className="text-brand-navy/30 text-[10px] font-bold mt-3">{remaining} remaining to reward</p>
+              <p className="text-brand-navy/45 text-[10px] font-bold mt-3">{remaining} remaining to reward</p>
             </div>
             <button
               onClick={startScan}
@@ -8021,11 +8021,11 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
             </div>
             {scannedUID && (
               <button onClick={() => navigator.clipboard?.writeText(scannedUID)}
-                className="w-full text-left text-[11px] font-mono text-brand-navy/30 bg-brand-bg px-3 py-2 rounded-xl mb-3 truncate">
+                className="w-full text-left text-[11px] font-mono text-brand-navy/45 bg-brand-bg px-3 py-2 rounded-xl mb-3 truncate">
                 UID: {scannedUID}
               </button>
             )}
-            <button onClick={onClose} className="w-full text-brand-navy/40 text-sm font-bold py-2">Close</button>
+            <button onClick={onClose} className="w-full text-brand-navy/55 text-sm font-bold py-2">Close</button>
           </>
         )}
 
@@ -8035,7 +8035,7 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
               <div className="mb-4">
                 <Smartphone size={36} className="text-brand-navy mx-auto mb-3" />
                 <p className="font-bold text-brand-navy mb-1">Hold near NFC tag</p>
-                <p className="text-brand-navy/40 text-xs">Hold the top of your iPhone near the store's NFC tag</p>
+                <p className="text-brand-navy/55 text-xs">Hold the top of your iPhone near the store's NFC tag</p>
               </div>
             ) : (
               <>
@@ -8051,7 +8051,7 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
                 <p className="font-bold text-brand-navy mb-1">Hold near NFC tag</p>
               </>
             )}
-            <button onClick={() => { abortRef.current?.abort(); setScanState('idle'); }} className="w-full text-brand-navy/40 text-sm font-bold py-2">Cancel</button>
+            <button onClick={() => { abortRef.current?.abort(); setScanState('idle'); }} className="w-full text-brand-navy/55 text-sm font-bold py-2">Cancel</button>
           </div>
         )}
         {scanState === 'processing' && (
@@ -8059,7 +8059,7 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
             <p className="text-brand-navy/60 font-medium">Processing…</p>
             {scannedUID && (
               <button onClick={() => navigator.clipboard?.writeText(scannedUID)}
-                className="mt-3 text-[11px] font-mono text-brand-navy/30 bg-brand-bg px-3 py-1.5 rounded-lg truncate max-w-full">
+                className="mt-3 text-[11px] font-mono text-brand-navy/45 bg-brand-bg px-3 py-1.5 rounded-lg truncate max-w-full">
                 UID: {scannedUID}
               </button>
             )}
@@ -8073,7 +8073,7 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
             <p className="text-brand-navy font-bold text-base mb-1">{statusMsg}</p>
             {scannedUID && (
               <button onClick={() => navigator.clipboard?.writeText(scannedUID)}
-                className="mt-1 text-[11px] font-mono text-brand-navy/30 bg-brand-bg px-3 py-1.5 rounded-lg truncate max-w-full">
+                className="mt-1 text-[11px] font-mono text-brand-navy/45 bg-brand-bg px-3 py-1.5 rounded-lg truncate max-w-full">
                 UID: {scannedUID}
               </button>
             )}
@@ -8085,12 +8085,12 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
             <p className="text-red-500 font-medium text-sm mb-3">{statusMsg}</p>
             {scannedUID && (
               <button onClick={() => navigator.clipboard?.writeText(scannedUID)}
-                className="mb-3 text-[11px] font-mono text-brand-navy/30 bg-brand-bg px-3 py-1.5 rounded-lg truncate max-w-full">
+                className="mb-3 text-[11px] font-mono text-brand-navy/45 bg-brand-bg px-3 py-1.5 rounded-lg truncate max-w-full">
                 UID: {scannedUID}
               </button>
             )}
             <button onClick={() => setScanState('idle')} className="w-full bg-brand-navy/10 text-brand-navy py-3 rounded-2xl font-bold text-sm mb-2">Try Again</button>
-            <button onClick={onClose} className="text-brand-navy/40 text-sm font-bold mt-2">Close</button>
+            <button onClick={onClose} className="text-brand-navy/55 text-sm font-bold mt-2">Close</button>
           </div>
         )}
       </motion.div>
@@ -8180,10 +8180,10 @@ function VisitScanSheet({ card, store, onClose }: { card: Card; store?: StorePro
           </div>
           <div className="min-w-0">
             <h3 className="font-display text-lg font-bold text-brand-navy">{store?.name || 'Store'}</h3>
-            <p className="text-brand-navy/40 text-xs">{store?.membershipName || 'Membership'} · {membershipVisits} pts</p>
+            <p className="text-brand-navy/55 text-xs">{store?.membershipName || 'Membership'} · {membershipVisits} pts</p>
             <button
               onClick={() => navigator.clipboard?.writeText(card.store_id)}
-              className="text-[10px] font-mono text-brand-navy/25 truncate max-w-full text-left active:text-brand-navy/50 transition-colors"
+              className="text-[10px] font-mono text-brand-navy/25 truncate max-w-full text-left active:text-brand-navy/65 transition-colors"
               title="Tap to copy shop ID"
             >{card.store_id}</button>
           </div>
@@ -8191,7 +8191,7 @@ function VisitScanSheet({ card, store, onClose }: { card: Card; store?: StorePro
         {scanState === 'idle' && (
           <>
             <div className="bg-brand-bg rounded-2xl p-5 mb-5 text-center">
-              <p className="text-brand-navy/40 text-[10px] font-bold uppercase tracking-widest mb-4">Points to collect</p>
+              <p className="text-brand-navy/55 text-[10px] font-bold uppercase tracking-widest mb-4">Points to collect</p>
               <span className="font-black text-6xl text-brand-navy leading-none">{qty}</span>
             </div>
             {isIOS ? (
@@ -8214,7 +8214,7 @@ function VisitScanSheet({ card, store, onClose }: { card: Card; store?: StorePro
               <button onClick={() => processId(testId.trim())} disabled={!testId.trim()}
                 className="bg-brand-navy text-white px-4 py-2.5 rounded-xl font-bold text-sm disabled:opacity-30">Go</button>
             </div>
-            <button onClick={onClose} className="w-full text-brand-navy/40 text-sm font-bold py-2">Close</button>
+            <button onClick={onClose} className="w-full text-brand-navy/55 text-sm font-bold py-2">Close</button>
           </>
         )}
         {scanState === 'scanning' && (
@@ -8238,8 +8238,8 @@ function VisitScanSheet({ card, store, onClose }: { card: Card; store?: StorePro
                 <p className="font-bold text-brand-navy mb-1">Hold near NFC tag</p>
               </>
             )}
-            <p className="text-brand-navy/40 text-xs mb-4">Listening for store tag…</p>
-            <button onClick={() => { abortRef.current?.abort(); setScanState('idle'); }} className="w-full text-brand-navy/40 text-sm font-bold py-2">Cancel</button>
+            <p className="text-brand-navy/55 text-xs mb-4">Listening for store tag…</p>
+            <button onClick={() => { abortRef.current?.abort(); setScanState('idle'); }} className="w-full text-brand-navy/55 text-sm font-bold py-2">Cancel</button>
           </div>
         )}
         {scanState === 'processing' && (
@@ -8251,7 +8251,7 @@ function VisitScanSheet({ card, store, onClose }: { card: Card; store?: StorePro
               <Check size={26} style={{ color }} />
             </div>
             <p className="text-brand-navy font-bold text-base mb-1">{statusMsg}</p>
-            <p className="text-brand-navy/40 text-sm">{membershipVisits + qty} total points</p>
+            <p className="text-brand-navy/55 text-sm">{membershipVisits + qty} total points</p>
             <button onClick={onClose} className="w-full bg-brand-navy text-white py-3.5 rounded-2xl font-bold text-sm mt-4">Done</button>
           </div>
         )}
@@ -8259,7 +8259,7 @@ function VisitScanSheet({ card, store, onClose }: { card: Card; store?: StorePro
           <div className="text-center">
             <p className="text-red-500 font-medium text-sm mb-4">{statusMsg}</p>
             <button onClick={() => setScanState('idle')} className="w-full bg-brand-navy/10 text-brand-navy py-3 rounded-2xl font-bold text-sm mb-2">Try Again</button>
-            <button onClick={onClose} className="text-brand-navy/40 text-sm font-bold mt-2">Close</button>
+            <button onClick={onClose} className="text-brand-navy/55 text-sm font-bold mt-2">Close</button>
           </div>
         )}
       </motion.div>
@@ -8470,7 +8470,7 @@ function StampCelebrationModal({
                   <motion.p
                     animate={!rankRevealed ? { opacity: [1, 0.4, 1] } : { opacity: 1 }}
                     transition={!rankRevealed ? { duration: 0.55, repeat: Infinity } : {}}
-                    className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40"
+                    className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/55"
                   >
                     {rankRevealed ? '🏆 Your rank' : '🥁 Calculating your rank...'}
                   </motion.p>
@@ -8485,7 +8485,7 @@ function StampCelebrationModal({
                       ? rankChange > 0 ? 'bg-emerald-50 border-emerald-200' : rankChange < 0 ? 'bg-red-50/60 border-red-100' : 'bg-brand-navy/4 border-brand-navy/8'
                       : 'bg-brand-navy/4 border-brand-navy/8'
                   )}>
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/40">Global</p>
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/55">Global</p>
                     <motion.p
                       key={rankRevealed ? 'g-final' : 'g-spin'}
                       animate={rankRevealed ? { scale: [0.7, 1.25, 1], opacity: [0.5, 1, 1] } : {}}
@@ -8518,7 +8518,7 @@ function StampCelebrationModal({
                       ? weeklyRankChange > 0 ? 'bg-emerald-50 border-emerald-200' : weeklyRankChange < 0 ? 'bg-red-50/60 border-red-100' : 'bg-brand-navy/4 border-brand-navy/8'
                       : 'bg-brand-navy/4 border-brand-navy/8'
                   )}>
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/40">This Week</p>
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/55">This Week</p>
                     <motion.p
                       key={rankRevealed ? 'w-final' : 'w-spin'}
                       animate={rankRevealed ? { scale: [0.7, 1.25, 1], opacity: [0.5, 1, 1] } : {}}
@@ -8613,7 +8613,7 @@ function StampCelebrationModal({
                 {/* Pick a cause */}
                 <motion.p
                   initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-                  className="text-center text-xs font-bold text-brand-navy/50 uppercase tracking-widest"
+                  className="text-center text-xs font-bold text-brand-navy/65 uppercase tracking-widest"
                 >
                   Pick what to champion today:
                 </motion.p>
@@ -8640,7 +8640,7 @@ function StampCelebrationModal({
                     <div className="w-full">
                       <p className="font-display font-bold text-sm text-brand-navy leading-tight">{page.charityAnimal?.name ?? 'Endangered Animal'}</p>
                       <p className="text-[10px] font-bold text-red-500 mt-0.5">{page.charityAnimal?.status}</p>
-                      <p className="text-[10px] text-brand-navy/50 mt-1 leading-tight">{page.charityAnimal?.fact}</p>
+                      <p className="text-[10px] text-brand-navy/65 mt-1 leading-tight">{page.charityAnimal?.fact}</p>
                     </div>
                     {charityPicked === 'animal' && (
                       <motion.div
@@ -8667,7 +8667,7 @@ function StampCelebrationModal({
                     <div className="w-full">
                       <p className="font-display font-bold text-sm text-brand-navy leading-tight">Plant a Tree</p>
                       <p className="text-[10px] font-bold text-emerald-600 mt-0.5">Reforestation</p>
-                      <p className="text-[10px] text-brand-navy/50 mt-1 leading-tight">Help restore forests and fight climate change</p>
+                      <p className="text-[10px] text-brand-navy/65 mt-1 leading-tight">Help restore forests and fight climate change</p>
                     </div>
                     {charityPicked === 'tree' && (
                       <motion.div
@@ -8806,7 +8806,7 @@ function StampCelebrationModal({
                             </svg>
                             <div className="absolute inset-0 flex flex-col items-center justify-center">
                               <span className="text-3xl font-display font-bold text-brand-navy leading-none">{page.stageStamps}</span>
-                              <span className="text-xs text-brand-navy/40 font-bold">/ {page.nextStageStamps}</span>
+                              <span className="text-xs text-brand-navy/55 font-bold">/ {page.nextStageStamps}</span>
                             </div>
                           </div>
                         </motion.div>
@@ -8952,7 +8952,7 @@ function StampCelebrationModal({
                         )}
                       </div>
                       <div className="space-y-1">
-                        <div className="flex justify-between text-[10px] font-bold text-brand-navy/40">
+                        <div className="flex justify-between text-[10px] font-bold text-brand-navy/55">
                           <span className="truncate max-w-[70%]">{c.reward}</span>
                           <span>{c.currentStamps}/{c.totalStamps}</span>
                         </div>
@@ -9012,10 +9012,10 @@ function StampCelebrationModal({
                     >
                       <div className="min-w-0">
                         <p className="font-bold text-sm text-brand-navy truncate">{c.title}</p>
-                        <p className="text-[11px] text-brand-navy/50 mt-0.5 truncate">🏆 {c.reward}</p>
+                        <p className="text-[11px] text-brand-navy/65 mt-0.5 truncate">🏆 {c.reward}</p>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-[10px] font-bold text-brand-navy/40">{c.totalStamps} stamps</p>
+                        <p className="text-[10px] font-bold text-brand-navy/55">{c.totalStamps} stamps</p>
                       </div>
                     </motion.div>
                   ))}
@@ -9213,7 +9213,7 @@ function StampCelebrationModal({
                           <div className="flex items-center justify-between gap-3">
                             <span className="text-brand-navy/35 text-[11px] font-bold">{page.currentStamps}/{limit} stamps</span>
                             {nextRewardTier && (
-                              <span className="text-brand-navy/30 text-[10px] text-right leading-snug">
+                              <span className="text-brand-navy/45 text-[10px] text-right leading-snug">
                                 {nextRewardTier.stamps - page.currentStamps} more →{' '}
                                 <span className="font-semibold" style={{ color: cardTheme }}>{nextRewardTier.reward}</span>
                               </span>
@@ -9244,7 +9244,7 @@ function StampCelebrationModal({
                       </svg>
                       <div className="absolute inset-0 flex flex-col items-center justify-center">
                         <span className="text-3xl font-display font-bold text-brand-navy leading-none">{page.currentStamps}</span>
-                        <span className="text-xs text-brand-navy/40 font-bold">/ {page.totalStamps}</span>
+                        <span className="text-xs text-brand-navy/55 font-bold">/ {page.totalStamps}</span>
                       </div>
                     </div>
                   </motion.div>
@@ -9266,7 +9266,7 @@ function StampCelebrationModal({
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
                     className="space-y-1.5"
                   >
-                    <div className="flex justify-between text-[10px] font-bold text-brand-navy/40">
+                    <div className="flex justify-between text-[10px] font-bold text-brand-navy/55">
                       <span className="truncate max-w-[70%]">{page.reward}</span>
                       <span>{pct}%</span>
                     </div>
@@ -9380,11 +9380,11 @@ function StickerCelebrationModal({ programmeName, newCount, totalStickers, total
         >
           <div className="flex-1 bg-white rounded-2xl p-3 text-center border border-black/5">
             <p className="text-2xl font-display font-bold text-brand-navy">{totalStickers}</p>
-            <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-wider mt-0.5">Stickers</p>
+            <p className="text-[10px] text-brand-navy/55 font-bold uppercase tracking-wider mt-0.5">Stickers</p>
           </div>
           <div className={cn('flex-1 rounded-2xl p-3 text-center border', allWon ? 'bg-green-50 border-green-200' : 'bg-white border-black/5')}>
             <p className={cn('text-2xl font-display font-bold', allWon ? 'text-green-500' : 'text-brand-navy')}>{totalSets}</p>
-            <p className={cn('text-[10px] font-bold uppercase tracking-wider mt-0.5', allWon ? 'text-green-400' : 'text-brand-navy/40')}>Sets</p>
+            <p className={cn('text-[10px] font-bold uppercase tracking-wider mt-0.5', allWon ? 'text-green-400' : 'text-brand-navy/55')}>Sets</p>
           </div>
         </motion.div>
 
@@ -9473,12 +9473,12 @@ function AddAutomationModal({ store, onClose }: { store: StoreProfile; onClose: 
         <div className="flex items-center justify-between">
           <h3 className="font-display text-lg font-bold text-brand-navy">New Automation</h3>
           <button onClick={onClose} className="p-2 rounded-xl bg-brand-navy/5">
-            <X size={16} className="text-brand-navy/50" />
+            <X size={16} className="text-brand-navy/65" />
           </button>
         </div>
 
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2">Type</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/55 mb-2">Type</p>
           <div className="flex gap-2">
             {(['birthday', 'scheduled'] as const).map(t => (
               <button
@@ -9486,7 +9486,7 @@ function AddAutomationModal({ store, onClose }: { store: StoreProfile; onClose: 
                 onClick={() => setType(t)}
                 className={cn(
                   'flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all',
-                  type === t ? 'bg-brand-navy text-white' : 'bg-brand-navy/5 text-brand-navy/50'
+                  type === t ? 'bg-brand-navy text-white' : 'bg-brand-navy/5 text-brand-navy/65'
                 )}
               >
                 {t === 'birthday' ? <><Gift size={12} /> Birthday</> : <><Calendar size={12} /> Scheduled</>}
@@ -9497,18 +9497,18 @@ function AddAutomationModal({ store, onClose }: { store: StoreProfile; onClose: 
 
         {type === 'birthday' && (
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2">When to send</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/55 mb-2">When to send</p>
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={() => setDaysBefore(0)}
                 className={cn(
                   'px-3 py-2 rounded-xl text-xs font-bold transition-all',
-                  daysBefore === 0 ? 'bg-brand-navy text-white' : 'bg-brand-navy/5 text-brand-navy/50'
+                  daysBefore === 0 ? 'bg-brand-navy text-white' : 'bg-brand-navy/5 text-brand-navy/65'
                 )}
               >
                 On birthday
               </button>
-              <span className="text-brand-navy/30 text-xs">or</span>
+              <span className="text-brand-navy/45 text-xs">or</span>
               <div className="flex items-center gap-1.5">
                 <input
                   type="number"
@@ -9520,7 +9520,7 @@ function AddAutomationModal({ store, onClose }: { store: StoreProfile; onClose: 
                   placeholder="7"
                   className="w-14 px-2 py-2 rounded-xl border border-black/10 text-xs text-center font-bold focus:outline-none focus:ring-2 focus:ring-brand-navy/20"
                 />
-                <span className="text-xs text-brand-navy/50 whitespace-nowrap">days before</span>
+                <span className="text-xs text-brand-navy/65 whitespace-nowrap">days before</span>
               </div>
             </div>
           </div>
@@ -9529,7 +9529,7 @@ function AddAutomationModal({ store, onClose }: { store: StoreProfile; onClose: 
         {type === 'scheduled' && (
           <div className="space-y-3">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2">Date &amp; Time</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/55 mb-2">Date &amp; Time</p>
               <input
                 type="datetime-local"
                 value={scheduledAt}
@@ -9538,7 +9538,7 @@ function AddAutomationModal({ store, onClose }: { store: StoreProfile; onClose: 
               />
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2">Repeat</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/55 mb-2">Repeat</p>
               <div className="flex gap-2">
                 {(['none', 'yearly'] as const).map(r => (
                   <button
@@ -9546,7 +9546,7 @@ function AddAutomationModal({ store, onClose }: { store: StoreProfile; onClose: 
                     onClick={() => setRecurring(r)}
                     className={cn(
                       'flex-1 py-2 rounded-xl text-xs font-bold transition-all',
-                      recurring === r ? 'bg-brand-navy text-white' : 'bg-brand-navy/5 text-brand-navy/50'
+                      recurring === r ? 'bg-brand-navy text-white' : 'bg-brand-navy/5 text-brand-navy/65'
                     )}
                   >
                     {r === 'none' ? 'Once' : 'Yearly'}
@@ -9564,7 +9564,7 @@ function AddAutomationModal({ store, onClose }: { store: StoreProfile; onClose: 
             value={title}
             onChange={e => setTitle(e.target.value)}
             maxLength={80}
-            className="w-full px-4 py-3 rounded-2xl border border-black/10 text-sm font-bold text-brand-navy placeholder:text-brand-navy/30 focus:outline-none focus:ring-2 focus:ring-brand-navy/20"
+            className="w-full px-4 py-3 rounded-2xl border border-black/10 text-sm font-bold text-brand-navy placeholder:text-brand-navy/45 focus:outline-none focus:ring-2 focus:ring-brand-navy/20"
           />
           <textarea
             placeholder="Message body..."
@@ -9572,7 +9572,7 @@ function AddAutomationModal({ store, onClose }: { store: StoreProfile; onClose: 
             onChange={e => setMessage(e.target.value)}
             rows={3}
             maxLength={500}
-            className="w-full px-4 py-3 rounded-2xl border border-black/10 text-sm text-brand-navy placeholder:text-brand-navy/30 focus:outline-none focus:ring-2 focus:ring-brand-navy/20 resize-none"
+            className="w-full px-4 py-3 rounded-2xl border border-black/10 text-sm text-brand-navy placeholder:text-brand-navy/45 focus:outline-none focus:ring-2 focus:ring-brand-navy/20 resize-none"
           />
         </div>
 
@@ -9744,7 +9744,7 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="font-display text-xl font-bold text-brand-navy">Broadcast</h2>
-                <p className="text-xs text-brand-navy/40">{store.name}</p>
+                <p className="text-xs text-brand-navy/55">{store.name}</p>
               </div>
               <button onClick={onClose} className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm">
                 <X size={18} className="text-brand-navy/60" />
@@ -9757,7 +9757,7 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
                   onClick={() => setSubTab(t)}
                   className={cn(
                     'flex-1 py-2.5 rounded-xl text-xs font-bold transition-all',
-                    subTab === t ? 'bg-brand-navy text-white' : 'bg-brand-navy/5 text-brand-navy/50'
+                    subTab === t ? 'bg-brand-navy text-white' : 'bg-brand-navy/5 text-brand-navy/65'
                   )}
                 >
                   {t === 'mass' ? 'Mass Message' : 'Automations'}
@@ -9770,7 +9770,7 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
             {subTab === 'mass' && (
               <div className="space-y-5">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2">Send To</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/55 mb-2">Send To</p>
                   <div className="grid grid-cols-2 gap-2">
                     {(['cardholders', 'followers', 'both', 'topX'] as const).map(f => (
                       <button
@@ -9778,7 +9778,7 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
                         onClick={() => { setFilter(f); setSentCount(null); setSendError(null); }}
                         className={cn(
                           'py-2.5 rounded-xl text-xs font-bold transition-all',
-                          filter === f ? 'bg-brand-navy text-white' : 'bg-brand-navy/5 text-brand-navy/50'
+                          filter === f ? 'bg-brand-navy text-white' : 'bg-brand-navy/5 text-brand-navy/65'
                         )}
                       >
                         {f === 'cardholders' ? 'Card Holders' : f === 'followers' ? 'Followers' : f === 'both' ? 'Both' : '⭐ Top Users'}
@@ -9787,17 +9787,17 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
                   </div>
                   {filter === 'topX' && (
                     <div className="flex items-center gap-3 mt-3">
-                      <p className="text-xs font-bold text-brand-navy/50 shrink-0">Top</p>
+                      <p className="text-xs font-bold text-brand-navy/65 shrink-0">Top</p>
                       <input
                         type="number" min={1} max={cardHolderUids.length || 100}
                         value={topXCount}
                         onChange={e => setTopXCount(Math.max(1, parseInt(e.target.value) || 1))}
                         className="w-20 px-3 py-2 rounded-xl bg-white border border-brand-navy/10 text-sm font-bold text-brand-navy text-center focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
                       />
-                      <p className="text-xs font-bold text-brand-navy/50 shrink-0">users by stamps</p>
+                      <p className="text-xs font-bold text-brand-navy/65 shrink-0">users by stamps</p>
                     </div>
                   )}
-                  <p className="text-xs text-brand-navy/40 mt-2 text-center">
+                  <p className="text-xs text-brand-navy/55 mt-2 text-center">
                     {loadingFollowers && filter !== 'topX'
                       ? 'Loading...'
                       : `${recipientUids.length} recipient${recipientUids.length !== 1 ? 's' : ''}`}
@@ -9811,7 +9811,7 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
                     value={msgTitle}
                     onChange={e => { setMsgTitle(e.target.value); setSentCount(null); setSendError(null); }}
                     maxLength={80}
-                    className="w-full px-4 py-3 rounded-2xl bg-white border border-black/8 text-sm font-bold text-brand-navy placeholder:text-brand-navy/30 focus:outline-none focus:ring-2 focus:ring-brand-navy/20"
+                    className="w-full px-4 py-3 rounded-2xl bg-white border border-black/8 text-sm font-bold text-brand-navy placeholder:text-brand-navy/45 focus:outline-none focus:ring-2 focus:ring-brand-navy/20"
                   />
                   <textarea
                     placeholder="Write your message..."
@@ -9819,9 +9819,9 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
                     onChange={e => { setMsgBody(e.target.value); setSentCount(null); setSendError(null); }}
                     rows={5}
                     maxLength={500}
-                    className="w-full px-4 py-3 rounded-2xl bg-white border border-black/8 text-sm text-brand-navy placeholder:text-brand-navy/30 focus:outline-none focus:ring-2 focus:ring-brand-navy/20 resize-none"
+                    className="w-full px-4 py-3 rounded-2xl bg-white border border-black/8 text-sm text-brand-navy placeholder:text-brand-navy/45 focus:outline-none focus:ring-2 focus:ring-brand-navy/20 resize-none"
                   />
-                  <p className="text-[10px] text-brand-navy/30 text-right">{msgBody.length}/500</p>
+                  <p className="text-[10px] text-brand-navy/45 text-right">{msgBody.length}/500</p>
                 </div>
 
                 {sentCount !== null && (
@@ -9849,7 +9849,7 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
 
                 {broadcastHistory.length > 0 && (
                   <div className="pt-2">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-3">Previously Sent</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/55 mb-3">Previously Sent</p>
                     <div className="space-y-3">
                       {broadcastHistory.map((b: any) => (
                         <div key={b.id} className="bg-white rounded-2xl p-4 border border-black/5 shadow-sm">
@@ -9860,12 +9860,12 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
                             </div>
                             <div className="text-right shrink-0">
                               <p className="text-[10px] font-bold text-brand-navy">{b.recipientCount} sent</p>
-                              <p className="text-[10px] text-brand-navy/30 mt-0.5">
+                              <p className="text-[10px] text-brand-navy/45 mt-0.5">
                                 {b.sentAt?.toDate ? format(b.sentAt.toDate(), 'MMM d, h:mm a') : ''}
                               </p>
                             </div>
                           </div>
-                          <span className="inline-block mt-2 text-[9px] font-bold uppercase tracking-widest bg-brand-navy/5 text-brand-navy/40 px-2 py-0.5 rounded-full">
+                          <span className="inline-block mt-2 text-[9px] font-bold uppercase tracking-widest bg-brand-navy/5 text-brand-navy/55 px-2 py-0.5 rounded-full">
                             {b.filter === 'cardholders' ? 'Card Holders' : b.filter === 'followers' ? 'Followers' : b.filter === 'topX' ? `Top ${b.topXCount ?? ''} Users` : 'Both'}
                           </span>
                         </div>
@@ -9880,14 +9880,14 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
               <div className="space-y-4">
                 <button
                   onClick={() => setShowAdd(true)}
-                  className="w-full border-2 border-dashed border-brand-navy/20 rounded-2xl py-4 flex items-center justify-center gap-2 text-brand-navy/40 font-bold text-sm active:bg-brand-navy/5 transition-colors"
+                  className="w-full border-2 border-dashed border-brand-navy/20 rounded-2xl py-4 flex items-center justify-center gap-2 text-brand-navy/55 font-bold text-sm active:bg-brand-navy/5 transition-colors"
                 >
                   <Plus size={18} />
                   Add Automation
                 </button>
 
                 {automations.length === 0 && (
-                  <p className="text-center text-sm text-brand-navy/30 py-6">
+                  <p className="text-center text-sm text-brand-navy/45 py-6">
                     No automations yet. Automate birthday messages, holiday deals, and more.
                   </p>
                 )}
@@ -9906,7 +9906,7 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-bold text-brand-navy truncate">{a.title}</p>
-                          <p className="text-[10px] text-brand-navy/40">
+                          <p className="text-[10px] text-brand-navy/55">
                             {a.type === 'birthday'
                               ? (a.daysBefore === 0 ? 'On birthday' : `${a.daysBefore} days before birthday`)
                               : a.scheduledAt
@@ -9925,20 +9925,20 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
                             'text-[10px] font-bold px-2.5 py-1 rounded-full transition-colors',
                             a.status === 'active'
                               ? 'bg-green-100 text-green-700'
-                              : 'bg-brand-navy/8 text-brand-navy/40'
+                              : 'bg-brand-navy/8 text-brand-navy/55'
                           )}
                         >
                           {a.status === 'active' ? 'Active' : 'Paused'}
                         </button>
                         <button
                           onClick={() => deleteAutomation(a.id)}
-                          className="p-1.5 rounded-xl text-brand-navy/20 active:text-red-400 transition-colors"
+                          className="p-1.5 rounded-xl text-brand-navy/32 active:text-red-400 transition-colors"
                         >
                           <Trash2 size={14} />
                         </button>
                       </div>
                     </div>
-                    <p className="text-xs text-brand-navy/50 line-clamp-2 ml-11">{a.message}</p>
+                    <p className="text-xs text-brand-navy/65 line-clamp-2 ml-11">{a.message}</p>
                   </div>
                 ))}
               </div>
@@ -10476,7 +10476,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
     return (
       <div className="glass-card p-10 rounded-[2.5rem] border-2 border-dashed border-brand-rose/40 text-center space-y-6">
         <div className="w-20 h-20 bg-brand-bg rounded-full flex items-center justify-center mx-auto">
-          <Store className="w-10 h-10 text-brand-navy/20" />
+          <Store className="w-10 h-10 text-brand-navy/32" />
         </div>
         <div>
           <h3 className="text-xl font-bold mb-2">Setup Your Store</h3>
@@ -10522,11 +10522,11 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
         needsPayment ? (
           <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center space-y-4">
             <div className="w-14 h-14 bg-brand-navy/8 rounded-full flex items-center justify-center">
-              <Lock size={24} className="text-brand-navy/30" />
+              <Lock size={24} className="text-brand-navy/45" />
             </div>
             <div>
               <p className="font-bold text-brand-navy">Messaging locked</p>
-              <p className="text-sm text-brand-navy/50 mt-1">Subscribe to access customer messaging.</p>
+              <p className="text-sm text-brand-navy/65 mt-1">Subscribe to access customer messaging.</p>
             </div>
             <button onClick={handleSubscribe} className="bg-brand-navy text-white font-bold px-6 py-3 rounded-2xl text-sm active:scale-95 transition-transform">
               Subscribe to access
@@ -10598,7 +10598,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                 <div className="bg-brand-bg rounded-2xl p-5">
                   <p className="font-display font-bold text-4xl">
                     $50
-                    <span className="text-lg font-normal text-brand-navy/50">/month</span>
+                    <span className="text-lg font-normal text-brand-navy/65">/month</span>
                   </p>
                   <ul className="mt-3 space-y-1 text-sm text-brand-navy/70 text-left max-w-[220px] mx-auto">
                     <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-green-500 shrink-0" />Full vendor dashboard</li>
@@ -10613,7 +10613,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                 >
                   Subscribe Now — $50/month
                 </button>
-                <p className="text-xs text-brand-navy/30">Secure payment via Stripe. Cancel anytime.</p>
+                <p className="text-xs text-brand-navy/45">Secure payment via Stripe. Cancel anytime.</p>
               </div>
             </div>
           ) : (
@@ -10663,7 +10663,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-bold text-brand-navy">Stamps Chart</p>
-                    <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest mt-0.5">
+                    <p className="text-[10px] text-brand-navy/55 font-bold uppercase tracking-widest mt-0.5">
                       {chartMode === 'weeks' ? 'By week' : 'By day'}
                     </p>
                   </div>
@@ -10671,7 +10671,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                     <div className="flex p-0.5 bg-brand-navy/8 rounded-xl">
                       {(['days', 'weeks'] as const).map(m => (
                         <button key={m} onClick={() => { setChartMode(m); setChartOffset(0); }}
-                          className={cn('px-3 py-1.5 rounded-[10px] text-[10px] font-bold transition-all', chartMode === m ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/40')}>
+                          className={cn('px-3 py-1.5 rounded-[10px] text-[10px] font-bold transition-all', chartMode === m ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/55')}>
                           {m === 'days' ? 'Days' : 'Weeks'}
                         </button>
                       ))}
@@ -10686,9 +10686,9 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                 </div>
                 <div className="flex gap-1 items-end">
                   <div className="flex flex-col justify-between text-right shrink-0 mb-3" style={{ height: '80px', minWidth: '16px' }}>
-                    <span className="text-[8px] text-brand-navy/30 font-bold leading-none">{maxVal}</span>
-                    <span className="text-[8px] text-brand-navy/30 font-bold leading-none">{Math.round(maxVal / 2)}</span>
-                    <span className="text-[8px] text-brand-navy/30 font-bold leading-none">0</span>
+                    <span className="text-[8px] text-brand-navy/45 font-bold leading-none">{maxVal}</span>
+                    <span className="text-[8px] text-brand-navy/45 font-bold leading-none">{Math.round(maxVal / 2)}</span>
+                    <span className="text-[8px] text-brand-navy/45 font-bold leading-none">0</span>
                   </div>
                   <div className="flex items-end gap-1 h-28 flex-1">
                     {periods.map((p, i) => (
@@ -10701,13 +10701,13 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                             style={{ minHeight: p.count > 0 ? '4px' : '0' }}
                           />
                         </div>
-                        <p className="text-[8px] text-brand-navy/30 font-bold leading-none">{p.label}</p>
+                        <p className="text-[8px] text-brand-navy/45 font-bold leading-none">{p.label}</p>
                       </div>
                     ))}
                   </div>
                 </div>
                 {chartTransactions.length === 0 && (
-                  <p className="text-center text-xs text-brand-navy/30 font-bold py-2">No stamp data yet</p>
+                  <p className="text-center text-xs text-brand-navy/45 font-bold py-2">No stamp data yet</p>
                 )}
               </div>
             );
@@ -10749,7 +10749,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-bold text-brand-navy">User Base Growth</p>
-                    <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest mt-0.5">Cumulative members</p>
+                    <p className="text-[10px] text-brand-navy/55 font-bold uppercase tracking-widest mt-0.5">Cumulative members</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <button onClick={() => setSignupsOffset(o => o + 1)} className="p-1.5 rounded-xl bg-brand-navy/8 active:scale-90 transition-all">
@@ -10762,9 +10762,9 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                 </div>
                 <div className="flex gap-1 items-end">
                   <div className="flex flex-col justify-between text-right shrink-0 mb-3" style={{ height: '80px', minWidth: '16px' }}>
-                    <span className="text-[8px] text-brand-navy/30 font-bold leading-none">{maxVal}</span>
-                    <span className="text-[8px] text-brand-navy/30 font-bold leading-none">{Math.round(maxVal / 2)}</span>
-                    <span className="text-[8px] text-brand-navy/30 font-bold leading-none">0</span>
+                    <span className="text-[8px] text-brand-navy/45 font-bold leading-none">{maxVal}</span>
+                    <span className="text-[8px] text-brand-navy/45 font-bold leading-none">{Math.round(maxVal / 2)}</span>
+                    <span className="text-[8px] text-brand-navy/45 font-bold leading-none">0</span>
                   </div>
                   <div className="flex items-end gap-1 h-28 flex-1">
                     {points.map((p, i) => (
@@ -10777,7 +10777,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                             style={{ minHeight: p.cumulative > 0 ? '4px' : '0' }}
                           />
                         </div>
-                        <p className="text-[8px] text-brand-navy/30 font-bold leading-none">{p.label}</p>
+                        <p className="text-[8px] text-brand-navy/45 font-bold leading-none">{p.label}</p>
                       </div>
                     ))}
                   </div>
@@ -10822,7 +10822,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-bold text-brand-navy">New Sign-ups / Day</p>
-                    <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest mt-0.5">
+                    <p className="text-[10px] text-brand-navy/55 font-bold uppercase tracking-widest mt-0.5">
                       {totalNew} new in this period
                     </p>
                   </div>
@@ -10837,9 +10837,9 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                 </div>
                 <div className="flex gap-1 items-end">
                   <div className="flex flex-col justify-between text-right shrink-0 mb-3" style={{ height: '80px', minWidth: '16px' }}>
-                    <span className="text-[8px] text-brand-navy/30 font-bold leading-none">{maxVal}</span>
-                    <span className="text-[8px] text-brand-navy/30 font-bold leading-none">{Math.round(maxVal / 2)}</span>
-                    <span className="text-[8px] text-brand-navy/30 font-bold leading-none">0</span>
+                    <span className="text-[8px] text-brand-navy/45 font-bold leading-none">{maxVal}</span>
+                    <span className="text-[8px] text-brand-navy/45 font-bold leading-none">{Math.round(maxVal / 2)}</span>
+                    <span className="text-[8px] text-brand-navy/45 font-bold leading-none">0</span>
                   </div>
                   <div className="flex items-end gap-1 h-28 flex-1">
                     {days.map((d, i) => (
@@ -10852,13 +10852,13 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                             style={{ minHeight: d.count > 0 ? '4px' : '0' }}
                           />
                         </div>
-                        <p className="text-[8px] text-brand-navy/30 font-bold leading-none">{d.label}</p>
+                        <p className="text-[8px] text-brand-navy/45 font-bold leading-none">{d.label}</p>
                       </div>
                     ))}
                   </div>
                 </div>
                 {totalNew === 0 && (
-                  <p className="text-center text-xs text-brand-navy/30 font-bold py-2">No new sign-ups in this period</p>
+                  <p className="text-center text-xs text-brand-navy/45 font-bold py-2">No new sign-ups in this period</p>
                 )}
               </div>
             );
@@ -10883,7 +10883,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                 </div>
                 {top10.map(({ uid, stamps, prof }, i) => (
                   <div key={uid} className="flex items-center gap-3">
-                    <span className="text-[11px] font-bold text-brand-navy/30 w-5 text-right">{i + 1}</span>
+                    <span className="text-[11px] font-bold text-brand-navy/45 w-5 text-right">{i + 1}</span>
                     <div className="w-8 h-8 rounded-full overflow-hidden bg-indigo-50 shrink-0 flex items-center justify-center">
                       <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={32} view="head" />
                     </div>
@@ -10893,7 +10893,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                         <div className="h-full bg-brand-gold rounded-full" style={{ width: `${Math.round((stamps / (top10[0].stamps || 1)) * 100)}%` }} />
                       </div>
                     </div>
-                    <span className="text-xs font-bold text-brand-navy/50 shrink-0">{stamps}</span>
+                    <span className="text-xs font-bold text-brand-navy/65 shrink-0">{stamps}</span>
                   </div>
                 ))}
               </div>
@@ -10932,7 +10932,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
               return (
                 <Modal title={titles[statModal]} onClose={() => setStatModal(null)}>
                   <div className="relative mb-3">
-                    <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-navy/30 pointer-events-none" />
+                    <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-navy/45 pointer-events-none" />
                     <input
                       type="text"
                       value={statModalSearch}
@@ -10950,7 +10950,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1"><p className="font-bold text-sm truncate">{prof?.name || 'Unknown'}</p><StreakBadge streak={prof?.streak} /></div>
-                          <p className="text-[11px] text-brand-navy/40">@{prof?.handle || uid.slice(0, 8)}</p>
+                          <p className="text-[11px] text-brand-navy/55">@{prof?.handle || uid.slice(0, 8)}</p>
                         </div>
                         <div className="text-right shrink-0">
                           <p className="font-bold text-sm">{totalStamps} stamps</p>
@@ -10966,7 +10966,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1"><p className="font-bold text-sm truncate">{prof?.name || 'Unknown'}</p><StreakBadge streak={prof?.streak} /></div>
-                          <p className="text-[11px] text-brand-navy/40">@{prof?.handle || uid.slice(0, 8)}</p>
+                          <p className="text-[11px] text-brand-navy/55">@{prof?.handle || uid.slice(0, 8)}</p>
                         </div>
                         <div className="text-right shrink-0">
                           <p className="font-bold text-sm">{totalStamps} stamps</p>
@@ -10983,7 +10983,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1"><p className="font-bold text-sm truncate">{prof?.name || 'Unknown'}</p><StreakBadge streak={prof?.streak} /></div>
-                            <p className="text-[11px] text-brand-navy/40">@{prof?.handle || card.user_id.slice(0, 8)}</p>
+                            <p className="text-[11px] text-brand-navy/55">@{prof?.handle || card.user_id.slice(0, 8)}</p>
                           </div>
                           <div className="text-right shrink-0">
                             <p className="font-bold text-sm">{card.current_stamps}/{stampsPerReward}</p>
@@ -10998,7 +10998,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                     {((statModal === 'members' && memberRows.length === 0) ||
                       (statModal === 'stamps' && stampRows.length === 0) ||
                       (statModal === 'activeCards' && activeRows.length === 0)) && (
-                      <p className="text-center text-brand-navy/30 py-8 font-bold text-sm">No data yet</p>
+                      <p className="text-center text-brand-navy/45 py-8 font-bold text-sm">No data yet</p>
                     )}
                   </div>
                 </Modal>
@@ -11100,11 +11100,11 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
             {recentTransactions.map(tx => (
               <div key={tx.id} className="glass-card p-4 rounded-2xl flex items-center gap-4">
                 <div className="w-10 h-10 bg-brand-bg rounded-full flex items-center justify-center">
-                  <UserIcon className="w-5 h-5 text-brand-navy/40" />
+                  <UserIcon className="w-5 h-5 text-brand-navy/55" />
                 </div>
                 <div className="flex-1">
                   <p className="font-bold text-sm">Card Completed</p>
-                  <p className="text-xs text-brand-navy/40">
+                  <p className="text-xs text-brand-navy/55">
                     {tx.completed_at ? format(tx.completed_at.toDate(), 'h:mm a') : 'Just now'}
                   </p>
                 </div>
@@ -11112,7 +11112,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
               </div>
             ))}
             {recentTransactions.length === 0 && (
-              <div className="py-8 text-center text-brand-navy/20">
+              <div className="py-8 text-center text-brand-navy/32">
                 <Clock size={40} className="mx-auto mb-2 opacity-10" />
                 <p className="text-sm font-bold">No recent activity</p>
               </div>
@@ -11128,7 +11128,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
           <div className="space-y-6 pb-20">
             <header>
               <h2 className="font-display text-3xl font-bold mb-1">Issue</h2>
-              <p className="text-brand-navy/50 text-sm">Manage your card or create store offers.</p>
+              <p className="text-brand-navy/65 text-sm">Manage your card or create store offers.</p>
             </header>
             <div className="grid grid-cols-2 gap-4">
               <button
@@ -11140,7 +11140,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                 </div>
                 <div>
                   <p className="font-bold text-brand-navy">Card</p>
-                  <p className="text-xs text-brand-navy/50 mt-0.5">Design your loyalty card</p>
+                  <p className="text-xs text-brand-navy/65 mt-0.5">Design your loyalty card</p>
                 </div>
               </button>
               <button
@@ -11152,7 +11152,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                 </div>
                 <div>
                   <p className="font-bold text-brand-navy">Offer</p>
-                  <p className="text-xs text-brand-navy/50 mt-0.5">Create deals for customers</p>
+                  <p className="text-xs text-brand-navy/65 mt-0.5">Create deals for customers</p>
                 </div>
               </button>
               {store?.membershipEnabled && (
@@ -11165,7 +11165,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                   </div>
                   <div>
                     <p className="font-bold text-brand-navy">{store.membershipType === 'visit' ? 'Issue Points' : 'Scan User'}</p>
-                    <p className="text-xs text-brand-navy/50 mt-0.5">{store.membershipType === 'visit' ? 'Scan NFC to issue visit points' : 'Issue spend to membership card'}</p>
+                    <p className="text-xs text-brand-navy/65 mt-0.5">{store.membershipType === 'visit' ? 'Scan NFC to issue visit points' : 'Issue spend to membership card'}</p>
                   </div>
                 </button>
               )}
@@ -11175,7 +11175,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
           <div className="space-y-4 pb-20">
             <button
               onClick={() => setVendorIssueMode(null)}
-              className="flex items-center gap-2 text-sm font-bold text-brand-navy/50 active:opacity-60 transition-opacity"
+              className="flex items-center gap-2 text-sm font-bold text-brand-navy/65 active:opacity-60 transition-opacity"
             >
               <ArrowLeft size={16} /> Back
             </button>
@@ -11414,9 +11414,9 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h3 className="font-display text-2xl font-bold">Redeem Points</h3>
-                    <p className="text-brand-navy/40 text-xs mt-0.5">{membershipPoints.toLocaleString()} pts available · up to ${maxRedeemDollars.toFixed(2)} off</p>
+                    <p className="text-brand-navy/55 text-xs mt-0.5">{membershipPoints.toLocaleString()} pts available · up to ${maxRedeemDollars.toFixed(2)} off</p>
                   </div>
-                  <button onClick={closeRedeemFlow} className="p-2 text-brand-navy/40 hover:text-brand-navy"><X size={20} /></button>
+                  <button onClick={closeRedeemFlow} className="p-2 text-brand-navy/55 hover:text-brand-navy"><X size={20} /></button>
                 </div>
                 <div className="flex items-center gap-2 bg-brand-bg rounded-2xl px-5 py-4 mb-3">
                   <span className="text-brand-navy font-black text-3xl">$</span>
@@ -11445,14 +11445,14 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 >
                   Continue
                 </button>
-                <button onClick={closeRedeemFlow} className="w-full text-brand-navy/40 text-sm font-bold py-2">Cancel</button>
+                <button onClick={closeRedeemFlow} className="w-full text-brand-navy/55 text-sm font-bold py-2">Cancel</button>
               </>
             )}
             {redeemStage === 'swipe' && (
               <>
                 <div className="text-center mb-6">
                   <h3 className="font-display text-2xl font-bold mb-1">Show Staff to Authorize</h3>
-                  <p className="text-brand-navy/40 text-sm">Ask a staff member to confirm then swipe</p>
+                  <p className="text-brand-navy/55 text-sm">Ask a staff member to confirm then swipe</p>
                 </div>
                 <div className="bg-emerald-50 rounded-3xl p-6 text-center mb-6 border border-emerald-100">
                   <p className="text-emerald-600/60 text-[10px] font-bold uppercase tracking-widest mb-1">Redeeming</p>
@@ -11460,7 +11460,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                   <p className="text-emerald-600/60 text-sm mt-1 font-bold">{pointsToDeduct} points</p>
                 </div>
                 <SwipeConfirm onConfirm={handleRedeem} />
-                <button onClick={() => setRedeemStage('input')} className="w-full text-brand-navy/40 text-sm font-bold py-3 mt-2">← Back</button>
+                <button onClick={() => setRedeemStage('input')} className="w-full text-brand-navy/55 text-sm font-bold py-3 mt-2">← Back</button>
               </>
             )}
             {redeemStage === 'success' && (
@@ -11470,14 +11470,14 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                     <Check size={28} className="text-emerald-500" />
                   </div>
                   <h3 className="font-display text-2xl font-bold mb-1">Redeemed!</h3>
-                  <p className="text-brand-navy/40 text-sm mb-6">${redeemDollarNum.toFixed(2)} off applied</p>
+                  <p className="text-brand-navy/55 text-sm mb-6">${redeemDollarNum.toFixed(2)} off applied</p>
                   <div className="glass-card rounded-2xl p-4 mb-6 grid grid-cols-2 gap-3">
                     <div className="text-center">
-                      <p className="text-brand-navy/40 text-[9px] font-bold uppercase tracking-widest">Points Used</p>
+                      <p className="text-brand-navy/55 text-[9px] font-bold uppercase tracking-widest">Points Used</p>
                       <p className="text-brand-navy font-black text-xl">{pointsToDeduct}</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-brand-navy/40 text-[9px] font-bold uppercase tracking-widest">Remaining</p>
+                      <p className="text-brand-navy/55 text-[9px] font-bold uppercase tracking-widest">Remaining</p>
                       <p className="text-brand-navy font-black text-xl">{netAvailablePoints - pointsToDeduct}</p>
                     </div>
                   </div>
@@ -11524,24 +11524,24 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
           {membershipType === 'spend' ? (
             <>
               <p className="text-brand-navy font-black text-4xl leading-none">{membershipPoints.toLocaleString()}</p>
-              <p className="text-brand-navy/40 text-[9px] font-bold uppercase tracking-widest mt-1">points</p>
+              <p className="text-brand-navy/55 text-[9px] font-bold uppercase tracking-widest mt-1">points</p>
               {redeemableValue > 0 && (
                 <p className="text-brand-navy/60 font-bold text-xs mt-1.5">≈ ${redeemableValue.toFixed(2)} redeemable</p>
               )}
               {userHandle && (
                 <div className="mt-3 w-full bg-brand-navy/5 rounded-2xl px-3 py-2.5">
-                  <p className="text-brand-navy/40 text-[9px] font-bold uppercase tracking-widest mb-0.5">Your handle</p>
+                  <p className="text-brand-navy/55 text-[9px] font-bold uppercase tracking-widest mb-0.5">Your handle</p>
                   <p className="text-brand-navy font-black text-sm">@{userHandle}</p>
-                  <p className="text-brand-navy/40 text-[9px] mt-0.5">Give this to the vendor when you spend</p>
+                  <p className="text-brand-navy/55 text-[9px] mt-0.5">Give this to the vendor when you spend</p>
                 </div>
               )}
             </>
           ) : (
             <>
               <p className="text-brand-navy font-black text-4xl leading-none">{membershipVisits}</p>
-              <p className="text-brand-navy/40 text-[9px] font-bold uppercase tracking-widest mt-1">points</p>
+              <p className="text-brand-navy/55 text-[9px] font-bold uppercase tracking-widest mt-1">points</p>
               {nextVisitReward && (
-                <p className="text-brand-navy/50 text-xs font-bold mt-1.5">{nextVisitReward.visits - membershipVisits} more → {nextVisitReward.reward}</p>
+                <p className="text-brand-navy/65 text-xs font-bold mt-1.5">{nextVisitReward.visits - membershipVisits} more → {nextVisitReward.reward}</p>
               )}
             </>
           )}
@@ -11554,8 +11554,8 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowRedeemSheet(false)} />
             <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 350, damping: 35 }} className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-10 shadow-2xl">
               <div className="flex items-center justify-between mb-6">
-                <div><h3 className="font-display text-2xl font-bold">{membershipName}</h3><p className="text-brand-navy/40 text-xs mt-0.5">Points & Redemption</p></div>
-                <button onClick={() => setShowRedeemSheet(false)} className="p-2 text-brand-navy/40 hover:text-brand-navy"><X size={20} /></button>
+                <div><h3 className="font-display text-2xl font-bold">{membershipName}</h3><p className="text-brand-navy/55 text-xs mt-0.5">Points & Redemption</p></div>
+                <button onClick={() => setShowRedeemSheet(false)} className="p-2 text-brand-navy/55 hover:text-brand-navy"><X size={20} /></button>
               </div>
               {userHandle && (
                 <div className="bg-brand-navy rounded-2xl px-5 py-4 mb-6 flex items-center gap-4">
@@ -11570,24 +11570,24 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               )}
               <div className="grid grid-cols-2 gap-3 mb-6">
                 <div className="glass-card p-5 rounded-2xl">
-                  <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest mb-1">Points</p>
+                  <p className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest mb-1">Points</p>
                   <p className="text-3xl font-black text-brand-navy">{membershipPoints.toLocaleString()}</p>
-                  {pointsRate > 0 && <p className="text-[10px] text-brand-navy/40 mt-1">{pointsRate} pts per $1</p>}
+                  {pointsRate > 0 && <p className="text-[10px] text-brand-navy/55 mt-1">{pointsRate} pts per $1</p>}
                 </div>
                 <div className="glass-card p-5 rounded-2xl">
-                  <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest mb-1">Value</p>
+                  <p className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest mb-1">Value</p>
                   <p className="text-3xl font-black text-emerald-600">${redeemableValue.toFixed(2)}</p>
-                  {redemptionRate > 0 && <p className="text-[10px] text-brand-navy/40 mt-1">{redemptionRate} pts = $1</p>}
+                  {redemptionRate > 0 && <p className="text-[10px] text-brand-navy/55 mt-1">{redemptionRate} pts = $1</p>}
                 </div>
               </div>
               <div className="glass-card rounded-2xl p-4 mb-6 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-brand-navy/50 text-xs font-bold uppercase tracking-widest">Total Spent</span>
+                  <span className="text-brand-navy/65 text-xs font-bold uppercase tracking-widest">Total Spent</span>
                   <span className="text-brand-navy font-black">${totalSpent.toFixed(2)}</span>
                 </div>
                 {earnedRewards > 0 && (
                   <div className="flex items-center justify-between">
-                    <span className="text-brand-navy/50 text-xs font-bold uppercase tracking-widest">Rewards Earned</span>
+                    <span className="text-brand-navy/65 text-xs font-bold uppercase tracking-widest">Rewards Earned</span>
                     <span className="text-brand-navy font-black">{earnedRewards}</span>
                   </div>
                 )}
@@ -11600,7 +11600,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                   <Gift size={15} /> Redeem Points
                 </button>
               )}
-              <button onClick={() => setShowRedeemSheet(false)} className="w-full text-brand-navy/40 text-sm font-bold py-2">Close</button>
+              <button onClick={() => setShowRedeemSheet(false)} className="w-full text-brand-navy/55 text-sm font-bold py-2">Close</button>
             </motion.div>
           </div>
         )}
@@ -11620,15 +11620,15 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-display text-2xl font-bold">{membershipName}</h3>
-                    <p className="text-brand-navy/40 text-xs mt-0.5">{membershipVisits} points available</p>
+                    <p className="text-brand-navy/55 text-xs mt-0.5">{membershipVisits} points available</p>
                   </div>
-                  <button onClick={() => setShowRedeemSheet(false)} className="p-2 text-brand-navy/40"><X size={20} /></button>
+                  <button onClick={() => setShowRedeemSheet(false)} className="p-2 text-brand-navy/55"><X size={20} /></button>
                 </div>
               </div>
               <div className="px-8 pb-10 space-y-6">
                 {menuItems.length > 0 && (
                   <div>
-                    <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest mb-3">Redeem Points</p>
+                    <p className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest mb-3">Redeem Points</p>
                     <div className="space-y-2">
                       {menuItems.map(item => {
                         const canAfford = membershipVisits >= item.points;
@@ -11642,12 +11642,12 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                           >
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-bold text-brand-navy truncate">{item.name}</p>
-                              {item.description && <p className="text-[11px] text-brand-navy/40 mt-0.5 truncate">{item.description}</p>}
+                              {item.description && <p className="text-[11px] text-brand-navy/55 mt-0.5 truncate">{item.description}</p>}
                             </div>
                             <div className="flex items-center gap-2 shrink-0 ml-3">
                               <span className="text-xs font-black" style={{ color }}>{item.points} pts</span>
-                              {canAfford && !isRedeeming && <ChevronRight size={14} className="text-brand-navy/30" />}
-                              {isRedeeming && <span className="text-[10px] text-brand-navy/40">Redeeming…</span>}
+                              {canAfford && !isRedeeming && <ChevronRight size={14} className="text-brand-navy/45" />}
+                              {isRedeeming && <span className="text-[10px] text-brand-navy/55">Redeeming…</span>}
                             </div>
                           </button>
                         );
@@ -11657,28 +11657,28 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 )}
                 {visitRewards.length > 0 && (
                   <div>
-                    <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest mb-3">Milestone Rewards</p>
+                    <p className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest mb-3">Milestone Rewards</p>
                     {nextVisitReward && (
                       <div className="glass-card p-4 rounded-2xl mb-2">
                         <div className="flex items-center justify-between mb-2">
                           <p className="font-bold text-brand-navy text-sm">{nextVisitReward.reward}</p>
-                          <p className="text-brand-navy/40 text-xs font-bold">{membershipVisits}/{nextVisitReward.visits} pts</p>
+                          <p className="text-brand-navy/55 text-xs font-bold">{membershipVisits}/{nextVisitReward.visits} pts</p>
                         </div>
                         <div className="h-2 bg-brand-navy/10 rounded-full overflow-hidden">
                           <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, (membershipVisits / nextVisitReward.visits) * 100)}%`, background: `linear-gradient(90deg, ${color}cc, ${color}ff)` }} />
                         </div>
-                        <p className="text-[10px] text-brand-navy/40 mt-1.5 font-bold">{nextVisitReward.visits - membershipVisits} more points to unlock</p>
+                        <p className="text-[10px] text-brand-navy/55 mt-1.5 font-bold">{nextVisitReward.visits - membershipVisits} more points to unlock</p>
                       </div>
                     )}
                     <div className="space-y-1.5">
                       {visitRewards.map((r, i) => (
                         <div key={i} className={`flex items-center gap-3 p-3 rounded-2xl ${membershipVisits >= r.visits ? 'bg-emerald-50' : 'bg-brand-bg'}`}>
                           <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${membershipVisits >= r.visits ? 'bg-emerald-500' : 'bg-brand-navy/10'}`}>
-                            {membershipVisits >= r.visits ? <Check size={13} className="text-white" /> : <span className="text-[9px] font-black text-brand-navy/40">{r.visits}</span>}
+                            {membershipVisits >= r.visits ? <Check size={13} className="text-white" /> : <span className="text-[9px] font-black text-brand-navy/55">{r.visits}</span>}
                           </div>
                           <div className="flex-1">
                             <p className={`text-sm font-bold ${membershipVisits >= r.visits ? 'text-emerald-700' : 'text-brand-navy'}`}>{r.reward}</p>
-                            <p className="text-[10px] text-brand-navy/40">{r.visits} pts to unlock</p>
+                            <p className="text-[10px] text-brand-navy/55">{r.visits} pts to unlock</p>
                           </div>
                         </div>
                       ))}
@@ -11713,8 +11713,8 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                   <Gift size={24} style={{ color }} />
                 </div>
                 <h3 className="font-display text-xl font-bold">{menuConfirm.name}</h3>
-                <p className="text-brand-navy/40 text-sm mt-1">Redeem for <span className="font-black" style={{ color }}>{menuConfirm.points} points</span></p>
-                <p className="text-brand-navy/30 text-xs mt-0.5">{membershipVisits - menuConfirm.points} points remaining after</p>
+                <p className="text-brand-navy/55 text-sm mt-1">Redeem for <span className="font-black" style={{ color }}>{menuConfirm.points} points</span></p>
+                <p className="text-brand-navy/45 text-xs mt-0.5">{membershipVisits - menuConfirm.points} points remaining after</p>
               </div>
               <button
                 onClick={() => handleMenuRedeem(menuConfirm)}
@@ -11724,7 +11724,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               >
                 {redeemingMenuItem ? 'Redeeming…' : 'Confirm Redeem'}
               </button>
-              <button onClick={() => { setMenuConfirm(null); setShowRedeemSheet(true); }} className="w-full text-brand-navy/40 font-bold text-sm py-2">Cancel</button>
+              <button onClick={() => { setMenuConfirm(null); setShowRedeemSheet(true); }} className="w-full text-brand-navy/55 font-bold text-sm py-2">Cancel</button>
             </motion.div>
           </div>
         )}
@@ -11772,27 +11772,27 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
             <>
               <div className="text-center mb-4">
                 <p className="text-brand-navy font-black text-5xl leading-none tracking-tight">{membershipPoints.toLocaleString()}</p>
-                <p className="text-brand-navy/40 text-xs font-bold uppercase tracking-widest mt-1.5">points</p>
+                <p className="text-brand-navy/55 text-xs font-bold uppercase tracking-widest mt-1.5">points</p>
                 {redeemableValue > 0 && (
                   <p className="text-brand-navy text-2xl font-black mt-2 leading-none">≈ ${redeemableValue.toFixed(2)} off</p>
                 )}
               </div>
               {userHandle && (
                 <div className="bg-brand-navy/5 rounded-2xl px-4 py-3 mb-3 text-center">
-                  <p className="text-brand-navy/40 text-[9px] font-bold uppercase tracking-widest mb-0.5">Your handle — give this to the vendor</p>
+                  <p className="text-brand-navy/55 text-[9px] font-bold uppercase tracking-widest mb-0.5">Your handle — give this to the vendor</p>
                   <p className="text-brand-navy font-black text-lg">@{userHandle}</p>
                 </div>
               )}
               <div className="flex items-center justify-between">
                 <span className="text-brand-navy/35 text-[11px] font-bold">${totalSpent.toFixed(2)} spent{earnedRewards > 0 ? ` · ${earnedRewards} rewards` : ''}</span>
-                <span className="text-brand-navy/40 text-[10px] font-bold flex items-center gap-1"><Gift size={11} /> Tap to redeem</span>
+                <span className="text-brand-navy/55 text-[10px] font-bold flex items-center gap-1"><Gift size={11} /> Tap to redeem</span>
               </div>
             </>
           ) : (
             <>
               <div className="text-center mb-4">
                 <p className="text-brand-navy font-black text-5xl leading-none tracking-tight">{membershipVisits}</p>
-                <p className="text-brand-navy/40 text-xs font-bold uppercase tracking-widest mt-1.5">points</p>
+                <p className="text-brand-navy/55 text-xs font-bold uppercase tracking-widest mt-1.5">points</p>
                 {nextVisitReward && (
                   <p className="text-brand-navy/60 text-sm mt-2 leading-snug">
                     {nextVisitReward.visits - membershipVisits} more pts → <span className="font-bold" style={{ color }}>{nextVisitReward.reward}</span>
@@ -11802,8 +11802,8 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               {nextVisitReward && (
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-1.5">
-                    <p className="text-brand-navy/40 text-[10px] font-bold uppercase tracking-widest truncate pr-2">{nextVisitReward.reward}</p>
-                    <p className="text-brand-navy/30 text-[10px] font-bold shrink-0">{membershipVisits}/{nextVisitReward.visits} pts</p>
+                    <p className="text-brand-navy/55 text-[10px] font-bold uppercase tracking-widest truncate pr-2">{nextVisitReward.reward}</p>
+                    <p className="text-brand-navy/45 text-[10px] font-bold shrink-0">{membershipVisits}/{nextVisitReward.visits} pts</p>
                   </div>
                   <div className="h-2 bg-brand-navy/10 rounded-full overflow-hidden">
                     <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, (membershipVisits / nextVisitReward.visits) * 100)}%`, backgroundColor: color }} />
@@ -11812,7 +11812,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               )}
               <div className="flex items-center justify-between">
                 <span className="text-brand-navy/35 text-[11px] font-bold">{lastVisitReward ? `Last: ${lastVisitReward.reward}` : 'Tap card to scan'}</span>
-                <span className="text-brand-navy/40 text-[10px] font-bold flex items-center gap-1"><Wifi size={11} className="-rotate-90" /> Scan</span>
+                <span className="text-brand-navy/55 text-[10px] font-bold flex items-center gap-1"><Wifi size={11} className="-rotate-90" /> Scan</span>
               </div>
             </>
           )}
@@ -11832,9 +11832,9 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h3 className="font-display text-2xl font-bold">{membershipName}</h3>
-                  <p className="text-brand-navy/40 text-xs mt-0.5">Points & Redemption</p>
+                  <p className="text-brand-navy/55 text-xs mt-0.5">Points & Redemption</p>
                 </div>
-                <button onClick={() => setShowRedeemSheet(false)} className="p-2 text-brand-navy/40 hover:text-brand-navy"><X size={20} /></button>
+                <button onClick={() => setShowRedeemSheet(false)} className="p-2 text-brand-navy/55 hover:text-brand-navy"><X size={20} /></button>
               </div>
 
               {/* Handle — give to vendor */}
@@ -11853,26 +11853,26 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               {/* Balance row */}
               <div className="grid grid-cols-2 gap-3 mb-6">
                 <div className="glass-card p-5 rounded-2xl">
-                  <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest mb-1">Points</p>
+                  <p className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest mb-1">Points</p>
                   <p className="text-3xl font-black text-brand-navy">{membershipPoints.toLocaleString()}</p>
-                  {pointsRate > 0 && <p className="text-[10px] text-brand-navy/40 mt-1">{pointsRate} pts per $1</p>}
+                  {pointsRate > 0 && <p className="text-[10px] text-brand-navy/55 mt-1">{pointsRate} pts per $1</p>}
                 </div>
                 <div className="glass-card p-5 rounded-2xl">
-                  <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest mb-1">Value</p>
+                  <p className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest mb-1">Value</p>
                   <p className="text-3xl font-black text-emerald-600">${redeemableValue.toFixed(2)}</p>
-                  {redemptionRate > 0 && <p className="text-[10px] text-brand-navy/40 mt-1">{redemptionRate} pts = $1</p>}
+                  {redemptionRate > 0 && <p className="text-[10px] text-brand-navy/55 mt-1">{redemptionRate} pts = $1</p>}
                 </div>
               </div>
 
               {/* Spend summary */}
               <div className="glass-card p-4 rounded-2xl flex items-center justify-between mb-4">
                 <div>
-                  <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">Total Spent</p>
+                  <p className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest">Total Spent</p>
                   <p className="text-2xl font-black text-brand-navy mt-0.5">${totalSpent.toFixed(2)}</p>
                 </div>
                 {earnedRewards > 0 && (
                   <div className="text-right">
-                    <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">Rewards</p>
+                    <p className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest">Rewards</p>
                     <p className="text-2xl font-black text-emerald-600 mt-0.5">{earnedRewards}</p>
                   </div>
                 )}
@@ -11881,7 +11881,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               {/* Earn rate info */}
               {(pointsRate > 0 || redemptionRate > 0) && (
                 <div className="bg-brand-bg rounded-2xl p-4 mb-4 space-y-2">
-                  <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest mb-3">How it works</p>
+                  <p className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest mb-3">How it works</p>
                   {pointsRate > 0 && (
                     <div className="flex items-center gap-3">
                       <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
@@ -11917,7 +11917,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                   <Gift size={15} /> Redeem Points
                 </button>
               )}
-              <button onClick={() => setShowRedeemSheet(false)} className="w-full text-brand-navy/40 text-sm font-bold py-2">Close</button>
+              <button onClick={() => setShowRedeemSheet(false)} className="w-full text-brand-navy/55 text-sm font-bold py-2">Close</button>
             </motion.div>
           </div>
         )}
@@ -11939,9 +11939,9 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-display text-2xl font-bold">{membershipName}</h3>
-                    <p className="text-brand-navy/40 text-xs mt-0.5">{membershipVisits} points available</p>
+                    <p className="text-brand-navy/55 text-xs mt-0.5">{membershipVisits} points available</p>
                   </div>
-                  <button onClick={() => setShowRedeemSheet(false)} className="p-2 text-brand-navy/40"><X size={20} /></button>
+                  <button onClick={() => setShowRedeemSheet(false)} className="p-2 text-brand-navy/55"><X size={20} /></button>
                 </div>
               </div>
 
@@ -11949,7 +11949,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 {/* Menu items */}
                 {menuItems.length > 0 && (
                   <div>
-                    <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest mb-3">Redeem Points</p>
+                    <p className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest mb-3">Redeem Points</p>
                     <div className="space-y-2">
                       {menuItems.map(item => {
                         const canAfford = membershipVisits >= item.points;
@@ -11968,12 +11968,12 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                           >
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-bold text-brand-navy truncate">{item.name}</p>
-                              {item.description && <p className="text-[11px] text-brand-navy/40 mt-0.5 truncate">{item.description}</p>}
+                              {item.description && <p className="text-[11px] text-brand-navy/55 mt-0.5 truncate">{item.description}</p>}
                             </div>
                             <div className="flex items-center gap-2 shrink-0 ml-3">
                               <span className="text-xs font-black" style={{ color }}>{item.points} pts</span>
-                              {canAfford && !isRedeeming && <ChevronRight size={14} className="text-brand-navy/30" />}
-                              {isRedeeming && <span className="text-[10px] text-brand-navy/40">Redeeming…</span>}
+                              {canAfford && !isRedeeming && <ChevronRight size={14} className="text-brand-navy/45" />}
+                              {isRedeeming && <span className="text-[10px] text-brand-navy/55">Redeeming…</span>}
                             </div>
                           </button>
                         );
@@ -11985,28 +11985,28 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 {/* Milestone rewards */}
                 {visitRewards.length > 0 && (
                   <div>
-                    <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest mb-3">Milestone Rewards</p>
+                    <p className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest mb-3">Milestone Rewards</p>
                     {nextVisitReward && (
                       <div className="glass-card p-4 rounded-2xl mb-2">
                         <div className="flex items-center justify-between mb-2">
                           <p className="font-bold text-brand-navy text-sm">{nextVisitReward.reward}</p>
-                          <p className="text-brand-navy/40 text-xs font-bold">{membershipVisits}/{nextVisitReward.visits} pts</p>
+                          <p className="text-brand-navy/55 text-xs font-bold">{membershipVisits}/{nextVisitReward.visits} pts</p>
                         </div>
                         <div className="h-2 bg-brand-navy/10 rounded-full overflow-hidden">
                           <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, (membershipVisits / nextVisitReward.visits) * 100)}%`, background: `linear-gradient(90deg, ${color}cc, ${color}ff)` }} />
                         </div>
-                        <p className="text-[10px] text-brand-navy/40 mt-1.5 font-bold">{nextVisitReward.visits - membershipVisits} more points to unlock</p>
+                        <p className="text-[10px] text-brand-navy/55 mt-1.5 font-bold">{nextVisitReward.visits - membershipVisits} more points to unlock</p>
                       </div>
                     )}
                     <div className="space-y-1.5">
                       {visitRewards.map((r, i) => (
                         <div key={i} className={`flex items-center gap-3 p-3 rounded-2xl ${membershipVisits >= r.visits ? 'bg-emerald-50' : 'bg-brand-bg'}`}>
                           <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${membershipVisits >= r.visits ? 'bg-emerald-500' : 'bg-brand-navy/10'}`}>
-                            {membershipVisits >= r.visits ? <Check size={13} className="text-white" /> : <span className="text-[9px] font-black text-brand-navy/40">{r.visits}</span>}
+                            {membershipVisits >= r.visits ? <Check size={13} className="text-white" /> : <span className="text-[9px] font-black text-brand-navy/55">{r.visits}</span>}
                           </div>
                           <div className="flex-1">
                             <p className={`text-sm font-bold ${membershipVisits >= r.visits ? 'text-emerald-700' : 'text-brand-navy'}`}>{r.reward}</p>
-                            <p className="text-[10px] text-brand-navy/40">{r.visits} pts to unlock</p>
+                            <p className="text-[10px] text-brand-navy/55">{r.visits} pts to unlock</p>
                           </div>
                         </div>
                       ))}
@@ -12044,8 +12044,8 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                   <Gift size={24} style={{ color }} />
                 </div>
                 <h3 className="font-display text-xl font-bold">{menuConfirm.name}</h3>
-                <p className="text-brand-navy/40 text-sm mt-1">Redeem for <span className="font-black" style={{ color }}>{menuConfirm.points} points</span></p>
-                <p className="text-brand-navy/30 text-xs mt-0.5">{membershipVisits - menuConfirm.points} points remaining after</p>
+                <p className="text-brand-navy/55 text-sm mt-1">Redeem for <span className="font-black" style={{ color }}>{menuConfirm.points} points</span></p>
+                <p className="text-brand-navy/45 text-xs mt-0.5">{membershipVisits - menuConfirm.points} points remaining after</p>
               </div>
               <button
                 onClick={() => handleMenuRedeem(menuConfirm)}
@@ -12055,7 +12055,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               >
                 {redeemingMenuItem ? 'Redeeming…' : 'Confirm Redeem'}
               </button>
-              <button onClick={() => { setMenuConfirm(null); setShowRedeemSheet(true); }} className="w-full text-brand-navy/40 font-bold text-sm py-2">Cancel</button>
+              <button onClick={() => { setMenuConfirm(null); setShowRedeemSheet(true); }} className="w-full text-brand-navy/55 font-bold text-sm py-2">Cancel</button>
             </motion.div>
           </div>
         )}
@@ -12339,7 +12339,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                     Claim Reward 🎁
                   </button>
                 ) : nextTier ? (
-                  <span className="text-brand-navy/30 text-[10px] text-right leading-snug">
+                  <span className="text-brand-navy/45 text-[10px] text-right leading-snug">
                     {nextTier.stamps - card.current_stamps} more →{' '}
                     <span className="font-semibold" style={{ color: cardTheme }}>{nextTier.reward}</span>
                   </span>
@@ -12449,7 +12449,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                 </button>
                 <button 
                   onClick={() => setShowCompletionPopup(false)}
-                  className="w-full py-4 text-brand-navy/40 font-bold text-sm"
+                  className="w-full py-4 text-brand-navy/55 font-bold text-sm"
                 >
                   Close
                 </button>
@@ -12480,7 +12480,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
 
               {/* Test Controls */}
               <div className="mb-8 p-4 glass-card rounded-2xl">
-                <p className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest mb-3">Test: Simulate Stamp</p>
+                <p className="text-[10px] font-bold text-brand-navy/55 uppercase tracking-widest mb-3">Test: Simulate Stamp</p>
                 <div className="flex gap-2">
                   <input 
                     type="number"
@@ -12730,7 +12730,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
             >
               <div className="flex items-center justify-between mb-6">
                 <h3 className="font-display text-2xl font-bold">Redeem Points</h3>
-                <button onClick={() => setShowRedeemSheet(false)} className="p-2 text-brand-navy/40 hover:text-brand-navy transition-colors">
+                <button onClick={() => setShowRedeemSheet(false)} className="p-2 text-brand-navy/55 hover:text-brand-navy transition-colors">
                   <X size={20} />
                 </button>
               </div>
@@ -12738,14 +12738,14 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
               <div className="space-y-4 mb-8">
                 <div className="glass-card p-5 rounded-2xl flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">Current Balance</p>
+                    <p className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest">Current Balance</p>
                     <p className="text-3xl font-black text-brand-navy mt-1">{points.toLocaleString()} pts</p>
                   </div>
                   <Star className="w-8 h-8 text-indigo-400" />
                 </div>
                 <div className="glass-card p-5 rounded-2xl flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">Redeemable Value</p>
+                    <p className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest">Redeemable Value</p>
                     <p className="text-3xl font-black text-emerald-600 mt-1">${moneyValue} off</p>
                   </div>
                   <Gift className="w-8 h-8 text-emerald-400" />
@@ -12772,7 +12772,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
                 </button>
               )}
 
-              <p className="text-center text-xs text-brand-navy/40 mt-3">
+              <p className="text-center text-xs text-brand-navy/55 mt-3">
                 {rate} pts = $1 off · {Math.floor(points / rate) * rate} pts will be used
               </p>
             </motion.div>
@@ -12803,7 +12803,7 @@ function StoreCard({ store, card, onJoin, onClick, distance }: { store: StorePro
           <h4 className="font-bold truncate">{store.name}</h4>
           {store.isVerified && <CheckCircle2 size={14} className="text-blue-500 fill-blue-500/10" />}
         </div>
-        <p className="text-xs text-brand-navy/40 mb-2 flex items-center gap-1">
+        <p className="text-xs text-brand-navy/55 mb-2 flex items-center gap-1">
           <StoreCategoryIcon category={store.category} size={11} />
           {store.category}{distance != null ? ` • ${distance < 1 ? `${Math.round(distance * 1000)}m` : `${distance.toFixed(1)}km`} away` : ''}
         </p>
@@ -13017,7 +13017,7 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
                 const barH = Math.max((pct / 100) * BAR_MAX_H, 4);
                 return (
                   <div key={i} className="flex-1 flex flex-col items-center">
-                    <span className="text-xs font-black text-brand-navy/50 mb-1">{pct}%</span>
+                    <span className="text-xs font-black text-brand-navy/65 mb-1">{pct}%</span>
                     <div className="w-full flex items-end" style={{ height: BAR_MAX_H }}>
                       <motion.div className="w-full rounded-t-2xl"
                         style={{ background: barColors[i % 2] }}
@@ -13054,7 +13054,7 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
             })}
           </div>
 
-          <p className="text-center text-xs text-brand-navy/30">
+          <p className="text-center text-xs text-brand-navy/45">
             {isClosed ? 'Voting closed' : hasVoted ? `${voteData.totalVotes} votes · updating live` : 'Tap an option to vote'}
           </p>
 
@@ -13063,7 +13063,7 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
             <input value={commentText} onChange={e => setCommentText(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); postComment(); } }}
               placeholder="Add a comment…"
-              className="flex-1 bg-brand-navy/5 rounded-2xl px-4 py-2.5 text-sm text-brand-navy placeholder:text-brand-navy/30 outline-none" />
+              className="flex-1 bg-brand-navy/5 rounded-2xl px-4 py-2.5 text-sm text-brand-navy placeholder:text-brand-navy/45 outline-none" />
             <button onClick={postComment} disabled={!commentText.trim() || posting}
               className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center disabled:opacity-40 active:scale-90 transition-all">
               <Send size={15} className="text-white" />
@@ -13072,7 +13072,7 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
 
           {/* Comments */}
           <div className="divide-y divide-brand-navy/5">
-            {comments.length === 0 && <p className="text-center text-brand-navy/30 text-sm py-6">No comments yet</p>}
+            {comments.length === 0 && <p className="text-center text-brand-navy/45 text-sm py-6">No comments yet</p>}
             {comments.map(c => {
               const liked = c.likes.includes(currentUser.uid);
               const ts = c.createdAt?.toDate?.();
@@ -13084,14 +13084,14 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-2">
                       <span className="text-xs font-bold text-brand-navy">{c.name}</span>
-                      {ts && <span className="text-[10px] text-brand-navy/30">{ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
+                      {ts && <span className="text-[10px] text-brand-navy/45">{ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
                     </div>
                     <p className="text-sm text-brand-navy/80 mt-0.5 leading-snug">{c.text}</p>
                   </div>
                   <button onClick={() => updateDoc(doc(db, 'daily_vote', today, 'comments', c.id), { likes: liked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid) })}
                     className="flex flex-col items-center gap-0.5 shrink-0 active:scale-90 transition-all pt-1">
-                    <Heart size={15} className={liked ? 'text-rose-500 fill-rose-500' : 'text-brand-navy/30'} />
-                    {c.likes.length > 0 && <span className="text-[10px] font-bold text-brand-navy/40">{c.likes.length}</span>}
+                    <Heart size={15} className={liked ? 'text-rose-500 fill-rose-500' : 'text-brand-navy/45'} />
+                    {c.likes.length > 0 && <span className="text-[10px] font-bold text-brand-navy/55">{c.likes.length}</span>}
                   </button>
                 </div>
               );
@@ -13432,10 +13432,10 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
     });
   });
 
-  if (loading) return <div className="flex items-center justify-center py-24 text-brand-navy/30"><RefreshCw size={24} className="animate-spin" /></div>;
+  if (loading) return <div className="flex items-center justify-center py-24 text-brand-navy/45"><RefreshCw size={24} className="animate-spin" /></div>;
 
   if (!answer) return (
-    <div className="text-center py-20 text-brand-navy/30">
+    <div className="text-center py-20 text-brand-navy/45">
       <span className="text-5xl font-black text-brand-navy/10">Lq</span>
       <p className="font-bold mt-4">No word set for today</p>
       <p className="text-xs mt-1">Check back soon</p>
@@ -13462,7 +13462,7 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
           className="flex flex-col items-center px-6 pt-6 pb-4 gap-4 text-center shrink-0">
           <p className="text-4xl">{displayWon ? '🎉' : '😔'}</p>
           <div>
-            <p className="text-xs text-brand-navy/50 font-semibold mb-2">{displayWon ? 'You got it!' : 'The answer was'}</p>
+            <p className="text-xs text-brand-navy/65 font-semibold mb-2">{displayWon ? 'You got it!' : 'The answer was'}</p>
             <div className="flex gap-1.5 justify-center">
               {answer.split('').map((ch, i) => (
                 <div key={i} className="w-12 h-12 rounded-xl bg-green-500 flex items-center justify-center font-black text-xl text-white">
@@ -13474,19 +13474,19 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
           <div className="flex items-center gap-4 text-sm">
             {displayWon
               ? <span className="text-brand-navy/60">{displayGuesses} guess{displayGuesses !== 1 ? 'es' : ''}{gameOver && elapsed > 0 ? ` · ${fmtTime(elapsed)}` : ''}</span>
-              : <span className="text-brand-navy/50">Better luck tomorrow</span>}
-            <span className={`flex items-center gap-1 font-bold px-3 py-1 rounded-full text-xs ${userStreak > 0 ? 'bg-orange-100 text-orange-600' : 'bg-brand-navy/8 text-brand-navy/40'}`}>
+              : <span className="text-brand-navy/65">Better luck tomorrow</span>}
+            <span className={`flex items-center gap-1 font-bold px-3 py-1 rounded-full text-xs ${userStreak > 0 ? 'bg-orange-100 text-orange-600' : 'bg-brand-navy/8 text-brand-navy/55'}`}>
               🔥 {userStreak} day streak
             </span>
           </div>
-          {submitting && <p className="text-xs text-brand-navy/40 animate-pulse">Saving…</p>}
+          {submitting && <p className="text-xs text-brand-navy/55 animate-pulse">Saving…</p>}
         </motion.div>
 
         {/* Leaderboard tabs */}
         <div className="flex gap-1 mx-5 mb-3 shrink-0">
           {(['today', 'alltime'] as const).map(tab => (
             <button key={tab} onClick={() => setLbTab(tab)}
-              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${lbTab === tab ? 'bg-brand-navy text-white' : 'bg-brand-navy/8 text-brand-navy/50'}`}>
+              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${lbTab === tab ? 'bg-brand-navy text-white' : 'bg-brand-navy/8 text-brand-navy/65'}`}>
               {tab === 'today' ? "Today" : "All Time"}
             </button>
           ))}
@@ -13496,55 +13496,55 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
         <div className="flex-1 overflow-y-auto px-5 pb-6 space-y-2">
           {lbTab === 'today' ? (
             scores.length === 0
-              ? <p className="text-xs text-brand-navy/30 text-center py-8">No completions today yet</p>
+              ? <p className="text-xs text-brand-navy/45 text-center py-8">No completions today yet</p>
               : scores.map((s, idx) => (
                 <div key={s.id} className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl ${s.uid === currentUser.uid ? 'bg-green-50 border border-green-200' : 'bg-white border border-brand-navy/6'}`}>
-                  <span className="w-5 text-center font-bold text-xs text-brand-navy/40 shrink-0">{idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}</span>
+                  <span className="w-5 text-center font-bold text-xs text-brand-navy/55 shrink-0">{idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}</span>
                   <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-brand-navy/10 bg-indigo-50 flex items-center justify-center">
                     <PixelAvatar config={s.avatar} uid={s.uid} size={36} view="head" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-sm truncate text-brand-navy">{s.name}</p>
-                    {s.handle && <p className="text-[10px] text-brand-navy/40 truncate">@{s.handle}</p>}
+                    {s.handle && <p className="text-[10px] text-brand-navy/55 truncate">@{s.handle}</p>}
                   </div>
-                  <span className="text-xs font-bold text-brand-navy/50 shrink-0">{s.won ? `${s.guesses}/6` : 'X/6'}</span>
-                  <span className="text-xs text-brand-navy/30 shrink-0">{fmtTime(s.timeMs)}</span>
+                  <span className="text-xs font-bold text-brand-navy/65 shrink-0">{s.won ? `${s.guesses}/6` : 'X/6'}</span>
+                  <span className="text-xs text-brand-navy/45 shrink-0">{fmtTime(s.timeMs)}</span>
                 </div>
               ))
           ) : (
             <>
               {top20.length === 0
-                ? <p className="text-xs text-brand-navy/30 text-center py-8">No all-time scores yet</p>
+                ? <p className="text-xs text-brand-navy/45 text-center py-8">No all-time scores yet</p>
                 : top20.map((s, idx) => (
                   <div key={s.id} className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl ${s.uid === currentUser.uid ? 'bg-green-50 border border-green-200' : 'bg-white border border-brand-navy/6'}`}>
-                    <span className="w-5 text-center font-bold text-xs text-brand-navy/40 shrink-0">{idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}</span>
+                    <span className="w-5 text-center font-bold text-xs text-brand-navy/55 shrink-0">{idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}</span>
                     <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-brand-navy/10 bg-indigo-50 flex items-center justify-center">
                       <PixelAvatar config={(s as any).avatar} uid={s.uid} size={36} view="head" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-sm truncate text-brand-navy">{s.name}</p>
-                      {(s as any).handle && <p className="text-[10px] text-brand-navy/40 truncate">@{(s as any).handle}</p>}
+                      {(s as any).handle && <p className="text-[10px] text-brand-navy/55 truncate">@{(s as any).handle}</p>}
                     </div>
                     <span className="text-xs font-bold text-green-600 shrink-0">{s.totalWins}W</span>
-                    <span className="text-xs text-brand-navy/30 shrink-0">best {s.bestGuesses}/6</span>
+                    <span className="text-xs text-brand-navy/45 shrink-0">best {s.bestGuesses}/6</span>
                     {(s as any).streak > 1 && <span className="text-xs shrink-0">🔥{(s as any).streak}</span>}
                   </div>
                 ))}
               {/* User's entry if outside top 20 */}
               {!userInTop20 && userAtEntry && (
                 <>
-                  <div className="text-center text-xs text-brand-navy/20 py-1">· · ·</div>
+                  <div className="text-center text-xs text-brand-navy/32 py-1">· · ·</div>
                   <div className="flex items-center gap-3 px-3 py-2.5 rounded-2xl bg-green-50 border border-green-200">
-                    <span className="w-5 text-center font-bold text-xs text-brand-navy/40 shrink-0">#{userAtIdx + 1}</span>
+                    <span className="w-5 text-center font-bold text-xs text-brand-navy/55 shrink-0">#{userAtIdx + 1}</span>
                     <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-brand-navy/10 bg-indigo-50 flex items-center justify-center">
                       <PixelAvatar config={(userAtEntry as any).avatar} uid={userAtEntry.uid} size={36} view="head" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-sm truncate text-brand-navy">{userAtEntry.name}</p>
-                      {(userAtEntry as any).handle && <p className="text-[10px] text-brand-navy/40 truncate">@{(userAtEntry as any).handle}</p>}
+                      {(userAtEntry as any).handle && <p className="text-[10px] text-brand-navy/55 truncate">@{(userAtEntry as any).handle}</p>}
                     </div>
                     <span className="text-xs font-bold text-green-600 shrink-0">{userAtEntry.totalWins}W</span>
-                    <span className="text-xs text-brand-navy/30 shrink-0">best {userAtEntry.bestGuesses}/6</span>
+                    <span className="text-xs text-brand-navy/45 shrink-0">best {userAtEntry.bestGuesses}/6</span>
                     {(userAtEntry as any).streak > 1 && <span className="text-xs shrink-0">🔥{(userAtEntry as any).streak}</span>}
                   </div>
                 </>
@@ -13708,7 +13708,7 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
               onClick={() => setSearchType('stores')}
               className={cn(
                 "flex-1 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2",
-                searchType === 'stores' ? "gradient-red text-white shadow-lg" : "text-brand-navy/40 hover:bg-brand-bg"
+                searchType === 'stores' ? "gradient-red text-white shadow-lg" : "text-brand-navy/55 hover:bg-brand-bg"
               )}
             >
               <Store size={18} />
@@ -13718,7 +13718,7 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
               onClick={() => setSearchType('users')}
               className={cn(
                 "flex-1 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2",
-                searchType === 'users' ? "gradient-red text-white shadow-lg" : "text-brand-navy/40 hover:bg-brand-bg"
+                searchType === 'users' ? "gradient-red text-white shadow-lg" : "text-brand-navy/55 hover:bg-brand-bg"
               )}
             >
               <Users size={18} />
@@ -13727,7 +13727,7 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
           </div>
           
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-navy/40" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-navy/55" />
             <input 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -13747,7 +13747,7 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
                 onClick={() => setActiveCategory(cat)}
                 className={cn(
                   "px-6 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all",
-                  activeCategory === cat ? "gradient-red text-white shadow-md" : "glass-card text-brand-navy/50 hover:text-brand-navy"
+                  activeCategory === cat ? "gradient-red text-white shadow-md" : "glass-card text-brand-navy/65 hover:text-brand-navy"
                 )}
               >
                 {cat}
@@ -13766,7 +13766,7 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
               />
             ))}
             {filteredStores.length === 0 && (
-              <div className="py-12 text-center text-brand-navy/20">
+              <div className="py-12 text-center text-brand-navy/32">
                 <Compass size={48} className="mx-auto mb-4 opacity-10" />
                 <p className="font-bold">No results found</p>
                 <p className="text-xs">Try a different search term or category</p>
@@ -13798,17 +13798,17 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
                     </div>
                     <div>
                       <div className="flex items-center gap-1"><p className="font-bold text-sm">{u.name || u.handle || u.email?.split('@')[0]}</p><StreakBadge streak={u.streak} /></div>
-                      <p className="text-xs text-brand-navy/40">{u.handle ? `@${u.handle}` : u.email?.split('@')[0]}</p>
+                      <p className="text-xs text-brand-navy/55">{u.handle ? `@${u.handle}` : u.email?.split('@')[0]}</p>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-bold text-brand-navy">{u.totalStamps || 0}</p>
-                    <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest">Stamps</p>
+                    <p className="text-[10px] text-brand-navy/55 font-bold uppercase tracking-widest">Stamps</p>
                   </div>
                 </div>
               ))}
               {filteredUsers.length === 0 && (
-                <div className="py-20 text-center text-brand-navy/20">
+                <div className="py-20 text-center text-brand-navy/32">
                   <Users size={64} className="mx-auto mb-4 opacity-10" />
                   <p className="font-bold">No users found</p>
                 </div>
@@ -13943,7 +13943,7 @@ function WallPostItem({ post, currentUser, wallOwnerUid, onViewUser }: { post: a
               <p className="font-bold text-sm text-brand-navy">{post.fromName}</p>
               <StreakBadge streak={post.fromStreak} />
             </div>
-            <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest">
+            <p className="text-[10px] text-brand-navy/55 font-bold uppercase tracking-widest">
               {post.createdAt ? format(post.createdAt.toDate(), 'MMM d, h:mm a') : 'Just now'}
             </p>
           </div>
@@ -13953,7 +13953,7 @@ function WallPostItem({ post, currentUser, wallOwnerUid, onViewUser }: { post: a
             <button
               onClick={handleDelete}
               disabled={deleting}
-              className="p-1.5 rounded-xl text-brand-navy/20 hover:text-red-400 hover:bg-red-50 transition-all disabled:opacity-40"
+              className="p-1.5 rounded-xl text-brand-navy/32 hover:text-red-400 hover:bg-red-50 transition-all disabled:opacity-40"
             >
               <Trash2 size={14} />
             </button>
@@ -13966,14 +13966,14 @@ function WallPostItem({ post, currentUser, wallOwnerUid, onViewUser }: { post: a
       <div className="flex items-center gap-6 pt-2 border-t border-brand-navy/5">
         <button 
           onClick={handleLike}
-          className={cn("flex items-center gap-2 transition-colors", isLiked ? "text-red-500" : "text-brand-navy/40 hover:text-red-500")}
+          className={cn("flex items-center gap-2 transition-colors", isLiked ? "text-red-500" : "text-brand-navy/55 hover:text-red-500")}
         >
           <Heart size={18} className={isLiked ? "fill-current" : ""} />
           <span className="text-xs font-bold">{likes.length}</span>
         </button>
         <button 
           onClick={() => setShowReplyInput(!showReplyInput)}
-          className="flex items-center gap-2 text-brand-navy/40 hover:text-brand-navy transition-colors"
+          className="flex items-center gap-2 text-brand-navy/55 hover:text-brand-navy transition-colors"
         >
           <MessageSquare size={18} />
           <span className="text-xs font-bold">{replies.length || 'Reply'}</span>
@@ -13993,7 +13993,7 @@ function WallPostItem({ post, currentUser, wallOwnerUid, onViewUser }: { post: a
                 <div className="flex items-center gap-2 flex-wrap">
                   <button onClick={() => handleViewProfile(reply.fromUid)} className="font-bold text-[10px] text-brand-navy hover:text-brand-gold transition-colors">{reply.fromName}</button>
                   <StreakBadge streak={reply.fromStreak} />
-                  <p className="text-[8px] text-brand-navy/40">{reply.createdAt ? format(reply.createdAt.toDate(), 'h:mm a') : ''}</p>
+                  <p className="text-[8px] text-brand-navy/55">{reply.createdAt ? format(reply.createdAt.toDate(), 'h:mm a') : ''}</p>
                 </div>
                 <p className="text-xs text-brand-navy/70">{reply.content}</p>
               </div>
@@ -14031,7 +14031,7 @@ function StatSquare({ icon, label, value }: { icon: React.ReactNode, label: stri
         {React.cloneElement(icon as React.ReactElement, { size: 15 })}
       </div>
       <p className="font-display text-base font-bold text-brand-navy leading-none mb-0.5">{value}</p>
-      <p className="text-[8px] text-brand-navy/40 font-bold uppercase tracking-wider text-center">{label}</p>
+      <p className="text-[8px] text-brand-navy/55 font-bold uppercase tracking-wider text-center">{label}</p>
     </div>
   );
 }
@@ -14054,7 +14054,7 @@ function Modal({ title, children, onClose }: { title: string, children: React.Re
       >
         <div className="flex items-center justify-between mb-8">
           <h3 className="font-display text-2xl font-bold">{title}</h3>
-          <button onClick={onClose} className="p-2 rounded-full bg-brand-bg text-brand-navy/40">
+          <button onClick={onClose} className="p-2 rounded-full bg-brand-bg text-brand-navy/55">
             <X size={20} />
           </button>
         </div>
@@ -14138,7 +14138,7 @@ function SlideToRedeem({ onRedeem, disabled = false, label = 'Slide to redeem' }
         />
       )}
       {/* Label */}
-      <div className={cn('absolute inset-0 flex items-center justify-center text-sm font-bold pointer-events-none', redeemed ? 'text-white' : 'text-brand-navy/40')}>
+      <div className={cn('absolute inset-0 flex items-center justify-center text-sm font-bold pointer-events-none', redeemed ? 'text-white' : 'text-brand-navy/55')}>
         {redeemed ? '✓ Redeemed!' : label}
       </div>
       {/* Thumb — pointer capture keeps events on this element even outside bounds */}
@@ -14263,7 +14263,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
       <header className="flex items-center justify-between">
         <div>
           <h2 className="font-display text-3xl font-bold mb-0.5">Offers</h2>
-          <p className="text-brand-navy/50 text-sm">{atLimit ? '3/3 offers used — delete one to add more.' : 'Create deals shown in the Deals section.'}</p>
+          <p className="text-brand-navy/65 text-sm">{atLimit ? '3/3 offers used — delete one to add more.' : 'Create deals shown in the Deals section.'}</p>
         </div>
         {!atLimit && (
           <button
@@ -14288,9 +14288,9 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
 
             {/* Savings value */}
             <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40 mb-1.5 block">Savings Value ($)</label>
+              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/55 mb-1.5 block">Savings Value ($)</label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-brand-navy/40 text-sm">$</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-brand-navy/55 text-sm">$</span>
                 <input
                   type="number"
                   min="0"
@@ -14306,7 +14306,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
 
             {/* Image */}
             <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40 mb-2 block">Offer Image</label>
+              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/55 mb-2 block">Offer Image</label>
               {imageUrl ? (
                 <div className="relative rounded-2xl overflow-hidden aspect-video">
                   <img src={imageUrl} alt="" className="w-full h-full object-cover" />
@@ -14315,7 +14315,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
                   </button>
                 </div>
               ) : (
-                <label className={cn(inputCls, 'flex items-center gap-3 cursor-pointer text-brand-navy/40')}>
+                <label className={cn(inputCls, 'flex items-center gap-3 cursor-pointer text-brand-navy/55')}>
                   <Image size={18} />
                   {uploading ? 'Uploading...' : 'Upload image'}
                   <input type="file" accept="image/*" className="sr-only" onChange={e => e.target.files?.[0] && handleImageUpload(e.target.files[0])} disabled={uploading} />
@@ -14326,7 +14326,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
 
             {/* Offer Type */}
             <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40 mb-2 block">Offer Type</label>
+              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/55 mb-2 block">Offer Type</label>
               <div className="flex gap-2">
                 {([
                   { v: 'standard', label: '🏷️ Standard', desc: 'General deal' },
@@ -14359,12 +14359,12 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
               <select value={category} onChange={e => setCategory(e.target.value)} className={cn(inputCls, 'appearance-none')}>
                 {OFFER_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
-              <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-navy/40 pointer-events-none" />
+              <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-navy/55 pointer-events-none" />
             </div>
 
             {/* Max redemptions */}
             <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40 mb-2 block">Max Redemptions Per User</label>
+              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/55 mb-2 block">Max Redemptions Per User</label>
               <div className="flex gap-2 flex-wrap">
                 {MAX_OPTIONS.map(opt => (
                   <button
@@ -14380,7 +14380,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
 
             {/* Valid for */}
             <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40 mb-2 block">Valid For</label>
+              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/55 mb-2 block">Valid For</label>
               <div className="flex gap-2 flex-wrap">
                 {[7, 14, 30, 60, 90].map(d => (
                   <button
@@ -14426,9 +14426,9 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-brand-navy truncate">{offer.title}</p>
-                    <p className="text-xs text-brand-navy/50 mt-0.5 line-clamp-2">{offer.description}</p>
+                    <p className="text-xs text-brand-navy/65 mt-0.5 line-clamp-2">{offer.description}</p>
                   </div>
-                  <span className={cn('text-[10px] font-black px-2.5 py-1 rounded-full shrink-0', offer.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-brand-navy/10 text-brand-navy/40')}>
+                  <span className={cn('text-[10px] font-black px-2.5 py-1 rounded-full shrink-0', offer.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-brand-navy/10 text-brand-navy/55')}>
                     {offer.status === 'active' ? 'Live' : 'Paused'}
                   </span>
                 </div>
@@ -14444,10 +14444,10 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
                     const days = Math.ceil(ms / 86400000);
                     return <span className={cn('text-[10px] font-black px-2 py-0.5 rounded-full', days <= 3 ? 'bg-red-100 text-red-500' : 'bg-amber-100 text-amber-600')}>{days}d left</span>;
                   })()}
-                  <span className="text-[11px] text-brand-navy/40 font-bold">{offer.category}</span>
-                  <span className="text-[11px] text-brand-navy/40 font-bold">•</span>
-                  <span className="text-[11px] text-brand-navy/40 font-bold">{offer.maxRedemptionsPerUser === 0 ? 'Unlimited' : `${offer.maxRedemptionsPerUser}x`} per user</span>
-                  {(offer.value ?? 0) > 0 && <><span className="text-[11px] text-brand-navy/40 font-bold">•</span><span className="text-[11px] font-bold text-emerald-600">${offer.value!.toFixed(2)} saving</span></>}
+                  <span className="text-[11px] text-brand-navy/55 font-bold">{offer.category}</span>
+                  <span className="text-[11px] text-brand-navy/55 font-bold">•</span>
+                  <span className="text-[11px] text-brand-navy/55 font-bold">{offer.maxRedemptionsPerUser === 0 ? 'Unlimited' : `${offer.maxRedemptionsPerUser}x`} per user</span>
+                  {(offer.value ?? 0) > 0 && <><span className="text-[11px] text-brand-navy/55 font-bold">•</span><span className="text-[11px] font-bold text-emerald-600">${offer.value!.toFixed(2)} saving</span></>}
                 </div>
                 <div className="flex gap-2 pt-1">
                   <button onClick={() => toggleStatus(offer)} className="flex-1 py-2 rounded-xl bg-brand-bg border border-brand-navy/10 text-xs font-bold text-brand-navy/60 active:scale-95 transition-transform">
@@ -14545,7 +14545,7 @@ function OfferDetailSheet({ offer, currentUser, onClose }: { offer: StoreOffer; 
             <div>
               <p className="font-bold text-brand-navy">{offer.storeName}</p>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <p className="text-xs text-brand-navy/40">{offer.category}</p>
+                <p className="text-xs text-brand-navy/55">{offer.category}</p>
                 {offer.offerType === 'birthday' && (
                   <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-pink-100 text-pink-600">🎂 Birthday</span>
                 )}
@@ -14594,7 +14594,7 @@ function OfferDetailSheet({ offer, currentUser, onClose }: { offer: StoreOffer; 
           {/* Slide to redeem */}
           <div>
             {!canRedeem ? (
-              <div className="h-14 rounded-full bg-brand-navy/8 flex items-center justify-center text-sm font-bold text-brand-navy/40">
+              <div className="h-14 rounded-full bg-brand-navy/8 flex items-center justify-center text-sm font-bold text-brand-navy/55">
                 {offer.maxRedemptionsPerUser === 0 ? 'No redemptions available' : 'Already fully redeemed'}
               </div>
             ) : redeemed ? (
@@ -14649,7 +14649,7 @@ function OffersModal({ offers, currentUser, onClose }: { offers: StoreOffer[]; c
             </div>
             {/* Search */}
             <div className="relative">
-              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-navy/30" />
+              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-navy/45" />
               <input
                 value={search} onChange={e => setSearch(e.target.value)}
                 placeholder="Search deals, stores..."
@@ -14662,7 +14662,7 @@ function OffersModal({ offers, currentUser, onClose }: { offers: StoreOffer[]; c
                 <button
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
-                  className={cn('shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-all', activeCategory === cat ? 'gradient-logo-blue text-white shadow-md' : 'bg-brand-bg border border-brand-navy/10 text-brand-navy/50')}
+                  className={cn('shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-all', activeCategory === cat ? 'gradient-logo-blue text-white shadow-md' : 'bg-brand-bg border border-brand-navy/10 text-brand-navy/65')}
                 >
                   {cat}
                 </button>
@@ -14673,7 +14673,7 @@ function OffersModal({ offers, currentUser, onClose }: { offers: StoreOffer[]; c
           {/* Offer list */}
           <div className="flex-1 overflow-y-auto px-5 pb-10 space-y-3">
             {filtered.length === 0 ? (
-              <div className="py-16 text-center text-brand-navy/30">
+              <div className="py-16 text-center text-brand-navy/45">
                 <Ticket size={40} className="mx-auto mb-3 opacity-30" />
                 <p className="font-bold">No offers found</p>
               </div>
@@ -14694,8 +14694,8 @@ function OffersModal({ offers, currentUser, onClose }: { offers: StoreOffer[]; c
                   )}
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-brand-navy">{offer.title}</p>
-                    <p className="text-xs text-brand-navy/50 mt-0.5">{offer.storeName}</p>
-                    <p className="text-xs text-brand-navy/40 mt-1 line-clamp-1">{offer.description}</p>
+                    <p className="text-xs text-brand-navy/65 mt-0.5">{offer.storeName}</p>
+                    <p className="text-xs text-brand-navy/55 mt-1 line-clamp-1">{offer.description}</p>
                   </div>
                   <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full shrink-0">{offer.category}</span>
                 </div>
@@ -14781,7 +14781,7 @@ function ScanUserPanel({ store, onIssue }: {
     <div className="space-y-6">
       <div>
         <h3 className="font-display text-2xl font-bold mb-1">{isVisit ? 'Issue Points' : 'Issue Spend'}</h3>
-        <p className="text-brand-navy/50 text-sm">
+        <p className="text-brand-navy/65 text-sm">
           {isVisit
             ? `Issue ${pointsPerVisit} point${pointsPerVisit !== 1 ? 's' : ''} per visit on the customer's ${store?.membershipName || 'membership'} card.`
             : `Add spend to the customer's ${store?.membershipName || 'membership'} card.`}
@@ -14804,24 +14804,24 @@ function ScanUserPanel({ store, onIssue }: {
       )}
 
       <div className="glass-card rounded-[2rem] p-6 space-y-4">
-        <p className="text-xs font-bold text-brand-navy/40 uppercase tracking-widest">Or enter manually</p>
+        <p className="text-xs font-bold text-brand-navy/55 uppercase tracking-widest">Or enter manually</p>
         <div>
-          <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest mb-2 block">Customer @handle</label>
+          <label className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest mb-2 block">Customer @handle</label>
           <div className="flex items-center gap-3 bg-white rounded-2xl px-4 py-3 border border-brand-navy/10">
-            <Hash size={16} className="text-brand-navy/30 shrink-0" />
+            <Hash size={16} className="text-brand-navy/45 shrink-0" />
             <input
               value={handle}
               onChange={e => { setHandle(e.target.value); setStatus(null); }}
               placeholder="handle"
-              className="flex-1 text-sm text-brand-navy outline-none placeholder:text-brand-navy/30"
+              className="flex-1 text-sm text-brand-navy outline-none placeholder:text-brand-navy/45"
             />
           </div>
         </div>
         {!isVisit && (
           <div>
-            <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest mb-2 block">Transaction Amount ($)</label>
+            <label className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest mb-2 block">Transaction Amount ($)</label>
             <div className="flex items-center gap-3 bg-white rounded-2xl px-4 py-3 border border-brand-navy/10">
-              <DollarSign size={16} className="text-brand-navy/30 shrink-0" />
+              <DollarSign size={16} className="text-brand-navy/45 shrink-0" />
               <input
                 type="number"
                 min="0"
@@ -14829,11 +14829,11 @@ function ScanUserPanel({ store, onIssue }: {
                 value={amount}
                 onChange={e => { setAmount(e.target.value); setStatus(null); }}
                 placeholder="0.00"
-                className="flex-1 text-sm text-brand-navy outline-none placeholder:text-brand-navy/30"
+                className="flex-1 text-sm text-brand-navy outline-none placeholder:text-brand-navy/45"
               />
             </div>
             {store?.membershipSpendThreshold && (
-              <p className="text-[10px] text-brand-navy/40 mt-1.5 font-bold">
+              <p className="text-[10px] text-brand-navy/55 mt-1.5 font-bold">
                 Reward every ${store.membershipSpendThreshold} spent · {store.membershipSpendReward || 'Reward'}
               </p>
             )}
@@ -14916,7 +14916,7 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
     <div className="space-y-6 pb-20">
       <header>
         <h2 className="font-display text-3xl font-bold mb-1">Cards</h2>
-        <p className="text-brand-navy/50 text-sm">Manage your loyalty and membership cards.</p>
+        <p className="text-brand-navy/65 text-sm">Manage your loyalty and membership cards.</p>
       </header>
 
       {/* ─── Tab selector ─── */}
@@ -14929,7 +14929,7 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
               'flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-200',
               activeTab === tab
                 ? 'bg-white text-brand-navy shadow-sm'
-                : 'text-brand-navy/40 hover:text-brand-navy/70'
+                : 'text-brand-navy/55 hover:text-brand-navy/70'
             )}
           >
             {tab === 'loyalty' ? 'Loyalty Card' : 'Membership Card'}
@@ -14984,7 +14984,7 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
           <div className="glass-card rounded-[1.5rem] px-5 py-4 flex items-center justify-between gap-4">
             <div>
               <p className="font-bold text-brand-navy">Stamp Card</p>
-              <p className="text-xs text-brand-navy/50 mt-0.5">
+              <p className="text-xs text-brand-navy/65 mt-0.5">
                 {enabled ? 'Customers can collect stamps' : 'Hidden from customers'}
               </p>
             </div>
@@ -15019,7 +15019,7 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
           <div className="glass-card rounded-[1.5rem] px-5 py-4 flex items-center justify-between gap-4">
             <div>
               <p className="font-bold text-brand-navy">Membership</p>
-              <p className="text-xs text-brand-navy/50 mt-0.5">
+              <p className="text-xs text-brand-navy/65 mt-0.5">
                 {membershipEnabled ? 'Customers can join your membership programme' : 'Enable a membership card'}
               </p>
             </div>
@@ -15138,7 +15138,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
 
         {/* Number of reward stages */}
         <div className="space-y-2">
-          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Number of Reward Stages</label>
+          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/55">Number of Reward Stages</label>
           <div className="relative">
             <select
               value={numTiers}
@@ -15147,20 +15147,20 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
             >
               {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n} {n === 1 ? 'Stage' : 'Stages'}</option>)}
             </select>
-            <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-navy/40 pointer-events-none" />
+            <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-navy/55 pointer-events-none" />
           </div>
         </div>
 
         {/* Tier inputs */}
         <div className="space-y-4">
-          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Reward at Each Stage</label>
+          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/55">Reward at Each Stage</label>
           {tiers.slice(0, numTiers).map((tier, i) => (
             <div key={i} className="space-y-1.5">
               <div className="flex items-center gap-1.5">
                 <div className="flex-shrink-0 w-6 h-6 rounded-full bg-brand-gold/10 flex items-center justify-center">
                   <span className="text-[10px] font-extrabold text-brand-gold">{i + 1}</span>
                 </div>
-                <span className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest">Stage {i + 1}</span>
+                <span className="text-[10px] font-bold text-brand-navy/55 uppercase tracking-widest">Stage {i + 1}</span>
               </div>
               <div className="flex gap-2 items-center min-w-0">
                 <input
@@ -15192,12 +15192,12 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
               </div>
             </div>
           ))}
-          <p className="text-[11px] text-brand-navy/30 pl-1">Set stamps, reward name, and the {currencySymbol(currency)} value saved at each stage.</p>
+          <p className="text-[11px] text-brand-navy/45 pl-1">Set stamps, reward name, and the {currencySymbol(currency)} value saved at each stage.</p>
         </div>
 
         {/* Currency */}
         <div className="space-y-2">
-          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Reward Currency</label>
+          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/55">Reward Currency</label>
           <div className="relative">
             <select
               value={currency}
@@ -15206,13 +15206,13 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
             >
               {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
             </select>
-            <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-navy/40 pointer-events-none" />
+            <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-navy/55 pointer-events-none" />
           </div>
         </div>
 
         {/* Colours — primary & secondary side by side */}
         <div className="space-y-2">
-          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Colours</label>
+          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/55">Colours</label>
           <div className="flex gap-3">
 
             {/* Primary — card background */}
@@ -15286,7 +15286,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
 
         {/* Stamp Icon */}
         <div className="space-y-3">
-          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Stamp Icon</label>
+          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/55">Stamp Icon</label>
           <div className="relative">
             <select
               value={selectedIconGroup}
@@ -15297,7 +15297,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
                 <option key={group} value={group}>{group}</option>
               ))}
             </select>
-            <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-navy/40 pointer-events-none" />
+            <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-navy/55 pointer-events-none" />
           </div>
           <div className="flex flex-wrap gap-2">
             {(STAMP_ICON_GROUPS.find(g => g.group === selectedIconGroup)?.icons || []).map(icon => (
@@ -15318,7 +15318,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
 
         {/* Card Pattern */}
         <div className="space-y-2">
-          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Card Pattern</label>
+          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/55">Card Pattern</label>
           <div className="flex gap-2">
             {CARD_PATTERNS.map(({ id, label }) => (
               <button
@@ -15326,7 +15326,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
                 onClick={() => setCardPattern(id)}
                 className={cn(
                   "flex-1 py-2.5 rounded-2xl text-xs font-bold transition-all border",
-                  cardPattern === id ? "bg-brand-navy text-white border-brand-navy" : "bg-brand-bg text-brand-navy/40 border-brand-navy/10"
+                  cardPattern === id ? "bg-brand-navy text-white border-brand-navy" : "bg-brand-bg text-brand-navy/55 border-brand-navy/10"
                 )}
               >
                 {label}
@@ -15337,7 +15337,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
 
         {/* Live preview */}
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-3">Live Preview</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/55 mb-3">Live Preview</p>
           <div className="rounded-[2rem] p-5 space-y-4 relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${theme} 0%, ${theme}dd 100%)` }}>
             {cardPattern !== 'solid' && (
               <div className="absolute inset-0 pointer-events-none rounded-[2rem]" style={getCardPatternStyle(cardPattern)} />
@@ -15394,12 +15394,12 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
           </div>
         </div>
 
-        <p className="text-xs text-brand-navy/40">Existing cards finish their current cycle first. New cycles use these settings.</p>
+        <p className="text-xs text-brand-navy/55">Existing cards finish their current cycle first. New cycles use these settings.</p>
 
         {store && (
           <div className="bg-brand-navy/5 rounded-2xl p-4 text-left">
             <p className="text-xs font-bold text-brand-navy mb-1 flex items-center gap-1.5"><Wifi size={12} /> NFC Tag URL</p>
-            <p className="text-[10px] text-brand-navy/50 mb-2 leading-relaxed">Program this URL onto your NFC tags. Customers tap the tag to collect a stamp on any device.</p>
+            <p className="text-[10px] text-brand-navy/65 mb-2 leading-relaxed">Program this URL onto your NFC tags. Customers tap the tag to collect a stamp on any device.</p>
             <div className="flex items-center gap-2">
               <code className="flex-1 text-[10px] bg-white rounded-xl px-3 py-2 text-brand-navy/70 truncate border border-brand-navy/10">
                 {`${window.location.origin}/?stamp=${store.id}`}
@@ -15492,7 +15492,7 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
 
         {/* Name */}
         <div className="space-y-2">
-          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Card Name</label>
+          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/55">Card Name</label>
           <input
             value={membershipName}
             onChange={e => setMembershipName(e.target.value)}
@@ -15503,7 +15503,7 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
 
         {/* Description */}
         <div className="space-y-2">
-          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Description</label>
+          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/55">Description</label>
           <textarea
             value={membershipDescription}
             onChange={e => setMembershipDescription(e.target.value)}
@@ -15515,7 +15515,7 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
 
         {/* Type */}
         <div className="space-y-2">
-          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Membership Type</label>
+          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/55">Membership Type</label>
           <div className="grid grid-cols-2 gap-3">
             {(['spend', 'visit'] as const).map(t => (
               <button
@@ -15523,7 +15523,7 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
                 onClick={() => setMembershipType(t)}
                 className={cn(
                   "py-3 rounded-2xl text-sm font-bold border transition-all",
-                  membershipType === t ? "bg-brand-navy text-white border-brand-navy" : "bg-brand-bg text-brand-navy/50 border-brand-navy/10 hover:border-brand-navy/30"
+                  membershipType === t ? "bg-brand-navy text-white border-brand-navy" : "bg-brand-bg text-brand-navy/65 border-brand-navy/10 hover:border-brand-navy/30"
                 )}
               >
                 {t === 'spend' ? 'Spend-Based' : 'Points (Per Visit)'}
@@ -15534,7 +15534,7 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
 
         {/* Color */}
         <div className="space-y-2">
-          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Card Color</label>
+          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/55">Card Color</label>
           <div className="flex gap-3 flex-wrap">
             {MEMBER_COLORS.map(c => (
               <button
@@ -15551,7 +15551,7 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
                 onChange={e => setMembershipColor(e.target.value)}
                 className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
               />
-              <div className="w-10 h-10 rounded-full border-4 border-dashed border-brand-navy/20 flex items-center justify-center text-brand-navy/30" style={{ backgroundColor: membershipColor }}>
+              <div className="w-10 h-10 rounded-full border-4 border-dashed border-brand-navy/20 flex items-center justify-center text-brand-navy/45" style={{ backgroundColor: membershipColor }}>
                 <Plus size={14} />
               </div>
             </div>
@@ -15563,10 +15563,10 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
           <div className="space-y-5">
             {/* Points earning */}
             <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40 mb-3 block">Points System</label>
+              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/55 mb-3 block">Points System</label>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest">Points per $1 spent</label>
+                  <label className="text-[10px] font-bold text-brand-navy/55 uppercase tracking-widest">Points per $1 spent</label>
                   <input
                     type="number"
                     min="0"
@@ -15577,7 +15577,7 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest">Points per $1 off</label>
+                  <label className="text-[10px] font-bold text-brand-navy/55 uppercase tracking-widest">Points per $1 off</label>
                   <input
                     type="number"
                     min="1"
@@ -15592,7 +15592,7 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
               {parseFloat(pointsRate) > 0 && parseFloat(redemptionRate) > 0 && (
                 <div className="mt-3 bg-brand-bg rounded-2xl p-4 space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-bold text-brand-navy/50 uppercase tracking-widest">Calculator — spend $</label>
+                    <label className="text-[10px] font-bold text-brand-navy/65 uppercase tracking-widest">Calculator — spend $</label>
                     <input
                       type="number"
                       min="1"
@@ -15618,10 +15618,10 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
 
             {/* Milestone reward */}
             <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40 mb-3 block">Milestone Reward (optional)</label>
+              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/55 mb-3 block">Milestone Reward (optional)</label>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest">Reward every $</label>
+                  <label className="text-[10px] font-bold text-brand-navy/55 uppercase tracking-widest">Reward every $</label>
                   <input
                     type="number"
                     value={spendThreshold}
@@ -15631,7 +15631,7 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest">Reward</label>
+                  <label className="text-[10px] font-bold text-brand-navy/55 uppercase tracking-widest">Reward</label>
                   <input
                     value={spendReward}
                     onChange={e => setSpendReward(e.target.value)}
@@ -15647,7 +15647,7 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
         {/* Visit-based: stamps per visit */}
         {membershipType === 'visit' && (
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Points Per Visit</label>
+            <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/55">Points Per Visit</label>
             <input
               type="number"
               min="1"
@@ -15657,7 +15657,7 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
               className="w-full px-5 py-4 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
               placeholder="1"
             />
-            <p className="text-[10px] text-brand-navy/40 font-medium">Points awarded each time a member visits.</p>
+            <p className="text-[10px] text-brand-navy/55 font-medium">Points awarded each time a member visits.</p>
           </div>
         )}
 
@@ -15665,7 +15665,7 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
         {membershipType === 'visit' && (
           <div>
             <div className="flex items-center justify-between mb-3">
-              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Rewards</label>
+              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/55">Rewards</label>
               {visitRewards.length < 10 && (
                 <button
                   onClick={() => setVisitRewards(r => [...r, { visits: (r[r.length - 1]?.visits ?? 0) + 5, reward: '' }])}
@@ -15676,13 +15676,13 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
               )}
             </div>
             {visitRewards.length === 0 && (
-              <p className="text-xs text-brand-navy/30 text-center py-4">No rewards yet — add up to 10</p>
+              <p className="text-xs text-brand-navy/45 text-center py-4">No rewards yet — add up to 10</p>
             )}
             <div className="space-y-2">
               {visitRewards.map((r, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <div className="flex items-center gap-1.5 bg-brand-bg rounded-2xl px-3 py-3 border border-brand-navy/10 w-24 shrink-0">
-                    <span className="text-[10px] font-bold text-brand-navy/40">@</span>
+                    <span className="text-[10px] font-bold text-brand-navy/55">@</span>
                     <input
                       type="number"
                       min="1"
@@ -15711,7 +15711,7 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
         {membershipType === 'visit' && (
           <div>
             <div className="flex items-center justify-between mb-3">
-              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Menu Items</label>
+              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/55">Menu Items</label>
               {menuItems.length < 20 && (
                 <button
                   onClick={() => setMenuItems(prev => [...prev, { id: `menu_${Date.now()}`, name: '', points: 50, description: '' }])}
@@ -15722,7 +15722,7 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
               )}
             </div>
             {menuItems.length === 0 && (
-              <p className="text-xs text-brand-navy/30 text-center py-4">No menu items yet — members can exchange points for these</p>
+              <p className="text-xs text-brand-navy/45 text-center py-4">No menu items yet — members can exchange points for these</p>
             )}
             <div className="space-y-3">
               {menuItems.map((item, i) => (
@@ -15743,7 +15743,7 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
                         className="w-full text-sm font-bold text-brand-navy bg-transparent outline-none"
                         placeholder="50"
                       />
-                      <span className="text-[9px] font-bold text-brand-navy/40 shrink-0">pts</span>
+                      <span className="text-[9px] font-bold text-brand-navy/55 shrink-0">pts</span>
                     </div>
                     <button onClick={() => setMenuItems(prev => prev.filter((_, idx) => idx !== i))} className="p-1.5 text-red-400 shrink-0">
                       <Trash2 size={14} />
@@ -15763,7 +15763,7 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
 
         {/* Preview */}
         <div className="space-y-2">
-          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/40">Preview</label>
+          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/55">Preview</label>
           <div className="rounded-2xl overflow-hidden">
             <div className="p-4 flex items-center gap-3" style={{ background: `linear-gradient(135deg, ${membershipColor}ff 0%, ${membershipColor}99 100%)` }}>
               <div className="w-10 h-10 rounded-full bg-white/20 border-2 border-white/30 shrink-0" />
@@ -15842,11 +15842,11 @@ function SubCardBuilder({ store }: { store: StoreProfile | null }) {
 
       {/* Earn mode selector */}
       <div>
-        <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest block mb-2">Points awarded on</label>
+        <label className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest block mb-2">Points awarded on</label>
         <div className="flex gap-2">
           {(['spend', 'visit', 'both'] as const).map(m => (
             <button key={m} onClick={() => setEarnMode(m)}
-              className={`flex-1 py-2.5 rounded-xl text-xs font-bold capitalize transition-all border ${earnMode === m ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-brand-navy/50 border-brand-navy/10'}`}>
+              className={`flex-1 py-2.5 rounded-xl text-xs font-bold capitalize transition-all border ${earnMode === m ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-brand-navy/65 border-brand-navy/10'}`}>
               {m === 'spend' ? '$ Spend' : m === 'visit' ? 'Visit' : 'Both'}
             </button>
           ))}
@@ -15857,7 +15857,7 @@ function SubCardBuilder({ store }: { store: StoreProfile | null }) {
       <div className="grid grid-cols-2 gap-4">
         {(earnMode === 'spend' || earnMode === 'both') && (
           <div>
-            <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest block mb-1.5">Points per $1 spent</label>
+            <label className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest block mb-1.5">Points per $1 spent</label>
             <input type="number" min="1" value={pointsPerDollar}
               onChange={(e) => setPointsPerDollar(Math.max(1, parseInt(e.target.value) || 1))}
               className="w-full px-4 py-3 rounded-xl border border-brand-navy/10 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400 text-brand-navy font-bold"
@@ -15866,7 +15866,7 @@ function SubCardBuilder({ store }: { store: StoreProfile | null }) {
         )}
         {(earnMode === 'visit' || earnMode === 'both') && (
           <div>
-            <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest block mb-1.5">Points per visit</label>
+            <label className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest block mb-1.5">Points per visit</label>
             <input type="number" min="1" value={pointsPerVisit}
               onChange={(e) => setPointsPerVisit(Math.max(1, parseInt(e.target.value) || 1))}
               className="w-full px-4 py-3 rounded-xl border border-brand-navy/10 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400 text-brand-navy font-bold"
@@ -15874,7 +15874,7 @@ function SubCardBuilder({ store }: { store: StoreProfile | null }) {
           </div>
         )}
         <div className={earnMode === 'both' ? 'col-span-2' : ''}>
-          <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest block mb-1.5">Points per $1 off</label>
+          <label className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest block mb-1.5">Points per $1 off</label>
           <input type="number" min="1" value={pointsToMoneyRate}
             onChange={(e) => setPointsToMoneyRate(Math.max(1, parseInt(e.target.value) || 1))}
             className="w-full px-4 py-3 rounded-xl border border-brand-navy/10 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400 text-brand-navy font-bold"
@@ -15884,7 +15884,7 @@ function SubCardBuilder({ store }: { store: StoreProfile | null }) {
 
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">Reward Tiers</label>
+          <label className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest">Reward Tiers</label>
           <button onClick={addReward} className="text-indigo-600 text-xs font-bold hover:underline flex items-center gap-1">
             <Plus size={12} /> Add tier
           </button>
@@ -15945,7 +15945,7 @@ function BadgeSwipeRow({ badges, onSelectBadge }: { badges: AppBadge[]; onSelect
             >
               {b.icon}
             </div>
-            <span className="text-[9px] font-bold text-brand-navy/50 text-center w-12 leading-tight line-clamp-2">{b.name}</span>
+            <span className="text-[9px] font-bold text-brand-navy/65 text-center w-12 leading-tight line-clamp-2">{b.name}</span>
           </button>
         ))}
       </div>
@@ -15962,7 +15962,7 @@ function BadgeSquarePanel({ badges, onSelectBadge }: { badges: AppBadge[]; onSel
           const b = badges[i];
           if (!b) return (
             <div key={i} className="aspect-square rounded-[1.1rem] bg-brand-navy/5 border border-brand-navy/8 flex items-center justify-center">
-              <span className="text-brand-navy/20 text-lg">✦</span>
+              <span className="text-brand-navy/32 text-lg">✦</span>
             </div>
           );
           return (
@@ -15991,9 +15991,9 @@ function BadgeSquarePanel({ badges, onSelectBadge }: { badges: AppBadge[]; onSel
               transition={{ type: 'spring', stiffness: 400, damping: 32 }}
               className="w-full bg-brand-bg rounded-t-3xl p-6 pb-10"
               onClick={e => e.stopPropagation()}>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-4">All Badges</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/55 mb-4">All Badges</p>
               {badges.length === 0 ? (
-                <p className="text-xs text-brand-navy/40 text-center py-8">No badges earned yet</p>
+                <p className="text-xs text-brand-navy/55 text-center py-8">No badges earned yet</p>
               ) : (
                 <div className="grid grid-cols-4 gap-3 max-h-72 overflow-y-auto pb-1">
                   {badges.map(b => (
@@ -16056,7 +16056,7 @@ function StickerListPanel({ uid }: { uid: string }) {
           const g = grouped[i];
           if (!g) return (
             <div key={i} className="aspect-square rounded-[1.1rem] bg-brand-navy/5 border border-brand-navy/8 flex items-center justify-center">
-              <span className="text-brand-navy/20 text-lg">✦</span>
+              <span className="text-brand-navy/32 text-lg">✦</span>
             </div>
           );
           return (
@@ -16090,9 +16090,9 @@ function StickerListPanel({ uid }: { uid: string }) {
               transition={{ type: 'spring', stiffness: 400, damping: 32 }}
               className="w-full bg-brand-bg rounded-t-3xl p-6 pb-10"
               onClick={e => e.stopPropagation()}>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-4">All Stickers</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/55 mb-4">All Stickers</p>
               {grouped.length === 0 ? (
-                <p className="text-xs text-brand-navy/40 text-center py-8">No stickers collected yet</p>
+                <p className="text-xs text-brand-navy/55 text-center py-8">No stickers collected yet</p>
               ) : (
                 <div className="grid grid-cols-4 gap-3 max-h-72 overflow-y-auto pb-1">
                   {grouped.map((g, i) => (
@@ -16162,16 +16162,16 @@ function StoreLeaderboard({ storeId, storeName, logoUrl, type, userId }: {
         </div>
         <div className="flex-1 min-w-0">
           <h4 className="font-bold text-brand-navy text-sm truncate">{storeName}</h4>
-          <p className="text-brand-navy/40 text-[9px] font-bold uppercase tracking-widest">{type === 'visit' ? 'Points' : 'Points'} Leaderboard</p>
+          <p className="text-brand-navy/55 text-[9px] font-bold uppercase tracking-widest">{type === 'visit' ? 'Points' : 'Points'} Leaderboard</p>
         </div>
         {myRank > 0 && (
-          <span className="text-brand-navy/50 text-xs font-bold shrink-0">#{myRank}</span>
+          <span className="text-brand-navy/65 text-xs font-bold shrink-0">#{myRank}</span>
         )}
       </div>
       <div className="space-y-1.5">
         {entries.map((e, i) => (
           <div key={e.id} className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl ${e.userId === userId ? 'bg-blue-50 border border-blue-100' : 'bg-brand-bg'}`}>
-            <span className="text-[10px] font-black text-brand-navy/30 w-4 text-center shrink-0">
+            <span className="text-[10px] font-black text-brand-navy/45 w-4 text-center shrink-0">
               {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`}
             </span>
             <div className="w-7 h-7 rounded-full overflow-hidden bg-brand-navy/10 shrink-0 flex items-center justify-center">
@@ -16504,12 +16504,12 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           <div className="flex items-center gap-4 text-sm px-1">
             <button onClick={() => { setFollowModalTab('following'); setShowFollowModal(true); }} className="flex items-center gap-1 font-bold hover:text-brand-gold transition-colors">
               <span>{following.length}</span>
-              <span className="text-brand-navy/40 font-normal">Following</span>
+              <span className="text-brand-navy/55 font-normal">Following</span>
             </button>
-            <span className="text-brand-navy/20">•</span>
+            <span className="text-brand-navy/32">•</span>
             <button onClick={() => { setFollowModalTab('followers'); setShowFollowModal(true); }} className="flex items-center gap-1 font-bold hover:text-brand-gold transition-colors">
               <span>{followers.length + storeFollowerCount}</span>
-              <span className="text-brand-navy/40 font-normal">Followers</span>
+              <span className="text-brand-navy/55 font-normal">Followers</span>
             </button>
           </div>
         )}
@@ -16517,11 +16517,11 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         {/* Posts */}
         <div className="flex p-1 glass-card rounded-2xl">
           <button onClick={() => setActiveSubTab('posts')}
-            className={cn("flex-1 py-3 rounded-xl text-xs font-bold transition-all", activeSubTab === 'posts' ? "bg-brand-navy text-white shadow-lg" : "text-brand-navy/40")}>
+            className={cn("flex-1 py-3 rounded-xl text-xs font-bold transition-all", activeSubTab === 'posts' ? "bg-brand-navy text-white shadow-lg" : "text-brand-navy/55")}>
             Posts
           </button>
           <button onClick={() => setActiveSubTab('interactions')}
-            className={cn("flex-1 py-3 rounded-xl text-xs font-bold transition-all", activeSubTab === 'interactions' ? "bg-brand-navy text-white shadow-lg" : "text-brand-navy/40")}>
+            className={cn("flex-1 py-3 rounded-xl text-xs font-bold transition-all", activeSubTab === 'interactions' ? "bg-brand-navy text-white shadow-lg" : "text-brand-navy/55")}>
             Interactions
           </button>
         </div>
@@ -16551,17 +16551,17 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                             onClick={async () => { const snap = await getDoc(doc(db, 'users', item.data.authorUid)).catch(() => null); if (snap?.exists()) onViewUser({ uid: snap.id, ...snap.data() } as UserProfile); }}>
                             {item.data.authorName}
                           </span>
-                          <span className="text-brand-navy/30 mx-1">›</span>
+                          <span className="text-brand-navy/45 mx-1">›</span>
                           <span className="font-bold text-brand-gold">{vendorStore?.name || profile.name}</span>
                         </p>
-                        <p className="text-[10px] text-brand-navy/40 font-medium">{item.data.createdAt ? format(item.data.createdAt.toDate(), 'MMM d · h:mm a') : 'Just now'}</p>
+                        <p className="text-[10px] text-brand-navy/55 font-medium">{item.data.createdAt ? format(item.data.createdAt.toDate(), 'MMM d · h:mm a') : 'Just now'}</p>
                       </div>
                     </div>
                     <p className="text-sm text-brand-navy/80 leading-relaxed">{item.data.content}</p>
                   </div>
                 )
               )}
-              {merged.length === 0 && <div className="py-16 text-center text-brand-navy/20"><MessageSquare size={48} className="mx-auto mb-3 opacity-10" /><p className="font-bold text-sm">No posts yet</p></div>}
+              {merged.length === 0 && <div className="py-16 text-center text-brand-navy/32"><MessageSquare size={48} className="mx-auto mb-3 opacity-10" /><p className="font-bold text-sm">No posts yet</p></div>}
             </div>
           );
         })()}
@@ -16593,8 +16593,8 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
             <Modal title={followModalTab === 'following' ? `Following (${following.length})` : `Followers (${followers.length})`} onClose={() => setShowFollowModal(false)}>
               <div className="space-y-4">
                 <div className="flex p-1 bg-brand-bg rounded-2xl">
-                  <button onClick={() => setFollowModalTab('following')} className={cn("flex-1 py-2.5 rounded-xl text-xs font-bold transition-all", followModalTab === 'following' ? "bg-brand-navy text-white shadow" : "text-brand-navy/40")}>Following ({following.length})</button>
-                  <button onClick={() => setFollowModalTab('followers')} className={cn("flex-1 py-2.5 rounded-xl text-xs font-bold transition-all", followModalTab === 'followers' ? "bg-brand-navy text-white shadow" : "text-brand-navy/40")}>Followers ({followers.length})</button>
+                  <button onClick={() => setFollowModalTab('following')} className={cn("flex-1 py-2.5 rounded-xl text-xs font-bold transition-all", followModalTab === 'following' ? "bg-brand-navy text-white shadow" : "text-brand-navy/55")}>Following ({following.length})</button>
+                  <button onClick={() => setFollowModalTab('followers')} className={cn("flex-1 py-2.5 rounded-xl text-xs font-bold transition-all", followModalTab === 'followers' ? "bg-brand-navy text-white shadow" : "text-brand-navy/55")}>Followers ({followers.length})</button>
                 </div>
                 <div className="space-y-2">
                   {(followModalTab === 'following' ? following : followers).map(u => (
@@ -16602,11 +16602,11 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                       <div className="w-10 h-10 rounded-2xl overflow-hidden border border-brand-navy/5 shrink-0 bg-indigo-50 flex items-center justify-center"><PixelAvatar config={u.avatar} uid={u.uid} size={40} view="head" /></div>
                       <div>
                         <div className="flex items-center gap-1"><p className="font-bold text-sm">{u.name}</p><StreakBadge streak={u.streak} /></div>
-                        <p className="text-[10px] text-brand-navy/40 font-bold uppercase">@{u.email?.split('@')[0]}</p>
+                        <p className="text-[10px] text-brand-navy/55 font-bold uppercase">@{u.email?.split('@')[0]}</p>
                       </div>
                     </div>
                   ))}
-                  {(followModalTab === 'following' ? following : followers).length === 0 && <p className="text-xs text-brand-navy/40 text-center py-8">{followModalTab === 'following' ? 'Not following anyone yet' : 'No followers yet'}</p>}
+                  {(followModalTab === 'following' ? following : followers).length === 0 && <p className="text-xs text-brand-navy/55 text-center py-8">{followModalTab === 'following' ? 'Not following anyone yet' : 'No followers yet'}</p>}
                 </div>
               </div>
             </Modal>
@@ -16670,7 +16670,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
               <PixelAvatar config={profile.avatar} uid={profile.uid} size={64} view="head" />
             </button>
             <div className="flex items-center gap-1 mt-1.5">
-              <p className="text-[8px] text-brand-navy/40 font-bold uppercase tracking-wider">tap to customise</p>
+              <p className="text-[8px] text-brand-navy/55 font-bold uppercase tracking-wider">tap to customise</p>
             </div>
           </div>
 
@@ -16684,12 +16684,12 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
             <div className="flex items-center gap-3 mt-2 text-sm">
               <button onClick={() => { setFollowModalTab('following'); setShowFollowModal(true); }} className="flex items-center gap-1 font-bold hover:text-brand-gold transition-colors">
                 <span>{following.length}</span>
-                <span className="text-brand-navy/40 font-normal">Following</span>
+                <span className="text-brand-navy/55 font-normal">Following</span>
               </button>
-              <span className="text-brand-navy/20">•</span>
+              <span className="text-brand-navy/32">•</span>
               <button onClick={() => { setFollowModalTab('followers'); setShowFollowModal(true); }} className="flex items-center gap-1 font-bold hover:text-brand-gold transition-colors">
                 <span>{followers.length}</span>
-                <span className="text-brand-navy/40 font-normal">Followers</span>
+                <span className="text-brand-navy/55 font-normal">Followers</span>
               </button>
             </div>
           </div>
@@ -16716,7 +16716,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
       {/* Badges swipe row */}
       {earnedBadges.length > 0 && (
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 text-center">Badges</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/55 mb-2.5 text-center">Badges</p>
           <BadgeSwipeRow badges={earnedBadges} onSelectBadge={setSelectedBadge} />
         </div>
       )}
@@ -16743,7 +16743,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                 >{selectedBadge.icon}</div>
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-brand-navy text-lg leading-tight">{selectedBadge.name}</p>
-                  <p className="text-xs text-brand-navy/50 mt-1">{BADGE_METRIC_LABELS[selectedBadge.metric]} ≥ {selectedBadge.threshold}</p>
+                  <p className="text-xs text-brand-navy/65 mt-1">{BADGE_METRIC_LABELS[selectedBadge.metric]} ≥ {selectedBadge.threshold}</p>
                 </div>
               </div>
               {selectedBadge.description ? (
@@ -16802,10 +16802,10 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                     <div className="flex-1 min-w-0 px-4 py-3">
                       <div className="flex items-center gap-1.5 mb-0.5">
                         {offer.storeLogoUrl && <img src={offer.storeLogoUrl} alt="" className="w-4 h-4 rounded object-cover shrink-0" />}
-                        <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest truncate">{offer.storeName}</p>
+                        <p className="text-[10px] text-brand-navy/55 font-bold uppercase tracking-widest truncate">{offer.storeName}</p>
                       </div>
                       <p className="font-bold text-brand-navy text-sm truncate">{offer.title}</p>
-                      <p className="text-xs text-brand-navy/40 mt-0.5 line-clamp-1">{offer.description}</p>
+                      <p className="text-xs text-brand-navy/55 mt-0.5 line-clamp-1">{offer.description}</p>
                     </div>
                     <div className="flex items-center pr-3 shrink-0">
                       <ChevronRight size={16} className="text-pink-300" />
@@ -16829,7 +16829,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         if (activeCards.length === 0) return null;
         return (
           <div className="space-y-2.5">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Active Cards</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/55 px-1">Active Cards</p>
             <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-2 scrollbar-hide">
               {activeCards.map(card => {
                 const store = (stores || []).find(s => s.id === card.store_id);
@@ -16855,7 +16855,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                     <div className="bg-white px-4 py-3">
                       <div className="flex items-center justify-between mb-1.5">
                         <span className="text-[10px] font-bold" style={{ color: theme }}>{card.current_stamps} / {total} stamps</span>
-                        <span className="text-[10px] font-bold text-brand-navy/30">{pct}%</span>
+                        <span className="text-[10px] font-bold text-brand-navy/45">{pct}%</span>
                       </div>
                       <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: `${theme}20` }}>
                         <motion.div
@@ -16875,36 +16875,17 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         );
       })()}
 
-      {/* Leaderboards for visit and points cards */}
-      {(() => {
-        const visitCards = userCards.filter(c => !c.isArchived && c.card_type === 'membership' && (c.membership_type === 'visit' || (stores || []).find(s => s.id === c.store_id)?.membershipType === 'visit'));
-        const subCards = userCards.filter(c => !c.isArchived && c.card_type === 'sub');
-        if (visitCards.length === 0 && subCards.length === 0) return null;
-        return (
-          <div className="space-y-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Leaderboards</p>
-            {visitCards.map(card => {
-              const store = (stores || []).find(s => s.id === card.store_id);
-              return <StoreLeaderboard key={card.id} storeId={card.store_id} storeName={store?.name || 'Store'} logoUrl={store?.logoUrl} type="visit" userId={profile.uid} />;
-            })}
-            {subCards.map(card => {
-              const store = (stores || []).find(s => s.id === card.store_id);
-              return <StoreLeaderboard key={card.id} storeId={card.store_id} storeName={store?.name || 'Store'} logoUrl={store?.logoUrl} type="points" userId={profile.uid} />;
-            })}
-          </div>
-        );
-      })()}
 
       {/* Linqle completions */}
       {(profile.linqleCompletions?.length ?? 0) > 0 && (
         <div className="space-y-2.5">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Linqle History</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/55 px-1">Linqle History</p>
           <div className="flex gap-2 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-2 scrollbar-hide">
             {[...(profile.linqleCompletions || [])].reverse().map(c => (
               <div key={c.date} className={`snap-start shrink-0 w-16 px-2 py-2.5 rounded-2xl flex flex-col items-center gap-1 ${c.won ? 'bg-green-50 border border-green-200' : 'bg-brand-navy/5 border border-brand-navy/10'}`}>
                 <span className="text-lg font-black">{c.won ? '🟩' : '🟥'}</span>
                 <p className="text-[10px] font-black text-brand-navy">{c.won ? `${c.guesses}/6` : 'X/6'}</p>
-                <p className="text-[9px] text-brand-navy/40">{c.date.slice(5)}</p>
+                <p className="text-[9px] text-brand-navy/55">{c.date.slice(5)}</p>
               </div>
             ))}
           </div>
@@ -16914,7 +16895,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
       {/* My challenges */}
       {myChallenges.length > 0 && (
         <div className="space-y-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Challenges</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/55 px-1">Challenges</p>
           <div className="space-y-2">
             {myChallenges.map(c => {
               const entry = profileEntries.get(c.id);
@@ -16960,7 +16941,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           {/* Redeemed challenges */}
           {myChallenges.some(c => profileEntries.get(c.id)?.redeemed) && (
             <div className="space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Redeemed</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/55 px-1">Redeemed</p>
               {myChallenges.filter(c => profileEntries.get(c.id)?.redeemed).map(c => (
                 <div key={c.id} className="rounded-2xl bg-white border border-brand-navy/8 px-4 py-3 flex items-center gap-3 opacity-60">
                   <div className="w-8 h-8 rounded-xl bg-green-50 flex items-center justify-center shrink-0">
@@ -16968,7 +16949,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-sm text-brand-navy truncate">{c.title}</p>
-                    <p className="text-[10px] text-brand-navy/40">🎁 {c.reward}</p>
+                    <p className="text-[10px] text-brand-navy/55">🎁 {c.reward}</p>
                   </div>
                   <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full shrink-0">Redeemed</span>
                 </div>
@@ -16992,13 +16973,13 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
       <div className="flex p-1 glass-card rounded-2xl">
         <button
           onClick={() => setActiveSubTab('posts')}
-          className={cn("flex-1 py-3 rounded-xl text-xs font-bold transition-all", activeSubTab === 'posts' ? "bg-brand-navy text-white shadow-lg" : "text-brand-navy/40")}
+          className={cn("flex-1 py-3 rounded-xl text-xs font-bold transition-all", activeSubTab === 'posts' ? "bg-brand-navy text-white shadow-lg" : "text-brand-navy/55")}
         >
           Posts
         </button>
         <button
           onClick={() => setActiveSubTab('interactions')}
-          className={cn("flex-1 py-3 rounded-xl text-xs font-bold transition-all", activeSubTab === 'interactions' ? "bg-brand-navy text-white shadow-lg" : "text-brand-navy/40")}
+          className={cn("flex-1 py-3 rounded-xl text-xs font-bold transition-all", activeSubTab === 'interactions' ? "bg-brand-navy text-white shadow-lg" : "text-brand-navy/55")}
         >
           Interactions
         </button>
@@ -17075,7 +17056,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           )}
 
           {myGlobalPosts.length === 0 && (
-            <div className="py-20 text-center text-brand-navy/20">
+            <div className="py-20 text-center text-brand-navy/32">
               <MessageSquare size={64} className="mx-auto mb-4 opacity-5" />
               <p className="font-bold">Nothing posted yet</p>
               <p className="text-xs">Use the + button or post to your wall above</p>
@@ -17096,7 +17077,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                 <Heart size={12} fill="currentColor" /> Liked ({likedPosts.length})
               </p>
               {likedPosts.length === 0 ? (
-                <div className="glass-card rounded-2xl p-6 text-center text-brand-navy/30 text-sm">Nothing liked yet</div>
+                <div className="glass-card rounded-2xl p-6 text-center text-brand-navy/45 text-sm">Nothing liked yet</div>
               ) : likedPosts.map(post => (
                 <FeedPostCard
                   key={post.id}
@@ -17129,7 +17110,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                 <BarChart2 size={12} /> Votes Cast ({votedPolls.length})
               </p>
               {votedPolls.length === 0 ? (
-                <div className="glass-card rounded-2xl p-6 text-center text-brand-navy/30 text-sm">No polls voted in yet</div>
+                <div className="glass-card rounded-2xl p-6 text-center text-brand-navy/45 text-sm">No polls voted in yet</div>
               ) : votedPolls.map(post => (
                 <FeedPostCard
                   key={post.id}
@@ -17166,13 +17147,13 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
               <div className="flex p-1 bg-brand-bg rounded-2xl">
                 <button
                   onClick={() => setFollowModalTab('following')}
-                  className={cn("flex-1 py-2.5 rounded-xl text-xs font-bold transition-all", followModalTab === 'following' ? "bg-brand-navy text-white shadow" : "text-brand-navy/40")}
+                  className={cn("flex-1 py-2.5 rounded-xl text-xs font-bold transition-all", followModalTab === 'following' ? "bg-brand-navy text-white shadow" : "text-brand-navy/55")}
                 >
                   Following ({following.length})
                 </button>
                 <button
                   onClick={() => setFollowModalTab('followers')}
-                  className={cn("flex-1 py-2.5 rounded-xl text-xs font-bold transition-all", followModalTab === 'followers' ? "bg-brand-navy text-white shadow" : "text-brand-navy/40")}
+                  className={cn("flex-1 py-2.5 rounded-xl text-xs font-bold transition-all", followModalTab === 'followers' ? "bg-brand-navy text-white shadow" : "text-brand-navy/55")}
                 >
                   Followers ({followers.length})
                 </button>
@@ -17190,7 +17171,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                       </div>
                       <div>
                         <div className="flex items-center gap-1"><p className="font-bold text-sm group-hover:text-brand-gold transition-colors">{u.name}</p><StreakBadge streak={u.streak} /></div>
-                        <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest">@{u.email?.split('@')[0]}</p>
+                        <p className="text-[10px] text-brand-navy/55 font-bold uppercase tracking-widest">@{u.email?.split('@')[0]}</p>
                       </div>
                     </div>
                     {followModalTab === 'following' && (
@@ -17199,7 +17180,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                           const followId = `${profile.uid}_${u.uid}`;
                           await deleteDoc(doc(db, 'follows', followId));
                         }}
-                        className="px-3 py-1.5 rounded-xl border border-brand-navy/10 text-xs font-bold text-brand-navy/50 hover:border-brand-gold/50 hover:text-brand-gold transition-all ml-2 shrink-0"
+                        className="px-3 py-1.5 rounded-xl border border-brand-navy/10 text-xs font-bold text-brand-navy/65 hover:border-brand-gold/50 hover:text-brand-gold transition-all ml-2 shrink-0"
                       >
                         Unfollow
                       </button>
@@ -17207,7 +17188,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                   </div>
                 ))}
                 {(followModalTab === 'following' ? following : followers).length === 0 && (
-                  <p className="text-xs text-brand-navy/40 text-center py-8">
+                  <p className="text-xs text-brand-navy/55 text-center py-8">
                     {followModalTab === 'following' ? 'Not following anyone yet' : 'No followers yet'}
                   </p>
                 )}
@@ -17334,18 +17315,18 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
 
         {/* Avatar preview (customiser is on Profile tab) */}
         <div className="space-y-3">
-          <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">Avatar</label>
+          <label className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest">Avatar</label>
           <div className="flex flex-col items-center gap-2 py-2">
             <div className="bg-gradient-to-b from-indigo-50 to-purple-50 rounded-[1.5rem] p-3 shadow-inner">
               <PixelAvatar config={profile.avatar} uid={profile.uid} size={64} view="full" />
             </div>
-            <p className="text-xs text-brand-navy/40">Customise your avatar on the Profile tab</p>
+            <p className="text-xs text-brand-navy/55">Customise your avatar on the Profile tab</p>
           </div>
         </div>
 
         {/* Name */}
         <div className="space-y-2">
-          <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">Display Name</label>
+          <label className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest">Display Name</label>
           <input value={name} onChange={e => setName(e.target.value)} placeholder="Your name"
             className="w-full px-5 py-4 rounded-2xl bg-white border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30" />
         </div>
@@ -17353,11 +17334,11 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
         {/* Handle — read-only */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">Handle</label>
-            <span className="text-[10px] text-brand-navy/30 flex items-center gap-1"><Lock size={9} /> Cannot be changed</span>
+            <label className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest">Handle</label>
+            <span className="text-[10px] text-brand-navy/45 flex items-center gap-1"><Lock size={9} /> Cannot be changed</span>
           </div>
           <div className="w-full px-5 py-4 rounded-2xl bg-brand-navy/5 border border-brand-navy/10 text-sm font-medium text-brand-navy/60 flex items-center gap-1">
-            <span className="text-brand-navy/30">@</span>{handle || profile.handle || '—'}
+            <span className="text-brand-navy/45">@</span>{handle || profile.handle || '—'}
           </div>
         </div>
 
@@ -17369,24 +17350,24 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
               {/* Email */}
               <div className="flex items-center justify-between bg-white px-5 py-4 rounded-2xl border border-brand-navy/10">
                 <div className="flex items-center gap-3">
-                  <Mail size={15} className="text-brand-navy/30 shrink-0" />
-                  <span className="text-xs font-bold text-brand-navy/40 uppercase tracking-widest">Email</span>
+                  <Mail size={15} className="text-brand-navy/45 shrink-0" />
+                  <span className="text-xs font-bold text-brand-navy/55 uppercase tracking-widest">Email</span>
                 </div>
                 <span className="text-sm text-brand-navy/70 font-medium truncate max-w-[160px]">{profile.email}</span>
               </div>
               {/* Gender */}
               <div className="flex items-center justify-between bg-white px-5 py-4 rounded-2xl border border-brand-navy/10">
                 <div className="flex items-center gap-3">
-                  <UserCheck size={15} className="text-brand-navy/30 shrink-0" />
-                  <span className="text-xs font-bold text-brand-navy/40 uppercase tracking-widest">Gender</span>
+                  <UserCheck size={15} className="text-brand-navy/45 shrink-0" />
+                  <span className="text-xs font-bold text-brand-navy/55 uppercase tracking-widest">Gender</span>
                 </div>
                 <span className="text-sm text-brand-navy/70 font-medium">{profile.gender || '—'}</span>
               </div>
               {/* Birthday */}
               <div className="flex items-center justify-between bg-white px-5 py-4 rounded-2xl border border-brand-navy/10">
                 <div className="flex items-center gap-3">
-                  <Calendar size={15} className="text-brand-navy/30 shrink-0" />
-                  <span className="text-xs font-bold text-brand-navy/40 uppercase tracking-widest">Birthday</span>
+                  <Calendar size={15} className="text-brand-navy/45 shrink-0" />
+                  <span className="text-xs font-bold text-brand-navy/55 uppercase tracking-widest">Birthday</span>
                 </div>
                 <span className="text-sm text-brand-navy/70 font-medium">
                   {profile.birthday ? new Date(profile.birthday).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
@@ -17395,8 +17376,8 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
               {/* Location */}
               <div className="flex items-center justify-between bg-white px-5 py-4 rounded-2xl border border-brand-navy/10">
                 <div className="flex items-center gap-3">
-                  <MapPin size={15} className="text-brand-navy/30 shrink-0" />
-                  <span className="text-xs font-bold text-brand-navy/40 uppercase tracking-widest">Location</span>
+                  <MapPin size={15} className="text-brand-navy/45 shrink-0" />
+                  <span className="text-xs font-bold text-brand-navy/55 uppercase tracking-widest">Location</span>
                 </div>
                 <span className="text-sm text-brand-navy/70 font-medium">{profile.location?.city || '—'}</span>
               </div>
@@ -17411,32 +17392,32 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
             <SectionLabel icon={<Building2 size={14} className="text-brand-gold" />} label="Business Details" />
 
             <div className="space-y-2">
-              <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">Business Name</label>
+              <label className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest">Business Name</label>
               <input value={storeName} onChange={e => setStoreName(e.target.value)} placeholder="Your business name"
                 className="w-full px-5 py-4 rounded-2xl bg-white border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30" />
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">Stamp Card Reward</label>
+              <label className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest">Stamp Card Reward</label>
               <input value={storeReward} onChange={e => setStoreReward(e.target.value)} placeholder="e.g. Free coffee, Free class"
                 className="w-full px-5 py-4 rounded-2xl bg-white border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30" />
-              <p className="text-[10px] text-brand-navy/30 px-1">Shown on the Hot tab so customers know what they earn</p>
+              <p className="text-[10px] text-brand-navy/45 px-1">Shown on the Hot tab so customers know what they earn</p>
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">Category</label>
+              <label className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest">Category</label>
               <div className="relative">
                 <select value={storeCategory} onChange={e => setStoreCategory(e.target.value as Category)}
                   className="w-full px-5 py-4 rounded-2xl bg-white border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30 appearance-none pr-10">
                   {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
-                <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-navy/40 pointer-events-none" />
+                <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-navy/55 pointer-events-none" />
               </div>
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">
+                <label className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest">
                   Business Address <span className="text-red-400">*</span>
                 </label>
                 {!storeLocation && (
@@ -17446,7 +17427,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
                 )}
               </div>
               <div className="relative">
-                <MapPin size={15} className={cn("absolute left-4 top-1/2 -translate-y-1/2", storeLocation ? "text-brand-navy/30" : "text-brand-gold")} />
+                <MapPin size={15} className={cn("absolute left-4 top-1/2 -translate-y-1/2", storeLocation ? "text-brand-navy/45" : "text-brand-gold")} />
                 <input
                   value={storeLocation}
                   onChange={e => setStoreLocation(e.target.value)}
@@ -17458,12 +17439,12 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
                 />
               </div>
               {!storeLocation && (
-                <p className="text-[11px] text-brand-navy/40 pl-1">Enter your full address so customers nearby can discover you in the Hot tab.</p>
+                <p className="text-[11px] text-brand-navy/55 pl-1">Enter your full address so customers nearby can discover you in the Hot tab.</p>
               )}
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">Logo</label>
+              <label className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest">Logo</label>
 
               {/* Fetch from website */}
               <div className="flex gap-2">
@@ -17504,7 +17485,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
 
               {/* Upload from device */}
               <div className="flex gap-3 items-center">
-                <label className={cn('flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl border-2 border-dashed border-brand-navy/20 text-sm font-semibold text-brand-navy/50 cursor-pointer transition-all', logoUploading ? 'opacity-50 pointer-events-none' : 'hover:border-brand-gold/50 hover:text-brand-navy active:scale-[0.98]')}>
+                <label className={cn('flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl border-2 border-dashed border-brand-navy/20 text-sm font-semibold text-brand-navy/65 cursor-pointer transition-all', logoUploading ? 'opacity-50 pointer-events-none' : 'hover:border-brand-gold/50 hover:text-brand-navy active:scale-[0.98]')}>
                   {logoUploading ? 'Uploading...' : '📁 Upload from device'}
                   <input type="file" accept="image/*" className="hidden" onChange={async e => {
                     const file = e.target.files?.[0];
@@ -17540,8 +17521,8 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
             {/* Colour Theme */}
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <label className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">Brand Colour</label>
-                <Palette size={13} className="text-brand-navy/30" />
+                <label className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest">Brand Colour</label>
+                <Palette size={13} className="text-brand-navy/45" />
               </div>
               <div className="grid grid-cols-4 gap-3">
                 {THEME_COLOURS.map(c => (
@@ -17553,7 +17534,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
                 ))}
               </div>
               <div className="flex items-center gap-3">
-                <label className="text-xs text-brand-navy/40 font-bold">Custom</label>
+                <label className="text-xs text-brand-navy/55 font-bold">Custom</label>
                 <input type="color" value={storeTheme} onChange={e => setStoreTheme(e.target.value)}
                   className="w-10 h-10 rounded-xl border border-brand-navy/10 cursor-pointer p-1 bg-white" />
                 <span className="text-sm font-mono text-brand-navy/60">{storeTheme}</span>
@@ -17563,7 +17544,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
             {/* Public Visibility */}
             <div className="space-y-3">
               <SectionLabel icon={<Settings size={14} className="text-brand-gold" />} label="Public Visibility" />
-              <p className="text-xs text-brand-navy/40">Choose which stats are visible on your public profile.</p>
+              <p className="text-xs text-brand-navy/55">Choose which stats are visible on your public profile.</p>
               <div className="space-y-3">
                 {visibilityItems.map(item => (
                   <div key={item.key} className="flex items-center justify-between bg-white px-5 py-4 rounded-2xl border border-brand-navy/10">
@@ -17621,7 +17602,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
                   <Trash2 size={24} className="text-red-500" />
                 </div>
                 <h3 className="font-display font-bold text-xl text-brand-navy">Delete Account?</h3>
-                <p className="text-sm text-brand-navy/50">This permanently removes your profile, posts, and follow connections. Your stamp history and loyalty cards will remain.</p>
+                <p className="text-sm text-brand-navy/65">This permanently removes your profile, posts, and follow connections. Your stamp history and loyalty cards will remain.</p>
               </div>
               <div className="space-y-3">
                 <button
@@ -17663,7 +17644,7 @@ function SectionLabel({ icon, label }: { icon: React.ReactNode; label: string })
   return (
     <div className="flex items-center gap-2 px-1 pt-2">
       {icon}
-      <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">{label}</p>
+      <p className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest">{label}</p>
     </div>
   );
 }
@@ -18091,7 +18072,7 @@ function SettingsMenu({
                   </div>
                 ))}
                 {archivedCards.length === 0 && (
-                  <div className="py-12 text-center text-brand-navy/20">
+                  <div className="py-12 text-center text-brand-navy/32">
                     <Archive size={48} className="mx-auto mb-4 opacity-10" />
                     <p className="font-bold">No archived cards yet</p>
                   </div>
@@ -18113,7 +18094,7 @@ function SettingsMenu({
                     </div>
                     <div className="flex-1 pb-6">
                       <p className="font-bold text-sm">Card Completed</p>
-                      <p className="text-xs text-brand-navy/40 mb-2">
+                      <p className="text-xs text-brand-navy/55 mb-2">
                         {tx.completed_at ? format(tx.completed_at.toDate(), 'MMM d, yyyy • h:mm a') : 'Recently'}
                       </p>
                       <div className="bg-brand-bg p-3 rounded-xl text-[10px] font-bold text-brand-navy/60 uppercase tracking-widest">
@@ -18123,7 +18104,7 @@ function SettingsMenu({
                   </div>
                 ))}
                 {transactions.length === 0 && (
-                  <div className="py-12 text-center text-brand-navy/20">
+                  <div className="py-12 text-center text-brand-navy/32">
                     <Clock size={48} className="mx-auto mb-4 opacity-10" />
                     <p className="font-bold">No history yet</p>
                   </div>
@@ -18145,15 +18126,15 @@ function MenuButton({ icon, label, sub, onClick, disabled }: { icon: React.React
       className="w-full bg-white p-5 rounded-3xl border border-brand-navy/5 flex items-center justify-between group hover:border-brand-gold/50 transition-all disabled:opacity-50"
     >
       <div className="flex items-center gap-4">
-        <div className="w-12 h-12 bg-brand-navy/5 rounded-2xl flex items-center justify-center text-brand-navy/40 group-hover:scale-110 transition-transform">
+        <div className="w-12 h-12 bg-brand-navy/5 rounded-2xl flex items-center justify-center text-brand-navy/55 group-hover:scale-110 transition-transform">
           {React.cloneElement(icon as React.ReactElement, { size: 24 })}
         </div>
         <div className="text-left">
           <p className="font-bold">{label}</p>
-          <p className="text-xs text-brand-navy/40">{sub}</p>
+          <p className="text-xs text-brand-navy/55">{sub}</p>
         </div>
       </div>
-      <ChevronRight className="text-brand-navy/20" />
+      <ChevronRight className="text-brand-navy/32" />
     </button>
   );
 }
@@ -18165,10 +18146,10 @@ function ProfileLink({ icon, label, onClick }: { icon: React.ReactNode, label: s
       className="w-full p-6 flex items-center justify-between hover:bg-brand-bg transition-all border-b border-brand-navy/5 last:border-0"
     >
       <div className="flex items-center gap-4">
-        <div className="text-brand-navy/40">{icon}</div>
+        <div className="text-brand-navy/55">{icon}</div>
         <span className="font-bold">{label}</span>
       </div>
-      <ChevronRight size={18} className="text-brand-navy/20" />
+      <ChevronRight size={18} className="text-brand-navy/32" />
     </button>
   );
 }
@@ -18327,7 +18308,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                     </span>
                     <StreakBadge streak={authorProfile?.streak} />
                   </span>
-                  <span className="text-brand-navy/30 mx-1">›</span>
+                  <span className="text-brand-navy/45 mx-1">›</span>
                   <span
                     className="font-bold text-brand-gold cursor-pointer hover:opacity-70 transition-opacity"
                     onClick={async () => {
@@ -18350,7 +18331,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                     </span>
                     <StreakBadge streak={authorProfile?.streak} />
                   </span>
-                  <span className="text-brand-navy/30 mx-1">›</span>
+                  <span className="text-brand-navy/45 mx-1">›</span>
                   <span
                     className="font-bold cursor-pointer hover:text-brand-gold transition-colors"
                     onClick={async () => {
@@ -18384,7 +18365,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                 </span>
               )}
             </div>
-            <p className="text-[10px] text-brand-navy/40 font-medium">
+            <p className="text-[10px] text-brand-navy/55 font-medium">
               {post.createdAt ? format(post.createdAt.toDate(), 'MMM d · h:mm a') : 'Just now'}
             </p>
           </div>
@@ -18397,7 +18378,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
             <div className="relative">
               <button
                 onClick={() => setShowMenu(v => !v)}
-                className="w-7 h-7 rounded-lg flex items-center justify-center text-brand-navy/30 hover:text-brand-navy/70 hover:bg-brand-bg transition-all"
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-brand-navy/45 hover:text-brand-navy/70 hover:bg-brand-bg transition-all"
               >
                 <MoreVertical size={16} />
               </button>
@@ -18445,9 +18426,9 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
         {post.postType === 'review' && (
           <div className="flex items-center gap-0.5">
             {[1,2,3,4,5].map(s => (
-              <Star key={s} size={13} className={s <= (post.rating || 5) ? "text-brand-gold fill-brand-gold" : "text-brand-navy/20"} />
+              <Star key={s} size={13} className={s <= (post.rating || 5) ? "text-brand-gold fill-brand-gold" : "text-brand-navy/32"} />
             ))}
-            <span className="ml-1.5 text-xs text-brand-navy/40 font-medium">review for <span className="font-bold text-brand-gold">{post.storeName}</span></span>
+            <span className="ml-1.5 text-xs text-brand-navy/55 font-medium">review for <span className="font-bold text-brand-gold">{post.storeName}</span></span>
           </div>
         )}
         {post.content && (
@@ -18482,7 +18463,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                         {voted && <CheckCircle2 size={14} className="text-brand-gold shrink-0" />}
                         <span className={cn("text-sm font-medium", voted && "font-bold")}>{opt.text}</span>
                       </div>
-                      <span className={cn("text-xs font-bold shrink-0", voted ? "text-brand-gold" : "text-brand-navy/40")}>{pct}%</span>
+                      <span className={cn("text-xs font-bold shrink-0", voted ? "text-brand-gold" : "text-brand-navy/55")}>{pct}%</span>
                     </div>
                   </div>
                 </button>
@@ -18499,7 +18480,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
             onClick={() => onLike(post)}
             className={cn(
               "flex items-center gap-1.5 transition-all active:scale-95 text-sm font-bold",
-              isLiked ? "text-brand-gold" : "text-brand-navy/30 hover:text-brand-gold"
+              isLiked ? "text-brand-gold" : "text-brand-navy/45 hover:text-brand-gold"
             )}
           >
             <Heart size={17} className={cn("transition-all", isLiked ? "fill-brand-gold scale-110" : "")} />
@@ -18508,14 +18489,14 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
 
           <button
             onClick={() => setShowAllComments(v => !v)}
-            className="flex items-center gap-1.5 text-sm font-bold text-brand-navy/30 hover:text-brand-navy/60 transition-colors"
+            className="flex items-center gap-1.5 text-sm font-bold text-brand-navy/45 hover:text-brand-navy/60 transition-colors"
           >
             <MessageCircle size={17} />
             <span>{comments.length}</span>
           </button>
 
           {post.postType === 'poll' && (
-            <div className="flex items-center gap-1.5 text-brand-navy/30 text-sm font-bold">
+            <div className="flex items-center gap-1.5 text-brand-navy/45 text-sm font-bold">
               <BarChart2 size={17} />
               <span>{totalVotes}</span>
             </div>
@@ -18546,12 +18527,12 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                   <div className="flex items-center gap-3 mt-1 px-1">
                     <button
                       onClick={() => handleLikeComment(comment)}
-                      className={cn("flex items-center gap-1 text-[10px] font-bold transition-colors", commentLiked ? "text-brand-gold" : "text-brand-navy/30 hover:text-brand-gold")}
+                      className={cn("flex items-center gap-1 text-[10px] font-bold transition-colors", commentLiked ? "text-brand-gold" : "text-brand-navy/45 hover:text-brand-gold")}
                     >
                       <Heart size={10} className={commentLiked ? "fill-current" : ""} />
                       {comment.likesCount > 0 && <span>{comment.likesCount}</span>}
                     </button>
-                    <span className="text-[10px] text-brand-navy/20">
+                    <span className="text-[10px] text-brand-navy/32">
                       {comment.createdAt ? format(comment.createdAt.toDate(), 'MMM d') : ''}
                     </span>
                   </div>
@@ -18563,7 +18544,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
           {comments.length > 2 && (
             <button
               onClick={() => setShowAllComments(v => !v)}
-              className="flex items-center gap-1 text-xs font-bold text-brand-navy/40 hover:text-brand-gold transition-colors"
+              className="flex items-center gap-1 text-xs font-bold text-brand-navy/55 hover:text-brand-gold transition-colors"
             >
               <ChevronDown size={14} className={cn("transition-transform", showAllComments && "rotate-180")} />
               {showAllComments ? 'Show less' : `View all ${comments.length} comments`}
@@ -18684,13 +18665,13 @@ function CreatePostModal({ onClose, user, profile }: { onClose: () => void, user
               onClick={() => setIsPoll(p => !p)}
               className={cn(
                 "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all",
-                isPoll ? "bg-brand-gold text-white shadow-md" : "bg-brand-navy/5 text-brand-navy/50 hover:bg-brand-navy/10"
+                isPoll ? "bg-brand-gold text-white shadow-md" : "bg-brand-navy/5 text-brand-navy/65 hover:bg-brand-navy/10"
               )}
             >
               <BarChart2 size={14} />
               Poll
             </button>
-            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl bg-brand-navy/5 text-brand-navy/40">
+            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl bg-brand-navy/5 text-brand-navy/55">
               <X size={16} />
             </button>
           </div>
@@ -18704,7 +18685,7 @@ function CreatePostModal({ onClose, user, profile }: { onClose: () => void, user
             <div className="flex items-center gap-2 mb-1">
               <p className="font-bold text-sm">{profile?.name || user.displayName}</p>
               {profile?.role === 'vendor' && vendorStore && (
-                <span className="text-[10px] text-brand-navy/40">• {vendorStore.name}</span>
+                <span className="text-[10px] text-brand-navy/55">• {vendorStore.name}</span>
               )}
             </div>
             <textarea
@@ -18712,7 +18693,7 @@ function CreatePostModal({ onClose, user, profile }: { onClose: () => void, user
               onChange={e => setContent(e.target.value)}
               placeholder={isPoll ? "Ask a question..." : "What's on your mind?"}
               rows={3}
-              className="w-full text-sm resize-none bg-transparent border-none outline-none text-brand-navy placeholder:text-brand-navy/30 leading-relaxed"
+              className="w-full text-sm resize-none bg-transparent border-none outline-none text-brand-navy placeholder:text-brand-navy/45 leading-relaxed"
               autoFocus
             />
           </div>
@@ -18724,17 +18705,17 @@ function CreatePostModal({ onClose, user, profile }: { onClose: () => void, user
               <div key={i} className="flex items-center gap-2">
                 <div className="flex-1 flex items-center gap-2 bg-brand-bg rounded-xl px-4 py-2.5 border border-brand-navy/8">
                   <span className="w-5 h-5 rounded-full border-2 border-brand-navy/20 flex items-center justify-center shrink-0">
-                    <span className="text-[9px] font-bold text-brand-navy/40">{i + 1}</span>
+                    <span className="text-[9px] font-bold text-brand-navy/55">{i + 1}</span>
                   </span>
                   <input
                     value={opt}
                     onChange={e => handleOptionChange(i, e.target.value)}
                     placeholder={`Option ${i + 1}`}
-                    className="flex-1 bg-transparent text-sm outline-none placeholder:text-brand-navy/30"
+                    className="flex-1 bg-transparent text-sm outline-none placeholder:text-brand-navy/45"
                   />
                 </div>
                 {pollOptions.length > 2 && (
-                  <button onClick={() => handleRemoveOption(i)} className="text-brand-navy/20 hover:text-red-400 transition-colors">
+                  <button onClick={() => handleRemoveOption(i)} className="text-brand-navy/32 hover:text-red-400 transition-colors">
                     <X size={16} />
                   </button>
                 )}
@@ -18837,7 +18818,7 @@ function NotificationsPanel({ notifications, onClose }: { notifications: Notific
                       <span className="font-bold">{notif.storeName}</span>
                       {notif.title && <span className="text-brand-navy/70"> · {notif.title}</span>}
                     </p>
-                    {notif.message && <p className="text-xs text-brand-navy/50 line-clamp-2 mt-0.5">{notif.message}</p>}
+                    {notif.message && <p className="text-xs text-brand-navy/65 line-clamp-2 mt-0.5">{notif.message}</p>}
                   </>
                 ) : (
                   <p className="text-sm line-clamp-2 leading-snug">
@@ -18847,20 +18828,20 @@ function NotificationsPanel({ notifications, onClose }: { notifications: Notific
                     }
                   </p>
                 )}
-                <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest mt-0.5">
+                <p className="text-[10px] text-brand-navy/55 font-bold uppercase tracking-widest mt-0.5">
                   {notif.createdAt ? format(notif.createdAt.toDate(), 'MMM d, h:mm a') : 'Just now'}
                 </p>
               </div>
               <button
                 onClick={async e => { e.stopPropagation(); await deleteDoc(doc(db, 'notifications', notif.id)); }}
-                className="w-7 h-7 rounded-lg flex items-center justify-center text-brand-navy/20 hover:text-red-400 hover:bg-red-50 transition-all shrink-0"
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-brand-navy/32 hover:text-red-400 hover:bg-red-50 transition-all shrink-0"
               >
                 <X size={13} />
               </button>
             </div>
           ))}
           {notifications.length === 0 && (
-            <div className="py-24 text-center text-brand-navy/20">
+            <div className="py-24 text-center text-brand-navy/32">
               <Bell size={48} className="mx-auto mb-4 opacity-10" />
               <p className="font-bold">All caught up!</p>
               <p className="text-sm mt-1">No notifications yet</p>
@@ -18886,7 +18867,7 @@ function FeedVendorPostCard({ item }: { item: any }) {
             <p className="font-bold text-sm truncate">{item.authorName}</p>
             <span className="px-2 py-0.5 bg-brand-gold/10 rounded-full text-[9px] font-bold text-brand-gold uppercase shrink-0">Store</span>
           </div>
-          <p className="text-[10px] text-brand-navy/40">{item.createdAt ? format(item.createdAt.toDate(), 'MMM d, h:mm a') : 'Just now'}</p>
+          <p className="text-[10px] text-brand-navy/55">{item.createdAt ? format(item.createdAt.toDate(), 'MMM d, h:mm a') : 'Just now'}</p>
         </div>
       </div>
       <p className="text-sm text-brand-navy/90 leading-relaxed">{item.content}</p>
@@ -18922,7 +18903,7 @@ function DealSliderSection({ title, icon, challenges, onViewStore, onViewChallen
         {icon}
         <h3 className="font-extrabold text-brand-navy text-sm flex-1">{title}</h3>
         {challenges.length > 5 && (
-          <button onClick={onToggleAll} className="text-[10px] font-bold text-brand-navy/40 flex items-center gap-0.5">
+          <button onClick={onToggleAll} className="text-[10px] font-bold text-brand-navy/55 flex items-center gap-0.5">
             {showAll ? 'Less' : `All ${challenges.length}`} <ChevronDown size={10} className={cn('transition-transform', showAll && 'rotate-180')} />
           </button>
         )}
@@ -18983,7 +18964,7 @@ function StoreDealsSection({ stores, onViewStore, showAll, onToggleAll }: {
         <Gift size={15} className="text-brand-rose" />
         <h3 className="font-extrabold text-brand-navy text-sm flex-1">Hot Deals</h3>
         {stores.length > 5 && (
-          <button onClick={onToggleAll} className="text-[10px] font-bold text-brand-navy/40 flex items-center gap-0.5">
+          <button onClick={onToggleAll} className="text-[10px] font-bold text-brand-navy/55 flex items-center gap-0.5">
             {showAll ? 'Less' : `All ${stores.length}`} <ChevronDown size={10} className={cn('transition-transform', showAll && 'rotate-180')} />
           </button>
         )}
@@ -19008,7 +18989,7 @@ function StoreDealsSection({ stores, onViewStore, showAll, onToggleAll }: {
               <div className="flex-1 bg-white/10 overflow-hidden relative">
                 {store.logoUrl
                   ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
-                  : <div className="w-full h-full flex items-center justify-center bg-brand-navy/5"><Building2 size={24} className="text-brand-navy/30" /></div>}
+                  : <div className="w-full h-full flex items-center justify-center bg-brand-navy/5"><Building2 size={24} className="text-brand-navy/45" /></div>}
               </div>
               {/* Bottom half — gradient-logo-blue */}
               <div className="gradient-logo-blue px-3 py-2 flex flex-col justify-center relative overflow-hidden" style={{ height: '72px' }}>
@@ -19112,7 +19093,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
     <div className="space-y-6 pb-6">
       <div>
         <h1 className="font-display font-bold text-2xl text-brand-navy">Deals</h1>
-        <p className="text-brand-navy/50 text-sm mt-0.5">Rewards waiting for you</p>
+        <p className="text-brand-navy/65 text-sm mt-0.5">Rewards waiting for you</p>
       </div>
 
       {/* Birthday gifts banner */}
@@ -19196,21 +19177,21 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
                 )}
                 <div className="flex-1 min-w-0 px-4 py-3">
                   <p className="font-bold text-brand-navy text-sm truncate">{offer.title}</p>
-                  <p className="text-xs text-brand-navy/50 mt-0.5">{offer.storeName}</p>
+                  <p className="text-xs text-brand-navy/65 mt-0.5">{offer.storeName}</p>
                   {(offer.value ?? 0) > 0 && (
                     <p className="text-xs font-bold text-emerald-600 mt-0.5">Save ${offer.value!.toFixed(2)}</p>
                   )}
-                  <p className="text-xs text-brand-navy/40 mt-0.5 line-clamp-1">{offer.description}</p>
+                  <p className="text-xs text-brand-navy/55 mt-0.5 line-clamp-1">{offer.description}</p>
                 </div>
                 <div className="flex items-center pr-3">
-                  <ChevronRight size={16} className="text-brand-navy/30" />
+                  <ChevronRight size={16} className="text-brand-navy/45" />
                 </div>
               </button>
             ))}
           </div>
           <button
             onClick={() => setShowOffersModal(true)}
-            className="w-full py-3 rounded-2xl border-2 border-dashed border-brand-navy/10 text-sm font-bold text-brand-navy/40 active:opacity-60 transition-opacity"
+            className="w-full py-3 rounded-2xl border-2 border-dashed border-brand-navy/10 text-sm font-bold text-brand-navy/55 active:opacity-60 transition-opacity"
           >
             See more
           </button>
@@ -19248,7 +19229,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
       />
 
       {storeDeals.length === 0 && experiences.length === 0 && services.length === 0 && products.length === 0 && storeOffers.length === 0 && (
-        <div className="py-20 text-center text-brand-navy/20">
+        <div className="py-20 text-center text-brand-navy/32">
           <Gift size={64} className="mx-auto mb-4 opacity-20" />
           <p className="font-bold">No deals yet</p>
           <p className="text-sm">Check back soon for rewards and challenges</p>
@@ -19321,10 +19302,10 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
                   <div className="flex-1 min-w-0 px-4 py-3">
                     <div className="flex items-center gap-1.5 mb-0.5">
                       {offer.storeLogoUrl && <img src={offer.storeLogoUrl} alt="" className="w-4 h-4 rounded object-cover shrink-0" />}
-                      <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest truncate">{offer.storeName}</p>
+                      <p className="text-[10px] text-brand-navy/55 font-bold uppercase tracking-widest truncate">{offer.storeName}</p>
                     </div>
                     <p className="font-bold text-brand-navy text-sm truncate">{offer.title}</p>
-                    <p className="text-xs text-brand-navy/40 mt-0.5 line-clamp-1">{offer.description}</p>
+                    <p className="text-xs text-brand-navy/55 mt-0.5 line-clamp-1">{offer.description}</p>
                   </div>
                   <div className="flex items-center pr-3 shrink-0">
                     <ChevronRight size={16} className="text-pink-300" />
@@ -19753,7 +19734,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                 : <React.Fragment key={`vp-${item.id}`}><FeedVendorPostCard item={item} /></React.Fragment>
             )}
             {followingFeed.length === 0 && (
-              <div className="py-20 text-center text-brand-navy/20">
+              <div className="py-20 text-center text-brand-navy/32">
                 <Compass size={64} className="mx-auto mb-4 opacity-10" />
                 <p className="font-bold">No posts from people you follow</p>
                 <p className="text-sm">Follow people to see their posts here</p>
@@ -20009,7 +19990,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                     <div className="flex gap-2 p-1 bg-white rounded-2xl border border-brand-navy/5">
                       {(['alltime', 'weekly'] as const).map(p => (
                         <button key={p} onClick={() => setLbPeriod(p)}
-                          className={cn('flex-1 py-2 rounded-xl text-xs font-bold transition-all', lbPeriod === p ? 'gradient-red text-white shadow' : 'text-brand-navy/40')}>
+                          className={cn('flex-1 py-2 rounded-xl text-xs font-bold transition-all', lbPeriod === p ? 'gradient-red text-white shadow' : 'text-brand-navy/55')}>
                           {p === 'alltime' ? 'All Time' : 'This Week'}
                         </button>
                       ))}
@@ -20025,7 +20006,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                         { key: 'monopoly', label: 'Monopoly', icon: '🎯' },
                       ] as const).map(({ key, label, icon }) => (
                         <button key={key} onClick={() => setLbCategory(key)}
-                          className={cn('shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold transition-all', lbCategory === key ? 'gradient-red text-white shadow' : 'bg-white border border-brand-navy/10 text-brand-navy/50')}>
+                          className={cn('shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold transition-all', lbCategory === key ? 'gradient-red text-white shadow' : 'bg-white border border-brand-navy/10 text-brand-navy/65')}>
                           <span>{icon}</span>{label}
                         </button>
                       ))}
@@ -20038,14 +20019,14 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                         </motion.div>
                       </div>
                     ) : sorted.length === 0 ? (
-                      <div className="py-10 text-center text-brand-navy/30">
+                      <div className="py-10 text-center text-brand-navy/45">
                         <Trophy size={40} className="mx-auto mb-3 opacity-20" />
                         <p className="text-sm font-bold">No data yet</p>
                       </div>
                     ) : (
                       <>
                         <div className="glass-card rounded-[2rem] p-4 pt-6">
-                          <p className="text-center text-[10px] font-bold text-brand-navy/30 uppercase tracking-widest mb-4">{lbCategoryLabel} Leaders</p>
+                          <p className="text-center text-[10px] font-bold text-brand-navy/45 uppercase tracking-widest mb-4">{lbCategoryLabel} Leaders</p>
                           <div className="flex items-end justify-center gap-3 mb-2">
                             {podium.map((u, col) => {
                               const rank = podiumIndexes[col];
@@ -20057,8 +20038,8 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                                     <PixelAvatar config={u.avatar} uid={u.uid} size={48} view="head" />
                                   </div>
                                   <p className="text-[10px] font-bold text-brand-navy text-center leading-tight line-clamp-1 w-full">{u.name}</p>
-                                  {u.handle && <p className="text-[9px] text-brand-navy/40 text-center truncate w-full">@{u.handle}</p>}
-                                  <p className={cn('text-[11px] font-black mt-0.5', rank === 0 ? 'text-brand-gold' : 'text-brand-navy/50')}>{getLbScore(u)}</p>
+                                  {u.handle && <p className="text-[9px] text-brand-navy/55 text-center truncate w-full">@{u.handle}</p>}
+                                  <p className={cn('text-[11px] font-black mt-0.5', rank === 0 ? 'text-brand-gold' : 'text-brand-navy/65')}>{getLbScore(u)}</p>
                                   <div className={cn('w-full rounded-t-xl mt-1', podiumColors[col], podiumHeights[col])} />
                                 </div>
                               );
@@ -20069,22 +20050,22 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                           <div className="space-y-2">
                             {sorted.slice(3).map((u, i) => (
                               <div key={u.uid} onClick={() => { setShowLeaderboard(false); onViewUser(u); }} className="glass-card p-3 rounded-2xl flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-transform">
-                                <div className="w-6 font-display font-bold text-brand-navy/30 text-sm text-center shrink-0">#{i + 4}</div>
+                                <div className="w-6 font-display font-bold text-brand-navy/45 text-sm text-center shrink-0">#{i + 4}</div>
                                 <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-brand-navy/10 bg-indigo-50 flex items-center justify-center">
                                   <PixelAvatar config={u.avatar} uid={u.uid} size={36} view="head" />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-1"><p className="font-bold text-xs truncate">{u.name}</p><StreakBadge streak={u.streak} /></div>
-                                  {u.handle && <p className="text-[10px] text-brand-navy/40 truncate">@{u.handle}</p>}
+                                  {u.handle && <p className="text-[10px] text-brand-navy/55 truncate">@{u.handle}</p>}
                                 </div>
-                                <p className="font-black text-sm text-brand-navy/70 shrink-0">{getLbScore(u)} <span className="text-[10px] font-medium text-brand-navy/30">{lbCategoryUnit}</span></p>
+                                <p className="font-black text-sm text-brand-navy/70 shrink-0">{getLbScore(u)} <span className="text-[10px] font-medium text-brand-navy/45">{lbCategoryUnit}</span></p>
                               </div>
                             ))}
                           </div>
                         )}
                         {!myRankInTopTen && myRank !== null && currentProfile && (
                           <div className="mt-1 space-y-1">
-                            <p className="text-center text-[10px] text-brand-navy/30 font-bold uppercase tracking-widest">Your position</p>
+                            <p className="text-center text-[10px] text-brand-navy/45 font-bold uppercase tracking-widest">Your position</p>
                             <div className="glass-card p-3 rounded-2xl flex items-center gap-3 border border-brand-gold/20 bg-brand-gold/5">
                               <div className="w-6 font-display font-bold text-brand-gold text-sm text-center shrink-0">#{myRank}</div>
                               <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-brand-gold/30">
@@ -20092,9 +20073,9 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-1"><p className="font-bold text-xs truncate">{currentProfile.name}</p><StreakBadge streak={currentProfile.streak} /></div>
-                                {currentProfile.handle && <p className="text-[10px] text-brand-navy/40 truncate">@{currentProfile.handle}</p>}
+                                {currentProfile.handle && <p className="text-[10px] text-brand-navy/55 truncate">@{currentProfile.handle}</p>}
                               </div>
-                              <p className="font-black text-sm text-brand-navy/70 shrink-0">{getLbScore(currentProfile)} <span className="text-[10px] font-medium text-brand-navy/30">{lbCategoryUnit}</span></p>
+                              <p className="font-black text-sm text-brand-navy/70 shrink-0">{getLbScore(currentProfile)} <span className="text-[10px] font-medium text-brand-navy/45">{lbCategoryUnit}</span></p>
                             </div>
                           </div>
                         )}
@@ -20115,7 +20096,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                   : <React.Fragment key={`vp-${item.id}`}><FeedVendorPostCard item={item} /></React.Fragment>
               )}
               {displayFeed.length === 0 && (
-                <div className="py-20 text-center text-brand-navy/20">
+                <div className="py-20 text-center text-brand-navy/32">
                   <Compass size={64} className="mx-auto mb-4 opacity-10" />
                   <p className="font-bold">Nothing posted yet</p>
                   <p className="text-sm">Be the first to post!</p>
@@ -20141,7 +20122,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
             <div className="sticky top-0 bg-[#f8f9fc] z-10 px-5 pt-5 pb-3 flex items-center justify-between border-b border-brand-navy/5">
               <div>
                 <h2 className="font-extrabold text-brand-navy text-lg">All Deals Near You</h2>
-                <p className="text-brand-navy/40 text-xs mt-0.5">{(hotStores.length > 0 ? hotStores : allStores).length} businesses</p>
+                <p className="text-brand-navy/55 text-xs mt-0.5">{(hotStores.length > 0 ? hotStores : allStores).length} businesses</p>
               </div>
               <button onClick={() => setShowAllDeals(false)} className="w-9 h-9 rounded-full bg-brand-navy/10 flex items-center justify-center active:scale-95 transition-transform">
                 <X size={16} className="text-brand-navy" />
@@ -20166,7 +20147,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                     <div className="flex-1 overflow-hidden relative bg-white/10">
                       {store.logoUrl
                         ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
-                        : <div className="w-full h-full flex items-center justify-center bg-brand-navy/5"><Building2 size={24} className="text-brand-navy/30" /></div>}
+                        : <div className="w-full h-full flex items-center justify-center bg-brand-navy/5"><Building2 size={24} className="text-brand-navy/45" /></div>}
                       {store.isVerified && (
                         <div className="absolute top-2 right-2 w-6 h-6 bg-white/80 rounded-full flex items-center justify-center shadow">
                           <Sparkles size={11} className="text-brand-navy" />
@@ -20239,18 +20220,18 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
               </div>
             </div>
 
-            <p className="px-5 mb-3 text-xs font-bold uppercase tracking-widest text-brand-navy/40 shrink-0">Savings Leaderboard</p>
+            <p className="px-5 mb-3 text-xs font-bold uppercase tracking-widest text-brand-navy/55 shrink-0">Savings Leaderboard</p>
 
             <div className="flex-1 overflow-y-auto px-5 pb-10 space-y-2">
               {savingsLbLoading ? (
-                <div className="py-16 text-center text-brand-navy/30">
+                <div className="py-16 text-center text-brand-navy/45">
                   <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="inline-block mb-2">
                     <Sparkles size={28} />
                   </motion.div>
                   <p className="text-sm">Loading...</p>
                 </div>
               ) : savingsLbUsers.length === 0 ? (
-                <div className="py-16 text-center text-brand-navy/30">
+                <div className="py-16 text-center text-brand-navy/45">
                   <p className="font-bold">No savers yet</p>
                   <p className="text-sm mt-1">Redeem your first reward to appear here!</p>
                 </div>
@@ -20533,11 +20514,11 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
             <div className="w-10 h-10 rounded-xl overflow-hidden border-2 border-white shadow-sm bg-brand-navy/5 flex items-center justify-center shrink-0">
               {activeBroadcastChat.storeLogoUrl
                 ? <img src={activeBroadcastChat.storeLogoUrl} alt="" className="w-full h-full object-cover" />
-                : <Store size={18} className="text-brand-navy/50" />}
+                : <Store size={18} className="text-brand-navy/65" />}
             </div>
             <div>
               <h3 className="font-bold text-sm leading-tight">{activeBroadcastChat.storeName}</h3>
-              <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest">Broadcast</p>
+              <p className="text-[10px] text-brand-navy/55 font-bold uppercase tracking-widest">Broadcast</p>
             </div>
           </div>
         </header>
@@ -20553,13 +20534,13 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
             <div key={msg.id} className="bg-white rounded-2xl p-4 border border-black/5 shadow-sm">
               {msg.title && <p className="font-bold text-sm text-brand-navy mb-1">{msg.title}</p>}
               <p className="text-sm text-brand-navy/80 leading-relaxed">{msg.text}</p>
-              <p className="text-[10px] text-brand-navy/30 mt-2 font-bold uppercase tracking-widest">
+              <p className="text-[10px] text-brand-navy/45 mt-2 font-bold uppercase tracking-widest">
                 {msg.createdAt?.toDate ? format(msg.createdAt.toDate(), 'MMM d, h:mm a') : 'Just now'}
               </p>
             </div>
           ))}
           {messages.length === 0 && (
-            <div className="text-center py-16 text-brand-navy/30">
+            <div className="text-center py-16 text-brand-navy/45">
               <Send size={32} className="mx-auto mb-3 opacity-20" />
               <p className="text-sm font-bold">No messages yet</p>
             </div>
@@ -20585,7 +20566,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
               <div className="w-10 h-10 rounded-xl overflow-hidden border-2 border-white shadow-sm bg-brand-navy/5 flex items-center justify-center shrink-0">
                 {activeChatBusinessInfo.businessLogoUrl
                   ? <img src={activeChatBusinessInfo.businessLogoUrl} alt="" className="w-full h-full object-cover" />
-                  : <Store size={18} className="text-brand-navy/50" />}
+                  : <Store size={18} className="text-brand-navy/65" />}
               </div>
             ) : (
               <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-sm cursor-pointer bg-indigo-50 flex items-center justify-center" onClick={() => chatPartner && onViewUser(chatPartner)}>
@@ -20594,7 +20575,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
             )}
             <div>
               <h3 className="font-bold text-sm leading-tight">{activeChatBusinessInfo ? activeChatBusinessInfo.businessName : (chatPartner?.name ?? '')}</h3>
-              <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest">{activeChatBusinessInfo ? 'Business' : 'Online'}</p>
+              <p className="text-[10px] text-brand-navy/55 font-bold uppercase tracking-widest">{activeChatBusinessInfo ? 'Business' : 'Online'}</p>
             </div>
           </div>
           <button className="p-2 text-brand-navy/60">
@@ -20616,7 +20597,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
             const isSelected = selectedMsgId === msg.id;
             return (
               <div key={msg.id} className="w-full px-2">
-                {showName && !isMe && <span className="text-[10px] font-bold text-brand-navy/40 mb-1 ml-1 block">{msg.senderName}</span>}
+                {showName && !isMe && <span className="text-[10px] font-bold text-brand-navy/55 mb-1 ml-1 block">{msg.senderName}</span>}
                 <div
                   className={cn("flex items-end gap-2 w-full", isMe ? "flex-row-reverse" : "flex-row")}
                   onClick={e => { e.stopPropagation(); if (isMe) setSelectedMsgId(isSelected ? null : msg.id); }}
@@ -20688,7 +20669,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
           {storeCustomers.length === 0 && (
             <div className="glass-card p-10 rounded-[2.5rem] text-center">
               <p className="text-brand-navy/60 font-bold">No customers yet</p>
-              <p className="text-xs text-brand-navy/40 mt-1">Customers will appear here once they join your loyalty program.</p>
+              <p className="text-xs text-brand-navy/55 mt-1">Customers will appear here once they join your loyalty program.</p>
             </div>
           )}
           {storeCustomers.map(customer => (
@@ -20702,9 +20683,9 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
               </div>
               <div className="flex-1 min-w-0">
                 <h4 className="font-bold text-sm truncate">{customer.name}</h4>
-                <p className="text-xs text-brand-navy/40">{customer.email}</p>
+                <p className="text-xs text-brand-navy/55">{customer.email}</p>
               </div>
-              <MessageCircle size={18} className="text-brand-navy/20 shrink-0" />
+              <MessageCircle size={18} className="text-brand-navy/32 shrink-0" />
             </button>
           ))}
         </div>
@@ -20768,10 +20749,10 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
         {chats.length === 0 && (
           <div className="glass-card p-10 rounded-[2.5rem] border-2 border-dashed border-brand-rose/40 text-center">
             <div className="w-16 h-16 bg-brand-bg rounded-full flex items-center justify-center mx-auto mb-4">
-              <MessageCircle className="w-8 h-8 text-brand-navy/20" />
+              <MessageCircle className="w-8 h-8 text-brand-navy/32" />
             </div>
             <p className="text-brand-navy/60 mb-2 font-bold">No conversations</p>
-            <p className="text-xs text-brand-navy/40">
+            <p className="text-xs text-brand-navy/55">
               {vendorStore ? 'Tap "New" to message a customer.' : "Start a message from someone's profile!"}
             </p>
           </div>
@@ -20816,7 +20797,7 @@ function ChatListItem({ chat, currentUser, isVendor = false, onClick }: { chat: 
         {isBusinessStyle
           ? (businessLogo
               ? <img src={businessLogo} alt="" className="w-full h-full object-cover" />
-              : <Store size={22} className="text-brand-navy/40" />)
+              : <Store size={22} className="text-brand-navy/55" />)
           : <PixelAvatar config={partner?.avatar} uid={partner?.uid} size={56} view="head" />}
       </div>
       <div className="flex-1 min-w-0">
@@ -20828,7 +20809,7 @@ function ChatListItem({ chat, currentUser, isVendor = false, onClick }: { chat: 
                 {unread}
               </span>
             )}
-            <span className="text-[10px] text-brand-navy/40 uppercase font-bold">
+            <span className="text-[10px] text-brand-navy/55 uppercase font-bold">
               {chat.lastActivity?.toDate ? format(chat.lastActivity.toDate(), 'HH:mm') : '...'}
             </span>
           </div>
@@ -20891,7 +20872,7 @@ function CommunityScreen({ onViewUser, currentUser }: { onViewUser: (u: UserProf
               onClick={() => setActiveSubTab(tab)}
               className={cn(
                 "flex-1 py-2 rounded-xl text-xs font-bold capitalize transition-all",
-                activeSubTab === tab ? "bg-brand-navy text-white shadow-lg" : "text-brand-navy/40 hover:bg-brand-bg"
+                activeSubTab === tab ? "bg-brand-navy text-white shadow-lg" : "text-brand-navy/55 hover:bg-brand-bg"
               )}
             >
               {tab}
@@ -20935,19 +20916,19 @@ function CommunityScreen({ onViewUser, currentUser }: { onViewUser: (u: UserProf
                     onClick={() => onViewUser(u)}
                     className="glass-card p-4 rounded-2xl flex items-center gap-4 hover:shadow-md transition-all cursor-pointer"
                   >
-                    <div className="w-8 font-display font-bold text-brand-navy/20">#{i + 1}</div>
+                    <div className="w-8 font-display font-bold text-brand-navy/32">#{i + 1}</div>
                     <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-navy/5 bg-indigo-50 flex items-center justify-center">
                       <PixelAvatar config={u.avatar} uid={u.uid} size={40} view="head" />
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-1"><p className="font-bold text-sm">{u.name}</p><StreakBadge streak={u.streak} /></div>
-                      <p className="text-xs text-brand-navy/40">{u.totalStamps} stamps</p>
+                      <p className="text-xs text-brand-navy/55">{u.totalStamps} stamps</p>
                     </div>
                     {i < 3 && <Sparkles className="w-4 h-4 text-brand-gold" />}
                   </div>
                 ))}
                 {users.length === 0 && (
-                  <div className="py-12 text-center text-brand-navy/20">
+                  <div className="py-12 text-center text-brand-navy/32">
                     <Trophy size={48} className="mx-auto mb-4 opacity-10" />
                     <p className="text-sm font-bold">No collectors yet. Be the first!</p>
                   </div>
@@ -20959,7 +20940,7 @@ function CommunityScreen({ onViewUser, currentUser }: { onViewUser: (u: UserProf
           {activeSubTab === 'discover' && (
             <div className="space-y-4">
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-navy/40" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-navy/55" />
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -20977,7 +20958,7 @@ function CommunityScreen({ onViewUser, currentUser }: { onViewUser: (u: UserProf
                       </div>
                       <div className="flex-1 cursor-pointer" onClick={() => onViewUser(u)}>
                         <div className="flex items-center gap-1"><p className="font-bold text-sm">{u.name}</p><StreakBadge streak={u.streak} /></div>
-                        <p className="text-xs text-brand-navy/40">{u.role}</p>
+                        <p className="text-xs text-brand-navy/55">{u.role}</p>
                       </div>
                       <button
                         onClick={() => handleToggleFollow(u.uid)}
@@ -21050,7 +21031,7 @@ function AdminStoreEditModal({ store, onClose }: { store: StoreProfile; onClose:
       <header className="glass-panel px-5 py-4 flex items-center gap-3 sticky top-0 z-10">
         <button onClick={onClose} className="p-2 -ml-2 text-brand-navy/60"><ArrowLeft size={22} /></button>
         <div className="flex-1">
-          <p className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest">Admin</p>
+          <p className="text-[10px] font-bold text-brand-navy/55 uppercase tracking-widest">Admin</p>
           <h2 className="font-bold text-brand-navy text-base">Edit Business Profile</h2>
         </div>
         <button
@@ -21065,10 +21046,10 @@ function AdminStoreEditModal({ store, onClose }: { store: StoreProfile; onClose:
       <div className="px-5 py-4 space-y-5">
         {/* Logo */}
         <div>
-          <p className="text-xs font-bold text-brand-navy/50 mb-2">Logo</p>
+          <p className="text-xs font-bold text-brand-navy/65 mb-2">Logo</p>
           <div className="flex items-center gap-3">
             <div className="w-16 h-16 rounded-2xl overflow-hidden bg-brand-navy/5 border border-brand-navy/10 shrink-0">
-              {logoUrl ? <img src={logoUrl} alt="" className="w-full h-full object-cover" /> : <Building2 size={24} className="m-auto mt-4 text-brand-navy/20" />}
+              {logoUrl ? <img src={logoUrl} alt="" className="w-full h-full object-cover" /> : <Building2 size={24} className="m-auto mt-4 text-brand-navy/32" />}
             </div>
             <label className="flex-1 py-2.5 px-4 rounded-2xl bg-brand-navy/5 text-xs font-bold text-brand-navy/60 text-center cursor-pointer active:scale-95 transition-all">
               {logoUploading ? 'Uploading…' : 'Upload Logo'}
@@ -21086,7 +21067,7 @@ function AdminStoreEditModal({ store, onClose }: { store: StoreProfile; onClose:
 
         {/* Cover */}
         <div>
-          <p className="text-xs font-bold text-brand-navy/50 mb-2">Cover Image</p>
+          <p className="text-xs font-bold text-brand-navy/65 mb-2">Cover Image</p>
           <div className="relative w-full h-24 rounded-2xl overflow-hidden bg-brand-navy/5 border border-brand-navy/10">
             {coverUrl && <img src={coverUrl} alt="" className="w-full h-full object-cover" />}
             <label className="absolute inset-0 flex items-center justify-center bg-black/20 cursor-pointer active:scale-95">
@@ -21115,7 +21096,7 @@ function AdminStoreEditModal({ store, onClose }: { store: StoreProfile; onClose:
             { label: 'Phone', value: phone, set: setPhone },
           ] as { label: string; value: string; set: (v: string) => void }[]).map(({ label, value, set }) => (
             <div key={label}>
-              <p className="text-xs font-bold text-brand-navy/50 mb-1">{label}</p>
+              <p className="text-xs font-bold text-brand-navy/65 mb-1">{label}</p>
               <input
                 value={value}
                 onChange={e => set(e.target.value)}
@@ -21125,7 +21106,7 @@ function AdminStoreEditModal({ store, onClose }: { store: StoreProfile; onClose:
           ))}
 
           <div>
-            <p className="text-xs font-bold text-brand-navy/50 mb-1">Category</p>
+            <p className="text-xs font-bold text-brand-navy/65 mb-1">Category</p>
             <select
               value={category}
               onChange={e => setCategory(e.target.value as Category)}
@@ -21138,7 +21119,7 @@ function AdminStoreEditModal({ store, onClose }: { store: StoreProfile; onClose:
           </div>
 
           <div>
-            <p className="text-xs font-bold text-brand-navy/50 mb-1">Description</p>
+            <p className="text-xs font-bold text-brand-navy/65 mb-1">Description</p>
             <textarea
               value={description}
               onChange={e => setDescription(e.target.value)}
@@ -21155,7 +21136,7 @@ function AdminStoreEditModal({ store, onClose }: { store: StoreProfile; onClose:
 
         {/* Card builder section */}
         <div>
-          <p className="text-xs font-bold text-brand-navy/50 mb-3 uppercase tracking-widest">Stamp Card Settings</p>
+          <p className="text-xs font-bold text-brand-navy/65 mb-3 uppercase tracking-widest">Stamp Card Settings</p>
           <CardBuilder store={store} />
         </div>
       </div>
@@ -21218,7 +21199,7 @@ function ProfileCardRow({ store, card, membershipCard, userId, onJoinLoyalty, on
                 className="relative z-10 w-full max-w-md bg-white rounded-t-[2rem] p-6 pb-10 space-y-3 shadow-2xl"
               >
                 <div className="w-10 h-1 bg-brand-navy/15 rounded-full mx-auto mb-4" />
-                <p className="text-xs font-bold text-brand-navy/40 uppercase tracking-widest text-center mb-2">Manage Cards</p>
+                <p className="text-xs font-bold text-brand-navy/55 uppercase tracking-widest text-center mb-2">Manage Cards</p>
 
                 {membershipCard && (
                   <button
@@ -21244,7 +21225,7 @@ function ProfileCardRow({ store, card, membershipCard, userId, onJoinLoyalty, on
 
                 <button
                   onClick={() => setShowSheet(false)}
-                  className="w-full py-3.5 rounded-2xl text-brand-navy/50 font-bold text-sm"
+                  className="w-full py-3.5 rounded-2xl text-brand-navy/65 font-bold text-sm"
                 >
                   Cancel
                 </button>
@@ -21717,21 +21698,21 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
             <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 -mx-6 px-6 pb-1 scrollbar-hide">
               {statSlides.map((slide, i) => (
                 <div key={i} className="snap-center shrink-0 w-[calc(100vw-48px)] max-w-[380px] glass-card rounded-[2rem] p-5">
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/40 mb-4">{slide.label}</p>
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/55 mb-4">{slide.label}</p>
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <div>
                       <p className="text-2xl font-black text-brand-navy">{slide.members}</p>
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/40 mt-0.5">Members</p>
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/55 mt-0.5">Members</p>
                     </div>
                     <div>
                       <p className="text-2xl font-black text-brand-navy">{fmtK(slide.metric)}</p>
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/40 mt-0.5">{slide.metricLabel}</p>
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/55 mt-0.5">{slide.metricLabel}</p>
                     </div>
                     <div>
                       <p className="text-2xl font-black text-brand-navy">
                         {slide.rewardsPrefix}{slide.rewardsPrefix ? slide.rewards.toFixed(2) : fmtK(slide.rewards)}
                       </p>
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/40 mt-0.5">{slide.rewardsLabel}</p>
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/55 mt-0.5">{slide.rewardsLabel}</p>
                     </div>
                   </div>
                 </div>
@@ -21742,19 +21723,19 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
               {(vis?.members !== false) && (
                 <div className="glass-card p-4 rounded-3xl text-center">
                   <p className="text-lg font-bold text-brand-navy">{totalMembers}</p>
-                  <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest mt-0.5">Members</p>
+                  <p className="text-[10px] text-brand-navy/55 font-bold uppercase tracking-widest mt-0.5">Members</p>
                 </div>
               )}
               {store.ownerUid !== user.uid && (vis?.stamps !== false) && (
                 <div className="glass-card p-4 rounded-3xl text-center">
                   <p className="text-lg font-bold text-brand-navy">{totalStampsGiven}</p>
-                  <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest mt-0.5">Stamps</p>
+                  <p className="text-[10px] text-brand-navy/55 font-bold uppercase tracking-widest mt-0.5">Stamps</p>
                 </div>
               )}
               {store.ownerUid !== user.uid && (
                 <div className="glass-card p-4 rounded-3xl text-center">
                   <p className="text-lg font-bold text-brand-navy">{publicStoreRewards}</p>
-                  <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest mt-0.5">Rewards</p>
+                  <p className="text-[10px] text-brand-navy/55 font-bold uppercase tracking-widest mt-0.5">Rewards</p>
                 </div>
               )}
             </div>
@@ -21770,7 +21751,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
             <h2 className="font-display text-2xl font-bold text-brand-navy">{store.name}</h2>
             {store.isVerified && <CheckCircle2 size={18} className="text-blue-400" />}
           </div>
-          <p className="text-sm text-brand-navy/50 mt-0.5">{store.category}</p>
+          <p className="text-sm text-brand-navy/65 mt-0.5">{store.category}</p>
           {(store.location || (store as any).address) && (
             <button
               onClick={() => {
@@ -21787,7 +21768,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
               <span className="text-xs font-medium text-left leading-tight">
                 {store.location || (store as any).address}
                 {distance !== null && (
-                  <span className="text-brand-navy/40 ml-1">
+                  <span className="text-brand-navy/55 ml-1">
                     · {distance < 1 ? `${Math.round(distance * 1000)}m` : `${distance.toFixed(1)}km`}
                   </span>
                 )}
@@ -21798,11 +21779,11 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
             <div className="flex items-center gap-1.5 mt-1.5">
               <div className="flex items-center gap-0.5">
                 {[1,2,3,4,5].map(s => (
-                  <Star key={s} size={12} className={s <= Math.round(avgRating) ? "text-brand-gold fill-brand-gold" : "text-brand-navy/20"} />
+                  <Star key={s} size={12} className={s <= Math.round(avgRating) ? "text-brand-gold fill-brand-gold" : "text-brand-navy/32"} />
                 ))}
               </div>
               <span className="text-brand-navy font-bold text-xs">{avgRating.toFixed(1)}</span>
-              <span className="text-brand-navy/40 text-xs">({storeReviews.length})</span>
+              <span className="text-brand-navy/55 text-xs">({storeReviews.length})</span>
             </div>
           )}
         </div>
@@ -21828,7 +21809,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
       {/* Reward tiers — only shown when not yet joined */}
       {tiers.length > 0 && !card && (
         <div className="glass-card p-5 rounded-[2rem] space-y-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/55">
             {tiers.length > 1 ? `Reward ${tierSlideIdx + 1} of ${tiers.length}` : 'Reward'}
           </p>
           <div className="overflow-hidden">
@@ -21844,7 +21825,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                 </div>
                 <div className="min-w-0">
                   <p className="font-bold text-brand-navy text-base leading-tight">{tiers[tierSlideIdx].reward}</p>
-                  <p className="text-xs text-brand-navy/40 mt-0.5">after {tiers[tierSlideIdx].stamps} stamps</p>
+                  <p className="text-xs text-brand-navy/55 mt-0.5">after {tiers[tierSlideIdx].stamps} stamps</p>
                 </div>
               </motion.div>
             </AnimatePresence>
@@ -21934,10 +21915,10 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                 </div>
               </div>
               <div className="bg-white px-5 py-3 flex items-center justify-between">
-                <span className="text-brand-navy/40 text-[10px] font-bold">£{spent.toFixed(2)} spent{rewards > 0 ? ` · ${rewards} rewards` : ''}</span>
+                <span className="text-brand-navy/55 text-[10px] font-bold">£{spent.toFixed(2)} spent{rewards > 0 ? ` · ${rewards} rewards` : ''}</span>
                 {redeemableValue > 0
                   ? <span className="text-emerald-600 font-black text-xs">≈ £{redeemableValue.toFixed(2)} off</span>
-                  : <span className="text-brand-navy/30 text-[10px] font-bold">Tap for details</span>}
+                  : <span className="text-brand-navy/45 text-[10px] font-bold">Tap for details</span>}
               </div>
             </button>
 
@@ -21955,9 +21936,9 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                     <div className="flex items-center justify-between mb-6">
                       <div>
                         <h3 className="font-display text-2xl font-bold">{store.membershipName || 'Membership'}</h3>
-                        <p className="text-brand-navy/40 text-xs mt-0.5">Points & Details</p>
+                        <p className="text-brand-navy/55 text-xs mt-0.5">Points & Details</p>
                       </div>
-                      <button onClick={() => setShowSpendSheet(false)} className="p-2 text-brand-navy/40"><X size={20} /></button>
+                      <button onClick={() => setShowSpendSheet(false)} className="p-2 text-brand-navy/55"><X size={20} /></button>
                     </div>
 
                     {/* Handle banner */}
@@ -21974,26 +21955,26 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                     {/* Balance */}
                     <div className="grid grid-cols-2 gap-3 mb-4">
                       <div className="glass-card p-5 rounded-2xl">
-                        <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest mb-1">Points</p>
+                        <p className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest mb-1">Points</p>
                         <p className="text-3xl font-black text-brand-navy">{pts.toLocaleString()}</p>
-                        {pointsRate > 0 && <p className="text-[10px] text-brand-navy/40 mt-1">{pointsRate} pts per £1</p>}
+                        {pointsRate > 0 && <p className="text-[10px] text-brand-navy/55 mt-1">{pointsRate} pts per £1</p>}
                       </div>
                       <div className="glass-card p-5 rounded-2xl">
-                        <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest mb-1">Value</p>
+                        <p className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest mb-1">Value</p>
                         <p className="text-3xl font-black text-emerald-600">£{redeemableValue.toFixed(2)}</p>
-                        {redemptionRate > 0 && <p className="text-[10px] text-brand-navy/40 mt-1">{redemptionRate} pts = £1</p>}
+                        {redemptionRate > 0 && <p className="text-[10px] text-brand-navy/55 mt-1">{redemptionRate} pts = £1</p>}
                       </div>
                     </div>
 
                     {/* Spend summary */}
                     <div className="glass-card p-4 rounded-2xl flex items-center justify-between mb-4">
                       <div>
-                        <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">Total Spent</p>
+                        <p className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest">Total Spent</p>
                         <p className="text-2xl font-black text-brand-navy mt-0.5">£{spent.toFixed(2)}</p>
                       </div>
                       {rewards > 0 && (
                         <div className="text-right">
-                          <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">Rewards</p>
+                          <p className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest">Rewards</p>
                           <p className="text-2xl font-black text-emerald-600 mt-0.5">{rewards}</p>
                         </div>
                       )}
@@ -22002,7 +21983,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                     {/* How it works */}
                     {(pointsRate > 0 || redemptionRate > 0 || store.membershipSpendThreshold) && (
                       <div className="bg-brand-bg rounded-2xl p-4 space-y-3 mb-6">
-                        <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest">How it works</p>
+                        <p className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest">How it works</p>
                         {pointsRate > 0 && (
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-xl bg-brand-navy/8 flex items-center justify-center shrink-0">
@@ -22038,7 +22019,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                         <Gift size={15} /> Redeem Points
                       </button>
                     )}
-                    <button onClick={() => setShowSpendSheet(false)} className="w-full text-brand-navy/40 text-sm font-bold py-2">Close</button>
+                    <button onClick={() => setShowSpendSheet(false)} className="w-full text-brand-navy/55 text-sm font-bold py-2">Close</button>
                   </motion.div>
                 </div>
               )}
@@ -22059,9 +22040,9 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                         <div className="flex items-center justify-between mb-6">
                           <div>
                             <h3 className="font-display text-2xl font-bold">Redeem Points</h3>
-                            <p className="text-brand-navy/40 text-xs mt-0.5">{pts.toLocaleString()} pts · up to £{maxRedeemDollars.toFixed(2)} off</p>
+                            <p className="text-brand-navy/55 text-xs mt-0.5">{pts.toLocaleString()} pts · up to £{maxRedeemDollars.toFixed(2)} off</p>
                           </div>
-                          <button onClick={closeRedeem} className="p-2 text-brand-navy/40"><X size={20} /></button>
+                          <button onClick={closeRedeem} className="p-2 text-brand-navy/55"><X size={20} /></button>
                         </div>
                         <div className="flex items-center gap-2 bg-brand-bg rounded-2xl px-5 py-4 mb-3">
                           <span className="text-brand-navy font-black text-3xl">£</span>
@@ -22090,14 +22071,14 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                         >
                           Continue
                         </button>
-                        <button onClick={closeRedeem} className="w-full text-brand-navy/40 text-sm font-bold py-2">Cancel</button>
+                        <button onClick={closeRedeem} className="w-full text-brand-navy/55 text-sm font-bold py-2">Cancel</button>
                       </>
                     )}
                     {redeemStage === 'swipe' && (
                       <>
                         <div className="text-center mb-6">
                           <h3 className="font-display text-2xl font-bold mb-1">Show Staff to Authorize</h3>
-                          <p className="text-brand-navy/40 text-sm">Ask a staff member to confirm then swipe</p>
+                          <p className="text-brand-navy/55 text-sm">Ask a staff member to confirm then swipe</p>
                         </div>
                         <div className="bg-emerald-50 rounded-3xl p-6 text-center mb-6 border border-emerald-100">
                           <p className="text-emerald-600/60 text-[10px] font-bold uppercase tracking-widest mb-1">Redeeming</p>
@@ -22105,7 +22086,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                           <p className="text-emerald-600/60 text-sm mt-1 font-bold">{pointsToDeduct} points</p>
                         </div>
                         <SwipeConfirm onConfirm={handleRedeem} />
-                        <button onClick={() => setRedeemStage('input')} className="w-full text-brand-navy/40 text-sm font-bold py-3 mt-2">← Back</button>
+                        <button onClick={() => setRedeemStage('input')} className="w-full text-brand-navy/55 text-sm font-bold py-3 mt-2">← Back</button>
                       </>
                     )}
                     {redeemStage === 'success' && (
@@ -22114,14 +22095,14 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                           <Check size={28} className="text-emerald-500" />
                         </div>
                         <h3 className="font-display text-2xl font-bold mb-1">Redeemed!</h3>
-                        <p className="text-brand-navy/40 text-sm mb-6">£{redeemDollarNum.toFixed(2)} off applied</p>
+                        <p className="text-brand-navy/55 text-sm mb-6">£{redeemDollarNum.toFixed(2)} off applied</p>
                         <div className="glass-card rounded-2xl p-4 mb-6 grid grid-cols-2 gap-3">
                           <div className="text-center">
-                            <p className="text-brand-navy/40 text-[9px] font-bold uppercase tracking-widest">Points Used</p>
+                            <p className="text-brand-navy/55 text-[9px] font-bold uppercase tracking-widest">Points Used</p>
                             <p className="text-brand-navy font-black text-xl">{pointsToDeduct}</p>
                           </div>
                           <div className="text-center">
-                            <p className="text-brand-navy/40 text-[9px] font-bold uppercase tracking-widest">Remaining</p>
+                            <p className="text-brand-navy/55 text-[9px] font-bold uppercase tracking-widest">Remaining</p>
                             <p className="text-brand-navy font-black text-xl">{spvNetAvailable - pointsToDeduct}</p>
                           </div>
                         </div>
@@ -22167,10 +22148,10 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
               </div>
               <div className="bg-white px-5 py-3 flex items-center justify-between">
                 {nextReward
-                  ? <span className="text-brand-navy/40 text-[10px] font-bold">{nextReward.visits - visits} more → {nextReward.reward}</span>
-                  : <span className="text-brand-navy/30 text-[10px] font-bold">Tap for details</span>}
+                  ? <span className="text-brand-navy/55 text-[10px] font-bold">{nextReward.visits - visits} more → {nextReward.reward}</span>
+                  : <span className="text-brand-navy/45 text-[10px] font-bold">Tap for details</span>}
                 {nextReward && (
-                  <span className="text-brand-navy/30 text-[10px] font-bold">{visits}/{nextReward.visits} pts</span>
+                  <span className="text-brand-navy/45 text-[10px] font-bold">{visits}/{nextReward.visits} pts</span>
                 )}
               </div>
             </button>
@@ -22188,22 +22169,22 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                     <div className="flex items-center justify-between mb-6">
                       <div>
                         <h3 className="font-display text-2xl font-bold">{store.membershipName || 'Membership'}</h3>
-                        <p className="text-brand-navy/40 text-xs mt-0.5">{fmtK(visits)} points available</p>
+                        <p className="text-brand-navy/55 text-xs mt-0.5">{fmtK(visits)} points available</p>
                       </div>
-                      <button onClick={() => setShowVisitSheet(false)} className="p-2 text-brand-navy/40"><X size={20} /></button>
+                      <button onClick={() => setShowVisitSheet(false)} className="p-2 text-brand-navy/55"><X size={20} /></button>
                     </div>
 
                     {/* Points + next reward */}
                     <div className="glass-card p-5 rounded-2xl mb-4 text-center">
                       <p className="text-brand-navy font-black text-5xl leading-none">{fmtK(visits)}</p>
-                      <p className="text-brand-navy/40 text-xs font-bold uppercase tracking-widest mt-1.5">Points</p>
+                      <p className="text-brand-navy/55 text-xs font-bold uppercase tracking-widest mt-1.5">Points</p>
                       {nextReward && (
                         <>
                           <p className="text-brand-navy/60 text-sm mt-3 font-bold">{nextReward.visits - visits} more → {nextReward.reward}</p>
                           <div className="mt-3 h-2 bg-brand-navy/10 rounded-full overflow-hidden">
                             <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, (visits / nextReward.visits) * 100)}%`, backgroundColor: color }} />
                           </div>
-                          <p className="text-brand-navy/30 text-[10px] font-bold mt-1">{visits}/{nextReward.visits} pts</p>
+                          <p className="text-brand-navy/45 text-[10px] font-bold mt-1">{visits}/{nextReward.visits} pts</p>
                         </>
                       )}
                     </div>
@@ -22211,14 +22192,14 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                     {/* Reward tiers */}
                     {visitRewards.length > 0 && (
                       <div className="mb-4">
-                        <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest mb-3">Reward Tiers</p>
+                        <p className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest mb-3">Reward Tiers</p>
                         <div className="space-y-2">
                           {visitRewards.map((r: any) => {
                             const earned = visits >= r.visits;
                             return (
                               <div key={r.visits} className={cn('flex items-center justify-between px-4 py-3 rounded-2xl', earned ? 'bg-emerald-50 border border-emerald-100' : 'bg-brand-bg')}>
                                 <span className={cn('font-bold text-sm', earned ? 'text-emerald-700' : 'text-brand-navy')}>{r.reward}</span>
-                                <span className={cn('text-xs font-bold', earned ? 'text-emerald-500' : 'text-brand-navy/40')}>{earned ? '✓' : `${r.visits} pts`}</span>
+                                <span className={cn('text-xs font-bold', earned ? 'text-emerald-500' : 'text-brand-navy/55')}>{earned ? '✓' : `${r.visits} pts`}</span>
                               </div>
                             );
                           })}
@@ -22229,14 +22210,14 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                     {/* Menu items */}
                     {menuItems.length > 0 && (
                       <div>
-                        <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest mb-3">Redeem Points</p>
+                        <p className="text-xs font-bold text-brand-navy/65 uppercase tracking-widest mb-3">Redeem Points</p>
                         <div className="space-y-2">
                           {menuItems.map((item: any) => {
                             const canAfford = visits >= item.points;
                             return (
                               <div key={item.id} className={cn('flex items-center justify-between px-4 py-3 rounded-2xl', canAfford ? 'bg-brand-bg' : 'bg-brand-bg/50 opacity-50')}>
                                 <span className="font-bold text-sm text-brand-navy">{item.name}</span>
-                                <span className="text-xs font-bold text-brand-navy/50">{item.points} pts</span>
+                                <span className="text-xs font-bold text-brand-navy/65">{item.points} pts</span>
                               </div>
                             );
                           })}
@@ -22244,7 +22225,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                       </div>
                     )}
 
-                    <button onClick={() => setShowVisitSheet(false)} className="w-full text-brand-navy/40 text-sm font-bold py-3 mt-4">Close</button>
+                    <button onClick={() => setShowVisitSheet(false)} className="w-full text-brand-navy/55 text-sm font-bold py-3 mt-4">Close</button>
                   </motion.div>
                 </div>
               )}
@@ -22278,13 +22259,13 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                 className="flex items-center justify-between p-3 rounded-2xl hover:bg-brand-bg transition-colors cursor-pointer group"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-6 h-6 flex items-center justify-center font-bold text-xs text-brand-navy/40">#{index + 1}</div>
+                  <div className="w-6 h-6 flex items-center justify-center font-bold text-xs text-brand-navy/55">#{index + 1}</div>
                   <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-navy/5 bg-indigo-50 flex items-center justify-center">
                     <PixelAvatar config={lbProfile?.avatar} uid={lbProfile?.uid ?? entry.user_id} size={40} view="head" />
                   </div>
                   <div>
                     <p className="font-bold text-sm group-hover:text-brand-gold transition-colors">{displayName}</p>
-                    <p className="text-[10px] text-brand-navy/40 font-bold uppercase tracking-widest">{subLabel}</p>
+                    <p className="text-[10px] text-brand-navy/55 font-bold uppercase tracking-widest">{subLabel}</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -22294,7 +22275,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
             );
           })}
           {leaderboard.length === 0 && (
-            <p className="text-center py-4 text-xs text-brand-navy/40 font-bold uppercase tracking-widest">No collectors yet</p>
+            <p className="text-center py-4 text-xs text-brand-navy/55 font-bold uppercase tracking-widest">No collectors yet</p>
           )}
         </div>
       </div>
@@ -22307,7 +22288,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
             onClick={() => setActiveStoreTab(tab)}
             className={cn(
               "flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5",
-              activeStoreTab === tab ? "bg-brand-navy text-white shadow-lg" : "text-brand-navy/40"
+              activeStoreTab === tab ? "bg-brand-navy text-white shadow-lg" : "text-brand-navy/55"
             )}
           >
             {tab === 'posts' ? <><MessageSquare size={13} /> Posts</> : <><Star size={13} /> Reviews {storeReviews.length > 0 && `(${storeReviews.length})`}</>}
@@ -22362,9 +22343,9 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-sm">{displayName}</p>
                         {!isOwnerPost && (
-                          <p className="text-[10px] text-brand-navy/40">on <span className="font-bold text-brand-gold">{store.name}</span></p>
+                          <p className="text-[10px] text-brand-navy/55">on <span className="font-bold text-brand-gold">{store.name}</span></p>
                         )}
-                        <p className="text-[10px] text-brand-navy/40 font-medium">{item.data.createdAt ? format(item.data.createdAt.toDate(), 'MMM d · h:mm a') : 'Just now'}</p>
+                        <p className="text-[10px] text-brand-navy/55 font-medium">{item.data.createdAt ? format(item.data.createdAt.toDate(), 'MMM d · h:mm a') : 'Just now'}</p>
                       </div>
                     </div>
                     <p className="text-sm text-brand-navy/80 leading-relaxed">{item.data.content}</p>
@@ -22372,7 +22353,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                 );
               })()
             )}
-            {merged.length === 0 && <div className="py-12 text-center text-brand-navy/20"><MessageSquare size={40} className="mx-auto mb-2 opacity-10" /><p className="font-bold text-sm">No posts yet</p></div>}
+            {merged.length === 0 && <div className="py-12 text-center text-brand-navy/32"><MessageSquare size={40} className="mx-auto mb-2 opacity-10" /><p className="font-bold text-sm">No posts yet</p></div>}
           </div>
         );
       })()}
@@ -22382,7 +22363,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
           {/* Leave a review — only if not already reviewed */}
           {store.ownerUid !== user.uid && (
             myReview ? (
-              <div className="glass-card p-4 rounded-3xl text-center text-sm text-brand-navy/40 font-medium">
+              <div className="glass-card p-4 rounded-3xl text-center text-sm text-brand-navy/55 font-medium">
                 You've already left a review
               </div>
             ) : (
@@ -22392,7 +22373,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                 <div className="flex gap-1">
                   {[1,2,3,4,5].map(s => (
                     <button key={s} onClick={() => setReviewRating(s)}>
-                      <Star size={24} className={s <= reviewRating ? "text-brand-gold fill-brand-gold" : "text-brand-navy/20"} />
+                      <Star size={24} className={s <= reviewRating ? "text-brand-gold fill-brand-gold" : "text-brand-navy/32"} />
                     </button>
                   ))}
                 </div>
@@ -22421,11 +22402,11 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                 <p className="text-4xl font-extrabold text-brand-navy">{avgRating.toFixed(1)}</p>
                 <div className="flex items-center gap-0.5 mt-1 justify-center">
                   {[1,2,3,4,5].map(s => (
-                    <Star key={s} size={13} className={s <= Math.round(avgRating) ? "text-brand-gold fill-brand-gold" : "text-brand-navy/20"} />
+                    <Star key={s} size={13} className={s <= Math.round(avgRating) ? "text-brand-gold fill-brand-gold" : "text-brand-navy/32"} />
                   ))}
                 </div>
               </div>
-              <div className="text-sm text-brand-navy/50">
+              <div className="text-sm text-brand-navy/65">
                 <p className="font-bold text-brand-navy">{storeReviews.length} {storeReviews.length === 1 ? 'review' : 'reviews'}</p>
                 <p>Based on customer ratings</p>
               </div>
@@ -22443,17 +22424,17 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                   <p className="font-bold text-sm">{review.authorName}</p>
                   <div className="flex items-center gap-0.5 mt-0.5">
                     {[1,2,3,4,5].map(s => (
-                      <Star key={s} size={11} className={s <= (review.rating || 5) ? "text-brand-gold fill-brand-gold" : "text-brand-navy/20"} />
+                      <Star key={s} size={11} className={s <= (review.rating || 5) ? "text-brand-gold fill-brand-gold" : "text-brand-navy/32"} />
                     ))}
                   </div>
                 </div>
-                <p className="text-[10px] text-brand-navy/40">{review.createdAt ? format(review.createdAt.toDate(), 'MMM d') : ''}</p>
+                <p className="text-[10px] text-brand-navy/55">{review.createdAt ? format(review.createdAt.toDate(), 'MMM d') : ''}</p>
               </div>
               <p className="text-sm text-brand-navy/70 leading-relaxed">{review.content}</p>
             </div>
           ))}
-          {visibleReviewCount < storeReviews.length && <div ref={reviewSentinelRef} className="py-4 text-center text-xs text-brand-navy/30">Loading more...</div>}
-          {storeReviews.length === 0 && <div className="py-12 text-center text-brand-navy/20"><Star size={40} className="mx-auto mb-2 opacity-10" /><p className="font-bold text-sm">No reviews yet</p></div>}
+          {visibleReviewCount < storeReviews.length && <div ref={reviewSentinelRef} className="py-4 text-center text-xs text-brand-navy/45">Loading more...</div>}
+          {storeReviews.length === 0 && <div className="py-12 text-center text-brand-navy/32"><Star size={40} className="mx-auto mb-2 opacity-10" /><p className="font-bold text-sm">No reviews yet</p></div>}
         </div>
       )}
     </motion.div>
@@ -22747,12 +22728,12 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
             <div className="flex items-center gap-3 mt-2 text-sm">
               <span className="flex items-center gap-1 font-bold">
                 <span>{targetFollowing}</span>
-                <span className="text-brand-navy/40 font-normal">Following</span>
+                <span className="text-brand-navy/55 font-normal">Following</span>
               </span>
-              <span className="text-brand-navy/20">•</span>
+              <span className="text-brand-navy/32">•</span>
               <span className="flex items-center gap-1 font-bold">
                 <span>{targetFollowers}</span>
-                <span className="text-brand-navy/40 font-normal">Followers</span>
+                <span className="text-brand-navy/55 font-normal">Followers</span>
               </span>
             </div>
           </div>
@@ -22800,7 +22781,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
       {/* Badges swipe row */}
       {earnedBadges.length > 0 && (
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 text-center">Badges</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/55 mb-2.5 text-center">Badges</p>
           <BadgeSwipeRow badges={earnedBadges} onSelectBadge={setSelectedBadge} />
         </div>
       )}
@@ -22825,7 +22806,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
                 >{selectedBadge.icon}</div>
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-brand-navy text-lg leading-tight">{selectedBadge.name}</p>
-                  <p className="text-xs text-brand-navy/50 mt-1">{BADGE_METRIC_LABELS[selectedBadge.metric]} ≥ {selectedBadge.threshold}</p>
+                  <p className="text-xs text-brand-navy/65 mt-1">{BADGE_METRIC_LABELS[selectedBadge.metric]} ≥ {selectedBadge.threshold}</p>
                 </div>
               </div>
               {selectedBadge.description && (
@@ -22862,7 +22843,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
       <div className="space-y-2.5">
         <h3 className="font-display text-xl font-bold px-2">Active Cards</h3>
         {cards.length === 0 ? (
-          <div className="py-8 text-center text-brand-navy/20 bg-white/50 rounded-2xl border border-dashed border-brand-navy/5">
+          <div className="py-8 text-center text-brand-navy/32 bg-white/50 rounded-2xl border border-dashed border-brand-navy/5">
             <p className="text-xs font-bold uppercase tracking-widest italic">No active loyalty cards</p>
           </div>
         ) : (
@@ -22892,7 +22873,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
                   <div className="bg-white px-4 py-3">
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="text-[10px] font-bold" style={{ color: theme }}>{card.current_stamps} / {total} stamps</span>
-                      <span className="text-[10px] font-bold text-brand-navy/30">{pct}%</span>
+                      <span className="text-[10px] font-bold text-brand-navy/45">{pct}%</span>
                     </div>
                     <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: `${theme}20` }}>
                       <motion.div
@@ -22917,7 +22898,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
         if (theirChallenges.length === 0) return null;
         return (
           <div className="space-y-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Challenges</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/55 px-1">Challenges</p>
             {theirChallenges.map(c => {
               const entry = publicEntries.get(c.id);
               let progress = 0;
@@ -22957,14 +22938,14 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
       <div className="flex p-1 glass-card rounded-2xl">
         <button
           onClick={() => setProfileTab('wall')}
-          className={cn("flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5", profileTab === 'wall' ? "bg-brand-navy text-white shadow" : "text-brand-navy/40")}
+          className={cn("flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5", profileTab === 'wall' ? "bg-brand-navy text-white shadow" : "text-brand-navy/55")}
         >
           <MessageSquare size={13} />
           Wall
         </button>
         <button
           onClick={() => setProfileTab('posts')}
-          className={cn("flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5", profileTab === 'posts' ? "bg-brand-navy text-white shadow" : "text-brand-navy/40")}
+          className={cn("flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5", profileTab === 'posts' ? "bg-brand-navy text-white shadow" : "text-brand-navy/55")}
         >
           <Zap size={13} />
           Posts {userPosts.length > 0 && `(${userPosts.length})`}
@@ -22996,7 +22977,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
               <WallPostItem key={review.id} post={review} currentUser={currentUser} wallOwnerUid={targetUser.uid} onViewUser={onViewUser} />
             ))}
             {reviews.length === 0 && (
-              <p className="text-center py-12 text-xs text-brand-navy/20 font-bold uppercase tracking-widest italic">No wall posts yet</p>
+              <p className="text-center py-12 text-xs text-brand-navy/32 font-bold uppercase tracking-widest italic">No wall posts yet</p>
             )}
           </div>
         </div>
@@ -23029,7 +23010,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
             />
           ))}
           {userPosts.length === 0 && (
-            <p className="text-center py-12 text-xs text-brand-navy/20 font-bold uppercase tracking-widest italic">No posts yet</p>
+            <p className="text-center py-12 text-xs text-brand-navy/32 font-bold uppercase tracking-widest italic">No posts yet</p>
           )}
         </div>
       )}
