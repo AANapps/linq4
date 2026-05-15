@@ -131,7 +131,8 @@ import {
   LayoutList,
   History,
   DollarSign,
-  AlertTriangle
+  AlertTriangle,
+  Plus
 } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
@@ -321,6 +322,7 @@ interface StoreProfile {
   location?: string;
   lat?: number;
   lng?: number;
+  locations?: Array<{ id: string; label?: string; address: string; lat?: number; lng?: number }>;
   rewardTiers?: { stamps: number; reward: string; value?: number }[];
   currency?: string;
   cardEnabled?: boolean;
@@ -13687,18 +13689,25 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
       const map = new Map<string, number>();
       for (let i = 0; i < stores.length; i++) {
         const store = stores[i];
-        let coords: { lat: number; lng: number } | null = null;
-        if (store.lat != null && store.lng != null) {
-          coords = { lat: store.lat, lng: store.lng };
-        } else {
-          const addr = store.address || store.location;
-          if (addr) {
-            coords = await geocodeAddressGlobal(addr);
-            if (i < stores.length - 1) await new Promise(r => setTimeout(r, 1100));
+        const locs = store.locations && store.locations.length > 0
+          ? store.locations
+          : [{ id: 'primary', address: store.address || store.location || '', lat: store.lat, lng: store.lng }];
+        let minDist = Infinity;
+        for (const loc of locs) {
+          let coords: { lat: number; lng: number } | null = null;
+          if (loc.lat != null && loc.lng != null) {
+            coords = { lat: loc.lat, lng: loc.lng };
+          } else if (loc.address) {
+            coords = await geocodeAddressGlobal(loc.address);
+            await new Promise(r => setTimeout(r, 1100));
           }
+          if (coords) {
+            const d = haversineKm(userCoords.lat, userCoords.lng, coords.lat, coords.lng);
+            if (d < minDist) minDist = d;
+          }
+          if (cancelled) return;
         }
-        if (coords) map.set(store.id, haversineKm(userCoords.lat, userCoords.lng, coords.lat, coords.lng));
-        if (cancelled) return;
+        if (minDist < Infinity) map.set(store.id, minDist);
       }
       setDistancesMap(new Map(map));
     })();
@@ -17352,6 +17361,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
   const [logoFetchError, setLogoFetchError] = useState('');
   const [logoUploading, setLogoUploading] = useState(false);
   const [storeLocation, setStoreLocation] = useState('');
+  const [storeLocations, setStoreLocations] = useState<Array<{ id: string; label: string; address: string; lat?: number; lng?: number }>>([]);
   const [visibility, setVisibility] = useState({ members: true, stamps: true, activeCards: true, returnRate: true, followers: true });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -17371,6 +17381,11 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
         setStoreTheme(s.theme || '#1e3a5f');
         setStoreLogo(s.logoUrl || '');
         setStoreLocation(s.location || s.address || '');
+        if (s.locations && s.locations.length > 0) {
+          setStoreLocations(s.locations.map(l => ({ id: l.id, label: l.label || '', address: l.address, lat: l.lat, lng: l.lng })));
+        } else {
+          setStoreLocations([{ id: 'primary', label: '', address: s.address || s.location || '', lat: s.lat, lng: s.lng }]);
+        }
         setVisibility({ members: true, stamps: true, activeCards: true, returnRate: true, followers: true, ...(s.visibilitySettings || {}) });
       }
     });
@@ -17384,9 +17399,26 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
       await updateDoc(doc(db, 'users', profile.uid), profileUpdates);
 
       if (profile.role === 'vendor' && store) {
+        // Geocode any locations missing coordinates
+        const geocoded: typeof storeLocations = [];
+        for (const loc of storeLocations) {
+          if (loc.address.trim() === '') continue;
+          if (loc.lat != null && loc.lng != null) {
+            geocoded.push(loc);
+          } else {
+            const coords = await geocodeAddressGlobal(loc.address);
+            geocoded.push(coords ? { ...loc, lat: coords.lat, lng: coords.lng } : loc);
+          }
+        }
+        const primary = geocoded[0];
         await updateDoc(doc(db, 'stores', store.id), {
           name: storeName, reward: storeReward, category: storeCategory, theme: storeTheme,
-          logoUrl: storeLogo, location: storeLocation, address: storeLocation, visibilitySettings: visibility,
+          logoUrl: storeLogo,
+          address: primary?.address || storeLocation,
+          location: primary?.address || storeLocation,
+          ...(primary?.lat != null ? { lat: primary.lat, lng: primary.lng } : {}),
+          locations: geocoded,
+          visibilitySettings: visibility,
         });
       }
 
@@ -17527,31 +17559,49 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">
-                  Business Address <span className="text-red-400">*</span>
-                </label>
-                {!storeLocation && (
-                  <span className="text-[10px] font-bold text-brand-gold bg-brand-gold/10 px-2 py-0.5 rounded-full flex items-center gap-1">
-                    <MapPin size={9} /> Required for nearby discovery
-                  </span>
-                )}
+                <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Locations</label>
+                <button
+                  type="button"
+                  onClick={() => setStoreLocations(prev => [...prev, { id: Date.now().toString(), label: '', address: '' }])}
+                  className="text-[11px] font-bold text-brand-navy/60 hover:text-brand-navy flex items-center gap-1 transition-colors"
+                >
+                  <Plus size={12} /> Add location
+                </button>
               </div>
-              <div className="relative">
-                <MapPin size={15} className={cn("absolute left-4 top-1/2 -translate-y-1/2", storeLocation ? "text-brand-navy/72" : "text-brand-gold")} />
-                <input
-                  value={storeLocation}
-                  onChange={e => setStoreLocation(e.target.value)}
-                  placeholder="e.g. 123 High Street, London, UK"
-                  className={cn(
-                    "w-full pl-10 pr-5 py-4 rounded-2xl bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30 border",
-                    storeLocation ? "border-brand-navy/10" : "border-brand-gold/50"
-                  )}
-                />
-              </div>
-              {!storeLocation && (
-                <p className="text-[11px] text-brand-navy/75 pl-1">Enter your full address so customers nearby can discover you in the Hot tab.</p>
+              {storeLocations.map((loc, idx) => (
+                <div key={loc.id} className="space-y-2 bg-white border border-brand-navy/8 rounded-2xl p-3">
+                  <div className="flex items-center gap-2">
+                    <input
+                      value={loc.label}
+                      onChange={e => setStoreLocations(prev => prev.map((l, i) => i === idx ? { ...l, label: e.target.value, lat: undefined, lng: undefined } : l))}
+                      placeholder={storeLocations.length > 1 ? `Location name (e.g. City Centre)` : 'Location name (optional)'}
+                      className="flex-1 px-3 py-2 rounded-xl bg-brand-bg border border-brand-navy/8 text-xs font-medium focus:outline-none"
+                    />
+                    {storeLocations.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setStoreLocations(prev => prev.filter((_, i) => i !== idx))}
+                        className="p-1.5 text-brand-navy/40 hover:text-red-500 transition-colors"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <MapPin size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-navy/40" />
+                    <input
+                      value={loc.address}
+                      onChange={e => setStoreLocations(prev => prev.map((l, i) => i === idx ? { ...l, address: e.target.value, lat: undefined, lng: undefined } : l))}
+                      placeholder="123 High Street, Sydney, AU"
+                      className="w-full pl-8 pr-4 py-2.5 rounded-xl bg-brand-bg border border-brand-navy/8 text-xs font-medium focus:outline-none"
+                    />
+                  </div>
+                </div>
+              ))}
+              {storeLocations.every(l => !l.address.trim()) && (
+                <p className="text-[11px] text-brand-gold pl-1 flex items-center gap-1"><MapPin size={9} /> Add an address so customers can discover you nearby.</p>
               )}
             </div>
 
