@@ -4147,14 +4147,11 @@ function BadgesAdminPanel({ onClose }: { onClose: () => void }) {
             <h3 className="font-bold text-brand-navy text-sm">New Badge</h3>
 
             {/* Preview */}
-            <div className="flex justify-center" style={{ paddingBottom: 16 }}>
-              <div style={{ position: 'relative', width: 80, height: 80 }}>
-                <div style={{ position: 'relative', zIndex: 1, width: 80, height: 80, clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', background: borderColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={{ width: 68, height: 68, clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', background: `linear-gradient(160deg, ${color}f5 0%, ${color}88 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span className="text-4xl leading-none">{icon}</span>
-                  </div>
+            <div className="flex justify-center">
+              <div style={{ width: 80, height: 80, clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', background: borderColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 68, height: 68, clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', background: `linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.52) 100%), ${color}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span className="text-4xl leading-none">{icon}</span>
                 </div>
-                <div style={{ position: 'absolute', bottom: -12, left: '50%', transform: 'translateX(-50%)', width: 56, height: 18, background: color, opacity: 0.55, borderRadius: '50%', filter: 'blur(8px)', zIndex: 0 }} />
               </div>
             </div>
 
@@ -16488,41 +16485,21 @@ function HexBadge({ badge, size = 56 }: { badge: AppBadge; size?: number }) {
   const border = badge.borderColor || '#FBBF24';
   const innerSize = size - Math.round(size * 0.15);
   const scrambleTarget = badge.name.slice(0, 3).toUpperCase();
-  const shadowW = Math.round(size * 0.7);
-  const shadowH = Math.round(size * 0.22);
-  const shadowBlur = Math.round(size / 7);
   return (
-    <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
-      {/* Hexagon badge */}
-      <div style={{ position: 'relative', zIndex: 1, width: size, height: size, clipPath: HEX_CLIP, background: border, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{
-          width: innerSize, height: innerSize,
-          clipPath: HEX_CLIP,
-          background: isLinqle
-            ? 'linear-gradient(160deg, #1a5c32 0%, #0a2318 100%)'
-            : `linear-gradient(160deg, ${fill}f5 0%, ${fill}88 100%)`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
-        }}>
-          {isLinqle
-            ? <MatrixScramble target={scrambleTarget} className="font-black text-green-300 font-mono tracking-tighter" style={{ fontSize: Math.round(size * 0.28) } as React.CSSProperties} />
-            : <span style={{ fontSize: Math.round(size * 0.42), lineHeight: 1 }}>{badge.icon}</span>
-          }
-        </div>
-      </div>
-      {/* 3D gradient shadow below */}
+    <div style={{ width: size, height: size, flexShrink: 0, clipPath: HEX_CLIP, background: border, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{
-        position: 'absolute',
-        bottom: -Math.round(size * 0.15),
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: shadowW,
-        height: shadowH,
-        background: fill,
-        opacity: 0.55,
-        borderRadius: '50%',
-        filter: `blur(${shadowBlur}px)`,
-        zIndex: 0,
-      }} />
+        width: innerSize, height: innerSize,
+        clipPath: HEX_CLIP,
+        background: isLinqle
+          ? 'linear-gradient(180deg, #1a5c32 0%, #051209 100%)'
+          : `linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.52) 100%), ${fill}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+      }}>
+        {isLinqle
+          ? <MatrixScramble target={scrambleTarget} className="font-black text-green-300 font-mono tracking-tighter" style={{ fontSize: Math.round(size * 0.28) } as React.CSSProperties} />
+          : <span style={{ fontSize: Math.round(size * 0.42), lineHeight: 1 }}>{badge.icon}</span>
+        }
+      </div>
     </div>
   );
 }
