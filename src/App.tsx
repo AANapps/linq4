@@ -20385,73 +20385,119 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
       )}
 
       {/* All Deals modal */}
-      {showAllDeals && (
-        <div className="fixed inset-0 z-[100] flex flex-col" style={{ background: 'rgba(0,0,0,0.7)' }}>
-          <div className="flex-1 overflow-y-auto bg-[#f8f9fc] rounded-t-3xl mt-12">
-            <div className="sticky top-0 bg-[#f8f9fc] z-10 px-5 pt-5 pb-3 flex items-center justify-between border-b border-brand-navy/5">
-              <div>
-                <h2 className="font-extrabold text-brand-navy text-lg">All Deals Near You</h2>
-                <p className="text-brand-navy/75 text-xs mt-0.5">{(hotStores.length > 0 ? hotStores : allStores).length} businesses</p>
+      {showAllDeals && (() => {
+        const displayStores = hotStores.length > 0 ? hotStores : allStores;
+        const CATEGORY_ORDER: Category[] = ['Food', 'Beauty', 'Barber', 'Gym', 'Parking', 'Retail'];
+        const grouped = CATEGORY_ORDER.reduce<Record<string, StoreProfile[]>>((acc, cat) => {
+          const stores = displayStores.filter(s => s.category === cat);
+          if (stores.length > 0) acc[cat] = stores;
+          return acc;
+        }, {});
+        const otherStores = displayStores.filter(s => !CATEGORY_ORDER.includes(s.category as Category));
+        if (otherStores.length > 0) (grouped as Record<string, StoreProfile[]>)['Other'] = otherStores;
+
+        return (
+          <div className="fixed inset-0 z-[100] flex flex-col" style={{ background: 'rgba(0,0,0,0.7)' }}>
+            <div className="flex-1 overflow-y-auto bg-[#f8f9fc] rounded-t-3xl mt-12">
+              <div className="sticky top-0 bg-[#f8f9fc] z-10 px-5 pt-5 pb-3 flex items-center justify-between border-b border-brand-navy/5">
+                <div>
+                  <h2 className="font-extrabold text-brand-navy text-lg">All Deals Near You</h2>
+                  <p className="text-brand-navy/75 text-xs mt-0.5">{displayStores.length} businesses</p>
+                </div>
+                <button onClick={() => setShowAllDeals(false)} className="w-9 h-9 rounded-full bg-brand-navy/10 flex items-center justify-center active:scale-95 transition-transform">
+                  <X size={16} className="text-brand-navy" />
+                </button>
               </div>
-              <button onClick={() => setShowAllDeals(false)} className="w-9 h-9 rounded-full bg-brand-navy/10 flex items-center justify-center active:scale-95 transition-transform">
-                <X size={16} className="text-brand-navy" />
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-3 p-4 pb-10">
-              {(hotStores.length > 0 ? hotStores : allStores).map((store, i) => {
-                const dealColor = DEAL_COLORS[i % DEAL_COLORS.length];
-                const joined = userCards.some(c => c.store_id === store.id && !c.isArchived);
-                const isJoining = joiningStoreId === store.id;
-                return (
-                  <motion.div
-                    key={store.id}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: i * 0.04 }}
-                    className="rounded-[1.75rem] overflow-hidden flex flex-col cursor-pointer active:scale-[0.97] transition-transform"
-                    style={{ height: '160px' }}
-                    onClick={() => { onViewStore && onViewStore(store); setShowAllDeals(false); }}
-                  >
-                    {/* Top half — logo */}
-                    <div className="flex-1 overflow-hidden relative bg-white/10">
-                      {store.logoUrl
-                        ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
-                        : <div className="w-full h-full flex items-center justify-center bg-brand-navy/5"><Building2 size={24} className="text-brand-navy/72" /></div>}
-                      {store.isVerified && (
-                        <div className="absolute top-2 right-2 w-6 h-6 bg-white/80 rounded-full flex items-center justify-center shadow">
-                          <Sparkles size={11} className="text-brand-navy" />
-                        </div>
-                      )}
-                    </div>
-                    {/* Bottom half — gradient-logo-blue */}
-                    <div className="gradient-logo-blue px-3 py-2.5 flex flex-col justify-between relative overflow-hidden" style={{ height: '80px' }}>
-                      <span className="shine-ray" aria-hidden="true" />
-                      <div className="relative z-10">
-                        <p className="font-extrabold text-white text-xs leading-tight line-clamp-2">
-                          {store.reward || `${store.stamps_required_for_reward} stamps to reward`}
-                        </p>
-                        <p className="text-white/60 text-[9px] font-medium mt-0.5 line-clamp-1">{store.name}</p>
+
+              <div className="py-4 pb-12 space-y-6">
+                {Object.entries(grouped).map(([cat, stores]) => {
+                  const CatIcon = CATEGORY_ICON_MAP[cat];
+                  return (
+                    <div key={cat}>
+                      {/* Section header */}
+                      <div className="flex items-center gap-2 px-5 mb-3">
+                        {CatIcon && <CatIcon size={14} className="text-brand-navy/50" />}
+                        <h3 className="font-extrabold text-brand-navy text-sm tracking-wide">{cat}</h3>
+                        <span className="text-[10px] text-brand-navy/40 font-semibold">{stores.length}</span>
                       </div>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); if (!joined) handleJoinStore(store); else { onViewStore && onViewStore(store); setShowAllDeals(false); } }}
-                        disabled={isJoining}
-                        className={cn(
-                          "w-full py-1.5 rounded-xl text-[10px] font-bold transition-all active:scale-95 flex items-center justify-center gap-1 relative z-10",
-                          joined ? "bg-white/20 text-white/80" : "bg-white text-brand-navy shadow"
-                        )}
+
+                      {/* Horizontal slider */}
+                      <div
+                        className="flex gap-3 overflow-x-auto pl-5 pr-5 pb-1"
+                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                       >
-                        {isJoining
-                          ? <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}><Sparkles size={11} /></motion.div>
-                          : joined ? <><UserCheck size={11} /> Joined</> : <><Plus size={11} /> Join</>}
-                      </button>
+                        {stores.map((store, i) => {
+                          const joined = userCards.some(c => c.store_id === store.id && !c.isArchived);
+                          const isJoining = joiningStoreId === store.id;
+                          const dist = storeDistances.get(store.id);
+                          const distLabel = dist != null
+                            ? dist < 1 ? `${Math.round(dist * 1000)}m away` : `${dist.toFixed(1)}km away`
+                            : null;
+                          const topReward = store.rewardTiers && store.rewardTiers.length > 0
+                            ? store.rewardTiers[store.rewardTiers.length - 1].reward
+                            : store.reward || null;
+
+                          return (
+                            <motion.div
+                              key={store.id}
+                              initial={{ opacity: 0, y: 8 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: i * 0.05 }}
+                              className="shrink-0 rounded-[1.5rem] overflow-hidden flex flex-col cursor-pointer active:scale-[0.97] transition-transform shadow-sm bg-white"
+                              style={{ width: '148px' }}
+                              onClick={() => { onViewStore && onViewStore(store); setShowAllDeals(false); }}
+                            >
+                              {/* Cover image */}
+                              <div className="relative overflow-hidden bg-brand-navy/5" style={{ height: '110px' }}>
+                                {store.coverUrl
+                                  ? <img src={store.coverUrl} alt="" className="w-full h-full object-cover" />
+                                  : store.logoUrl
+                                    ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
+                                    : <div className="w-full h-full flex items-center justify-center"><Building2 size={28} className="text-brand-navy/20" /></div>}
+                                {store.isVerified && (
+                                  <div className="absolute top-2 right-2 w-5 h-5 bg-white/90 rounded-full flex items-center justify-center shadow-sm">
+                                    <Sparkles size={9} className="text-brand-gold" />
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* White info strip */}
+                              <div className="px-3 py-2.5 flex flex-col gap-0.5">
+                                <p className="font-extrabold text-brand-navy text-[11px] leading-snug line-clamp-2">
+                                  {topReward ?? `${store.stamps_required_for_reward} stamp reward`}
+                                </p>
+                                <p className="text-brand-navy/45 text-[9px] font-medium line-clamp-1">{store.name}</p>
+                                {distLabel && (
+                                  <p className="text-brand-gold text-[9px] font-semibold mt-0.5 flex items-center gap-0.5">
+                                    <MapPin size={8} />
+                                    {distLabel}
+                                  </p>
+                                )}
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); if (!joined) handleJoinStore(store); else { onViewStore && onViewStore(store); setShowAllDeals(false); } }}
+                                  disabled={isJoining}
+                                  className={cn(
+                                    "w-full mt-1.5 py-1.5 rounded-xl text-[10px] font-bold transition-all active:scale-95 flex items-center justify-center gap-1",
+                                    joined ? "bg-brand-navy/8 text-brand-navy/60" : "gradient-logo-blue text-white shadow-sm"
+                                  )}
+                                >
+                                  {isJoining
+                                    ? <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}><Sparkles size={10} /></motion.div>
+                                    : joined ? <><UserCheck size={10} /> Joined</> : <><Plus size={10} /> Join</>}
+                                </button>
+                              </div>
+                            </motion.div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </motion.div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
 
     {/* Savings leaderboard modal */}
