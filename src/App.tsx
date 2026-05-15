@@ -1862,9 +1862,15 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
             </div>
           )}
           <button
+            onClick={() => reset('phone')}
+            className="w-full bg-white text-brand-navy font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg"
+          >
+            <Phone size={18} /> Continue with Phone
+          </button>
+          <button
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="w-full bg-white text-brand-navy font-bold py-4 rounded-2xl flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg disabled:opacity-60"
+            className="w-full bg-white/15 backdrop-blur-sm text-white font-bold py-4 rounded-2xl hover:bg-white/25 transition-all border border-white/20 flex items-center justify-center gap-3 disabled:opacity-60"
           >
             <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="" />
             Continue with Google
@@ -1874,12 +1880,6 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
             className="w-full bg-white/15 backdrop-blur-sm text-white font-bold py-4 rounded-2xl hover:bg-white/25 transition-all border border-white/20"
           >
             Create Account
-          </button>
-          <button
-            onClick={() => reset('phone')}
-            className="w-full bg-white/15 backdrop-blur-sm text-white font-bold py-4 rounded-2xl hover:bg-white/25 transition-all border border-white/20 flex items-center justify-center gap-2"
-          >
-            <Phone size={18} /> Continue with Phone
           </button>
           <button
             onClick={() => reset('signin')}
