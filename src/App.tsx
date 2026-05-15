@@ -24225,7 +24225,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
           </div>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="-mx-6 divide-y divide-brand-navy/8">
           {userPosts.map(post => (
             <FeedPostCard
               key={post.id}
