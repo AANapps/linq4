@@ -488,7 +488,8 @@ interface GlobalPost {
   toName?: string;
   toPhoto?: string;
   content: string;
-  postType: 'post' | 'poll' | 'review';
+  postType: 'post' | 'poll' | 'review' | 'activity';
+  activityEmoji?: string;
   rating?: number;
   storeReviewId?: string;
   pollOptions?: { text: string }[];
@@ -499,6 +500,23 @@ interface GlobalPost {
 }
 
 const ADMIN_EMAIL = 'info@adastranetwork.co.uk';
+
+async function postActivity(uid: string, name: string, photo: string, content: string, emoji: string) {
+  try {
+    await addDoc(collection(db, 'global_posts'), {
+      authorUid: uid,
+      authorName: name,
+      authorPhoto: photo,
+      authorRole: 'consumer',
+      postType: 'activity',
+      activityEmoji: emoji,
+      content,
+      likesCount: 0,
+      likedBy: [],
+      createdAt: serverTimestamp(),
+    });
+  } catch { /* non-critical */ }
+}
 
 type StickerTier = 'brown' | 'lightblue' | 'red' | 'blue' | 'gold';
 
@@ -6868,7 +6886,12 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
 
     const newBadges = earned.filter(b => !seenBadgeIdsRef.current.has(b.id));
     if (newBadges.length > 0) {
-      newBadges.forEach(b => seenBadgeIdsRef.current.add(b.id));
+      newBadges.forEach(b => {
+        seenBadgeIdsRef.current.add(b.id);
+        const name = profile?.name || user.displayName || 'Someone';
+        const photo = profile?.photoURL || user.photoURL || '';
+        postActivity(user.uid, name, photo, `${name} earned the "${b.name}" badge!`, b.icon || '🏅');
+      });
       localStorage.setItem(`seenBadges_${user.uid}`, JSON.stringify([...seenBadgeIdsRef.current]));
       setBadgeNotifQueue(q => [...q, ...newBadges]);
     }
@@ -7814,6 +7837,10 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
     const newStickers = await issueUserStickers(user.uid, userName, 3).catch(() => [] as CollectibleSticker[]);
     issueStickersToCard(user.uid, userName, 3).catch(console.error);
     updateChallengeProgress(user.uid, store.id, 1).catch(console.error);
+    newStickers.forEach(s => {
+      if (s.tier === 'gold') postActivity(user.uid, userName, profile?.photoURL || user.photoURL || '', `${userName} pulled a Legendary card! 🏆`, '🏆');
+      else if (s.tier === 'blue') postActivity(user.uid, userName, profile?.photoURL || user.photoURL || '', `${userName} pulled an Epic card! 🔥`, '🔥');
+    });
 
     // Also issue membership points if store has a visit-type membership card
     if (store.membershipEnabled && store.membershipType === 'visit') {
@@ -12320,6 +12347,10 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
     }).catch(console.error);
     updateDoc(doc(db, 'users', uid), { totalRedeemed: increment(numTiers) }).catch(console.error);
     updateDoc(doc(db, 'stores', card.store_id), { rewardsGiven: increment(numTiers) }).catch(console.error);
+    const userName = auth.currentUser?.displayName || 'Someone';
+    const userPhoto = auth.currentUser?.photoURL || '';
+    const rewardLabel = store?.rewardTiers?.length ? store.rewardTiers[store.rewardTiers.length - 1].reward : (store?.reward || 'a reward');
+    postActivity(uid, userName, userPhoto, `${userName} just got ${rewardLabel} at ${store?.name || 'a store'}!`, '🎁');
   };
 
   const handleDelete = async (e: React.MouseEvent) => {
@@ -12711,6 +12742,8 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
         redeemed_at: serverTimestamp(),
       });
       setRedeemSuccess(true);
+      const u = auth.currentUser;
+      if (u) postActivity(u.uid, u.displayName || 'Someone', u.photoURL || '', `${u.displayName || 'Someone'} redeemed ${pointsToUse} points at ${store?.name || 'a store'}!`, '⭐');
       setTimeout(() => {
         setRedeemSuccess(false);
         setShowRedeemSheet(false);
@@ -18712,14 +18745,33 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
 
   const visibleComments = showAllComments ? comments : comments.slice(0, 2);
 
+  // Activity posts render as a compact status line
+  if (post.postType === 'activity') {
+    return (
+      <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3 py-3">
+        <div className="w-9 h-9 rounded-full overflow-hidden border border-black/5 bg-indigo-50 flex items-center justify-center shrink-0">
+          <PixelAvatar config={authorProfile?.avatar} uid={post.authorUid} size={36} view="head" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[13px] font-semibold text-gray-800 leading-snug">
+            <span className="mr-1">{post.activityEmoji}</span>{post.content}
+          </p>
+          <p className="text-[10px] text-gray-400 font-medium mt-0.5">
+            {post.createdAt?.toDate ? format(post.createdAt.toDate(), 'MMM d · h:mm a') : 'Just now'}
+          </p>
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-[2rem] overflow-hidden border border-black/5 shadow-sm"
+      className="py-4"
     >
       {/* Post header */}
-      <div className="px-5 pt-5 pb-3 space-y-3">
+      <div className="space-y-2.5">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full overflow-hidden border border-black/5 cursor-pointer shrink-0 bg-indigo-50 flex items-center justify-center" onClick={handleAvatarClick}>
             {post.authorRole === 'vendor'
@@ -18863,7 +18915,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
           </div>
         )}
         {post.content && (
-          <p className="text-sm text-brand-navy leading-relaxed">{post.content}</p>
+          <p className="text-[14px] font-semibold text-gray-800 leading-relaxed">{post.content}</p>
         )}
 
         {post.postType === 'poll' && post.pollOptions && (
@@ -18905,13 +18957,13 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
       </div>
 
       {/* Interactions bar */}
-      <div className="px-5 pb-3 border-t border-black/5 pt-3">
+      <div className="pt-2.5 border-t border-gray-100">
         <div className="flex items-center gap-4">
           <button
             onClick={() => onLike(post)}
             className={cn(
               "flex items-center gap-1.5 transition-all active:scale-95 text-sm font-bold",
-              isLiked ? "text-brand-gold" : "text-brand-navy/72 hover:text-brand-gold"
+              isLiked ? "text-brand-gold" : "text-gray-400 hover:text-brand-gold"
             )}
           >
             <Heart size={17} className={cn("transition-all", isLiked ? "fill-brand-gold scale-110" : "")} />
@@ -18920,14 +18972,14 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
 
           <button
             onClick={() => setShowAllComments(v => !v)}
-            className="flex items-center gap-1.5 text-sm font-bold text-brand-navy/72 hover:text-brand-navy/75 transition-colors"
+            className="flex items-center gap-1.5 text-sm font-bold text-gray-400 hover:text-gray-600 transition-colors"
           >
             <MessageCircle size={17} />
             <span>{comments.length}</span>
           </button>
 
           {post.postType === 'poll' && (
-            <div className="flex items-center gap-1.5 text-brand-navy/72 text-sm font-bold">
+            <div className="flex items-center gap-1.5 text-gray-400 text-sm font-bold">
               <BarChart2 size={17} />
               <span>{totalVotes}</span>
             </div>
@@ -18937,7 +18989,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
 
       {/* Comments thread — toggled by the chat icon */}
       {(comments.length > 0 || showAllComments) && (
-        <div className="px-5 pb-3 border-t border-black/5 pt-3 space-y-3">
+        <div className="pt-3 border-t border-gray-100 space-y-3">
           {visibleComments.map(comment => {
             const commentLiked = currentUser ? (comment.likedBy || []).includes(currentUser.uid) : false;
             return (
@@ -18986,7 +19038,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
 
       {/* Comment input — always visible for logged-in users */}
       {currentUser && (
-        <div className="px-5 pb-4 border-t border-black/5 pt-3 flex gap-2">
+        <div className="pt-3 border-t border-gray-100 flex gap-2">
           <div className="w-7 h-7 rounded-full overflow-hidden border border-black/5 shrink-0 bg-indigo-50 flex items-center justify-center">
             <LivePixelAvatar uid={currentUser.uid} size={28} view="head" />
           </div>
@@ -20158,7 +20210,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
 
       {activeSubTab === 'following' ? (
         loading ? <FeedLoadingSpinner /> : (
-          <div className="space-y-4">
+          <div className="divide-y divide-gray-100">
             {followingFeed.map((item) =>
               !item._type
                 ? <FeedPostCard key={`gp-${item.id}`} post={item as GlobalPost} currentUser={currentUser} currentProfile={currentProfile} onViewUser={onViewUser} onViewStore={onViewStore} onLike={handleLike} onVote={handleVote} onDelete={async (p) => { await deleteDoc(doc(db, 'global_posts', p.id)); }} />
@@ -20520,7 +20572,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
 
           {/* Main mixed feed */}
           {loading ? <FeedLoadingSpinner /> : (
-            <div className="space-y-4">
+            <div className="divide-y divide-gray-100 bg-white rounded-2xl px-4">
               {displayFeed.map((item) =>
                 !item._type
                   ? <FeedPostCard key={`gp-${item.id}`} post={item as GlobalPost} currentUser={currentUser} currentProfile={currentProfile} onViewUser={onViewUser} onViewStore={onViewStore} onLike={handleLike} onVote={handleVote} onDelete={async (p) => { await deleteDoc(doc(db, 'global_posts', p.id)); }} />
