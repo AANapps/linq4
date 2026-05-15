@@ -16825,7 +16825,7 @@ function SubCardBuilder({ store }: { store: StoreProfile | null }) {
   );
 }
 
-const HEX_CLIP = 'polygon(43% 4%, 57% 4%, 93% 21%, 100% 33%, 100% 67%, 93% 79%, 57% 96%, 43% 96%, 7% 79%, 0% 67%, 0% 33%, 7% 21%)';
+const HEX_CLIP = 'polygon(46% 2%, 54% 2%, 96% 23%, 100% 29%, 100% 71%, 96% 77%, 54% 98%, 46% 98%, 4% 77%, 0% 71%, 0% 29%, 4% 23%)';
 
 function HexBadge({ badge, size = 56 }: { badge: AppBadge; size?: number }) {
   const isLinqle = badge.metric === 'linqle_wins';
