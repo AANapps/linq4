@@ -19560,6 +19560,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
   const [followingStoreIds, setFollowingStoreIds] = useState<Set<string>>(new Set());
   const [hotStores, setHotStores] = useState<StoreProfile[]>([]);
   const [storeDistances, setStoreDistances] = useState<Map<string, number>>(new Map());
+  const [locationSorting, setLocationSorting] = useState(false);
   const [joiningStoreId, setJoiningStoreId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -19737,6 +19738,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
     // Sort stores so nearby ones appear first; always include all stores so the
     // slider is never empty just because nothing is within the proximity radius.
     let cancelled = false;
+    setLocationSorting(true);
     (async () => {
       const nearby: StoreProfile[] = [];
       const rest: StoreProfile[] = [];
@@ -19760,9 +19762,9 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
           rest.push(store);
         }
       }
-      if (!cancelled) { setHotStores([...nearby, ...rest]); setStoreDistances(distances); }
+      if (!cancelled) { setHotStores([...nearby, ...rest]); setStoreDistances(distances); setLocationSorting(false); }
     })();
-    return () => { cancelled = true; };
+    return () => { cancelled = true; setLocationSorting(false); };
   }, [allStores, currentProfile?.location]);
 
   const handleJoinStore = async (store: StoreProfile) => {
@@ -19976,6 +19978,41 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
         )
       ) : (
         <>
+          {/* Nearby search banner */}
+          <AnimatePresence>
+            {locationSorting && (
+              <motion.div
+                key="nearby-banner"
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.3 }}
+                className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-brand-navy/5 border border-brand-navy/10"
+              >
+                <motion.div
+                  animate={{ scale: [1, 1.25, 1] }}
+                  transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+                >
+                  <MapPin size={14} className="text-brand-gold shrink-0" />
+                </motion.div>
+                <p className="text-[12px] font-semibold text-brand-navy/70 tracking-wide">Searching for nearby vendors…</p>
+                <motion.div
+                  className="ml-auto flex gap-0.5"
+                  initial={false}
+                >
+                  {[0, 1, 2].map(i => (
+                    <motion.span
+                      key={i}
+                      className="w-1 h-1 rounded-full bg-brand-gold/60"
+                      animate={{ opacity: [0.3, 1, 0.3] }}
+                      transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
+                    />
+                  ))}
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Total savings widget */}
           {(() => {
             const saved = currentProfile?.totalSaved ?? 0;
