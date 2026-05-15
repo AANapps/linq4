@@ -4194,9 +4194,9 @@ function BadgesAdminPanel({ onClose }: { onClose: () => void }) {
 
             {/* Preview */}
             <div className="flex justify-center">
-              <div style={{ width: 80, height: 80, clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', background: borderColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ width: 68, height: 68, clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', background: `linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.52) 100%), ${color}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span className="text-4xl leading-none">{icon}</span>
+              <div style={{ width: 80, height: 80, clipPath: HEX_CLIP, background: borderColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 68, height: 68, clipPath: HEX_CLIP, background: `linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.28) 100%), ${color}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: 40, lineHeight: 1 }}>{icon}</span>
                 </div>
               </div>
             </div>
@@ -16825,7 +16825,7 @@ function SubCardBuilder({ store }: { store: StoreProfile | null }) {
   );
 }
 
-const HEX_CLIP = 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)';
+const HEX_CLIP = 'polygon(43% 4%, 57% 4%, 93% 21%, 100% 33%, 100% 67%, 93% 79%, 57% 96%, 43% 96%, 7% 79%, 0% 67%, 0% 33%, 7% 21%)';
 
 function HexBadge({ badge, size = 56 }: { badge: AppBadge; size?: number }) {
   const isLinqle = badge.metric === 'linqle_wins';
@@ -16840,12 +16840,12 @@ function HexBadge({ badge, size = 56 }: { badge: AppBadge; size?: number }) {
         clipPath: HEX_CLIP,
         background: isLinqle
           ? 'linear-gradient(180deg, #1a5c32 0%, #051209 100%)'
-          : `linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.52) 100%), ${fill}`,
+          : `linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.28) 100%), ${fill}`,
         display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
       }}>
         {isLinqle
-          ? <MatrixScramble target={scrambleTarget} className="font-black text-green-300 font-mono tracking-tighter" style={{ fontSize: Math.round(size * 0.28) } as React.CSSProperties} />
-          : <span style={{ fontSize: Math.round(size * 0.42), lineHeight: 1 }}>{badge.icon}</span>
+          ? <MatrixScramble target={scrambleTarget} className="font-black text-green-300 font-mono tracking-tighter" style={{ fontSize: Math.round(size * 0.32) } as React.CSSProperties} />
+          : <span style={{ fontSize: Math.round(size * 0.50), lineHeight: 1 }}>{badge.icon}</span>
         }
       </div>
     </div>
