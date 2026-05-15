@@ -589,11 +589,23 @@ function allSetsWon(revealedStickers: CollectibleSticker[]): boolean {
   return STICKER_ORDER.every(tier => tierSetsCompleted(revealedStickers, tier) >= STICKER_CONFIG[tier].variants.length);
 }
 
+interface CollectibleCardDef {
+  id: string;
+  name: string;
+  imageUrl: string;
+  tier: StickerTier;
+  probability: number; // relative weight within tier
+  createdAt?: any;
+}
+
 interface CollectibleSticker {
   id: string;
   tier: StickerTier;
   variant: number; // index into STICKER_CONFIG[tier].variants
   earnedAt: string;
+  cardDefId?: string;
+  cardImageUrl?: string;
+  cardName?: string;
 }
 
 interface StickerCardDoc {
@@ -808,7 +820,7 @@ export default function App() {
   const [pendingNFCStoreId, setPendingNFCStoreId] = useState<string | null>(null);
   const [userCards, setUserCards] = useState<Card[]>([]);
   const [showSettings, setShowSettings] = useState(false);
-  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges' | 'stores' | 'users' | 'posts' | 'offers' | 'linqle' | 'daily-vote'>(null);
+  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges' | 'stores' | 'users' | 'posts' | 'offers' | 'linqle' | 'daily-vote' | 'cards'>(null);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -1627,6 +1639,7 @@ export default function App() {
             onOpenOffers={() => setAdminView('offers')}
             onOpenLinqle={() => setAdminView('linqle')}
             onOpenDailyVote={() => setAdminView('daily-vote')}
+            onOpenCards={() => setAdminView('cards')}
           />
         )}
         {adminView === 'challenges' && (
@@ -1652,6 +1665,9 @@ export default function App() {
         )}
         {adminView === 'daily-vote' && (
           <DailyVoteAdmin onClose={() => setAdminView('menu')} />
+        )}
+        {adminView === 'cards' && (
+          <CollectibleCardsAdminPanel onClose={() => setAdminView('menu')} />
         )}
       </AnimatePresence>
 
@@ -2912,9 +2928,36 @@ async function issueStickersToCard(customerUid: string, userName: string, qty: n
 // --- Global user sticker collection (every stamp always issues 3 stickers here) ---
 
 async function issueUserStickers(uid: string, userName: string, qty: number): Promise<CollectibleSticker[]> {
+  // Load card defs from Firestore grouped by tier
+  const cardDefsSnap = await getDocs(collection(db, 'collectible_cards')).catch(() => null);
+  const cardDefsByTier = new Map<StickerTier, CollectibleCardDef[]>();
+  if (cardDefsSnap) {
+    cardDefsSnap.docs.forEach(d => {
+      const def = { id: d.id, ...d.data() } as CollectibleCardDef;
+      if (!cardDefsByTier.has(def.tier)) cardDefsByTier.set(def.tier, []);
+      cardDefsByTier.get(def.tier)!.push(def);
+    });
+  }
+
+  const rollCardDef = (tier: StickerTier): CollectibleCardDef | null => {
+    const defs = cardDefsByTier.get(tier);
+    if (!defs || defs.length === 0) return null;
+    const total = defs.reduce((s, d) => s + (d.probability || 1), 0);
+    let r = Math.random() * total;
+    for (const def of defs) { r -= (def.probability || 1); if (r <= 0) return def; }
+    return defs[defs.length - 1];
+  };
+
   const newStickers: CollectibleSticker[] = Array.from({ length: qty }, () => {
     const tier = rollStickerTier();
-    return { id: Math.random().toString(36).slice(2), tier, variant: rollStickerVariant(tier), earnedAt: new Date().toISOString() };
+    const def = rollCardDef(tier);
+    return {
+      id: Math.random().toString(36).slice(2),
+      tier,
+      variant: rollStickerVariant(tier),
+      earnedAt: new Date().toISOString(),
+      ...(def ? { cardDefId: def.id, cardImageUrl: def.imageUrl, cardName: def.name } : {}),
+    };
   });
   const ref = doc(db, 'user_stickers', uid);
   const snap = await getDoc(ref);
@@ -2978,7 +3021,7 @@ function StickerCard({ sticker, isRevealed, onReveal, size = 'md' }: {
           <span style={{ fontSize: 30, fontWeight: 900, color: '#94A3B8' }}>?</span>
           {!localRevealed && <span style={{ fontSize: 8, color: '#94A3B8', fontWeight: 600 }}>Tap to reveal</span>}
         </div>
-        {/* Back — Emoji card */}
+        {/* Back — card reveal */}
         <div style={{
           position: 'absolute', inset: 0, backfaceVisibility: 'hidden',
           transform: 'rotateY(180deg)',
@@ -2987,14 +3030,15 @@ function StickerCard({ sticker, isRevealed, onReveal, size = 'md' }: {
           boxShadow: `0 4px 20px ${cfg.color}33`,
           display: 'flex', flexDirection: 'column', overflow: 'hidden',
         }}>
-          <div style={{ background: cfg.solid, height: '60%', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontSize: size === 'sm' ? 28 : 36, lineHeight: 1 }}>
-              {cfg.variants[sticker.variant ?? 0]?.emoji ?? cfg.variants[0].emoji}
-            </span>
+          <div style={{ background: cfg.solid, height: '60%', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+            {sticker.cardImageUrl
+              ? <img src={sticker.cardImageUrl} alt={sticker.cardName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : <span style={{ fontSize: size === 'sm' ? 28 : 36, lineHeight: 1 }}>{cfg.variants[sticker.variant ?? 0]?.emoji ?? cfg.variants[0].emoji}</span>
+            }
           </div>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, padding: '2px 4px' }}>
             <span style={{ fontSize: size === 'sm' ? 7 : 8, fontWeight: 900, color: cfg.color, textAlign: 'center', lineHeight: 1.1 }}>
-              {cfg.variants[sticker.variant ?? 0]?.name ?? cfg.variants[0].name}
+              {sticker.cardName ?? cfg.variants[sticker.variant ?? 0]?.name ?? cfg.variants[0].name}
             </span>
             <span style={{ fontSize: size === 'sm' ? 6 : 7, color: cfg.color, opacity: 0.65, fontWeight: 700 }}>{cfg.label}</span>
           </div>
@@ -3537,14 +3581,15 @@ function MysteryRevealCard({ sticker, isRevealed, onReveal }: {
               initial={{ opacity: 0.9 }} animate={{ opacity: 0 }} transition={{ duration: 0.38 }}
             />
           )}
-          <div style={{ background: cfg.solid, height: '60%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontSize: 58, lineHeight: 1 }}>
-              {cfg.variants[sticker.variant ?? 0]?.emoji ?? cfg.variants[0].emoji}
-            </span>
+          <div style={{ background: cfg.solid, height: '60%', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+            {sticker.cardImageUrl
+              ? <img src={sticker.cardImageUrl} alt={sticker.cardName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : <span style={{ fontSize: 58, lineHeight: 1 }}>{cfg.variants[sticker.variant ?? 0]?.emoji ?? cfg.variants[0].emoji}</span>
+            }
           </div>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, padding: '4px 8px' }}>
             <span style={{ fontSize: 11, fontWeight: 900, color: cfg.color, textAlign: 'center' }}>
-              {cfg.variants[sticker.variant ?? 0]?.name ?? cfg.variants[0].name}
+              {sticker.cardName ?? cfg.variants[sticker.variant ?? 0]?.name ?? cfg.variants[0].name}
             </span>
             <span style={{ fontSize: 9, fontWeight: 700, color: cfg.color, opacity: 0.65 }}>{cfg.label} · {cfg.chance}</span>
           </div>
@@ -4595,7 +4640,191 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
-function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts, onOpenOffers, onOpenLinqle, onOpenDailyVote }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void; onOpenOffers: () => void; onOpenLinqle: () => void; onOpenDailyVote: () => void }) {
+const MAX_CARDS_PER_TIER: Record<StickerTier, number> = { brown: 3, lightblue: 3, red: 3, blue: 3, gold: 2 };
+
+function CollectibleCardsAdminPanel({ onClose }: { onClose: () => void }) {
+  const [cardDefs, setCardDefs] = useState<CollectibleCardDef[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTier, setActiveTier] = useState<StickerTier>('brown');
+  const [uploading, setUploading] = useState(false);
+  const [name, setName] = useState('');
+  const [probability, setProbability] = useState(1);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'collectible_cards'), snap => {
+      setCardDefs(snap.docs.map(d => ({ id: d.id, ...d.data() } as CollectibleCardDef)));
+      setLoading(false);
+    });
+    return unsub;
+  }, []);
+
+  const tierCards = cardDefs.filter(c => c.tier === activeTier);
+  const maxForTier = MAX_CARDS_PER_TIER[activeTier];
+  const canAdd = tierCards.length < maxForTier;
+  const cfg = STICKER_CONFIG[activeTier];
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]; if (!f) return;
+    setImageFile(f);
+    setImagePreview(URL.createObjectURL(f));
+  };
+
+  const handleAdd = async () => {
+    if (!name.trim() || !imageFile) return;
+    setSaving(true);
+    try {
+      const blob = await compressImage(imageFile, 800);
+      const path = `collectible_cards/${activeTier}_${Date.now()}.webp`;
+      const snap2 = await uploadBytes(storageRef(storage, path), blob);
+      const imageUrl = await getDownloadURL(snap2.ref);
+      await addDoc(collection(db, 'collectible_cards'), {
+        name: name.trim(), imageUrl, tier: activeTier, probability, createdAt: serverTimestamp(),
+      });
+      setName(''); setProbability(1); setImageFile(null); setImagePreview('');
+      if (fileRef.current) fileRef.current.value = '';
+    } catch (e) { console.error(e); }
+    setSaving(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    await deleteDoc(doc(db, 'collectible_cards', id)).catch(console.error);
+    setDeleteConfirm(null);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex flex-col max-w-md mx-auto"
+    >
+      <div className="flex-1 overflow-y-auto bg-brand-bg">
+        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm px-5 pt-5 pb-4 border-b border-black/5 z-10">
+          <div className="flex items-center gap-3">
+            <button onClick={onClose} className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm active:scale-95 transition-all">
+              <ArrowLeft size={18} className="text-brand-navy/75" />
+            </button>
+            <div>
+              <h2 className="font-display text-xl font-bold text-brand-navy">Collectible Cards</h2>
+              <p className="text-xs text-brand-navy/60">Upload card images per tier</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-5 space-y-5">
+          {/* Tier tabs */}
+          <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+            {STICKER_ORDER.map(t => {
+              const tcfg = STICKER_CONFIG[t];
+              const count = cardDefs.filter(c => c.tier === t).length;
+              const max = MAX_CARDS_PER_TIER[t];
+              return (
+                <button key={t} onClick={() => setActiveTier(t)}
+                  className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all"
+                  style={activeTier === t
+                    ? { background: tcfg.solid, color: 'white', borderColor: tcfg.solid }
+                    : { background: tcfg.bg, color: tcfg.color, borderColor: tcfg.border }
+                  }>
+                  {tcfg.label} {count}/{max}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Existing cards for this tier */}
+          {loading ? (
+            <p className="text-xs text-brand-navy/60 text-center py-4">Loading…</p>
+          ) : tierCards.length === 0 ? (
+            <div className="rounded-2xl bg-brand-navy/5 p-6 text-center">
+              <p className="text-sm font-bold text-brand-navy/60">No cards yet for {cfg.label}</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {tierCards.map(card => (
+                <div key={card.id} className="flex items-center gap-3 bg-white rounded-2xl p-3 border border-black/5 shadow-sm">
+                  <img src={card.imageUrl} alt={card.name}
+                    className="w-14 h-14 rounded-xl object-cover flex-shrink-0"
+                    style={{ border: `2px solid ${cfg.border}` }} />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-sm text-brand-navy truncate">{card.name}</p>
+                    <p className="text-xs text-brand-navy/60">{cfg.label} · weight {card.probability}</p>
+                  </div>
+                  {deleteConfirm === card.id ? (
+                    <div className="flex gap-2 flex-shrink-0">
+                      <button onClick={() => handleDelete(card.id)} className="px-2 py-1 rounded-xl bg-red-500 text-white text-xs font-bold">Delete</button>
+                      <button onClick={() => setDeleteConfirm(null)} className="px-2 py-1 rounded-xl bg-brand-navy/10 text-brand-navy text-xs font-bold">Cancel</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setDeleteConfirm(card.id)} className="p-2 rounded-xl bg-red-50 active:scale-90 transition-all flex-shrink-0">
+                      <Trash2 size={14} className="text-red-500" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add new card */}
+          {canAdd ? (
+            <div className="bg-white rounded-3xl border border-black/5 shadow-sm p-5 space-y-4">
+              <p className="font-bold text-sm text-brand-navy">Add {cfg.label} card ({tierCards.length}/{maxForTier})</p>
+
+              {/* Image picker */}
+              <div>
+                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                <button onClick={() => fileRef.current?.click()}
+                  className="w-full h-32 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 active:scale-[0.98] transition-all"
+                  style={{ borderColor: imagePreview ? cfg.border : '#CBD5E1', background: imagePreview ? 'transparent' : cfg.bg }}>
+                  {imagePreview
+                    ? <img src={imagePreview} alt="" className="w-full h-full object-cover rounded-2xl" />
+                    : <>
+                        <Image size={22} className="text-brand-navy/40" />
+                        <span className="text-xs text-brand-navy/60 font-medium">Tap to upload image</span>
+                      </>
+                  }
+                </button>
+              </div>
+
+              {/* Name */}
+              <div>
+                <label className="text-[10px] font-bold text-brand-navy/60 uppercase tracking-widest mb-1 block">Card Name</label>
+                <input value={name} onChange={e => setName(e.target.value)}
+                  placeholder="e.g. Golden Phoenix"
+                  className="w-full px-4 py-3 rounded-2xl bg-brand-bg border border-black/8 text-sm font-medium text-brand-navy placeholder:text-brand-navy/35 outline-none" />
+              </div>
+
+              {/* Probability weight */}
+              <div>
+                <label className="text-[10px] font-bold text-brand-navy/60 uppercase tracking-widest mb-1 block">Probability Weight (relative)</label>
+                <div className="flex items-center gap-3">
+                  <input type="range" min={1} max={10} step={1} value={probability} onChange={e => setProbability(Number(e.target.value))} className="flex-1" />
+                  <span className="font-black text-brand-navy text-sm w-6 text-center">{probability}</span>
+                </div>
+                <p className="text-[10px] text-brand-navy/50 mt-1">Higher weight = more likely to be issued within this tier</p>
+              </div>
+
+              <button onClick={handleAdd} disabled={saving || !name.trim() || !imageFile}
+                className="w-full py-3.5 rounded-2xl font-bold text-sm text-white transition-all active:scale-[0.98] disabled:opacity-40"
+                style={{ background: cfg.solid }}>
+                {saving ? 'Saving…' : `Add ${cfg.label} Card`}
+              </button>
+            </div>
+          ) : (
+            <div className="bg-amber-50 rounded-2xl border border-amber-200 p-4 text-center">
+              <p className="text-sm font-bold text-amber-700">Max {maxForTier} cards for {cfg.label} tier reached</p>
+              <p className="text-xs text-amber-600 mt-0.5">Delete one to add a new card</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts, onOpenOffers, onOpenLinqle, onOpenDailyVote, onOpenCards }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void; onOpenOffers: () => void; onOpenLinqle: () => void; onOpenDailyVote: () => void; onOpenCards: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -4724,6 +4953,20 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores,
             <div>
               <p className="font-bold text-brand-navy text-sm">Daily Vote</p>
               <p className="text-[11px] text-brand-navy/75 mt-0.5">Create today's poll question</p>
+            </div>
+          </motion.button>
+
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={onOpenCards}
+            className="rounded-[2rem] bg-white border border-black/5 shadow-sm p-6 flex flex-col items-start gap-3 text-left active:bg-brand-navy/5 transition-colors"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-orange-100 flex items-center justify-center">
+              <span className="text-xl">🃏</span>
+            </div>
+            <div>
+              <p className="font-bold text-brand-navy text-sm">Cards</p>
+              <p className="text-[11px] text-brand-navy/75 mt-0.5">Upload collectible card images</p>
             </div>
           </motion.button>
         </div>
@@ -16708,15 +16951,15 @@ function StickerListPanel({ uid }: { uid: string }) {
     return unsub;
   }, [uid]);
 
-  // Group by tier+variant, count duplicates
+  // Group by cardDefId (if present) or tier+variant, count duplicates
   const grouped = (() => {
-    const map = new Map<string, { bg: string; border: string; emoji: string; name: string; count: number }>();
+    const map = new Map<string, { bg: string; border: string; emoji: string; name: string; count: number; imageUrl?: string }>();
     (stickers || []).forEach(s => {
-      const key = `${s.tier}-${s.variant ?? 0}`;
+      const key = s.cardDefId ? `card-${s.cardDefId}` : `${s.tier}-${s.variant ?? 0}`;
       if (!map.has(key)) {
         const cfg = STICKER_CONFIG[s.tier];
         const v = cfg.variants[s.variant ?? 0];
-        map.set(key, { bg: cfg.bg, border: cfg.border, emoji: v?.emoji ?? '?', name: v?.name ?? cfg.label, count: 0 });
+        map.set(key, { bg: cfg.bg, border: cfg.border, emoji: v?.emoji ?? '?', name: s.cardName ?? v?.name ?? cfg.label, count: 0, imageUrl: s.cardImageUrl });
       }
       map.get(key)!.count++;
     });
@@ -16737,10 +16980,13 @@ function StickerListPanel({ uid }: { uid: string }) {
             <button key={i} onClick={() => setShowAll(true)}
               className="aspect-square rounded-[1.1rem] flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-transform shadow-md overflow-hidden relative"
               style={{ background: g.bg, border: `1.5px solid ${g.border}` }}>
-              <span className="text-2xl leading-none">{g.emoji}</span>
-              <span className="text-[6px] font-bold text-brand-navy/80 text-center px-1 leading-tight line-clamp-2 max-w-full">{g.name}</span>
+              {g.imageUrl
+                ? <img src={g.imageUrl} alt={g.name} className="w-full h-full object-cover absolute inset-0" />
+                : <span className="text-2xl leading-none">{g.emoji}</span>
+              }
+              <span className="text-[6px] font-bold text-brand-navy/80 text-center px-1 leading-tight line-clamp-2 max-w-full relative z-10" style={g.imageUrl ? { background: 'rgba(255,255,255,0.75)', borderRadius: 3, padding: '1px 3px' } : {}}>{g.name}</span>
               {g.count > 1 && (
-                <span className="absolute top-1 right-1 bg-brand-navy text-white text-[6px] font-black w-3 h-3 rounded-full flex items-center justify-center leading-none">
+                <span className="absolute top-1 right-1 bg-brand-navy text-white text-[6px] font-black w-3 h-3 rounded-full flex items-center justify-center leading-none z-10">
                   {g.count}
                 </span>
               )}
@@ -16771,11 +17017,14 @@ function StickerListPanel({ uid }: { uid: string }) {
                 <div className="grid grid-cols-4 gap-3 max-h-72 overflow-y-auto pb-1">
                   {grouped.map((g, i) => (
                     <div key={i} className="flex flex-col items-center gap-1">
-                      <div className="relative w-14 h-14 rounded-[1.1rem] flex items-center justify-center text-2xl shadow-md"
+                      <div className="relative w-14 h-14 rounded-[1.1rem] flex items-center justify-center text-2xl shadow-md overflow-hidden"
                         style={{ background: g.bg, border: `1.5px solid ${g.border}` }}>
-                        {g.emoji}
+                        {g.imageUrl
+                          ? <img src={g.imageUrl} alt={g.name} className="w-full h-full object-cover" />
+                          : g.emoji
+                        }
                         {g.count > 1 && (
-                          <span className="absolute -top-1 -right-1 bg-brand-navy text-white text-[7px] font-black w-3.5 h-3.5 rounded-full flex items-center justify-center leading-none">
+                          <span className="absolute -top-1 -right-1 bg-brand-navy text-white text-[7px] font-black w-3.5 h-3.5 rounded-full flex items-center justify-center leading-none z-10">
                             {g.count}
                           </span>
                         )}
