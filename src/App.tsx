@@ -1096,6 +1096,10 @@ export default function App() {
           setProfileCollection(inUsers ? 'users' : 'vendors');
           setProfile(data as UserProfile);
           setNeedsOnboarding(!data.onboardingComplete);
+          // Backfill phone number for phone-auth users who signed up before this field was stored
+          if (inUsers && firebaseUser.phoneNumber && !data.phone) {
+            updateDoc(doc(db, 'users', firebaseUser.uid), { phone: firebaseUser.phoneNumber }).catch(() => {});
+          }
         }
       } catch (err) {
         console.error('Auth check failed:', err);
@@ -1353,6 +1357,7 @@ export default function App() {
         photoURL: user.photoURL || '',
         role: 'consumer',
         onboardingComplete: true,
+        ...(user.phoneNumber ? { phone: user.phoneNumber } : {}),
         ...(data.gender ? { gender: data.gender } : {}),
         ...(data.birthday ? { birthday: data.birthday } : {}),
         ...(data.location ? { location: data.location } : {}),
@@ -14724,6 +14729,8 @@ function ScanUserPanel({ store, onIssue }: {
   onIssue: (handle: string, amount: string, setStatus: (s: { type: 'success' | 'error'; message: string } | null) => void, setWorking: (b: boolean) => void) => void;
 }) {
   const [handle, setHandle] = useState('');
+  const [phoneInput, setPhoneInput] = useState('');
+  const [lookupMode, setLookupMode] = useState<'handle' | 'phone'>('handle');
   const [amount, setAmount] = useState('');
   const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [working, setWorking] = useState(false);
@@ -14732,6 +14739,24 @@ function ScanUserPanel({ store, onIssue }: {
   const memType = store?.membershipType ?? 'spend';
   const isVisit = memType === 'visit';
   const pointsPerVisit = store?.membershipStampsPerVisit || 1;
+
+  const handlePhoneIssue = async () => {
+    const cleaned = phoneInput.trim();
+    if (!cleaned) { setStatus({ type: 'error', message: 'Enter a phone number' }); return; }
+    setWorking(true);
+    setStatus(null);
+    try {
+      const q = query(collection(db, 'users'), where('phone', '==', cleaned));
+      const snap = await getDocs(q);
+      if (snap.empty) { setWorking(false); setStatus({ type: 'error', message: 'No account found for that number' }); return; }
+      const h = snap.docs[0].data().handle as string;
+      if (!h) { setWorking(false); setStatus({ type: 'error', message: 'Customer has no handle — ask them to set one' }); return; }
+      onIssue(h, amount, setStatus, setWorking);
+    } catch (_err) {
+      setWorking(false);
+      setStatus({ type: 'error', message: 'Lookup failed — try again' });
+    }
+  };
 
   const handleNFCScan = async () => {
     if (!('NDEFReader' in window)) {
@@ -14809,18 +14834,49 @@ function ScanUserPanel({ store, onIssue }: {
 
       <div className="glass-card rounded-[2rem] p-6 space-y-4">
         <p className="text-xs font-bold text-brand-navy/75 uppercase tracking-widest">Or enter manually</p>
-        <div>
-          <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-2 block">Customer @handle</label>
-          <div className="flex items-center gap-3 bg-white rounded-2xl px-4 py-3 border border-brand-navy/10">
-            <Hash size={16} className="text-brand-navy/72 shrink-0" />
-            <input
-              value={handle}
-              onChange={e => { setHandle(e.target.value); setStatus(null); }}
-              placeholder="handle"
-              className="flex-1 text-sm text-brand-navy outline-none placeholder:text-brand-navy/72"
-            />
-          </div>
+
+        {/* Lookup mode toggle */}
+        <div className="flex gap-2 p-1 bg-brand-navy/5 rounded-2xl">
+          {(['handle', 'phone'] as const).map(m => (
+            <button
+              key={m}
+              onClick={() => { setLookupMode(m); setStatus(null); }}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${lookupMode === m ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/50'}`}
+            >
+              {m === 'handle' ? <><Hash size={13} /> Handle</> : <><Phone size={13} /> Phone</>}
+            </button>
+          ))}
         </div>
+
+        {lookupMode === 'handle' ? (
+          <div>
+            <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-2 block">Customer @handle</label>
+            <div className="flex items-center gap-3 bg-white rounded-2xl px-4 py-3 border border-brand-navy/10">
+              <Hash size={16} className="text-brand-navy/72 shrink-0" />
+              <input
+                value={handle}
+                onChange={e => { setHandle(e.target.value); setStatus(null); }}
+                placeholder="handle"
+                className="flex-1 text-sm text-brand-navy outline-none placeholder:text-brand-navy/72"
+              />
+            </div>
+          </div>
+        ) : (
+          <div>
+            <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-2 block">Customer phone number</label>
+            <div className="flex items-center gap-3 bg-white rounded-2xl px-4 py-3 border border-brand-navy/10">
+              <Phone size={16} className="text-brand-navy/72 shrink-0" />
+              <input
+                type="tel"
+                value={phoneInput}
+                onChange={e => { setPhoneInput(e.target.value); setStatus(null); }}
+                placeholder="+1 555 000 0000"
+                className="flex-1 text-sm text-brand-navy outline-none placeholder:text-brand-navy/72"
+              />
+            </div>
+            <p className="text-[10px] text-brand-navy/60 mt-1.5 font-medium">Include country code, e.g. +44 7700 900000</p>
+          </div>
+        )}
         {!isVisit && (
           <div>
             <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-2 block">Transaction Amount ($)</label>
@@ -14844,8 +14900,8 @@ function ScanUserPanel({ store, onIssue }: {
           </div>
         )}
         <button
-          onClick={() => onIssue(handle, amount, setStatus, setWorking)}
-          disabled={working || !handle || (!isVisit && !amount)}
+          onClick={lookupMode === 'phone' ? handlePhoneIssue : () => onIssue(handle, amount, setStatus, setWorking)}
+          disabled={working || (lookupMode === 'handle' ? !handle : !phoneInput) || (!isVisit && !amount)}
           className="w-full py-4 rounded-2xl font-bold text-sm text-white disabled:opacity-40 transition-all active:scale-95"
           style={{ background: 'linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 40%, #2563eb 70%, #3b82f6 100%)' }}
         >
