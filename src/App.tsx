@@ -21203,6 +21203,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
             chat={chat}
             currentUser={currentUser}
             isVendor={!!vendorStore}
+            vendorLogoUrl={vendorStore?.logoUrl || ''}
             onClick={() => setActiveChatId(chat.id)}
           />
         ))}
@@ -21223,8 +21224,9 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
   );
 }
 
-function ChatListItem({ chat, currentUser, isVendor = false, onClick }: { chat: Chat, currentUser: FirebaseUser, isVendor?: boolean, onClick: () => void, key?: React.Key }) {
+function ChatListItem({ chat, currentUser, isVendor = false, onClick, vendorLogoUrl = '' }: { chat: Chat, currentUser: FirebaseUser, isVendor?: boolean, onClick: () => void, vendorLogoUrl?: string, key?: React.Key }) {
   const [partner, setPartner] = useState<UserProfile | null>(null);
+  const [fetchedLogo, setFetchedLogo] = useState('');
   const partnerUid = chat.isBroadcast ? null : chat.uids.find(id => id !== currentUser.uid);
   const unread = (chat.unreadCount?.[currentUser.uid] || 0);
 
@@ -21237,29 +21239,45 @@ function ChatListItem({ chat, currentUser, isVendor = false, onClick }: { chat: 
     });
   }, [partnerUid]);
 
+  // Fetch store logo as fallback when chat document doesn't carry businessLogoUrl
+  useEffect(() => {
+    const hasLogo = chat.isBroadcast ? !!chat.storeLogoUrl : !!chat.businessLogoUrl;
+    if (hasLogo || !partnerUid || isVendor) return;
+    getDocs(query(collection(db, 'stores'), where('ownerUid', '==', partnerUid), limit(1)))
+      .then(snap => { if (!snap.empty) setFetchedLogo((snap.docs[0].data() as StoreProfile).logoUrl || ''); });
+  }, [partnerUid, chat.businessLogoUrl, chat.storeLogoUrl, chat.isBroadcast, isVendor]);
+
   // Vendors must wait for partner to load (their chats have businessName = their own store name)
   if (!chat.isBroadcast && !partner && (!chat.businessName || isVendor)) return null;
 
   const displayName = chat.isBroadcast
     ? (chat.storeName || 'Business')
     : isVendor
-      ? (partner?.name || '')          // vendor sees the customer's name
-      : (chat.businessName || partner?.name || '');  // consumer sees the business name
+      ? (partner?.name || '')
+      : (chat.businessName || partner?.name || '');
 
   const isBusinessStyle = chat.isBroadcast || (!isVendor && !!chat.businessName);
-  const businessLogo = chat.isBroadcast ? chat.storeLogoUrl : chat.businessLogoUrl;
+  const businessLogo = (chat.isBroadcast ? chat.storeLogoUrl : chat.businessLogoUrl) || fetchedLogo;
 
   return (
     <button
       onClick={onClick}
       className="w-full bg-white p-4 rounded-2xl flex items-center gap-4 border border-brand-navy/5 hover:border-brand-gold/20 transition-all text-left"
     >
-      <div className={cn("w-14 h-14 overflow-hidden border border-brand-navy/5 bg-brand-navy/5 flex items-center justify-center shrink-0", isBusinessStyle ? "rounded-2xl" : "rounded-full")}>
-        {isBusinessStyle
-          ? (businessLogo
-              ? <img src={businessLogo} alt="" className="w-full h-full object-cover" />
-              : <Store size={22} className="text-brand-navy/75" />)
-          : <PixelAvatar config={partner?.avatar} uid={partner?.uid} size={56} view="head" />}
+      <div className="relative shrink-0">
+        <div className={cn("w-14 h-14 overflow-hidden border border-brand-navy/5 bg-brand-navy/5 flex items-center justify-center", isBusinessStyle ? "rounded-2xl" : "rounded-full")}>
+          {isBusinessStyle
+            ? (businessLogo
+                ? <img src={businessLogo} alt="" className="w-full h-full object-cover" />
+                : <Store size={22} className="text-brand-navy/75" />)
+            : <PixelAvatar config={partner?.avatar} uid={partner?.uid} size={56} view="head" />}
+        </div>
+        {/* Vendor logo badge on customer avatar (vendor-side chats) */}
+        {isVendor && !chat.isBroadcast && vendorLogoUrl && (
+          <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-md overflow-hidden border-2 border-white shadow-sm bg-brand-navy/5">
+            <img src={vendorLogoUrl} alt="" className="w-full h-full object-cover" />
+          </div>
+        )}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-center mb-1">
