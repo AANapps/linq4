@@ -132,7 +132,8 @@ import {
   History,
   DollarSign,
   AlertTriangle,
-  Plus
+  Plus,
+  Pin
 } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
@@ -480,7 +481,7 @@ interface GlobalPost {
   authorUid: string;
   authorName: string;
   authorPhoto: string;
-  authorRole: 'consumer' | 'vendor';
+  authorRole: 'consumer' | 'vendor' | 'admin';
   storeId?: string;
   storeName?: string;
   wallPost?: boolean;
@@ -497,6 +498,10 @@ interface GlobalPost {
   createdAt: any;
   likesCount: number;
   likedBy?: string[];
+  isPinned?: boolean;
+  adminBadgeIcon?: string;
+  adminBadgeName?: string;
+  adminBadgeColor?: string;
 }
 
 const ADMIN_EMAIL = 'info@adastranetwork.co.uk';
@@ -4142,13 +4147,14 @@ function BadgesAdminPanel({ onClose }: { onClose: () => void }) {
             <h3 className="font-bold text-brand-navy text-sm">New Badge</h3>
 
             {/* Preview */}
-            <div className="flex justify-center">
-              <div style={{ filter: `drop-shadow(0 10px 16px ${color}88)` }}>
-                <div style={{ width: 80, height: 80, clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', background: borderColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={{ width: 70, height: 70, clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', background: `linear-gradient(160deg, ${color}f0 0%, ${color}99 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div className="flex justify-center" style={{ paddingBottom: 16 }}>
+              <div style={{ position: 'relative', width: 80, height: 80 }}>
+                <div style={{ position: 'relative', zIndex: 1, width: 80, height: 80, clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', background: borderColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 68, height: 68, clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', background: `linear-gradient(160deg, ${color}f5 0%, ${color}88 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <span className="text-4xl leading-none">{icon}</span>
                   </div>
                 </div>
+                <div style={{ position: 'absolute', bottom: -12, left: '50%', transform: 'translateX(-50%)', width: 56, height: 18, background: color, opacity: 0.55, borderRadius: '50%', filter: 'blur(8px)', zIndex: 0 }} />
               </div>
             </div>
 
@@ -5298,10 +5304,17 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
   const [posts, setPosts] = useState<GlobalPost[]>([]);
   const [flaggedPosts, setFlaggedPosts] = useState<GlobalPost[]>([]);
   const [reportedPostIds, setReportedPostIds] = useState<Set<string>>(new Set());
-  const [tab, setTab] = useState<'all' | 'flagged'>('all');
+  const [tab, setTab] = useState<'create' | 'all' | 'flagged'>('create');
   const [search, setSearch] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [pinning, setPinning] = useState(false);
+
+  // Create form
+  const [content, setContent] = useState('');
+  const [publishing, setPublishing] = useState(false);
+  const [badges, setBadges] = useState<AppBadge[]>([]);
+  const [selectedBadge, setSelectedBadge] = useState<AppBadge | null>(null);
 
   useEffect(() => {
     const unsub1 = onSnapshot(
@@ -5322,11 +5335,15 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
       }
       setFlaggedPosts(fetched);
     }, () => {});
-    return () => { unsub1(); unsub2(); };
+    const unsub3 = onSnapshot(
+      query(collection(db, 'badges'), orderBy('createdAt', 'desc')),
+      snap => setBadges(snap.docs.map(d => ({ id: d.id, ...d.data() } as AppBadge))),
+      () => {}
+    );
+    return () => { unsub1(); unsub2(); unsub3(); };
   }, []);
 
   const base = tab === 'flagged' ? flaggedPosts : posts;
-
   const filtered = search.trim()
     ? base.filter(p =>
         p.authorName?.toLowerCase().includes(search.toLowerCase()) ||
@@ -5334,15 +5351,47 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
       )
     : base;
 
+  const pinnedPost = posts.find(p => p.isPinned) ?? null;
+
   const handleDelete = async (postId: string) => {
     setDeleting(true);
     try {
       await deleteDoc(doc(db, 'global_posts', postId));
       setFlaggedPosts(prev => prev.filter(p => p.id !== postId));
       setConfirmDeleteId(null);
-    } finally {
-      setDeleting(false);
-    }
+    } finally { setDeleting(false); }
+  };
+
+  const handlePin = async (post: GlobalPost) => {
+    setPinning(true);
+    try {
+      if (pinnedPost && pinnedPost.id !== post.id) {
+        await updateDoc(doc(db, 'global_posts', pinnedPost.id), { isPinned: false });
+      }
+      await updateDoc(doc(db, 'global_posts', post.id), { isPinned: !post.isPinned });
+    } finally { setPinning(false); }
+  };
+
+  const handlePublish = async () => {
+    if (!content.trim()) return;
+    setPublishing(true);
+    try {
+      await addDoc(collection(db, 'global_posts'), {
+        authorUid: 'linq_admin',
+        authorName: 'Linq',
+        authorPhoto: '',
+        authorRole: 'admin',
+        postType: 'post',
+        content: content.trim(),
+        likesCount: 0,
+        likedBy: [],
+        ...(selectedBadge ? { adminBadgeIcon: selectedBadge.icon, adminBadgeName: selectedBadge.name, adminBadgeColor: selectedBadge.baseColor || selectedBadge.color } : {}),
+        createdAt: serverTimestamp(),
+      });
+      setContent('');
+      setSelectedBadge(null);
+      setTab('all');
+    } finally { setPublishing(false); }
   };
 
   const formatAge = (ts: any) => {
@@ -5367,22 +5416,16 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
         <button onClick={onClose} className="p-2 -ml-2 text-brand-navy/75"><ArrowLeft size={22} /></button>
         <div className="flex-1">
           <p className="text-[10px] font-bold text-brand-navy/75 uppercase tracking-widest">Admin</p>
-          <h2 className="font-bold text-brand-navy text-base">Posts</h2>
+          <h2 className="font-bold text-brand-navy text-base">FYP Control</h2>
         </div>
-        {tab === 'flagged' && reportedPostIds.size > 0 && (
-          <span className="text-xs font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-full">{reportedPostIds.size} flagged</span>
+        {pinnedPost && (
+          <span className="text-[10px] font-bold text-brand-navy/60 bg-white border border-brand-navy/10 px-2 py-0.5 rounded-full">📌 1 pinned</span>
         )}
       </header>
 
-      <div className="px-5 pt-3 pb-2 space-y-2">
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Search by user or content…"
-          className="w-full px-4 py-2.5 rounded-2xl bg-white border border-brand-navy/10 text-sm text-brand-navy outline-none"
-        />
+      <div className="px-5 pt-3 pb-2">
         <div className="flex gap-2">
-          {(['all', 'flagged'] as const).map(t => (
+          {(['create', 'all', 'flagged'] as const).map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -5391,65 +5434,145 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
                 tab === t ? 'bg-brand-navy text-white' : 'bg-white border border-brand-navy/10 text-brand-navy/80'
               )}
             >
-              {t === 'all' ? 'All Posts' : `Flagged${reportedPostIds.size > 0 ? ` (${reportedPostIds.size})` : ''}`}
+              {t === 'create' ? '+ Create' : t === 'all' ? 'All Posts' : `Flagged${reportedPostIds.size > 0 ? ` (${reportedPostIds.size})` : ''}`}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5 py-2 space-y-2 pb-10">
-        {filtered.map(post => (
-          <div key={post.id} className="bg-white rounded-2xl border border-brand-navy/5 overflow-hidden">
-            {confirmDeleteId === post.id ? (
-              <div className="px-4 py-3 flex items-center gap-3">
-                <p className="flex-1 text-xs font-bold text-red-500">Delete this post?</p>
-                <button
-                  onClick={() => handleDelete(post.id)}
-                  disabled={deleting}
-                  className="px-3 py-1.5 bg-red-500 text-white text-xs font-bold rounded-xl active:scale-95 transition-all disabled:opacity-50"
-                >
-                  {deleting ? '…' : 'Delete'}
-                </button>
-                <button
-                  onClick={() => setConfirmDeleteId(null)}
-                  className="px-3 py-1.5 bg-brand-navy/10 text-brand-navy text-xs font-bold rounded-xl active:scale-95 transition-all"
-                >
-                  Cancel
-                </button>
+      <div className="flex-1 overflow-y-auto pb-10">
+        {tab === 'create' ? (
+          <div className="px-5 pt-3 space-y-4">
+            {/* Preview */}
+            <div className="bg-white rounded-2xl border border-brand-navy/5 px-4 py-3">
+              <div className="flex items-center gap-2.5 mb-2">
+                <div className="w-9 h-9 rounded-full gradient-logo-blue flex items-center justify-center shrink-0">
+                  <span className="text-white font-black text-sm font-mono">L</span>
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-sm text-brand-navy">Linq</span>
+                    <span className="text-[9px] font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 px-1.5 py-0.5 rounded-full uppercase tracking-wide">Official</span>
+                    {selectedBadge && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full border"
+                        style={{ background: `${selectedBadge.baseColor || selectedBadge.color}18`, borderColor: `${selectedBadge.baseColor || selectedBadge.color}40`, color: selectedBadge.baseColor || selectedBadge.color }}>
+                        {selectedBadge.icon} {selectedBadge.name}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-brand-navy/50">Now</p>
+                </div>
               </div>
-            ) : (
-              <div className="px-4 py-3">
-                <div className="flex items-start gap-2">
-                  <div className="w-7 h-7 rounded-full overflow-hidden bg-brand-navy/5 shrink-0 mt-0.5">
-                    {post.authorPhoto
-                      ? <img src={post.authorPhoto} alt="" className="w-full h-full object-cover" />
-                      : <UserIcon size={12} className="m-auto mt-1 text-brand-navy/32" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="font-bold text-xs text-brand-navy">{post.authorName || 'Unknown'}</span>
-                      {reportedPostIds.has(post.id) && (
-                        <span className="text-[9px] font-bold text-rose-500 bg-rose-50 px-1.5 py-0.5 rounded-full">Flagged</span>
-                      )}
-                      <span className="text-[10px] text-brand-navy/45 ml-auto">{formatAge(post.createdAt)}</span>
-                    </div>
-                    <p className="text-xs text-brand-navy/70 mt-0.5 line-clamp-2">{post.content}</p>
-                  </div>
+              <p className="text-[13px] font-semibold text-gray-800 whitespace-pre-wrap min-h-[20px]">{content || <span className="text-brand-navy/30">Your post will appear here…</span>}</p>
+            </div>
+
+            <textarea
+              value={content}
+              onChange={e => setContent(e.target.value)}
+              placeholder="Write a post for the For You page…"
+              rows={4}
+              className="w-full px-4 py-3 rounded-2xl bg-white border border-brand-navy/10 text-sm text-brand-navy outline-none resize-none"
+            />
+
+            {/* Badge picker */}
+            {badges.length > 0 && (
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/60 mb-2">Attach Badge (optional)</p>
+                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                   <button
-                    onClick={() => setConfirmDeleteId(post.id)}
-                    className="p-1.5 text-red-400 hover:text-red-600 transition-colors shrink-0"
+                    onClick={() => setSelectedBadge(null)}
+                    className={cn('shrink-0 px-3 py-1.5 rounded-2xl text-xs font-bold border transition-all', !selectedBadge ? 'bg-brand-navy text-white border-brand-navy' : 'bg-white border-brand-navy/15 text-brand-navy/60')}
                   >
-                    <Trash2 size={13} />
+                    None
                   </button>
+                  {badges.map(b => (
+                    <button
+                      key={b.id}
+                      onClick={() => setSelectedBadge(selectedBadge?.id === b.id ? null : b)}
+                      className={cn('shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs font-bold border transition-all', selectedBadge?.id === b.id ? 'bg-brand-navy text-white border-brand-navy' : 'bg-white border-brand-navy/15 text-brand-navy/80')}
+                    >
+                      <span>{b.icon}</span>
+                      <span className="max-w-[80px] truncate">{b.name}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
+
+            <button
+              onClick={handlePublish}
+              disabled={publishing || !content.trim()}
+              className="w-full py-3 rounded-2xl bg-brand-navy text-white font-bold text-sm disabled:opacity-40 active:scale-[0.98] transition-all"
+            >
+              {publishing ? 'Publishing…' : 'Publish to FYP'}
+            </button>
           </div>
-        ))}
-        {filtered.length === 0 && (
-          <p className="text-center text-brand-navy/72 text-sm py-10">
-            {tab === 'flagged' ? 'No flagged posts' : 'No posts found'}
-          </p>
+        ) : (
+          <div className="px-5 pt-2 space-y-2">
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search posts…"
+              className="w-full px-4 py-2.5 rounded-2xl bg-white border border-brand-navy/10 text-sm text-brand-navy outline-none"
+            />
+            {filtered.map(post => (
+              <div key={post.id} className="bg-white rounded-2xl border border-brand-navy/5 overflow-hidden">
+                {confirmDeleteId === post.id ? (
+                  <div className="px-4 py-3 flex items-center gap-3">
+                    <p className="flex-1 text-xs font-bold text-red-500">Delete this post?</p>
+                    <button onClick={() => handleDelete(post.id)} disabled={deleting}
+                      className="px-3 py-1.5 bg-red-500 text-white text-xs font-bold rounded-xl active:scale-95 transition-all disabled:opacity-50">
+                      {deleting ? '…' : 'Delete'}
+                    </button>
+                    <button onClick={() => setConfirmDeleteId(null)}
+                      className="px-3 py-1.5 bg-brand-navy/10 text-brand-navy text-xs font-bold rounded-xl active:scale-95 transition-all">
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <div className="px-4 py-3">
+                    <div className="flex items-start gap-2">
+                      <div className="w-7 h-7 rounded-full overflow-hidden bg-brand-navy/5 shrink-0 mt-0.5 flex items-center justify-center">
+                        {post.authorRole === 'admin'
+                          ? <div className="w-full h-full gradient-logo-blue flex items-center justify-center"><span className="text-white font-black text-[10px] font-mono">L</span></div>
+                          : post.authorPhoto
+                          ? <img src={post.authorPhoto} alt="" className="w-full h-full object-cover" />
+                          : <UserIcon size={12} className="text-brand-navy/32" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-bold text-xs text-brand-navy">{post.authorName || 'Unknown'}</span>
+                          {post.isPinned && <span className="text-[9px] font-bold text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded-full">📌 Pinned</span>}
+                          {reportedPostIds.has(post.id) && <span className="text-[9px] font-bold text-rose-500 bg-rose-50 px-1.5 py-0.5 rounded-full">Flagged</span>}
+                          {post.adminBadgeIcon && <span className="text-[9px]">{post.adminBadgeIcon}</span>}
+                          <span className="text-[10px] text-brand-navy/45 ml-auto">{formatAge(post.createdAt)}</span>
+                        </div>
+                        <p className="text-xs text-brand-navy/70 mt-0.5 line-clamp-2">{post.content}</p>
+                      </div>
+                      <div className="flex flex-col gap-1 shrink-0">
+                        <button
+                          onClick={() => handlePin(post)}
+                          disabled={pinning}
+                          className={cn('p-1.5 rounded-xl transition-all active:scale-90 disabled:opacity-50', post.isPinned ? 'bg-blue-100 text-blue-600' : 'bg-brand-navy/5 text-brand-navy/40 hover:text-brand-navy/60')}
+                          title={post.isPinned ? 'Unpin' : 'Pin to top'}
+                        >
+                          <Pin size={13} />
+                        </button>
+                        <button onClick={() => setConfirmDeleteId(post.id)} className="p-1.5 text-red-400 hover:text-red-600 transition-colors">
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+            {filtered.length === 0 && (
+              <p className="text-center text-brand-navy/72 text-sm py-10">
+                {tab === 'flagged' ? 'No flagged posts' : 'No posts found'}
+              </p>
+            )}
+          </div>
         )}
       </div>
     </motion.div>
@@ -16363,19 +16486,21 @@ function HexBadge({ badge, size = 56 }: { badge: AppBadge; size?: number }) {
   const isLinqle = badge.metric === 'linqle_wins';
   const fill = badge.baseColor || badge.color;
   const border = badge.borderColor || '#FBBF24';
-  const innerSize = size - Math.round(size * 0.09);
+  const innerSize = size - Math.round(size * 0.15);
   const scrambleTarget = badge.name.slice(0, 3).toUpperCase();
-  const shadowBlur = Math.round(size / 3.2);
-  const shadowY = Math.round(size / 5);
+  const shadowW = Math.round(size * 0.7);
+  const shadowH = Math.round(size * 0.22);
+  const shadowBlur = Math.round(size / 7);
   return (
-    <div style={{ filter: `drop-shadow(0 ${shadowY}px ${shadowBlur}px ${fill}88)`, width: size, height: size }}>
-      <div style={{ width: size, height: size, clipPath: HEX_CLIP, background: border, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
+      {/* Hexagon badge */}
+      <div style={{ position: 'relative', zIndex: 1, width: size, height: size, clipPath: HEX_CLIP, background: border, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{
           width: innerSize, height: innerSize,
           clipPath: HEX_CLIP,
           background: isLinqle
             ? 'linear-gradient(160deg, #1a5c32 0%, #0a2318 100%)'
-            : `linear-gradient(160deg, ${fill}f0 0%, ${fill}88 100%)`,
+            : `linear-gradient(160deg, ${fill}f5 0%, ${fill}88 100%)`,
           display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
         }}>
           {isLinqle
@@ -16384,6 +16509,20 @@ function HexBadge({ badge, size = 56 }: { badge: AppBadge; size?: number }) {
           }
         </div>
       </div>
+      {/* 3D gradient shadow below */}
+      <div style={{
+        position: 'absolute',
+        bottom: -Math.round(size * 0.15),
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: shadowW,
+        height: shadowH,
+        background: fill,
+        opacity: 0.55,
+        borderRadius: '50%',
+        filter: `blur(${shadowBlur}px)`,
+        zIndex: 0,
+      }} />
     </div>
   );
 }
@@ -18665,7 +18804,7 @@ function ProfileLink({ icon, label, onClick }: { icon: React.ReactNode, label: s
 
 // --- Social & Community Components ---
 
-function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewStore, onLike, onVote, onDelete }: {
+function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewStore, onLike, onVote, onDelete, showPinnedTag }: {
   key?: React.Key;
   post: GlobalPost;
   currentUser?: FirebaseUser;
@@ -18675,6 +18814,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
   onLike: (post: GlobalPost) => void | Promise<void>;
   onVote: (post: GlobalPost, optionIndex: number) => void | Promise<void>;
   onDelete?: (post: GlobalPost) => void | Promise<void>;
+  showPinnedTag?: boolean;
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const [comments, setComments] = useState<any[]>([]);
@@ -18685,6 +18825,10 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
   const [authorProfile, setAuthorProfile] = useState<{ name: string; logoUrl?: string; gender?: string; avatar?: UserAvatar; streak?: number } | null>(null);
 
   useEffect(() => {
+    if (post.authorRole === 'admin') {
+      setAuthorProfile({ name: 'Linq' });
+      return;
+    }
     if (post.authorRole === 'vendor' && post.storeId) {
       return onSnapshot(doc(db, 'stores', post.storeId), (snap) => {
         if (snap.exists()) setAuthorProfile({ name: snap.data().name, logoUrl: snap.data().logoUrl || '' });
@@ -18815,11 +18959,19 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
       animate={{ opacity: 1, y: 0 }}
       className="py-4"
     >
+      {/* Pinned indicator — only on FYP */}
+      {post.isPinned && showPinnedTag && (
+        <div className="flex items-center gap-1.5 mb-2">
+          <span className="text-[10px] font-bold text-brand-navy/60 uppercase tracking-widest">📌 Pinned</span>
+        </div>
+      )}
       {/* Post header */}
       <div className="space-y-2.5">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full overflow-hidden border border-black/5 cursor-pointer shrink-0 bg-indigo-50 flex items-center justify-center" onClick={handleAvatarClick}>
-            {post.authorRole === 'vendor'
+            {post.authorRole === 'admin'
+              ? <div className="w-full h-full gradient-logo-blue flex items-center justify-center"><span className="text-white font-black text-sm font-mono">L</span></div>
+              : post.authorRole === 'vendor'
               ? <img src={authorProfile?.logoUrl || post.authorPhoto || ''} alt="" className="w-full h-full object-cover" />
               : <PixelAvatar config={authorProfile?.avatar} uid={post.authorUid} size={40} view="head" />}
           </div>
@@ -18870,6 +19022,11 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                     {post.toName}
                   </span>
                 </p>
+              ) : post.authorRole === 'admin' ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="font-bold text-sm text-brand-navy">Linq</span>
+                  <span className="text-[9px] font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 px-1.5 py-0.5 rounded-full uppercase tracking-wide">Official</span>
+                </span>
               ) : post.authorRole === 'vendor' && post.storeName && !post.wallPost ? (
                 <span
                   className="font-bold text-sm cursor-pointer hover:text-brand-gold transition-colors"
@@ -18898,6 +19055,13 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
             </p>
           </div>
           <div className="flex items-center gap-1 shrink-0">
+            {post.adminBadgeIcon && (
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold border"
+                style={{ background: `${post.adminBadgeColor || '#3B82F6'}18`, borderColor: `${post.adminBadgeColor || '#3B82F6'}40`, color: post.adminBadgeColor || '#3B82F6' }}>
+                <span>{post.adminBadgeIcon}</span>
+                {post.adminBadgeName && <span className="text-[9px] max-w-[60px] truncate">{post.adminBadgeName}</span>}
+              </div>
+            )}
             {post.postType === 'poll' && (
               <div className="w-7 h-7 bg-brand-gold/10 rounded-lg flex items-center justify-center">
                 <BarChart2 size={14} className="text-brand-gold" />
@@ -20132,11 +20296,16 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
     if (Object.keys(updates).length > 0) await updateDoc(ref, updates);
   };
 
-  const sortedFeed = [...globalPosts, ...vendorPosts].sort((a, b) => {
-    const tA = a.createdAt?.toMillis?.() || 0;
-    const tB = b.createdAt?.toMillis?.() || 0;
-    return tB - tA;
-  });
+  const sortedFeed = (() => {
+    const combined = [...globalPosts, ...vendorPosts].sort((a, b) => {
+      const tA = a.createdAt?.toMillis?.() || 0;
+      const tB = b.createdAt?.toMillis?.() || 0;
+      return tB - tA;
+    });
+    const pinned = combined.filter(p => (p as GlobalPost).isPinned);
+    const rest = combined.filter(p => !(p as GlobalPost).isPinned);
+    return [...pinned, ...rest];
+  })();
 
   const displayFeed = sortedFeed;
 
@@ -20620,7 +20789,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
             <div className="divide-y divide-gray-100 bg-white rounded-2xl px-4">
               {displayFeed.map((item) =>
                 !item._type
-                  ? <FeedPostCard key={`gp-${item.id}`} post={item as GlobalPost} currentUser={currentUser} currentProfile={currentProfile} onViewUser={onViewUser} onViewStore={onViewStore} onLike={handleLike} onVote={handleVote} onDelete={async (p) => { await deleteDoc(doc(db, 'global_posts', p.id)); }} />
+                  ? <FeedPostCard key={`gp-${item.id}`} post={item as GlobalPost} currentUser={currentUser} currentProfile={currentProfile} onViewUser={onViewUser} onViewStore={onViewStore} onLike={handleLike} onVote={handleVote} onDelete={async (p) => { await deleteDoc(doc(db, 'global_posts', p.id)); }} showPinnedTag />
                   : <React.Fragment key={`vp-${item.id}`}><FeedVendorPostCard item={item} /></React.Fragment>
               )}
               {displayFeed.length === 0 && (
