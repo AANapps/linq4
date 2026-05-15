@@ -22884,29 +22884,40 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
             {store.isVerified && <CheckCircle2 size={18} className="text-blue-400" />}
           </div>
           <p className="text-sm text-brand-navy/80 mt-0.5">{store.category}</p>
-          {(store.location || (store as any).address) && (
-            <button
-              onClick={() => {
-                const addr = encodeURIComponent(store.location || (store as any).address || '');
+          {(() => {
+            const addrText = store.location || (store as any).address || '';
+            const hasCoords = store.lat != null && store.lng != null;
+            if (!addrText && !hasCoords) return null;
+            const handleMapClick = () => {
+              if (addrText) {
+                const enc = encodeURIComponent(addrText);
                 if (userCoords) {
-                  window.open(`https://www.google.com/maps/dir/?api=1&origin=${userCoords.lat},${userCoords.lng}&destination=${addr}`, '_blank');
+                  window.open(`https://www.google.com/maps/dir/?api=1&origin=${userCoords.lat},${userCoords.lng}&destination=${enc}`, '_blank');
                 } else {
-                  window.open(`https://www.google.com/maps/search/?api=1&query=${addr}`, '_blank');
+                  window.open(`https://www.google.com/maps/search/?api=1&query=${enc}`, '_blank');
                 }
-              }}
-              className="flex items-center gap-1 mt-1.5 text-brand-gold active:opacity-70"
-            >
-              <MapPin size={13} className="shrink-0" />
-              <span className="text-xs font-medium text-left leading-tight">
-                {store.location || (store as any).address}
-                {distance !== null && (
-                  <span className="text-brand-navy/75 ml-1">
-                    · {distance < 1 ? `${Math.round(distance * 1000)}m` : `${distance.toFixed(1)}km`}
-                  </span>
-                )}
-              </span>
-            </button>
-          )}
+              } else if (hasCoords) {
+                if (userCoords) {
+                  window.open(`https://www.google.com/maps/dir/?api=1&origin=${userCoords.lat},${userCoords.lng}&destination=${store.lat},${store.lng}`, '_blank');
+                } else {
+                  window.open(`https://www.google.com/maps/search/?api=1&query=${store.lat},${store.lng}`, '_blank');
+                }
+              }
+            };
+            return (
+              <button onClick={handleMapClick} className="flex items-center gap-1 mt-1.5 text-brand-gold active:opacity-70">
+                <MapPin size={13} className="shrink-0" />
+                <span className="text-xs font-medium text-left leading-tight">
+                  {addrText || 'Show on map'}
+                  {distance !== null && (
+                    <span className="text-brand-navy/75 ml-1">
+                      · {distance < 1 ? `${Math.round(distance * 1000)}m` : `${distance.toFixed(1)}km`}
+                    </span>
+                  )}
+                </span>
+              </button>
+            );
+          })()}
           {avgRating !== null && (
             <div className="flex items-center gap-1.5 mt-1.5">
               <div className="flex items-center gap-0.5">
