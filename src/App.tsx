@@ -502,6 +502,7 @@ interface GlobalPost {
   adminBadgeIcon?: string;
   adminBadgeName?: string;
   adminBadgeColor?: string;
+  postImageUrl?: string;
 }
 
 const ADMIN_EMAIL = 'info@adastranetwork.co.uk';
@@ -5312,6 +5313,9 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
   const [publishing, setPublishing] = useState(false);
   const [badges, setBadges] = useState<AppBadge[]>([]);
   const [selectedBadge, setSelectedBadge] = useState<AppBadge | null>(null);
+  const [postImageFile, setPostImageFile] = useState<File | null>(null);
+  const [postImagePreview, setPostImagePreview] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     const unsub1 = onSnapshot(
@@ -5370,9 +5374,18 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
   };
 
   const handlePublish = async () => {
-    if (!content.trim()) return;
+    if (!content.trim() && !postImageFile) return;
     setPublishing(true);
     try {
+      let postImageUrl: string | undefined;
+      if (postImageFile) {
+        setUploadingImage(true);
+        const blob = await compressImage(postImageFile, 1400);
+        const path = `admin_posts/${Date.now()}.webp`;
+        const snap = await uploadBytes(storageRef(storage, path), blob, { contentType: 'image/webp' });
+        postImageUrl = await getDownloadURL(snap.ref);
+        setUploadingImage(false);
+      }
       await addDoc(collection(db, 'global_posts'), {
         authorUid: 'linq_admin',
         authorName: 'Linq',
@@ -5383,12 +5396,15 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
         likesCount: 0,
         likedBy: [],
         ...(selectedBadge ? { adminBadgeIcon: selectedBadge.icon, adminBadgeName: selectedBadge.name, adminBadgeColor: selectedBadge.baseColor || selectedBadge.color } : {}),
+        ...(postImageUrl ? { postImageUrl } : {}),
         createdAt: serverTimestamp(),
       });
       setContent('');
       setSelectedBadge(null);
+      setPostImageFile(null);
+      setPostImagePreview(null);
       setTab('all');
-    } finally { setPublishing(false); }
+    } finally { setPublishing(false); setUploadingImage(false); }
   };
 
   const formatAge = (ts: any) => {
@@ -5441,26 +5457,63 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
         {tab === 'create' ? (
           <div className="px-5 pt-3 space-y-4">
             {/* Preview */}
-            <div className="bg-white rounded-2xl border border-brand-navy/5 px-4 py-3">
-              <div className="flex items-center gap-2.5 mb-2">
-                <div className="w-9 h-9 rounded-full gradient-logo-blue flex items-center justify-center shrink-0">
-                  <span className="text-white font-black text-sm font-mono">L</span>
-                </div>
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-sm text-brand-navy">Linq</span>
-                    <span className="text-[9px] font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 px-1.5 py-0.5 rounded-full uppercase tracking-wide">Official</span>
-                    {selectedBadge && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full border"
-                        style={{ background: `${selectedBadge.baseColor || selectedBadge.color}18`, borderColor: `${selectedBadge.baseColor || selectedBadge.color}40`, color: selectedBadge.baseColor || selectedBadge.color }}>
-                        {selectedBadge.icon} {selectedBadge.name}
-                      </span>
-                    )}
+            <div className="bg-white rounded-2xl border border-brand-navy/5 overflow-hidden">
+              {postImagePreview && (
+                <img src={postImagePreview} alt="" className="w-full object-cover max-h-48" />
+              )}
+              <div className="px-4 py-3">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div className="w-9 h-9 rounded-full gradient-logo-blue flex items-center justify-center shrink-0">
+                    <span className="text-white font-black text-sm font-mono">L</span>
                   </div>
-                  <p className="text-[10px] text-brand-navy/50">Now</p>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-bold text-sm text-brand-navy">Linq</span>
+                      <span className="text-[9px] font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 px-1.5 py-0.5 rounded-full uppercase tracking-wide">Official</span>
+                      {selectedBadge && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full border"
+                          style={{ background: `${selectedBadge.baseColor || selectedBadge.color}18`, borderColor: `${selectedBadge.baseColor || selectedBadge.color}40`, color: selectedBadge.baseColor || selectedBadge.color }}>
+                          {selectedBadge.icon} {selectedBadge.name}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-brand-navy/50">Now</p>
+                  </div>
                 </div>
+                <p className="text-[13px] font-semibold text-gray-800 whitespace-pre-wrap min-h-[20px]">{content || <span className="text-brand-navy/30">Your post will appear here…</span>}</p>
               </div>
-              <p className="text-[13px] font-semibold text-gray-800 whitespace-pre-wrap min-h-[20px]">{content || <span className="text-brand-navy/30">Your post will appear here…</span>}</p>
+            </div>
+
+            {/* Image picker */}
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/60 mb-2">Image (optional)</p>
+              <label className="block">
+                <input type="file" accept="image/*" className="hidden" onChange={e => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setPostImageFile(file);
+                  const reader = new FileReader();
+                  reader.onload = ev => setPostImagePreview(ev.target?.result as string);
+                  reader.readAsDataURL(file);
+                }} />
+                {postImagePreview ? (
+                  <div className="relative rounded-2xl overflow-hidden">
+                    <img src={postImagePreview} alt="" className="w-full object-cover max-h-40 rounded-2xl" />
+                    <button
+                      type="button"
+                      onClick={e => { e.preventDefault(); setPostImageFile(null); setPostImagePreview(null); }}
+                      className="absolute top-2 right-2 w-7 h-7 bg-black/50 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl border-2 border-dashed border-brand-navy/15 bg-white text-brand-navy/50 text-sm font-medium cursor-pointer hover:border-brand-navy/30 transition-colors">
+                    <Image size={16} />
+                    <span>Tap to add image</span>
+                  </div>
+                )}
+              </label>
             </div>
 
             <textarea
@@ -5498,10 +5551,10 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
 
             <button
               onClick={handlePublish}
-              disabled={publishing || !content.trim()}
+              disabled={publishing || (!content.trim() && !postImageFile)}
               className="w-full py-3 rounded-2xl bg-brand-navy text-white font-bold text-sm disabled:opacity-40 active:scale-[0.98] transition-all"
             >
-              {publishing ? 'Publishing…' : 'Publish to FYP'}
+              {uploadingImage ? 'Uploading image…' : publishing ? 'Publishing…' : 'Publish to FYP'}
             </button>
           </div>
         ) : (
@@ -18934,8 +18987,13 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="py-4"
+      className={post.postImageUrl ? 'pt-0 pb-4' : 'py-4 px-4'}
     >
+      {/* Full-bleed image */}
+      {post.postImageUrl && (
+        <img src={post.postImageUrl} alt="" className="w-full object-cover max-h-64 mb-3" />
+      )}
+      <div className={post.postImageUrl ? 'px-4' : ''}>
       {/* Pinned indicator — only on FYP */}
       {post.isPinned && showPinnedTag && (
         <div className="flex items-center gap-1.5 mb-2">
@@ -19246,6 +19304,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
           </div>
         </div>
       )}
+      </div>{/* end postImageUrl wrapper */}
     </motion.div>
   );
 }
@@ -20401,7 +20460,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
 
       {activeSubTab === 'following' ? (
         loading ? <FeedLoadingSpinner /> : (
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y-2 divide-gray-200 bg-white -mx-4">
             {followingFeed.map((item) =>
               !item._type
                 ? <FeedPostCard key={`gp-${item.id}`} post={item as GlobalPost} currentUser={currentUser} currentProfile={currentProfile} onViewUser={onViewUser} onViewStore={onViewStore} onLike={handleLike} onVote={handleVote} onDelete={async (p) => { await deleteDoc(doc(db, 'global_posts', p.id)); }} />
@@ -20763,7 +20822,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
 
           {/* Main mixed feed */}
           {loading ? <FeedLoadingSpinner /> : (
-            <div className="divide-y divide-gray-100 bg-white rounded-2xl px-4">
+            <div className="divide-y-2 divide-gray-200 bg-white -mx-4">
               {displayFeed.map((item) =>
                 !item._type
                   ? <FeedPostCard key={`gp-${item.id}`} post={item as GlobalPost} currentUser={currentUser} currentProfile={currentProfile} onViewUser={onViewUser} onViewStore={onViewStore} onLike={handleLike} onVote={handleVote} onDelete={async (p) => { await deleteDoc(doc(db, 'global_posts', p.id)); }} showPinnedTag />
