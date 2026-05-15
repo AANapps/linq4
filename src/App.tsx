@@ -13907,11 +13907,8 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
               <p className="text-xs">Try a different search term or category</p>
             </div>
           ) : activeCategory !== 'All' ? (
-            /* Single category — horizontal slider */
-            <div
-              className="flex gap-3 overflow-x-auto pb-2"
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-            >
+            /* Single category — vertical list */
+            <div className="space-y-3">
               {filteredStores.map((store, i) => {
                 const dist = distancesMap.get(store.id);
                 const distLabel = dist != null
@@ -13923,31 +13920,36 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
                 return (
                   <motion.div key={store.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.04 }}
-                    className="shrink-0 rounded-[1.5rem] overflow-hidden flex flex-col cursor-pointer active:scale-[0.97] transition-transform shadow-sm bg-white"
-                    style={{ width: '148px' }} onClick={() => onViewStore(store)}
+                    className="rounded-[1.5rem] overflow-hidden flex cursor-pointer active:scale-[0.98] transition-transform shadow-sm bg-white"
+                    onClick={() => onViewStore(store)}
                   >
-                    <div className="relative overflow-hidden bg-brand-navy/5" style={{ height: '110px' }}>
+                    {/* Cover image — left side */}
+                    <div className="relative shrink-0 overflow-hidden bg-brand-navy/5" style={{ width: '90px', height: '90px' }}>
                       {store.coverUrl
                         ? <img src={store.coverUrl} alt="" className="w-full h-full object-cover" />
                         : store.logoUrl
                           ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
-                          : <div className="w-full h-full flex items-center justify-center"><Building2 size={28} className="text-brand-navy/20" /></div>}
+                          : <div className="w-full h-full flex items-center justify-center"><Building2 size={24} className="text-brand-navy/20" /></div>}
                       {store.isVerified && (
-                        <div className="absolute top-2 right-2 w-5 h-5 bg-white/90 rounded-full flex items-center justify-center shadow-sm">
-                          <Sparkles size={9} className="text-brand-gold" />
+                        <div className="absolute top-1.5 left-1.5 w-4 h-4 bg-white/90 rounded-full flex items-center justify-center shadow-sm">
+                          <Sparkles size={8} className="text-brand-gold" />
                         </div>
                       )}
                     </div>
-                    <div className="px-3 py-2.5 flex flex-col gap-0.5">
-                      <p className="font-extrabold text-brand-navy text-[11px] leading-snug line-clamp-2">
+                    {/* Info — right side */}
+                    <div className="flex-1 min-w-0 px-4 py-3 flex flex-col justify-center gap-0.5">
+                      <p className="font-extrabold text-brand-navy text-sm leading-snug line-clamp-2">
                         {topReward ?? `${store.stamps_required_for_reward} stamp reward`}
                       </p>
-                      <p className="text-brand-navy/45 text-[9px] font-medium line-clamp-1">{store.name}</p>
+                      <p className="text-brand-navy/50 text-xs font-medium line-clamp-1">{store.name}</p>
                       {distLabel && (
-                        <p className="text-brand-gold text-[9px] font-semibold mt-0.5 flex items-center gap-0.5">
-                          <MapPin size={8} />{distLabel}
+                        <p className="text-brand-gold text-[10px] font-semibold flex items-center gap-0.5 mt-0.5">
+                          <MapPin size={9} />{distLabel}
                         </p>
                       )}
+                    </div>
+                    <div className="flex items-center pr-4">
+                      <ChevronRight size={16} className="text-brand-navy/25" />
                     </div>
                   </motion.div>
                 );
