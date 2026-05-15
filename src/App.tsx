@@ -1698,6 +1698,23 @@ export default function App() {
   );
 }
 
+// --- Phone helpers ---
+const DIAL_CODES = [
+  { code: 'AU', dial: '+61', flag: '🇦🇺' },
+  { code: 'GB', dial: '+44', flag: '🇬🇧' },
+  { code: 'US', dial: '+1',  flag: '🇺🇸' },
+  { code: 'NZ', dial: '+64', flag: '🇳🇿' },
+  { code: 'CA', dial: '+1',  flag: '🇨🇦' },
+  { code: 'IE', dial: '+353', flag: '🇮🇪' },
+  { code: 'IN', dial: '+91', flag: '🇮🇳' },
+  { code: 'SG', dial: '+65', flag: '🇸🇬' },
+  { code: 'AE', dial: '+971', flag: '🇦🇪' },
+  { code: 'ZA', dial: '+27', flag: '🇿🇦' },
+];
+function toE164(dial: string, local: string): string {
+  return dial + local.replace(/\D/g, '').replace(/^0+/, '');
+}
+
 // --- Shared Components ---
 
 function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
@@ -1712,6 +1729,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
   const [showPassword, setShowPassword] = React.useState(false);
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(false);
+  const [dialCode, setDialCode] = React.useState('+61');
   const [phone, setPhone] = React.useState('');
   const [otp, setOtp] = React.useState('');
   const [newPass, setNewPass] = React.useState('');
@@ -1743,15 +1761,15 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
 
   const reset = (next: 'home' | 'signin' | 'signup' | 'phone' | 'otp' | 'forgot' | 'forgot_otp') => {
     setError(''); setEmail(''); setPassword(''); setConfirmPassword('');
-    setPhone(''); setOtp(''); setConfirmResult(null);
+    setPhone(''); setDialCode('+61'); setOtp(''); setConfirmResult(null);
     setNewPass(''); setConfirmNewPass('');
     setMode(next);
   };
 
   const handleSendOTP = async () => {
     setError('');
-    const cleaned = phone.trim();
-    if (!cleaned) { setError('Enter your phone number with country code'); return; }
+    const cleaned = toE164(dialCode, phone.trim());
+    if (!phone.trim()) { setError('Enter your phone number'); return; }
     // Ensure verifier exists (handles resend after error)
     if (!recaptchaVerifier.current) {
       try {
@@ -1893,22 +1911,31 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
             <p className="text-white/50 text-sm">
               {mode === 'forgot'
                 ? 'Enter your phone number and choose a new password'
-                : `We sent a 6-digit code to ${phone}`}
+                : `We sent a 6-digit code to ${toE164(dialCode, phone)}`}
             </p>
           </div>
 
           <div className="space-y-3">
             {mode === 'forgot' ? (
               <>
-                <div className="relative">
-                  <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
+                <div className="flex gap-2">
+                  <select
+                    value={dialCode}
+                    onChange={e => setDialCode(e.target.value)}
+                    className="shrink-0 rounded-2xl bg-white/15 border border-white/20 text-white text-sm px-3 py-4 focus:outline-none focus:border-white/50 appearance-none"
+                  >
+                    {DIAL_CODES.map(c => (
+                      <option key={c.code} value={c.dial} className="text-black">{c.flag} {c.dial}</option>
+                    ))}
+                  </select>
                   <input
                     type="tel"
                     value={phone}
                     onChange={e => setPhone(e.target.value)}
-                    placeholder="+44 7700 900000"
-                    autoComplete="tel"
-                    className="w-full pl-10 pr-5 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm focus:outline-none focus:border-white/50 focus:bg-white/20"
+                    placeholder="0420 448 995"
+                    autoComplete="tel-national"
+                    inputMode="numeric"
+                    className="flex-1 min-w-0 px-5 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm focus:outline-none focus:border-white/50 focus:bg-white/20"
                   />
                 </div>
                 <div className="relative">
@@ -1999,23 +2026,32 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
             </h2>
             <p className="text-white/50 text-sm">
               {mode === 'phone'
-                ? 'Include your country code, e.g. +44 7700 900000'
-                : `We sent a 6-digit code to ${phone}`}
+                ? 'Select your country and enter your number'
+                : `We sent a 6-digit code to ${toE164(dialCode, phone)}`}
             </p>
           </div>
 
           <div className="space-y-3">
             {mode === 'phone' ? (
-              <div className="relative">
-                <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
+              <div className="flex gap-2">
+                <select
+                  value={dialCode}
+                  onChange={e => setDialCode(e.target.value)}
+                  className="shrink-0 rounded-2xl bg-white/15 border border-white/20 text-white text-sm px-3 py-4 focus:outline-none focus:border-white/50 appearance-none"
+                >
+                  {DIAL_CODES.map(c => (
+                    <option key={c.code} value={c.dial} className="text-black">{c.flag} {c.dial}</option>
+                  ))}
+                </select>
                 <input
                   type="tel"
                   value={phone}
                   onChange={e => setPhone(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleSendOTP()}
-                  placeholder="+44 7700 900000"
-                  autoComplete="tel"
-                  className="w-full pl-10 pr-5 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm focus:outline-none focus:border-white/50 focus:bg-white/20"
+                  placeholder="0420 448 995"
+                  autoComplete="tel-national"
+                  inputMode="numeric"
+                  className="flex-1 min-w-0 px-5 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm focus:outline-none focus:border-white/50 focus:bg-white/20"
                 />
               </div>
             ) : (
@@ -14730,6 +14766,7 @@ function ScanUserPanel({ store, onIssue }: {
 }) {
   const [handle, setHandle] = useState('');
   const [phoneInput, setPhoneInput] = useState('');
+  const [phoneDial, setPhoneDial] = useState('+61');
   const [lookupMode, setLookupMode] = useState<'handle' | 'phone'>('handle');
   const [amount, setAmount] = useState('');
   const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -14741,8 +14778,8 @@ function ScanUserPanel({ store, onIssue }: {
   const pointsPerVisit = store?.membershipStampsPerVisit || 1;
 
   const handlePhoneIssue = async () => {
-    const cleaned = phoneInput.trim();
-    if (!cleaned) { setStatus({ type: 'error', message: 'Enter a phone number' }); return; }
+    const cleaned = toE164(phoneDial, phoneInput.trim());
+    if (!phoneInput.trim()) { setStatus({ type: 'error', message: 'Enter a phone number' }); return; }
     setWorking(true);
     setStatus(null);
     try {
@@ -14864,17 +14901,25 @@ function ScanUserPanel({ store, onIssue }: {
         ) : (
           <div>
             <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-2 block">Customer phone number</label>
-            <div className="flex items-center gap-3 bg-white rounded-2xl px-4 py-3 border border-brand-navy/10">
-              <Phone size={16} className="text-brand-navy/72 shrink-0" />
+            <div className="flex gap-2">
+              <select
+                value={phoneDial}
+                onChange={e => { setPhoneDial(e.target.value); setStatus(null); }}
+                className="shrink-0 bg-white rounded-2xl px-3 py-3 border border-brand-navy/10 text-sm text-brand-navy focus:outline-none appearance-none"
+              >
+                {DIAL_CODES.map(c => (
+                  <option key={c.code} value={c.dial}>{c.flag} {c.dial}</option>
+                ))}
+              </select>
               <input
                 type="tel"
                 value={phoneInput}
                 onChange={e => { setPhoneInput(e.target.value); setStatus(null); }}
-                placeholder="+1 555 000 0000"
-                className="flex-1 text-sm text-brand-navy outline-none placeholder:text-brand-navy/72"
+                placeholder="0420 448 995"
+                inputMode="numeric"
+                className="flex-1 min-w-0 bg-white rounded-2xl px-4 py-3 border border-brand-navy/10 text-sm text-brand-navy outline-none placeholder:text-brand-navy/40"
               />
             </div>
-            <p className="text-[10px] text-brand-navy/60 mt-1.5 font-medium">Include country code, e.g. +44 7700 900000</p>
           </div>
         )}
         {!isVisit && (
