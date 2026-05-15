@@ -735,6 +735,8 @@ interface AppBadge {
   name: string;
   description?: string;
   color: string;
+  baseColor?: string;
+  borderColor?: string;
   icon: string;
   metric: BadgeMetric;
   threshold: number;
@@ -4054,6 +4056,7 @@ function BadgesAdminPanel({ onClose }: { onClose: () => void }) {
   const [metric, setMetric] = useState<BadgeMetric>('stamps');
   const [threshold, setThreshold] = useState('');
   const [color, setColor] = useState(BADGE_COLORS[0]);
+  const [borderColor, setBorderColor] = useState('#FBBF24');
   const [icon, setIcon] = useState(BADGE_ICONS[0]);
 
   // Edit form state
@@ -4062,6 +4065,7 @@ function BadgesAdminPanel({ onClose }: { onClose: () => void }) {
   const [editMetric, setEditMetric] = useState<BadgeMetric>('stamps');
   const [editThreshold, setEditThreshold] = useState('');
   const [editColor, setEditColor] = useState(BADGE_COLORS[0]);
+  const [editBorderColor, setEditBorderColor] = useState('#FBBF24');
   const [editIcon, setEditIcon] = useState(BADGE_ICONS[0]);
 
   const inputCls = 'w-full bg-white border border-brand-navy/15 rounded-2xl px-4 py-3 text-sm text-brand-navy placeholder:text-brand-navy/72 focus:outline-none focus:ring-2 focus:ring-brand-gold/40';
@@ -4080,9 +4084,9 @@ function BadgesAdminPanel({ onClose }: { onClose: () => void }) {
     setSaving(true);
     try {
       await addDoc(collection(db, 'badges'), {
-        name: name.trim(), description: description.trim(), color, icon, metric, threshold: t, createdAt: serverTimestamp(),
+        name: name.trim(), description: description.trim(), color, baseColor: color, borderColor, icon, metric, threshold: t, createdAt: serverTimestamp(),
       });
-      setName(''); setDescription(''); setThreshold(''); setMetric('stamps'); setColor(BADGE_COLORS[0]); setIcon(BADGE_ICONS[0]);
+      setName(''); setDescription(''); setThreshold(''); setMetric('stamps'); setColor(BADGE_COLORS[0]); setBorderColor('#FBBF24'); setIcon(BADGE_ICONS[0]);
     } finally { setSaving(false); }
   };
 
@@ -4093,6 +4097,7 @@ function BadgesAdminPanel({ onClose }: { onClose: () => void }) {
     setEditMetric(b.metric);
     setEditThreshold(String(b.threshold));
     setEditColor(b.color);
+    setEditBorderColor(b.borderColor ?? '#FBBF24');
     setEditIcon(b.icon);
   };
 
@@ -4102,7 +4107,7 @@ function BadgesAdminPanel({ onClose }: { onClose: () => void }) {
     setEditSaving(true);
     try {
       await updateDoc(doc(db, 'badges', editingId), {
-        name: editName.trim(), description: editDescription.trim(), color: editColor, icon: editIcon, metric: editMetric, threshold: t,
+        name: editName.trim(), description: editDescription.trim(), color: editColor, baseColor: editColor, borderColor: editBorderColor, icon: editIcon, metric: editMetric, threshold: t,
       });
       setEditingId(null);
     } finally { setEditSaving(false); }
@@ -4138,11 +4143,12 @@ function BadgesAdminPanel({ onClose }: { onClose: () => void }) {
 
             {/* Preview */}
             <div className="flex justify-center">
-              <div
-                className="w-20 h-20 rounded-[1.75rem] flex items-center justify-center text-4xl shadow-lg border-4 border-white"
-                style={{ background: `linear-gradient(135deg, ${color}ee, ${color}99)` }}
-              >
-                {icon}
+              <div style={{ filter: `drop-shadow(0 10px 16px ${color}88)` }}>
+                <div style={{ width: 80, height: 80, clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', background: borderColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 70, height: 70, clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', background: `linear-gradient(160deg, ${color}f0 0%, ${color}99 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span className="text-4xl leading-none">{icon}</span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -4159,13 +4165,25 @@ function BadgesAdminPanel({ onClose }: { onClose: () => void }) {
               <input value={threshold} onChange={e => setThreshold(e.target.value)} placeholder="Amount" type="number" min="1" className={cn(inputCls, 'w-24')} />
             </div>
 
-            {/* Colour picker */}
+            {/* Badge Colour picker */}
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75 mb-2">Colour</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75 mb-2">Badge Colour</p>
               <div className="flex flex-wrap gap-2">
                 {BADGE_COLORS.map(c => (
                   <button key={c} onClick={() => setColor(c)}
                     className={cn('w-7 h-7 rounded-full border-2 transition-transform active:scale-90', color === c ? 'border-brand-navy scale-110' : 'border-white')}
+                    style={{ background: c }} />
+                ))}
+              </div>
+            </div>
+
+            {/* Border Colour picker */}
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75 mb-2">Border Colour</p>
+              <div className="flex flex-wrap gap-2">
+                {['#FBBF24','#F97316','#EF4444','#EC4899','#8B5CF6','#3B82F6','#22C55E','#14B8A6','#FFFFFF','#1E293B'].map(c => (
+                  <button key={c} onClick={() => setBorderColor(c)}
+                    className={cn('w-7 h-7 rounded-full border-2 transition-transform active:scale-90', borderColor === c ? 'border-brand-navy scale-110' : 'border-white')}
                     style={{ background: c }} />
                 ))}
               </div>
@@ -4217,10 +4235,10 @@ function BadgesAdminPanel({ onClose }: { onClose: () => void }) {
                       <div key={b.id} className="bg-white rounded-2xl border border-black/5 overflow-hidden">
                         {/* Badge row */}
                         <div className="p-4 flex items-center gap-3">
-                          <div
-                            className="w-12 h-12 rounded-[1rem] flex items-center justify-center text-2xl shrink-0 shadow-sm"
-                            style={{ background: `linear-gradient(135deg, ${editingId === b.id ? editColor : b.color}ee, ${editingId === b.id ? editColor : b.color}99)` }}
-                          >{editingId === b.id ? editIcon : b.icon}</div>
+                          <HexBadge
+                            badge={editingId === b.id ? { ...b, color: editColor, baseColor: editColor, borderColor: editBorderColor, icon: editIcon } : b}
+                            size={48}
+                          />
                           <div className="flex-1 min-w-0">
                             <p className="font-bold text-brand-navy text-sm leading-tight">{b.name}</p>
                             <p className="text-xs text-brand-navy/80 mt-0.5">{BADGE_METRIC_LABELS[b.metric]} ≥ {b.threshold}</p>
@@ -4267,11 +4285,21 @@ function BadgesAdminPanel({ onClose }: { onClose: () => void }) {
                                 <input value={editThreshold} onChange={e => setEditThreshold(e.target.value)} placeholder="Amount" type="number" min="1" className={cn(editInputCls, 'w-24')} />
                               </div>
                               <div>
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75 mb-2">Colour</p>
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75 mb-2">Badge Colour</p>
                                 <div className="flex flex-wrap gap-2">
                                   {BADGE_COLORS.map(c => (
                                     <button key={c} onClick={() => setEditColor(c)}
                                       className={cn('w-7 h-7 rounded-full border-2 transition-transform active:scale-90', editColor === c ? 'border-brand-navy scale-110' : 'border-white')}
+                                      style={{ background: c }} />
+                                  ))}
+                                </div>
+                              </div>
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75 mb-2">Border Colour</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {['#FBBF24','#F97316','#EF4444','#EC4899','#8B5CF6','#3B82F6','#22C55E','#14B8A6','#FFFFFF','#1E293B'].map(c => (
+                                    <button key={c} onClick={() => setEditBorderColor(c)}
+                                      className={cn('w-7 h-7 rounded-full border-2 transition-transform active:scale-90', editBorderColor === c ? 'border-brand-navy scale-110' : 'border-white')}
                                       style={{ background: c }} />
                                   ))}
                                 </div>
@@ -7722,9 +7750,9 @@ function BadgeNotifCard({ badge, queueCount, onDismiss }: { badge: AppBadge; que
             initial={{ scale: 0, rotate: -20 }}
             animate={{ scale: [0, 1.35, 0.9, 1.1, 1], rotate: [-20, 15, -8, 4, 0] }}
             transition={{ duration: 0.7, ease: 'easeOut', delay: 0.1 }}
-            className="w-28 h-28 rounded-[2rem] flex items-center justify-center text-6xl shadow-2xl"
-            style={{ background: `linear-gradient(135deg, ${badge.color}ee, ${badge.color}99)` }}
-          >{badge.icon}</motion.div>
+          >
+            <HexBadge badge={badge} size={112} />
+          </motion.div>
         </div>
         <div className="text-center space-y-1">
           <motion.p initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
@@ -16329,6 +16357,37 @@ function SubCardBuilder({ store }: { store: StoreProfile | null }) {
   );
 }
 
+const HEX_CLIP = 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)';
+
+function HexBadge({ badge, size = 56 }: { badge: AppBadge; size?: number }) {
+  const isLinqle = badge.metric === 'linqle_wins';
+  const fill = badge.baseColor || badge.color;
+  const border = badge.borderColor || '#FBBF24';
+  const innerSize = size - Math.round(size * 0.09);
+  const scrambleTarget = badge.name.slice(0, 3).toUpperCase();
+  const shadowBlur = Math.round(size / 3.2);
+  const shadowY = Math.round(size / 5);
+  return (
+    <div style={{ filter: `drop-shadow(0 ${shadowY}px ${shadowBlur}px ${fill}88)`, width: size, height: size }}>
+      <div style={{ width: size, height: size, clipPath: HEX_CLIP, background: border, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{
+          width: innerSize, height: innerSize,
+          clipPath: HEX_CLIP,
+          background: isLinqle
+            ? 'linear-gradient(160deg, #1a5c32 0%, #0a2318 100%)'
+            : `linear-gradient(160deg, ${fill}f0 0%, ${fill}88 100%)`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+        }}>
+          {isLinqle
+            ? <MatrixScramble target={scrambleTarget} className="font-black text-green-300 font-mono tracking-tighter" style={{ fontSize: Math.round(size * 0.28) } as React.CSSProperties} />
+            : <span style={{ fontSize: Math.round(size * 0.42), lineHeight: 1 }}>{badge.icon}</span>
+          }
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BadgeSwipeRow({ badges, onSelectBadge }: { badges: AppBadge[]; onSelectBadge: (b: AppBadge) => void }) {
   if (badges.length === 0) return null;
   return (
@@ -16340,19 +16399,7 @@ function BadgeSwipeRow({ badges, onSelectBadge }: { badges: AppBadge[]; onSelect
             onClick={() => onSelectBadge(b)}
             className="flex flex-col items-center gap-2.5 shrink-0 active:scale-95 transition-transform"
           >
-            <div
-              className="relative w-14 h-14 rotate-45 rounded-lg overflow-hidden"
-              style={{
-                background: `linear-gradient(135deg, ${b.color}ee, ${b.color}99)`,
-                border: '2.5px solid #FBBF24',
-                boxShadow: '0 0 0 1px #F59E0B55, 0 6px 16px -4px rgba(0,0,0,0.25)',
-              }}
-            >
-              <span className="badge-shine-ray" aria-hidden="true" />
-              <div className="-rotate-45 flex items-center justify-center w-full h-full text-2xl">
-                {b.icon}
-              </div>
-            </div>
+            <HexBadge badge={b} size={56} />
             <span className="text-[11px] font-bold text-brand-navy/90 text-center w-16 leading-tight line-clamp-2 pt-1.5">{b.name}</span>
           </button>
         ))}
@@ -16365,25 +16412,24 @@ function BadgeSquarePanel({ badges, onSelectBadge }: { badges: AppBadge[]; onSel
   const [showAll, setShowAll] = useState(false);
   return (
     <>
-      <div className="grid grid-cols-2 gap-1.5 w-full">
+      <div className="grid grid-cols-2 gap-3 w-full">
         {[0, 1, 2].map(i => {
           const b = badges[i];
           if (!b) return (
-            <div key={i} className="aspect-square rounded-[1.1rem] bg-brand-navy/5 border border-brand-navy/8 flex items-center justify-center">
+            <div key={i} className="h-24 rounded-[1.1rem] bg-brand-navy/5 border border-brand-navy/8 flex items-center justify-center">
               <span className="text-brand-navy/32 text-lg">✦</span>
             </div>
           );
           return (
             <button key={b.id} onClick={() => onSelectBadge(b)}
-              className="aspect-square rounded-[1.1rem] flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-transform shadow-md overflow-hidden"
-              style={{ background: `linear-gradient(135deg, ${b.color}ee, ${b.color}99)` }}>
-              <span className="text-2xl leading-none">{b.icon}</span>
-              <span className="text-[6px] font-bold text-white/90 text-center px-1 leading-tight line-clamp-2 max-w-full">{b.name}</span>
+              className="h-24 rounded-[1.1rem] flex flex-col items-center justify-center gap-1.5 active:scale-95 transition-transform bg-white/60 border border-black/5">
+              <HexBadge badge={b} size={52} />
+              <span className="text-[7px] font-bold text-brand-navy/80 text-center px-1 leading-tight line-clamp-2 max-w-full">{b.name}</span>
             </button>
           );
         })}
         <button onClick={() => setShowAll(true)}
-          className="aspect-square rounded-[1.1rem] bg-brand-navy flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-transform shadow-md">
+          className="h-24 rounded-[1.1rem] bg-brand-navy flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-transform shadow-md">
           <span className="text-lg leading-none">🏅</span>
           <span className="text-[7px] font-bold text-white/70 uppercase tracking-wide">See all</span>
           {badges.length > 0 && <span className="text-[9px] font-black text-brand-gold">{badges.length}</span>}
@@ -16403,12 +16449,11 @@ function BadgeSquarePanel({ badges, onSelectBadge }: { badges: AppBadge[]; onSel
               {badges.length === 0 ? (
                 <p className="text-xs text-brand-navy/75 text-center py-8">No badges earned yet</p>
               ) : (
-                <div className="grid grid-cols-4 gap-3 max-h-72 overflow-y-auto pb-1">
+                <div className="grid grid-cols-4 gap-4 max-h-72 overflow-y-auto pb-1">
                   {badges.map(b => (
                     <button key={b.id} onClick={() => { setShowAll(false); onSelectBadge(b); }}
                       className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform">
-                      <div className="w-14 h-14 rounded-[1.1rem] flex items-center justify-center text-2xl shadow-md"
-                        style={{ background: `linear-gradient(135deg, ${b.color}ee, ${b.color}99)` }}>{b.icon}</div>
+                      <HexBadge badge={b} size={56} />
                       <p className="text-[8px] font-bold text-brand-navy/75 text-center max-w-[56px] leading-tight line-clamp-2">{b.name}</p>
                     </button>
                   ))}
