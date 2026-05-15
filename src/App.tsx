@@ -296,6 +296,8 @@ interface UserProfile {
   linqleTotalPlays?: number;
   linqleBestGuesses?: number;
   linqleBestTime?: number;
+  correctPolls?: number;
+  challengesWon?: number;
   dogName?: string;
   lastDogFed?: any;
   lastTreeWatered?: any;
@@ -636,7 +638,7 @@ interface StoreAutomation {
   lastFiredDate?: string;
 }
 
-type BadgeMetric = 'stamps' | 'cards_completed' | 'challenges_joined' | 'memberships' | 'followers' | 'following' | 'posts' | 'charity_animals' | 'charity_trees' | 'charity_total';
+type BadgeMetric = 'stamps' | 'cards_completed' | 'challenges_joined' | 'memberships' | 'followers' | 'following' | 'posts' | 'charity_animals' | 'charity_trees' | 'charity_total' | 'linqle_wins' | 'correct_polls' | 'rewards_redeemed' | 'streak' | 'points_redeemed' | 'visits' | 'challenges_won';
 
 interface EndangeredAnimal {
   name: string;
@@ -3526,10 +3528,11 @@ function MysteryRevealCard({ sticker, isRevealed, onReveal }: {
   );
 }
 
-function ChallengeRedeemModal({ challenge, entry, userName, onClose }: {
+function ChallengeRedeemModal({ challenge, entry, userName, uid, onClose }: {
   challenge: Challenge;
   entry: any;
   userName: string;
+  uid?: string;
   onClose: () => void;
 }) {
   const [confirmed, setConfirmed] = useState(false);
@@ -3542,6 +3545,7 @@ function ChallengeRedeemModal({ challenge, entry, userName, onClose }: {
         redeemed: true,
         redeemedAt: serverTimestamp(),
       });
+      if (uid) updateDoc(doc(db, 'users', uid), { challengesWon: increment(1) }).catch(console.error);
       setConfirmed(true);
     } finally {
       setMarking(false);
@@ -3988,6 +3992,13 @@ const BADGE_METRIC_LABELS: Record<BadgeMetric, string> = {
   charity_animals: 'Animals championed',
   charity_trees: 'Trees championed',
   charity_total: 'Total good deeds',
+  linqle_wins: 'Linqle wins',
+  correct_polls: 'Correct daily polls',
+  rewards_redeemed: 'Rewards redeemed',
+  streak: 'Day streak',
+  points_redeemed: 'Points redeemed',
+  visits: 'Total visits',
+  challenges_won: 'Challenges won',
 };
 
 const BADGE_COLORS = [
@@ -6837,6 +6848,13 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       charity_animals: profile.charityAnimals || 0,
       charity_trees: profile.charityTrees || 0,
       charity_total: (profile.charityAnimals || 0) + (profile.charityTrees || 0),
+      linqle_wins: profile.linqleTotalWins || 0,
+      correct_polls: profile.correctPolls || 0,
+      rewards_redeemed: profile.totalRedeemed || 0,
+      streak: profile.streak || 0,
+      points_redeemed: initialCards.reduce((sum, c) => sum + (c.total_points_redeemed || 0), 0),
+      visits: initialCards.reduce((sum, c) => sum + (c.total_visits || 0), 0),
+      challenges_won: profile.challengesWon || 0,
     };
     const earned = allBadgesGlobal.filter(b => (metrics[b.metric] ?? 0) >= b.threshold);
 
@@ -7566,6 +7584,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
             challenge={redeemingChallenge.challenge}
             entry={redeemingChallenge.entry}
             userName={redeemingChallenge.userName}
+            uid={user.uid}
             onClose={() => setRedeemingChallenge(null)}
           />
         )}
@@ -13013,6 +13032,7 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
         const newStickers = await issueUserStickers(currentUser.uid, name, 3).catch(() => [] as CollectibleSticker[]);
         issueStickersToCard(currentUser.uid, name, 3).catch(console.error);
         await updateDoc(voteRef, { rewardClaimed: true });
+        updateDoc(doc(db, 'users', currentUser.uid), { correctPolls: increment(1) }).catch(console.error);
         if (newStickers.length > 0) onPackReady?.(newStickers);
       } catch (e) { console.error('vote reward', e); }
     });
@@ -16787,6 +16807,13 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
     charity_animals: profile.charityAnimals || 0,
     charity_trees: profile.charityTrees || 0,
     charity_total: (profile.charityAnimals || 0) + (profile.charityTrees || 0),
+    linqle_wins: profile.linqleTotalWins || 0,
+    correct_polls: profile.correctPolls || 0,
+    rewards_redeemed: profile.totalRedeemed || 0,
+    streak: profile.streak || 0,
+    points_redeemed: userCards.reduce((sum, c) => sum + (c.total_points_redeemed || 0), 0),
+    visits: userCards.reduce((sum, c) => sum + (c.total_visits || 0), 0),
+    challenges_won: profile.challengesWon || 0,
   };
   const earnedBadges = allBadges.filter(b => (badgeMetrics[b.metric] ?? 0) >= b.threshold);
 
@@ -17320,6 +17347,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
             challenge={profileRedeemingChallenge.challenge}
             entry={profileRedeemingChallenge.entry}
             userName={profileRedeemingChallenge.userName}
+            uid={profileRedeemingChallenge.entry?.uid}
             onClose={() => setProfileRedeemingChallenge(null)}
           />
         )}
