@@ -13956,9 +13956,18 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
               })}
             </div>
           ) : (
-            /* All — grouped by category */
+            /* All — grouped by category, sections ordered by nearest store */
             <div className="space-y-6">
-              {(['Food', 'Beauty', 'Barber', 'Gym', 'Parking', 'Retail'] as const).map(cat => {
+              {(['Food', 'Beauty', 'Barber', 'Gym', 'Parking', 'Retail'] as const)
+                .slice()
+                .sort((a, b) => {
+                  const minDist = (cat: string) => {
+                    const dists = filteredStores.filter(s => s.category === cat).map(s => distancesMap.get(s.id) ?? Infinity);
+                    return dists.length ? Math.min(...dists) : Infinity;
+                  };
+                  return minDist(a) - minDist(b);
+                })
+                .map(cat => {
                 const catStores = filteredStores.filter(s => s.category === cat);
                 if (catStores.length === 0) return null;
                 const CatIcon = CATEGORY_ICON_MAP[cat];
