@@ -21046,11 +21046,23 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
             const isSelected = selectedMsgId === msg.id;
             return (
               <div key={msg.id} className="w-full px-2">
-                {showName && !isMe && <span className="text-[10px] font-bold text-brand-navy/75 mb-1 ml-1 block">{msg.senderName}</span>}
+                {showName && !isMe && !activeChatBusinessInfo && <span className="text-[10px] font-bold text-brand-navy/75 mb-1 ml-1 block">{msg.senderName}</span>}
                 <div
                   className={cn("flex items-end gap-2 w-full", isMe ? "flex-row-reverse" : "flex-row")}
                   onClick={e => { e.stopPropagation(); if (isMe) setSelectedMsgId(isSelected ? null : msg.id); }}
                 >
+                  {/* Vendor logo next to their messages */}
+                  {!isMe && activeChatBusinessInfo && (
+                    showName ? (
+                      <div className="w-8 h-8 rounded-xl overflow-hidden border border-white shadow-sm bg-brand-navy/5 flex items-center justify-center shrink-0">
+                        {activeChatBusinessInfo.businessLogoUrl
+                          ? <img src={activeChatBusinessInfo.businessLogoUrl} alt="" className="w-full h-full object-cover" />
+                          : <Store size={14} className="text-brand-navy/60" />}
+                      </div>
+                    ) : (
+                      <div className="w-8 shrink-0" />
+                    )
+                  )}
                   <div className={cn(
                     "flex-1 px-4 py-3 rounded-2xl text-sm shadow-sm",
                     isMe ? "gradient-red text-white" : "glass-card text-brand-navy"
