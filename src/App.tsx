@@ -595,6 +595,7 @@ interface CollectibleCardDef {
   imageUrl: string;
   tier: StickerTier;
   probability: number; // relative weight within tier
+  challengeId?: string; // which Monopoly game this card belongs to
   createdAt?: any;
 }
 
@@ -2928,15 +2929,41 @@ async function issueStickersToCard(customerUid: string, userName: string, qty: n
 // --- Global user sticker collection (every stamp always issues 3 stickers here) ---
 
 async function issueUserStickers(uid: string, userName: string, qty: number): Promise<CollectibleSticker[]> {
-  // Load card defs from Firestore grouped by tier
+  // Determine which active Monopoly games this user is in, to pick game-specific cards
+  let activeChallengeId: string | null = null;
+  try {
+    const stickerCardsSnap = await getDocs(query(collection(db, 'sticker_cards'), where('user_id', '==', uid)));
+    if (!stickerCardsSnap.empty) {
+      const programmeIds = [...new Set(stickerCardsSnap.docs.map(d => d.data().programme_id as string))];
+      for (const pid of programmeIds) {
+        const cSnap = await getDoc(doc(db, 'challenges', pid));
+        if (cSnap.exists() && cSnap.data().status === 'active' && cSnap.data().type === 'collectible') {
+          activeChallengeId = pid;
+          break;
+        }
+      }
+    }
+  } catch { /* fall through — use global pool */ }
+
+  // Load card defs: prefer game-specific pool, fall back to global (no challengeId)
   const cardDefsSnap = await getDocs(collection(db, 'collectible_cards')).catch(() => null);
   const cardDefsByTier = new Map<StickerTier, CollectibleCardDef[]>();
   if (cardDefsSnap) {
     cardDefsSnap.docs.forEach(d => {
       const def = { id: d.id, ...d.data() } as CollectibleCardDef;
+      const belongsToGame = activeChallengeId ? def.challengeId === activeChallengeId : !def.challengeId;
+      if (!belongsToGame) return;
       if (!cardDefsByTier.has(def.tier)) cardDefsByTier.set(def.tier, []);
       cardDefsByTier.get(def.tier)!.push(def);
     });
+    // If no game-specific cards found, fall back to all cards
+    if (cardDefsByTier.size === 0 && cardDefsSnap) {
+      cardDefsSnap.docs.forEach(d => {
+        const def = { id: d.id, ...d.data() } as CollectibleCardDef;
+        if (!cardDefsByTier.has(def.tier)) cardDefsByTier.set(def.tier, []);
+        cardDefsByTier.get(def.tier)!.push(def);
+      });
+    }
   }
 
   const rollCardDef = (tier: StickerTier): CollectibleCardDef | null => {
@@ -4643,10 +4670,11 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
 const MAX_CARDS_PER_TIER: Record<StickerTier, number> = { brown: 3, lightblue: 3, red: 3, blue: 3, gold: 2 };
 
 function CollectibleCardsAdminPanel({ onClose }: { onClose: () => void }) {
+  const [games, setGames] = useState<Challenge[]>([]);
+  const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
   const [cardDefs, setCardDefs] = useState<CollectibleCardDef[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTier, setActiveTier] = useState<StickerTier>('brown');
-  const [uploading, setUploading] = useState(false);
   const [name, setName] = useState('');
   const [probability, setProbability] = useState(1);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -4656,6 +4684,13 @@ function CollectibleCardsAdminPanel({ onClose }: { onClose: () => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    const q = query(collection(db, 'challenges'), where('type', '==', 'collectible'));
+    return onSnapshot(q, snap => {
+      setGames(snap.docs.map(d => ({ id: d.id, ...d.data() } as Challenge)));
+    });
+  }, []);
+
+  useEffect(() => {
     const unsub = onSnapshot(collection(db, 'collectible_cards'), snap => {
       setCardDefs(snap.docs.map(d => ({ id: d.id, ...d.data() } as CollectibleCardDef)));
       setLoading(false);
@@ -4663,9 +4698,10 @@ function CollectibleCardsAdminPanel({ onClose }: { onClose: () => void }) {
     return unsub;
   }, []);
 
-  const tierCards = cardDefs.filter(c => c.tier === activeTier);
+  const selectedGame = games.find(g => g.id === selectedGameId) ?? null;
+  const tierCards = cardDefs.filter(c => c.tier === activeTier && c.challengeId === selectedGameId);
   const maxForTier = MAX_CARDS_PER_TIER[activeTier];
-  const canAdd = tierCards.length < maxForTier;
+  const canAdd = !!selectedGameId && tierCards.length < maxForTier;
   const cfg = STICKER_CONFIG[activeTier];
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -4675,7 +4711,7 @@ function CollectibleCardsAdminPanel({ onClose }: { onClose: () => void }) {
   };
 
   const handleAdd = async () => {
-    if (!name.trim() || !imageFile) return;
+    if (!name.trim() || !imageFile || !selectedGameId) return;
     setSaving(true);
     try {
       const blob = await compressImage(imageFile, 800);
@@ -4683,7 +4719,7 @@ function CollectibleCardsAdminPanel({ onClose }: { onClose: () => void }) {
       const snap2 = await uploadBytes(storageRef(storage, path), blob);
       const imageUrl = await getDownloadURL(snap2.ref);
       await addDoc(collection(db, 'collectible_cards'), {
-        name: name.trim(), imageUrl, tier: activeTier, probability, createdAt: serverTimestamp(),
+        name: name.trim(), imageUrl, tier: activeTier, probability, challengeId: selectedGameId, createdAt: serverTimestamp(),
       });
       setName(''); setProbability(1); setImageFile(null); setImagePreview('');
       if (fileRef.current) fileRef.current.value = '';
@@ -4704,119 +4740,162 @@ function CollectibleCardsAdminPanel({ onClose }: { onClose: () => void }) {
       <div className="flex-1 overflow-y-auto bg-brand-bg">
         <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm px-5 pt-5 pb-4 border-b border-black/5 z-10">
           <div className="flex items-center gap-3">
-            <button onClick={onClose} className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm active:scale-95 transition-all">
-              <ArrowLeft size={18} className="text-brand-navy/75" />
-            </button>
+            {selectedGameId ? (
+              <button onClick={() => { setSelectedGameId(null); setActiveTier('brown'); }} className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm active:scale-95 transition-all">
+                <ArrowLeft size={18} className="text-brand-navy/75" />
+              </button>
+            ) : (
+              <button onClick={onClose} className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm active:scale-95 transition-all">
+                <ArrowLeft size={18} className="text-brand-navy/75" />
+              </button>
+            )}
             <div>
-              <h2 className="font-display text-xl font-bold text-brand-navy">Collectible Cards</h2>
-              <p className="text-xs text-brand-navy/60">Upload card images per tier</p>
+              <h2 className="font-display text-xl font-bold text-brand-navy">
+                {selectedGame ? selectedGame.title : 'Collectible Cards'}
+              </h2>
+              <p className="text-xs text-brand-navy/60">
+                {selectedGame ? 'Manage cards for this game' : 'Select a Monopoly game'}
+              </p>
             </div>
           </div>
         </div>
 
         <div className="p-5 space-y-5">
-          {/* Tier tabs */}
-          <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-            {STICKER_ORDER.map(t => {
-              const tcfg = STICKER_CONFIG[t];
-              const count = cardDefs.filter(c => c.tier === t).length;
-              const max = MAX_CARDS_PER_TIER[t];
-              return (
-                <button key={t} onClick={() => setActiveTier(t)}
-                  className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all"
-                  style={activeTier === t
-                    ? { background: tcfg.solid, color: 'white', borderColor: tcfg.solid }
-                    : { background: tcfg.bg, color: tcfg.color, borderColor: tcfg.border }
-                  }>
-                  {tcfg.label} {count}/{max}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Existing cards for this tier */}
-          {loading ? (
-            <p className="text-xs text-brand-navy/60 text-center py-4">Loading…</p>
-          ) : tierCards.length === 0 ? (
-            <div className="rounded-2xl bg-brand-navy/5 p-6 text-center">
-              <p className="text-sm font-bold text-brand-navy/60">No cards yet for {cfg.label}</p>
-            </div>
+          {/* Game picker — shown when no game selected */}
+          {!selectedGameId ? (
+            <>
+              {games.length === 0 ? (
+                <div className="rounded-2xl bg-brand-navy/5 p-8 text-center">
+                  <p className="text-sm font-bold text-brand-navy/60">No Monopoly games found</p>
+                  <p className="text-xs text-brand-navy/40 mt-1">Create a collectible challenge first</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {games.map(game => {
+                    const gameCardCount = cardDefs.filter(c => c.challengeId === game.id).length;
+                    return (
+                      <button
+                        key={game.id}
+                        onClick={() => setSelectedGameId(game.id)}
+                        className="w-full flex items-center gap-3 bg-white rounded-2xl p-4 border border-black/5 shadow-sm active:scale-[0.98] transition-all text-left"
+                      >
+                        <div className="w-10 h-10 rounded-2xl bg-amber-50 flex items-center justify-center shrink-0">
+                          <span className="text-xl">🎰</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-sm text-brand-navy truncate">{game.title}</p>
+                          <p className="text-xs text-brand-navy/60">{gameCardCount} card{gameCardCount !== 1 ? 's' : ''} · {game.status}</p>
+                        </div>
+                        <ChevronRight size={16} className="text-brand-navy/40 shrink-0" />
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </>
           ) : (
-            <div className="space-y-3">
-              {tierCards.map(card => (
-                <div key={card.id} className="flex items-center gap-3 bg-white rounded-2xl p-3 border border-black/5 shadow-sm">
-                  <img src={card.imageUrl} alt={card.name}
-                    className="w-14 h-14 rounded-xl object-cover flex-shrink-0"
-                    style={{ border: `2px solid ${cfg.border}` }} />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-sm text-brand-navy truncate">{card.name}</p>
-                    <p className="text-xs text-brand-navy/60">{cfg.label} · weight {card.probability}</p>
-                  </div>
-                  {deleteConfirm === card.id ? (
-                    <div className="flex gap-2 flex-shrink-0">
-                      <button onClick={() => handleDelete(card.id)} className="px-2 py-1 rounded-xl bg-red-500 text-white text-xs font-bold">Delete</button>
-                      <button onClick={() => setDeleteConfirm(null)} className="px-2 py-1 rounded-xl bg-brand-navy/10 text-brand-navy text-xs font-bold">Cancel</button>
-                    </div>
-                  ) : (
-                    <button onClick={() => setDeleteConfirm(card.id)} className="p-2 rounded-xl bg-red-50 active:scale-90 transition-all flex-shrink-0">
-                      <Trash2 size={14} className="text-red-500" />
+            <>
+              {/* Tier tabs */}
+              <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                {STICKER_ORDER.map(t => {
+                  const tcfg = STICKER_CONFIG[t];
+                  const count = cardDefs.filter(c => c.tier === t && c.challengeId === selectedGameId).length;
+                  const max = MAX_CARDS_PER_TIER[t];
+                  return (
+                    <button key={t} onClick={() => setActiveTier(t)}
+                      className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all"
+                      style={activeTier === t
+                        ? { background: tcfg.solid, color: 'white', borderColor: tcfg.solid }
+                        : { background: tcfg.bg, color: tcfg.color, borderColor: tcfg.border }
+                      }>
+                      {tcfg.label} {count}/{max}
                     </button>
-                  )}
+                  );
+                })}
+              </div>
+
+              {/* Existing cards for this tier */}
+              {loading ? (
+                <p className="text-xs text-brand-navy/60 text-center py-4">Loading…</p>
+              ) : tierCards.length === 0 ? (
+                <div className="rounded-2xl bg-brand-navy/5 p-6 text-center">
+                  <p className="text-sm font-bold text-brand-navy/60">No {cfg.label} cards for this game</p>
                 </div>
-              ))}
-            </div>
-          )}
-
-          {/* Add new card */}
-          {canAdd ? (
-            <div className="bg-white rounded-3xl border border-black/5 shadow-sm p-5 space-y-4">
-              <p className="font-bold text-sm text-brand-navy">Add {cfg.label} card ({tierCards.length}/{maxForTier})</p>
-
-              {/* Image picker */}
-              <div>
-                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-                <button onClick={() => fileRef.current?.click()}
-                  className="w-full h-32 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 active:scale-[0.98] transition-all"
-                  style={{ borderColor: imagePreview ? cfg.border : '#CBD5E1', background: imagePreview ? 'transparent' : cfg.bg }}>
-                  {imagePreview
-                    ? <img src={imagePreview} alt="" className="w-full h-full object-cover rounded-2xl" />
-                    : <>
-                        <Image size={22} className="text-brand-navy/40" />
-                        <span className="text-xs text-brand-navy/60 font-medium">Tap to upload image</span>
-                      </>
-                  }
-                </button>
-              </div>
-
-              {/* Name */}
-              <div>
-                <label className="text-[10px] font-bold text-brand-navy/60 uppercase tracking-widest mb-1 block">Card Name</label>
-                <input value={name} onChange={e => setName(e.target.value)}
-                  placeholder="e.g. Golden Phoenix"
-                  className="w-full px-4 py-3 rounded-2xl bg-brand-bg border border-black/8 text-sm font-medium text-brand-navy placeholder:text-brand-navy/35 outline-none" />
-              </div>
-
-              {/* Probability weight */}
-              <div>
-                <label className="text-[10px] font-bold text-brand-navy/60 uppercase tracking-widest mb-1 block">Probability Weight (relative)</label>
-                <div className="flex items-center gap-3">
-                  <input type="range" min={1} max={10} step={1} value={probability} onChange={e => setProbability(Number(e.target.value))} className="flex-1" />
-                  <span className="font-black text-brand-navy text-sm w-6 text-center">{probability}</span>
+              ) : (
+                <div className="space-y-3">
+                  {tierCards.map(card => (
+                    <div key={card.id} className="flex items-center gap-3 bg-white rounded-2xl p-3 border border-black/5 shadow-sm">
+                      <img src={card.imageUrl} alt={card.name}
+                        className="w-14 h-14 rounded-xl object-cover flex-shrink-0"
+                        style={{ border: `2px solid ${cfg.border}` }} />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm text-brand-navy truncate">{card.name}</p>
+                        <p className="text-xs text-brand-navy/60">{cfg.label} · weight {card.probability}</p>
+                      </div>
+                      {deleteConfirm === card.id ? (
+                        <div className="flex gap-2 flex-shrink-0">
+                          <button onClick={() => handleDelete(card.id)} className="px-2 py-1 rounded-xl bg-red-500 text-white text-xs font-bold">Delete</button>
+                          <button onClick={() => setDeleteConfirm(null)} className="px-2 py-1 rounded-xl bg-brand-navy/10 text-brand-navy text-xs font-bold">Cancel</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => setDeleteConfirm(card.id)} className="p-2 rounded-xl bg-red-50 active:scale-90 transition-all flex-shrink-0">
+                          <Trash2 size={14} className="text-red-500" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
                 </div>
-                <p className="text-[10px] text-brand-navy/50 mt-1">Higher weight = more likely to be issued within this tier</p>
-              </div>
+              )}
 
-              <button onClick={handleAdd} disabled={saving || !name.trim() || !imageFile}
-                className="w-full py-3.5 rounded-2xl font-bold text-sm text-white transition-all active:scale-[0.98] disabled:opacity-40"
-                style={{ background: cfg.solid }}>
-                {saving ? 'Saving…' : `Add ${cfg.label} Card`}
-              </button>
-            </div>
-          ) : (
-            <div className="bg-amber-50 rounded-2xl border border-amber-200 p-4 text-center">
-              <p className="text-sm font-bold text-amber-700">Max {maxForTier} cards for {cfg.label} tier reached</p>
-              <p className="text-xs text-amber-600 mt-0.5">Delete one to add a new card</p>
-            </div>
+              {/* Add new card */}
+              {canAdd ? (
+                <div className="bg-white rounded-3xl border border-black/5 shadow-sm p-5 space-y-4">
+                  <p className="font-bold text-sm text-brand-navy">Add {cfg.label} card ({tierCards.length}/{maxForTier})</p>
+
+                  <div>
+                    <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                    <button onClick={() => fileRef.current?.click()}
+                      className="w-full h-32 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 active:scale-[0.98] transition-all"
+                      style={{ borderColor: imagePreview ? cfg.border : '#CBD5E1', background: imagePreview ? 'transparent' : cfg.bg }}>
+                      {imagePreview
+                        ? <img src={imagePreview} alt="" className="w-full h-full object-cover rounded-2xl" />
+                        : <>
+                            <Image size={22} className="text-brand-navy/40" />
+                            <span className="text-xs text-brand-navy/60 font-medium">Tap to upload image</span>
+                          </>
+                      }
+                    </button>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-brand-navy/60 uppercase tracking-widest mb-1 block">Card Name</label>
+                    <input value={name} onChange={e => setName(e.target.value)}
+                      placeholder="e.g. Golden Phoenix"
+                      className="w-full px-4 py-3 rounded-2xl bg-brand-bg border border-black/8 text-sm font-medium text-brand-navy placeholder:text-brand-navy/35 outline-none" />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-brand-navy/60 uppercase tracking-widest mb-1 block">Probability Weight (relative)</label>
+                    <div className="flex items-center gap-3">
+                      <input type="range" min={1} max={10} step={1} value={probability} onChange={e => setProbability(Number(e.target.value))} className="flex-1" />
+                      <span className="font-black text-brand-navy text-sm w-6 text-center">{probability}</span>
+                    </div>
+                    <p className="text-[10px] text-brand-navy/50 mt-1">Higher weight = more likely to be issued within this tier</p>
+                  </div>
+
+                  <button onClick={handleAdd} disabled={saving || !name.trim() || !imageFile}
+                    className="w-full py-3.5 rounded-2xl font-bold text-sm text-white transition-all active:scale-[0.98] disabled:opacity-40"
+                    style={{ background: cfg.solid }}>
+                    {saving ? 'Saving…' : `Add ${cfg.label} Card`}
+                  </button>
+                </div>
+              ) : (
+                <div className="bg-amber-50 rounded-2xl border border-amber-200 p-4 text-center">
+                  <p className="text-sm font-bold text-amber-700">Max {maxForTier} cards for {cfg.label} tier reached</p>
+                  <p className="text-xs text-amber-600 mt-0.5">Delete one to add a new card</p>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
