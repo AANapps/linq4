@@ -12876,53 +12876,53 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
   );
 }
 
-function StoreCard({ store, card, onJoin, onClick, distance }: { store: StoreProfile, card?: Card, onJoin: () => void, onClick?: () => void, distance?: number | null, key?: React.Key }) {
+function StoreCard({ store, card, onJoin, onClick, distance, town }: { store: StoreProfile, card?: Card, onJoin: () => void, onClick?: () => void, distance?: number | null, town?: string, key?: React.Key }) {
   const stampsRequired = store.stamps_required_for_reward || 10;
   const finalReward = store.rewardTiers?.length
     ? [...store.rewardTiers].sort((a, b) => b.stamps - a.stamps)[0]?.reward
     : store.reward;
   const cardEnabled = storeCardActive(store);
+  const distStr = distance != null ? (distance < 1 ? `${Math.round(distance * 1000)}m` : `${distance.toFixed(1)}km`) : null;
 
   return (
     <div
       onClick={onClick}
-      className="glass-card p-4 rounded-3xl flex items-center gap-4 hover:shadow-lg transition-all cursor-pointer group"
+      className="glass-card p-4 rounded-3xl flex items-center gap-3 hover:shadow-lg transition-all cursor-pointer group"
     >
-      <div className="w-20 h-20 rounded-2xl overflow-hidden shrink-0">
+      <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0 border border-brand-navy/5">
         <img src={store.logoUrl || `https://picsum.photos/seed/${store.id}/200/200`} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
       </div>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1 mb-1">
-          <h4 className="font-bold truncate">{store.name}</h4>
-          {store.isVerified && <CheckCircle2 size={14} className="text-blue-500 fill-blue-500/10" />}
+        <div className="flex items-center gap-1 mb-0.5">
+          <h4 className="font-bold text-sm truncate">{store.name}</h4>
+          {store.isVerified && <CheckCircle2 size={13} className="text-blue-500 fill-blue-500/10 shrink-0" />}
         </div>
-        <p className="text-xs text-brand-navy/75 mb-2 flex items-center gap-1">
-          <StoreCategoryIcon category={store.category} size={11} />
-          {store.category}{distance != null ? ` • ${distance < 1 ? `${Math.round(distance * 1000)}m` : `${distance.toFixed(1)}km`} away` : ''}
+        <p className="text-xs text-brand-navy/60 flex items-center gap-1 mb-1">
+          <StoreCategoryIcon category={store.category} size={10} />
+          {store.category}
         </p>
-
+        <p className="text-xs text-brand-navy/50 flex items-center gap-1">
+          {town && <><MapPin size={10} className="shrink-0" />{town}</>}
+          {distStr && <span className={town ? 'before:content-["•"] before:mx-1' : ''}>{distStr}</span>}
+          {!town && !distStr && null}
+        </p>
         {cardEnabled && card ? (
-          <div className="space-y-2">
-            <div className="flex gap-1">
+          <div className="mt-1.5 space-y-1">
+            <div className="flex gap-0.5">
               {Array.from({ length: stampsRequired }).map((_, i) => (
-                <div key={i} className={cn(
-                  "h-1 rounded-full flex-1",
-                  i < card.current_stamps ? "bg-brand-gold" : "bg-brand-navy/10"
-                )} />
+                <div key={i} className={cn("h-1 rounded-full flex-1", i < card.current_stamps ? "bg-brand-gold" : "bg-brand-navy/10")} />
               ))}
             </div>
-            <p className="text-[10px] font-bold text-brand-gold uppercase tracking-widest">
-              {card.current_stamps} / {stampsRequired} Stamps
-            </p>
+            <p className="text-[10px] font-bold text-brand-gold uppercase tracking-widest">{card.current_stamps}/{stampsRequired} stamps</p>
           </div>
         ) : cardEnabled && finalReward ? (
-          <div className="px-2 py-1 bg-brand-gold/10 rounded-lg w-fit">
+          <div className="mt-1.5 px-2 py-0.5 bg-brand-gold/10 rounded-lg w-fit">
             <span className="text-[10px] font-bold text-brand-gold">🎁 {finalReward}</span>
           </div>
         ) : null}
       </div>
       {cardEnabled && card && (
-        <div className="px-3 py-1.5 bg-green-50 border border-green-200 rounded-2xl shrink-0">
+        <div className="px-2.5 py-1 bg-green-50 border border-green-200 rounded-2xl shrink-0">
           <span className="text-[10px] font-bold text-green-600">Joined</span>
         </div>
       )}
@@ -13718,6 +13718,7 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
   const [activeCategory, setActiveCategory] = useState('All');
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [distancesMap, setDistancesMap] = useState<Map<string, number>>(new Map());
+  const [closestTownMap, setClosestTownMap] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -13732,13 +13733,15 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
     if (!userCoords || stores.length === 0) return;
     let cancelled = false;
     (async () => {
-      const map = new Map<string, number>();
+      const dMap = new Map<string, number>();
+      const tMap = new Map<string, string>();
       for (let i = 0; i < stores.length; i++) {
         const store = stores[i];
         const locs = store.locations && store.locations.length > 0
           ? store.locations
-          : [{ id: 'primary', address: store.address || store.location || '', lat: store.lat, lng: store.lng }];
+          : [{ id: 'primary', line1: '', line2: '', town: store.location || '', state: '', postcode: '', address: store.address || store.location || '', lat: store.lat, lng: store.lng }];
         let minDist = Infinity;
+        let closestTown = store.location || '';
         for (const loc of locs) {
           let coords: { lat: number; lng: number } | null = null;
           if (loc.lat != null && loc.lng != null) {
@@ -13754,13 +13757,21 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
           }
           if (coords) {
             const d = haversineKm(userCoords.lat, userCoords.lng, coords.lat, coords.lng);
-            if (d < minDist) minDist = d;
+            if (d < minDist) {
+              minDist = d;
+              closestTown = loc.town || (loc as any).town || store.location || '';
+            }
           }
           if (cancelled) return;
         }
-        if (minDist < Infinity) map.set(store.id, minDist);
+        if (minDist < Infinity) {
+          dMap.set(store.id, minDist);
+          tMap.set(store.id, closestTown);
+          // Update immediately so stores with stored coords appear at once
+          setDistancesMap(new Map(dMap));
+          setClosestTownMap(new Map(tMap));
+        }
       }
-      setDistancesMap(new Map(map));
     })();
     return () => { cancelled = true; };
   }, [userCoords, stores]);
@@ -13868,6 +13879,7 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
                 onJoin={() => onJoin(store)}
                 onClick={() => onViewStore(store)}
                 distance={distancesMap.get(store.id) ?? null}
+                town={closestTownMap.get(store.id) ?? store.location ?? ''}
               />
             ))}
             {filteredStores.length === 0 && (
