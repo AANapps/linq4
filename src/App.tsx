@@ -12904,30 +12904,28 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
   const [showRedeemSheet, setShowRedeemSheet] = useState(false);
   const [isRedeeming, setIsRedeeming] = useState(false);
   const [redeemError, setRedeemError] = useState<string | null>(null);
-  const [redeemSuccess, setRedeemSuccess] = useState(false);
+  const [redeemSuccess, setRedeemSuccess] = useState<string | null>(null);
+  const [selectedReward, setSelectedReward] = useState<{ points: number; reward: string; moneyValue?: number } | null>(null);
 
   const points = card.current_points ?? 0;
   const visits = card.total_visits ?? 0;
-  const rate = store?.pointsToMoneyRate || 100;
+  const rate = store?.pointsToMoneyRate || 0;
   const rewards = store?.subCardRewards ?? [];
-  const moneyValue = Math.floor(points / rate);
 
-  // Find next reward threshold
+  // Sort rewards; find what's unlocked vs next target
   const sortedRewards = [...rewards].sort((a, b) => a.points - b.points);
+  const unlockedRewards = sortedRewards.filter(r => r.points <= points);
   const nextReward = sortedRewards.find(r => r.points > points);
-  const progressTarget = nextReward?.points || rate;
+  const progressTarget = nextReward?.points ?? (rate > 0 ? rate : (sortedRewards[sortedRewards.length - 1]?.points || 100));
   const progressPct = Math.min(100, (points / progressTarget) * 100);
+  const moneyValue = rate > 0 ? Math.floor(points / rate) : 0;
 
   const handleRedeem = async () => {
-    if (points < rate) {
-      setRedeemError(`You need at least ${rate} points to redeem.`);
-      return;
-    }
+    if (!selectedReward) return;
     setIsRedeeming(true);
     setRedeemError(null);
     try {
-      const pointsToUse = Math.floor(points / rate) * rate;
-      const moneyVal = pointsToUse / rate;
+      const pointsToUse = selectedReward.points;
       const cardRef = doc(db, 'cards', card.id);
       await updateDoc(cardRef, {
         current_points: increment(-pointsToUse),
@@ -12939,16 +12937,18 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
         card_type: 'sub',
         type: 'redemption',
         points_redeemed: pointsToUse,
-        money_value: moneyVal,
+        reward_label: selectedReward.reward,
+        ...(selectedReward.moneyValue ? { money_value: selectedReward.moneyValue } : {}),
         redeemed_at: serverTimestamp(),
       });
-      setRedeemSuccess(true);
+      setRedeemSuccess(selectedReward.reward);
       const u = auth.currentUser;
       if (u) postActivity(u.uid, u.displayName || 'Someone', u.photoURL || '', `${u.displayName || 'Someone'} redeemed ${pointsToUse} points at ${store?.name || 'a store'}!`, '⭐');
       setTimeout(() => {
-        setRedeemSuccess(false);
+        setRedeemSuccess(null);
+        setSelectedReward(null);
         setShowRedeemSheet(false);
-      }, 2000);
+      }, 2200);
     } catch (err) {
       console.error(err);
       setRedeemError('Redemption failed. Please try again.');
@@ -13024,7 +13024,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
         <div className="px-5 pb-2">
           <div className="flex items-center justify-between mb-1.5">
             <p className="text-indigo-200 text-[10px] font-bold uppercase tracking-widest">
-              {nextReward ? `Next: ${nextReward.reward}` : `Redeem $${moneyValue} off`}
+              {nextReward ? `Next: ${nextReward.reward}` : unlockedRewards.length > 0 ? `${unlockedRewards.length} reward${unlockedRewards.length > 1 ? 's' : ''} available!` : rate > 0 ? `Redeem $${moneyValue} off` : 'Earn more points'}
             </p>
             <p className="text-indigo-200 text-[10px] font-bold">{points}/{progressTarget}</p>
           </div>
@@ -13061,66 +13061,118 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
         {showRedeemSheet && (
           <div className="fixed inset-0 z-[120] flex items-end justify-center">
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-              onClick={() => setShowRedeemSheet(false)}
+              onClick={() => { setShowRedeemSheet(false); setSelectedReward(null); }}
             />
             <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', stiffness: 350, damping: 35 }}
-              className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-10 shadow-2xl"
+              className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] px-6 pt-6 pb-10 shadow-2xl"
             >
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="font-display text-2xl font-bold">Redeem Points</h3>
-                <button onClick={() => setShowRedeemSheet(false)} className="p-2 text-brand-navy/75 hover:text-brand-navy transition-colors">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="font-display text-xl font-bold text-brand-navy">Redeem Points</h3>
+                  <p className="text-xs text-brand-navy/60 mt-0.5">Balance: <span className="font-bold text-indigo-600">{points.toLocaleString()} pts</span></p>
+                </div>
+                <button onClick={() => { setShowRedeemSheet(false); setSelectedReward(null); }} className="p-2 text-brand-navy/75">
                   <X size={20} />
                 </button>
               </div>
 
-              <div className="space-y-4 mb-8">
-                <div className="glass-card p-5 rounded-2xl flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Current Balance</p>
-                    <p className="text-3xl font-black text-brand-navy mt-1">{points.toLocaleString()} pts</p>
-                  </div>
-                  <Star className="w-8 h-8 text-indigo-400" />
-                </div>
-                <div className="glass-card p-5 rounded-2xl flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Redeemable Value</p>
-                    <p className="text-3xl font-black text-emerald-600 mt-1">${moneyValue} off</p>
-                  </div>
-                  <Gift className="w-8 h-8 text-emerald-400" />
-                </div>
-              </div>
-
-              {redeemError && (
-                <p className="text-red-500 text-sm font-bold mb-4 text-center">{redeemError}</p>
-              )}
-
               {redeemSuccess ? (
-                <div className="w-full bg-emerald-500 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2">
-                  <Check size={18} />
-                  Redeemed!
-                </div>
+                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                  className="py-8 flex flex-col items-center gap-3">
+                  <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center">
+                    <Check size={28} className="text-emerald-600" />
+                  </div>
+                  <p className="font-bold text-brand-navy text-lg text-center">Redeemed!</p>
+                  <p className="text-sm text-brand-navy/60 text-center">{redeemSuccess}</p>
+                </motion.div>
               ) : (
-                <button
-                  onClick={handleRedeem}
-                  disabled={isRedeeming || points < rate}
-                  className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-indigo-700 transition-colors"
-                >
-                  <Gift size={18} />
-                  {isRedeeming ? 'Processing...' : `Confirm Redeem $${moneyValue}`}
-                </button>
-              )}
+                <div className="space-y-3">
+                  {/* Named rewards from store config */}
+                  {sortedRewards.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/50">Rewards</p>
+                      {sortedRewards.map((r, i) => {
+                        const affordable = r.points <= points;
+                        const isSelected = selectedReward?.reward === r.reward && selectedReward?.points === r.points;
+                        return (
+                          <button key={i}
+                            onClick={() => affordable && setSelectedReward(isSelected ? null : { points: r.points, reward: r.reward })}
+                            disabled={!affordable}
+                            className={cn(
+                              'w-full flex items-center justify-between px-4 py-3 rounded-2xl border-2 transition-all text-left',
+                              isSelected ? 'border-indigo-500 bg-indigo-50' : affordable ? 'border-brand-navy/10 bg-white hover:border-indigo-300' : 'border-brand-navy/5 bg-brand-navy/3 opacity-50'
+                            )}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <Gift size={16} className={isSelected ? 'text-indigo-600' : affordable ? 'text-indigo-400' : 'text-brand-navy/30'} />
+                              <div>
+                                <p className={cn('font-bold text-sm', isSelected ? 'text-indigo-700' : 'text-brand-navy')}>{r.reward}</p>
+                                <p className="text-[10px] text-brand-navy/50">{r.points.toLocaleString()} pts</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {!affordable && <span className="text-[10px] text-brand-navy/40">{(r.points - points).toLocaleString()} more</span>}
+                              {isSelected && <CheckCircle2 size={18} className="text-indigo-500" />}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
 
-              <p className="text-center text-xs text-brand-navy/75 mt-3">
-                {rate} pts = $1 off · {Math.floor(points / rate) * rate} pts will be used
-              </p>
+                  {/* Money-value option */}
+                  {rate > 0 && moneyValue > 0 && (
+                    <div className="space-y-2">
+                      {sortedRewards.length > 0 && <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/50">Or cash value</p>}
+                      {(() => {
+                        const moneyPts = Math.floor(points / rate) * rate;
+                        const isSelected = selectedReward?.moneyValue !== undefined;
+                        return (
+                          <button
+                            onClick={() => setSelectedReward(isSelected ? null : { points: moneyPts, reward: `$${moneyValue} off`, moneyValue })}
+                            className={cn(
+                              'w-full flex items-center justify-between px-4 py-3 rounded-2xl border-2 transition-all text-left',
+                              isSelected ? 'border-emerald-500 bg-emerald-50' : 'border-brand-navy/10 bg-white hover:border-emerald-300'
+                            )}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <Wallet size={16} className={isSelected ? 'text-emerald-600' : 'text-emerald-400'} />
+                              <div>
+                                <p className={cn('font-bold text-sm', isSelected ? 'text-emerald-700' : 'text-brand-navy')}>${moneyValue} off</p>
+                                <p className="text-[10px] text-brand-navy/50">{moneyPts.toLocaleString()} pts · {rate} pts = $1</p>
+                              </div>
+                            </div>
+                            {isSelected && <CheckCircle2 size={18} className="text-emerald-500" />}
+                          </button>
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                  {sortedRewards.length === 0 && rate === 0 && (
+                    <p className="text-center text-brand-navy/50 text-sm py-6">No rewards configured for this store yet.</p>
+                  )}
+
+                  {unlockedRewards.length === 0 && moneyValue === 0 && sortedRewards.length > 0 && (
+                    <p className="text-center text-brand-navy/50 text-sm py-4">Keep collecting — {(sortedRewards[0].points - points).toLocaleString()} more pts until your first reward.</p>
+                  )}
+
+                  {redeemError && <p className="text-red-500 text-sm font-bold text-center">{redeemError}</p>}
+
+                  <button
+                    onClick={handleRedeem}
+                    disabled={isRedeeming || !selectedReward}
+                    className="w-full bg-indigo-600 text-white py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 disabled:opacity-40 active:scale-[0.98] transition-all mt-2"
+                  >
+                    <Gift size={16} />
+                    {isRedeeming ? 'Processing…' : selectedReward ? `Redeem — ${selectedReward.points.toLocaleString()} pts` : 'Select a reward'}
+                  </button>
+                </div>
+              )}
             </motion.div>
           </div>
         )}
