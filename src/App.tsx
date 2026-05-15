@@ -607,6 +607,7 @@ interface CollectibleSticker {
   cardDefId?: string;
   cardImageUrl?: string;
   cardName?: string;
+  challengeId?: string; // set when earned while participating in a Monopoly game
 }
 
 interface StickerCardDoc {
@@ -821,7 +822,7 @@ export default function App() {
   const [pendingNFCStoreId, setPendingNFCStoreId] = useState<string | null>(null);
   const [userCards, setUserCards] = useState<Card[]>([]);
   const [showSettings, setShowSettings] = useState(false);
-  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges' | 'stores' | 'users' | 'posts' | 'offers' | 'linqle' | 'daily-vote' | 'cards'>(null);
+  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges' | 'stores' | 'users' | 'posts' | 'offers' | 'linqle' | 'daily-vote'>(null);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -1640,7 +1641,6 @@ export default function App() {
             onOpenOffers={() => setAdminView('offers')}
             onOpenLinqle={() => setAdminView('linqle')}
             onOpenDailyVote={() => setAdminView('daily-vote')}
-            onOpenCards={() => setAdminView('cards')}
           />
         )}
         {adminView === 'challenges' && (
@@ -1666,9 +1666,6 @@ export default function App() {
         )}
         {adminView === 'daily-vote' && (
           <DailyVoteAdmin onClose={() => setAdminView('menu')} />
-        )}
-        {adminView === 'cards' && (
-          <CollectibleCardsAdminPanel onClose={() => setAdminView('menu')} />
         )}
       </AnimatePresence>
 
@@ -2984,6 +2981,7 @@ async function issueUserStickers(uid: string, userName: string, qty: number): Pr
       variant: rollStickerVariant(tier),
       earnedAt: new Date().toISOString(),
       ...(def ? { cardDefId: def.id, cardImageUrl: def.imageUrl, cardName: def.name } : {}),
+      ...(activeChallengeId ? { challengeId: activeChallengeId } : {}),
     };
   });
   const ref = doc(db, 'user_stickers', uid);
@@ -4903,7 +4901,7 @@ function CollectibleCardsAdminPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
-function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts, onOpenOffers, onOpenLinqle, onOpenDailyVote, onOpenCards }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void; onOpenOffers: () => void; onOpenLinqle: () => void; onOpenDailyVote: () => void; onOpenCards: () => void }) {
+function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts, onOpenOffers, onOpenLinqle, onOpenDailyVote }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void; onOpenOffers: () => void; onOpenLinqle: () => void; onOpenDailyVote: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -5035,19 +5033,6 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores,
             </div>
           </motion.button>
 
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={onOpenCards}
-            className="rounded-[2rem] bg-white border border-black/5 shadow-sm p-6 flex flex-col items-start gap-3 text-left active:bg-brand-navy/5 transition-colors"
-          >
-            <div className="w-12 h-12 rounded-2xl bg-orange-100 flex items-center justify-center">
-              <span className="text-xl">🃏</span>
-            </div>
-            <div>
-              <p className="font-bold text-brand-navy text-sm">Cards</p>
-              <p className="text-[11px] text-brand-navy/75 mt-0.5">Upload collectible card images</p>
-            </div>
-          </motion.button>
         </div>
       </div>
     </motion.div>
@@ -5969,6 +5954,47 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
   const [programmePlayerData, setProgrammePlayerData] = useState<Map<string, { uid: string; profile?: UserProfile; card: StickerCardDoc }[]>>(new Map());
   const [loadingProgramme, setLoadingProgramme] = useState(false);
 
+  // Inline card management state (shared — only one game's cards open at a time)
+  const [expandedCards, setExpandedCards] = useState<string | null>(null);
+  const [allCardDefs, setAllCardDefs] = useState<CollectibleCardDef[]>([]);
+  const [cardTier, setCardTier] = useState<StickerTier>('brown');
+  const [cardName, setCardName] = useState('');
+  const [cardProbability, setCardProbability] = useState(1);
+  const [cardImageFile, setCardImageFile] = useState<File | null>(null);
+  const [cardImagePreview, setCardImagePreview] = useState('');
+  const [cardSaving, setCardSaving] = useState(false);
+  const [cardDeleteConfirm, setCardDeleteConfirm] = useState<string | null>(null);
+  const cardFileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    return onSnapshot(collection(db, 'collectible_cards'), snap => {
+      setAllCardDefs(snap.docs.map(d => ({ id: d.id, ...d.data() } as CollectibleCardDef)));
+    });
+  }, []);
+
+  const handleAddCard = async (challengeId: string) => {
+    if (!cardName.trim() || !cardImageFile) return;
+    setCardSaving(true);
+    try {
+      const blob = await compressImage(cardImageFile, 800);
+      const path = `collectible_cards/${cardTier}_${Date.now()}.webp`;
+      const snap2 = await uploadBytes(storageRef(storage, path), blob);
+      const imageUrl = await getDownloadURL(snap2.ref);
+      await addDoc(collection(db, 'collectible_cards'), {
+        name: cardName.trim(), imageUrl, tier: cardTier, probability: cardProbability,
+        challengeId, createdAt: serverTimestamp(),
+      });
+      setCardName(''); setCardProbability(1); setCardImageFile(null); setCardImagePreview('');
+      if (cardFileRef.current) cardFileRef.current.value = '';
+    } catch (e) { console.error(e); }
+    setCardSaving(false);
+  };
+
+  const handleDeleteCard = async (id: string) => {
+    await deleteDoc(doc(db, 'collectible_cards', id)).catch(console.error);
+    setCardDeleteConfirm(null);
+  };
+
   // All stores for vendor picker
   const [allStores, setAllStores] = useState<StoreProfile[]>([]);
   const [vendorPickerOpen, setVendorPickerOpen] = useState(false);
@@ -6591,6 +6617,15 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
                             <Users size={12} />
                           </button>
                           <button
+                            onClick={() => { setExpandedCards(expandedCards === c.id ? null : c.id); setCardTier('brown'); setCardName(''); setCardImageFile(null); setCardImagePreview(''); setCardDeleteConfirm(null); }}
+                            className={cn(
+                              'p-1.5 rounded-xl flex-shrink-0 transition-all',
+                              expandedCards === c.id ? 'bg-amber-500 text-white' : 'bg-amber-50 text-amber-600'
+                            )}
+                          >
+                            <span className="text-[11px] font-black leading-none">🃏</span>
+                          </button>
+                          <button
                             onClick={() => setConfirmDelete(c.id)}
                             disabled={deletingId === c.id}
                             className="p-1.5 rounded-xl bg-red-50 text-brand-rose flex-shrink-0"
@@ -6668,6 +6703,92 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
                             </div>
                           </motion.div>
                         )}
+                      </AnimatePresence>
+
+                      <AnimatePresence>
+                        {expandedCards === c.id && (() => {
+                          const gameTierCards = allCardDefs.filter(cd => cd.challengeId === c.id && cd.tier === cardTier);
+                          const maxForTier = MAX_CARDS_PER_TIER[cardTier];
+                          const tierCfg = STICKER_CONFIG[cardTier];
+                          return (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.15 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="px-3 pb-3 border-t border-amber-100 space-y-3 pt-3">
+                                {/* Tier tabs */}
+                                <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+                                  {STICKER_ORDER.map(t => {
+                                    const tcfg = STICKER_CONFIG[t];
+                                    const cnt = allCardDefs.filter(cd => cd.challengeId === c.id && cd.tier === t).length;
+                                    const mx = MAX_CARDS_PER_TIER[t];
+                                    return (
+                                      <button key={t} onClick={() => setCardTier(t)}
+                                        className="flex-shrink-0 px-2 py-1 rounded-full text-[10px] font-bold border transition-all"
+                                        style={cardTier === t
+                                          ? { background: tcfg.solid, color: 'white', borderColor: tcfg.solid }
+                                          : { background: tcfg.bg, color: tcfg.color, borderColor: tcfg.border }
+                                        }>
+                                        {tcfg.label} {cnt}/{mx}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                                {/* Card list */}
+                                {gameTierCards.map(card => (
+                                  <div key={card.id} className="flex items-center gap-2 bg-amber-50 rounded-xl p-2">
+                                    <img src={card.imageUrl} alt={card.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" style={{ border: `2px solid ${tierCfg.border}` }} />
+                                    <div className="flex-1 min-w-0">
+                                      <p className="font-bold text-[11px] text-amber-900 truncate">{card.name}</p>
+                                      <p className="text-[10px] text-amber-700/60">weight {card.probability}</p>
+                                    </div>
+                                    {cardDeleteConfirm === card.id ? (
+                                      <div className="flex gap-1 flex-shrink-0">
+                                        <button onClick={() => handleDeleteCard(card.id)} className="px-2 py-1 rounded-lg bg-red-500 text-white text-[10px] font-bold">Del</button>
+                                        <button onClick={() => setCardDeleteConfirm(null)} className="px-2 py-1 rounded-lg bg-brand-navy/10 text-brand-navy text-[10px] font-bold">No</button>
+                                      </div>
+                                    ) : (
+                                      <button onClick={() => setCardDeleteConfirm(card.id)} className="p-1.5 rounded-lg bg-red-50 flex-shrink-0">
+                                        <Trash2 size={11} className="text-red-500" />
+                                      </button>
+                                    )}
+                                  </div>
+                                ))}
+                                {/* Add form */}
+                                {gameTierCards.length < maxForTier ? (
+                                  <div className="space-y-2 bg-white rounded-xl p-3 border border-amber-100">
+                                    <p className="text-[10px] font-bold text-amber-800">Add {tierCfg.label} card ({gameTierCards.length}/{maxForTier})</p>
+                                    <input ref={expandedCards === c.id ? cardFileRef : undefined} type="file" accept="image/*" className="hidden"
+                                      onChange={e => { const f = e.target.files?.[0]; if (!f) return; setCardImageFile(f); setCardImagePreview(URL.createObjectURL(f)); }} />
+                                    <button onClick={() => cardFileRef.current?.click()}
+                                      className="w-full h-20 rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-1 text-[10px]"
+                                      style={{ borderColor: cardImagePreview ? tierCfg.border : '#CBD5E1', background: cardImagePreview ? 'transparent' : tierCfg.bg }}>
+                                      {cardImagePreview
+                                        ? <img src={cardImagePreview} alt="" className="w-full h-full object-cover rounded-xl" />
+                                        : <><Image size={16} className="text-brand-navy/40" /><span className="text-brand-navy/60">Upload image</span></>}
+                                    </button>
+                                    <input value={cardName} onChange={e => setCardName(e.target.value)} placeholder="Card name"
+                                      className="w-full px-3 py-2 rounded-xl bg-amber-50 text-[11px] font-medium text-brand-navy placeholder:text-brand-navy/35 outline-none border border-amber-100" />
+                                    <div className="flex items-center gap-2">
+                                      <input type="range" min={1} max={10} step={1} value={cardProbability} onChange={e => setCardProbability(Number(e.target.value))} className="flex-1" />
+                                      <span className="font-black text-amber-800 text-[11px] w-4">{cardProbability}</span>
+                                    </div>
+                                    <button onClick={() => handleAddCard(c.id)} disabled={cardSaving || !cardName.trim() || !cardImageFile}
+                                      className="w-full py-2 rounded-xl font-bold text-[11px] text-white disabled:opacity-40"
+                                      style={{ background: tierCfg.solid }}>
+                                      {cardSaving ? 'Saving…' : `Add ${tierCfg.label} Card`}
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <p className="text-[10px] text-amber-700/60 text-center">Max {maxForTier} {tierCfg.label} cards reached</p>
+                                )}
+                              </div>
+                            </motion.div>
+                          );
+                        })()}
                       </AnimatePresence>
 
                       {confirmDelete === c.id && (
