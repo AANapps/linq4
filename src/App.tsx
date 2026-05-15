@@ -11997,7 +11997,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h3 className="font-display text-2xl font-bold">Redeem Points</h3>
-                    <p className="text-brand-navy/75 text-xs mt-0.5">{membershipPoints.toLocaleString()} pts available · up to ${maxRedeemDollars.toFixed(2)} off</p>
+                    <p className="text-brand-navy/75 text-xs mt-0.5">{netAvailablePoints.toLocaleString()} pts available · up to ${maxRedeemDollars.toFixed(2)} off</p>
                   </div>
                   <button onClick={closeRedeemFlow} className="p-2 text-brand-navy/75 hover:text-brand-navy"><X size={20} /></button>
                 </div>
@@ -12106,8 +12106,8 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
         <div className="bg-white px-4 py-5 flex flex-col items-center text-center">
           {membershipType === 'spend' ? (
             <>
-              <p className="text-brand-navy font-black text-4xl leading-none">{membershipPoints.toLocaleString()}</p>
-              <p className="text-brand-navy/75 text-[9px] font-bold uppercase tracking-widest mt-1">points</p>
+              <p className="text-brand-navy font-black text-4xl leading-none">{netAvailablePoints.toLocaleString()}</p>
+              <p className="text-brand-navy/75 text-[9px] font-bold uppercase tracking-widest mt-1">points available</p>
               {redeemableValue > 0 && (
                 <p className="text-brand-navy/75 font-bold text-xs mt-1.5">≈ ${redeemableValue.toFixed(2)} redeemable</p>
               )}
@@ -12153,8 +12153,8 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               )}
               <div className="grid grid-cols-2 gap-3 mb-6">
                 <div className="glass-card p-5 rounded-2xl">
-                  <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-1">Points</p>
-                  <p className="text-3xl font-black text-brand-navy">{membershipPoints.toLocaleString()}</p>
+                  <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-1">Available</p>
+                  <p className="text-3xl font-black text-brand-navy">{netAvailablePoints.toLocaleString()}</p>
                   {pointsRate > 0 && <p className="text-[10px] text-brand-navy/75 mt-1">{pointsRate} pts per $1</p>}
                 </div>
                 <div className="glass-card p-5 rounded-2xl">
@@ -12168,6 +12168,16 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                   <span className="text-brand-navy/80 text-xs font-bold uppercase tracking-widest">Total Spent</span>
                   <span className="text-brand-navy font-black">${totalSpent.toFixed(2)}</span>
                 </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-brand-navy/80 text-xs font-bold uppercase tracking-widest">Points Earned</span>
+                  <span className="text-brand-navy font-black">{membershipPoints.toLocaleString()}</span>
+                </div>
+                {pointsAlreadyRedeemed > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-brand-navy/80 text-xs font-bold uppercase tracking-widest">Points Redeemed</span>
+                    <span className="text-red-500 font-black">−{pointsAlreadyRedeemed.toLocaleString()}</span>
+                  </div>
+                )}
                 {earnedRewards > 0 && (
                   <div className="flex items-center justify-between">
                     <span className="text-brand-navy/80 text-xs font-bold uppercase tracking-widest">Rewards Earned</span>
@@ -12354,8 +12364,8 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
           {membershipType === 'spend' ? (
             <>
               <div className="text-center mb-4">
-                <p className="text-brand-navy font-black text-5xl leading-none tracking-tight">{membershipPoints.toLocaleString()}</p>
-                <p className="text-brand-navy/75 text-xs font-bold uppercase tracking-widest mt-1.5">points</p>
+                <p className="text-brand-navy font-black text-5xl leading-none tracking-tight">{netAvailablePoints.toLocaleString()}</p>
+                <p className="text-brand-navy/75 text-xs font-bold uppercase tracking-widest mt-1.5">points available</p>
                 {redeemableValue > 0 && (
                   <p className="text-brand-navy text-2xl font-black mt-2 leading-none">≈ ${redeemableValue.toFixed(2)} off</p>
                 )}
@@ -12436,8 +12446,8 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               {/* Balance row */}
               <div className="grid grid-cols-2 gap-3 mb-6">
                 <div className="glass-card p-5 rounded-2xl">
-                  <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-1">Points</p>
-                  <p className="text-3xl font-black text-brand-navy">{membershipPoints.toLocaleString()}</p>
+                  <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-1">Available</p>
+                  <p className="text-3xl font-black text-brand-navy">{netAvailablePoints.toLocaleString()}</p>
                   {pointsRate > 0 && <p className="text-[10px] text-brand-navy/75 mt-1">{pointsRate} pts per $1</p>}
                 </div>
                 <div className="glass-card p-5 rounded-2xl">
@@ -12448,15 +12458,25 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               </div>
 
               {/* Spend summary */}
-              <div className="glass-card p-4 rounded-2xl flex items-center justify-between mb-4">
-                <div>
+              <div className="glass-card p-4 rounded-2xl mb-4 space-y-2">
+                <div className="flex items-center justify-between">
                   <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Total Spent</p>
-                  <p className="text-2xl font-black text-brand-navy mt-0.5">${totalSpent.toFixed(2)}</p>
+                  <p className="font-black text-brand-navy">${totalSpent.toFixed(2)}</p>
                 </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Points Earned</p>
+                  <p className="font-black text-brand-navy">{membershipPoints.toLocaleString()}</p>
+                </div>
+                {pointsAlreadyRedeemed > 0 && (
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Points Redeemed</p>
+                    <p className="font-black text-red-500">−{pointsAlreadyRedeemed.toLocaleString()}</p>
+                  </div>
+                )}
                 {earnedRewards > 0 && (
-                  <div className="text-right">
+                  <div className="flex items-center justify-between">
                     <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Rewards</p>
-                    <p className="text-2xl font-black text-emerald-600 mt-0.5">{earnedRewards}</p>
+                    <p className="font-black text-emerald-600">{earnedRewards}</p>
                   </div>
                 )}
               </div>
@@ -23022,8 +23042,8 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                   <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">Collect Points</p>
                 </div>
                 <div className="relative z-10 text-right shrink-0">
-                  <p className="text-white font-black text-2xl leading-none">{pts.toLocaleString()}</p>
-                  <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">pts</p>
+                  <p className="text-white font-black text-2xl leading-none">{spvNetAvailable.toLocaleString()}</p>
+                  <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">pts available</p>
                 </div>
               </div>
               <div className="bg-white px-5 py-3 flex items-center justify-between">
@@ -23067,8 +23087,8 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                     {/* Balance */}
                     <div className="grid grid-cols-2 gap-3 mb-4">
                       <div className="glass-card p-5 rounded-2xl">
-                        <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-1">Points</p>
-                        <p className="text-3xl font-black text-brand-navy">{pts.toLocaleString()}</p>
+                        <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-1">Available</p>
+                        <p className="text-3xl font-black text-brand-navy">{spvNetAvailable.toLocaleString()}</p>
                         {pointsRate > 0 && <p className="text-[10px] text-brand-navy/75 mt-1">{pointsRate} pts per £1</p>}
                       </div>
                       <div className="glass-card p-5 rounded-2xl">
@@ -23079,15 +23099,25 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                     </div>
 
                     {/* Spend summary */}
-                    <div className="glass-card p-4 rounded-2xl flex items-center justify-between mb-4">
-                      <div>
+                    <div className="glass-card p-4 rounded-2xl mb-4 space-y-2">
+                      <div className="flex items-center justify-between">
                         <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Total Spent</p>
-                        <p className="text-2xl font-black text-brand-navy mt-0.5">£{spent.toFixed(2)}</p>
+                        <p className="font-black text-brand-navy">£{spent.toFixed(2)}</p>
                       </div>
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Points Earned</p>
+                        <p className="font-black text-brand-navy">{pts.toLocaleString()}</p>
+                      </div>
+                      {spvPointsAlreadyRedeemed > 0 && (
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Points Redeemed</p>
+                          <p className="font-black text-red-500">−{spvPointsAlreadyRedeemed.toLocaleString()}</p>
+                        </div>
+                      )}
                       {rewards > 0 && (
-                        <div className="text-right">
+                        <div className="flex items-center justify-between">
                           <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Rewards</p>
-                          <p className="text-2xl font-black text-emerald-600 mt-0.5">{rewards}</p>
+                          <p className="font-black text-emerald-600">{rewards}</p>
                         </div>
                       )}
                     </div>
