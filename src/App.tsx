@@ -259,7 +259,11 @@ interface VendorOnboardingData {
   type: 'vendor';
   businessName: string;
   category: string;
-  address: string;
+  addrLine1: string;
+  addrLine2: string;
+  addrTown: string;
+  addrState: string;
+  addrPostcode: string;
   phone: string;
   description: string;
   location: { lat: number; lng: number; city?: string } | null;
@@ -322,7 +326,7 @@ interface StoreProfile {
   location?: string;
   lat?: number;
   lng?: number;
-  locations?: Array<{ id: string; label?: string; address: string; lat?: number; lng?: number }>;
+  locations?: Array<{ id: string; label?: string; line1?: string; line2?: string; town?: string; state?: string; postcode?: string; address?: string; lat?: number; lng?: number }>;
   rewardTiers?: { stamps: number; reward: string; value?: number }[];
   currency?: string;
   cardEnabled?: boolean;
@@ -1381,12 +1385,19 @@ export default function App() {
         totalStamps: 0,
         totalRedeemed: 0
       });
+      const composedAddr = composeAddress(data.addrLine1, data.addrLine2, data.addrTown, data.addrState, data.addrPostcode);
+      const primaryLocation = {
+        id: 'primary', label: '', line1: data.addrLine1, line2: data.addrLine2,
+        town: data.addrTown, state: data.addrState, postcode: data.addrPostcode,
+        ...(data.location ? { lat: data.location.lat, lng: data.location.lng } : {}),
+      };
       await addDoc(collection(db, 'stores'), {
         name: data.businessName,
         category: data.category,
-        address: data.address,
+        address: composedAddr,
         phone: data.phone,
         description: data.description,
+        locations: [primaryLocation],
         ownerUid: user.uid,
         isVerified: false,
         stamps_required_for_reward: 10,
@@ -1715,6 +1726,9 @@ const DIAL_CODES = [
 ];
 function toE164(dial: string, local: string): string {
   return dial + local.replace(/\D/g, '').replace(/^0+/, '');
+}
+function composeAddress(line1: string, line2: string, town: string, state: string, postcode: string): string {
+  return [line1, line2, town, state, postcode].filter(s => s.trim()).join(', ');
 }
 
 // --- Shared Components ---
@@ -2366,7 +2380,11 @@ function OnboardingScreen({ user, onComplete }: {
   // Vendor fields
   const [businessName, setBusinessName] = React.useState('');
   const [category, setCategory] = React.useState('');
-  const [address, setAddress] = React.useState('');
+  const [addrLine1, setAddrLine1] = React.useState('');
+  const [addrLine2, setAddrLine2] = React.useState('');
+  const [addrTown, setAddrTown] = React.useState('');
+  const [addrState, setAddrState] = React.useState('');
+  const [addrPostcode, setAddrPostcode] = React.useState('');
   const [phone, setPhone] = React.useState('');
   const [description, setDescription] = React.useState('');
 
@@ -2401,7 +2419,7 @@ function OnboardingScreen({ user, onComplete }: {
     : isVendor
       ? step === 1 ? businessName.trim().length > 0
       : step === 2 ? !!category
-      : step === 3 ? address.trim().length > 0 && phone.trim().length > 0
+      : step === 3 ? addrLine1.trim().length > 0 && addrTown.trim().length > 0 && phone.trim().length > 0
       : locationStatus === 'granted' || locationStatus === 'denied'
     : step === 1 ? fullName.trim().length > 0 && handle.trim().length >= 3 && !handleError && !handleChecking
       : step === 2 ? !!gender
@@ -2433,7 +2451,7 @@ function OnboardingScreen({ user, onComplete }: {
   const handleFinish = async () => {
     setSaving(true);
     if (isVendor) {
-      await onComplete({ type: 'vendor', businessName, category, address, phone, description, location: locationData });
+      await onComplete({ type: 'vendor', businessName, category, addrLine1, addrLine2, addrTown, addrState, addrPostcode, phone, description, location: locationData });
     } else {
       await onComplete({ type: 'consumer', name: fullName.trim(), handle, gender, birthday, location: locationData });
     }
@@ -2588,19 +2606,47 @@ function OnboardingScreen({ user, onComplete }: {
     // Step 2 — Contact & Address
     <>
       <div className="w-14 h-14 bg-brand-gold/10 rounded-full flex items-center justify-center mx-auto mb-4">
-        <Phone className="w-7 h-7 text-brand-gold" />
+        <MapPin className="w-7 h-7 text-brand-gold" />
       </div>
-      <h2 className="font-display font-bold text-2xl text-brand-navy mb-1">Contact details</h2>
-      <p className="text-sm text-brand-navy/75 mb-8">Your address and phone number for customers</p>
+      <h2 className="font-display font-bold text-2xl text-brand-navy mb-1">Business address</h2>
+      <p className="text-sm text-brand-navy/75 mb-6">So customers nearby can find you</p>
       <div className="w-full space-y-3">
-        <div className="relative">
-          <MapPin size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-navy/72" />
+        <input
+          type="text"
+          value={addrLine1}
+          onChange={e => setAddrLine1(e.target.value)}
+          placeholder="Address line 1 *"
+          className="w-full px-5 py-4 rounded-2xl bg-white border-2 border-brand-navy/10 text-brand-navy text-sm focus:outline-none focus:border-brand-gold/60 placeholder:text-brand-navy/72"
+        />
+        <input
+          type="text"
+          value={addrLine2}
+          onChange={e => setAddrLine2(e.target.value)}
+          placeholder="Address line 2 (optional)"
+          className="w-full px-5 py-4 rounded-2xl bg-white border-2 border-brand-navy/10 text-brand-navy text-sm focus:outline-none focus:border-brand-gold/60 placeholder:text-brand-navy/72"
+        />
+        <input
+          type="text"
+          value={addrTown}
+          onChange={e => setAddrTown(e.target.value)}
+          placeholder="Town / Suburb *"
+          className="w-full px-5 py-4 rounded-2xl bg-white border-2 border-brand-navy/10 text-brand-navy text-sm focus:outline-none focus:border-brand-gold/60 placeholder:text-brand-navy/72"
+        />
+        <div className="flex gap-3">
           <input
             type="text"
-            value={address}
-            onChange={e => setAddress(e.target.value)}
-            placeholder="Business address"
-            className="w-full pl-10 pr-5 py-4 rounded-2xl bg-white border-2 border-brand-navy/10 text-brand-navy text-sm focus:outline-none focus:border-brand-gold/60 placeholder:text-brand-navy/72"
+            value={addrState}
+            onChange={e => setAddrState(e.target.value)}
+            placeholder="State"
+            className="flex-1 px-5 py-4 rounded-2xl bg-white border-2 border-brand-navy/10 text-brand-navy text-sm focus:outline-none focus:border-brand-gold/60 placeholder:text-brand-navy/72"
+          />
+          <input
+            type="text"
+            value={addrPostcode}
+            onChange={e => setAddrPostcode(e.target.value)}
+            placeholder="Postcode"
+            inputMode="numeric"
+            className="w-28 px-5 py-4 rounded-2xl bg-white border-2 border-brand-navy/10 text-brand-navy text-sm focus:outline-none focus:border-brand-gold/60 placeholder:text-brand-navy/72"
           />
         </div>
         <div className="relative">
@@ -13697,9 +13743,14 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
           let coords: { lat: number; lng: number } | null = null;
           if (loc.lat != null && loc.lng != null) {
             coords = { lat: loc.lat, lng: loc.lng };
-          } else if (loc.address) {
-            coords = await geocodeAddressGlobal(loc.address);
-            await new Promise(r => setTimeout(r, 1100));
+          } else {
+            const addrStr = loc.line1
+              ? composeAddress(loc.line1, loc.line2 || '', loc.town || '', loc.state || '', loc.postcode || '')
+              : (loc as any).address || '';
+            if (addrStr) {
+              coords = await geocodeAddressGlobal(addrStr);
+              await new Promise(r => setTimeout(r, 1100));
+            }
           }
           if (coords) {
             const d = haversineKm(userCoords.lat, userCoords.lng, coords.lat, coords.lng);
@@ -17361,7 +17412,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
   const [logoFetchError, setLogoFetchError] = useState('');
   const [logoUploading, setLogoUploading] = useState(false);
   const [storeLocation, setStoreLocation] = useState('');
-  const [storeLocations, setStoreLocations] = useState<Array<{ id: string; label: string; address: string; lat?: number; lng?: number }>>([]);
+  const [storeLocations, setStoreLocations] = useState<Array<{ id: string; label: string; line1: string; line2: string; town: string; state: string; postcode: string; lat?: number; lng?: number }>>([]);
   const [visibility, setVisibility] = useState({ members: true, stamps: true, activeCards: true, returnRate: true, followers: true });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -17381,10 +17432,17 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
         setStoreTheme(s.theme || '#1e3a5f');
         setStoreLogo(s.logoUrl || '');
         setStoreLocation(s.location || s.address || '');
+        const emptyLoc = { label: '', line1: '', line2: '', town: '', state: '', postcode: '' };
         if (s.locations && s.locations.length > 0) {
-          setStoreLocations(s.locations.map(l => ({ id: l.id, label: l.label || '', address: l.address, lat: l.lat, lng: l.lng })));
+          setStoreLocations(s.locations.map(l => ({
+            id: l.id, label: l.label || '',
+            line1: l.line1 || (l as any).address || '',
+            line2: l.line2 || '', town: l.town || '',
+            state: l.state || '', postcode: l.postcode || '',
+            lat: l.lat, lng: l.lng,
+          })));
         } else {
-          setStoreLocations([{ id: 'primary', label: '', address: s.address || s.location || '', lat: s.lat, lng: s.lng }]);
+          setStoreLocations([{ id: 'primary', ...emptyLoc, line1: s.address || s.location || '', lat: s.lat, lng: s.lng }]);
         }
         setVisibility({ members: true, stamps: true, activeCards: true, returnRate: true, followers: true, ...(s.visibilitySettings || {}) });
       }
@@ -17402,20 +17460,22 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
         // Geocode any locations missing coordinates
         const geocoded: typeof storeLocations = [];
         for (const loc of storeLocations) {
-          if (loc.address.trim() === '') continue;
+          const composed = composeAddress(loc.line1, loc.line2, loc.town, loc.state, loc.postcode);
+          if (!composed.trim()) continue;
           if (loc.lat != null && loc.lng != null) {
             geocoded.push(loc);
           } else {
-            const coords = await geocodeAddressGlobal(loc.address);
+            const coords = await geocodeAddressGlobal(composed);
             geocoded.push(coords ? { ...loc, lat: coords.lat, lng: coords.lng } : loc);
           }
         }
         const primary = geocoded[0];
+        const primaryAddr = primary ? composeAddress(primary.line1, primary.line2, primary.town, primary.state, primary.postcode) : storeLocation;
         await updateDoc(doc(db, 'stores', store.id), {
           name: storeName, reward: storeReward, category: storeCategory, theme: storeTheme,
           logoUrl: storeLogo,
-          address: primary?.address || storeLocation,
-          location: primary?.address || storeLocation,
+          address: primaryAddr,
+          location: primaryAddr,
           ...(primary?.lat != null ? { lat: primary.lat, lng: primary.lng } : {}),
           locations: geocoded,
           visibilitySettings: visibility,
@@ -17564,43 +17624,41 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
                 <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Locations</label>
                 <button
                   type="button"
-                  onClick={() => setStoreLocations(prev => [...prev, { id: Date.now().toString(), label: '', address: '' }])}
+                  onClick={() => setStoreLocations(prev => [...prev, { id: Date.now().toString(), label: '', line1: '', line2: '', town: '', state: '', postcode: '' }])}
                   className="text-[11px] font-bold text-brand-navy/60 hover:text-brand-navy flex items-center gap-1 transition-colors"
                 >
                   <Plus size={12} /> Add location
                 </button>
               </div>
-              {storeLocations.map((loc, idx) => (
-                <div key={loc.id} className="space-y-2 bg-white border border-brand-navy/8 rounded-2xl p-3">
-                  <div className="flex items-center gap-2">
-                    <input
-                      value={loc.label}
-                      onChange={e => setStoreLocations(prev => prev.map((l, i) => i === idx ? { ...l, label: e.target.value, lat: undefined, lng: undefined } : l))}
-                      placeholder={storeLocations.length > 1 ? `Location name (e.g. City Centre)` : 'Location name (optional)'}
-                      className="flex-1 px-3 py-2 rounded-xl bg-brand-bg border border-brand-navy/8 text-xs font-medium focus:outline-none"
-                    />
-                    {storeLocations.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => setStoreLocations(prev => prev.filter((_, i) => i !== idx))}
-                        className="p-1.5 text-brand-navy/40 hover:text-red-500 transition-colors"
-                      >
-                        <X size={14} />
-                      </button>
-                    )}
+              {storeLocations.map((loc, idx) => {
+                const upd = (patch: Partial<typeof loc>) =>
+                  setStoreLocations(prev => prev.map((l, i) => i === idx ? { ...l, ...patch, lat: undefined, lng: undefined } : l));
+                return (
+                  <div key={loc.id} className="space-y-2 bg-white border border-brand-navy/8 rounded-2xl p-3">
+                    <div className="flex items-center gap-2">
+                      <input
+                        value={loc.label}
+                        onChange={e => upd({ label: e.target.value })}
+                        placeholder={storeLocations.length > 1 ? 'Branch name (e.g. City Centre)' : 'Location name (optional)'}
+                        className="flex-1 px-3 py-2 rounded-xl bg-brand-bg border border-brand-navy/8 text-xs font-medium focus:outline-none"
+                      />
+                      {storeLocations.length > 1 && (
+                        <button type="button" onClick={() => setStoreLocations(prev => prev.filter((_, i) => i !== idx))} className="p-1.5 text-brand-navy/40 hover:text-red-500 transition-colors">
+                          <X size={14} />
+                        </button>
+                      )}
+                    </div>
+                    <input value={loc.line1} onChange={e => upd({ line1: e.target.value })} placeholder="Address line 1" className="w-full px-3 py-2.5 rounded-xl bg-brand-bg border border-brand-navy/8 text-xs font-medium focus:outline-none" />
+                    <input value={loc.line2} onChange={e => upd({ line2: e.target.value })} placeholder="Address line 2 (optional)" className="w-full px-3 py-2.5 rounded-xl bg-brand-bg border border-brand-navy/8 text-xs font-medium focus:outline-none" />
+                    <input value={loc.town} onChange={e => upd({ town: e.target.value })} placeholder="Town / Suburb" className="w-full px-3 py-2.5 rounded-xl bg-brand-bg border border-brand-navy/8 text-xs font-medium focus:outline-none" />
+                    <div className="flex gap-2">
+                      <input value={loc.state} onChange={e => upd({ state: e.target.value })} placeholder="State" className="flex-1 px-3 py-2.5 rounded-xl bg-brand-bg border border-brand-navy/8 text-xs font-medium focus:outline-none" />
+                      <input value={loc.postcode} onChange={e => upd({ postcode: e.target.value })} placeholder="Postcode" inputMode="numeric" className="w-24 px-3 py-2.5 rounded-xl bg-brand-bg border border-brand-navy/8 text-xs font-medium focus:outline-none" />
+                    </div>
                   </div>
-                  <div className="relative">
-                    <MapPin size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-navy/40" />
-                    <input
-                      value={loc.address}
-                      onChange={e => setStoreLocations(prev => prev.map((l, i) => i === idx ? { ...l, address: e.target.value, lat: undefined, lng: undefined } : l))}
-                      placeholder="123 High Street, Sydney, AU"
-                      className="w-full pl-8 pr-4 py-2.5 rounded-xl bg-brand-bg border border-brand-navy/8 text-xs font-medium focus:outline-none"
-                    />
-                  </div>
-                </div>
-              ))}
-              {storeLocations.every(l => !l.address.trim()) && (
+                );
+              })}
+              {storeLocations.every(l => !l.line1.trim()) && (
                 <p className="text-[11px] text-brand-gold pl-1 flex items-center gap-1"><MapPin size={9} /> Add an address so customers can discover you nearby.</p>
               )}
             </div>
