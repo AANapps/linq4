@@ -13719,6 +13719,7 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [distancesMap, setDistancesMap] = useState<Map<string, number>>(new Map());
   const [closestTownMap, setClosestTownMap] = useState<Map<string, string>>(new Map());
+  const [locationSorting, setLocationSorting] = useState(false);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -13732,6 +13733,7 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
   useEffect(() => {
     if (!userCoords || stores.length === 0) return;
     let cancelled = false;
+    setLocationSorting(true);
     (async () => {
       const dMap = new Map<string, number>();
       const tMap = new Map<string, string>();
@@ -13767,13 +13769,13 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
         if (minDist < Infinity) {
           dMap.set(store.id, minDist);
           tMap.set(store.id, closestTown);
-          // Update immediately so stores with stored coords appear at once
           setDistancesMap(new Map(dMap));
           setClosestTownMap(new Map(tMap));
         }
       }
+      if (!cancelled) setLocationSorting(false);
     })();
-    return () => { cancelled = true; };
+    return () => { cancelled = true; setLocationSorting(false); };
   }, [userCoords, stores]);
 
   useEffect(() => {
@@ -13856,10 +13858,11 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
 
       {searchType === 'stores' && (
         <>
+          {/* Category filter pills */}
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-            {['All', 'Food', 'Beauty', 'Barber', 'Gym', 'Retail'].map(cat => (
-              <button 
-                key={cat} 
+            {(['All', 'Food', 'Beauty', 'Barber', 'Gym', 'Parking', 'Retail'] as const).map(cat => (
+              <button
+                key={cat}
                 onClick={() => setActiveCategory(cat)}
                 className={cn(
                   "px-6 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all",
@@ -13871,25 +13874,182 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
             ))}
           </div>
 
-          <div className="space-y-4">
-            {filteredStores.map(store => (
-              <StoreCard
-                key={store.id}
-                store={store}
-                onJoin={() => onJoin(store)}
-                onClick={() => onViewStore(store)}
-                distance={distancesMap.get(store.id) ?? null}
-                town={closestTownMap.get(store.id) ?? store.location ?? ''}
-              />
-            ))}
-            {filteredStores.length === 0 && (
-              <div className="py-12 text-center text-brand-navy/32">
-                <Compass size={48} className="mx-auto mb-4 opacity-10" />
-                <p className="font-bold">No results found</p>
-                <p className="text-xs">Try a different search term or category</p>
-              </div>
+          {/* Searching banner */}
+          <AnimatePresence>
+            {locationSorting && (
+              <motion.div
+                key="nearby-banner"
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.25 }}
+                className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-brand-navy/5 border border-brand-navy/10"
+              >
+                <motion.div animate={{ scale: [1, 1.3, 1] }} transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}>
+                  <MapPin size={13} className="text-brand-gold shrink-0" />
+                </motion.div>
+                <p className="text-[12px] font-semibold text-brand-navy/70 tracking-wide">Searching for nearby vendors…</p>
+                <div className="ml-auto flex gap-0.5">
+                  {[0, 1, 2].map(i => (
+                    <motion.span key={i} className="w-1 h-1 rounded-full bg-brand-gold/60"
+                      animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }} />
+                  ))}
+                </div>
+              </motion.div>
             )}
-          </div>
+          </AnimatePresence>
+
+          {/* Category sections */}
+          {filteredStores.length === 0 ? (
+            <div className="py-12 text-center text-brand-navy/32">
+              <Compass size={48} className="mx-auto mb-4 opacity-10" />
+              <p className="font-bold">No results found</p>
+              <p className="text-xs">Try a different search term or category</p>
+            </div>
+          ) : activeCategory !== 'All' ? (
+            /* Single category — horizontal slider */
+            <div
+              className="flex gap-3 overflow-x-auto pb-2"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              {filteredStores.map((store, i) => {
+                const dist = distancesMap.get(store.id);
+                const distLabel = dist != null
+                  ? dist < 1 ? `${Math.round(dist * 1000)}m away` : `${dist.toFixed(1)}km away`
+                  : null;
+                const topReward = store.rewardTiers && store.rewardTiers.length > 0
+                  ? store.rewardTiers[store.rewardTiers.length - 1].reward
+                  : store.reward || null;
+                return (
+                  <motion.div key={store.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.04 }}
+                    className="shrink-0 rounded-[1.5rem] overflow-hidden flex flex-col cursor-pointer active:scale-[0.97] transition-transform shadow-sm bg-white"
+                    style={{ width: '148px' }} onClick={() => onViewStore(store)}
+                  >
+                    <div className="relative overflow-hidden bg-brand-navy/5" style={{ height: '110px' }}>
+                      {store.coverUrl
+                        ? <img src={store.coverUrl} alt="" className="w-full h-full object-cover" />
+                        : store.logoUrl
+                          ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
+                          : <div className="w-full h-full flex items-center justify-center"><Building2 size={28} className="text-brand-navy/20" /></div>}
+                      {store.isVerified && (
+                        <div className="absolute top-2 right-2 w-5 h-5 bg-white/90 rounded-full flex items-center justify-center shadow-sm">
+                          <Sparkles size={9} className="text-brand-gold" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="px-3 py-2.5 flex flex-col gap-0.5">
+                      <p className="font-extrabold text-brand-navy text-[11px] leading-snug line-clamp-2">
+                        {topReward ?? `${store.stamps_required_for_reward} stamp reward`}
+                      </p>
+                      <p className="text-brand-navy/45 text-[9px] font-medium line-clamp-1">{store.name}</p>
+                      {distLabel && (
+                        <p className="text-brand-gold text-[9px] font-semibold mt-0.5 flex items-center gap-0.5">
+                          <MapPin size={8} />{distLabel}
+                        </p>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          ) : (
+            /* All — grouped by category */
+            <div className="space-y-6">
+              {(['Food', 'Beauty', 'Barber', 'Gym', 'Parking', 'Retail'] as const).map(cat => {
+                const catStores = filteredStores.filter(s => s.category === cat);
+                if (catStores.length === 0) return null;
+                const CatIcon = CATEGORY_ICON_MAP[cat];
+                return (
+                  <div key={cat}>
+                    <div className="flex items-center gap-2 mb-3">
+                      {CatIcon && <CatIcon size={14} className="text-brand-navy/50" />}
+                      <h3 className="font-extrabold text-brand-navy text-sm tracking-wide">{cat}</h3>
+                      <span className="text-[10px] text-brand-navy/40 font-semibold">{catStores.length}</span>
+                    </div>
+                    <div
+                      className="flex gap-3 overflow-x-auto pb-1"
+                      style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                    >
+                      {catStores.map((store, i) => {
+                        const dist = distancesMap.get(store.id);
+                        const distLabel = dist != null
+                          ? dist < 1 ? `${Math.round(dist * 1000)}m away` : `${dist.toFixed(1)}km away`
+                          : null;
+                        const topReward = store.rewardTiers && store.rewardTiers.length > 0
+                          ? store.rewardTiers[store.rewardTiers.length - 1].reward
+                          : store.reward || null;
+                        return (
+                          <motion.div key={store.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: i * 0.05 }}
+                            className="shrink-0 rounded-[1.5rem] overflow-hidden flex flex-col cursor-pointer active:scale-[0.97] transition-transform shadow-sm bg-white"
+                            style={{ width: '148px' }} onClick={() => onViewStore(store)}
+                          >
+                            <div className="relative overflow-hidden bg-brand-navy/5" style={{ height: '110px' }}>
+                              {store.coverUrl
+                                ? <img src={store.coverUrl} alt="" className="w-full h-full object-cover" />
+                                : store.logoUrl
+                                  ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
+                                  : <div className="w-full h-full flex items-center justify-center"><Building2 size={28} className="text-brand-navy/20" /></div>}
+                              {store.isVerified && (
+                                <div className="absolute top-2 right-2 w-5 h-5 bg-white/90 rounded-full flex items-center justify-center shadow-sm">
+                                  <Sparkles size={9} className="text-brand-gold" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="px-3 py-2.5 flex flex-col gap-0.5">
+                              <p className="font-extrabold text-brand-navy text-[11px] leading-snug line-clamp-2">
+                                {topReward ?? `${store.stamps_required_for_reward} stamp reward`}
+                              </p>
+                              <p className="text-brand-navy/45 text-[9px] font-medium line-clamp-1">{store.name}</p>
+                              {distLabel && (
+                                <p className="text-brand-gold text-[9px] font-semibold mt-0.5 flex items-center gap-0.5">
+                                  <MapPin size={8} />{distLabel}
+                                </p>
+                              )}
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+              {/* Any uncategorised stores */}
+              {filteredStores.filter(s => !(['Food', 'Beauty', 'Barber', 'Gym', 'Parking', 'Retail'] as string[]).includes(s.category)).length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Store size={14} className="text-brand-navy/50" />
+                    <h3 className="font-extrabold text-brand-navy text-sm tracking-wide">Other</h3>
+                  </div>
+                  <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                    {filteredStores.filter(s => !(['Food', 'Beauty', 'Barber', 'Gym', 'Parking', 'Retail'] as string[]).includes(s.category)).map((store, i) => {
+                      const dist = distancesMap.get(store.id);
+                      const distLabel = dist != null ? dist < 1 ? `${Math.round(dist * 1000)}m away` : `${dist.toFixed(1)}km away` : null;
+                      const topReward = store.rewardTiers?.length ? store.rewardTiers[store.rewardTiers.length - 1].reward : store.reward || null;
+                      return (
+                        <motion.div key={store.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+                          className="shrink-0 rounded-[1.5rem] overflow-hidden flex flex-col cursor-pointer active:scale-[0.97] transition-transform shadow-sm bg-white"
+                          style={{ width: '148px' }} onClick={() => onViewStore(store)}
+                        >
+                          <div className="relative overflow-hidden bg-brand-navy/5" style={{ height: '110px' }}>
+                            {store.coverUrl ? <img src={store.coverUrl} alt="" className="w-full h-full object-cover" />
+                              : store.logoUrl ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
+                              : <div className="w-full h-full flex items-center justify-center"><Building2 size={28} className="text-brand-navy/20" /></div>}
+                          </div>
+                          <div className="px-3 py-2.5 flex flex-col gap-0.5">
+                            <p className="font-extrabold text-brand-navy text-[11px] leading-snug line-clamp-2">{topReward ?? `${store.stamps_required_for_reward} stamp reward`}</p>
+                            <p className="text-brand-navy/45 text-[9px] font-medium line-clamp-1">{store.name}</p>
+                            {distLabel && <p className="text-brand-gold text-[9px] font-semibold mt-0.5 flex items-center gap-0.5"><MapPin size={8} />{distLabel}</p>}
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
 
@@ -19560,7 +19720,6 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
   const [followingStoreIds, setFollowingStoreIds] = useState<Set<string>>(new Set());
   const [hotStores, setHotStores] = useState<StoreProfile[]>([]);
   const [storeDistances, setStoreDistances] = useState<Map<string, number>>(new Map());
-  const [locationSorting, setLocationSorting] = useState(false);
   const [joiningStoreId, setJoiningStoreId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -19738,7 +19897,6 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
     // Sort stores so nearby ones appear first; always include all stores so the
     // slider is never empty just because nothing is within the proximity radius.
     let cancelled = false;
-    setLocationSorting(true);
     (async () => {
       const nearby: StoreProfile[] = [];
       const rest: StoreProfile[] = [];
@@ -19762,9 +19920,9 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
           rest.push(store);
         }
       }
-      if (!cancelled) { setHotStores([...nearby, ...rest]); setStoreDistances(distances); setLocationSorting(false); }
+      if (!cancelled) { setHotStores([...nearby, ...rest]); setStoreDistances(distances); }
     })();
-    return () => { cancelled = true; setLocationSorting(false); };
+    return () => { cancelled = true; };
   }, [allStores, currentProfile?.location]);
 
   const handleJoinStore = async (store: StoreProfile) => {
@@ -19978,41 +20136,6 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
         )
       ) : (
         <>
-          {/* Nearby search banner */}
-          <AnimatePresence>
-            {locationSorting && (
-              <motion.div
-                key="nearby-banner"
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.3 }}
-                className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-brand-navy/5 border border-brand-navy/10"
-              >
-                <motion.div
-                  animate={{ scale: [1, 1.25, 1] }}
-                  transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
-                >
-                  <MapPin size={14} className="text-brand-gold shrink-0" />
-                </motion.div>
-                <p className="text-[12px] font-semibold text-brand-navy/70 tracking-wide">Searching for nearby vendors…</p>
-                <motion.div
-                  className="ml-auto flex gap-0.5"
-                  initial={false}
-                >
-                  {[0, 1, 2].map(i => (
-                    <motion.span
-                      key={i}
-                      className="w-1 h-1 rounded-full bg-brand-gold/60"
-                      animate={{ opacity: [0.3, 1, 0.3] }}
-                      transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
-                    />
-                  ))}
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
           {/* Total savings widget */}
           {(() => {
             const saved = currentProfile?.totalSaved ?? 0;
