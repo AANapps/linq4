@@ -20460,7 +20460,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
 
       {activeSubTab === 'following' ? (
         loading ? <FeedLoadingSpinner /> : (
-          <div className="divide-y-2 divide-gray-200 bg-white -mx-4">
+          <div className="divide-y-[3px] divide-gray-200 bg-white -mx-4">
             {followingFeed.map((item) =>
               !item._type
                 ? <FeedPostCard key={`gp-${item.id}`} post={item as GlobalPost} currentUser={currentUser} currentProfile={currentProfile} onViewUser={onViewUser} onViewStore={onViewStore} onLike={handleLike} onVote={handleVote} onDelete={async (p) => { await deleteDoc(doc(db, 'global_posts', p.id)); }} />
@@ -20822,7 +20822,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
 
           {/* Main mixed feed */}
           {loading ? <FeedLoadingSpinner /> : (
-            <div className="divide-y-2 divide-gray-200 bg-white -mx-4">
+            <div className="divide-y-[3px] divide-gray-200 bg-white -mx-4">
               {displayFeed.map((item) =>
                 !item._type
                   ? <FeedPostCard key={`gp-${item.id}`} post={item as GlobalPost} currentUser={currentUser} currentProfile={currentProfile} onViewUser={onViewUser} onViewStore={onViewStore} onLike={handleLike} onVote={handleVote} onDelete={async (p) => { await deleteDoc(doc(db, 'global_posts', p.id)); }} showPinnedTag />
