@@ -2973,10 +2973,8 @@ async function issueUserStickers(uid: string, userName: string, qty: number): Pr
       return pool[pool.length - 1];
     };
     const tierDefs = cardDefsByTier.get(tier);
-    if (tierDefs && tierDefs.length > 0) return pick(tierDefs);
-    // Tier has no uploaded cards — fall back to any card in the set
-    const allDefs = [...cardDefsByTier.values()].flat();
-    return allDefs.length > 0 ? pick(allDefs) : null;
+    // Only pick from defs that match the rolled tier — no cross-tier fallback
+    return tierDefs && tierDefs.length > 0 ? pick(tierDefs) : null;
   };
 
   // Roll cards ONCE — same cards go everywhere
