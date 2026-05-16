@@ -17489,9 +17489,9 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
   const [birthdayOffers, setBirthdayOffers] = useState<StoreOffer[]>([]);
   const [selectedBirthdayOffer, setSelectedBirthdayOffer] = useState<StoreOffer | null>(null);
   const [bdayCountdown, setBdayCountdown] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
-  const [showLinqleWins, setShowLinqleWins] = useState(false);
   const [challengeOpen, setChallengeOpen] = useState(false);
   const [challengeTab, setChallengeTab] = useState<'current' | 'completed'>('current');
+  const [badgesOpen, setBadgesOpen] = useState(false);
 
   useEffect(() => {
     if (!profile?.birthday) return;
@@ -18007,15 +18007,6 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
 
       {settingsModal}
 
-      {/* Badges swipe row */}
-      {earnedBadges.length > 0 && (
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/90 mb-2.5 text-center">Badges</p>
-          <BadgeSwipeRow badges={earnedBadges} onSelectBadge={setSelectedBadge} />
-        </div>
-      )}
-
-
       {/* Badge detail sheet */}
       <AnimatePresence>
         {selectedBadge && (
@@ -18171,32 +18162,14 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
 
 
 
-      {/* Side-by-side: Linqle + Challenges */}
+      {/* Side-by-side: Challenges + Badges */}
       {(() => {
-        const wins = (profile?.linqleCompletions || []).filter(c => c.won);
         const activeChallenges = myChallenges.filter(c => !profileEntries.get(c.id)?.redeemed);
         const completedChallenges = myChallenges.filter(c => profileEntries.get(c.id)?.redeemed);
         return (
           <div className="space-y-2">
             <div className="flex gap-2.5">
-              {/* Linqle card */}
-              <div className="flex-1 min-w-0">
-              <motion.button whileTap={{ scale: 0.97 }} onClick={() => setShowLinqleWins(v => !v)}
-                className="w-full rounded-2xl overflow-hidden shadow-md shadow-green-900/20">
-                <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3"
-                  style={{ background: 'linear-gradient(135deg, #022c22 0%, #064e3b 50%, #059669 100%)' }}>
-                  <MatrixRainCanvas opacity={0.25} fadeColor="rgba(2,44,34,0.15)" />
-                  <div className="relative z-10 flex items-center gap-0">
-                    {'LINQLE'.split('').map((letter, i) => (
-                      <MatrixScramble key={i} target={letter} className="text-xl font-black text-white font-mono leading-none" />
-                    ))}
-                  </div>
-                  <span className="relative z-10 text-[10px] font-bold text-emerald-300">{wins.length} wins</span>
-                </div>
-              </motion.button>
-              </div>
-
-              {/* Challenges card */}
+              {/* Challenges card — blue gradient, expandable */}
               <div className="flex-1 min-w-0">
               <motion.button whileTap={{ scale: 0.97 }} onClick={() => setChallengeOpen(v => !v)}
                 className="w-full rounded-2xl overflow-hidden shadow-md shadow-blue-900/20">
@@ -18208,25 +18181,36 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                 </div>
               </motion.button>
               </div>
+
+              {/* Badges card */}
+              <div className="flex-1 min-w-0">
+              <motion.button whileTap={{ scale: 0.97 }} onClick={() => setBadgesOpen(v => !v)}
+                className="w-full rounded-2xl overflow-hidden shadow-md shadow-brand-navy/10 bg-white border border-brand-navy/8">
+                <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3">
+                  <p className="text-xl font-black text-brand-navy leading-none">{earnedBadges.length}</p>
+                  <span className="text-[10px] font-bold text-brand-navy/60">badges</span>
+                </div>
+              </motion.button>
+              </div>
             </div>
 
-            {/* Linqle wins expanded */}
-            {showLinqleWins && (
-              <div>
-                {wins.length > 0 ? (
-                  <div className="flex gap-2 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-1 scrollbar-hide">
-                    {[...wins].reverse().map(c => (
-                      <div key={c.date} className="snap-start shrink-0 w-16 px-2 py-2.5 rounded-2xl flex flex-col items-center gap-1 bg-green-50 border border-green-200">
-                        <span className="text-lg">🟩</span>
-                        <p className="text-[10px] font-black text-brand-navy">{c.guesses}/6</p>
-                        <p className="text-[9px] text-brand-navy/75">{c.date.slice(5)}</p>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-center text-xs text-brand-navy/50 py-2">No wins yet</p>
+            {/* Badges expanded */}
+            {badgesOpen && earnedBadges.length > 0 && (
+              <div className="flex flex-wrap gap-3 pt-1 px-1">
+                {earnedBadges.map(b => (
+                  <button key={b.id} onClick={() => setSelectedBadge(b)}
+                    className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform">
+                    <HexBadge badge={b} size={48} />
+                    <span className="text-[10px] font-bold text-brand-navy/80 text-center w-14 leading-tight line-clamp-2">{b.name}</span>
+                  </button>
+                ))}
+                {earnedBadges.length === 0 && (
+                  <p className="text-xs text-brand-navy/50 py-2">No badges earned yet</p>
                 )}
               </div>
+            )}
+            {badgesOpen && earnedBadges.length === 0 && (
+              <p className="text-center text-xs text-brand-navy/50 py-2">No badges earned yet</p>
             )}
 
             {/* Challenges expanded */}
