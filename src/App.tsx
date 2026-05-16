@@ -3068,23 +3068,19 @@ function StickerCard({ sticker, isRevealed, onReveal, size = 'md' }: {
         <div style={{
           position: 'absolute', inset: 0, backfaceVisibility: 'hidden',
           transform: 'rotateY(180deg)',
-          background: 'white',
           border: `2px solid ${cfg.border}`, borderRadius: 16,
           boxShadow: `0 4px 20px ${cfg.color}33`,
-          display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          overflow: 'hidden', position: 'absolute' as any,
         }}>
-          <div style={{ background: cfg.solid, height: '60%', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-            {sticker.cardImageUrl
-              ? <img src={sticker.cardImageUrl} alt={sticker.cardName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : <span style={{ fontSize: size === 'sm' ? 28 : 36, lineHeight: 1 }}>{cfg.variants[sticker.variant ?? 0]?.emoji ?? cfg.variants[0].emoji}</span>
-            }
-          </div>
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, padding: '2px 4px' }}>
-            <span style={{ fontSize: size === 'sm' ? 7 : 8, fontWeight: 900, color: cfg.color, textAlign: 'center', lineHeight: 1.1 }}>
-              {sticker.cardName ?? cfg.variants[sticker.variant ?? 0]?.name ?? cfg.variants[0].name}
-            </span>
-            <span style={{ fontSize: size === 'sm' ? 6 : 7, color: cfg.color, opacity: 0.65, fontWeight: 700 }}>{cfg.label}</span>
-          </div>
+          {sticker.cardImageUrl
+            ? <img src={sticker.cardImageUrl} alt={sticker.cardName} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            : <div style={{ width: '100%', height: '100%', background: cfg.solid }} />
+          }
+          {sticker.cardName && (
+            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.45)', padding: '2px 3px', textAlign: 'center' }}>
+              <span style={{ fontSize: size === 'sm' ? 6 : 7, fontWeight: 900, color: '#fff', lineHeight: 1.2 }}>{sticker.cardName}</span>
+            </div>
+          )}
         </div>
       </motion.div>
     </motion.div>
@@ -3464,19 +3460,16 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
               className="bg-white rounded-3xl p-6 flex flex-col items-center gap-4 shadow-2xl w-full max-w-xs"
               onClick={e => e.stopPropagation()}>
               {/* Card large view */}
-              <div style={{ width: 120, height: 162, borderRadius: 20, border: `2.5px solid ${cfg.border}`, overflow: 'hidden', boxShadow: `0 8px 32px ${cfg.color}33`, display: 'flex', flexDirection: 'column' }}>
-                <div style={{ background: cfg.solid, height: '60%', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                  {selected.sticker.cardImageUrl
-                    ? <img src={selected.sticker.cardImageUrl} alt={selected.sticker.cardName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : <span style={{ fontSize: 52 }}>{cfg.variants[selected.sticker.variant ?? 0]?.emoji ?? cfg.variants[0].emoji}</span>
-                  }
-                </div>
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, padding: '4px 8px', background: 'white' }}>
-                  <span style={{ fontSize: 11, fontWeight: 900, color: cfg.color, textAlign: 'center', lineHeight: 1.2 }}>
-                    {selected.sticker.cardName ?? cfg.variants[selected.sticker.variant ?? 0]?.name}
-                  </span>
-                  <span style={{ fontSize: 9, color: cfg.color, opacity: 0.65, fontWeight: 700 }}>{cfg.label}</span>
-                </div>
+              <div style={{ width: 120, height: 162, borderRadius: 20, border: `2.5px solid ${cfg.border}`, overflow: 'hidden', boxShadow: `0 8px 32px ${cfg.color}33`, position: 'relative' }}>
+                {selected.sticker.cardImageUrl
+                  ? <img src={selected.sticker.cardImageUrl} alt={selected.sticker.cardName} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  : <div style={{ width: '100%', height: '100%', background: cfg.solid }} />
+                }
+                {selected.sticker.cardName && (
+                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.45)', padding: '4px 6px', textAlign: 'center' }}>
+                    <span style={{ fontSize: 11, fontWeight: 900, color: '#fff', lineHeight: 1.2 }}>{selected.sticker.cardName}</span>
+                  </div>
+                )}
               </div>
 
               {selected.count > 1 && (
