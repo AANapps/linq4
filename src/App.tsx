@@ -18125,7 +18125,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         const activeCards = userCards.filter(c => !c.isArchived);
         if (activeCards.length === 0) return null;
         return (
-          <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-2 scrollbar-hide">
+          <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 scrollbar-hide">
             {activeCards.map(card => {
               const store = (stores || []).find(s => s.id === card.store_id);
               if (!store) return null;
