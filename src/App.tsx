@@ -593,6 +593,7 @@ interface CollectibleCardSet {
   id: string;
   name: string;
   isDefault: boolean; // universally distributed when true
+  tierChances?: Record<StickerTier, number>;
   createdAt?: any;
 }
 
@@ -4684,16 +4685,39 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
 
 const MAX_CARDS_PER_TIER: Record<StickerTier, number> = { brown: 3, lightblue: 3, red: 3, blue: 3, gold: 2 };
 
+function ProbCounter({ value, onChange, min = 0, max = 100, suffix = '%', size = 'md' }: {
+  value: number; onChange: (v: number) => void; min?: number; max?: number; suffix?: string; size?: 'sm' | 'md';
+}) {
+  const sm = size === 'sm';
+  return (
+    <div className={`flex items-center gap-1 bg-brand-navy/5 rounded-xl ${sm ? 'px-1.5 py-1' : 'px-2 py-1.5'}`}>
+      <button onClick={() => onChange(Math.max(min, value - 1))}
+        className={`font-black text-brand-navy/60 leading-none active:scale-90 transition-all ${sm ? 'text-sm w-5' : 'text-base w-6'}`}>−</button>
+      <span className={`font-black text-brand-navy tabular-nums text-center ${sm ? 'text-xs w-7' : 'text-sm w-9'}`}>{value}{suffix}</span>
+      <button onClick={() => onChange(Math.min(max, value + 1))}
+        className={`font-black text-brand-navy/60 leading-none active:scale-90 transition-all ${sm ? 'text-sm w-5' : 'text-base w-6'}`}>+</button>
+    </div>
+  );
+}
+
 function CardSetsAdminPanel({ onClose }: { onClose: () => void }) {
   const [sets, setSets] = useState<CollectibleCardSet[]>([]);
   const [cardDefs, setCardDefs] = useState<CollectibleCardDef[]>([]);
   const [selectedSetId, setSelectedSetId] = useState<string | null>(null);
   const [activeTier, setActiveTier] = useState<StickerTier>('brown');
-  const [name, setName] = useState('');
-  const [probability, setProbability] = useState(1);
+  const [tierChances, setTierChances] = useState<Record<StickerTier, number>>({ ...DEFAULT_TIER_CHANCES });
+  // add card form
+  const [addName, setAddName] = useState('');
+  const [addProb, setAddProb] = useState(10);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState('');
   const [saving, setSaving] = useState(false);
+  // edit card
+  const [editingCardId, setEditingCardId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editProb, setEditProb] = useState(10);
+  const [editSaving, setEditSaving] = useState(false);
+  // misc
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [newSetName, setNewSetName] = useState('');
   const [creatingSet, setCreatingSet] = useState(false);
@@ -4708,10 +4732,25 @@ function CardSetsAdminPanel({ onClose }: { onClose: () => void }) {
     return () => { u1(); u2(); };
   }, []);
 
+  // Sync tier chances when entering a set
+  useEffect(() => {
+    const set = sets.find(s => s.id === selectedSetId);
+    if (set?.tierChances) setTierChances({ ...DEFAULT_TIER_CHANCES, ...set.tierChances });
+    else setTierChances({ ...DEFAULT_TIER_CHANCES });
+  }, [selectedSetId, sets]);
+
   const selectedSet = sets.find(s => s.id === selectedSetId) ?? null;
   const tierCards = cardDefs.filter(c => c.tier === activeTier && c.setId === selectedSetId);
   const maxForTier = MAX_CARDS_PER_TIER[activeTier];
   const cfg = STICKER_CONFIG[activeTier];
+
+  const handleTierChanceChange = async (tier: StickerTier, val: number) => {
+    const updated = { ...tierChances, [tier]: val };
+    setTierChances(updated);
+    if (selectedSetId) {
+      await updateDoc(doc(db, 'collectible_card_sets', selectedSetId), { tierChances: updated }).catch(console.error);
+    }
+  };
 
   const handleCreateSet = async () => {
     if (!newSetName.trim()) return;
@@ -4725,7 +4764,6 @@ function CardSetsAdminPanel({ onClose }: { onClose: () => void }) {
 
   const handleToggleDefault = async (set: CollectibleCardSet) => {
     setTogglingDefault(set.id);
-    // Only one set can be default at a time — clear others first
     if (!set.isDefault) {
       await Promise.all(sets.filter(s => s.isDefault && s.id !== set.id)
         .map(s => updateDoc(doc(db, 'collectible_card_sets', s.id), { isDefault: false })));
@@ -4735,7 +4773,7 @@ function CardSetsAdminPanel({ onClose }: { onClose: () => void }) {
   };
 
   const handleAddCard = async () => {
-    if (!name.trim() || !imageFile || !selectedSetId) return;
+    if (!addName.trim() || !imageFile || !selectedSetId) return;
     setSaving(true);
     try {
       const blob = await compressImage(imageFile, 800);
@@ -4743,12 +4781,27 @@ function CardSetsAdminPanel({ onClose }: { onClose: () => void }) {
       const snap2 = await uploadBytes(storageRef(storage, path), blob);
       const imageUrl = await getDownloadURL(snap2.ref);
       await addDoc(collection(db, 'collectible_cards'), {
-        name: name.trim(), imageUrl, tier: activeTier, probability, setId: selectedSetId, createdAt: serverTimestamp(),
+        name: addName.trim(), imageUrl, tier: activeTier, probability: addProb, setId: selectedSetId, createdAt: serverTimestamp(),
       });
-      setName(''); setProbability(1); setImageFile(null); setImagePreview('');
+      setAddName(''); setAddProb(10); setImageFile(null); setImagePreview('');
       if (fileRef.current) fileRef.current.value = '';
     } catch (e) { console.error(e); }
     setSaving(false);
+  };
+
+  const handleStartEdit = (card: CollectibleCardDef) => {
+    setEditingCardId(card.id);
+    setEditName(card.name);
+    setEditProb(card.probability ?? 10);
+    setDeleteConfirm(null);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingCardId || !editName.trim()) return;
+    setEditSaving(true);
+    await updateDoc(doc(db, 'collectible_cards', editingCardId), { name: editName.trim(), probability: editProb }).catch(console.error);
+    setEditSaving(false);
+    setEditingCardId(null);
   };
 
   const handleDeleteCard = async (id: string) => {
@@ -4757,12 +4810,13 @@ function CardSetsAdminPanel({ onClose }: { onClose: () => void }) {
   };
 
   const handleDeleteSet = async (id: string) => {
-    // Delete all cards in this set first
     const cardsInSet = cardDefs.filter(c => c.setId === id);
     await Promise.all(cardsInSet.map(c => deleteDoc(doc(db, 'collectible_cards', c.id))));
     await deleteDoc(doc(db, 'collectible_card_sets', id));
     if (selectedSetId === id) setSelectedSetId(null);
   };
+
+  const totalChance = (STICKER_ORDER as StickerTier[]).reduce((s, t) => s + (tierChances[t] ?? 0), 0);
 
   return (
     <motion.div
@@ -4772,7 +4826,7 @@ function CardSetsAdminPanel({ onClose }: { onClose: () => void }) {
       <div className="flex-1 overflow-y-auto bg-brand-bg">
         <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm px-5 pt-5 pb-4 border-b border-black/5 z-10">
           <div className="flex items-center gap-3">
-            <button onClick={selectedSetId ? () => { setSelectedSetId(null); setActiveTier('brown'); } : onClose}
+            <button onClick={selectedSetId ? () => { setSelectedSetId(null); setActiveTier('brown'); setEditingCardId(null); } : onClose}
               className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm active:scale-95 transition-all">
               <ArrowLeft size={18} className="text-brand-navy/75" />
             </button>
@@ -4793,7 +4847,6 @@ function CardSetsAdminPanel({ onClose }: { onClose: () => void }) {
           {!selectedSetId ? (
             /* ── Set list ── */
             <>
-              {/* Create new set */}
               <div className="flex gap-2">
                 <input value={newSetName} onChange={e => setNewSetName(e.target.value)}
                   placeholder="New set name…"
@@ -4816,7 +4869,7 @@ function CardSetsAdminPanel({ onClose }: { onClose: () => void }) {
                     return (
                       <div key={set.id} className={`rounded-2xl border overflow-hidden ${set.isDefault ? 'border-brand-gold/50 bg-brand-gold/5' : 'border-black/8 bg-white'}`}>
                         <div className="flex items-center gap-3 p-3">
-                          <button onClick={() => { setSelectedSetId(set.id); setActiveTier('brown'); }}
+                          <button onClick={() => { setSelectedSetId(set.id); setActiveTier('brown'); setEditingCardId(null); }}
                             className="flex-1 flex items-center gap-3 text-left min-w-0">
                             <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${set.isDefault ? 'bg-brand-gold/20' : 'bg-brand-navy/8'}`}>
                               <span className="text-lg">🃏</span>
@@ -4857,7 +4910,7 @@ function CardSetsAdminPanel({ onClose }: { onClose: () => void }) {
                   const count = cardDefs.filter(c => c.tier === t && c.setId === selectedSetId).length;
                   const max = MAX_CARDS_PER_TIER[t];
                   return (
-                    <button key={t} onClick={() => setActiveTier(t)}
+                    <button key={t} onClick={() => { setActiveTier(t); setEditingCardId(null); }}
                       className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all"
                       style={activeTier === t
                         ? { background: tcfg.solid, color: 'white', borderColor: tcfg.solid }
@@ -4869,31 +4922,78 @@ function CardSetsAdminPanel({ onClose }: { onClose: () => void }) {
                 })}
               </div>
 
+              {/* Tier drop-chance counter */}
+              <div className="bg-white rounded-2xl border border-black/5 shadow-sm p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-brand-navy" style={{ color: cfg.color }}>{cfg.label} drop chance</p>
+                  <p className={`text-[10px] mt-0.5 ${Math.round(totalChance) === 100 ? 'text-green-600' : 'text-red-500'}`}>
+                    Total across tiers: {totalChance}% {Math.round(totalChance) === 100 ? '✓' : '≠ 100'}
+                  </p>
+                </div>
+                <ProbCounter
+                  value={tierChances[activeTier] ?? 0}
+                  onChange={val => handleTierChanceChange(activeTier, val)}
+                />
+              </div>
+
               {/* Card list */}
-              {tierCards.length > 0 && (
-                <div className="space-y-3">
-                  {tierCards.map(card => (
-                    <div key={card.id} className="flex items-center gap-3 bg-white rounded-2xl p-3 border border-black/5 shadow-sm">
+              <div className="space-y-3">
+                {tierCards.map(card => (
+                  <div key={card.id} className="bg-white rounded-2xl border border-black/5 shadow-sm overflow-hidden">
+                    <div className="flex items-center gap-3 p-3">
                       <img src={card.imageUrl} alt={card.name} className="w-14 h-14 rounded-xl object-cover flex-shrink-0"
                         style={{ border: `2px solid ${cfg.border}` }} />
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-sm text-brand-navy truncate">{card.name}</p>
-                        <p className="text-xs text-brand-navy/60">{cfg.label} · weight {card.probability}</p>
+                        <p className="text-xs text-brand-navy/50 mt-0.5">{card.probability ?? 0}% win probability</p>
                       </div>
-                      {deleteConfirm === card.id ? (
-                        <div className="flex gap-2 flex-shrink-0">
-                          <button onClick={() => handleDeleteCard(card.id)} className="px-2 py-1 rounded-xl bg-red-500 text-white text-xs font-bold">Delete</button>
-                          <button onClick={() => setDeleteConfirm(null)} className="px-2 py-1 rounded-xl bg-brand-navy/10 text-brand-navy text-xs font-bold">Cancel</button>
-                        </div>
-                      ) : (
-                        <button onClick={() => setDeleteConfirm(card.id)} className="p-2 rounded-xl bg-red-50 active:scale-90 transition-all flex-shrink-0">
-                          <Trash2 size={14} className="text-red-500" />
-                        </button>
-                      )}
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {editingCardId !== card.id && (
+                          <button onClick={() => handleStartEdit(card)}
+                            className="p-2 rounded-xl bg-brand-navy/8 active:scale-90 transition-all">
+                            <Pencil size={13} className="text-brand-navy/60" />
+                          </button>
+                        )}
+                        {deleteConfirm === card.id ? (
+                          <>
+                            <button onClick={() => handleDeleteCard(card.id)} className="px-2 py-1 rounded-xl bg-red-500 text-white text-xs font-bold">Delete</button>
+                            <button onClick={() => setDeleteConfirm(null)} className="px-2 py-1 rounded-xl bg-brand-navy/10 text-brand-navy text-xs font-bold">Cancel</button>
+                          </>
+                        ) : (
+                          <button onClick={() => { setDeleteConfirm(card.id); setEditingCardId(null); }}
+                            className="p-2 rounded-xl bg-red-50 active:scale-90 transition-all">
+                            <Trash2 size={13} className="text-red-500" />
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  ))}
-                </div>
-              )}
+
+                    {/* Inline edit form */}
+                    {editingCardId === card.id && (
+                      <div className="px-3 pb-3 pt-1 border-t border-black/5 space-y-3">
+                        <div>
+                          <label className="text-[10px] font-bold text-brand-navy/50 uppercase tracking-widest mb-1 block">Name</label>
+                          <input value={editName} onChange={e => setEditName(e.target.value)}
+                            className="w-full px-3 py-2 rounded-xl bg-brand-bg border border-black/8 text-sm font-medium text-brand-navy outline-none" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-brand-navy/50 uppercase tracking-widest mb-2 block">Win probability within tier</label>
+                          <ProbCounter value={editProb} onChange={setEditProb} min={1} max={100} />
+                        </div>
+                        <div className="flex gap-2">
+                          <button onClick={() => setEditingCardId(null)}
+                            className="flex-1 py-2 rounded-xl bg-brand-navy/8 text-brand-navy text-xs font-bold">Cancel</button>
+                          <button onClick={handleSaveEdit} disabled={editSaving || !editName.trim()}
+                            className="flex-1 py-2 rounded-xl text-white text-xs font-bold disabled:opacity-40"
+                            style={{ background: cfg.solid }}>
+                            {editSaving ? 'Saving…' : 'Save'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
 
               {/* Add card form */}
               {tierCards.length < maxForTier ? (
@@ -4912,18 +5012,14 @@ function CardSetsAdminPanel({ onClose }: { onClose: () => void }) {
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-brand-navy/60 uppercase tracking-widest mb-1 block">Card Name</label>
-                    <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Golden Phoenix"
+                    <input value={addName} onChange={e => setAddName(e.target.value)} placeholder="e.g. Golden Phoenix"
                       className="w-full px-4 py-3 rounded-2xl bg-brand-bg border border-black/8 text-sm font-medium text-brand-navy placeholder:text-brand-navy/35 outline-none" />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-brand-navy/60 uppercase tracking-widest mb-1 block">Probability Weight</label>
-                    <div className="flex items-center gap-3">
-                      <input type="range" min={1} max={10} step={1} value={probability} onChange={e => setProbability(Number(e.target.value))} className="flex-1" />
-                      <span className="font-black text-brand-navy text-sm w-6 text-center">{probability}</span>
-                    </div>
-                    <p className="text-[10px] text-brand-navy/50 mt-1">Higher = more likely within this tier</p>
+                    <label className="text-[10px] font-bold text-brand-navy/60 uppercase tracking-widest mb-2 block">Win probability within tier</label>
+                    <ProbCounter value={addProb} onChange={setAddProb} min={1} max={100} />
                   </div>
-                  <button onClick={handleAddCard} disabled={saving || !name.trim() || !imageFile}
+                  <button onClick={handleAddCard} disabled={saving || !addName.trim() || !imageFile}
                     className="w-full py-3.5 rounded-2xl font-bold text-sm text-white transition-all active:scale-[0.98] disabled:opacity-40"
                     style={{ background: cfg.solid }}>
                     {saving ? 'Saving…' : `Add ${cfg.label} Card`}
