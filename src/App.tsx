@@ -24395,6 +24395,11 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
   const [selectedBadge, setSelectedBadge] = useState<AppBadge | null>(null);
   const [publicChallenges, setPublicChallenges] = useState<Challenge[]>([]);
   const [publicEntries, setPublicEntries] = useState<Map<string, any>>(new Map());
+  const [pubChallengeOpen, setPubChallengeOpen] = useState(false);
+  const [pubBadgesOpen, setPubBadgesOpen] = useState(false);
+  const [pubStickerOpen, setPubStickerOpen] = useState(false);
+  const [pubChallengeTab, setPubChallengeTab] = useState<'current' | 'completed'>('current');
+  const [pubStickerCount, setPubStickerCount] = useState(0);
 
   useEffect(() => {
     return onSnapshot(collection(db, 'badges'), snap =>
@@ -24413,6 +24418,12 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
       const m = new Map<string, any>();
       snap.docs.forEach(d => m.set(d.data().challengeId, { id: d.id, ...d.data() }));
       setPublicEntries(m);
+    });
+  }, [initialTargetUser.uid]);
+
+  useEffect(() => {
+    return onSnapshot(doc(db, 'user_stickers', initialTargetUser.uid), snap => {
+      setPubStickerCount(snap.exists() ? (snap.data().stickers || []).length : 0);
     });
   }, [initialTargetUser.uid]);
 
@@ -24711,13 +24722,137 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
       )}
 
 
-      {/* Badges swipe row */}
-      {earnedBadges.length > 0 && (
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/90 mb-2.5 text-center">Badges</p>
-          <BadgeSwipeRow badges={earnedBadges} onSelectBadge={setSelectedBadge} />
-        </div>
-      )}
+      {/* Challenges · Badges · Stickers row */}
+      {(() => {
+        const theirChallenges = publicChallenges.filter(c => (c.participantUids || []).includes(initialTargetUser.uid));
+        const activePub = theirChallenges.filter(c => !publicEntries.get(c.id)?.redeemed);
+        const donePub = theirChallenges.filter(c => publicEntries.get(c.id)?.redeemed);
+        return (
+          <div className="flex gap-2">
+            <motion.button whileTap={{ scale: 0.97 }} onClick={() => setPubChallengeOpen(true)}
+              className="flex-1 rounded-2xl overflow-hidden shadow-md shadow-blue-900/20">
+              <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3.5"
+                style={{ background: 'linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 40%, #2563eb 70%, #3b82f6 100%)' }}>
+                <span className="shine-ray" aria-hidden="true" />
+                <p className="relative z-10 text-xl font-black text-white leading-none">{activePub.length}</p>
+                <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-blue-200/80">Challenges</span>
+              </div>
+            </motion.button>
+            <motion.button whileTap={{ scale: 0.97 }} onClick={() => setPubBadgesOpen(true)}
+              className="flex-1 rounded-2xl overflow-hidden shadow-md shadow-amber-900/20">
+              <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3.5 overflow-hidden"
+                style={{ background: 'linear-gradient(135deg, #78350f 0%, #b45309 40%, #d97706 75%, #fbbf24 100%)' }}>
+                <span className="badge-shine-ray" aria-hidden="true" />
+                <p className="relative z-10 text-xl font-black text-white leading-none">{earnedBadges.length}</p>
+                <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-amber-200/80">Badges</span>
+              </div>
+            </motion.button>
+            <motion.button whileTap={{ scale: 0.97 }} onClick={() => setPubStickerOpen(true)}
+              className="flex-1 rounded-2xl overflow-hidden shadow-md"
+              style={{ background: 'linear-gradient(135deg, #0D0D2B, #1A0730)' }}>
+              <div className="flex flex-col items-center justify-center gap-0.5 px-3 py-3.5">
+                <p className="text-xl font-black text-white leading-none">{pubStickerCount}</p>
+                <span className="text-[9px] font-bold uppercase tracking-widest text-amber-300/80">Stickers</span>
+              </div>
+            </motion.button>
+          </div>
+        );
+      })()}
+
+      {/* Challenges popup */}
+      <AnimatePresence>
+        {pubChallengeOpen && (() => {
+          const theirChallenges = publicChallenges.filter(c => (c.participantUids || []).includes(initialTargetUser.uid));
+          const activePub = theirChallenges.filter(c => !publicEntries.get(c.id)?.redeemed);
+          const donePub = theirChallenges.filter(c => publicEntries.get(c.id)?.redeemed);
+          const list = pubChallengeTab === 'current' ? activePub : donePub;
+          return (
+            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+              className="fixed top-0 left-0 right-0 bottom-0 z-[9999] bg-brand-bg flex flex-col overflow-hidden max-w-md mx-auto"
+              onClick={e => e.stopPropagation()}>
+              <div className="px-5 pt-5 pb-3 flex items-center justify-between shrink-0">
+                <h3 className="font-bold text-brand-navy text-lg">Challenges</h3>
+                <button onClick={() => setPubChallengeOpen(false)} className="w-8 h-8 rounded-full bg-brand-navy/8 flex items-center justify-center">
+                  <X size={16} className="text-brand-navy" />
+                </button>
+              </div>
+              <div className="px-4 pb-3 shrink-0">
+                <div className="flex gap-1.5 bg-brand-navy/5 rounded-2xl p-1">
+                  {(['current', 'completed'] as const).map(tab => (
+                    <button key={tab} onClick={() => setPubChallengeTab(tab)}
+                      className={`flex-1 py-1.5 rounded-xl text-[11px] font-bold transition-all ${pubChallengeTab === tab ? 'bg-white shadow-sm text-brand-navy' : 'text-brand-navy/50'}`}>
+                      {tab === 'current' ? `Active (${activePub.length})` : `Done (${donePub.length})`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto px-4 pb-6 space-y-3">
+                {list.length === 0 && <p className="text-center text-xs text-brand-navy/50 py-6">No challenges</p>}
+                {list.map(c => {
+                  const entry = publicEntries.get(c.id);
+                  const progress = entry ? Math.min(c.goal, entry.count || 0) : 0;
+                  const pct = c.goal > 0 ? Math.min(100, Math.round((progress / c.goal) * 100)) : 0;
+                  return (
+                    <div key={c.id} className="rounded-2xl px-4 py-3 gradient-logo-blue overflow-hidden relative">
+                      <span className="shine-ray" aria-hidden="true" />
+                      <div className="flex items-center justify-between mb-1.5 gap-2 relative z-10">
+                        <p className="text-xs font-bold leading-tight line-clamp-1 flex-1 text-white">{c.title}</p>
+                        <span className={`text-[10px] font-bold shrink-0 ${pct >= 100 ? 'text-green-300' : 'text-white/80'}`}>{pct >= 100 ? '✓ Done' : `${pct}%`}</span>
+                      </div>
+                      <div className="h-1.5 bg-white/20 rounded-full overflow-hidden relative z-10">
+                        <motion.div className={`h-full rounded-full ${pct >= 100 ? 'bg-green-400' : 'bg-white'}`}
+                          initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.6, ease: 'easeOut' }} />
+                      </div>
+                      <p className="text-[9px] mt-1.5 font-medium text-white/60 relative z-10">{progress} / {c.goal} {c.unit} · 🎁 {c.reward}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
+
+      {/* Badges popup */}
+      <AnimatePresence>
+        {pubBadgesOpen && (
+          <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+            transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+            className="fixed top-0 left-0 right-0 bottom-0 z-[9999] bg-brand-bg flex flex-col overflow-hidden max-w-md mx-auto"
+            onClick={e => e.stopPropagation()}>
+            <div className="px-5 pt-5 pb-3 flex items-center justify-between shrink-0">
+              <h3 className="font-bold text-brand-navy text-lg">Badges</h3>
+              <button onClick={() => setPubBadgesOpen(false)} className="w-8 h-8 rounded-full bg-brand-navy/8 flex items-center justify-center">
+                <X size={16} className="text-brand-navy" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 pb-6">
+              <BadgeSwipeRow badges={earnedBadges} onSelectBadge={setSelectedBadge} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Stickers popup */}
+      <AnimatePresence>
+        {pubStickerOpen && (
+          <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+            transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+            className="fixed top-0 left-0 right-0 bottom-0 z-[9999] bg-brand-bg flex flex-col overflow-hidden max-w-md mx-auto"
+            onClick={e => e.stopPropagation()}>
+            <div className="px-5 pt-5 pb-3 flex items-center justify-between shrink-0">
+              <h3 className="font-bold text-brand-navy text-lg">Stickers</h3>
+              <button onClick={() => setPubStickerOpen(false)} className="w-8 h-8 rounded-full bg-brand-navy/8 flex items-center justify-center">
+                <X size={16} className="text-brand-navy" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 pb-6">
+              <UserStickerPanel uid={targetUser.uid} isOwnProfile={false} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {selectedBadge && (
@@ -24825,50 +24960,6 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
         )}
       </div>
 
-      {/* Challenges */}
-      {(() => {
-        const theirChallenges = publicChallenges.filter(c => (c.participantUids || []).includes(initialTargetUser.uid));
-        if (theirChallenges.length === 0) return null;
-        return (
-          <div className="space-y-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/90 px-1">Challenges</p>
-            {theirChallenges.map(c => {
-              const entry = publicEntries.get(c.id);
-              let progress = 0;
-              if (entry) {
-                if (c.vendorIds?.length) {
-                  progress = Math.min(c.goal, entry.count || 0);
-                } else {
-                  progress = Math.max(0, Math.min(c.goal, (targetUser.totalStamps || 0) - (entry.totalStampsAtJoin || 0)));
-                }
-              }
-              const pct = c.goal > 0 ? Math.min(100, Math.round((progress / c.goal) * 100)) : 0;
-              const done = pct >= 100;
-              return (
-                <div key={c.id} className="rounded-2xl px-4 py-3 gradient-logo-blue overflow-hidden relative">
-                  <span className="shine-ray" aria-hidden="true" />
-                  <div className="flex items-center justify-between mb-1.5 gap-2 relative z-10">
-                    <p className="text-xs font-bold leading-tight line-clamp-1 flex-1 text-white">{c.title}</p>
-                    <span className={cn('text-[10px] font-bold shrink-0', done ? 'text-green-300' : 'text-white/80')}>{done ? '✓ Done' : `${pct}%`}</span>
-                  </div>
-                  <div className="h-1.5 bg-white/20 rounded-full overflow-hidden relative z-10">
-                    <motion.div
-                      className={cn('h-full rounded-full', done ? 'bg-green-400' : 'bg-white')}
-                      initial={{ width: 0 }}
-                      animate={{ width: `${pct}%` }}
-                      transition={{ duration: 0.6, ease: 'easeOut' }}
-                    />
-                  </div>
-                  <p className="text-[9px] mt-1.5 font-medium text-white/60 relative z-10">{progress} / {c.goal} {c.unit} · 🎁 {c.reward}</p>
-                </div>
-              );
-            })}
-          </div>
-        );
-      })()}
-
-      {/* Card collection */}
-      <UserStickerPanel uid={targetUser.uid} isOwnProfile={false} />
 
       {/* Tab switcher */}
       <div className="flex p-1 glass-card rounded-2xl">
