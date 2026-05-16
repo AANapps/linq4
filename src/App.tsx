@@ -14004,7 +14004,10 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
   const [posting, setPosting] = useState(false);
 
   useEffect(() => onSnapshot(doc(db, 'daily_vote', today), snap => { if (snap.exists()) setVoteData(snap.data() as DailyVoteData); }), [today]);
-  useEffect(() => onSnapshot(doc(db, 'daily_vote', today, 'votes', currentUser.uid), snap => { if (snap.exists()) setUserVote(snap.data().optionIdx as number); }), [today, currentUser.uid]);
+  useEffect(() => onSnapshot(doc(db, 'daily_vote', today, 'votes', currentUser.uid), snap => {
+    if (snap.exists() && snap.data().countRecorded) setUserVote(snap.data().optionIdx as number);
+    else setUserVote(null);
+  }), [today, currentUser.uid]);
   useEffect(() => {
     const q = query(collection(db, 'daily_vote', today, 'comments'), orderBy('createdAt', 'desc'), limit(50));
     return onSnapshot(q, snap => setComments(snap.docs.map(d => ({ id: d.id, ...d.data() } as DailyVoteComment))));
@@ -14031,9 +14034,18 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
     try {
       const voteRef = doc(db, 'daily_vote', today, 'votes', currentUser.uid);
       const snap = await getDoc(voteRef);
-      if (snap.exists()) { setUserVote(snap.data().optionIdx); setVoting(false); return; }
-      await setDoc(voteRef, { optionIdx: idx, uid: currentUser.uid, name: currentProfile?.name || 'Anonymous', votedAt: serverTimestamp(), rewardClaimed: false });
+      // Vote doc exists but count was never recorded (previous failed attempt) — retry with original choice
+      if (snap.exists() && !snap.data().countRecorded) {
+        const prevIdx = snap.data().optionIdx as number;
+        await updateDoc(doc(db, 'daily_vote', today), { [`voteCounts.${prevIdx}`]: increment(1), totalVotes: increment(1) });
+        await updateDoc(voteRef, { countRecorded: true });
+        setVoting(false);
+        return;
+      }
+      if (snap.exists()) { setVoting(false); return; }
+      await setDoc(voteRef, { optionIdx: idx, uid: currentUser.uid, name: currentProfile?.name || 'Anonymous', votedAt: serverTimestamp(), rewardClaimed: false, countRecorded: false });
       await updateDoc(doc(db, 'daily_vote', today), { [`voteCounts.${idx}`]: increment(1), totalVotes: increment(1) });
+      await updateDoc(voteRef, { countRecorded: true });
     } catch (e) { console.error('castVote', e); }
     setVoting(false);
   };
@@ -14210,7 +14222,10 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady }: { curren
   const [open, setOpen] = useState(false);
 
   useEffect(() => onSnapshot(doc(db, 'daily_vote', today), snap => { if (snap.exists()) setVoteData(snap.data() as DailyVoteData); }), [today]);
-  useEffect(() => onSnapshot(doc(db, 'daily_vote', today, 'votes', currentUser.uid), snap => { if (snap.exists()) setUserVote(snap.data().optionIdx as number); }), [today, currentUser.uid]);
+  useEffect(() => onSnapshot(doc(db, 'daily_vote', today, 'votes', currentUser.uid), snap => {
+    if (snap.exists() && snap.data().countRecorded) setUserVote(snap.data().optionIdx as number);
+    else setUserVote(null);
+  }), [today, currentUser.uid]);
 
   if (!voteData) return null;
 
