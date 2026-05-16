@@ -2966,12 +2966,17 @@ async function issueUserStickers(uid: string, userName: string, qty: number): Pr
   if (cardDefsByTier.size === 0) loadDefs(() => true);
 
   const rollCardDef = (tier: StickerTier): CollectibleCardDef | null => {
-    const defs = cardDefsByTier.get(tier);
-    if (!defs || defs.length === 0) return null;
-    const total = defs.reduce((s, d) => s + (d.probability || 1), 0);
-    let r = Math.random() * total;
-    for (const def of defs) { r -= (def.probability || 1); if (r <= 0) return def; }
-    return defs[defs.length - 1];
+    const pick = (pool: CollectibleCardDef[]): CollectibleCardDef => {
+      const total = pool.reduce((s, d) => s + (d.probability || 1), 0);
+      let r = Math.random() * total;
+      for (const def of pool) { r -= (def.probability || 1); if (r <= 0) return def; }
+      return pool[pool.length - 1];
+    };
+    const tierDefs = cardDefsByTier.get(tier);
+    if (tierDefs && tierDefs.length > 0) return pick(tierDefs);
+    // Tier has no uploaded cards — fall back to any card in the set
+    const allDefs = [...cardDefsByTier.values()].flat();
+    return allDefs.length > 0 ? pick(allDefs) : null;
   };
 
   // Roll cards ONCE — same cards go everywhere
