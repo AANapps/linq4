@@ -3350,13 +3350,158 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
 
 // --- User Sticker Panel (profile view — own + other users) ---
 
+function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onReveal, onClose, onOpenPack }: {
+  uid: string;
+  isOwnProfile: boolean;
+  stickers: CollectibleSticker[];
+  revealedIds: string[];
+  onReveal: (id: string) => void;
+  onClose: () => void;
+  onOpenPack?: (s: CollectibleSticker[]) => void;
+}) {
+  const [selected, setSelected] = useState<{ sticker: CollectibleSticker; count: number } | null>(null);
+  const [challengeNames, setChallengeNames] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const ids = [...new Set(stickers.filter(s => s.challengeId).map(s => s.challengeId!))];
+    if (!ids.length) return;
+    Promise.all(ids.map(id => getDoc(doc(db, 'challenges', id)))).then(snaps => {
+      const names: Record<string, string> = {};
+      snaps.forEach(snap => { if (snap.exists()) names[snap.id] = snap.data().title; });
+      setChallengeNames(names);
+    });
+  }, []);
+
+  const unrevealed = stickers.filter(s => !revealedIds.includes(s.id));
+  const revealed = stickers.filter(s => revealedIds.includes(s.id));
+
+  // Group revealed by collection key
+  const collectionMap = new Map<string, CollectibleSticker[]>();
+  revealed.forEach(s => {
+    const key = s.challengeId ?? 'general';
+    if (!collectionMap.has(key)) collectionMap.set(key, []);
+    collectionMap.get(key)!.push(s);
+  });
+
+  // Deduplicate: group by cardDefId or tier+variant, keep most recent, track count
+  const dedupe = (list: CollectibleSticker[]) => {
+    const map = new Map<string, { sticker: CollectibleSticker; count: number }>();
+    [...list].reverse().forEach(s => {
+      const key = s.cardDefId ?? `${s.tier}-${s.variant ?? 0}`;
+      if (map.has(key)) { map.get(key)!.count++; }
+      else { map.set(key, { sticker: s, count: 1 }); }
+    });
+    return [...map.values()];
+  };
+
+  const cfg = selected ? STICKER_CONFIG[selected.sticker.tier] : null;
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] flex flex-col max-w-md mx-auto">
+      <div className="flex-1 overflow-y-auto bg-brand-bg">
+        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm px-5 pt-5 pb-4 border-b border-black/5 z-10 flex items-center justify-between">
+          <h2 className="font-display text-xl font-bold text-brand-navy">My Collection</h2>
+          <button onClick={onClose} className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm active:scale-95 transition-all">
+            <X size={18} className="text-brand-navy/75" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-6">
+          {/* Unrevealed CTA */}
+          {isOwnProfile && unrevealed.length > 0 && (
+            <motion.button className="w-full py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"
+              style={{ background: 'linear-gradient(135deg, #0D0D2B, #1A0730)', color: 'white' }}
+              onClick={() => { onOpenPack?.(unrevealed); onClose(); }}
+              whileTap={{ scale: 0.97 }}
+              animate={{ boxShadow: ['0 0 0px #F5C51800', '0 0 18px #F5C51866', '0 0 0px #F5C51800'] }}
+              transition={{ duration: 2, repeat: Infinity }}>
+              🎴 Open {unrevealed.length} card{unrevealed.length !== 1 ? 's' : ''}
+            </motion.button>
+          )}
+
+          {revealed.length === 0 && (
+            <p className="text-center text-sm text-brand-navy/50 py-8">No revealed cards yet</p>
+          )}
+
+          {/* Collections */}
+          {[...collectionMap.entries()].map(([key, cards]) => {
+            const name = key === 'general' ? 'General Collection' : (challengeNames[key] ?? 'Collection');
+            const deduped = dedupe(cards);
+            return (
+              <div key={key} className="space-y-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/60">{name} · {cards.length} cards</p>
+                <div className="flex flex-wrap gap-3">
+                  {deduped.map(({ sticker, count }) => (
+                    <div key={sticker.cardDefId ?? `${sticker.tier}-${sticker.variant}`} className="relative" onClick={() => setSelected({ sticker, count })}>
+                      <StickerCard sticker={sticker} isRevealed={true} size="sm" />
+                      {count > 1 && (
+                        <span className="absolute -top-1.5 -right-1.5 bg-brand-navy text-white text-[9px] font-black rounded-full w-5 h-5 flex items-center justify-center shadow">
+                          x{count}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Card detail overlay */}
+      <AnimatePresence>
+        {selected && cfg && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm z-20 flex items-center justify-center p-6"
+            onClick={() => setSelected(null)}>
+            <motion.div initial={{ scale: 0.85, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.85, opacity: 0 }}
+              className="bg-white rounded-3xl p-6 flex flex-col items-center gap-4 shadow-2xl w-full max-w-xs"
+              onClick={e => e.stopPropagation()}>
+              {/* Card large view */}
+              <div style={{ width: 120, height: 162, borderRadius: 20, border: `2.5px solid ${cfg.border}`, overflow: 'hidden', boxShadow: `0 8px 32px ${cfg.color}33`, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ background: cfg.solid, height: '60%', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                  {selected.sticker.cardImageUrl
+                    ? <img src={selected.sticker.cardImageUrl} alt={selected.sticker.cardName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : <span style={{ fontSize: 52 }}>{cfg.variants[selected.sticker.variant ?? 0]?.emoji ?? cfg.variants[0].emoji}</span>
+                  }
+                </div>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, padding: '4px 8px', background: 'white' }}>
+                  <span style={{ fontSize: 11, fontWeight: 900, color: cfg.color, textAlign: 'center', lineHeight: 1.2 }}>
+                    {selected.sticker.cardName ?? cfg.variants[selected.sticker.variant ?? 0]?.name}
+                  </span>
+                  <span style={{ fontSize: 9, color: cfg.color, opacity: 0.65, fontWeight: 700 }}>{cfg.label}</span>
+                </div>
+              </div>
+
+              {selected.count > 1 && (
+                <p className="text-xs font-bold text-brand-navy/60">You own <span className="text-brand-navy">x{selected.count}</span></p>
+              )}
+
+              <div className="flex gap-3 w-full">
+                <button disabled className="flex-1 py-2.5 rounded-2xl bg-brand-navy/10 text-brand-navy/30 font-bold text-sm cursor-not-allowed">
+                  Trade
+                </button>
+                <button onClick={() => setSelected(null)}
+                  className="flex-1 py-2.5 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-95 transition-all">
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
 function UserStickerPanel({ uid, isOwnProfile = false, onOpenPack }: {
   uid: string;
   isOwnProfile?: boolean;
   onOpenPack?: (stickers: CollectibleSticker[]) => void;
 }) {
   const [col, setCol] = useState<{ stickers: CollectibleSticker[]; revealedIds: string[]; uniqueTiers: StickerTier[] } | null>(null);
-  const [expanded, setExpanded] = useState(false);
+  const [showCollection, setShowCollection] = useState(false);
 
   useEffect(() => {
     return onSnapshot(doc(db, 'user_stickers', uid), snap => {
@@ -3380,33 +3525,33 @@ function UserStickerPanel({ uid, isOwnProfile = false, onOpenPack }: {
   const revealed = [...col.stickers.filter(s => col.revealedIds.includes(s.id))].reverse();
 
   return (
-    <div className="space-y-2">
-      {/* Header */}
-      <div className="flex items-center justify-between px-1">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75">
-          Cards <span className="text-brand-navy/40 normal-case tracking-normal font-bold">{col.stickers.length}</span>
-        </p>
-        <button onClick={() => setExpanded(v => !v)} className="text-[10px] font-bold text-brand-navy/50 active:opacity-60">
-          {expanded ? 'Collapse' : 'See all'}
-        </button>
-      </div>
+    <>
+      <div className="space-y-2">
+        {/* Header */}
+        <div className="flex items-center justify-between px-1">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75">
+            Cards <span className="text-brand-navy/40 normal-case tracking-normal font-bold">{col.stickers.length}</span>
+          </p>
+          <button onClick={() => setShowCollection(true)} className="text-[10px] font-bold text-brand-navy/50 active:opacity-60">
+            See all
+          </button>
+        </div>
 
-      {/* Open pack CTA */}
-      {isOwnProfile && unrevealed.length > 0 && (
-        <motion.button
-          className="w-full py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"
-          style={{ background: 'linear-gradient(135deg, #0D0D2B, #1A0730)', color: 'white' }}
-          onClick={() => onOpenPack?.(unrevealed)}
-          whileTap={{ scale: 0.97 }}
-          animate={{ boxShadow: ['0 0 0px #F5C51800', '0 0 18px #F5C51866', '0 0 0px #F5C51800'] }}
-          transition={{ duration: 2, repeat: Infinity }}
-        >
-          🎴 Open {unrevealed.length} card{unrevealed.length !== 1 ? 's' : ''}
-        </motion.button>
-      )}
+        {/* Open pack CTA */}
+        {isOwnProfile && unrevealed.length > 0 && (
+          <motion.button
+            className="w-full py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"
+            style={{ background: 'linear-gradient(135deg, #0D0D2B, #1A0730)', color: 'white' }}
+            onClick={() => onOpenPack?.(unrevealed)}
+            whileTap={{ scale: 0.97 }}
+            animate={{ boxShadow: ['0 0 0px #F5C51800', '0 0 18px #F5C51866', '0 0 0px #F5C51800'] }}
+            transition={{ duration: 2, repeat: Infinity }}
+          >
+            🎴 Open {unrevealed.length} card{unrevealed.length !== 1 ? 's' : ''}
+          </motion.button>
+        )}
 
-      {/* Slider (collapsed) */}
-      {!expanded && (
+        {/* Slider */}
         <div className="flex gap-2 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-2 scrollbar-hide">
           {isOwnProfile && unrevealed.map(s => (
             <div key={s.id} className="snap-start shrink-0">
@@ -3419,20 +3564,22 @@ function UserStickerPanel({ uid, isOwnProfile = false, onOpenPack }: {
             </div>
           ))}
         </div>
-      )}
+      </div>
 
-      {/* Expanded grid */}
-      {expanded && (
-        <div className="flex flex-wrap gap-2 px-1">
-          {isOwnProfile && unrevealed.map(s => (
-            <StickerCard key={s.id} sticker={s} isRevealed={false} onReveal={() => handleReveal(s.id)} size="sm" />
-          ))}
-          {revealed.map(s => (
-            <StickerCard key={s.id} sticker={s} isRevealed={true} size="sm" />
-          ))}
-        </div>
-      )}
-    </div>
+      <AnimatePresence>
+        {showCollection && (
+          <UserCollectionModal
+            uid={uid}
+            isOwnProfile={isOwnProfile}
+            stickers={col.stickers}
+            revealedIds={col.revealedIds}
+            onReveal={handleReveal}
+            onClose={() => setShowCollection(false)}
+            onOpenPack={onOpenPack}
+          />
+        )}
+      </AnimatePresence>
+    </>
   );
 }
 
