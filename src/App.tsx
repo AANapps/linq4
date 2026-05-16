@@ -24634,10 +24634,32 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
       animate={{ opacity: 1, scale: 1 }}
       className="space-y-6 pb-20 text-brand-navy"
     >
-      <button onClick={onBack} className="flex items-center gap-2 text-brand-navy/75 font-bold text-sm hover:text-brand-navy transition-colors">
-        <ArrowLeft size={18} />
-        Back
-      </button>
+      <div className="flex items-center justify-between">
+        <button onClick={onBack} className="flex items-center gap-2 text-brand-navy/75 font-bold text-sm hover:text-brand-navy transition-colors">
+          <ArrowLeft size={18} />
+          Back
+        </button>
+        {currentUser && currentUser.uid !== targetUser.uid && (
+          <div className="flex gap-2">
+            <button
+              onClick={handleFollowClick}
+              className={cn(
+                "flex items-center gap-1.5 px-4 py-2 rounded-2xl font-bold text-sm transition-all active:scale-95",
+                isFollowing ? "bg-brand-navy/8 text-green-600" : "bg-brand-navy/8 text-brand-gold"
+              )}
+            >
+              {isFollowing ? <><UserCheck size={15} />Following</> : <><UserPlus size={15} />Follow</>}
+            </button>
+            <button
+              onClick={handleMessageClick}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-brand-navy/8 text-brand-gold font-bold text-sm transition-all active:scale-95"
+            >
+              <MessageCircle size={15} />
+              Message
+            </button>
+          </div>
+        )}
+      </div>
 
       <header className="relative">
         <div className="flex items-start gap-4">
@@ -24664,28 +24686,6 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
           </div>
         </div>
       </header>
-
-      {/* Follow / Message buttons — top */}
-      {currentUser && currentUser.uid !== targetUser.uid && (
-        <div className="flex gap-2">
-          <button
-            onClick={handleFollowClick}
-            className={cn(
-              "flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm transition-all active:scale-95",
-              isFollowing ? "bg-brand-navy/8 text-green-600 hover:bg-red-50 hover:text-red-500" : "bg-brand-navy/8 text-brand-gold hover:bg-brand-gold/10"
-            )}
-          >
-            {isFollowing ? <><UserCheck size={18} />Following</> : <><UserPlus size={18} />Follow</>}
-          </button>
-          <button
-            onClick={handleMessageClick}
-            className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-brand-navy/8 text-brand-gold font-bold text-sm transition-all active:scale-95 hover:bg-brand-gold/10"
-          >
-            <MessageCircle size={18} />
-            Message
-          </button>
-        </div>
-      )}
 
       {/* Stats — clean separator */}
       <div className="flex items-center divide-x divide-brand-navy/10">
