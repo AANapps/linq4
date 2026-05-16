@@ -3132,10 +3132,22 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
     });
   }, [initialCard.id]);
 
+  const [cardDefs, setCardDefs] = useState<CollectibleCardDef[]>([]);
   const stickerCard = liveCard;
   const unrevealed = stickerCard.stickers.filter(s => !(stickerCard.revealedIds || []).includes(s.id));
   const revealed = stickerCard.stickers.filter(s => (stickerCard.revealedIds || []).includes(s.id));
   const [topPlayers, setTopPlayers] = useState<{ uid: string; userName?: string; userPhoto?: string; uniqueCards: number; stickers: number }[]>([]);
+
+  // Load admin card defs for this set so we can show fixed slots
+  useEffect(() => {
+    const setId = programme?.cardSetId;
+    const q = setId
+      ? query(collection(db, 'collectible_cards'), where('setId', '==', setId))
+      : query(collection(db, 'collectible_cards'));
+    getDocs(q).then(snap => {
+      setCardDefs(snap.docs.map(d => ({ id: d.id, ...d.data() } as CollectibleCardDef)));
+    });
+  }, [programme?.cardSetId]);
 
   useEffect(() => {
     if (!programme?.id) return;
@@ -3225,33 +3237,37 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
               </div>
             )}
 
-            {/* Card collection — fixed slots per tier, filled with uploaded images */}
+            {/* Card collection — one slot per admin card def, filled when collected */}
             <div className="space-y-4">
               <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75">
                 Card Collection ({revealed.length} collected)
               </p>
               {STICKER_ORDER.map(tier => {
                 const cfg = STICKER_CONFIG[tier];
-                const slotCount = cfg.variants.length;
-                const collectedCount = revealed.filter(s => s.tier === tier).length;
+                const tierDefs = cardDefs.filter(d => d.tier === tier);
+                if (tierDefs.length === 0) return null;
+                const collectedForTier = tierDefs.filter(def =>
+                  revealed.some(s => s.cardDefId === def.id)
+                ).length;
                 return (
                   <div key={tier} className="rounded-2xl p-3 overflow-hidden relative"
                     style={{ background: cfg.solid, boxShadow: `0 4px 18px ${cfg.color}55` }}>
                     <span className="shine-ray" style={{ animationDelay: `${STICKER_ORDER.indexOf(tier) * 0.6}s` }} />
                     <div className="flex items-center justify-between mb-2.5 relative z-10">
                       <span className="text-[10px] font-black uppercase tracking-wider text-white">{cfg.label}</span>
-                      <span className="text-[10px] font-black text-white">{Math.min(collectedCount, slotCount)}/{slotCount}{collectedCount >= slotCount ? ' ✓' : ''}</span>
+                      <span className="text-[10px] font-black text-white">
+                        {collectedForTier}/{tierDefs.length}{collectedForTier >= tierDefs.length ? ' ✓' : ''}
+                      </span>
                     </div>
                     <div className="flex gap-2 relative z-10" style={{ justifyContent: 'space-evenly' }}>
-                      {Array.from({ length: slotCount }, (_, vi) => {
-                        // Find the best match for this slot: prefer matching variant index, then any from this tier for overflow
-                        const byVariant = revealed.filter(s => s.tier === tier && (s.variant ?? 0) === vi);
-                        // count how many times this slot appears (duplicates)
-                        const count = byVariant.length;
-                        const sticker = byVariant[0] ?? null;
-                        const filled = sticker !== null;
+                      {tierDefs.map(def => {
+                        // Find collected stickers that match this card def
+                        const matches = revealed.filter(s => s.cardDefId === def.id);
+                        const count = matches.length;
+                        const filled = count > 0;
+                        const sticker = matches[0] ?? null;
                         return (
-                          <div key={vi} className="relative flex-1" style={{ maxWidth: 72, aspectRatio: '3/4', minWidth: 0 }}>
+                          <div key={def.id} className="relative flex-1" style={{ maxWidth: 72, aspectRatio: '3/4', minWidth: 0 }}>
                             <div style={{
                               width: '100%', height: '100%', borderRadius: 12, overflow: 'hidden', border: '2px solid',
                               borderColor: filled ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.2)',
@@ -3261,18 +3277,18 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
                             }}>
                               {filled ? (
                                 <>
-                                  {sticker.cardImageUrl
-                                    ? <img src={sticker.cardImageUrl} alt={sticker.cardName} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                                  {(sticker?.cardImageUrl ?? def.imageUrl)
+                                    ? <img src={sticker?.cardImageUrl ?? def.imageUrl} alt={def.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                                     : <div style={{ width: '100%', height: '100%', background: cfg.solid }} />
                                   }
-                                  {sticker.cardName && (
+                                  {def.name && (
                                     <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.45)', padding: '2px 3px', textAlign: 'center' }}>
-                                      <span style={{ fontSize: 6, fontWeight: 900, color: '#fff', lineHeight: 1.2 }}>{sticker.cardName}</span>
+                                      <span style={{ fontSize: 6, fontWeight: 900, color: '#fff', lineHeight: 1.2 }}>{def.name}</span>
                                     </div>
                                   )}
                                 </>
                               ) : (
-                                <span style={{ fontSize: 18, opacity: 0.3, userSelect: 'none' }}>?</span>
+                                <span style={{ fontSize: 18, opacity: 0.25, userSelect: 'none', color: '#fff' }}>?</span>
                               )}
                             </div>
                             {count > 1 && (
