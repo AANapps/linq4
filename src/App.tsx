@@ -17403,6 +17403,9 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
   const [birthdayOffers, setBirthdayOffers] = useState<StoreOffer[]>([]);
   const [selectedBirthdayOffer, setSelectedBirthdayOffer] = useState<StoreOffer | null>(null);
   const [bdayCountdown, setBdayCountdown] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
+  const [showLinqleWins, setShowLinqleWins] = useState(false);
+  const [challengeOpen, setChallengeOpen] = useState(false);
+  const [challengeTab, setChallengeTab] = useState<'current' | 'completed'>('current');
 
   useEffect(() => {
     if (!profile?.birthday) return;
@@ -18082,72 +18085,140 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
 
 
 
-      {/* My challenges */}
-      {myChallenges.length > 0 && (
-        <div className="space-y-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75 px-1">Challenges</p>
+      {/* Side-by-side: Linqle + Challenges */}
+      {(() => {
+        const wins = (profile?.linqleCompletions || []).filter(c => c.won);
+        const activeChallenges = myChallenges.filter(c => !profileEntries.get(c.id)?.redeemed);
+        const completedChallenges = myChallenges.filter(c => profileEntries.get(c.id)?.redeemed);
+        return (
           <div className="space-y-2">
-            {myChallenges.map(c => {
-              const entry = profileEntries.get(c.id);
-              if (entry?.redeemed) return null;
-              let progress = 0;
-              if (entry) {
-                if (c.vendorIds?.length) {
-                  progress = Math.min(c.goal, entry.count || 0);
-                } else {
-                  progress = Math.max(0, Math.min(c.goal, (profile.totalStamps || 0) - (entry.totalStampsAtJoin || 0)));
-                }
-              }
-              const pct = c.goal > 0 ? Math.min(100, Math.round((progress / c.goal) * 100)) : 0;
-              const done = pct >= 100;
-              return (
-                <div key={c.id} className="gradient-logo-blue rounded-2xl px-4 py-3 pb-4 relative overflow-hidden shadow-lg space-y-2">
-                  <span className="shine-ray" aria-hidden="true" />
-                  <div className="flex items-center justify-between gap-2 relative z-10">
-                    <p className="text-xs font-bold leading-tight line-clamp-1 flex-1 text-white">{c.title}</p>
-                    <span className={cn('text-[10px] font-bold shrink-0', done ? 'text-green-300' : 'text-white/80')}>{done ? '✓ Done' : `${pct}%`}</span>
+            <div className="flex gap-2.5">
+              {/* Linqle card */}
+              <motion.button whileTap={{ scale: 0.97 }} onClick={() => setShowLinqleWins(v => !v)}
+                className="flex-1 rounded-2xl overflow-hidden shadow-md shadow-green-900/20 min-w-0">
+                <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3"
+                  style={{ background: 'linear-gradient(135deg, #022c22 0%, #064e3b 50%, #059669 100%)' }}>
+                  <MatrixRainCanvas opacity={0.25} fadeColor="rgba(2,44,34,0.15)" />
+                  <div className="relative z-10 flex items-center gap-0">
+                    {'LINQLE'.split('').map((letter, i) => (
+                      <MatrixScramble key={i} target={letter} className="text-xl font-black text-white font-mono leading-none" />
+                    ))}
                   </div>
-                  <div className="h-1.5 bg-white/20 rounded-full overflow-hidden relative z-10">
-                    <motion.div
-                      className={cn('h-full rounded-full', done ? 'bg-green-400' : 'bg-white')}
-                      initial={{ width: 0 }} animate={{ width: `${pct}%` }}
-                      transition={{ duration: 0.6, ease: 'easeOut' }}
-                    />
-                  </div>
-                  <p className="text-[9px] font-medium text-white/60 relative z-10">{progress} / {c.goal} {c.unit} · 🎁 {c.reward}</p>
-                  {done && entry && (
-                    <button
-                      onClick={() => setProfileRedeemingChallenge({ challenge: c, entry, userName: profile.name || '' })}
-                      className="w-full py-2.5 rounded-xl bg-white/20 backdrop-blur-sm border border-white/30 text-white font-bold text-xs relative z-10 active:scale-95 transition-all"
-                    >
-                      🏆 Redeem Now
-                    </button>
-                  )}
+                  <span className="relative z-10 text-[10px] font-bold text-emerald-300">{wins.length} wins</span>
                 </div>
-              );
-            })}
-          </div>
+              </motion.button>
 
-          {/* Redeemed challenges */}
-          {myChallenges.some(c => profileEntries.get(c.id)?.redeemed) && (
-            <div className="space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75 px-1">Redeemed</p>
-              {myChallenges.filter(c => profileEntries.get(c.id)?.redeemed).map(c => (
-                <div key={c.id} className="rounded-2xl bg-white border border-brand-navy/8 px-4 py-3 flex items-center gap-3 opacity-60">
-                  <div className="w-8 h-8 rounded-xl bg-green-50 flex items-center justify-center shrink-0">
-                    <Trophy size={14} className="text-green-500" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-sm text-brand-navy truncate">{c.title}</p>
-                    <p className="text-[10px] text-brand-navy/75">🎁 {c.reward}</p>
-                  </div>
-                  <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full shrink-0">Redeemed</span>
+              {/* Challenges card */}
+              <motion.button whileTap={{ scale: 0.97 }} onClick={() => setChallengeOpen(v => !v)}
+                className="flex-1 rounded-2xl overflow-hidden shadow-md shadow-blue-900/20 min-w-0">
+                <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3"
+                  style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #3730a3 50%, #6366f1 100%)' }}>
+                  <span className="shine-ray" aria-hidden="true" />
+                  <p className="relative z-10 text-xl font-black text-white leading-none">{activeChallenges.length}</p>
+                  <span className="relative z-10 text-[10px] font-bold text-indigo-300">challenges</span>
                 </div>
-              ))}
+              </motion.button>
             </div>
-          )}
-        </div>
-      )}
+
+            {/* Linqle wins expanded */}
+            {showLinqleWins && (
+              <div>
+                {wins.length > 0 ? (
+                  <div className="flex gap-2 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-1 scrollbar-hide">
+                    {[...wins].reverse().map(c => (
+                      <div key={c.date} className="snap-start shrink-0 w-16 px-2 py-2.5 rounded-2xl flex flex-col items-center gap-1 bg-green-50 border border-green-200">
+                        <span className="text-lg">🟩</span>
+                        <p className="text-[10px] font-black text-brand-navy">{c.guesses}/6</p>
+                        <p className="text-[9px] text-brand-navy/75">{c.date.slice(5)}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-center text-xs text-brand-navy/50 py-2">No wins yet</p>
+                )}
+              </div>
+            )}
+
+            {/* Challenges expanded */}
+            {challengeOpen && (
+              <div className="space-y-2">
+                {/* Tabs */}
+                <div className="flex gap-1.5 bg-brand-navy/5 rounded-2xl p-1">
+                  {(['current', 'completed'] as const).map(tab => (
+                    <button key={tab} onClick={() => setChallengeTab(tab)}
+                      className={`flex-1 py-1.5 rounded-xl text-[11px] font-bold transition-all ${challengeTab === tab ? 'bg-white shadow-sm text-brand-navy' : 'text-brand-navy/50'}`}>
+                      {tab === 'current' ? `Active (${activeChallenges.length})` : `Done (${completedChallenges.length})`}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Active challenges */}
+                {challengeTab === 'current' && (
+                  <div className="space-y-2">
+                    {activeChallenges.length === 0 && (
+                      <p className="text-center text-xs text-brand-navy/50 py-3">No active challenges</p>
+                    )}
+                    {activeChallenges.map(c => {
+                      const entry = profileEntries.get(c.id);
+                      let progress = 0;
+                      if (entry) {
+                        if (c.vendorIds?.length) {
+                          progress = Math.min(c.goal, entry.count || 0);
+                        } else {
+                          progress = Math.max(0, Math.min(c.goal, (profile.totalStamps || 0) - (entry.totalStampsAtJoin || 0)));
+                        }
+                      }
+                      const pct = c.goal > 0 ? Math.min(100, Math.round((progress / c.goal) * 100)) : 0;
+                      const done = pct >= 100;
+                      return (
+                        <div key={c.id} className="gradient-logo-blue rounded-2xl px-4 py-3 pb-4 relative overflow-hidden shadow-lg space-y-2">
+                          <span className="shine-ray" aria-hidden="true" />
+                          <div className="flex items-center justify-between gap-2 relative z-10">
+                            <p className="text-xs font-bold leading-tight line-clamp-1 flex-1 text-white">{c.title}</p>
+                            <span className={cn('text-[10px] font-bold shrink-0', done ? 'text-green-300' : 'text-white/80')}>{done ? '✓ Done' : `${pct}%`}</span>
+                          </div>
+                          <div className="h-1.5 bg-white/20 rounded-full overflow-hidden relative z-10">
+                            <motion.div className={cn('h-full rounded-full', done ? 'bg-green-400' : 'bg-white')}
+                              initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.6, ease: 'easeOut' }} />
+                          </div>
+                          <p className="text-[9px] font-medium text-white/60 relative z-10">{progress} / {c.goal} {c.unit} · 🎁 {c.reward}</p>
+                          {done && entry && (
+                            <button onClick={() => setProfileRedeemingChallenge({ challenge: c, entry, userName: profile.name || '' })}
+                              className="w-full py-2.5 rounded-xl bg-white/20 backdrop-blur-sm border border-white/30 text-white font-bold text-xs relative z-10 active:scale-95 transition-all">
+                              🏆 Redeem Now
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Completed challenges */}
+                {challengeTab === 'completed' && (
+                  <div className="space-y-2">
+                    {completedChallenges.length === 0 && (
+                      <p className="text-center text-xs text-brand-navy/50 py-3">No completed challenges yet</p>
+                    )}
+                    {completedChallenges.map(c => (
+                      <div key={c.id} className="rounded-2xl bg-white border border-brand-navy/8 px-4 py-3 flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-green-50 flex items-center justify-center shrink-0">
+                          <Trophy size={14} className="text-green-500" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-sm text-brand-navy truncate">{c.title}</p>
+                          <p className="text-[10px] text-brand-navy/75">🎁 {c.reward}</p>
+                        </div>
+                        <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full shrink-0">Redeemed</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       <AnimatePresence>
         {profileRedeemingChallenge && (
