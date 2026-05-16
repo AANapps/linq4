@@ -250,7 +250,9 @@ service cloud.firestore {
 
     match /daily_vote/{dateId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() ||
+        (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['voteCounts', 'totalVotes', 'commentCount']));
 
       match /votes/{userId} {
         allow read: if isAuthenticated();
