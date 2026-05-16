@@ -2909,56 +2909,40 @@ function NavButton({ active, onClick, icon, label, badgeCount }: { active: boole
 
 // --- Sticker issuance (triggered by stamp collection — 1 stamp = 1 sticker per active programme) ---
 
-async function issueStickersToCard(customerUid: string, userName: string, qty: number): Promise<CollectibleSticker[]> {
-  const joinedSnap = await getDocs(query(collection(db, 'sticker_cards'), where('user_id', '==', customerUid)));
-  if (joinedSnap.empty) return [];
-  const programmeIds = [...new Set(joinedSnap.docs.map(d => d.data().programme_id as string))];
-  const chancesMap = new Map<string, { brown: number; lightblue: number; red: number; blue: number; gold: number } | undefined>();
-  const activeProgrammeIds = new Set<string>();
-  await Promise.all(programmeIds.map(async pid => {
-    const snap = await getDoc(doc(db, 'challenges', pid));
-    if (snap.exists() && snap.data().status === 'active') {
-      chancesMap.set(pid, snap.data().tierChances);
-      activeProgrammeIds.add(pid);
-    }
-  }));
-  const allNew: CollectibleSticker[] = [];
-  for (const cardDoc of joinedSnap.docs) {
-    if (!activeProgrammeIds.has(cardDoc.data().programme_id)) continue;
-    const chances = chancesMap.get(cardDoc.data().programme_id);
-    const newStickers: CollectibleSticker[] = Array.from({ length: qty }, () => {
-      const tier = rollStickerTier(chances);
-      return { id: Math.random().toString(36).slice(2), tier, variant: rollStickerVariant(tier), earnedAt: new Date().toISOString() };
-    });
-    await updateDoc(cardDoc.ref, { stickers: arrayUnion(...newStickers), userName });
-    allNew.push(...newStickers);
-  }
-  return allNew;
-}
-
-// --- Global user sticker collection (every stamp always issues 3 stickers here) ---
-
+// --- Unified sticker issuer: rolls once, writes to personal collection + any active challenge cards ---
 async function issueUserStickers(uid: string, userName: string, qty: number): Promise<CollectibleSticker[]> {
-  // Determine which active Monopoly games this user is in, to pick game-specific cards
-  // Determine which card set to use: challenge-specific or default
+  // Find active collectible challenge sticker_cards docs for this user
+  let activeStickerCardDocs: any[] = [];
   let activeChallengeId: string | null = null;
   let activeSetId: string | null = null;
+  let activeTierChances: { brown: number; lightblue: number; red: number; blue: number; gold: number } | undefined;
+
   try {
     const stickerCardsSnap = await getDocs(query(collection(db, 'sticker_cards'), where('user_id', '==', uid)));
     if (!stickerCardsSnap.empty) {
       const programmeIds = [...new Set(stickerCardsSnap.docs.map(d => d.data().programme_id as string))];
-      for (const pid of programmeIds) {
+      const activePids = new Set<string>();
+      const chancesMap = new Map<string, any>();
+      const setIdMap = new Map<string, string | null>();
+      await Promise.all(programmeIds.map(async pid => {
         const cSnap = await getDoc(doc(db, 'challenges', pid));
         if (cSnap.exists() && cSnap.data().status === 'active' && cSnap.data().type === 'collectible') {
-          activeChallengeId = pid;
-          activeSetId = cSnap.data().cardSetId ?? null;
-          break;
+          activePids.add(pid);
+          chancesMap.set(pid, cSnap.data().tierChances ?? undefined);
+          setIdMap.set(pid, cSnap.data().cardSetId ?? null);
         }
+      }));
+      activeStickerCardDocs = stickerCardsSnap.docs.filter(d => activePids.has(d.data().programme_id));
+      if (activeStickerCardDocs.length > 0) {
+        const firstPid = activeStickerCardDocs[0].data().programme_id;
+        activeChallengeId = firstPid;
+        activeTierChances = chancesMap.get(firstPid);
+        activeSetId = setIdMap.get(firstPid) ?? null;
       }
     }
   } catch { /* fall through */ }
 
-  // If no challenge set, find the default set
+  // Fall back to default card set if no challenge set
   if (!activeSetId) {
     try {
       const setsSnap = await getDocs(query(collection(db, 'collectible_card_sets'), where('isDefault', '==', true)));
@@ -2966,7 +2950,7 @@ async function issueUserStickers(uid: string, userName: string, qty: number): Pr
     } catch { /* fall through */ }
   }
 
-  // Load card defs filtered by setId; fall back to all cards if none found
+  // Load card defs filtered by setId
   const cardDefsSnap = await getDocs(collection(db, 'collectible_cards')).catch(() => null);
   const cardDefsByTier = new Map<StickerTier, CollectibleCardDef[]>();
   const loadDefs = (filterFn: (d: CollectibleCardDef) => boolean) => {
@@ -2979,7 +2963,7 @@ async function issueUserStickers(uid: string, userName: string, qty: number): Pr
     });
   };
   loadDefs(def => activeSetId ? def.setId === activeSetId : !def.setId);
-  if (cardDefsByTier.size === 0) loadDefs(() => true); // fallback: any card
+  if (cardDefsByTier.size === 0) loadDefs(() => true);
 
   const rollCardDef = (tier: StickerTier): CollectibleCardDef | null => {
     const defs = cardDefsByTier.get(tier);
@@ -2990,8 +2974,9 @@ async function issueUserStickers(uid: string, userName: string, qty: number): Pr
     return defs[defs.length - 1];
   };
 
+  // Roll cards ONCE — same cards go everywhere
   const newStickers: CollectibleSticker[] = Array.from({ length: qty }, () => {
-    const tier = rollStickerTier();
+    const tier = rollStickerTier(activeTierChances);
     const def = rollCardDef(tier);
     return {
       id: Math.random().toString(36).slice(2),
@@ -3002,6 +2987,8 @@ async function issueUserStickers(uid: string, userName: string, qty: number): Pr
       ...(activeChallengeId ? { challengeId: activeChallengeId } : {}),
     };
   });
+
+  // Write to personal collection
   const ref = doc(db, 'user_stickers', uid);
   const snap = await getDoc(ref);
   if (snap.exists()) {
@@ -3009,6 +2996,14 @@ async function issueUserStickers(uid: string, userName: string, qty: number): Pr
   } else {
     await setDoc(ref, { userId: uid, userName, stickers: newStickers, revealedIds: [], uniqueTiers: [] });
   }
+
+  // Write same cards to all active challenge sticker_cards docs
+  if (activeStickerCardDocs.length > 0) {
+    await Promise.all(activeStickerCardDocs.map(cardDoc =>
+      updateDoc(cardDoc.ref, { stickers: arrayUnion(...newStickers), userName })
+    ));
+  }
+
   return newStickers;
 }
 
@@ -8534,7 +8529,6 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
     }
 
     const newStickers = await issueUserStickers(user.uid, userName, 3).catch(() => [] as CollectibleSticker[]);
-    issueStickersToCard(user.uid, userName, 3).catch(console.error);
     updateChallengeProgress(user.uid, store.id, 1).catch(console.error);
     newStickers.forEach(s => {
       if (s.tier === 'gold') postActivity(user.uid, userName, profile?.photoURL || user.photoURL || '', `${userName} pulled a Legendary card! 🏆`, '🏆');
@@ -11224,7 +11218,6 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
         })();
 
         issueUserStickers(customer.uid, customer.name, qty).catch(console.error);
-        issueStickersToCard(customer.uid, customer.name, qty).catch(console.error);
         updateChallengeProgress(customer.uid, store.id, qty).catch(console.error);
         setIssueStatus({ type: 'success', message: `${qty} stamp(s) issued to ${customer.name}!` });
         setCustomerHandle('');
@@ -13016,7 +13009,6 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
 
       const customerName = auth.currentUser.displayName || auth.currentUser.email?.split('@')[0] || 'Customer';
       issueUserStickers(auth.currentUser.uid, customerName, qty).catch(console.error);
-      issueStickersToCard(auth.currentUser.uid, customerName, qty).catch(console.error);
       updateChallengeProgress(auth.currentUser.uid, store.id, qty).catch(console.error);
 
       if (newStamps >= limit) {
@@ -13834,7 +13826,6 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
       try {
         const name = currentProfile?.name || 'Anonymous';
         const newStickers = await issueUserStickers(currentUser.uid, name, 3).catch(() => [] as CollectibleSticker[]);
-        issueStickersToCard(currentUser.uid, name, 3).catch(console.error);
         await updateDoc(voteRef, { rewardClaimed: true });
         updateDoc(doc(db, 'users', currentUser.uid), { correctPolls: increment(1) }).catch(console.error);
         if (newStickers.length > 0) onPackReady?.(newStickers);
@@ -14273,7 +14264,6 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
     try {
       const userName = currentProfile?.name || 'Anonymous';
       const newStickers = await issueUserStickers(currentUser.uid, userName, 3).catch(() => [] as CollectibleSticker[]);
-      issueStickersToCard(currentUser.uid, userName, 3).catch(console.error);
       if (newStickers.length > 0 && onPackReady) {
         setTimeout(() => onPackReady(newStickers), 1600);
       }
