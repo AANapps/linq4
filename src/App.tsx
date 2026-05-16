@@ -3709,31 +3709,28 @@ function MysteryRevealCard({ sticker, isRevealed, onReveal }: {
           >TAP TO REVEAL</motion.div>
         </div>
 
-        {/* Back — animal reveal */}
+        {/* Back — card reveal */}
         <div style={{
           position: 'absolute', inset: 0, backfaceVisibility: 'hidden',
-          transform: 'rotateY(180deg)', background: 'white',
+          transform: 'rotateY(180deg)',
           border: `2px solid ${cfg.border}`, borderRadius: 20,
           boxShadow: `0 8px 32px ${cfg.color}44`,
-          display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          overflow: 'hidden',
         }}>
           {showFlash && (
             <motion.div style={{ position: 'absolute', inset: 0, background: 'white', borderRadius: 18, zIndex: 10 }}
               initial={{ opacity: 0.9 }} animate={{ opacity: 0 }} transition={{ duration: 0.38 }}
             />
           )}
-          <div style={{ background: cfg.solid, height: '60%', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-            {sticker.cardImageUrl
-              ? <img src={sticker.cardImageUrl} alt={sticker.cardName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : <span style={{ fontSize: 58, lineHeight: 1 }}>{cfg.variants[sticker.variant ?? 0]?.emoji ?? cfg.variants[0].emoji}</span>
-            }
-          </div>
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, padding: '4px 8px' }}>
-            <span style={{ fontSize: 11, fontWeight: 900, color: cfg.color, textAlign: 'center' }}>
-              {sticker.cardName ?? cfg.variants[sticker.variant ?? 0]?.name ?? cfg.variants[0].name}
-            </span>
-            <span style={{ fontSize: 9, fontWeight: 700, color: cfg.color, opacity: 0.65 }}>{cfg.label} · {cfg.chance}</span>
-          </div>
+          {sticker.cardImageUrl
+            ? <img src={sticker.cardImageUrl} alt={sticker.cardName} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            : <div style={{ width: '100%', height: '100%', background: cfg.solid }} />
+          }
+          {sticker.cardName && (
+            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.45)', padding: '3px 6px', textAlign: 'center' }}>
+              <span style={{ fontSize: 10, fontWeight: 900, color: '#fff' }}>{sticker.cardName}</span>
+            </div>
+          )}
         </div>
       </motion.div>
     </motion.div>
