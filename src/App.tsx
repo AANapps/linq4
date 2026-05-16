@@ -16732,7 +16732,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
           <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Colours</label>
           <div className="flex gap-3">
 
-            {/* Primary — card background */}
+            {/* Primary — card background & brand colour */}
             <div className="flex-1 relative">
               <p className="text-[10px] text-brand-navy/35 font-bold uppercase tracking-wider mb-1.5">Primary</p>
               <button
@@ -16740,7 +16740,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
                 className="w-full h-12 rounded-2xl border-2 border-brand-navy/10 flex items-center justify-center gap-2 bg-brand-bg active:scale-95 transition-all"
               >
                 <div className="w-6 h-6 rounded-full border border-black/10 shadow-sm" style={{ backgroundColor: theme }} />
-                <span className="text-xs font-bold text-brand-navy/75">Card</span>
+                <span className="text-xs font-bold text-brand-navy/75">Brand &amp; Card</span>
               </button>
               {openColorPicker === 'primary' && (
                 <>
