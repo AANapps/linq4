@@ -17194,10 +17194,10 @@ function HexBadge({ badge, size = 56 }: { badge: AppBadge; size?: number }) {
   const isLinqle = badge.metric === 'linqle_wins';
   const fill = badge.baseColor || badge.color;
   const border = badge.borderColor || '#FBBF24';
-  const innerSize = size - Math.round(size * 0.15);
+  const innerSize = size - Math.round(size * 0.20);
   const scrambleTarget = badge.name.slice(0, 3).toUpperCase();
   return (
-    <div style={{ width: size, height: size, flexShrink: 0, clipPath: HEX_CLIP, background: border, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ width: size, height: size, flexShrink: 0, clipPath: HEX_CLIP, background: border, display: 'flex', alignItems: 'center', justifyContent: 'center', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.18))' }}>
       <div style={{
         width: innerSize, height: innerSize,
         clipPath: HEX_CLIP,
