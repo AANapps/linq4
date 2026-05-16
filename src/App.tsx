@@ -23658,8 +23658,8 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
         )}
       </div>
 
-      {/* Reward tiers — only shown when not yet joined */}
-      {tiers.length > 0 && !card && (
+      {/* Reward tiers — only shown when store has an active stamp card and user hasn't joined yet */}
+      {storeCardActive(store) && tiers.length > 0 && !card && (
         <div className="glass-card p-5 rounded-[2rem] space-y-3">
           <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75">
             {tiers.length > 1 ? `Reward ${tierSlideIdx + 1} of ${tiers.length}` : 'Reward'}
