@@ -23529,18 +23529,17 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
         </div>
       </div>
 
-      {/* Stats — consistent 3 tiles */}
+      {/* Stats — clean separator row */}
       <div className="pt-10">
-        <div className="flex gap-2">
+        <div className="flex items-center divide-x divide-brand-navy/10">
           {[
             { val: totalMembers,       label: 'Members' },
             { val: totalStampsGiven,   label: 'Stamps'  },
             { val: publicStoreRewards, label: 'Rewards' },
           ].map(s => (
-            <div key={s.label} className="flex-1 rounded-2xl px-3 py-2.5 flex flex-col items-center gap-0.5 shadow-md"
-              style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #2563EB 50%, #3B82F6 100%)' }}>
-              <p className="font-bold text-sm leading-none text-white">{s.val}</p>
-              <p className="text-[9px] font-bold uppercase tracking-wider text-white/80">{s.label}</p>
+            <div key={s.label} className="flex-1 flex flex-col items-center gap-0.5 py-2">
+              <p className="font-black text-base leading-none text-brand-navy">{s.val}</p>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-brand-navy/50">{s.label}</p>
             </div>
           ))}
         </div>
