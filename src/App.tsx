@@ -3225,48 +3225,54 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
               </div>
             )}
 
-            {/* Card collection — uploaded images grouped by tier */}
-            {revealed.length > 0 && (() => {
-              const dedupe = (() => {
-                const map = new Map<string, { sticker: CollectibleSticker; count: number }>();
-                revealed.forEach(s => {
-                  const key = s.cardDefId ?? `${s.tier}-${s.variant ?? 0}`;
-                  if (!map.has(key)) map.set(key, { sticker: s, count: 0 });
-                  map.get(key)!.count++;
-                });
-                return Array.from(map.values());
-              })();
-              const byTier = STICKER_ORDER.map(tier => ({
-                tier,
-                cfg: STICKER_CONFIG[tier],
-                cards: dedupe.filter(d => d.sticker.tier === tier),
-              })).filter(g => g.cards.length > 0);
-              return (
-                <div className="space-y-4">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75">
-                    Your Cards ({revealed.length} collected)
-                  </p>
-                  {byTier.map(({ tier, cfg, cards }) => (
-                    <div key={tier} className="rounded-2xl p-3 overflow-hidden relative"
-                      style={{ background: cfg.solid, boxShadow: `0 4px 18px ${cfg.color}55` }}>
-                      <span className="shine-ray" style={{ animationDelay: `${STICKER_ORDER.indexOf(tier) * 0.6}s` }} />
-                      <div className="flex items-center justify-between mb-2.5 relative z-10">
-                        <span className="text-[10px] font-black uppercase tracking-wider text-white">{cfg.label}</span>
-                        <span className="text-[10px] font-black text-white">{cards.length} card{cards.length !== 1 ? 's' : ''}</span>
-                      </div>
-                      <div className="flex gap-2 flex-wrap relative z-10">
-                        {cards.map(({ sticker, count }, ci) => (
-                          <div key={ci} className="relative" style={{ width: 60, height: 82 }}>
-                            <div className="w-full h-full rounded-xl overflow-hidden border-2"
-                              style={{ borderColor: 'rgba(255,255,255,0.6)', boxShadow: '0 2px 10px rgba(0,0,0,0.2)' }}>
-                              {sticker.cardImageUrl
-                                ? <img src={sticker.cardImageUrl} alt={sticker.cardName} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                                : <div style={{ width: '100%', height: '100%', background: cfg.solid }} />
-                              }
-                              {sticker.cardName && (
-                                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.45)', padding: '2px 3px', textAlign: 'center' }}>
-                                  <span style={{ fontSize: 6, fontWeight: 900, color: '#fff', lineHeight: 1.2 }}>{sticker.cardName}</span>
-                                </div>
+            {/* Card collection — fixed slots per tier, filled with uploaded images */}
+            <div className="space-y-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75">
+                Card Collection ({revealed.length} collected)
+              </p>
+              {STICKER_ORDER.map(tier => {
+                const cfg = STICKER_CONFIG[tier];
+                const slotCount = cfg.variants.length;
+                const collectedCount = revealed.filter(s => s.tier === tier).length;
+                return (
+                  <div key={tier} className="rounded-2xl p-3 overflow-hidden relative"
+                    style={{ background: cfg.solid, boxShadow: `0 4px 18px ${cfg.color}55` }}>
+                    <span className="shine-ray" style={{ animationDelay: `${STICKER_ORDER.indexOf(tier) * 0.6}s` }} />
+                    <div className="flex items-center justify-between mb-2.5 relative z-10">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-white">{cfg.label}</span>
+                      <span className="text-[10px] font-black text-white">{Math.min(collectedCount, slotCount)}/{slotCount}{collectedCount >= slotCount ? ' ✓' : ''}</span>
+                    </div>
+                    <div className="flex gap-2 relative z-10" style={{ justifyContent: 'space-evenly' }}>
+                      {Array.from({ length: slotCount }, (_, vi) => {
+                        // Find the best match for this slot: prefer matching variant index, then any from this tier for overflow
+                        const byVariant = revealed.filter(s => s.tier === tier && (s.variant ?? 0) === vi);
+                        // count how many times this slot appears (duplicates)
+                        const count = byVariant.length;
+                        const sticker = byVariant[0] ?? null;
+                        const filled = sticker !== null;
+                        return (
+                          <div key={vi} className="relative flex-1" style={{ maxWidth: 72, aspectRatio: '3/4', minWidth: 0 }}>
+                            <div style={{
+                              width: '100%', height: '100%', borderRadius: 12, overflow: 'hidden', border: '2px solid',
+                              borderColor: filled ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.2)',
+                              background: filled ? undefined : 'rgba(0,0,0,0.22)',
+                              boxShadow: filled ? '0 2px 10px rgba(0,0,0,0.2)' : 'none',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative',
+                            }}>
+                              {filled ? (
+                                <>
+                                  {sticker.cardImageUrl
+                                    ? <img src={sticker.cardImageUrl} alt={sticker.cardName} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                                    : <div style={{ width: '100%', height: '100%', background: cfg.solid }} />
+                                  }
+                                  {sticker.cardName && (
+                                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.45)', padding: '2px 3px', textAlign: 'center' }}>
+                                      <span style={{ fontSize: 6, fontWeight: 900, color: '#fff', lineHeight: 1.2 }}>{sticker.cardName}</span>
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                <span style={{ fontSize: 18, opacity: 0.3, userSelect: 'none' }}>?</span>
                               )}
                             </div>
                             {count > 1 && (
@@ -3275,13 +3281,13 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
                               </span>
                             )}
                           </div>
-                        ))}
-                      </div>
+                        );
+                      })}
                     </div>
-                  ))}
-                </div>
-              );
-            })()}
+                  </div>
+                );
+              })}
+            </div>
 
             {unrevealed.length > 0 && (
               <div>
