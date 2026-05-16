@@ -3135,14 +3135,10 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
   const stickerCard = liveCard;
   const unrevealed = stickerCard.stickers.filter(s => !(stickerCard.revealedIds || []).includes(s.id));
   const revealed = stickerCard.stickers.filter(s => (stickerCard.revealedIds || []).includes(s.id));
-  const myTotalSets = totalSetsCompleted(revealed);
-  const myWon = allSetsWon(revealed);
-  const [showAllRevealed, setShowAllRevealed] = useState(false);
   const [topPlayers, setTopPlayers] = useState<{ uid: string; userName?: string; userPhoto?: string; uniqueCards: number; stickers: number }[]>([]);
 
   useEffect(() => {
     if (!programme?.id) return;
-    const totalUnique = STICKER_ORDER.reduce((s, t) => s + STICKER_CONFIG[t].variants.length, 0);
     getDocs(query(collection(db, 'sticker_cards'), where('programme_id', '==', programme.id))).then(snap => {
       const entries = snap.docs.map(d => {
         const data = d.data();
@@ -3165,9 +3161,6 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
       setTopPlayers(entries.slice(0, 5));
     });
   }, [programme?.id]);
-
-  const reversedRevealed = [...revealed].reverse();
-  const displayedRevealed = showAllRevealed ? reversedRevealed : reversedRevealed.slice(0, 5);
 
   const handleReveal = async (stickerId: string) => {
     const cardRef = doc(db, 'sticker_cards', stickerCard.id);
@@ -3232,69 +3225,63 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
               </div>
             )}
 
-            {/* Card collection — 3 variants per tier, collect 3 sets to win */}
-            <div className="space-y-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75">
-                Collect 1 of each animal to complete all tiers
-              </p>
-              {STICKER_ORDER.map(tier => {
-                const cfg = STICKER_CONFIG[tier];
-                const sets = tierSetsCompleted(revealed, tier);
-                const tierDone = sets >= cfg.variants.length;
-                return (
-                  <div key={tier} className="rounded-2xl p-3 overflow-hidden relative"
-                    style={{ background: cfg.solid, boxShadow: `0 4px 18px ${cfg.color}55` }}>
-                    {/* Backdrop shine sweep */}
-                    <span className="shine-ray" style={{ animationDelay: `${STICKER_ORDER.indexOf(tier) * 0.6}s` }} />
-                    <div className="flex items-center justify-between mb-2.5 relative z-10">
-                      <div>
+            {/* Card collection — uploaded images grouped by tier */}
+            {revealed.length > 0 && (() => {
+              const dedupe = (() => {
+                const map = new Map<string, { sticker: CollectibleSticker; count: number }>();
+                revealed.forEach(s => {
+                  const key = s.cardDefId ?? `${s.tier}-${s.variant ?? 0}`;
+                  if (!map.has(key)) map.set(key, { sticker: s, count: 0 });
+                  map.get(key)!.count++;
+                });
+                return Array.from(map.values());
+              })();
+              const byTier = STICKER_ORDER.map(tier => ({
+                tier,
+                cfg: STICKER_CONFIG[tier],
+                cards: dedupe.filter(d => d.sticker.tier === tier),
+              })).filter(g => g.cards.length > 0);
+              return (
+                <div className="space-y-4">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75">
+                    Your Cards ({revealed.length} collected)
+                  </p>
+                  {byTier.map(({ tier, cfg, cards }) => (
+                    <div key={tier} className="rounded-2xl p-3 overflow-hidden relative"
+                      style={{ background: cfg.solid, boxShadow: `0 4px 18px ${cfg.color}55` }}>
+                      <span className="shine-ray" style={{ animationDelay: `${STICKER_ORDER.indexOf(tier) * 0.6}s` }} />
+                      <div className="flex items-center justify-between mb-2.5 relative z-10">
                         <span className="text-[10px] font-black uppercase tracking-wider text-white">{cfg.label}</span>
-                        <span className="text-[9px] text-white/70 ml-1.5">· {cfg.theme} · {cfg.chance}</span>
+                        <span className="text-[10px] font-black text-white">{cards.length} card{cards.length !== 1 ? 's' : ''}</span>
                       </div>
-                      <span className="text-[10px] font-black text-white">
-                        {sets}/{cfg.variants.length}{tierDone ? ' ✓' : ''}
-                      </span>
-                    </div>
-                    <div className="flex gap-2 relative z-10">
-                      {cfg.variants.map((v, vi) => {
-                        const count = revealed.filter(s => s.tier === tier && (s.variant ?? 0) === vi).length;
-                        return (
-                          <div key={vi} className="flex-1 flex flex-col items-center gap-1">
-                            <div className="w-full rounded-xl border-2 flex flex-col items-center justify-between relative overflow-hidden pt-2 pb-1.5 px-1"
-                              style={count > 0
-                                ? { background: 'white', borderColor: 'rgba(255,255,255,0.6)', boxShadow: '0 2px 10px rgba(0,0,0,0.15)' }
-                                : { background: 'rgba(0,0,0,0.2)', borderColor: 'rgba(255,255,255,0.15)' }}>
-                              <span style={{ fontSize: 34, lineHeight: 1, position: 'relative', zIndex: 1 }}>{count > 0 ? v.emoji : <span style={{ fontSize: 28 }} className="text-white/30">?</span>}</span>
-                              <span className="text-[8px] font-bold text-center leading-tight mt-1 relative z-10 truncate w-full text-center"
-                                style={{ color: count > 0 ? cfg.solid : 'rgba(255,255,255,0.4)' }}>
-                                {count > 0 ? v.name : '???'}
-                              </span>
-                              {count > 0 && (
-                                <span className="text-[7px] font-black relative z-10 mt-0.5"
-                                  style={{ color: '#16a34a' }}>
-                                  ✓
-                                </span>
+                      <div className="flex gap-2 flex-wrap relative z-10">
+                        {cards.map(({ sticker, count }, ci) => (
+                          <div key={ci} className="relative" style={{ width: 60, height: 82 }}>
+                            <div className="w-full h-full rounded-xl overflow-hidden border-2"
+                              style={{ borderColor: 'rgba(255,255,255,0.6)', boxShadow: '0 2px 10px rgba(0,0,0,0.2)' }}>
+                              {sticker.cardImageUrl
+                                ? <img src={sticker.cardImageUrl} alt={sticker.cardName} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                                : <div style={{ width: '100%', height: '100%', background: cfg.solid }} />
+                              }
+                              {sticker.cardName && (
+                                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.45)', padding: '2px 3px', textAlign: 'center' }}>
+                                  <span style={{ fontSize: 6, fontWeight: 900, color: '#fff', lineHeight: 1.2 }}>{sticker.cardName}</span>
+                                </div>
                               )}
-                              {count > 0 && <span className="card-shine-ray" style={{ animationDelay: `${vi * 0.7}s` }} />}
                             </div>
+                            {count > 1 && (
+                              <span style={{ position: 'absolute', top: -4, right: -4, background: '#1e293b', color: '#fff', fontSize: 7, fontWeight: 900, width: 14, height: 14, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+                                x{count}
+                              </span>
+                            )}
                           </div>
-                        );
-                      })}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-              {myWon && (
-                <div className="p-3 rounded-2xl text-center" style={{ background: '#FEF9C3', border: '1px solid #FDE68A' }}>
-                  <p className="font-bold text-amber-700 text-sm">🏆 All sets complete — you win!</p>
+                  ))}
                 </div>
-              )}
-              {!myWon && myTotalSets > 0 && (
-                <div className="p-2.5 rounded-2xl text-center bg-brand-navy/5">
-                  <p className="text-[10px] font-bold text-brand-navy/75">{myTotalSets}/14 animals collected · keep going!</p>
-                </div>
-              )}
-            </div>
+              );
+            })()}
 
             {unrevealed.length > 0 && (
               <div>
@@ -3309,26 +3296,6 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
               </div>
             )}
 
-            {revealed.length > 0 && (
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75 mb-3">
-                  Revealed ({revealed.length})
-                </p>
-                <div className="flex flex-wrap gap-3">
-                  {displayedRevealed.map(s => (
-                    <StickerCard key={s.id} sticker={s} isRevealed={true} size="md" />
-                  ))}
-                </div>
-                {revealed.length > 5 && !showAllRevealed && (
-                  <button
-                    onClick={() => setShowAllRevealed(true)}
-                    className="mt-3 w-full py-2.5 rounded-2xl bg-brand-navy/5 text-brand-navy/75 text-xs font-bold active:bg-brand-navy/10 transition-colors"
-                  >
-                    Show all ({revealed.length})
-                  </button>
-                )}
-              </div>
-            )}
 
             {stickerCard.stickers.length === 0 && (
               <p className="text-sm text-brand-navy/75 text-center py-10">No stickers yet. Collect stamps to earn some!</p>
