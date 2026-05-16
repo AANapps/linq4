@@ -23529,58 +23529,22 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
         </div>
       </div>
 
-      {/* Stats — top of page, directly after cover */}
-      {showStats && (
-        <div className={cn('pt-10', statSlides.length > 0 ? 'w-full' : '')}>
-          {statSlides.length > 0 ? (
-            <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 -mx-6 px-6 pb-1 scrollbar-hide">
-              {statSlides.map((slide, i) => (
-                <div key={i} className="snap-center shrink-0 w-[calc(100vw-48px)] max-w-[380px] glass-card rounded-[2rem] p-5">
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/75 mb-4">{slide.label}</p>
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div>
-                      <p className="text-2xl font-black text-brand-navy">{slide.members}</p>
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/75 mt-0.5">Members</p>
-                    </div>
-                    <div>
-                      <p className="text-2xl font-black text-brand-navy">{fmtK(slide.metric)}</p>
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/75 mt-0.5">{slide.metricLabel}</p>
-                    </div>
-                    <div>
-                      <p className="text-2xl font-black text-brand-navy">
-                        {slide.rewardsPrefix}{slide.rewardsPrefix ? slide.rewards.toFixed(2) : fmtK(slide.rewards)}
-                      </p>
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/75 mt-0.5">{slide.rewardsLabel}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
+      {/* Stats — consistent 3 tiles */}
+      <div className="pt-10">
+        <div className="flex gap-2">
+          {[
+            { val: totalMembers,       label: 'Members' },
+            { val: totalStampsGiven,   label: 'Stamps'  },
+            { val: publicStoreRewards, label: 'Rewards' },
+          ].map(s => (
+            <div key={s.label} className="flex-1 rounded-2xl px-3 py-2.5 flex flex-col items-center gap-0.5 shadow-md"
+              style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #2563EB 50%, #3B82F6 100%)' }}>
+              <p className="font-bold text-sm leading-none text-white">{s.val}</p>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-white/80">{s.label}</p>
             </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-3">
-              {(vis?.members !== false) && (
-                <div className="glass-card p-4 rounded-3xl text-center">
-                  <p className="text-lg font-bold text-brand-navy">{totalMembers}</p>
-                  <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Members</p>
-                </div>
-              )}
-              {store.ownerUid !== user.uid && (vis?.stamps !== false) && (
-                <div className="glass-card p-4 rounded-3xl text-center">
-                  <p className="text-lg font-bold text-brand-navy">{totalStampsGiven}</p>
-                  <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Stamps</p>
-                </div>
-              )}
-              {store.ownerUid !== user.uid && (
-                <div className="glass-card p-4 rounded-3xl text-center">
-                  <p className="text-lg font-bold text-brand-navy">{publicStoreRewards}</p>
-                  <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Rewards</p>
-                </div>
-              )}
-            </div>
-          )}
+          ))}
         </div>
-      )}
-      {!showStats && <div className="pt-10" />}
+      </div>
 
       {/* Name + info row with message/follow on RHS */}
       <div className="flex items-start gap-3">
