@@ -8626,10 +8626,6 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
 
     const newStickers = await issueUserStickers(user.uid, userName, 3).catch(() => [] as CollectibleSticker[]);
     updateChallengeProgress(user.uid, store.id, 1).catch(console.error);
-    newStickers.forEach(s => {
-      if (s.tier === 'gold') postActivity(user.uid, userName, profile?.photoURL || user.photoURL || '', `${userName} pulled a Legendary card! 🏆`, '🏆');
-      else if (s.tier === 'blue') postActivity(user.uid, userName, profile?.photoURL || user.photoURL || '', `${userName} pulled an Epic card! 🔥`, '🔥');
-    });
 
     // Also issue membership points if store has a visit-type membership card
     if (store.membershipEnabled && store.membershipType === 'visit') {
@@ -19699,19 +19695,27 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
 
   const visibleComments = showAllComments ? comments : comments.slice(0, 2);
 
-  // Activity posts render as a compact status line
+  // Activity posts render the same as normal posts
   if (post.postType === 'activity') {
     return (
-      <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3 py-3">
-        <div className="w-9 h-9 rounded-full overflow-hidden border border-black/5 bg-indigo-50 flex items-center justify-center shrink-0">
-          <PixelAvatar config={authorProfile?.avatar} uid={post.authorUid} size={36} view="head" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-[13px] font-semibold text-gray-800 leading-snug">
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="py-4 px-4">
+        <div className="space-y-2.5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full overflow-hidden border border-black/5 shrink-0 bg-indigo-50 flex items-center justify-center">
+              <PixelAvatar config={authorProfile?.avatar} uid={post.authorUid} size={40} view="head" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <p className="font-bold text-sm text-brand-navy leading-snug">{authorProfile?.name || post.authorName}</p>
+                <StreakBadge streak={authorProfile?.streak} />
+              </div>
+              <p className="text-[10px] text-brand-navy/50 font-medium">
+                {post.createdAt?.toDate ? format(post.createdAt.toDate(), 'MMM d · h:mm a') : 'Just now'}
+              </p>
+            </div>
+          </div>
+          <p className="text-sm text-brand-navy/80 leading-relaxed">
             <span className="mr-1">{post.activityEmoji}</span>{post.content}
-          </p>
-          <p className="text-[10px] text-gray-400 font-medium mt-0.5">
-            {post.createdAt?.toDate ? format(post.createdAt.toDate(), 'MMM d · h:mm a') : 'Just now'}
           </p>
         </div>
       </motion.div>
