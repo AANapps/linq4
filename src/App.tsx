@@ -21129,8 +21129,8 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
           {onOpenLinqle && (
             <motion.button whileTap={{ scale: 0.97 }} onClick={onOpenLinqle}
               className="w-full rounded-[1.5rem] overflow-hidden shadow-lg shadow-green-900/20"
-              style={{ height: '90px' }}>
-              <div className="relative w-full h-full flex items-center justify-center"
+              style={{ height: '106px' }}>
+              <div className="relative w-full h-full flex flex-col items-center justify-center gap-1"
                 style={{ background: 'linear-gradient(135deg, #022c22 0%, #064e3b 40%, #059669 80%, #34d399 100%)' }}>
                 <MatrixRainCanvas opacity={0.35} fadeColor="rgba(2,44,34,0.18)" />
                 <div className="relative z-10 flex items-center gap-0.5">
@@ -21138,6 +21138,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                     <MatrixScramble key={i} target={letter} className="text-5xl font-black text-white font-mono leading-none tracking-tight" />
                   ))}
                 </div>
+                <p className="relative z-10 text-[11px] font-semibold text-emerald-200/80 tracking-wide">Win sticker packs</p>
                 {currentProfile?.linqleCompletions?.find(c => c.date === new Date().toISOString().split('T')[0]) && (
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 z-10 text-xs font-bold text-emerald-300 bg-white/10 px-2 py-1 rounded-full">✓ Done</span>
                 )}
