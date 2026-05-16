@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import confetti from 'canvas-confetti';
 import { PixelAvatar, AvatarCustomiserModal, AvatarViewModal, DailyWheelModal } from './PixelAvatar';
 import {
@@ -52,6 +52,8 @@ import {
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { auth, db } from './firebase';
+import { scanNFCTag } from './nfc';
+import { Capacitor } from '@capacitor/core';
 const functions = getFunctions();
 const storage = getStorage();
 import { cn } from './lib/utils';
@@ -132,8 +134,8 @@ import {
   History,
   DollarSign,
   AlertTriangle,
-  Plus,
-  Pin
+  Pin,
+  Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
@@ -7559,8 +7561,9 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const [joinError, setJoinError] = useState<string | null>(null);
   const [highlightedChallengeId, setHighlightedChallengeId] = useState<string | null>(null);
   const [openProgrammeId, setOpenProgrammeId] = useState<string | null>(null);
-  const [showNFCStamp, setShowNFCStamp] = useState(false);
-  const [autoNFCStoreId, setAutoNFCStoreId] = useState<string | null>(null);
+  const [nfcPhase, setNfcPhase] = useState<'idle' | 'scanning' | 'processing' | 'success' | 'error'>('idle');
+  const [nfcMsg, setNfcMsg] = useState('');
+  const nfcAbortRef = useRef<AbortController | null>(null);
   const [pendingPack, setPendingPack] = useState<CollectibleSticker[] | null>(null);
   const [pendingPackCardId, setPendingPackCardId] = useState<string | null>(null);
   const [pendingCollectionCardId, setPendingCollectionCardId] = useState<string | null>(null);
@@ -7739,13 +7742,38 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   // Delay detection until initial data has loaded to avoid false positives
   const [badgeDetectionReady, setBadgeDetectionReady] = useState(false);
 
+  // Auto-process URL-based stamp (iOS NFC banner opens the app with ?stamp=ID)
   useEffect(() => {
-    if (pendingNFCStoreId) {
-      setAutoNFCStoreId(pendingNFCStoreId);
-      setShowNFCStamp(true);
-      onClearPendingNFC?.();
-    }
+    if (!pendingNFCStoreId) return;
+    onClearPendingNFC?.();
+    setNfcPhase('processing');
+    setNfcMsg('');
+    processNFCStamp(pendingNFCStoreId, user, profile, (state, msg) => {
+      setNfcPhase(state); setNfcMsg(msg);
+    }).then(() => { setTimeout(() => setNfcPhase('idle'), 3500); });
   }, [pendingNFCStoreId]);
+
+  // Triggered by the Scan button on any card — starts native NFC scan directly
+  const handleNFCScan = useCallback(async () => {
+    if (nfcPhase !== 'idle') return;
+    const isNative = ['ios', 'android'].includes(Capacitor.getPlatform());
+    const ctrl = new AbortController();
+    nfcAbortRef.current = ctrl;
+    // Web NFC (Android Chrome): show scanning indicator. Native: OS shows its own sheet.
+    if (!isNative) { setNfcPhase('scanning'); setNfcMsg(''); }
+    const scanResult = await scanNFCTag('Hold near the store NFC tag to collect your stamp', ctrl);
+    if (scanResult.ok === false) {
+      if (scanResult.cancelled) { setNfcPhase('idle'); return; }
+      setNfcPhase('error'); setNfcMsg(scanResult.error);
+      setTimeout(() => setNfcPhase('idle'), 4000);
+      return;
+    }
+    setNfcPhase('processing'); setNfcMsg('');
+    await processNFCStamp(scanResult.storeId, user, profile, (state, msg) => {
+      setNfcPhase(state); setNfcMsg(msg);
+    });
+    setTimeout(() => setNfcPhase('idle'), 3500);
+  }, [nfcPhase, user, profile]);
 
   useEffect(() => {
     if (!highlightedChallengeId) return;
@@ -8135,10 +8163,10 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                       return (
                         <div key={card.id} className="snap-center shrink-0 w-[83vw] max-w-[340px] flex flex-col rounded-[2rem] shadow-xl">
                           {card.card_type === 'membership'
-                            ? <MembershipCard card={card} store={store} onViewStore={onViewStore} onScan={() => setShowNFCStamp(true)} userHandle={profile?.handle} />
+                            ? <MembershipCard card={card} store={store} onViewStore={onViewStore} onScan={handleNFCScan} userHandle={profile?.handle} />
                             : card.card_type === 'sub'
-                            ? <SubLoyaltyCard card={card} store={store} onViewStore={onViewStore} onScan={() => setShowNFCStamp(true)} />
-                            : <LoyaltyCard card={card} store={store} onViewStore={onViewStore} onScan={() => setShowNFCStamp(true)} />}
+                            ? <SubLoyaltyCard card={card} store={store} onViewStore={onViewStore} onScan={handleNFCScan} />
+                            : <LoyaltyCard card={card} store={store} onViewStore={onViewStore} onScan={handleNFCScan} />}
                         </div>
                       );
                     })}
@@ -8150,10 +8178,10 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                       return (
                         <div key={card.id} className="rounded-3xl shadow-xl overflow-hidden">
                           {card.card_type === 'membership'
-                            ? <MembershipCard card={card} store={store} onViewStore={onViewStore} compact onScan={() => setShowNFCStamp(true)} userHandle={profile?.handle} />
+                            ? <MembershipCard card={card} store={store} onViewStore={onViewStore} compact onScan={handleNFCScan} userHandle={profile?.handle} />
                             : card.card_type === 'sub'
-                            ? <SubLoyaltyCard card={card} store={store} onViewStore={onViewStore} compact onScan={() => setShowNFCStamp(true)} />
-                            : <LoyaltyCard card={card} store={store} onViewStore={onViewStore} compact onScan={() => setShowNFCStamp(true)} />}
+                            ? <SubLoyaltyCard card={card} store={store} onViewStore={onViewStore} compact onScan={handleNFCScan} />
+                            : <LoyaltyCard card={card} store={store} onViewStore={onViewStore} compact onScan={handleNFCScan} />}
                         </div>
                       );
                     })}
@@ -8599,15 +8627,13 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         })()}
       </AnimatePresence>
 
-      {/* NFC Stamp Modal */}
+      {/* NFC Scan Overlay — slim toast, no blocking popup */}
       <AnimatePresence>
-        {showNFCStamp && (
-          <NFCStampModal
-            user={user}
-            profile={profile}
-            autoStoreId={autoNFCStoreId}
-            onPackReady={() => { setShowNFCStamp(false); setAutoNFCStoreId(null); }}
-            onClose={() => { setShowNFCStamp(false); setAutoNFCStoreId(null); }}
+        {nfcPhase !== 'idle' && (
+          <NFCScanOverlay
+            phase={nfcPhase}
+            msg={nfcMsg}
+            onCancel={() => { nfcAbortRef.current?.abort(); setNfcPhase('idle'); }}
           />
         )}
       </AnimatePresence>
@@ -8861,169 +8887,80 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
   }
 }
 
-function NFCStampModal({ user, profile, onClose, autoStoreId, onPackReady }: {
-  user: FirebaseUser;
-  profile: UserProfile | null;
-  onClose: () => void;
-  autoStoreId?: string | null;
-  onPackReady?: (stickers: CollectibleSticker[]) => void;
+// Slim floating banner — replaces the old full-screen NFCStampModal popup.
+// Native iOS/Android: the OS shows its own NFC sheet; we only show feedback after.
+// Web NFC (Android Chrome): shows a "Hold near tag" strip while scanning.
+function NFCScanOverlay({ phase, msg, onCancel }: {
+  phase: 'scanning' | 'processing' | 'success' | 'error';
+  msg: string;
+  onCancel: () => void;
 }) {
-  type NFCState = 'ios' | 'scanning' | 'processing' | 'success' | 'error';
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  const hasNFC = 'NDEFReader' in window;
-
-  const initialState: NFCState = autoStoreId ? 'processing' : isIOS ? 'ios' : 'scanning';
-  const [nfcState, setNfcState] = useState<NFCState>(initialState);
-  const [statusMsg, setStatusMsg] = useState('');
-  const abortRef = useRef<AbortController | null>(null);
-
   useEffect(() => {
-    if (nfcState === 'success' && 'vibrate' in navigator) {
-      navigator.vibrate([80, 40, 120]);
-    }
-  }, [nfcState]);
-
-  const onStatus = (state: 'processing' | 'success' | 'error', msg: string) => {
-    setNfcState(state); setStatusMsg(msg);
-  };
-
-  // Auto-process stamp from URL (iOS NFC banner / shared link)
-  useEffect(() => {
-    if (!autoStoreId) return;
-    processNFCStamp(autoStoreId, user, profile, onStatus).then(stickers => {
-      if (stickers.length > 0) onPackReady?.(stickers);
-    });
-  }, []);
-
-  // Android Web NFC scanning
-  useEffect(() => {
-    if (autoStoreId || isIOS || !hasNFC) return;
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    const startScan = async () => {
-      try {
-        const reader = new (window as any).NDEFReader();
-        reader.onreadingerror = () => onStatus('error', 'Could not read NFC tag. Try again.');
-        reader.onreading = async (event: any) => {
-          controller.abort();
-          setNfcState('processing');
-          let storeId: string | null = null;
-          for (const record of event.message.records) {
-            if (record.recordType === 'text') {
-              const text = new TextDecoder(record.encoding || 'utf-8').decode(record.data);
-              if (text.startsWith('linq4:')) { storeId = text.slice(6).trim(); break; }
-            }
-            if (record.recordType === 'url') {
-              const url = new TextDecoder().decode(record.data);
-              const m = url.match(/[?&]stamp=([^&]+)/);
-              if (m) { storeId = m[1]; break; }
-            }
-          }
-          if (!storeId) { onStatus('error', 'This tag is not a valid Linq store tag.'); return; }
-          const stickers = await processNFCStamp(storeId, user, profile, onStatus);
-          if (stickers.length > 0) onPackReady?.(stickers);
-        };
-        await reader.scan({ signal: controller.signal });
-      } catch (err: any) {
-        if (err.name !== 'AbortError') onStatus('error', err?.message || 'Could not start NFC scan. Check permissions.');
-      }
-    };
-
-    startScan();
-    return () => { abortRef.current?.abort(); };
-  }, []);
+    if (phase === 'success' && 'vibrate' in navigator) navigator.vibrate([80, 40, 120]);
+  }, [phase]);
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end justify-center"
-      onClick={onClose}
+      initial={{ y: 100, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      exit={{ y: 100, opacity: 0 }}
+      transition={{ type: 'spring', stiffness: 420, damping: 36 }}
+      className="fixed bottom-24 left-0 right-0 max-w-md mx-auto px-4 z-50 pointer-events-none"
     >
-      <motion.div
-        initial={{ y: 80, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: 80, opacity: 0 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        className="bg-white rounded-t-[2rem] w-full max-w-md p-8 pb-12 text-center"
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="bg-brand-navy/20 rounded-full mx-auto mb-6" style={{ width: 40, height: 4 }} />
-
-        {nfcState === 'ios' && (
+      <div className={cn(
+        'rounded-2xl px-4 py-3 flex items-center gap-3 shadow-2xl pointer-events-auto',
+        phase === 'success' ? 'bg-green-500' : phase === 'error' ? 'bg-red-500' : 'bg-brand-navy',
+      )}>
+        {phase === 'scanning' && (
           <>
-            <div className="w-24 h-24 rounded-full bg-brand-navy/5 flex items-center justify-center mx-auto mb-6 relative">
-              <Smartphone size={36} className="text-brand-navy" />
-              <motion.div
-                className="absolute inset-0 rounded-full border-2 border-brand-navy/30"
-                animate={{ scale: [1, 1.5, 1], opacity: [0.7, 0, 0.7] }}
-                transition={{ duration: 1.8, repeat: Infinity }}
-              />
-              <motion.div
-                className="absolute inset-0 rounded-full border-2 border-brand-navy/15"
-                animate={{ scale: [1, 1.9, 1], opacity: [0.5, 0, 0.5] }}
-                transition={{ duration: 1.8, repeat: Infinity, delay: 0.4 }}
-              />
+            <motion.div
+              animate={{ scale: [1, 1.25, 1] }}
+              transition={{ duration: 1.2, repeat: Infinity }}
+            >
+              <Wifi size={20} className="text-white -rotate-90 shrink-0" />
+            </motion.div>
+            <div className="flex-1 min-w-0">
+              <p className="text-white font-bold text-sm">Hold near NFC tag</p>
+              <p className="text-white/65 text-xs">Waiting for store tag…</p>
             </div>
-            <h2 className="font-display text-2xl font-bold text-brand-navy mb-2">Hold to NFC Tag</h2>
-            <p className="text-brand-navy/75 text-sm mb-4 leading-relaxed">
-              Hold the top of your iPhone near the store's NFC tag. Your iPhone will show a notification — tap it to collect your stamp.
-            </p>
-            <p className="text-[11px] text-brand-navy/72 font-bold uppercase tracking-widest">iPhone reads NFC automatically</p>
+            <button
+              onClick={onCancel}
+              className="text-white/70 text-xs font-bold px-2.5 py-1 rounded-lg bg-white/10 active:bg-white/20 shrink-0"
+            >
+              Cancel
+            </button>
           </>
         )}
-
-        {nfcState === 'scanning' && (
+        {phase === 'processing' && (
           <>
-            <div className="w-24 h-24 rounded-full bg-brand-navy/5 flex items-center justify-center mx-auto mb-6 relative">
-              <Wifi size={40} className="text-brand-navy" />
-              <motion.div
-                className="absolute inset-0 rounded-full border-2 border-brand-navy/30"
-                animate={{ scale: [1, 1.4, 1], opacity: [0.8, 0, 0.8] }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-              />
-            </div>
-            <h2 className="font-display text-2xl font-bold text-brand-navy mb-2">Ready to Scan</h2>
-            <p className="text-brand-navy/75 text-sm">Hold your phone near the store NFC tag</p>
+            <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }}>
+              <Loader2 size={20} className="text-white shrink-0" />
+            </motion.div>
+            <p className="text-white font-bold text-sm flex-1">Adding stamp…</p>
           </>
         )}
-
-        {nfcState === 'processing' && (
+        {phase === 'success' && (
           <>
-            <div className="w-24 h-24 rounded-full bg-brand-navy/5 flex items-center justify-center mx-auto mb-6">
-              <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
-                <Wifi size={40} className="text-brand-navy" />
-              </motion.div>
-            </div>
-            <h2 className="font-display text-2xl font-bold text-brand-navy mb-2">Processing...</h2>
-            <p className="text-brand-navy/75 text-sm">{statusMsg}</p>
+            <CheckCircle2 size={20} className="text-white shrink-0" />
+            <p className="text-white font-bold text-sm flex-1">{msg || 'Stamp added!'}</p>
           </>
         )}
-
-        {nfcState === 'success' && (
+        {phase === 'error' && (
           <>
-            <div className="w-24 h-24 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-6">
-              <CheckCircle2 size={48} className="text-green-500" />
+            <X size={20} className="text-white shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-white font-bold text-sm">Could not stamp</p>
+              <p className="text-white/80 text-xs truncate">{msg}</p>
             </div>
-            <h2 className="font-display text-2xl font-bold text-brand-navy mb-2">Stamp Added!</h2>
-            <p className="text-brand-navy/75 text-sm mb-6">{statusMsg}</p>
-            <button onClick={onClose} className="bg-brand-navy text-white px-8 py-3 rounded-xl font-bold text-sm w-full">Done</button>
+            <button
+              onClick={onCancel}
+              className="text-white/70 text-xs font-bold px-2.5 py-1 rounded-lg bg-white/10 shrink-0"
+            >
+              Dismiss
+            </button>
           </>
         )}
-
-        {nfcState === 'error' && (
-          <>
-            <div className="w-24 h-24 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-6">
-              <X size={48} className="text-red-400" />
-            </div>
-            <h2 className="font-display text-2xl font-bold text-brand-navy mb-2">Oops</h2>
-            <p className="text-brand-navy/75 text-sm mb-6">{statusMsg}</p>
-            <button onClick={onClose} className="bg-brand-navy text-white px-8 py-3 rounded-xl font-bold text-sm w-full">Close</button>
-          </>
-        )}
-      </motion.div>
+      </div>
     </motion.div>
   );
 }
