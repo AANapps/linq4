@@ -7746,11 +7746,13 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   useEffect(() => {
     if (!pendingNFCStoreId) return;
     onClearPendingNFC?.();
-    setNfcPhase('processing');
-    setNfcMsg('');
+    // Screen is already clear — process silently; celebration fires via Firestore listener.
     processNFCStamp(pendingNFCStoreId, user, profile, (state, msg) => {
-      setNfcPhase(state); setNfcMsg(msg);
-    }).then(() => { setTimeout(() => setNfcPhase('idle'), 3500); });
+      if (state === 'error') {
+        setNfcPhase('error'); setNfcMsg(msg);
+        setTimeout(() => setNfcPhase('idle'), 4000);
+      }
+    });
   }, [pendingNFCStoreId]);
 
   // Triggered by the Scan button on any card — starts native NFC scan directly
@@ -7759,20 +7761,30 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
     const isNative = ['ios', 'android'].includes(Capacitor.getPlatform());
     const ctrl = new AbortController();
     nfcAbortRef.current = ctrl;
-    // Web NFC (Android Chrome): show scanning indicator. Native: OS shows its own sheet.
+    // Web NFC (Android Chrome): show scanning strip while waiting. Native: OS handles its own UI.
     if (!isNative) { setNfcPhase('scanning'); setNfcMsg(''); }
+
     const scanResult = await scanNFCTag('Hold near the store NFC tag to collect your stamp', ctrl);
+
     if (scanResult.ok === false) {
       if (scanResult.cancelled) { setNfcPhase('idle'); return; }
       setNfcPhase('error'); setNfcMsg(scanResult.error);
       setTimeout(() => setNfcPhase('idle'), 4000);
       return;
     }
-    setNfcPhase('processing'); setNfcMsg('');
+
+    // Clear the screen immediately — the native sheet is gone.
+    // The Firestore listener will detect the stamp increase and fire
+    // the full-screen celebration animation on its own.
+    setNfcPhase('idle');
+
     await processNFCStamp(scanResult.storeId, user, profile, (state, msg) => {
-      setNfcPhase(state); setNfcMsg(msg);
+      // Only surface errors; success is celebrated by StampCelebrationModal via Firestore listener.
+      if (state === 'error') {
+        setNfcPhase('error'); setNfcMsg(msg);
+        setTimeout(() => setNfcPhase('idle'), 4000);
+      }
     });
-    setTimeout(() => setNfcPhase('idle'), 3500);
   }, [nfcPhase, user, profile]);
 
   useEffect(() => {
