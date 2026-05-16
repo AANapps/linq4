@@ -18301,46 +18301,40 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         ))}
       </div>
 
-      {/* Active stamp cards */}
+      {/* Active stamp memberships — full-width rows */}
       {(() => {
         const activeCards = userCards.filter(c => !c.isArchived);
         if (activeCards.length === 0) return null;
         return (
-          <div className="space-y-2.5">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75 px-1">Stamp Cards</p>
-            <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-2 scrollbar-hide">
-              {activeCards.map(card => {
-                const store = (stores || []).find(s => s.id === card.store_id);
-                if (!store) return null;
-                const theme = store.theme || '#3a6fcc';
-                const total = store.stamps_required_for_reward || 10;
-                const pct = Math.min(100, Math.round((card.current_stamps / total) * 100));
-                return (
-                  <div key={card.id} className="snap-start shrink-0 w-52 rounded-2xl overflow-hidden shadow-sm"
-                    style={{ border: `1.5px solid ${theme}30` }}>
-                    <div className="flex items-center gap-3 px-4 py-3" style={{ backgroundColor: theme }}>
-                      <div className="w-9 h-9 rounded-xl overflow-hidden border-2 border-white/40 shrink-0">
-                        <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-bold text-white text-sm truncate leading-tight">{store.name}</p>
-                        <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">{store.category || 'Retail'}</p>
-                      </div>
+          <div className="space-y-2">
+            {activeCards.map(card => {
+              const store = (stores || []).find(s => s.id === card.store_id);
+              if (!store) return null;
+              const theme = store.theme || '#3a6fcc';
+              const total = store.stamps_required_for_reward || 10;
+              const pct = Math.min(100, Math.round((card.current_stamps / total) * 100));
+              return (
+                <div key={card.id} className="w-full rounded-2xl overflow-hidden shadow-sm"
+                  style={{ border: `1.5px solid ${theme}22` }}>
+                  <div className="flex items-center gap-3 px-4 py-2.5" style={{ backgroundColor: theme }}>
+                    <div className="w-8 h-8 rounded-xl overflow-hidden border-2 border-white/40 shrink-0">
+                      <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
                     </div>
-                    <div className="bg-white px-4 py-3">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[10px] font-bold" style={{ color: theme }}>{card.current_stamps} / {total} stamps</span>
-                        <span className="text-[10px] font-bold text-brand-navy/72">{pct}%</span>
-                      </div>
-                      <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: `${theme}20` }}>
-                        <motion.div className="h-full rounded-full" style={{ backgroundColor: theme }}
-                          initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.6, ease: 'easeOut' }} />
-                      </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-white text-sm truncate leading-tight">{store.name}</p>
+                      <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">{store.category || 'Retail'}</p>
+                    </div>
+                    <span className="text-white/80 text-[11px] font-bold shrink-0">{card.current_stamps}/{total}</span>
+                  </div>
+                  <div className="bg-white px-4 py-2">
+                    <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: `${theme}20` }}>
+                      <motion.div className="h-full rounded-full" style={{ backgroundColor: theme }}
+                        initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.6, ease: 'easeOut' }} />
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })}
           </div>
         );
       })()}
