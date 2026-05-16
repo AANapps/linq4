@@ -812,6 +812,8 @@ export default function App() {
   const [viewingStore, setViewingStore] = useState<StoreProfile | null>(null);
   const [viewingUser, setViewingUser] = useState<UserProfile | null>(null);
 
+  useEffect(() => { if (viewingStore || viewingUser) window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior }); }, [viewingStore, viewingUser]);
+
   // If the target user is a vendor, go straight to their store instead of their user profile
   const handleViewUser = async (targetUser: UserProfile) => {
     if (targetUser.role === 'vendor') {
