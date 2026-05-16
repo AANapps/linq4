@@ -5506,6 +5506,7 @@ interface DailyVoteData {
   winner: number | null;
   commentCount?: number;
   voteId?: string;
+  imageUrl?: string;
 }
 interface DailyVoteComment { id: string; uid: string; name: string; photoURL?: string; text: string; createdAt: any; likes: string[]; voteId?: string; }
 
@@ -5515,12 +5516,18 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(true);
   const [question, setQuestion] = useState('');
   const [options, setOptions] = useState(['', '']);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState('');
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editQuestion, setEditQuestion] = useState('');
   const [editOptions, setEditOptions] = useState<string[]>([]);
+  const [editImageFile, setEditImageFile] = useState<File | null>(null);
+  const [editImagePreview, setEditImagePreview] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const editFileRef = useRef<HTMLInputElement>(null);
 
   const [liveCounts, setLiveCounts] = useState<Record<string, number>>({});
   const [liveTotal, setLiveTotal] = useState(0);
@@ -5553,7 +5560,15 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
     setSaving(true);
     const voteId = Date.now().toString();
     try {
-      await setDoc(doc(db, 'daily_vote', today), { question: question.trim(), options: cleanOpts, voteCounts: {}, totalVotes: 0, closed: false, winner: null, commentCount: 0, voteId, createdAt: serverTimestamp() });
+      let imageUrl = '';
+      if (imageFile) {
+        const blob = await compressImage(imageFile, 800);
+        const snap2 = await uploadBytes(storageRef(storage, `daily_vote/${today}_${voteId}.webp`), blob);
+        imageUrl = await getDownloadURL(snap2.ref);
+      }
+      await setDoc(doc(db, 'daily_vote', today), { question: question.trim(), options: cleanOpts, voteCounts: {}, totalVotes: 0, closed: false, winner: null, commentCount: 0, voteId, createdAt: serverTimestamp(), ...(imageUrl ? { imageUrl } : {}) });
+      setQuestion(''); setOptions(['', '']); setImageFile(null); setImagePreview('');
+      if (fileRef.current) fileRef.current.value = '';
     } catch (e) { console.error(e); }
     setSaving(false);
   };
@@ -5562,6 +5577,8 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
     if (!voteData) return;
     setEditQuestion(voteData.question);
     setEditOptions([...voteData.options]);
+    setEditImagePreview(voteData.imageUrl || '');
+    setEditImageFile(null);
     setEditing(true);
   };
 
@@ -5570,8 +5587,15 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
     if (!editQuestion.trim() || cleanOpts.length < 2) return;
     setSaving(true);
     try {
-      await updateDoc(doc(db, 'daily_vote', today), { question: editQuestion.trim(), options: cleanOpts });
-      setEditing(false);
+      let imageUrl = voteData?.imageUrl || '';
+      if (editImageFile) {
+        const blob = await compressImage(editImageFile, 800);
+        const snap2 = await uploadBytes(storageRef(storage, `daily_vote/${today}_edit_${Date.now()}.webp`), blob);
+        imageUrl = await getDownloadURL(snap2.ref);
+      }
+      await updateDoc(doc(db, 'daily_vote', today), { question: editQuestion.trim(), options: cleanOpts, imageUrl });
+      setEditing(false); setEditImageFile(null); setEditImagePreview('');
+      if (editFileRef.current) editFileRef.current.value = '';
     } catch (e) { console.error(e); }
     setSaving(false);
   };
@@ -5649,6 +5673,25 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
                       <Plus size={13} /> Add option
                     </button>
                   )}
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-wider">Image (optional)</label>
+                  {(editImagePreview) && (
+                    <div className="relative w-full h-32 rounded-2xl overflow-hidden">
+                      <img src={editImagePreview} alt="" className="w-full h-full object-cover" />
+                      <button onClick={() => { setEditImageFile(null); setEditImagePreview(''); if (editFileRef.current) editFileRef.current.value = ''; }}
+                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 flex items-center justify-center">
+                        <X size={12} className="text-white" />
+                      </button>
+                    </div>
+                  )}
+                  <input ref={editFileRef} type="file" accept="image/*" onChange={e => {
+                    const f = e.target.files?.[0]; if (!f) return;
+                    setEditImageFile(f); setEditImagePreview(URL.createObjectURL(f));
+                  }} className="hidden" id="edit-vote-img" />
+                  <label htmlFor="edit-vote-img" className="flex items-center gap-2 text-xs font-bold text-brand-navy/75 px-1 py-1 cursor-pointer active:opacity-60">
+                    <Image size={13} /> {editImagePreview ? 'Change image' : 'Add image'}
+                  </label>
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => setEditing(false)}
@@ -5735,6 +5778,25 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
                     <Plus size={13} /> Add option
                   </button>
                 )}
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-wider">Image (optional)</label>
+                {imagePreview && (
+                  <div className="relative w-full h-32 rounded-2xl overflow-hidden">
+                    <img src={imagePreview} alt="" className="w-full h-full object-cover" />
+                    <button onClick={() => { setImageFile(null); setImagePreview(''); if (fileRef.current) fileRef.current.value = ''; }}
+                      className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 flex items-center justify-center">
+                      <X size={12} className="text-white" />
+                    </button>
+                  </div>
+                )}
+                <input ref={fileRef} type="file" accept="image/*" onChange={e => {
+                  const f = e.target.files?.[0]; if (!f) return;
+                  setImageFile(f); setImagePreview(URL.createObjectURL(f));
+                }} className="hidden" id="create-vote-img" />
+                <label htmlFor="create-vote-img" className="flex items-center gap-2 text-xs font-bold text-brand-navy/75 px-1 py-1 cursor-pointer active:opacity-60">
+                  <Image size={13} /> {imagePreview ? 'Change image' : 'Add image'}
+                </label>
               </div>
               <button onClick={createVote} disabled={saving || !question.trim() || options.filter(o => o.trim()).length < 2}
                 className="w-full py-3 rounded-2xl gradient-logo-blue text-white font-bold text-sm active:scale-95 transition-all disabled:opacity-50">
@@ -14133,6 +14195,11 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
         {/* Header */}
         <div className="relative overflow-hidden shrink-0" style={{ background: 'linear-gradient(90deg, #1e1b4b 0%, #3730a3 35%, #6366f1 70%, #818cf8 100%)' }}>
           <MatrixRainCanvas opacity={0.22} fadeColor="rgba(20,17,60,0.2)" />
+          {voteData.imageUrl && (
+            <div className="absolute inset-0 z-0">
+              <img src={voteData.imageUrl} alt="" className="w-full h-full object-cover opacity-30" />
+            </div>
+          )}
           <div className="relative z-10 flex items-start justify-between px-5 pt-5 pb-3">
             <div className="flex-1 pr-4">
               <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-200/70">Daily Vote</p>
@@ -14296,8 +14363,9 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady }: { curren
     <>
       <motion.button whileTap={{ scale: 0.97 }} onClick={() => setOpen(true)}
         className="flex-1 rounded-[1.5rem] overflow-hidden shadow-lg shadow-violet-900/20 text-left">
-        <div className="h-full px-4 py-4 flex flex-col gap-3"
+        <div className="relative h-full px-4 py-4 flex flex-col gap-3"
           style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #3730a3 40%, #6366f1 80%, #818cf8 100%)' }}>
+          {voteData.imageUrl && <img src={voteData.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20 pointer-events-none" />}
           <div className="flex-1 min-w-0">
             <p className="text-[9px] font-bold uppercase tracking-widest text-indigo-200/70">Daily Vote</p>
             <p className="text-sm font-black text-white leading-tight mt-0.5 line-clamp-2">{voteData.question}</p>
