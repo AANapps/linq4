@@ -8349,6 +8349,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           onDeleteAccount={onDeleteAccount}
           onViewUser={onViewUser}
           onGoToDeals={() => setActiveTab('deals')}
+          onOpenLinqle={() => setViewingLinqle(true)}
           user={user}
         />
       )}
@@ -17383,7 +17384,7 @@ function StoreLeaderboard({ storeId, storeName, logoUrl, type, userId }: {
   );
 }
 
-function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, onViewUser, onGoToDeals, user }: { profile: UserProfile | null, userCards: Card[], stores?: StoreProfile[], onLogout: () => void, onDeleteAccount: () => Promise<void>, onViewUser: (u: UserProfile) => void, onGoToDeals?: () => void, user: FirebaseUser }) {
+function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, onViewUser, onGoToDeals, onOpenLinqle, user }: { profile: UserProfile | null, userCards: Card[], stores?: StoreProfile[], onLogout: () => void, onDeleteAccount: () => Promise<void>, onViewUser: (u: UserProfile) => void, onGoToDeals?: () => void, onOpenLinqle?: () => void, user: FirebaseUser }) {
   const [activeSubTab, setActiveSubTab] = useState<'posts' | 'interactions'>('posts');
   const [profileRedeemingChallenge, setProfileRedeemingChallenge] = useState<{ challenge: Challenge; entry: any; userName: string } | null>(null);
   const [showProfileSettings, setShowProfileSettings] = useState(false);
@@ -18080,7 +18081,27 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
       })()}
 
 
-      {/* Linqle completions */}
+      {/* Linqle — big scrambling button */}
+      {onOpenLinqle && (
+        <motion.button whileTap={{ scale: 0.97 }} onClick={onOpenLinqle}
+          className="w-full rounded-[1.5rem] overflow-hidden shadow-lg shadow-green-900/20"
+          style={{ height: '90px' }}>
+          <div className="relative w-full h-full flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg, #022c22 0%, #064e3b 40%, #059669 80%, #34d399 100%)' }}>
+            <MatrixRainCanvas opacity={0.35} fadeColor="rgba(2,44,34,0.18)" />
+            <div className="relative z-10 flex items-center gap-0.5">
+              {'LINQLE'.split('').map((letter, i) => (
+                <MatrixScramble key={i} target={letter} className="text-5xl font-black text-white font-mono leading-none tracking-tight" />
+              ))}
+            </div>
+            {profile?.linqleCompletions?.find(c => c.date === new Date().toISOString().split('T')[0]) && (
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 z-10 text-xs font-bold text-emerald-300 bg-white/10 px-2 py-1 rounded-full">✓ Done</span>
+            )}
+          </div>
+        </motion.button>
+      )}
+
+      {/* Linqle history */}
       {(profile.linqleCompletions?.length ?? 0) > 0 && (
         <div className="space-y-2.5">
           <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75 px-1">Linqle History</p>
