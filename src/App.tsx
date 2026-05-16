@@ -5521,11 +5521,23 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  const [liveCounts, setLiveCounts] = useState<Record<string, number>>({});
+  const [liveTotal, setLiveTotal] = useState(0);
+
   useEffect(() => {
     return onSnapshot(doc(db, 'daily_vote', today), snap => {
       if (snap.exists()) setVoteData(snap.data() as DailyVoteData);
       else setVoteData(null);
       setLoading(false);
+    });
+  }, [today]);
+
+  useEffect(() => {
+    return onSnapshot(collection(db, 'daily_vote', today, 'votes'), snap => {
+      const counts: Record<string, number> = {};
+      snap.docs.forEach(d => { const k = String(d.data().optionIdx); counts[k] = (counts[k] || 0) + 1; });
+      setLiveCounts(counts);
+      setLiveTotal(snap.size);
     });
   }, [today]);
 
@@ -5574,7 +5586,7 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
     if (!voteData || voteData.closed) return;
     setSaving(true);
     const winner = voteData.options.reduce((best, _, i) =>
-      (voteData.voteCounts[String(i)] ?? 0) > (voteData.voteCounts[String(best)] ?? 0) ? i : best, 0);
+      (liveCounts[String(i)] ?? 0) > (liveCounts[String(best)] ?? 0) ? i : best, 0);
     try {
       await updateDoc(doc(db, 'daily_vote', today), { closed: true, winner });
     } catch (e) { console.error(e); }
@@ -5642,12 +5654,12 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
               <>
                 <div className="bg-indigo-50 rounded-2xl p-4 border border-indigo-100">
                   <p className="font-black text-brand-navy">{voteData.question}</p>
-                  <p className="text-xs text-brand-navy/80 mt-1">{voteData.totalVotes} votes · {voteData.closed ? `Closed — winner: ${voteData.winner !== null ? voteData.options[voteData.winner] : '?'}` : 'Open'}</p>
+                  <p className="text-xs text-brand-navy/80 mt-1">{liveTotal} votes · {voteData.closed ? `Closed — winner: ${voteData.winner !== null ? voteData.options[voteData.winner] : '?'}` : 'Open'}</p>
                 </div>
                 {voteData.options.map((opt, i) => (
                   <div key={i} className="bg-white rounded-2xl border border-brand-navy/8 px-4 py-3">
                     <p className="font-bold text-brand-navy text-sm">{opt}</p>
-                    <p className="text-xs text-brand-navy/75 mt-0.5">{voteData.voteCounts[String(i)] ?? 0} votes</p>
+                    <p className="text-xs text-brand-navy/75 mt-0.5">{liveCounts[String(i)] ?? 0} votes</p>
                   </div>
                 ))}
                 {!voteData.closed && (
@@ -13998,6 +14010,8 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
   const today = new Date().toISOString().split('T')[0];
   const [voteData, setVoteData] = useState<DailyVoteData | null>(null);
   const [userVote, setUserVote] = useState<number | null>(null);
+  const [liveCounts, setLiveCounts] = useState<Record<string, number>>({});
+  const [liveTotal, setLiveTotal] = useState(0);
   const [comments, setComments] = useState<DailyVoteComment[]>([]);
   const [commentText, setCommentText] = useState('');
   const [voting, setVoting] = useState(false);
@@ -14005,9 +14019,14 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
 
   useEffect(() => onSnapshot(doc(db, 'daily_vote', today), snap => { if (snap.exists()) setVoteData(snap.data() as DailyVoteData); }), [today]);
   useEffect(() => onSnapshot(doc(db, 'daily_vote', today, 'votes', currentUser.uid), snap => {
-    if (snap.exists() && snap.data().countRecorded) setUserVote(snap.data().optionIdx as number);
-    else setUserVote(null);
+    setUserVote(snap.exists() ? snap.data().optionIdx as number : null);
   }), [today, currentUser.uid]);
+  useEffect(() => onSnapshot(collection(db, 'daily_vote', today, 'votes'), snap => {
+    const counts: Record<string, number> = {};
+    snap.docs.forEach(d => { const k = String(d.data().optionIdx); counts[k] = (counts[k] || 0) + 1; });
+    setLiveCounts(counts);
+    setLiveTotal(snap.size);
+  }), [today]);
   useEffect(() => {
     const q = query(collection(db, 'daily_vote', today, 'comments'), orderBy('createdAt', 'desc'), limit(50));
     return onSnapshot(q, snap => setComments(snap.docs.map(d => ({ id: d.id, ...d.data() } as DailyVoteComment))));
@@ -14032,20 +14051,11 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
     if (voting || userVote !== null || voteData?.closed) return;
     setVoting(true);
     try {
-      const voteRef = doc(db, 'daily_vote', today, 'votes', currentUser.uid);
-      const snap = await getDoc(voteRef);
-      // Vote doc exists but count was never recorded (previous failed attempt) — retry with original choice
-      if (snap.exists() && !snap.data().countRecorded) {
-        const prevIdx = snap.data().optionIdx as number;
-        await updateDoc(doc(db, 'daily_vote', today), { [`voteCounts.${prevIdx}`]: increment(1), totalVotes: increment(1) });
-        await updateDoc(voteRef, { countRecorded: true });
-        setVoting(false);
-        return;
-      }
-      if (snap.exists()) { setVoting(false); return; }
-      await setDoc(voteRef, { optionIdx: idx, uid: currentUser.uid, name: currentProfile?.name || 'Anonymous', votedAt: serverTimestamp(), rewardClaimed: false, countRecorded: false });
-      await updateDoc(doc(db, 'daily_vote', today), { [`voteCounts.${idx}`]: increment(1), totalVotes: increment(1) });
-      await updateDoc(voteRef, { countRecorded: true });
+      await setDoc(doc(db, 'daily_vote', today, 'votes', currentUser.uid), {
+        optionIdx: idx, uid: currentUser.uid,
+        name: currentProfile?.name || 'Anonymous',
+        votedAt: serverTimestamp(), rewardClaimed: false,
+      });
     } catch (e) { console.error('castVote', e); }
     setVoting(false);
   };
@@ -14055,7 +14065,6 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
     setPosting(true);
     try {
       await addDoc(collection(db, 'daily_vote', today, 'comments'), { uid: currentUser.uid, name: currentProfile?.name || 'Anonymous', photoURL: currentProfile?.photoURL || '', text: commentText.trim(), createdAt: serverTimestamp(), likes: [] });
-      await updateDoc(doc(db, 'daily_vote', today), { commentCount: increment(1) });
       setCommentText('');
     } catch (e) { console.error('postComment', e); }
     setPosting(false);
@@ -14068,7 +14077,7 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
     </motion.div>
   );
 
-  const total = Math.max(voteData.totalVotes, 1);
+  const total = Math.max(liveTotal, 1);
   const hasVoted = userVote !== null;
   const isClosed = voteData.closed;
   const BAR_MAX_H = 120;
@@ -14113,9 +14122,9 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
             </div>
           )}
           <div className="relative z-10 px-5 pb-4 flex gap-3 text-xs font-bold text-white/60">
-            <span>{voteData.totalVotes} votes</span>
+            <span>{liveTotal} votes</span>
             <span>·</span>
-            <span>{voteData.commentCount ?? comments.length} comments</span>
+            <span>{comments.length} comments</span>
           </div>
         </div>
 
@@ -14124,7 +14133,7 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
           {(hasVoted || isClosed) && (
             <div className="flex items-end gap-4 px-2" style={{ height: 160 }}>
               {voteData.options.map((opt, i) => {
-                const count = voteData.voteCounts[String(i)] ?? 0;
+                const count = liveCounts[String(i)] ?? 0;
                 const pct = Math.round((count / total) * 100);
                 const barH = Math.max((pct / 100) * BAR_MAX_H, 4);
                 return (
@@ -14167,7 +14176,7 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
           </div>
 
           <p className="text-center text-xs text-brand-navy/72">
-            {isClosed ? 'Voting closed' : hasVoted ? `${voteData.totalVotes} votes · updating live` : 'Tap an option to vote'}
+            {isClosed ? 'Voting closed' : hasVoted ? `${liveTotal} votes · updating live` : 'Tap an option to vote'}
           </p>
 
           {/* Comment input */}
@@ -14219,17 +14228,24 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady }: { curren
   const today = new Date().toISOString().split('T')[0];
   const [voteData, setVoteData] = useState<DailyVoteData | null>(null);
   const [userVote, setUserVote] = useState<number | null>(null);
+  const [liveCounts, setLiveCounts] = useState<Record<string, number>>({});
+  const [liveTotal, setLiveTotal] = useState(0);
   const [open, setOpen] = useState(false);
 
   useEffect(() => onSnapshot(doc(db, 'daily_vote', today), snap => { if (snap.exists()) setVoteData(snap.data() as DailyVoteData); }), [today]);
   useEffect(() => onSnapshot(doc(db, 'daily_vote', today, 'votes', currentUser.uid), snap => {
-    if (snap.exists() && snap.data().countRecorded) setUserVote(snap.data().optionIdx as number);
-    else setUserVote(null);
+    setUserVote(snap.exists() ? snap.data().optionIdx as number : null);
   }), [today, currentUser.uid]);
+  useEffect(() => onSnapshot(collection(db, 'daily_vote', today, 'votes'), snap => {
+    const counts: Record<string, number> = {};
+    snap.docs.forEach(d => { const k = String(d.data().optionIdx); counts[k] = (counts[k] || 0) + 1; });
+    setLiveCounts(counts);
+    setLiveTotal(snap.size);
+  }), [today]);
 
   if (!voteData) return null;
 
-  const total = Math.max(voteData.totalVotes, 1);
+  const total = Math.max(liveTotal, 1);
   const hasVoted = userVote !== null;
 
   return (
@@ -14245,7 +14261,7 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady }: { curren
           {hasVoted && (
             <div className="space-y-1">
               {voteData.options.map((_, i) => {
-                const pct = Math.round(((voteData.voteCounts[String(i)] ?? 0) / total) * 100);
+                const pct = Math.round(((liveCounts[String(i)] ?? 0) / total) * 100);
                 return (
                   <div key={i} className="h-1.5 bg-white/15 rounded-full overflow-hidden">
                     <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.5, delay: i * 0.1 }}
@@ -14253,7 +14269,7 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady }: { curren
                   </div>
                 );
               })}
-              <p className="text-[9px] text-indigo-200/60 pt-0.5">{voteData.totalVotes} votes</p>
+              <p className="text-[9px] text-indigo-200/60 pt-0.5">{liveTotal} votes</p>
             </div>
           )}
           {!hasVoted && !voteData.closed && (
