@@ -18198,13 +18198,11 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
       {/* Challenges popup sheet */}
       <AnimatePresence>
         {challengeOpen && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[300] max-w-md mx-auto">
-            <motion.div
-              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-              transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-              className="absolute inset-0 bg-brand-bg flex flex-col overflow-hidden"
-              onClick={e => e.stopPropagation()}>
+          <motion.div
+            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+            transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+            className="fixed top-0 left-0 right-0 bottom-0 z-[9999] bg-brand-bg flex flex-col overflow-hidden"
+            onClick={e => e.stopPropagation()}>
               <div className="px-5 pt-5 pb-3 flex items-center justify-between shrink-0">
                 <h3 className="font-bold text-brand-navy text-lg">Challenges</h3>
                 <button onClick={() => setChallengeOpen(false)} className="w-8 h-8 rounded-full bg-brand-navy/8 flex items-center justify-center">
@@ -18273,7 +18271,6 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                   </>
                 )}
               </div>
-            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -18281,13 +18278,11 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
       {/* Badges popup sheet */}
       <AnimatePresence>
         {badgesOpen && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[300] max-w-md mx-auto">
-            <motion.div
-              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-              transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-              className="absolute inset-0 bg-brand-bg flex flex-col overflow-hidden"
-              onClick={e => e.stopPropagation()}>
+          <motion.div
+            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+            transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+            className="fixed top-0 left-0 right-0 bottom-0 z-[9999] bg-brand-bg flex flex-col overflow-hidden"
+            onClick={e => e.stopPropagation()}>
               <div className="px-5 pt-5 pb-4 flex items-center justify-between shrink-0">
                 <h3 className="font-bold text-brand-navy text-lg">Badges <span className="text-brand-navy/40 font-normal text-base">({earnedBadges.length})</span></h3>
                 <button onClick={() => setBadgesOpen(false)} className="w-8 h-8 rounded-full bg-brand-navy/8 flex items-center justify-center">
@@ -18308,7 +18303,6 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                     </div>
                 }
               </div>
-            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
