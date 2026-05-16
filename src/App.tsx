@@ -14820,6 +14820,16 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
             </>
           )}
         </div>
+
+        {/* Done button */}
+        <div className="px-5 py-4 shrink-0">
+          <button
+            onClick={onClose}
+            className="w-full py-3.5 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-[0.98] transition-all"
+          >
+            Done
+          </button>
+        </div>
       </div>
     );
   }
