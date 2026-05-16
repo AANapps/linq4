@@ -23017,7 +23017,7 @@ function ProfileCardRow({ store, card, membershipCard, userId, onJoinLoyalty, on
         <button
           onClick={() => setShowSheet(true)}
           className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-white text-sm font-bold shadow-sm active:scale-[0.98] transition-all"
-          style={{ background: 'linear-gradient(135deg, #064e3b 0%, #065f46 60%, #059669 100%)' }}
+          style={{ background: store.theme || '#2563EB' }}
         >
           <Check size={15} strokeWidth={3} />
           Member
@@ -23082,7 +23082,7 @@ function ProfileCardRow({ store, card, membershipCard, userId, onJoinLoyalty, on
     <button
       onClick={handleJoin}
       className="w-full relative overflow-hidden flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm text-white shadow-lg active:scale-[0.98] transition-all"
-      style={{ background: 'linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 40%, #2563eb 70%, #3b82f6 100%)' }}
+      style={{ background: store.theme || '#2563EB' }}
     >
       <span className="card-shine-ray" />
       <Plus size={15} />
@@ -23574,7 +23574,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
               }
             };
             return (
-              <button onClick={handleMapClick} className="flex items-center gap-1 mt-1.5 text-brand-gold active:opacity-70">
+              <button onClick={handleMapClick} className="flex items-center gap-1 mt-1.5 active:opacity-70" style={{ color: store.theme || '#2563EB' }}>
                 <MapPin size={13} className="shrink-0" />
                 <span className="text-xs font-medium text-left leading-tight">
                   Show on map
@@ -23603,13 +23603,14 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
         {store.ownerUid !== user.uid && (
           <div className="flex flex-col gap-2 shrink-0 pt-1">
             {onMessage && store.ownerUid && (
-              <button onClick={handleMessageStore} className="flex items-center gap-1.5 px-3 py-2 rounded-2xl gradient-red text-white font-bold text-xs shadow active:scale-95 transition-all">
+              <button onClick={handleMessageStore} className="flex items-center gap-1.5 px-3 py-2 rounded-2xl text-white font-bold text-xs shadow active:scale-95 transition-all" style={{ background: store.theme || '#2563EB' }}>
                 <MessageCircle size={13} /> Message
               </button>
             )}
             <button
               onClick={handleFollowStore}
-              className={cn("flex items-center gap-1.5 px-3 py-2 rounded-2xl font-bold text-xs transition-all shadow active:scale-95", isFollowingStore ? "bg-brand-navy/8 text-brand-navy border border-brand-navy/15" : "gradient-red text-white")}
+              className={cn("flex items-center gap-1.5 px-3 py-2 rounded-2xl font-bold text-xs transition-all shadow active:scale-95", isFollowingStore ? "bg-brand-navy/8 text-brand-navy border border-brand-navy/15" : "text-white")}
+              style={isFollowingStore ? {} : { background: store.theme || '#2563EB' }}
             >
               {isFollowingStore ? <UserCheck size={13} /> : <UserPlus size={13} />}
               {isFollowingStore ? 'Following' : 'Follow'}
@@ -24200,8 +24201,9 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
             onClick={() => setActiveStoreTab(tab)}
             className={cn(
               "flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5",
-              activeStoreTab === tab ? "bg-brand-navy text-white shadow-lg" : "text-brand-navy/75"
+              activeStoreTab === tab ? "text-white shadow-lg" : "text-brand-navy/75"
             )}
+            style={activeStoreTab === tab ? { background: store.theme || '#1E3A8A' } : {}}
           >
             {tab === 'posts' ? <><MessageSquare size={13} /> Posts</> : <><Star size={13} /> Reviews {storeReviews.length > 0 && `(${storeReviews.length})`}</>}
           </button>
