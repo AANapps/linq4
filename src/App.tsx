@@ -14193,13 +14193,11 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
         transition={{ type: 'spring', stiffness: 380, damping: 36 }}
         className="bg-brand-bg flex flex-col overflow-hidden flex-1">
         {/* Header */}
+        {voteData.imageUrl && (
+          <img src={voteData.imageUrl} alt="" className="w-full object-cover shrink-0" style={{ maxHeight: 220 }} />
+        )}
         <div className="relative overflow-hidden shrink-0" style={{ background: 'linear-gradient(90deg, #1e1b4b 0%, #3730a3 35%, #6366f1 70%, #818cf8 100%)' }}>
           <MatrixRainCanvas opacity={0.22} fadeColor="rgba(20,17,60,0.2)" />
-          {voteData.imageUrl && (
-            <div className="absolute inset-0 z-0">
-              <img src={voteData.imageUrl} alt="" className="w-full h-full object-cover opacity-30" />
-            </div>
-          )}
           <div className="relative z-10 flex items-start justify-between px-5 pt-5 pb-3">
             <div className="flex-1 pr-4">
               <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-200/70">Daily Vote</p>
