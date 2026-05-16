@@ -18094,8 +18094,9 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           <div className="space-y-2">
             <div className="flex gap-2.5">
               {/* Linqle card */}
+              <div className="flex-1 min-w-0">
               <motion.button whileTap={{ scale: 0.97 }} onClick={() => setShowLinqleWins(v => !v)}
-                className="flex-1 rounded-2xl overflow-hidden shadow-md shadow-green-900/20 min-w-0">
+                className="w-full rounded-2xl overflow-hidden shadow-md shadow-green-900/20">
                 <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3"
                   style={{ background: 'linear-gradient(135deg, #022c22 0%, #064e3b 50%, #059669 100%)' }}>
                   <MatrixRainCanvas opacity={0.25} fadeColor="rgba(2,44,34,0.15)" />
@@ -18107,10 +18108,12 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                   <span className="relative z-10 text-[10px] font-bold text-emerald-300">{wins.length} wins</span>
                 </div>
               </motion.button>
+              </div>
 
               {/* Challenges card */}
+              <div className="flex-1 min-w-0">
               <motion.button whileTap={{ scale: 0.97 }} onClick={() => setChallengeOpen(v => !v)}
-                className="flex-1 rounded-2xl overflow-hidden shadow-md shadow-blue-900/20 min-w-0">
+                className="w-full rounded-2xl overflow-hidden shadow-md shadow-blue-900/20">
                 <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3"
                   style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #3730a3 50%, #6366f1 100%)' }}>
                   <span className="shine-ray" aria-hidden="true" />
@@ -18118,6 +18121,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                   <span className="relative z-10 text-[10px] font-bold text-indigo-300">challenges</span>
                 </div>
               </motion.button>
+              </div>
             </div>
 
             {/* Linqle wins expanded */}
