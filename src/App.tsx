@@ -14486,7 +14486,8 @@ function LinqleMatrixBanner({ onClose, dateStr }: { onClose: () => void; dateStr
 }
 
 function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { currentUser: FirebaseUser; currentProfile: UserProfile | null; onClose: () => void; onPackReady?: (stickers: CollectibleSticker[]) => void }) {
-  const today = new Date().toISOString().split('T')[0];
+  // Use local date so completion check stays in sync with linqleTodayWord (which also uses local time)
+  const today = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
   const [answer, setAnswer] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [guesses, setGuesses] = useState<string[]>([]);
@@ -14522,7 +14523,7 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
     if (done) setAlreadyDone(done);
     // Calculate current streak
     const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
     const last = currentProfile?.linqleLastCompleted;
     const stored = currentProfile?.linqleStreak || 0;
     if (last === today || last === yesterdayStr) setUserStreak(stored);
@@ -14578,7 +14579,7 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
 
     // Streak calculation
     const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
     const last = currentProfile?.linqleLastCompleted;
     const prevStreak = currentProfile?.linqleStreak || 0;
     let newStreak = 1;
