@@ -8237,10 +8237,15 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                                     const sets = tierSetsCompleted(myRevealedCards, tier);
                                     const firstFound = myRevealedCards.find((s: CollectibleSticker) => s.tier === tier);
                                     return (
-                                      <div key={tier} className="flex-1 rounded-lg flex flex-col items-center justify-center py-1.5 relative overflow-hidden"
+                                      <div key={tier} className="flex-1 h-10 rounded-lg relative overflow-hidden"
                                         style={{ background: cfg.solid, opacity: sets > 0 ? 1 : 0.3 }}>
-                                        <span style={{ fontSize: 14, lineHeight: 1 }}>{firstFound ? cfg.variants[firstFound.variant ?? 0]?.emoji ?? '?' : '?'}</span>
-                                        <span className="text-[6px] font-black text-white mt-0.5">{sets}/{cfg.variants.length}</span>
+                                        {firstFound?.cardImageUrl
+                                          ? <img src={firstFound.cardImageUrl} alt={firstFound.cardName || tier} className="w-full h-full object-cover" />
+                                          : <div className="w-full h-full flex items-center justify-center"><span className="text-[9px] font-black text-white/60">?</span></div>
+                                        }
+                                        <div className="absolute inset-x-0 bottom-0 flex justify-center pb-0.5">
+                                          <span className="text-[6px] font-black text-white drop-shadow">{sets}/{cfg.variants.length}</span>
+                                        </div>
                                         {sets > 0 && <span className="card-shine-ray" style={{ animationDelay: `${idx * 0.45}s` }} />}
                                       </div>
                                     );
