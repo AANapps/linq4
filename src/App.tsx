@@ -23614,7 +23614,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
               <button onClick={handleMapClick} className="flex items-center gap-1 mt-1.5 text-brand-gold active:opacity-70">
                 <MapPin size={13} className="shrink-0" />
                 <span className="text-xs font-medium text-left leading-tight">
-                  {addrText || 'Show on map'}
+                  Show on map
                   {distance !== null && (
                     <span className="text-brand-navy/75 ml-1">
                       · {distance < 1 ? `${Math.round(distance * 1000)}m` : `${distance.toFixed(1)}km`}
