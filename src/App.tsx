@@ -3048,6 +3048,7 @@ function StickerCard({ sticker, isRevealed, onReveal, size = 'md' }: {
       className="relative"
     >
       <motion.div
+        initial={{ rotateY: isRevealed ? 180 : 0 }}
         animate={{ rotateY: localRevealed ? 180 : 0 }}
         transition={{ duration: 0.55, ease: [0.23, 1, 0.32, 1] }}
         style={{ transformStyle: 'preserve-3d', width: '100%', height: '100%', position: 'relative' }}
@@ -3668,6 +3669,7 @@ function MysteryRevealCard({ sticker, isRevealed, onReveal }: {
       )}
 
       <motion.div
+        initial={{ rotateY: isRevealed ? 180 : 0 }}
         animate={{ rotateY: localRevealed ? 180 : 0 }}
         transition={{ duration: 0.68, ease: [0.23, 1, 0.32, 1] }}
         style={{ transformStyle: 'preserve-3d', width: '100%', height: '100%', position: 'relative', zIndex: 1 }}
