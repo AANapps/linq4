@@ -8574,18 +8574,6 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
     const cardRef = doc(db, 'cards', cardId);
     const cardSnap = await getDoc(cardRef);
 
-    if (cardSnap.exists()) {
-      const ts = cardSnap.data()?.last_tap_timestamp;
-      if (ts) {
-        const lastTap = ts.toDate ? ts.toDate() : new Date(ts);
-        const diffMins = (Date.now() - lastTap.getTime()) / 60000;
-        if (diffMins < 30) {
-          const waitMins = Math.ceil(30 - diffMins);
-          onStatus('error', `Already stamped at ${store.name} recently. Try again in ${waitMins} min.`);
-          return [];
-        }
-      }
-    }
 
     const userName = profile?.name || user.displayName || user.email?.split('@')[0] || 'Customer';
     const userPhoto = profile?.photoURL || user.photoURL || '';
