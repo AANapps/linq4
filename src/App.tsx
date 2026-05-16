@@ -3237,18 +3237,31 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
               </div>
             )}
 
-            {/* Card collection — one slot per admin card def, filled when collected */}
+            {/* Card collection — all 5 tier rows always visible, slots from admin defs or fixed count */}
             <div className="space-y-4">
               <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75">
                 Card Collection ({revealed.length} collected)
               </p>
               {STICKER_ORDER.map(tier => {
                 const cfg = STICKER_CONFIG[tier];
+                // Use admin card defs for this tier if available, otherwise fall back to MAX_CARDS_PER_TIER slots
                 const tierDefs = cardDefs.filter(d => d.tier === tier);
-                if (tierDefs.length === 0) return null;
-                const collectedForTier = tierDefs.filter(def =>
-                  revealed.some(s => s.cardDefId === def.id)
-                ).length;
+                const slotCount = tierDefs.length > 0 ? tierDefs.length : MAX_CARDS_PER_TIER[tier];
+
+                // Build slot data: each slot is either def-anchored (by cardDefId) or variant-anchored
+                const slots = Array.from({ length: slotCount }, (_, i) => {
+                  if (tierDefs.length > 0) {
+                    const def = tierDefs[i];
+                    const matches = revealed.filter(s => s.cardDefId === def.id);
+                    return { key: def.id, imageUrl: def.imageUrl, name: def.name, matches, count: matches.length };
+                  } else {
+                    const matches = revealed.filter(s => s.tier === tier && (s.variant ?? 0) === i);
+                    const s = matches[0];
+                    return { key: String(i), imageUrl: s?.cardImageUrl, name: s?.cardName, matches, count: matches.length };
+                  }
+                });
+
+                const collectedCount = slots.filter(sl => sl.count > 0).length;
                 return (
                   <div key={tier} className="rounded-2xl p-3 overflow-hidden relative"
                     style={{ background: cfg.solid, boxShadow: `0 4px 18px ${cfg.color}55` }}>
@@ -3256,18 +3269,14 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
                     <div className="flex items-center justify-between mb-2.5 relative z-10">
                       <span className="text-[10px] font-black uppercase tracking-wider text-white">{cfg.label}</span>
                       <span className="text-[10px] font-black text-white">
-                        {collectedForTier}/{tierDefs.length}{collectedForTier >= tierDefs.length ? ' ✓' : ''}
+                        {collectedCount}/{slotCount}{collectedCount >= slotCount ? ' ✓' : ''}
                       </span>
                     </div>
                     <div className="flex gap-2 relative z-10" style={{ justifyContent: 'space-evenly' }}>
-                      {tierDefs.map(def => {
-                        // Find collected stickers that match this card def
-                        const matches = revealed.filter(s => s.cardDefId === def.id);
-                        const count = matches.length;
-                        const filled = count > 0;
-                        const sticker = matches[0] ?? null;
+                      {slots.map(sl => {
+                        const filled = sl.count > 0;
                         return (
-                          <div key={def.id} className="relative flex-1" style={{ maxWidth: 72, aspectRatio: '3/4', minWidth: 0 }}>
+                          <div key={sl.key} className="relative flex-1" style={{ maxWidth: 72, aspectRatio: '3/4', minWidth: 0 }}>
                             <div style={{
                               width: '100%', height: '100%', borderRadius: 12, overflow: 'hidden', border: '2px solid',
                               borderColor: filled ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.2)',
@@ -3277,13 +3286,13 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
                             }}>
                               {filled ? (
                                 <>
-                                  {(sticker?.cardImageUrl ?? def.imageUrl)
-                                    ? <img src={sticker?.cardImageUrl ?? def.imageUrl} alt={def.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                                  {sl.imageUrl
+                                    ? <img src={sl.imageUrl} alt={sl.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                                     : <div style={{ width: '100%', height: '100%', background: cfg.solid }} />
                                   }
-                                  {def.name && (
+                                  {sl.name && (
                                     <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.45)', padding: '2px 3px', textAlign: 'center' }}>
-                                      <span style={{ fontSize: 6, fontWeight: 900, color: '#fff', lineHeight: 1.2 }}>{def.name}</span>
+                                      <span style={{ fontSize: 6, fontWeight: 900, color: '#fff', lineHeight: 1.2 }}>{sl.name}</span>
                                     </div>
                                   )}
                                 </>
@@ -3291,9 +3300,9 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
                                 <span style={{ fontSize: 18, opacity: 0.25, userSelect: 'none', color: '#fff' }}>?</span>
                               )}
                             </div>
-                            {count > 1 && (
+                            {sl.count > 1 && (
                               <span style={{ position: 'absolute', top: -4, right: -4, background: '#1e293b', color: '#fff', fontSize: 7, fontWeight: 900, width: 14, height: 14, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
-                                x{count}
+                                x{sl.count}
                               </span>
                             )}
                           </div>
