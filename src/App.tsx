@@ -18109,7 +18109,63 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         )}
       </AnimatePresence>
 
-      {/* One row: Challenges · Badges · Stickers */}
+      {/* Stamps / Cards / Rewards counters */}
+      <div className="flex gap-2">
+        {[
+          { val: lifetimeStamps,    label: 'Stamps'  },
+          { val: activeCardsCount,  label: 'Cards'   },
+          { val: archivedCardsCount, label: 'Rewards' },
+        ].map(s => (
+          <div key={s.label} className="flex-1 rounded-2xl px-3 py-2.5 flex flex-col items-center gap-0.5 shadow-md"
+               style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #2563EB 50%, #3B82F6 100%)' }}>
+            <p className="font-bold text-sm leading-none text-white">{s.val}</p>
+            <p className="text-[9px] font-bold uppercase tracking-wider text-white/80">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Active stamp cards — slider */}
+      {(() => {
+        const activeCards = userCards.filter(c => !c.isArchived);
+        if (activeCards.length === 0) return null;
+        return (
+          <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-2 scrollbar-hide">
+            {activeCards.map(card => {
+              const store = (stores || []).find(s => s.id === card.store_id);
+              if (!store) return null;
+              const theme = store.theme || '#3a6fcc';
+              const total = store.stamps_required_for_reward || 10;
+              const pct = Math.min(100, Math.round((card.current_stamps / total) * 100));
+              return (
+                <div key={card.id} className="snap-start shrink-0 w-52 rounded-2xl overflow-hidden shadow-sm"
+                  style={{ border: `1.5px solid ${theme}30` }}>
+                  <div className="flex items-center gap-3 px-4 py-3" style={{ backgroundColor: theme }}>
+                    <div className="w-9 h-9 rounded-xl overflow-hidden border-2 border-white/40 shrink-0">
+                      <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-white text-sm truncate leading-tight">{store.name}</p>
+                      <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">{store.category || 'Retail'}</p>
+                    </div>
+                  </div>
+                  <div className="bg-white px-4 py-3">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[10px] font-bold" style={{ color: theme }}>{card.current_stamps} / {total} stamps</span>
+                      <span className="text-[10px] font-bold text-brand-navy/72">{pct}%</span>
+                    </div>
+                    <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: `${theme}20` }}>
+                      <motion.div className="h-full rounded-full" style={{ backgroundColor: theme }}
+                        initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.6, ease: 'easeOut' }} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
+
+      {/* One row: Challenges · Badges · Cards */}
       <div className="flex gap-2">
         <motion.button whileTap={{ scale: 0.97 }} onClick={() => setChallengeOpen(true)}
           className="flex-1 rounded-2xl overflow-hidden shadow-md shadow-blue-900/20">
@@ -18286,63 +18342,6 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         )}
       </AnimatePresence>
 
-      {/* Stamps / Cards / Rewards counters */}
-      <div className="flex gap-2">
-        {[
-          { val: lifetimeStamps,    label: 'Stamps'  },
-          { val: activeCardsCount,  label: 'Cards'   },
-          { val: archivedCardsCount, label: 'Rewards' },
-        ].map(s => (
-          <div key={s.label} className="flex-1 rounded-2xl px-3 py-2.5 flex flex-col items-center gap-0.5 shadow-md"
-               style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #2563EB 50%, #3B82F6 100%)' }}>
-            <p className="font-bold text-sm leading-none text-white">{s.val}</p>
-            <p className="text-[9px] font-bold uppercase tracking-wider text-white/80">{s.label}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Active stamp cards — slider */}
-      {(() => {
-        const activeCards = userCards.filter(c => !c.isArchived);
-        if (activeCards.length === 0) return null;
-        return (
-          <div className="space-y-2.5">
-            <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-2 scrollbar-hide">
-              {activeCards.map(card => {
-                const store = (stores || []).find(s => s.id === card.store_id);
-                if (!store) return null;
-                const theme = store.theme || '#3a6fcc';
-                const total = store.stamps_required_for_reward || 10;
-                const pct = Math.min(100, Math.round((card.current_stamps / total) * 100));
-                return (
-                  <div key={card.id} className="snap-start shrink-0 w-52 rounded-2xl overflow-hidden shadow-sm"
-                    style={{ border: `1.5px solid ${theme}30` }}>
-                    <div className="flex items-center gap-3 px-4 py-3" style={{ backgroundColor: theme }}>
-                      <div className="w-9 h-9 rounded-xl overflow-hidden border-2 border-white/40 shrink-0">
-                        <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-bold text-white text-sm truncate leading-tight">{store.name}</p>
-                        <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">{store.category || 'Retail'}</p>
-                      </div>
-                    </div>
-                    <div className="bg-white px-4 py-3">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[10px] font-bold" style={{ color: theme }}>{card.current_stamps} / {total} stamps</span>
-                        <span className="text-[10px] font-bold text-brand-navy/72">{pct}%</span>
-                      </div>
-                      <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: `${theme}20` }}>
-                        <motion.div className="h-full rounded-full" style={{ backgroundColor: theme }}
-                          initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.6, ease: 'easeOut' }} />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })()}
 
       <div className="flex p-1 glass-card rounded-2xl">
         <button
