@@ -18013,7 +18013,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         {selectedBadge && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] flex items-end max-w-md mx-auto"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[400] flex items-end max-w-md mx-auto"
             onClick={() => setSelectedBadge(null)}
           >
             <motion.div
@@ -18199,12 +18199,11 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
       <AnimatePresence>
         {challengeOpen && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] flex items-end max-w-md mx-auto"
-            onClick={() => setChallengeOpen(false)}>
+            className="fixed inset-0 z-[200] flex items-end max-w-md mx-auto">
             <motion.div
-              initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-              className="w-full bg-brand-bg rounded-t-3xl max-h-[80vh] flex flex-col overflow-hidden"
+              className="w-full h-full bg-brand-bg flex flex-col overflow-hidden"
               onClick={e => e.stopPropagation()}>
               <div className="px-5 pt-5 pb-3 flex items-center justify-between shrink-0">
                 <h3 className="font-bold text-brand-navy text-lg">Challenges</h3>
@@ -18283,12 +18282,11 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
       <AnimatePresence>
         {badgesOpen && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] flex items-end max-w-md mx-auto"
-            onClick={() => setBadgesOpen(false)}>
+            className="fixed inset-0 z-[200] flex items-end max-w-md mx-auto">
             <motion.div
-              initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-              className="w-full bg-brand-bg rounded-t-3xl max-h-[80vh] flex flex-col overflow-hidden"
+              className="w-full h-full bg-brand-bg flex flex-col overflow-hidden"
               onClick={e => e.stopPropagation()}>
               <div className="px-5 pt-5 pb-4 flex items-center justify-between shrink-0">
                 <h3 className="font-bold text-brand-navy text-lg">Badges <span className="text-brand-navy/40 font-normal text-base">({earnedBadges.length})</span></h3>
