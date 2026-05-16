@@ -5515,10 +5515,16 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
   const [question, setQuestion] = useState('');
   const [options, setOptions] = useState(['', '']);
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editQuestion, setEditQuestion] = useState('');
+  const [editOptions, setEditOptions] = useState<string[]>([]);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    getDoc(doc(db, 'daily_vote', today)).then(snap => {
+    return onSnapshot(doc(db, 'daily_vote', today), snap => {
       if (snap.exists()) setVoteData(snap.data() as DailyVoteData);
+      else setVoteData(null);
       setLoading(false);
     });
   }, [today]);
@@ -5531,10 +5537,37 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
     cleanOpts.forEach((_, i) => { voteCounts[String(i)] = 0; });
     try {
       await setDoc(doc(db, 'daily_vote', today), { question: question.trim(), options: cleanOpts, voteCounts, totalVotes: 0, closed: false, winner: null, commentCount: 0, createdAt: serverTimestamp() });
-      const snap = await getDoc(doc(db, 'daily_vote', today));
-      setVoteData(snap.data() as DailyVoteData);
     } catch (e) { console.error(e); }
     setSaving(false);
+  };
+
+  const startEdit = () => {
+    if (!voteData) return;
+    setEditQuestion(voteData.question);
+    setEditOptions([...voteData.options]);
+    setEditing(true);
+  };
+
+  const saveEdit = async () => {
+    const cleanOpts = editOptions.map(o => o.trim()).filter(Boolean);
+    if (!editQuestion.trim() || cleanOpts.length < 2) return;
+    setSaving(true);
+    const voteCounts: Record<string, number> = {};
+    cleanOpts.forEach((_, i) => { voteCounts[String(i)] = voteData?.voteCounts[String(i)] ?? 0; });
+    try {
+      await updateDoc(doc(db, 'daily_vote', today), { question: editQuestion.trim(), options: cleanOpts, voteCounts });
+      setEditing(false);
+    } catch (e) { console.error(e); }
+    setSaving(false);
+  };
+
+  const deleteVote = async () => {
+    setDeleting(true);
+    try {
+      await deleteDoc(doc(db, 'daily_vote', today));
+      setConfirmDelete(false);
+    } catch (e) { console.error(e); }
+    setDeleting(false);
   };
 
   const closeVote = async () => {
@@ -5544,7 +5577,6 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
       (voteData.voteCounts[String(i)] ?? 0) > (voteData.voteCounts[String(best)] ?? 0) ? i : best, 0);
     try {
       await updateDoc(doc(db, 'daily_vote', today), { closed: true, winner });
-      setVoteData(prev => prev ? { ...prev, closed: true, winner } : prev);
     } catch (e) { console.error(e); }
     setSaving(false);
   };
@@ -5566,24 +5598,92 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
           {loading ? (
             <div className="flex justify-center py-12"><RefreshCw size={24} className="animate-spin text-brand-navy/72" /></div>
           ) : voteData ? (
-            <>
-              <div className="bg-indigo-50 rounded-2xl p-4 border border-indigo-100">
-                <p className="font-black text-brand-navy">{voteData.question}</p>
-                <p className="text-xs text-brand-navy/80 mt-1">{voteData.totalVotes} votes · {voteData.closed ? `Closed — winner: ${voteData.winner !== null ? voteData.options[voteData.winner] : '?'}` : 'Open'}</p>
-              </div>
-              {voteData.options.map((opt, i) => (
-                <div key={i} className="bg-white rounded-2xl border border-brand-navy/8 px-4 py-3">
-                  <p className="font-bold text-brand-navy text-sm">{opt}</p>
-                  <p className="text-xs text-brand-navy/75 mt-0.5">{voteData.voteCounts[String(i)] ?? 0} votes</p>
+            editing ? (
+              <>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-wider">Question</label>
+                  <input value={editQuestion} onChange={e => setEditQuestion(e.target.value)}
+                    className="w-full bg-brand-navy/5 rounded-2xl px-4 py-3 text-sm text-brand-navy outline-none" />
                 </div>
-              ))}
-              {!voteData.closed && (
-                <button onClick={closeVote} disabled={saving}
-                  className="w-full py-3 rounded-2xl bg-rose-500 text-white font-bold text-sm active:scale-95 transition-all disabled:opacity-50">
-                  {saving ? 'Closing…' : 'Close Vote & Announce Winner'}
-                </button>
-              )}
-            </>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-wider">Options (2–4)</label>
+                  {editOptions.map((opt, i) => (
+                    <div key={i} className="flex gap-2 items-center">
+                      <input value={opt} onChange={e => { const n = [...editOptions]; n[i] = e.target.value; setEditOptions(n); }}
+                        placeholder={`Option ${i + 1}`}
+                        className="flex-1 bg-brand-navy/5 rounded-2xl px-4 py-3 text-sm text-brand-navy outline-none placeholder:text-brand-navy/72" />
+                      {editOptions.length > 2 && (
+                        <button onClick={() => setEditOptions(prev => prev.filter((_, j) => j !== i))}
+                          className="w-9 h-9 rounded-2xl bg-rose-100 flex items-center justify-center active:scale-90 transition-all">
+                          <X size={13} className="text-rose-500" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  {editOptions.length < 4 && (
+                    <button onClick={() => setEditOptions(prev => [...prev, ''])}
+                      className="flex items-center gap-1.5 text-xs font-bold text-brand-navy/75 px-1 py-1 active:opacity-60">
+                      <Plus size={13} /> Add option
+                    </button>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => setEditing(false)}
+                    className="flex-1 py-3 rounded-2xl bg-brand-navy/8 text-brand-navy font-bold text-sm active:scale-95 transition-all">
+                    Cancel
+                  </button>
+                  <button onClick={saveEdit} disabled={saving || !editQuestion.trim() || editOptions.filter(o => o.trim()).length < 2}
+                    className="flex-1 py-3 rounded-2xl gradient-logo-blue text-white font-bold text-sm active:scale-95 transition-all disabled:opacity-50">
+                    {saving ? 'Saving…' : 'Save Changes'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="bg-indigo-50 rounded-2xl p-4 border border-indigo-100">
+                  <p className="font-black text-brand-navy">{voteData.question}</p>
+                  <p className="text-xs text-brand-navy/80 mt-1">{voteData.totalVotes} votes · {voteData.closed ? `Closed — winner: ${voteData.winner !== null ? voteData.options[voteData.winner] : '?'}` : 'Open'}</p>
+                </div>
+                {voteData.options.map((opt, i) => (
+                  <div key={i} className="bg-white rounded-2xl border border-brand-navy/8 px-4 py-3">
+                    <p className="font-bold text-brand-navy text-sm">{opt}</p>
+                    <p className="text-xs text-brand-navy/75 mt-0.5">{voteData.voteCounts[String(i)] ?? 0} votes</p>
+                  </div>
+                ))}
+                {!voteData.closed && (
+                  <div className="flex gap-2">
+                    <button onClick={startEdit}
+                      className="flex-1 py-3 rounded-2xl bg-indigo-50 text-indigo-700 font-bold text-sm border border-indigo-200 active:scale-95 transition-all">
+                      Edit Vote
+                    </button>
+                    <button onClick={closeVote} disabled={saving}
+                      className="flex-1 py-3 rounded-2xl bg-rose-500 text-white font-bold text-sm active:scale-95 transition-all disabled:opacity-50">
+                      {saving ? 'Closing…' : 'Close & Announce'}
+                    </button>
+                  </div>
+                )}
+                {confirmDelete ? (
+                  <div className="bg-rose-50 rounded-2xl p-4 border border-rose-200 space-y-3">
+                    <p className="text-sm font-bold text-rose-700">Delete today's vote? This cannot be undone.</p>
+                    <div className="flex gap-2">
+                      <button onClick={() => setConfirmDelete(false)}
+                        className="flex-1 py-2.5 rounded-2xl bg-white border border-rose-200 text-rose-600 font-bold text-sm active:scale-95 transition-all">
+                        Cancel
+                      </button>
+                      <button onClick={deleteVote} disabled={deleting}
+                        className="flex-1 py-2.5 rounded-2xl bg-rose-600 text-white font-bold text-sm active:scale-95 transition-all disabled:opacity-50">
+                        {deleting ? 'Deleting…' : 'Delete'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button onClick={() => setConfirmDelete(true)}
+                    className="w-full py-2.5 rounded-2xl border border-rose-200 text-rose-500 font-bold text-sm active:scale-95 transition-all">
+                    Delete Vote
+                  </button>
+                )}
+              </>
+            )
           ) : (
             <>
               <div className="space-y-2">
