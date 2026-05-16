@@ -21573,9 +21573,6 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                   <MatrixRainCanvas opacity={0.35} fadeColor="rgba(2,44,34,0.18)" />
                   <p className="relative z-10 text-sm font-black text-white font-mono leading-none tracking-tight">LINQLE</p>
                   <p className="relative z-10 text-[11px] font-semibold text-emerald-200/80 tracking-wide">Win sticker packs</p>
-                  {currentProfile?.linqleCompletions?.find(c => c.date === new Date().toISOString().split('T')[0]) && (
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 z-10 text-xs font-bold text-emerald-300 bg-white/10 px-2 py-1 rounded-full">✓ Done</span>
-                  )}
                 </div>
               </motion.button>
             )}
@@ -25009,86 +25006,38 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
       </div>
 
 
-      {/* Tab switcher */}
-      <div className="flex p-1 glass-card rounded-2xl">
-        <button
-          onClick={() => setProfileTab('wall')}
-          className={cn("flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5", profileTab === 'wall' ? "bg-brand-navy text-white shadow" : "text-brand-navy/90")}
-        >
-          <MessageSquare size={13} />
-          Wall
-        </button>
-        <button
-          onClick={() => setProfileTab('posts')}
-          className={cn("flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5", profileTab === 'posts' ? "bg-brand-navy text-white shadow" : "text-brand-navy/90")}
-        >
-          <Zap size={13} />
-          Posts {userPosts.length > 0 && `(${userPosts.length})`}
-        </button>
+      {/* Posts */}
+      <div className="-mx-6 divide-y divide-brand-navy/8">
+        {userPosts.map(post => (
+          <FeedPostCard
+            key={post.id}
+            post={post}
+            currentUser={currentUser}
+            currentProfile={currentProfile}
+            onViewUser={onViewUser}
+            onLike={async (p) => {
+              const ref = doc(db, 'global_posts', p.id);
+              const alreadyLiked = (p.likedBy || []).includes(currentUser.uid);
+              await updateDoc(ref, {
+                likedBy: alreadyLiked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid),
+                likesCount: alreadyLiked ? Math.max(0, p.likesCount - 1) : p.likesCount + 1,
+              });
+            }}
+            onVote={async (p, optionIndex) => {
+              const ref = doc(db, 'global_posts', p.id);
+              const votes = p.pollVotes || {};
+              const currentVoteKey = Object.keys(votes).find(k => (votes[k] || []).includes(currentUser.uid));
+              const updates: any = {};
+              if (currentVoteKey !== undefined) updates[`pollVotes.${currentVoteKey}`] = arrayRemove(currentUser.uid);
+              if (currentVoteKey !== String(optionIndex)) updates[`pollVotes.${optionIndex}`] = arrayUnion(currentUser.uid);
+              if (Object.keys(updates).length > 0) await updateDoc(ref, updates);
+            }}
+          />
+        ))}
+        {userPosts.length === 0 && (
+          <p className="text-center py-12 text-xs text-brand-navy/60 font-bold uppercase tracking-widest italic">No posts yet</p>
+        )}
       </div>
-
-      {profileTab === 'wall' ? (
-        <div className="space-y-4">
-          {targetUser.uid !== currentUser.uid && (
-            <div className="glass-card p-6 rounded-[2.5rem] space-y-4">
-              <textarea
-                value={newReview}
-                onChange={(e) => setNewReview(e.target.value)}
-                placeholder={`Write on ${targetUser.name}'s wall...`}
-                className="w-full p-4 rounded-2xl bg-brand-bg border-none focus:ring-2 focus:ring-brand-gold/20 text-sm h-24 resize-none"
-              />
-              <button
-                onClick={handlePostReview}
-                disabled={isPosting || !newReview.trim()}
-                className="w-full bg-brand-navy text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-brand-navy/10"
-              >
-                <Send size={18} />
-                Post to Wall
-              </button>
-            </div>
-          )}
-          <div className="space-y-4">
-            {reviews.map(review => (
-              <WallPostItem key={review.id} post={review} currentUser={currentUser} wallOwnerUid={targetUser.uid} onViewUser={onViewUser} />
-            ))}
-            {reviews.length === 0 && (
-              <p className="text-center py-12 text-xs text-brand-navy/60 font-bold uppercase tracking-widest italic">No wall posts yet</p>
-            )}
-          </div>
-        </div>
-      ) : (
-        <div className="-mx-6 divide-y divide-brand-navy/8">
-          {userPosts.map(post => (
-            <FeedPostCard
-              key={post.id}
-              post={post}
-              currentUser={currentUser}
-              currentProfile={currentProfile}
-              onViewUser={onViewUser}
-              onLike={async (p) => {
-                const ref = doc(db, 'global_posts', p.id);
-                const alreadyLiked = (p.likedBy || []).includes(currentUser.uid);
-                await updateDoc(ref, {
-                  likedBy: alreadyLiked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid),
-                  likesCount: alreadyLiked ? Math.max(0, p.likesCount - 1) : p.likesCount + 1,
-                });
-              }}
-              onVote={async (p, optionIndex) => {
-                const ref = doc(db, 'global_posts', p.id);
-                const votes = p.pollVotes || {};
-                const currentVoteKey = Object.keys(votes).find(k => (votes[k] || []).includes(currentUser.uid));
-                const updates: any = {};
-                if (currentVoteKey !== undefined) updates[`pollVotes.${currentVoteKey}`] = arrayRemove(currentUser.uid);
-                if (currentVoteKey !== String(optionIndex)) updates[`pollVotes.${optionIndex}`] = arrayUnion(currentUser.uid);
-                if (Object.keys(updates).length > 0) await updateDoc(ref, updates);
-              }}
-            />
-          ))}
-          {userPosts.length === 0 && (
-            <p className="text-center py-12 text-xs text-brand-navy/60 font-bold uppercase tracking-widest italic">No posts yet</p>
-          )}
-        </div>
-      )}
     </motion.div>
   );
 }
