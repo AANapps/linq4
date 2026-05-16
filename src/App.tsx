@@ -20647,6 +20647,9 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
   const [activeSubTab, setActiveSubTab] = useState<'discovery' | 'following'>('discovery');
   const [showAllDeals, setShowAllDeals] = useState(false);
   const [feedChallenges, setFeedChallenges] = useState<Challenge[]>([]);
+  const [feedCompletedChallenges, setFeedCompletedChallenges] = useState<Challenge[]>([]);
+  const [challengeView, setChallengeView] = useState<'active' | 'completed'>('active');
+  const [completedIdx, setCompletedIdx] = useState(0);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [dailyWheelOpen, setDailyWheelOpen] = useState(false);
   const [spinTimeLeft, setSpinTimeLeft] = useState('');
@@ -20771,10 +20774,23 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
   }, []);
 
   useEffect(() => {
+    const q = query(collection(db, 'challenges'), where('type', '==', 'standard'), where('status', '==', 'paused'));
+    return onSnapshot(q, snap =>
+      setFeedCompletedChallenges(snap.docs.map(d => ({ id: d.id, ...d.data() } as Challenge)))
+    , () => {});
+  }, []);
+
+  useEffect(() => {
     if (feedChallenges.length <= 1) return;
     const t = setInterval(() => setChallengeIdx(i => (i + 1) % feedChallenges.length), 2800);
     return () => clearInterval(t);
   }, [feedChallenges.length]);
+
+  useEffect(() => {
+    if (feedCompletedChallenges.length <= 1) return;
+    const t = setInterval(() => setCompletedIdx(i => (i + 1) % feedCompletedChallenges.length), 2800);
+    return () => clearInterval(t);
+  }, [feedCompletedChallenges.length]);
 
   useEffect(() => {
     if (!showLeaderboard || lbUsers.length > 0) return;
@@ -21088,113 +21104,132 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
             );
           })()}
 
-          {/* Linqle + Daily Vote — side by side */}
-          <div className="flex gap-3 items-stretch">
-            {onOpenLinqle && (
-              <motion.button whileTap={{ scale: 0.97 }} onClick={onOpenLinqle}
-                className="flex-1 rounded-[1.5rem] overflow-hidden shadow-lg shadow-green-900/20 text-left">
-                <div className="relative overflow-hidden h-full px-4 py-4 flex flex-col gap-3"
-                  style={{ background: 'linear-gradient(135deg, #022c22 0%, #064e3b 40%, #059669 80%, #34d399 100%)' }}>
-                  <MatrixRainCanvas opacity={0.3} fadeColor="rgba(2,44,34,0.2)" />
-                  <div className="relative z-10 w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center border border-white/20">
-                    <MatrixScramble target="L" className="text-lg font-black text-white font-mono" />
-                  </div>
-                  <div className="relative z-10">
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-emerald-200/70">Daily Word</p>
-                    <p className="font-display text-sm font-black text-white leading-tight mt-0.5">
-                      {currentProfile?.linqleCompletions?.find(c => c.date === new Date().toISOString().split('T')[0])
-                        ? '✓ Done' : "Today's\nLinqle"}
-                    </p>
-                  </div>
+          {/* Linqle — full-width big scrambling button */}
+          {onOpenLinqle && (
+            <motion.button whileTap={{ scale: 0.97 }} onClick={onOpenLinqle}
+              className="w-full rounded-[1.5rem] overflow-hidden shadow-lg shadow-green-900/20"
+              style={{ height: '90px' }}>
+              <div className="relative w-full h-full flex items-center justify-center"
+                style={{ background: 'linear-gradient(135deg, #022c22 0%, #064e3b 40%, #059669 80%, #34d399 100%)' }}>
+                <MatrixRainCanvas opacity={0.35} fadeColor="rgba(2,44,34,0.18)" />
+                <div className="relative z-10 flex items-center gap-0.5">
+                  {'LINQLE'.split('').map((letter, i) => (
+                    <MatrixScramble key={i} target={letter} className="text-5xl font-black text-white font-mono leading-none tracking-tight" />
+                  ))}
                 </div>
-              </motion.button>
-            )}
-            {currentUser && currentProfile && (
-              <DailyVoteFYPCard currentUser={currentUser} currentProfile={currentProfile} onPackReady={onPackReady} />
-            )}
-          </div>
+                {currentProfile?.linqleCompletions?.find(c => c.date === new Date().toISOString().split('T')[0]) && (
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 z-10 text-xs font-bold text-emerald-300 bg-white/10 px-2 py-1 rounded-full">✓ Done</span>
+                )}
+              </div>
+            </motion.button>
+          )}
+
+          {/* Daily Vote */}
+          {currentUser && currentProfile && (
+            <DailyVoteFYPCard currentUser={currentUser} currentProfile={currentProfile} onPackReady={onPackReady} />
+          )}
 
           {/* Challenges card + Leaderboard button — side by side */}
-          {(feedChallenges.length > 0 || true) && (
+          {(feedChallenges.length > 0 || feedCompletedChallenges.length > 0 || true) && (
             <div className="flex gap-3 items-stretch">
 
-              {/* Single cycling challenges card with confetti */}
-              {feedChallenges.length > 0 && (
-                <div
-                  className="flex-1 relative rounded-[1.5rem] overflow-hidden cursor-pointer active:scale-[0.97] transition-transform"
-                  style={{ background: 'linear-gradient(135deg, #7C3AED 0%, #A855F7 55%, #C084FC 100%)', minHeight: '148px' }}
-                  onClick={() => onViewChallenges?.()}
-                >
-                  {/* Challenge image background */}
-                  <AnimatePresence mode="wait">
-                    {feedChallenges[challengeIdx % feedChallenges.length]?.imageUrl && (
-                      <motion.div
-                        key={`img-${challengeIdx}`}
-                        className="absolute inset-0"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.4 }}
-                      >
-                        <img src={feedChallenges[challengeIdx % feedChallenges.length].imageUrl} alt="" className="w-full h-full object-cover" style={{ opacity: 0.45 }} />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                  {/* Confetti particles */}
-                  {[
-                    { x: 8,  y: 18, color: '#FFD700', size: 6, delay: 0,   dur: 2.2 },
-                    { x: 28, y: 72, color: '#FF6B6B', size: 4, delay: 0.4, dur: 1.8 },
-                    { x: 50, y: 35, color: '#4ADE80', size: 5, delay: 0.8, dur: 2.5 },
-                    { x: 72, y: 62, color: '#60A5FA', size: 4, delay: 0.2, dur: 2.0 },
-                    { x: 88, y: 22, color: '#F9A8D4', size: 6, delay: 0.6, dur: 1.9 },
-                    { x: 62, y: 82, color: '#FFD700', size: 3, delay: 1.0, dur: 2.3 },
-                    { x: 18, y: 55, color: '#4ADE80', size: 4, delay: 1.2, dur: 2.1 },
-                    { x: 92, y: 48, color: '#FF6B6B', size: 5, delay: 0.5, dur: 1.7 },
-                    { x: 40, y: 88, color: '#60A5FA', size: 3, delay: 0.9, dur: 2.4 },
-                    { x: 78, y: 10, color: '#F9A8D4', size: 4, delay: 0.3, dur: 2.0 },
-                  ].map((p, i) => (
-                    <motion.div
-                      key={i}
-                      className="absolute rounded-sm pointer-events-none"
-                      style={{ left: `${p.x}%`, top: `${p.y}%`, width: p.size, height: p.size, background: p.color }}
-                      animate={{ y: [-4, -14, -4], rotate: [0, 180, 360], opacity: [0.5, 1, 0.5] }}
-                      transition={{ duration: p.dur, repeat: Infinity, delay: p.delay, ease: 'easeInOut' }}
-                    />
-                  ))}
-
-                  {/* Content */}
-                  <div className="relative z-10 p-4 h-full flex flex-col justify-between" style={{ minHeight: '148px' }}>
-                    <div>
-                      <p className="text-white/70 text-[9px] font-black uppercase tracking-widest mb-1.5">Win</p>
-                      <AnimatePresence mode="wait">
-                        <motion.div
-                          key={challengeIdx}
-                          initial={{ opacity: 0, y: 8 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -8 }}
-                          transition={{ duration: 0.35 }}
-                        >
-                          <p className="text-white font-black text-base leading-snug line-clamp-2">
-                            {feedChallenges[challengeIdx % feedChallenges.length]?.reward}
-                          </p>
-                          <p className="text-white/50 text-[10px] mt-1 line-clamp-1">
-                            {feedChallenges[challengeIdx % feedChallenges.length]?.title}
-                          </p>
-                        </motion.div>
-                      </AnimatePresence>
+              {/* Cycling challenges card with toggle */}
+              {(feedChallenges.length > 0 || feedCompletedChallenges.length > 0) && (() => {
+                const isCompleted = challengeView === 'completed';
+                const list = isCompleted ? feedCompletedChallenges : feedChallenges;
+                const idx = isCompleted ? completedIdx : challengeIdx;
+                const current = list[idx % Math.max(list.length, 1)];
+                return (
+                  <div
+                    className="flex-1 relative rounded-[1.5rem] overflow-hidden cursor-pointer active:scale-[0.97] transition-transform"
+                    style={{ background: isCompleted ? 'linear-gradient(135deg, #374151 0%, #4B5563 55%, #6B7280 100%)' : 'linear-gradient(135deg, #7C3AED 0%, #A855F7 55%, #C084FC 100%)', minHeight: '148px' }}
+                    onClick={() => onViewChallenges?.()}
+                  >
+                    {/* Toggle buttons */}
+                    <div className="absolute top-2.5 left-2.5 z-20 flex gap-1.5" onClick={e => e.stopPropagation()}>
+                      <button
+                        onClick={() => setChallengeView('active')}
+                        className={cn('px-2 py-0.5 rounded-full text-[9px] font-bold transition-all', !isCompleted ? 'bg-white text-purple-700' : 'bg-white/20 text-white/70')}
+                      >Challenges</button>
+                      <button
+                        onClick={() => setChallengeView('completed')}
+                        className={cn('px-2 py-0.5 rounded-full text-[9px] font-bold transition-all', isCompleted ? 'bg-white text-gray-700' : 'bg-white/20 text-white/70')}
+                      >Completed</button>
                     </div>
-                    {/* Dot indicators */}
-                    <div className="flex items-center justify-between mt-2">
-                      <p className="text-white/50 text-[9px] font-bold">{feedChallenges.length} prizes</p>
-                      <div className="flex gap-1 items-center">
-                        {feedChallenges.slice(0, Math.min(feedChallenges.length, 5)).map((_, i) => (
-                          <div key={i} className={cn('rounded-full transition-all duration-300', i === (challengeIdx % feedChallenges.length) ? 'w-3 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/30')} />
-                        ))}
-                      </div>
+
+                    {/* Challenge image background */}
+                    <AnimatePresence mode="wait">
+                      {current?.imageUrl && (
+                        <motion.div
+                          key={`img-${challengeView}-${idx}`}
+                          className="absolute inset-0"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.4 }}
+                        >
+                          <img src={current.imageUrl} alt="" className="w-full h-full object-cover" style={{ opacity: 0.45 }} />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {/* Confetti particles */}
+                    {!isCompleted && [
+                      { x: 8,  y: 18, color: '#FFD700', size: 6, delay: 0,   dur: 2.2 },
+                      { x: 28, y: 72, color: '#FF6B6B', size: 4, delay: 0.4, dur: 1.8 },
+                      { x: 50, y: 35, color: '#4ADE80', size: 5, delay: 0.8, dur: 2.5 },
+                      { x: 72, y: 62, color: '#60A5FA', size: 4, delay: 0.2, dur: 2.0 },
+                      { x: 88, y: 22, color: '#F9A8D4', size: 6, delay: 0.6, dur: 1.9 },
+                      { x: 62, y: 82, color: '#FFD700', size: 3, delay: 1.0, dur: 2.3 },
+                      { x: 18, y: 55, color: '#4ADE80', size: 4, delay: 1.2, dur: 2.1 },
+                      { x: 92, y: 48, color: '#FF6B6B', size: 5, delay: 0.5, dur: 1.7 },
+                      { x: 40, y: 88, color: '#60A5FA', size: 3, delay: 0.9, dur: 2.4 },
+                      { x: 78, y: 10, color: '#F9A8D4', size: 4, delay: 0.3, dur: 2.0 },
+                    ].map((p, i) => (
+                      <motion.div
+                        key={i}
+                        className="absolute rounded-sm pointer-events-none"
+                        style={{ left: `${p.x}%`, top: `${p.y}%`, width: p.size, height: p.size, background: p.color }}
+                        animate={{ y: [-4, -14, -4], rotate: [0, 180, 360], opacity: [0.5, 1, 0.5] }}
+                        transition={{ duration: p.dur, repeat: Infinity, delay: p.delay, ease: 'easeInOut' }}
+                      />
+                    ))}
+
+                    {/* Content */}
+                    <div className="relative z-10 p-4 h-full flex flex-col justify-between" style={{ minHeight: '148px', paddingTop: '2.25rem' }}>
+                      {list.length === 0 ? (
+                        <p className="text-white/50 text-xs font-bold text-center mt-6">No {isCompleted ? 'completed' : 'active'} challenges</p>
+                      ) : (
+                        <>
+                          <div>
+                            <p className="text-white/70 text-[9px] font-black uppercase tracking-widest mb-1.5">{isCompleted ? 'Ended' : 'Win'}</p>
+                            <AnimatePresence mode="wait">
+                              <motion.div
+                                key={`${challengeView}-${idx}`}
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -8 }}
+                                transition={{ duration: 0.35 }}
+                              >
+                                <p className="text-white font-black text-base leading-snug line-clamp-2">{current?.reward}</p>
+                                <p className="text-white/50 text-[10px] mt-1 line-clamp-1">{current?.title}</p>
+                              </motion.div>
+                            </AnimatePresence>
+                          </div>
+                          <div className="flex items-center justify-between mt-2">
+                            <p className="text-white/50 text-[9px] font-bold">{list.length} {isCompleted ? 'ended' : 'prizes'}</p>
+                            <div className="flex gap-1 items-center">
+                              {list.slice(0, Math.min(list.length, 5)).map((_, i) => (
+                                <div key={i} className={cn('rounded-full transition-all duration-300', i === (idx % list.length) ? 'w-3 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/30')} />
+                              ))}
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Leaderboard square button */}
               <button
@@ -21203,11 +21238,9 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                   confetti({ particleCount: 80, spread: 60, startVelocity: 30, gravity: 0.8, scalar: 0.9, origin: { y: 0.6 }, zIndex: 9999, colors: ['#FFD700', '#FFC200', '#FFE566', '#FFAA00', '#FFF8DC'] });
                 }}
                 className="relative rounded-[1.5rem] overflow-hidden active:scale-[0.97] transition-transform shrink-0"
-                style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #2563EB 50%, #3B82F6 100%)', width: feedChallenges.length > 0 ? '136px' : '100%', minHeight: '148px' }}
+                style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #2563EB 50%, #3B82F6 100%)', width: (feedChallenges.length > 0 || feedCompletedChallenges.length > 0) ? '136px' : '100%', minHeight: '148px' }}
               >
-                {/* Medal top-left */}
                 <div className="absolute top-3 left-3 text-lg leading-none">🥇</div>
-                {/* Rotating sparkle that fades in and out */}
                 <motion.div
                   className="absolute top-3 right-3"
                   animate={{ rotate: [0, 360], opacity: [0, 1, 1, 1, 0] }}
@@ -21215,7 +21248,6 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                 >
                   <Sparkles size={13} className="text-yellow-300" />
                 </motion.div>
-                {/* Golden confetti overlay */}
                 {[
                   { x: 12, y: 20, color: '#FFD700', size: 5, delay: 0,   dur: 2.1 },
                   { x: 75, y: 65, color: '#FFC200', size: 4, delay: 0.5, dur: 1.8 },
@@ -21234,8 +21266,6 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                     transition={{ duration: p.dur, repeat: Infinity, delay: p.delay, ease: 'easeInOut' }}
                   />
                 ))}
-
-                {/* Avatar + name + label */}
                 <div className="relative z-10 h-full flex flex-col items-center justify-center gap-1.5 px-2 py-4" style={{ minHeight: '148px' }}>
                   <div className="w-12 h-12 rounded-xl overflow-hidden border-2 border-white/30 bg-indigo-50 flex items-center justify-center">
                     <PixelAvatar config={currentProfile?.avatar} uid={currentProfile?.uid || ''} size={48} view="head" />
