@@ -5101,7 +5101,7 @@ function CardSetsAdminPanel({ onClose }: { onClose: () => void }) {
               {/* Add card form */}
               {tierCards.length < maxForTier ? (
                 <div className="bg-white rounded-3xl border border-black/5 shadow-sm p-5 space-y-4">
-                  <p className="font-bold text-sm text-brand-navy">Add {cfg.label} card ({tierCards.length}/{maxForTier})</p>
+                  <p className="font-bold text-sm text-brand-navy">Add {cfg.label} card ({tierCards.length + 1}/{maxForTier})</p>
                   <div>
                     <input ref={fileRef} type="file" accept="image/*" className="hidden"
                       onChange={e => { const f = e.target.files?.[0]; if (!f) return; setImageFile(f); setImagePreview(URL.createObjectURL(f)); }} />
