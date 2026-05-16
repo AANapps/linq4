@@ -18175,6 +18175,15 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         )}
       </AnimatePresence>
 
+      {/* Card collection */}
+      {profile?.uid && (
+        <UserStickerPanel
+          uid={profile.uid}
+          isOwnProfile={true}
+          onOpenPack={stickers => setProfilePendingPack(stickers)}
+        />
+      )}
+
       <div className="flex p-1 glass-card rounded-2xl">
         <button
           onClick={() => setActiveSubTab('posts')}
@@ -24430,6 +24439,9 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
           </div>
         );
       })()}
+
+      {/* Card collection */}
+      <UserStickerPanel uid={targetUser.uid} isOwnProfile={false} />
 
       {/* Tab switcher */}
       <div className="flex p-1 glass-card rounded-2xl">
