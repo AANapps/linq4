@@ -24700,22 +24700,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
         </div>
       </header>
 
-      {/* Stats */}
-      <div className="flex gap-2">
-        {[
-          { val: publicUserStamps,  label: 'Stamps'  },
-          { val: cards.length,      label: 'Cards'   },
-          { val: publicUserRewards, label: 'Rewards' },
-        ].map(s => (
-          <div key={s.label} className="flex-1 rounded-2xl px-3 py-2.5 flex flex-col items-center gap-0.5 shadow-md"
-               style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #2563EB 50%, #3B82F6 100%)' }}>
-            <p className="font-bold text-sm leading-none text-white">{s.val}</p>
-            <p className="text-[9px] font-bold uppercase tracking-wider text-white/80">{s.label}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Follow / Message buttons */}
+      {/* Follow / Message buttons — top */}
       {currentUser && currentUser.uid !== targetUser.uid && (
         <div className="flex gap-2">
           <button
@@ -24736,6 +24721,21 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
           </button>
         </div>
       )}
+
+      {/* Stats */}
+      <div className="flex gap-2">
+        {[
+          { val: publicUserStamps,  label: 'Stamps'  },
+          { val: cards.length,      label: 'Cards'   },
+          { val: publicUserRewards, label: 'Rewards' },
+        ].map(s => (
+          <div key={s.label} className="flex-1 rounded-2xl px-3 py-2.5 flex flex-col items-center gap-0.5 shadow-md"
+               style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #2563EB 50%, #3B82F6 100%)' }}>
+            <p className="font-bold text-sm leading-none text-white">{s.val}</p>
+            <p className="text-[9px] font-bold uppercase tracking-wider text-white/80">{s.label}</p>
+          </div>
+        ))}
+      </div>
 
 
       {/* Challenges · Badges · Stickers row */}
