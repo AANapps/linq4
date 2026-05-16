@@ -18368,17 +18368,16 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         )}
       </AnimatePresence>
 
-      {/* Stamps / Cards / Rewards counters */}
-      <div className="flex gap-2">
+      {/* Stamps / Cards / Rewards — clean separator */}
+      <div className="flex items-center divide-x divide-brand-navy/10">
         {[
-          { val: lifetimeStamps,    label: 'Stamps'  },
-          { val: activeCardsCount,  label: 'Cards'   },
+          { val: lifetimeStamps,     label: 'Stamps'  },
+          { val: activeCardsCount,   label: 'Cards'   },
           { val: archivedCardsCount, label: 'Rewards' },
         ].map(s => (
-          <div key={s.label} className="flex-1 rounded-2xl px-3 py-2.5 flex flex-col items-center gap-0.5 shadow-md"
-               style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #2563EB 50%, #3B82F6 100%)' }}>
-            <p className="font-bold text-sm leading-none text-white">{s.val}</p>
-            <p className="text-[9px] font-bold uppercase tracking-wider text-white/80">{s.label}</p>
+          <div key={s.label} className="flex-1 flex flex-col items-center gap-0.5 py-2">
+            <p className="font-black text-base leading-none text-brand-navy">{s.val}</p>
+            <p className="text-[9px] font-bold uppercase tracking-wider text-brand-navy/50">{s.label}</p>
           </div>
         ))}
       </div>
@@ -18386,31 +18385,32 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
       {/* One row: Challenges · Badges · Stickers */}
       <div className="flex gap-2">
         <motion.button whileTap={{ scale: 0.97 }} onClick={() => setChallengeOpen(true)}
-          className="flex-1 rounded-2xl overflow-hidden shadow-md shadow-blue-900/20">
+          className="flex-1 rounded-2xl overflow-hidden shadow-sm shadow-blue-500/20">
           <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3.5"
-            style={{ background: 'linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 40%, #2563eb 70%, #3b82f6 100%)' }}>
+            style={{ background: 'linear-gradient(160deg, #2563eb 0%, #3b82f6 45%, #60a5fa 75%, #93c5fd 100%)' }}>
             <span className="shine-ray" aria-hidden="true" />
             <p className="relative z-10 text-xl font-black text-white leading-none">{activeChallenges.length}</p>
-            <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-blue-200/80">Challenges</span>
+            <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-blue-100/80">Challenges</span>
           </div>
         </motion.button>
 
         <motion.button whileTap={{ scale: 0.97 }} onClick={() => setBadgesOpen(true)}
-          className="flex-1 rounded-2xl overflow-hidden shadow-md shadow-amber-900/20">
+          className="flex-1 rounded-2xl overflow-hidden shadow-sm shadow-amber-300/30">
           <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3.5 overflow-hidden"
-            style={{ background: 'linear-gradient(135deg, #78350f 0%, #b45309 40%, #d97706 75%, #fbbf24 100%)' }}>
+            style={{ background: 'linear-gradient(135deg, #fefce8 0%, #fef9c3 30%, #fde68a 60%, #fbbf24 100%)' }}>
             <span className="badge-shine-ray" aria-hidden="true" />
-            <p className="relative z-10 text-xl font-black text-white leading-none">{earnedBadges.length}</p>
-            <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-amber-200/80">Badges</span>
+            <p className="relative z-10 text-xl font-black leading-none" style={{ color: '#713f12' }}>{earnedBadges.length}</p>
+            <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest" style={{ color: '#b45309' }}>Badges</span>
           </div>
         </motion.button>
 
         <motion.button whileTap={{ scale: 0.97 }} onClick={() => setShowStickerModal(true)}
-          className="flex-1 rounded-2xl overflow-hidden shadow-md"
-          style={{ background: 'linear-gradient(135deg, #0D0D2B, #1A0730)' }}>
-          <div className="flex flex-col items-center justify-center gap-0.5 px-3 py-3.5">
-            <p className="text-xl font-black text-white leading-none">{stickerData?.stickers.length ?? 0}</p>
-            <span className="text-[9px] font-bold uppercase tracking-widest text-amber-300/80">Stickers</span>
+          className="flex-1 rounded-2xl overflow-hidden shadow-sm shadow-blue-500/20">
+          <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3.5"
+            style={{ background: 'linear-gradient(160deg, #2563eb 0%, #3b82f6 45%, #60a5fa 75%, #93c5fd 100%)' }}>
+            <span className="shine-ray" aria-hidden="true" />
+            <p className="relative z-10 text-xl font-black text-white leading-none">{stickerData?.stickers.length ?? 0}</p>
+            <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-blue-100/80">Stickers</span>
           </div>
         </motion.button>
       </div>
@@ -24687,21 +24687,19 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
         </div>
       )}
 
-      {/* Stats */}
-      <div className="flex gap-2">
+      {/* Stats — clean separator */}
+      <div className="flex items-center divide-x divide-brand-navy/10">
         {[
           { val: publicUserStamps,  label: 'Stamps'  },
           { val: cards.length,      label: 'Cards'   },
           { val: publicUserRewards, label: 'Rewards' },
         ].map(s => (
-          <div key={s.label} className="flex-1 rounded-2xl px-3 py-2.5 flex flex-col items-center gap-0.5 shadow-md"
-               style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #2563EB 50%, #3B82F6 100%)' }}>
-            <p className="font-bold text-sm leading-none text-white">{s.val}</p>
-            <p className="text-[9px] font-bold uppercase tracking-wider text-white/80">{s.label}</p>
+          <div key={s.label} className="flex-1 flex flex-col items-center gap-0.5 py-2">
+            <p className="font-black text-base leading-none text-brand-navy">{s.val}</p>
+            <p className="text-[9px] font-bold uppercase tracking-wider text-brand-navy/50">{s.label}</p>
           </div>
         ))}
       </div>
-
 
       {/* Challenges · Badges · Stickers row */}
       {(() => {
@@ -24711,29 +24709,30 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
         return (
           <div className="flex gap-2">
             <motion.button whileTap={{ scale: 0.97 }} onClick={() => setPubChallengeOpen(true)}
-              className="flex-1 rounded-2xl overflow-hidden shadow-md shadow-blue-900/20">
+              className="flex-1 rounded-2xl overflow-hidden shadow-sm shadow-blue-500/20">
               <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3.5"
-                style={{ background: 'linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 40%, #2563eb 70%, #3b82f6 100%)' }}>
+                style={{ background: 'linear-gradient(160deg, #2563eb 0%, #3b82f6 45%, #60a5fa 75%, #93c5fd 100%)' }}>
                 <span className="shine-ray" aria-hidden="true" />
                 <p className="relative z-10 text-xl font-black text-white leading-none">{activePub.length}</p>
-                <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-blue-200/80">Challenges</span>
+                <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-blue-100/80">Challenges</span>
               </div>
             </motion.button>
             <motion.button whileTap={{ scale: 0.97 }} onClick={() => setPubBadgesOpen(true)}
-              className="flex-1 rounded-2xl overflow-hidden shadow-md shadow-amber-900/20">
+              className="flex-1 rounded-2xl overflow-hidden shadow-sm shadow-amber-300/30">
               <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3.5 overflow-hidden"
-                style={{ background: 'linear-gradient(135deg, #78350f 0%, #b45309 40%, #d97706 75%, #fbbf24 100%)' }}>
+                style={{ background: 'linear-gradient(135deg, #fefce8 0%, #fef9c3 30%, #fde68a 60%, #fbbf24 100%)' }}>
                 <span className="badge-shine-ray" aria-hidden="true" />
-                <p className="relative z-10 text-xl font-black text-white leading-none">{earnedBadges.length}</p>
-                <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-amber-200/80">Badges</span>
+                <p className="relative z-10 text-xl font-black leading-none" style={{ color: '#713f12' }}>{earnedBadges.length}</p>
+                <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest" style={{ color: '#b45309' }}>Badges</span>
               </div>
             </motion.button>
             <motion.button whileTap={{ scale: 0.97 }} onClick={() => setPubStickerOpen(true)}
-              className="flex-1 rounded-2xl overflow-hidden shadow-md"
-              style={{ background: 'linear-gradient(135deg, #0D0D2B, #1A0730)' }}>
-              <div className="flex flex-col items-center justify-center gap-0.5 px-3 py-3.5">
-                <p className="text-xl font-black text-white leading-none">{pubStickerCount}</p>
-                <span className="text-[9px] font-bold uppercase tracking-widest text-amber-300/80">Stickers</span>
+              className="flex-1 rounded-2xl overflow-hidden shadow-sm shadow-blue-500/20">
+              <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3.5"
+                style={{ background: 'linear-gradient(160deg, #2563eb 0%, #3b82f6 45%, #60a5fa 75%, #93c5fd 100%)' }}>
+                <span className="shine-ray" aria-hidden="true" />
+                <p className="relative z-10 text-xl font-black text-white leading-none">{pubStickerCount}</p>
+                <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-blue-100/80">Stickers</span>
               </div>
             </motion.button>
           </div>
