@@ -4879,9 +4879,11 @@ function CardSetsAdminPanel({ onClose }: { onClose: () => void }) {
     if (!addName.trim() || !imageFile || !selectedSetId) return;
     setSaving(true);
     try {
-      const blob = await compressImage(imageFile, 800);
-      const path = `collectible_cards/${activeTier}_${Date.now()}.webp`;
-      const snap2 = await uploadBytes(storageRef(storage, path), blob);
+      const isGif = imageFile.type === 'image/gif';
+      const blob = isGif ? imageFile : await compressImage(imageFile, 800);
+      const ext = isGif ? 'gif' : 'webp';
+      const path = `collectible_cards/${activeTier}_${Date.now()}.${ext}`;
+      const snap2 = await uploadBytes(storageRef(storage, path), blob, isGif ? { contentType: 'image/gif' } : undefined);
       const imageUrl = await getDownloadURL(snap2.ref);
       await addDoc(collection(db, 'collectible_cards'), {
         name: addName.trim(), imageUrl, tier: activeTier, probability: addProb, setId: selectedSetId, createdAt: serverTimestamp(),
