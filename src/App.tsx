@@ -4815,6 +4815,7 @@ function CardSetsAdminPanel({ onClose }: { onClose: () => void }) {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState('');
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   // edit card
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
@@ -4877,20 +4878,32 @@ function CardSetsAdminPanel({ onClose }: { onClose: () => void }) {
 
   const handleAddCard = async () => {
     if (!addName.trim() || !imageFile || !selectedSetId) return;
+    setSaveError('');
+    const isGif = imageFile.type === 'image/gif';
+    if (isGif && imageFile.size > 20 * 1024 * 1024) {
+      setSaveError('GIF must be under 20 MB.');
+      return;
+    }
+    if (!isGif && imageFile.size > 5 * 1024 * 1024) {
+      setSaveError('Image must be under 5 MB.');
+      return;
+    }
     setSaving(true);
     try {
-      const isGif = imageFile.type === 'image/gif';
       const blob = isGif ? imageFile : await compressImage(imageFile, 800);
       const ext = isGif ? 'gif' : 'webp';
       const path = `collectible_cards/${activeTier}_${Date.now()}.${ext}`;
-      const snap2 = await uploadBytes(storageRef(storage, path), blob, isGif ? { contentType: 'image/gif' } : undefined);
+      const snap2 = await uploadBytes(storageRef(storage, path), blob, { contentType: isGif ? 'image/gif' : 'image/webp' });
       const imageUrl = await getDownloadURL(snap2.ref);
       await addDoc(collection(db, 'collectible_cards'), {
         name: addName.trim(), imageUrl, tier: activeTier, probability: addProb, setId: selectedSetId, createdAt: serverTimestamp(),
       });
       setAddName(''); setAddProb(10); setImageFile(null); setImagePreview('');
       if (fileRef.current) fileRef.current.value = '';
-    } catch (e) { console.error(e); }
+    } catch (e: any) {
+      console.error(e);
+      setSaveError(e?.message || 'Upload failed. Check file size or try again.');
+    }
     setSaving(false);
   };
 
@@ -5124,6 +5137,7 @@ function CardSetsAdminPanel({ onClose }: { onClose: () => void }) {
                     <label className="text-[10px] font-bold text-brand-navy/60 uppercase tracking-widest mb-2 block">Win probability within tier</label>
                     <ProbCounter value={addProb} onChange={setAddProb} min={1} max={100} />
                   </div>
+                  {saveError && <p className="text-xs text-red-500 font-medium text-center -mt-1">{saveError}</p>}
                   <button onClick={handleAddCard} disabled={saving || !addName.trim() || !imageFile}
                     className="w-full py-3.5 rounded-2xl font-bold text-sm text-white transition-all active:scale-[0.98] disabled:opacity-40"
                     style={{ background: cfg.solid }}>

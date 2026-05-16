@@ -29,10 +29,10 @@ service firebase.storage {
                    && request.resource.contentType.matches('image/.*');
     }
 
-    // Collectible card images — admin only
+    // Collectible card images — admin only (20 MB to allow animated GIFs)
     match /collectible_cards/{fileName} {
       allow write: if request.auth != null
-                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.size < 20 * 1024 * 1024
                    && request.resource.contentType.matches('image/.*');
     }
 
