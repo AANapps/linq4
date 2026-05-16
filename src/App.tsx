@@ -3356,6 +3356,7 @@ function UserStickerPanel({ uid, isOwnProfile = false, onOpenPack }: {
   onOpenPack?: (stickers: CollectibleSticker[]) => void;
 }) {
   const [col, setCol] = useState<{ stickers: CollectibleSticker[]; revealedIds: string[]; uniqueTiers: StickerTier[] } | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     return onSnapshot(doc(db, 'user_stickers', uid), snap => {
@@ -3370,72 +3371,27 @@ function UserStickerPanel({ uid, isOwnProfile = false, onOpenPack }: {
 
   const handleReveal = async (stickerId: string) => {
     if (!col) return;
-    const ref = doc(db, 'user_stickers', uid);
-    await updateDoc(ref, { revealedIds: arrayUnion(stickerId) });
+    await updateDoc(doc(db, 'user_stickers', uid), { revealedIds: arrayUnion(stickerId) });
   };
 
-  if (!col) {
-    if (!isOwnProfile) return null;
-    return (
-      <div className="glass-card rounded-[2rem] p-5">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75 mb-3">Animal Cards</p>
-        <p className="text-xs text-brand-navy/75 text-center py-6">Collect stamps to earn your first animal cards!</p>
-      </div>
-    );
-  }
+  if (!col || col.stickers.length === 0) return null;
 
   const unrevealed = col.stickers.filter(s => !col.revealedIds.includes(s.id));
-  const revealed = col.stickers.filter(s => col.revealedIds.includes(s.id));
-  const recentRevealed = [...revealed].reverse().slice(0, 6);
-  const panelSets = totalSetsCompleted(revealed);
-  const panelWon = allSetsWon(revealed);
+  const revealed = [...col.stickers.filter(s => col.revealedIds.includes(s.id))].reverse();
 
   return (
-    <div className="glass-card rounded-[2rem] p-5 space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75">Animal Cards</p>
-        <span className="text-[10px] font-bold text-brand-navy/75">{panelSets}/14 · {col.stickers.length} total</span>
+    <div className="space-y-2">
+      {/* Header */}
+      <div className="flex items-center justify-between px-1">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75">
+          Cards <span className="text-brand-navy/40 normal-case tracking-normal font-bold">{col.stickers.length}</span>
+        </p>
+        <button onClick={() => setExpanded(v => !v)} className="text-[10px] font-bold text-brand-navy/50 active:opacity-60">
+          {expanded ? 'Collapse' : 'See all'}
+        </button>
       </div>
 
-      {/* Compact tier overview — one row per tier showing variants */}
-      <div className="space-y-2">
-        {STICKER_ORDER.map(tier => {
-          const cfg = STICKER_CONFIG[tier];
-          const sets = tierSetsCompleted(revealed, tier);
-          const tierDone = sets >= cfg.variants.length;
-          return (
-            <div key={tier} className="flex items-center gap-2 rounded-xl px-1.5 py-1 transition-all"
-              style={tierDone ? { boxShadow: `0 0 10px 2px ${cfg.solid}55`, background: `${cfg.bg}` } : {}}>
-              <span className="text-[8px] font-black uppercase w-14 shrink-0" style={{ color: sets > 0 ? cfg.color : '#CBD5E1' }}>{cfg.theme}</span>
-              <div className="flex gap-1.5 flex-1">
-                {cfg.variants.map((v, vi) => {
-                  const count = revealed.filter(s => s.tier === tier && (s.variant ?? 0) === vi).length;
-                  return (
-                    <div key={vi} className="flex flex-col items-center gap-0.5 flex-1">
-                      <div className="w-full aspect-square rounded-xl border flex items-center justify-center"
-                        style={count > 0 ? { background: cfg.bg, borderColor: cfg.border } : { background: '#F1F5F9', borderColor: '#E2E8F0' }}>
-                        <span style={{ fontSize: 16, lineHeight: 1 }}>{count > 0 ? v.emoji : '?'}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <span className="text-[8px] font-black shrink-0 w-9 text-right" style={{ color: tierDone ? cfg.color : '#94A3B8' }}>
-                {sets}/{cfg.variants.length}{tierDone ? '✓' : ''}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Win badge */}
-      {panelWon && (
-        <div className="p-2.5 rounded-2xl text-center" style={{ background: '#FEF9C3', border: '1px solid #FDE68A' }}>
-          <p className="text-xs font-bold text-amber-700">🏆 All sets complete — you win!</p>
-        </div>
-      )}
-
-      {/* Unrevealed cards — open pack CTA */}
+      {/* Open pack CTA */}
       {isOwnProfile && unrevealed.length > 0 && (
         <motion.button
           className="w-full py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"
@@ -3445,33 +3401,35 @@ function UserStickerPanel({ uid, isOwnProfile = false, onOpenPack }: {
           animate={{ boxShadow: ['0 0 0px #F5C51800', '0 0 18px #F5C51866', '0 0 0px #F5C51800'] }}
           transition={{ duration: 2, repeat: Infinity }}
         >
-          🎴 Open {unrevealed.length} stored card{unrevealed.length !== 1 ? 's' : ''}
+          🎴 Open {unrevealed.length} card{unrevealed.length !== 1 ? 's' : ''}
         </motion.button>
       )}
 
-      {/* Recent revealed cards */}
-      {recentRevealed.length > 0 && (
-        <div>
-          <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/72 mb-2">
-            Recent {isOwnProfile ? '' : 'cards'}
-          </p>
-          <div className="flex gap-2 flex-wrap">
-            {recentRevealed.map(s => (
-              <StickerCard key={s.id} sticker={s} isRevealed={true} size="sm" />
-            ))}
-          </div>
+      {/* Slider (collapsed) */}
+      {!expanded && (
+        <div className="flex gap-2 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-2 scrollbar-hide">
+          {isOwnProfile && unrevealed.map(s => (
+            <div key={s.id} className="snap-start shrink-0">
+              <StickerCard sticker={s} isRevealed={false} onReveal={() => handleReveal(s.id)} size="sm" />
+            </div>
+          ))}
+          {revealed.map(s => (
+            <div key={s.id} className="snap-start shrink-0">
+              <StickerCard sticker={s} isRevealed={true} size="sm" />
+            </div>
+          ))}
         </div>
       )}
 
-      {/* Unrevealed cards for own profile (in-place reveal) */}
-      {isOwnProfile && unrevealed.length > 0 && (
-        <div>
-          <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/72 mb-2">Tap to reveal</p>
-          <div className="flex gap-2 flex-wrap">
-            {unrevealed.slice(0, 6).map(s => (
-              <StickerCard key={s.id} sticker={s} isRevealed={false} onReveal={() => handleReveal(s.id)} size="sm" />
-            ))}
-          </div>
+      {/* Expanded grid */}
+      {expanded && (
+        <div className="flex flex-wrap gap-2 px-1">
+          {isOwnProfile && unrevealed.map(s => (
+            <StickerCard key={s.id} sticker={s} isRevealed={false} onReveal={() => handleReveal(s.id)} size="sm" />
+          ))}
+          {revealed.map(s => (
+            <StickerCard key={s.id} sticker={s} isRevealed={true} size="sm" />
+          ))}
         </div>
       )}
     </div>
