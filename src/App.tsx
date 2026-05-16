@@ -18593,12 +18593,12 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
               <div className="overflow-y-auto flex-1 px-4 pb-8">
                 {earnedBadges.length === 0
                   ? <p className="text-center text-xs text-brand-navy/50 py-10">No badges earned yet</p>
-                  : <div className="flex flex-wrap gap-4 pt-1">
+                  : <div className="grid grid-cols-4 gap-3 pt-1">
                       {earnedBadges.map(b => (
                         <button key={b.id} onClick={() => setSelectedBadge(b)}
                           className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform">
                           <HexBadge badge={b} size={52} />
-                          <span className="text-[10px] font-bold text-brand-navy/80 text-center w-14 leading-tight line-clamp-2">{b.name}</span>
+                          <span className="text-[10px] font-bold text-brand-navy/80 text-center leading-tight line-clamp-2">{b.name}</span>
                         </button>
                       ))}
                     </div>
@@ -24421,6 +24421,8 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
   const [pubStickerOpen, setPubStickerOpen] = useState(false);
   const [pubChallengeTab, setPubChallengeTab] = useState<'current' | 'completed'>('current');
   const [pubStickerCount, setPubStickerCount] = useState(0);
+  const [pubStickers, setPubStickers] = useState<CollectibleSticker[]>([]);
+  const [pubRevealedIds, setPubRevealedIds] = useState<string[]>([]);
 
   useEffect(() => {
     return onSnapshot(collection(db, 'badges'), snap =>
@@ -24444,7 +24446,12 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
 
   useEffect(() => {
     return onSnapshot(doc(db, 'user_stickers', initialTargetUser.uid), snap => {
-      setPubStickerCount(snap.exists() ? (snap.data().stickers || []).length : 0);
+      const data = snap.exists() ? snap.data() : null;
+      const s: CollectibleSticker[] = data?.stickers || [];
+      const r: string[] = data?.revealedIds || [];
+      setPubStickerCount(s.length);
+      setPubStickers(s);
+      setPubRevealedIds(r);
     });
   }, [initialTargetUser.uid]);
 
@@ -24848,7 +24855,18 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
               </button>
             </div>
             <div className="flex-1 overflow-y-auto px-4 pb-6">
-              <BadgeSwipeRow badges={earnedBadges} onSelectBadge={setSelectedBadge} />
+              {earnedBadges.length === 0
+                ? <p className="text-center text-xs text-brand-navy/50 py-10">No badges earned yet</p>
+                : <div className="grid grid-cols-4 gap-3 pt-1">
+                    {earnedBadges.map(b => (
+                      <button key={b.id} onClick={() => setSelectedBadge(b)}
+                        className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform">
+                        <HexBadge badge={b} size={52} />
+                        <span className="text-[10px] font-bold text-brand-navy/80 text-center leading-tight line-clamp-2">{b.name}</span>
+                      </button>
+                    ))}
+                  </div>
+              }
             </div>
           </motion.div>
         )}
@@ -24857,20 +24875,14 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
       {/* Stickers popup */}
       <AnimatePresence>
         {pubStickerOpen && (
-          <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-            transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-            className="fixed top-0 left-0 right-0 bottom-0 z-[9999] bg-brand-bg flex flex-col overflow-hidden max-w-md mx-auto"
-            onClick={e => e.stopPropagation()}>
-            <div className="px-5 pt-5 pb-3 flex items-center justify-between shrink-0">
-              <h3 className="font-bold text-brand-navy text-lg">Stickers</h3>
-              <button onClick={() => setPubStickerOpen(false)} className="w-8 h-8 rounded-full bg-brand-navy/8 flex items-center justify-center">
-                <X size={16} className="text-brand-navy" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto px-4 pb-6">
-              <UserStickerPanel uid={targetUser.uid} isOwnProfile={false} />
-            </div>
-          </motion.div>
+          <UserCollectionModal
+            uid={targetUser.uid}
+            isOwnProfile={false}
+            stickers={pubStickers}
+            revealedIds={pubRevealedIds}
+            onReveal={() => {}}
+            onClose={() => setPubStickerOpen(false)}
+          />
         )}
       </AnimatePresence>
 
