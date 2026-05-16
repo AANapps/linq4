@@ -21366,7 +21366,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                 <div className="relative w-full h-full flex flex-col items-center justify-center gap-1"
                   style={{ background: 'linear-gradient(135deg, #022c22 0%, #064e3b 40%, #059669 80%, #34d399 100%)' }}>
                   <MatrixRainCanvas opacity={0.35} fadeColor="rgba(2,44,34,0.18)" />
-                  <p className="relative z-10 text-5xl font-black text-white font-mono leading-none tracking-tight">LINQLE</p>
+                  <p className="relative z-10 text-3xl font-black text-white font-mono leading-none tracking-tight">LINQLE</p>
                   <p className="relative z-10 text-[11px] font-semibold text-emerald-200/80 tracking-wide">Win sticker packs</p>
                   {currentProfile?.linqleCompletions?.find(c => c.date === new Date().toISOString().split('T')[0]) && (
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 z-10 text-xs font-bold text-emerald-300 bg-white/10 px-2 py-1 rounded-full">✓ Done</span>
