@@ -3359,28 +3359,37 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
   onOpenPack?: (s: CollectibleSticker[]) => void;
 }) {
   const [selected, setSelected] = useState<{ sticker: CollectibleSticker; count: number } | null>(null);
-  const [challengeNames, setChallengeNames] = useState<Record<string, string>>({});
+  const [cardDefs, setCardDefs] = useState<CollectibleCardDef[]>([]);
+  const [cardSets, setCardSets] = useState<CollectibleCardSet[]>([]);
 
   useEffect(() => {
-    const ids = [...new Set(stickers.filter(s => s.challengeId).map(s => s.challengeId!))];
-    if (!ids.length) return;
-    Promise.all(ids.map(id => getDoc(doc(db, 'challenges', id)))).then(snaps => {
-      const names: Record<string, string> = {};
-      snaps.forEach(snap => { if (snap.exists()) names[snap.id] = snap.data().title; });
-      setChallengeNames(names);
-    });
+    Promise.all([
+      getDocs(collection(db, 'collectible_cards')),
+      getDocs(collection(db, 'collectible_card_sets')),
+    ]).then(([defsSnap, setsSnap]) => {
+      setCardDefs(defsSnap.docs.map(d => ({ id: d.id, ...d.data() } as CollectibleCardDef)));
+      setCardSets(setsSnap.docs.map(d => ({ id: d.id, ...d.data() } as CollectibleCardSet)));
+    }).catch(console.error);
   }, []);
 
   const unrevealed = stickers.filter(s => !revealedIds.includes(s.id));
   const revealed = stickers.filter(s => revealedIds.includes(s.id));
 
-  // Group revealed by collection key
-  const collectionMap = new Map<string, CollectibleSticker[]>();
+  // Build cardDefId → setId lookup
+  const defSetMap = new Map<string, string>(cardDefs.map(d => [d.id, d.setId ?? '']));
+
+  // Group revealed stickers by their card set id ('__none__' for no set)
+  const bySet = new Map<string, CollectibleSticker[]>();
   revealed.forEach(s => {
-    const key = s.challengeId ?? 'general';
-    if (!collectionMap.has(key)) collectionMap.set(key, []);
-    collectionMap.get(key)!.push(s);
+    const setId = s.cardDefId ? (defSetMap.get(s.cardDefId) || '__none__') : '__none__';
+    if (!bySet.has(setId)) bySet.set(setId, []);
+    bySet.get(setId)!.push(s);
   });
+
+  // Order: known sets first (sorted by name), then __none__
+  const setOrder = cardSets
+    .filter(s => bySet.has(s.id))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   // Deduplicate: group by cardDefId or tier+variant, keep most recent, track count
   const dedupe = (list: CollectibleSticker[]) => {
@@ -3394,6 +3403,27 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
   };
 
   const cfg = selected ? STICKER_CONFIG[selected.sticker.tier] : null;
+
+  const renderSet = (key: string, name: string, cards: CollectibleSticker[]) => {
+    const deduped = dedupe(cards);
+    return (
+      <div key={key} className="space-y-3">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/60">{name} · {cards.length} card{cards.length !== 1 ? 's' : ''}</p>
+        <div className="flex flex-wrap gap-3">
+          {deduped.map(({ sticker, count }) => (
+            <div key={sticker.cardDefId ?? `${sticker.tier}-${sticker.variant}`} className="relative" onClick={() => setSelected({ sticker, count })}>
+              <StickerCard sticker={sticker} isRevealed={true} size="sm" />
+              {count > 1 && (
+                <span className="absolute -top-1.5 -right-1.5 bg-brand-navy text-white text-[9px] font-black rounded-full w-5 h-5 flex items-center justify-center shadow">
+                  x{count}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -3423,28 +3453,10 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
             <p className="text-center text-sm text-brand-navy/50 py-8">No revealed cards yet</p>
           )}
 
-          {/* Collections */}
-          {[...collectionMap.entries()].map(([key, cards]) => {
-            const name = key === 'general' ? 'General Collection' : (challengeNames[key] ?? 'Collection');
-            const deduped = dedupe(cards);
-            return (
-              <div key={key} className="space-y-3">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/60">{name} · {cards.length} cards</p>
-                <div className="flex flex-wrap gap-3">
-                  {deduped.map(({ sticker, count }) => (
-                    <div key={sticker.cardDefId ?? `${sticker.tier}-${sticker.variant}`} className="relative" onClick={() => setSelected({ sticker, count })}>
-                      <StickerCard sticker={sticker} isRevealed={true} size="sm" />
-                      {count > 1 && (
-                        <span className="absolute -top-1.5 -right-1.5 bg-brand-navy text-white text-[9px] font-black rounded-full w-5 h-5 flex items-center justify-center shadow">
-                          x{count}
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+          {/* Sets in order */}
+          {setOrder.map(set => renderSet(set.id, set.name, bySet.get(set.id)!))}
+          {/* Cards with no set */}
+          {bySet.has('__none__') && renderSet('__none__', 'Other', bySet.get('__none__')!)}
         </div>
       </div>
 
