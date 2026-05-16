@@ -17403,6 +17403,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
   const [birthdayOffers, setBirthdayOffers] = useState<StoreOffer[]>([]);
   const [selectedBirthdayOffer, setSelectedBirthdayOffer] = useState<StoreOffer | null>(null);
   const [bdayCountdown, setBdayCountdown] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
+  const [showLinqleWins, setShowLinqleWins] = useState(false);
 
   useEffect(() => {
     if (!profile?.birthday) return;
@@ -18081,41 +18082,47 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
       })()}
 
 
-      {/* Linqle — big scrambling button */}
-      {onOpenLinqle && (
-        <motion.button whileTap={{ scale: 0.97 }} onClick={onOpenLinqle}
-          className="w-full rounded-[1.5rem] overflow-hidden shadow-lg shadow-green-900/20"
-          style={{ height: '90px' }}>
-          <div className="relative w-full h-full flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #022c22 0%, #064e3b 40%, #059669 80%, #34d399 100%)' }}>
-            <MatrixRainCanvas opacity={0.35} fadeColor="rgba(2,44,34,0.18)" />
-            <div className="relative z-10 flex items-center gap-0.5">
-              {'LINQLE'.split('').map((letter, i) => (
-                <MatrixScramble key={i} target={letter} className="text-5xl font-black text-white font-mono leading-none tracking-tight" />
-              ))}
-            </div>
-            {profile?.linqleCompletions?.find(c => c.date === new Date().toISOString().split('T')[0]) && (
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 z-10 text-xs font-bold text-emerald-300 bg-white/10 px-2 py-1 rounded-full">✓ Done</span>
+      {/* Linqle — compact card */}
+      {(() => {
+        const wins = (profile?.linqleCompletions || []).filter(c => c.won);
+        const winCount = wins.length;
+        return (
+          <div className="space-y-2">
+            <motion.button whileTap={{ scale: 0.97 }} onClick={() => setShowLinqleWins(v => !v)}
+              className="w-full rounded-2xl overflow-hidden shadow-md shadow-green-900/20">
+              <div className="relative flex items-center justify-between px-4 py-3"
+                style={{ background: 'linear-gradient(135deg, #022c22 0%, #064e3b 50%, #059669 100%)' }}>
+                <MatrixRainCanvas opacity={0.25} fadeColor="rgba(2,44,34,0.15)" />
+                <div className="relative z-10 flex items-center gap-0.5">
+                  {'LINQLE'.split('').map((letter, i) => (
+                    <MatrixScramble key={i} target={letter} className="text-2xl font-black text-white font-mono leading-none tracking-tight" />
+                  ))}
+                </div>
+                <div className="relative z-10 flex items-center gap-2">
+                  {winCount > 0 && (
+                    <span className="text-xs font-bold text-emerald-300 bg-white/10 px-2 py-0.5 rounded-full">{winCount} wins</span>
+                  )}
+                  <span className="text-emerald-400 text-xs">{showLinqleWins ? '▲' : '▼'}</span>
+                </div>
+              </div>
+            </motion.button>
+            {showLinqleWins && winCount > 0 && (
+              <div className="flex gap-2 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-1 scrollbar-hide">
+                {[...wins].reverse().map(c => (
+                  <div key={c.date} className="snap-start shrink-0 w-16 px-2 py-2.5 rounded-2xl flex flex-col items-center gap-1 bg-green-50 border border-green-200">
+                    <span className="text-lg">🟩</span>
+                    <p className="text-[10px] font-black text-brand-navy">{c.guesses}/6</p>
+                    <p className="text-[9px] text-brand-navy/75">{c.date.slice(5)}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+            {showLinqleWins && winCount === 0 && (
+              <p className="text-center text-xs text-brand-navy/50 py-2">No wins yet — play today!</p>
             )}
           </div>
-        </motion.button>
-      )}
-
-      {/* Linqle history */}
-      {(profile.linqleCompletions?.length ?? 0) > 0 && (
-        <div className="space-y-2.5">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75 px-1">Linqle History</p>
-          <div className="flex gap-2 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-2 scrollbar-hide">
-            {[...(profile.linqleCompletions || [])].reverse().map(c => (
-              <div key={c.date} className={`snap-start shrink-0 w-16 px-2 py-2.5 rounded-2xl flex flex-col items-center gap-1 ${c.won ? 'bg-green-50 border border-green-200' : 'bg-brand-navy/5 border border-brand-navy/10'}`}>
-                <span className="text-lg font-black">{c.won ? '🟩' : '🟥'}</span>
-                <p className="text-[10px] font-black text-brand-navy">{c.won ? `${c.guesses}/6` : 'X/6'}</p>
-                <p className="text-[9px] text-brand-navy/75">{c.date.slice(5)}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* My challenges */}
       {myChallenges.length > 0 && (
