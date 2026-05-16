@@ -8659,6 +8659,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           onLogout={onLogout}
           onDeleteAccount={onDeleteAccount}
           onViewUser={onViewUser}
+          onViewStore={onViewStore}
           onGoToDeals={() => setActiveTab('deals')}
           onOpenLinqle={() => setViewingLinqle(true)}
           user={user}
@@ -17745,7 +17746,7 @@ function StoreLeaderboard({ storeId, storeName, logoUrl, type, userId }: {
   );
 }
 
-function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, onViewUser, onGoToDeals, onOpenLinqle, user }: { profile: UserProfile | null, userCards: Card[], stores?: StoreProfile[], onLogout: () => void, onDeleteAccount: () => Promise<void>, onViewUser: (u: UserProfile) => void, onGoToDeals?: () => void, onOpenLinqle?: () => void, user: FirebaseUser }) {
+function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, onViewUser, onViewStore, onGoToDeals, onOpenLinqle, user }: { profile: UserProfile | null, userCards: Card[], stores?: StoreProfile[], onLogout: () => void, onDeleteAccount: () => Promise<void>, onViewUser: (u: UserProfile) => void, onViewStore?: (s: StoreProfile) => void, onGoToDeals?: () => void, onOpenLinqle?: () => void, user: FirebaseUser }) {
   const [activeSubTab, setActiveSubTab] = useState<'posts' | 'interactions'>('posts');
   const [profileRedeemingChallenge, setProfileRedeemingChallenge] = useState<{ challenge: Challenge; entry: any; userName: string } | null>(null);
   const [showProfileSettings, setShowProfileSettings] = useState(false);
@@ -18431,7 +18432,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         </motion.button>
       </div>
 
-      {/* Active stamp cards — slider */}
+      {/* Active cards — slider */}
       {(() => {
         const activeCards = userCards.filter(c => !c.isArchived);
         if (activeCards.length === 0) return null;
@@ -18441,11 +18442,14 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
               const store = (stores || []).find(s => s.id === card.store_id);
               if (!store) return null;
               const theme = store.theme || '#3a6fcc';
-              const total = store.stamps_required_for_reward || 10;
-              const pct = Math.min(100, Math.round((card.current_stamps / total) * 100));
+              const isMembership = card.card_type === 'membership';
+              const isVisit = isMembership && store.membershipType === 'visit';
+              const isSpend = isMembership && (store.membershipType === 'spend' || !store.membershipType);
               return (
-                <div key={card.id} className="snap-start shrink-0 w-52 rounded-2xl overflow-hidden shadow-sm"
-                  style={{ border: `1.5px solid ${theme}30` }}>
+                <div key={card.id}
+                  onClick={() => onViewStore?.(store)}
+                  className="snap-start shrink-0 w-52 rounded-2xl overflow-hidden shadow-sm active:scale-[0.98] transition-transform"
+                  style={{ border: `1.5px solid ${theme}30`, cursor: onViewStore ? 'pointer' : 'default' }}>
                   <div className="flex items-center gap-3 px-4 py-3" style={{ backgroundColor: theme }}>
                     <div className="w-9 h-9 rounded-xl overflow-hidden border-2 border-white/40 shrink-0">
                       <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
@@ -18455,16 +18459,33 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                       <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">{store.category || 'Retail'}</p>
                     </div>
                   </div>
-                  <div className="bg-white px-4 py-3">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[10px] font-bold" style={{ color: theme }}>{card.current_stamps} / {total} stamps</span>
-                      <span className="text-[10px] font-bold text-brand-navy/72">{pct}%</span>
+                  {isMembership ? (
+                    <div className="bg-white px-4 py-3 flex items-center justify-between">
+                      {isVisit ? (
+                        <>
+                          <span className="text-[10px] font-bold" style={{ color: theme }}>{card.total_visits ?? 0} visits</span>
+                          {(card.earned_rewards ?? 0) > 0 && <span className="text-[10px] font-bold text-green-600">{card.earned_rewards} rewards</span>}
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-[10px] font-bold" style={{ color: theme }}>{(card.membership_points ?? 0).toLocaleString()} pts</span>
+                          {(card.total_spent ?? 0) > 0 && <span className="text-[10px] font-bold text-brand-navy/60">£{(card.total_spent ?? 0).toFixed(2)}</span>}
+                        </>
+                      )}
                     </div>
-                    <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: `${theme}20` }}>
-                      <motion.div className="h-full rounded-full" style={{ backgroundColor: theme }}
-                        initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.6, ease: 'easeOut' }} />
+                  ) : (
+                    <div className="bg-white px-4 py-3">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[10px] font-bold" style={{ color: theme }}>{card.current_stamps} / {store.stamps_required_for_reward || 10} stamps</span>
+                        <span className="text-[10px] font-bold text-brand-navy/72">{Math.min(100, Math.round((card.current_stamps / (store.stamps_required_for_reward || 10)) * 100))}%</span>
+                      </div>
+                      <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: `${theme}20` }}>
+                        <motion.div className="h-full rounded-full" style={{ backgroundColor: theme }}
+                          initial={{ width: 0 }} animate={{ width: `${Math.min(100, Math.round((card.current_stamps / (store.stamps_required_for_reward || 10)) * 100))}%` }}
+                          transition={{ duration: 0.6, ease: 'easeOut' }} />
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               );
             })}
@@ -24916,8 +24937,8 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
               const store = stores.find(s => s.id === card.store_id);
               if (!store) return null;
               const theme = store.theme || '#3a6fcc';
-              const total = store.stamps_required_for_reward || 10;
-              const pct = Math.min(100, Math.round((card.current_stamps / total) * 100));
+              const isMembership = card.card_type === 'membership';
+              const isVisit = isMembership && store.membershipType === 'visit';
               return (
                 <div
                   key={card.id}
@@ -24934,21 +24955,37 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
                       <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">{store.category || 'Retail'}</p>
                     </div>
                   </div>
-                  <div className="bg-white px-4 py-3">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[10px] font-bold" style={{ color: theme }}>{card.current_stamps} / {total} stamps</span>
-                      <span className="text-[10px] font-bold text-brand-navy/90">{pct}%</span>
+                  {isMembership ? (
+                    <div className="bg-white px-4 py-3 flex items-center justify-between">
+                      {isVisit ? (
+                        <>
+                          <span className="text-[10px] font-bold" style={{ color: theme }}>{card.total_visits ?? 0} visits</span>
+                          {(card.earned_rewards ?? 0) > 0 && <span className="text-[10px] font-bold text-green-600">{card.earned_rewards} rewards</span>}
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-[10px] font-bold" style={{ color: theme }}>{(card.membership_points ?? 0).toLocaleString()} pts</span>
+                          {(card.total_spent ?? 0) > 0 && <span className="text-[10px] font-bold text-brand-navy/60">£{(card.total_spent ?? 0).toFixed(2)}</span>}
+                        </>
+                      )}
                     </div>
-                    <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: `${theme}20` }}>
-                      <motion.div
-                        className="h-full rounded-full"
-                        style={{ backgroundColor: theme }}
-                        initial={{ width: 0 }}
-                        animate={{ width: `${pct}%` }}
-                        transition={{ duration: 0.6, ease: 'easeOut' }}
-                      />
+                  ) : (
+                    <div className="bg-white px-4 py-3">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[10px] font-bold" style={{ color: theme }}>{card.current_stamps} / {store.stamps_required_for_reward || 10} stamps</span>
+                        <span className="text-[10px] font-bold text-brand-navy/90">{Math.min(100, Math.round((card.current_stamps / (store.stamps_required_for_reward || 10)) * 100))}%</span>
+                      </div>
+                      <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: `${theme}20` }}>
+                        <motion.div
+                          className="h-full rounded-full"
+                          style={{ backgroundColor: theme }}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${Math.min(100, Math.round((card.current_stamps / (store.stamps_required_for_reward || 10)) * 100))}%` }}
+                          transition={{ duration: 0.6, ease: 'easeOut' }}
+                        />
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               );
             })}
