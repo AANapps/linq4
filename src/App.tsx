@@ -10203,7 +10203,7 @@ function StampCelebrationModal({
                     initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
                     className="text-[10px] font-bold uppercase tracking-widest text-brand-gold"
                   >
-                    {isUpsell ? '✨ Level up your stamps!' : page.type === 'stamp' ? '🎉 Stamp Collected!' : page.done ? '🏆 Challenge Complete!' : '🏃 Challenge Update'}
+                    {isUpsell ? '✨ Level up your stamps!' : page.type === 'stamp' ? `🎉 Stamp ${page.currentStamps} of ${page.rewardTiers?.length ? Math.max(...page.rewardTiers.map(t => t.stamps)) : page.totalStamps} collected!` : page.done ? '🏆 Challenge Complete!' : '🏃 Challenge Update'}
                   </motion.p>
                   <motion.h2
                     initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
