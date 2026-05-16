@@ -5505,8 +5505,9 @@ interface DailyVoteData {
   closed: boolean;
   winner: number | null;
   commentCount?: number;
+  voteId?: string;
 }
-interface DailyVoteComment { id: string; uid: string; name: string; photoURL?: string; text: string; createdAt: any; likes: string[]; }
+interface DailyVoteComment { id: string; uid: string; name: string; photoURL?: string; text: string; createdAt: any; likes: string[]; voteId?: string; }
 
 function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
   const today = new Date().toISOString().split('T')[0];
@@ -5533,22 +5534,26 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
   }, [today]);
 
   useEffect(() => {
+    if (!voteData?.voteId) return;
+    const vid = voteData.voteId;
     return onSnapshot(collection(db, 'daily_vote', today, 'votes'), snap => {
       const counts: Record<string, number> = {};
-      snap.docs.forEach(d => { const k = String(d.data().optionIdx); counts[k] = (counts[k] || 0) + 1; });
+      snap.docs.forEach(d => {
+        if (d.data().voteId !== vid) return;
+        const k = String(d.data().optionIdx); counts[k] = (counts[k] || 0) + 1;
+      });
       setLiveCounts(counts);
-      setLiveTotal(snap.size);
+      setLiveTotal(Object.values(counts).reduce((a, b) => a + b, 0));
     });
-  }, [today]);
+  }, [today, voteData?.voteId]);
 
   const createVote = async () => {
     const cleanOpts = options.map(o => o.trim()).filter(Boolean);
     if (!question.trim() || cleanOpts.length < 2) return;
     setSaving(true);
-    const voteCounts: Record<string, number> = {};
-    cleanOpts.forEach((_, i) => { voteCounts[String(i)] = 0; });
+    const voteId = Date.now().toString();
     try {
-      await setDoc(doc(db, 'daily_vote', today), { question: question.trim(), options: cleanOpts, voteCounts, totalVotes: 0, closed: false, winner: null, commentCount: 0, createdAt: serverTimestamp() });
+      await setDoc(doc(db, 'daily_vote', today), { question: question.trim(), options: cleanOpts, voteCounts: {}, totalVotes: 0, closed: false, winner: null, commentCount: 0, voteId, createdAt: serverTimestamp() });
     } catch (e) { console.error(e); }
     setSaving(false);
   };
@@ -5564,10 +5569,8 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
     const cleanOpts = editOptions.map(o => o.trim()).filter(Boolean);
     if (!editQuestion.trim() || cleanOpts.length < 2) return;
     setSaving(true);
-    const voteCounts: Record<string, number> = {};
-    cleanOpts.forEach((_, i) => { voteCounts[String(i)] = voteData?.voteCounts[String(i)] ?? 0; });
     try {
-      await updateDoc(doc(db, 'daily_vote', today), { question: editQuestion.trim(), options: cleanOpts, voteCounts });
+      await updateDoc(doc(db, 'daily_vote', today), { question: editQuestion.trim(), options: cleanOpts });
       setEditing(false);
     } catch (e) { console.error(e); }
     setSaving(false);
@@ -5576,7 +5579,15 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
   const deleteVote = async () => {
     setDeleting(true);
     try {
-      await deleteDoc(doc(db, 'daily_vote', today));
+      const [votesSnap, commentsSnap] = await Promise.all([
+        getDocs(collection(db, 'daily_vote', today, 'votes')),
+        getDocs(collection(db, 'daily_vote', today, 'comments')),
+      ]);
+      await Promise.all([
+        ...votesSnap.docs.map(d => deleteDoc(d.ref)),
+        ...commentsSnap.docs.map(d => deleteDoc(d.ref)),
+        deleteDoc(doc(db, 'daily_vote', today)),
+      ]);
       setConfirmDelete(false);
     } catch (e) { console.error(e); }
     setDeleting(false);
@@ -14009,7 +14020,7 @@ const KEYBOARD_ROWS = [['Q','W','E','R','T','Y','U','I','O','P'],['A','S','D','F
 function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: { currentUser: FirebaseUser; currentProfile: UserProfile | null; onClose: () => void; onPackReady?: (s: CollectibleSticker[]) => void }) {
   const today = new Date().toISOString().split('T')[0];
   const [voteData, setVoteData] = useState<DailyVoteData | null>(null);
-  const [userVote, setUserVote] = useState<number | null>(null);
+  const [rawUserVote, setRawUserVote] = useState<{ optionIdx: number; voteId?: string } | null>(null);
   const [liveCounts, setLiveCounts] = useState<Record<string, number>>({});
   const [liveTotal, setLiveTotal] = useState(0);
   const [comments, setComments] = useState<DailyVoteComment[]>([]);
@@ -14017,20 +14028,38 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
   const [voting, setVoting] = useState(false);
   const [posting, setPosting] = useState(false);
 
-  useEffect(() => onSnapshot(doc(db, 'daily_vote', today), snap => { if (snap.exists()) setVoteData(snap.data() as DailyVoteData); }), [today]);
-  useEffect(() => onSnapshot(doc(db, 'daily_vote', today, 'votes', currentUser.uid), snap => {
-    setUserVote(snap.exists() ? snap.data().optionIdx as number : null);
-  }), [today, currentUser.uid]);
-  useEffect(() => onSnapshot(collection(db, 'daily_vote', today, 'votes'), snap => {
-    const counts: Record<string, number> = {};
-    snap.docs.forEach(d => { const k = String(d.data().optionIdx); counts[k] = (counts[k] || 0) + 1; });
-    setLiveCounts(counts);
-    setLiveTotal(snap.size);
+  // voteId from main doc — only count user's vote and counts if it matches
+  const voteId = voteData?.voteId;
+  const userVote = rawUserVote && voteId && rawUserVote.voteId === voteId ? rawUserVote.optionIdx : null;
+
+  useEffect(() => onSnapshot(doc(db, 'daily_vote', today), snap => {
+    setVoteData(snap.exists() ? snap.data() as DailyVoteData : null);
   }), [today]);
+
+  useEffect(() => onSnapshot(doc(db, 'daily_vote', today, 'votes', currentUser.uid), snap => {
+    setRawUserVote(snap.exists() ? { optionIdx: snap.data().optionIdx, voteId: snap.data().voteId } : null);
+  }), [today, currentUser.uid]);
+
+  useEffect(() => {
+    if (!voteId) return;
+    return onSnapshot(collection(db, 'daily_vote', today, 'votes'), snap => {
+      const counts: Record<string, number> = {};
+      snap.docs.forEach(d => {
+        if (d.data().voteId !== voteId) return;
+        const k = String(d.data().optionIdx); counts[k] = (counts[k] || 0) + 1;
+      });
+      setLiveCounts(counts);
+      setLiveTotal(Object.values(counts).reduce((a, b) => a + b, 0));
+    });
+  }, [today, voteId]);
+
   useEffect(() => {
     const q = query(collection(db, 'daily_vote', today, 'comments'), orderBy('createdAt', 'desc'), limit(50));
-    return onSnapshot(q, snap => setComments(snap.docs.map(d => ({ id: d.id, ...d.data() } as DailyVoteComment))));
-  }, [today]);
+    return onSnapshot(q, snap => {
+      const all = snap.docs.map(d => ({ id: d.id, ...d.data() } as DailyVoteComment));
+      setComments(voteId ? all.filter(c => c.voteId === voteId) : all);
+    });
+  }, [today, voteId]);
 
   useEffect(() => {
     if (!voteData?.closed || voteData.winner === null || userVote === null || userVote !== voteData.winner) return;
@@ -14048,11 +14077,11 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
   }, [voteData?.closed, voteData?.winner, userVote]);
 
   const castVote = async (idx: number) => {
-    if (voting || userVote !== null || voteData?.closed) return;
+    if (voting || userVote !== null || voteData?.closed || !voteId) return;
     setVoting(true);
     try {
       await setDoc(doc(db, 'daily_vote', today, 'votes', currentUser.uid), {
-        optionIdx: idx, uid: currentUser.uid,
+        optionIdx: idx, uid: currentUser.uid, voteId,
         name: currentProfile?.name || 'Anonymous',
         votedAt: serverTimestamp(), rewardClaimed: false,
       });
@@ -14061,10 +14090,14 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
   };
 
   const postComment = async () => {
-    if (!commentText.trim() || posting) return;
+    if (!commentText.trim() || posting || !voteId) return;
     setPosting(true);
     try {
-      await addDoc(collection(db, 'daily_vote', today, 'comments'), { uid: currentUser.uid, name: currentProfile?.name || 'Anonymous', photoURL: currentProfile?.photoURL || '', text: commentText.trim(), createdAt: serverTimestamp(), likes: [] });
+      await addDoc(collection(db, 'daily_vote', today, 'comments'), {
+        uid: currentUser.uid, name: currentProfile?.name || 'Anonymous',
+        photoURL: currentProfile?.photoURL || '', text: commentText.trim(),
+        createdAt: serverTimestamp(), likes: [], voteId,
+      });
       setCommentText('');
     } catch (e) { console.error('postComment', e); }
     setPosting(false);
@@ -14227,24 +14260,35 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
 function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady }: { currentUser: FirebaseUser; currentProfile: UserProfile | null; onPackReady?: (s: CollectibleSticker[]) => void }) {
   const today = new Date().toISOString().split('T')[0];
   const [voteData, setVoteData] = useState<DailyVoteData | null>(null);
-  const [userVote, setUserVote] = useState<number | null>(null);
+  const [rawUserVote, setRawUserVote] = useState<{ optionIdx: number; voteId?: string } | null>(null);
   const [liveCounts, setLiveCounts] = useState<Record<string, number>>({});
   const [liveTotal, setLiveTotal] = useState(0);
   const [open, setOpen] = useState(false);
 
-  useEffect(() => onSnapshot(doc(db, 'daily_vote', today), snap => { if (snap.exists()) setVoteData(snap.data() as DailyVoteData); }), [today]);
-  useEffect(() => onSnapshot(doc(db, 'daily_vote', today, 'votes', currentUser.uid), snap => {
-    setUserVote(snap.exists() ? snap.data().optionIdx as number : null);
-  }), [today, currentUser.uid]);
-  useEffect(() => onSnapshot(collection(db, 'daily_vote', today, 'votes'), snap => {
-    const counts: Record<string, number> = {};
-    snap.docs.forEach(d => { const k = String(d.data().optionIdx); counts[k] = (counts[k] || 0) + 1; });
-    setLiveCounts(counts);
-    setLiveTotal(snap.size);
+  useEffect(() => onSnapshot(doc(db, 'daily_vote', today), snap => {
+    setVoteData(snap.exists() ? snap.data() as DailyVoteData : null);
   }), [today]);
+  useEffect(() => onSnapshot(doc(db, 'daily_vote', today, 'votes', currentUser.uid), snap => {
+    setRawUserVote(snap.exists() ? { optionIdx: snap.data().optionIdx, voteId: snap.data().voteId } : null);
+  }), [today, currentUser.uid]);
+  useEffect(() => {
+    if (!voteData?.voteId) return;
+    const vid = voteData.voteId;
+    return onSnapshot(collection(db, 'daily_vote', today, 'votes'), snap => {
+      const counts: Record<string, number> = {};
+      snap.docs.forEach(d => {
+        if (d.data().voteId !== vid) return;
+        const k = String(d.data().optionIdx); counts[k] = (counts[k] || 0) + 1;
+      });
+      setLiveCounts(counts);
+      setLiveTotal(Object.values(counts).reduce((a, b) => a + b, 0));
+    });
+  }, [today, voteData?.voteId]);
 
   if (!voteData) return null;
 
+  const voteId = voteData.voteId;
+  const userVote = rawUserVote && voteId && rawUserVote.voteId === voteId ? rawUserVote.optionIdx : null;
   const total = Math.max(liveTotal, 1);
   const hasVoted = userVote !== null;
 

@@ -257,6 +257,7 @@ service cloud.firestore {
       match /votes/{userId} {
         allow read: if isAuthenticated();
         allow create, update: if isAuthenticated() && request.auth.uid == userId;
+        allow delete: if isAdmin();
       }
 
       match /comments/{commentId} {
