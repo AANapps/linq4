@@ -18413,18 +18413,20 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         <motion.button whileTap={{ scale: 0.97 }} onClick={() => setChallengeOpen(true)}
           className="flex-1 rounded-2xl overflow-hidden shadow-md shadow-blue-900/20">
           <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3.5"
-            style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #3730a3 50%, #6366f1 100%)' }}>
+            style={{ background: 'linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 40%, #2563eb 70%, #3b82f6 100%)' }}>
             <span className="shine-ray" aria-hidden="true" />
             <p className="relative z-10 text-xl font-black text-white leading-none">{activeChallenges.length}</p>
-            <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-indigo-300">Challenges</span>
+            <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-blue-200/80">Challenges</span>
           </div>
         </motion.button>
 
         <motion.button whileTap={{ scale: 0.97 }} onClick={() => setBadgesOpen(true)}
-          className="flex-1 rounded-2xl overflow-hidden shadow-md shadow-brand-navy/10 bg-white border border-brand-navy/8">
-          <div className="flex flex-col items-center justify-center gap-0.5 px-3 py-3.5">
-            <p className="text-xl font-black text-brand-navy leading-none">{earnedBadges.length}</p>
-            <span className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/60">Badges</span>
+          className="flex-1 rounded-2xl overflow-hidden shadow-md shadow-amber-900/20">
+          <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3.5 overflow-hidden"
+            style={{ background: 'linear-gradient(135deg, #78350f 0%, #b45309 40%, #d97706 75%, #fbbf24 100%)' }}>
+            <span className="badge-shine-ray" aria-hidden="true" />
+            <p className="relative z-10 text-xl font-black text-white leading-none">{earnedBadges.length}</p>
+            <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-amber-200/80">Badges</span>
           </div>
         </motion.button>
 
@@ -18433,7 +18435,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           style={{ background: 'linear-gradient(135deg, #0D0D2B, #1A0730)' }}>
           <div className="flex flex-col items-center justify-center gap-0.5 px-3 py-3.5">
             <p className="text-xl font-black text-white leading-none">{stickerData?.stickers.length ?? 0}</p>
-            <span className="text-[9px] font-bold uppercase tracking-widest text-amber-300/80">Cards</span>
+            <span className="text-[9px] font-bold uppercase tracking-widest text-amber-300/80">Stickers</span>
           </div>
         </motion.button>
       </div>
