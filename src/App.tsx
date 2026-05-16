@@ -17492,6 +17492,8 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
   const [challengeOpen, setChallengeOpen] = useState(false);
   const [challengeTab, setChallengeTab] = useState<'current' | 'completed'>('current');
   const [badgesOpen, setBadgesOpen] = useState(false);
+  const [showStickerModal, setShowStickerModal] = useState(false);
+  const [stickerData, setStickerData] = useState<{ stickers: CollectibleSticker[]; revealedIds: string[] } | null>(null);
 
   useEffect(() => {
     if (!profile?.birthday) return;
@@ -17676,6 +17678,18 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
     );
   }, []);
 
+  useEffect(() => {
+    if (!profile?.uid) return;
+    return onSnapshot(doc(db, 'user_stickers', profile.uid), snap => {
+      if (snap.exists()) {
+        const d = snap.data();
+        setStickerData({ stickers: d.stickers || [], revealedIds: d.revealedIds || [] });
+      } else {
+        setStickerData(null);
+      }
+    });
+  }, [profile?.uid]);
+
   if (!profile) return null;
 
   const lifetimeStamps = Math.max(
@@ -17706,6 +17720,8 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
 
   // Challenges I'm in (consumer)
   const myChallenges = profileChallenges.filter(c => (c.participantUids || []).includes(user.uid));
+  const activeChallenges = myChallenges.filter(c => !profileEntries.get(c.id)?.redeemed);
+  const completedChallenges = myChallenges.filter(c => profileEntries.get(c.id)?.redeemed);
 
   // Badge metric map
   const badgeMetrics: Record<BadgeMetric, number> = {
@@ -18093,26 +18109,54 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         )}
       </AnimatePresence>
 
-      {/* Challenges card — full width */}
-      {(() => {
-        const activeChallenges = myChallenges.filter(c => !profileEntries.get(c.id)?.redeemed);
-        const completedChallenges = myChallenges.filter(c => profileEntries.get(c.id)?.redeemed);
-        return (
-          <div className="space-y-2">
-            <motion.button whileTap={{ scale: 0.97 }} onClick={() => setChallengeOpen(v => !v)}
-              className="w-full rounded-2xl overflow-hidden shadow-md shadow-blue-900/20">
-              <div className="relative flex items-center justify-between px-5 py-3.5"
-                style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #3730a3 50%, #6366f1 100%)' }}>
-                <span className="shine-ray" aria-hidden="true" />
-                <span className="relative z-10 text-[11px] font-bold uppercase tracking-widest text-indigo-300">Challenges</span>
-                <p className="relative z-10 text-xl font-black text-white leading-none">{activeChallenges.length}</p>
-              </div>
-            </motion.button>
+      {/* One row: Challenges · Badges · Stickers */}
+      <div className="flex gap-2">
+        <motion.button whileTap={{ scale: 0.97 }} onClick={() => setChallengeOpen(true)}
+          className="flex-1 rounded-2xl overflow-hidden shadow-md shadow-blue-900/20">
+          <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3.5"
+            style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #3730a3 50%, #6366f1 100%)' }}>
+            <span className="shine-ray" aria-hidden="true" />
+            <p className="relative z-10 text-xl font-black text-white leading-none">{activeChallenges.length}</p>
+            <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-indigo-300">Challenges</span>
+          </div>
+        </motion.button>
 
-            {/* Challenges expanded */}
-            {challengeOpen && (
-              <div className="space-y-2">
-                {/* Tabs */}
+        <motion.button whileTap={{ scale: 0.97 }} onClick={() => setBadgesOpen(true)}
+          className="flex-1 rounded-2xl overflow-hidden shadow-md shadow-brand-navy/10 bg-white border border-brand-navy/8">
+          <div className="flex flex-col items-center justify-center gap-0.5 px-3 py-3.5">
+            <p className="text-xl font-black text-brand-navy leading-none">{earnedBadges.length}</p>
+            <span className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/60">Badges</span>
+          </div>
+        </motion.button>
+
+        <motion.button whileTap={{ scale: 0.97 }} onClick={() => setShowStickerModal(true)}
+          className="flex-1 rounded-2xl overflow-hidden shadow-md"
+          style={{ background: 'linear-gradient(135deg, #0D0D2B, #1A0730)' }}>
+          <div className="flex flex-col items-center justify-center gap-0.5 px-3 py-3.5">
+            <p className="text-xl font-black text-white leading-none">{stickerData?.stickers.length ?? 0}</p>
+            <span className="text-[9px] font-bold uppercase tracking-widest text-amber-300/80">Cards</span>
+          </div>
+        </motion.button>
+      </div>
+
+      {/* Challenges popup sheet */}
+      <AnimatePresence>
+        {challengeOpen && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] flex items-end max-w-md mx-auto"
+            onClick={() => setChallengeOpen(false)}>
+            <motion.div
+              initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+              className="w-full bg-brand-bg rounded-t-3xl max-h-[80vh] flex flex-col overflow-hidden"
+              onClick={e => e.stopPropagation()}>
+              <div className="px-5 pt-5 pb-3 flex items-center justify-between shrink-0">
+                <h3 className="font-bold text-brand-navy text-lg">Challenges</h3>
+                <button onClick={() => setChallengeOpen(false)} className="w-8 h-8 rounded-full bg-brand-navy/8 flex items-center justify-center">
+                  <X size={16} className="text-brand-navy" />
+                </button>
+              </div>
+              <div className="px-4 pb-3 shrink-0">
                 <div className="flex gap-1.5 bg-brand-navy/5 rounded-2xl p-1">
                   {(['current', 'completed'] as const).map(tab => (
                     <button key={tab} onClick={() => setChallengeTab(tab)}
@@ -18121,22 +18165,17 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                     </button>
                   ))}
                 </div>
-
-                {/* Active challenges */}
+              </div>
+              <div className="overflow-y-auto flex-1 px-4 pb-8 space-y-2">
                 {challengeTab === 'current' && (
-                  <div className="space-y-2">
-                    {activeChallenges.length === 0 && (
-                      <p className="text-center text-xs text-brand-navy/50 py-3">No active challenges</p>
-                    )}
+                  <>
+                    {activeChallenges.length === 0 && <p className="text-center text-xs text-brand-navy/50 py-6">No active challenges</p>}
                     {activeChallenges.map(c => {
                       const entry = profileEntries.get(c.id);
                       let progress = 0;
                       if (entry) {
-                        if (c.vendorIds?.length) {
-                          progress = Math.min(c.goal, entry.count || 0);
-                        } else {
-                          progress = Math.max(0, Math.min(c.goal, (profile.totalStamps || 0) - (entry.totalStampsAtJoin || 0)));
-                        }
+                        if (c.vendorIds?.length) progress = Math.min(c.goal, entry.count || 0);
+                        else progress = Math.max(0, Math.min(c.goal, (profile.totalStamps || 0) - (entry.totalStampsAtJoin || 0)));
                       }
                       const pct = c.goal > 0 ? Math.min(100, Math.round((progress / c.goal) * 100)) : 0;
                       const done = pct >= 100;
@@ -18153,7 +18192,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                           </div>
                           <p className="text-[9px] font-medium text-white/60 relative z-10">{progress} / {c.goal} {c.unit} · 🎁 {c.reward}</p>
                           {done && entry && (
-                            <button onClick={() => setProfileRedeemingChallenge({ challenge: c, entry, userName: profile.name || '' })}
+                            <button onClick={() => { setChallengeOpen(false); setProfileRedeemingChallenge({ challenge: c, entry, userName: profile.name || '' }); }}
                               className="w-full py-2.5 rounded-xl bg-white/20 backdrop-blur-sm border border-white/30 text-white font-bold text-xs relative z-10 active:scale-95 transition-all">
                               🏆 Redeem Now
                             </button>
@@ -18161,20 +18200,14 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                         </div>
                       );
                     })}
-                  </div>
+                  </>
                 )}
-
-                {/* Completed challenges */}
                 {challengeTab === 'completed' && (
-                  <div className="space-y-2">
-                    {completedChallenges.length === 0 && (
-                      <p className="text-center text-xs text-brand-navy/50 py-3">No completed challenges yet</p>
-                    )}
+                  <>
+                    {completedChallenges.length === 0 && <p className="text-center text-xs text-brand-navy/50 py-6">No completed challenges yet</p>}
                     {completedChallenges.map(c => (
                       <div key={c.id} className="rounded-2xl bg-white border border-brand-navy/8 px-4 py-3 flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-green-50 flex items-center justify-center shrink-0">
-                          <Trophy size={14} className="text-green-500" />
-                        </div>
+                        <div className="w-8 h-8 rounded-xl bg-green-50 flex items-center justify-center shrink-0"><Trophy size={14} className="text-green-500" /></div>
                         <div className="flex-1 min-w-0">
                           <p className="font-bold text-sm text-brand-navy truncate">{c.title}</p>
                           <p className="text-[10px] text-brand-navy/75">🎁 {c.reward}</p>
@@ -18182,13 +18215,64 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                         <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full shrink-0">Redeemed</span>
                       </div>
                     ))}
-                  </div>
+                  </>
                 )}
               </div>
-            )}
-          </div>
-        );
-      })()}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Badges popup sheet */}
+      <AnimatePresence>
+        {badgesOpen && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] flex items-end max-w-md mx-auto"
+            onClick={() => setBadgesOpen(false)}>
+            <motion.div
+              initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+              className="w-full bg-brand-bg rounded-t-3xl max-h-[80vh] flex flex-col overflow-hidden"
+              onClick={e => e.stopPropagation()}>
+              <div className="px-5 pt-5 pb-4 flex items-center justify-between shrink-0">
+                <h3 className="font-bold text-brand-navy text-lg">Badges <span className="text-brand-navy/40 font-normal text-base">({earnedBadges.length})</span></h3>
+                <button onClick={() => setBadgesOpen(false)} className="w-8 h-8 rounded-full bg-brand-navy/8 flex items-center justify-center">
+                  <X size={16} className="text-brand-navy" />
+                </button>
+              </div>
+              <div className="overflow-y-auto flex-1 px-4 pb-8">
+                {earnedBadges.length === 0
+                  ? <p className="text-center text-xs text-brand-navy/50 py-10">No badges earned yet</p>
+                  : <div className="flex flex-wrap gap-4 pt-1">
+                      {earnedBadges.map(b => (
+                        <button key={b.id} onClick={() => setSelectedBadge(b)}
+                          className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform">
+                          <HexBadge badge={b} size={52} />
+                          <span className="text-[10px] font-bold text-brand-navy/80 text-center w-14 leading-tight line-clamp-2">{b.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                }
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Sticker collection popup */}
+      <AnimatePresence>
+        {showStickerModal && stickerData && (
+          <UserCollectionModal
+            uid={profile.uid}
+            isOwnProfile={true}
+            stickers={stickerData.stickers}
+            revealedIds={stickerData.revealedIds}
+            onReveal={async (id) => { await updateDoc(doc(db, 'user_stickers', profile.uid), { revealedIds: arrayUnion(id) }); }}
+            onClose={() => setShowStickerModal(false)}
+            onOpenPack={stickers => { setShowStickerModal(false); setProfilePendingPack(stickers); }}
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {profileRedeemingChallenge && (
@@ -18201,40 +18285,6 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           />
         )}
       </AnimatePresence>
-
-      {/* Badges card — full width */}
-      <div className="space-y-2">
-        <motion.button whileTap={{ scale: 0.97 }} onClick={() => setBadgesOpen(v => !v)}
-          className="w-full rounded-2xl overflow-hidden shadow-md shadow-brand-navy/10 bg-white border border-brand-navy/8">
-          <div className="relative flex items-center justify-between px-5 py-3.5">
-            <span className="text-[11px] font-bold uppercase tracking-widest text-brand-navy/60">Badges</span>
-            <p className="text-xl font-black text-brand-navy leading-none">{earnedBadges.length}</p>
-          </div>
-        </motion.button>
-        {badgesOpen && earnedBadges.length > 0 && (
-          <div className="flex flex-wrap gap-3 pt-1 px-1">
-            {earnedBadges.map(b => (
-              <button key={b.id} onClick={() => setSelectedBadge(b)}
-                className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform">
-                <HexBadge badge={b} size={48} />
-                <span className="text-[10px] font-bold text-brand-navy/80 text-center w-14 leading-tight line-clamp-2">{b.name}</span>
-              </button>
-            ))}
-          </div>
-        )}
-        {badgesOpen && earnedBadges.length === 0 && (
-          <p className="text-center text-xs text-brand-navy/50 py-2">No badges earned yet</p>
-        )}
-      </div>
-
-      {/* Card collection — stickers one row */}
-      {profile?.uid && (
-        <UserStickerPanel
-          uid={profile.uid}
-          isOwnProfile={true}
-          onOpenPack={stickers => setProfilePendingPack(stickers)}
-        />
-      )}
 
       {/* Active stamp cards */}
       {(() => {
