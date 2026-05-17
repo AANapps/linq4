@@ -14797,25 +14797,62 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
 
   if (compact) {
     return (
-      <div
-        className="rounded-3xl p-4 flex items-center gap-3"
-        style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4338ca 80%, #6366f1 100%)' }}
-      >
-        <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/30 shrink-0 cursor-pointer"
-          onClick={() => store && onViewStore && onViewStore(store)}>
-          <img src={store?.logoUrl || `https://picsum.photos/seed/${card.store_id}/200/200`} alt="" className="w-full h-full object-cover" />
-        </div>
-        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => store && onViewStore && onViewStore(store)}>
-          <p className="font-bold text-white text-sm truncate">{store?.name || 'Store'}</p>
-          <p className="text-indigo-200 text-xs">{points} pts • {visits} visits</p>
-        </div>
-        <div className="shrink-0 flex items-center gap-2">
-          <div className="text-right cursor-pointer" onClick={() => store && onViewStore && onViewStore(store)}>
+      <>
+        <div
+          className="rounded-3xl p-4 flex items-center gap-3 cursor-pointer"
+          style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4338ca 80%, #6366f1 100%)' }}
+          onClick={() => setShowScanSheet(true)}
+        >
+          <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/30 shrink-0"
+            onClick={(e) => { e.stopPropagation(); store && onViewStore && onViewStore(store); }}>
+            <img src={store?.logoUrl || `https://picsum.photos/seed/${card.store_id}/200/200`} alt="" className="w-full h-full object-cover" />
+          </div>
+          <div className="flex-1 min-w-0" onClick={(e) => { e.stopPropagation(); store && onViewStore && onViewStore(store); }}>
+            <p className="font-bold text-white text-sm truncate">{store?.name || 'Store'}</p>
+            <p className="text-indigo-200 text-xs">{points} pts • {visits} visits</p>
+          </div>
+          <div className="shrink-0 text-right" onClick={(e) => { e.stopPropagation(); store && onViewStore && onViewStore(store); }}>
             <p className="text-xs font-bold text-indigo-200">Redeem</p>
             <p className="text-white font-bold text-sm">${moneyValue} off</p>
           </div>
         </div>
-      </div>
+        <AnimatePresence>
+          {showScanSheet && (
+            <div className="fixed inset-0 z-[100] flex items-end justify-center">
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                onClick={() => setShowScanSheet(false)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+              <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+                transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+                className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-10 shadow-2xl"
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="bg-brand-navy/20 rounded-full mx-auto mb-5" style={{ width: 40, height: 4 }} />
+                <h3 className="font-display text-xl font-bold text-center mb-1">{store?.name}</h3>
+                <p className="text-brand-navy/60 text-xs text-center mb-6">{points.toLocaleString()} pts · {visits} visits</p>
+                <div className="grid grid-cols-2 gap-3 mb-5">
+                  <button onClick={() => { setShowScanSheet(false); setShowQRScan(true); }}
+                    className="flex flex-col items-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform gradient-logo-blue text-white shadow-lg relative overflow-hidden">
+                    <span className="card-shine-ray" aria-hidden="true" />
+                    <QrCode size={28} className="relative z-10" />
+                    <span className="relative z-10">Scan QR Code</span>
+                  </button>
+                  <button onClick={() => { setShowScanSheet(false); onScan?.(); }}
+                    className="flex flex-col items-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform bg-brand-navy/8 text-brand-navy">
+                    <Wifi size={28} className="-rotate-90" />
+                    Scan NFC
+                  </button>
+                </div>
+                <button onClick={() => setShowScanSheet(false)} className="w-full text-brand-navy/75 font-bold text-sm py-2">Close</button>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+        <AnimatePresence>
+          {showQRScan && store && (
+            <ConsumerQRScanner card={card} store={store} onClose={() => setShowQRScan(false)} />
+          )}
+        </AnimatePresence>
+      </>
     );
   }
 
