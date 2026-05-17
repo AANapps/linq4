@@ -9229,6 +9229,253 @@ function VendorQRScanner({ store, stampQty, onScanned, onClose }: {
   );
 }
 
+// QR window = 30-second rotating token
+const qrWindow = () => Math.floor(Date.now() / 30000);
+const encodeVendorQR = (storeId: string) => `linq4:stamp:${storeId}:${qrWindow()}`;
+const decodeVendorQR = (val: string): { storeId: string } | null => {
+  if (!val.startsWith('linq4:stamp:')) return null;
+  const parts = val.split(':'); // linq4 : stamp : storeId : window
+  if (parts.length < 4) return null;
+  const storeId = parts[2];
+  const win = parseInt(parts[3]);
+  const now = qrWindow();
+  if (win !== now && win !== now - 1) return null; // expired (>60s old)
+  return { storeId };
+};
+
+function VendorQRDisplay({ store, onClose }: { store: StoreProfile; onClose: () => void }) {
+  const [tick, setTick] = useState(0);
+  const [secsLeft, setSecsLeft] = useState(30 - (Date.now() / 1000 % 30 | 0));
+  const cardTheme = store.theme || '#3a6fcc';
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      const s = 30 - (Math.floor(Date.now() / 1000) % 30);
+      setSecsLeft(s);
+      if (s === 30) setTick(t => t + 1); // new window started
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const qrValue = encodeVendorQR(store.id);
+  const progress = secsLeft / 30;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: '100%' }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: '100%' }}
+      transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+      className="fixed inset-0 z-[130] flex flex-col items-center justify-center"
+      style={{ backgroundColor: cardTheme }}
+    >
+      <button onClick={onClose} className="absolute top-12 right-5 p-2 bg-white/20 rounded-full">
+        <X size={20} className="text-white" />
+      </button>
+
+      <div className="flex flex-col items-center gap-6 px-8">
+        <div className="text-center">
+          <p className="text-white/70 text-xs font-bold uppercase tracking-widest mb-1">Show this to your customer</p>
+          <h2 className="text-white font-bold text-2xl">{store.name}</h2>
+        </div>
+
+        {/* QR code */}
+        <div className="bg-white rounded-3xl p-5 shadow-2xl">
+          <QRCodeSVG key={tick} value={qrValue} size={200} />
+        </div>
+
+        {/* Countdown */}
+        <div className="flex flex-col items-center gap-2 w-48">
+          <div className="w-full h-1.5 bg-white/20 rounded-full overflow-hidden">
+            <motion.div
+              className="h-full bg-white rounded-full"
+              animate={{ width: `${progress * 100}%` }}
+              transition={{ duration: 0.9, ease: 'linear' }}
+            />
+          </div>
+          <p className="text-white/60 text-xs font-bold">
+            Refreshes in {secsLeft}s
+          </p>
+        </div>
+
+        <p className="text-white/50 text-xs text-center max-w-[220px]">
+          Customer scans this with the Linq app to earn their stamp
+        </p>
+      </div>
+    </motion.div>
+  );
+}
+
+function ConsumerQRScanner({ card, store, onClose, onPackReady }: {
+  card: Card; store?: StoreProfile; onClose: () => void; onPackReady?: (s: CollectibleSticker[]) => void;
+}) {
+  type SS = 'idle' | 'scanning' | 'processing' | 'success' | 'error';
+  const [scanState, setScanState] = useState<SS>('idle');
+  const [statusMsg, setStatusMsg] = useState('');
+  const [qty, setQty] = useState(1);
+  const [camError, setCamError] = useState('');
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const rafRef = useRef<number>(0);
+  const detectorRef = useRef<any>(null);
+  const hasBarcodeDetector = typeof window !== 'undefined' && 'BarcodeDetector' in window;
+  const limit = card.stamps_required || store?.stamps_required_for_reward || 10;
+  const remaining = Math.max(1, limit - (card.current_stamps || 0));
+  const cardTheme = store?.theme || '#3a6fcc';
+
+  const stopCamera = () => {
+    cancelAnimationFrame(rafRef.current);
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    streamRef.current = null;
+  };
+
+  const processQR = async (storeId: string) => {
+    stopCamera();
+    const user = auth.currentUser;
+    if (!user) return;
+    const stickers = await processNFCStamp(storeId, user, null, (s, m) => {
+      setScanState(s as SS); setStatusMsg(m);
+    }, qty);
+    if (stickers.length > 0) onPackReady?.(stickers);
+  };
+
+  const startCamera = async () => {
+    setScanState('scanning');
+    setCamError('');
+    try {
+      if (hasBarcodeDetector) {
+        detectorRef.current = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play().then(tick);
+      }
+    } catch (err: any) {
+      setScanState('error');
+      setStatusMsg(err?.message || 'Camera unavailable');
+    }
+  };
+
+  const tick = async () => {
+    const video = videoRef.current;
+    if (!video || video.readyState < 2 || !detectorRef.current) {
+      rafRef.current = requestAnimationFrame(tick); return;
+    }
+    try {
+      const barcodes = await detectorRef.current.detect(video);
+      for (const b of barcodes) {
+        const decoded = decodeVendorQR(b.rawValue as string);
+        if (!decoded) { setScanState('error'); setStatusMsg('Invalid or expired QR — ask vendor to refresh.'); stopCamera(); return; }
+        if (decoded.storeId !== card.store_id) { setScanState('error'); setStatusMsg('Wrong store QR code.'); stopCamera(); return; }
+        await processQR(decoded.storeId);
+        return;
+      }
+    } catch { /* non-fatal */ }
+    rafRef.current = requestAnimationFrame(tick);
+  };
+
+  useEffect(() => () => stopCamera(), []);
+
+  const handleClose = () => { stopCamera(); onClose(); };
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[130] flex items-end justify-center" onClick={handleClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+        transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+        className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-12 shadow-2xl"
+        onClick={e => e.stopPropagation()}>
+        <div className="bg-brand-navy/20 rounded-full mx-auto mb-6" style={{ width: 40, height: 4 }} />
+
+        {/* Store header */}
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-12 h-12 rounded-2xl overflow-hidden shrink-0">
+            <img src={store?.logoUrl || `https://picsum.photos/seed/${card.store_id}/200/200`} alt="" className="w-full h-full object-cover" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="font-display text-lg font-bold text-brand-navy">{store?.name || 'Store'}</h3>
+            <p className="text-brand-navy/60 text-xs font-bold flex items-center gap-1"><QrCode size={11} /> Scan store QR code</p>
+          </div>
+        </div>
+
+        {scanState === 'idle' && (
+          <>
+            <div className="bg-brand-bg rounded-2xl p-5 mb-5 text-center">
+              <p className="text-brand-navy/75 text-[10px] font-bold uppercase tracking-widest mb-4">How many stamps?</p>
+              <div className="flex items-center justify-center gap-6">
+                <button onClick={() => setQty(q => Math.max(1, q - 1))}
+                  className="w-12 h-12 rounded-full bg-white shadow font-black text-2xl text-brand-navy flex items-center justify-center active:scale-90 transition-transform">−</button>
+                <span className="font-black text-6xl text-brand-navy leading-none w-16 text-center">{qty}</span>
+                <button onClick={() => setQty(q => Math.min(remaining, q + 1))}
+                  className="w-12 h-12 rounded-full bg-white shadow font-black text-2xl text-brand-navy flex items-center justify-center active:scale-90 transition-transform">+</button>
+              </div>
+              <p className="text-brand-navy/72 text-[10px] font-bold mt-3">{remaining} remaining to reward</p>
+            </div>
+            <button onClick={startCamera}
+              className="w-full flex items-center justify-center gap-2.5 text-white py-4 rounded-2xl font-black text-base mb-4 active:scale-[0.98] transition-transform"
+              style={{ backgroundColor: cardTheme }}>
+              <QrCode size={18} /> Scan QR Code
+            </button>
+            <button onClick={handleClose} className="w-full text-brand-navy/75 text-sm font-bold py-2">Close</button>
+          </>
+        )}
+
+        {scanState === 'scanning' && (
+          <div className="text-center py-2">
+            {hasBarcodeDetector ? (
+              <>
+                <div className="relative w-full rounded-2xl overflow-hidden bg-black mb-4" style={{ height: 200 }}>
+                  <video ref={videoRef} playsInline muted className="w-full h-full object-cover" />
+                  {/* Corner brackets */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="relative w-32 h-32">
+                      <div className="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 rounded-tl" style={{ borderColor: cardTheme }} />
+                      <div className="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 rounded-tr" style={{ borderColor: cardTheme }} />
+                      <div className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 rounded-bl" style={{ borderColor: cardTheme }} />
+                      <div className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 rounded-br" style={{ borderColor: cardTheme }} />
+                    </div>
+                  </div>
+                </div>
+                <p className="text-brand-navy/75 text-sm font-bold mb-1">Point at the store's QR code</p>
+              </>
+            ) : (
+              <p className="text-brand-navy/60 text-sm mb-4">QR scanning not supported. Ask vendor for their store ID.</p>
+            )}
+            {camError && <p className="text-red-500 text-xs mb-3">{camError}</p>}
+            <button onClick={() => { stopCamera(); setScanState('idle'); }}
+              className="w-full text-brand-navy/75 text-sm font-bold py-2">Cancel</button>
+          </div>
+        )}
+
+        {scanState === 'processing' && (
+          <div className="text-center py-6">
+            <Loader2 size={32} className="animate-spin text-brand-navy mx-auto mb-3" />
+            <p className="text-brand-navy/75 font-medium">{statusMsg || 'Processing…'}</p>
+          </div>
+        )}
+
+        {(scanState === 'success' || scanState === 'error') && (
+          <div className="text-center py-4">
+            <div className={cn('w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4',
+              scanState === 'success' ? 'bg-green-100' : 'bg-red-100')}>
+              {scanState === 'success'
+                ? <CheckCircle2 size={28} className="text-green-500" />
+                : <AlertCircle size={28} className="text-red-500" />}
+            </div>
+            <p className={cn('font-bold text-base mb-1', scanState === 'success' ? 'text-green-600' : 'text-red-500')}>{statusMsg}</p>
+            {scanState === 'success'
+              ? <button onClick={handleClose} className="mt-4 w-full text-white py-3 rounded-2xl font-bold" style={{ backgroundColor: cardTheme }}>Done</button>
+              : <button onClick={() => setScanState('idle')} className="mt-4 w-full text-brand-navy/75 text-sm font-bold py-2">Try Again</button>}
+          </div>
+        )}
+      </motion.div>
+    </motion.div>
+  );
+}
+
 function CardScanSheet({ card, store, onClose, onPackReady }: {
   card: Card; store?: StoreProfile; onClose: () => void; onPackReady?: (s: CollectibleSticker[]) => void;
 }) {
@@ -12401,7 +12648,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
               ? store.pointsEarnMode === 'visit' ? 'Issue a fixed points bonus for this visit.'
               : store.pointsEarnMode === 'both' ? 'Enter transaction value — points are awarded for spend and visit.'
               : 'Enter the transaction value to calculate and issue points.'
-              : "Scan a customer's QR code or enter their handle to issue a loyalty stamp."}</p>
+              : store?.scanMethod === 'qr' ? 'Show your QR code — customers scan it to collect their stamp.' : "Scan a customer's QR code or enter their handle to issue a loyalty stamp."}</p>
 
             <div className="space-y-4">
               <button
@@ -12409,7 +12656,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                 className="w-full bg-brand-gold text-brand-navy font-bold py-4 rounded-2xl flex items-center justify-center gap-3"
               >
                 <QrCode className="w-6 h-6" />
-                {store?.scanMethod === 'qr' ? 'Scan Customer QR' : 'Open Scanner'}
+                {store?.scanMethod === 'qr' ? 'Show QR Code' : 'Open Scanner'}
               </button>
 
               <div className="flex gap-4">
@@ -12630,18 +12877,10 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
         )}
       </AnimatePresence>
 
-      {/* QR Camera Scanner */}
+      {/* QR Display — vendor shows this, customer scans it */}
       <AnimatePresence>
         {showQRScanner && store && (
-          <VendorQRScanner
-            store={store}
-            stampQty={stampQuantity}
-            onScanned={async (userId) => {
-              setShowQRScanner(false);
-              await handleIssueByUID(userId);
-            }}
-            onClose={() => setShowQRScanner(false)}
-          />
+          <VendorQRDisplay store={store} onClose={() => setShowQRScanner(false)} />
         )}
       </AnimatePresence>
     </motion.div>
@@ -13501,6 +13740,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
   const [showOptions, setShowOptions] = useState(false);
   const [showCompletionPopup, setShowCompletionPopup] = useState(false);
   const [showCardScan, setShowCardScan] = useState(false);
+  const [showQRScan, setShowQRScan] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [testQty, setTestQty] = useState(1);
@@ -13680,7 +13920,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
     <>
       <motion.div
         whileTap={{ scale: 0.97 }}
-        onClick={() => !isCompleted && !card.isRedeemed && (store?.scanMethod === 'qr' ? setShowQR(true) : setShowCardScan(true))}
+        onClick={() => !isCompleted && !card.isRedeemed && (store?.scanMethod === 'qr' ? setShowQRScan(true) : setShowCardScan(true))}
         className={cn(
           "relative rounded-[2rem] overflow-hidden shadow-xl w-full select-none h-full flex flex-col",
           !isCompleted && !card.isRedeemed ? "cursor-pointer" : ""
@@ -13839,6 +14079,12 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
       <AnimatePresence>
         {showCardScan && (
           <CardScanSheet card={card} store={store} onClose={() => setShowCardScan(false)} />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showQRScan && (
+          <ConsumerQRScanner card={card} store={store} onClose={() => setShowQRScan(false)} />
         )}
       </AnimatePresence>
 
