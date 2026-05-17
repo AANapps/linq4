@@ -6226,6 +6226,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [adminGifs, setAdminGifs] = useState<{ id: string; label: string; url: string }[]>([]);
   const [selectedGif, setSelectedGif] = useState<{ id: string; label: string; url: string } | null>(null);
+  const [stickerTierFilter, setStickerTierFilter] = useState<StickerTier | 'all'>('all');
 
   useEffect(() => {
     const unsub1 = onSnapshot(
@@ -6338,6 +6339,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
       setPostImageFile(null);
       setPostImagePreview(null);
       setSelectedGif(null);
+      setStickerTierFilter('all');
       setTab('all');
     } finally { setPublishing(false); setUploadingImage(false); }
   };
@@ -6533,55 +6535,75 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
               </div>
             )}
 
-            {/* Card collection picker */}
-            {cardSets.length > 0 && (
+            {/* Sticker picker */}
+            {cardDefs.length > 0 && (
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/60 mb-2">Link Card Collection (optional)</p>
-                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                  <button
-                    onClick={() => setSelectedCardSet(null)}
-                    className={cn('shrink-0 px-3 py-1.5 rounded-2xl text-xs font-bold border transition-all', !selectedCardSet ? 'bg-brand-navy text-white border-brand-navy' : 'bg-white border-brand-navy/15 text-brand-navy/60')}
-                  >
-                    None
-                  </button>
-                  {cardSets.map(cs => (
-                    <button
-                      key={cs.id}
-                      onClick={() => { const next = selectedCardSet?.id === cs.id ? null : cs; setSelectedCardSet(next); setSelectedCardDef(null); }}
-                      className={cn('shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs font-bold border transition-all', selectedCardSet?.id === cs.id ? 'bg-purple-600 text-white border-purple-600' : 'bg-white border-brand-navy/15 text-brand-navy/80')}
-                    >
-                      <span>🃏</span>
-                      <span className="max-w-[100px] truncate">{cs.name}</span>
-                    </button>
-                  ))}
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/60">Sticker (optional)</p>
+                  {selectedCardDef && (
+                    <button onClick={() => { setSelectedCardDef(null); setSelectedCardSet(null); }} className="text-[10px] font-bold text-red-400 hover:text-red-500 transition-colors">Clear</button>
+                  )}
                 </div>
-              </div>
-            )}
-
-            {/* Specific card picker — shown when a set is selected and has card defs */}
-            {selectedCardSet && cardDefs.filter(d => d.setId === selectedCardSet.id).length > 0 && (
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/60 mb-2">Select Specific Card (optional)</p>
-                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                  <button
-                    onClick={() => setSelectedCardDef(null)}
-                    className={cn('shrink-0 px-3 py-1.5 rounded-2xl text-xs font-bold border transition-all', !selectedCardDef ? 'bg-brand-navy text-white border-brand-navy' : 'bg-white border-brand-navy/15 text-brand-navy/60')}
-                  >
-                    Any
-                  </button>
-                  {cardDefs.filter(d => d.setId === selectedCardSet.id).map(def => (
-                    <button
-                      key={def.id}
-                      onClick={() => setSelectedCardDef(selectedCardDef?.id === def.id ? null : def)}
-                      className={cn('shrink-0 flex flex-col items-center gap-1 px-2 py-1.5 rounded-2xl border transition-all', selectedCardDef?.id === def.id ? 'bg-purple-600 text-white border-purple-600' : 'bg-white border-brand-navy/15 text-brand-navy/80')}
-                    >
-                      {def.imageUrl
-                        ? <img src={def.imageUrl} alt={def.name} className="w-10 h-10 object-cover rounded-lg" />
-                        : <div className="w-10 h-10 rounded-lg bg-brand-navy/8 flex items-center justify-center"><span>🃏</span></div>}
-                      <span className="max-w-[60px] truncate text-[9px] font-bold">{def.name}</span>
-                    </button>
-                  ))}
+                {/* Tier filter */}
+                <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-2">
+                  {(['all', ...STICKER_ORDER] as const).map(tier => {
+                    const cfg = tier === 'all' ? null : STICKER_CONFIG[tier];
+                    return (
+                      <button
+                        key={tier}
+                        onClick={() => setStickerTierFilter(tier)}
+                        className={cn('shrink-0 px-2.5 py-1 rounded-xl text-[10px] font-bold border transition-all', stickerTierFilter === tier ? 'bg-brand-navy text-white border-brand-navy' : 'bg-white border-brand-navy/15 text-brand-navy/60')}
+                      >
+                        {cfg ? cfg.label : 'All'}
+                      </button>
+                    );
+                  })}
                 </div>
+                {/* Sticker grid */}
+                <div className="grid grid-cols-4 gap-2">
+                  {cardDefs
+                    .filter(d => stickerTierFilter === 'all' || d.tier === stickerTierFilter)
+                    .filter(d => d.imageUrl)
+                    .map(def => {
+                      const cfg = STICKER_CONFIG[def.tier as StickerTier];
+                      const isSelected = selectedCardDef?.id === def.id;
+                      const set = cardSets.find(s => s.id === def.setId);
+                      return (
+                        <button
+                          key={def.id}
+                          onClick={() => {
+                            if (isSelected) { setSelectedCardDef(null); setSelectedCardSet(null); return; }
+                            setSelectedCardDef(def);
+                            setSelectedCardSet(set || null);
+                          }}
+                          className={cn('relative flex flex-col items-center rounded-2xl border-2 overflow-hidden transition-all active:scale-95', isSelected ? 'border-brand-gold ring-2 ring-brand-gold/30 scale-105' : 'border-transparent')}
+                          style={{ background: cfg?.bg || '#F3F4F6' }}
+                        >
+                          <img src={def.imageUrl} alt={def.name} className="w-full aspect-square object-cover" />
+                          <span className="w-full text-center text-[8px] font-bold truncate px-1 py-1" style={{ color: cfg?.color || '#374151' }}>{def.name}</span>
+                          {isSelected && (
+                            <div className="absolute top-1 right-1 w-4 h-4 bg-brand-gold rounded-full flex items-center justify-center">
+                              <span className="text-white text-[8px] font-black">✓</span>
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                </div>
+                {selectedCardDef && (
+                  <div className="mt-2 flex items-center gap-2 px-3 py-2 rounded-xl bg-brand-navy/5 border border-brand-navy/8">
+                    <img src={selectedCardDef.imageUrl} alt={selectedCardDef.name} className="w-8 h-8 object-cover rounded-lg" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-brand-navy truncate">{selectedCardDef.name}</p>
+                      {selectedCardDef.setId && cardSets.find(s => s.id === selectedCardDef.setId) && (
+                        <p className="text-[10px] text-brand-navy/50 truncate">{cardSets.find(s => s.id === selectedCardDef.setId)!.name}</p>
+                      )}
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: STICKER_CONFIG[selectedCardDef.tier as StickerTier]?.bg, color: STICKER_CONFIG[selectedCardDef.tier as StickerTier]?.color }}>
+                      {STICKER_CONFIG[selectedCardDef.tier as StickerTier]?.label}
+                    </span>
+                  </div>
+                )}
               </div>
             )}
 
