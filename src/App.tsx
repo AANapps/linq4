@@ -855,6 +855,7 @@ export default function App() {
   const [viewingStore, setViewingStore] = useState<StoreProfile | null>(null);
   const [viewingUser, setViewingUser] = useState<UserProfile | null>(null);
   const [showVendorQR, setShowVendorQR] = useState(false);
+  const [vendorQREnabled, setVendorQREnabled] = useState(false);
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior }); }, [activeTab]);
   useEffect(() => { if (user) logEvent('screen_view', user.uid, { screen: activeTab }); }, [activeTab]);
@@ -1678,6 +1679,7 @@ export default function App() {
               onDeleteAccount={handleDeleteAccount}
               showVendorQR={showVendorQR}
               setShowVendorQR={setShowVendorQR}
+              onVendorQRStatus={setVendorQREnabled}
             />
           )}
         </AnimatePresence>
@@ -1809,7 +1811,7 @@ export default function App() {
             </div>
             <span className={cn("text-[10px] font-bold uppercase tracking-wider", activeTab === 'home' ? "text-brand-gold" : "text-brand-navy/75")}>Wallet</span>
           </button>
-        ) : (
+        ) : vendorQREnabled ? (
           <button
             onClick={() => setShowVendorQR(true)}
             className="flex-1 flex flex-col items-center gap-1 -mb-1 -mt-7 transition-all"
@@ -1820,7 +1822,7 @@ export default function App() {
             </div>
             <span className="text-[10px] font-bold uppercase tracking-wider text-brand-navy/75">QR Code</span>
           </button>
-        )}
+        ) : null}
         <NavButton
           active={activeTab === 'discover'}
           onClick={() => { setActiveTab('discover'); setViewingStore(null); setViewingUser(null); }}
@@ -11859,7 +11861,7 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
 
 // --- Vendor App ---
 
-function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notifications, activeChatId, setActiveChatId, onLogout, onDeleteAccount, showVendorQR, setShowVendorQR }: { activeTab: string, setActiveTab: (tab: string) => void, profile: UserProfile | null, user: FirebaseUser, onViewUser: (u: UserProfile) => void, notifications: Notification[], activeChatId: string | null, setActiveChatId: (id: string | null) => void, onLogout: () => void, onDeleteAccount: () => Promise<void>, showVendorQR?: boolean, setShowVendorQR?: (v: boolean) => void, key?: React.Key }) {
+function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notifications, activeChatId, setActiveChatId, onLogout, onDeleteAccount, showVendorQR, setShowVendorQR, onVendorQRStatus }: { activeTab: string, setActiveTab: (tab: string) => void, profile: UserProfile | null, user: FirebaseUser, onViewUser: (u: UserProfile) => void, notifications: Notification[], activeChatId: string | null, setActiveChatId: (id: string | null) => void, onLogout: () => void, onDeleteAccount: () => Promise<void>, showVendorQR?: boolean, setShowVendorQR?: (v: boolean) => void, onVendorQRStatus?: (enabled: boolean) => void, key?: React.Key }) {
   const [store, setStore] = useState<StoreProfile | null>(null);
   const [userCards, setUserCards] = useState<Card[]>([]);
 
@@ -11900,6 +11902,10 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   useEffect(() => {
     if (showVendorQR) { setShowQRScanner(true); setShowVendorQR?.(false); }
   }, [showVendorQR]);
+
+  useEffect(() => {
+    onVendorQRStatus?.(!!store && store.cardEnabled !== false && store.scanMethod === 'qr');
+  }, [store]);
 
   const trialEndsMs = store?.trialEndsAt
     ? (store.trialEndsAt as any).toMillis?.() ?? (store.trialEndsAt as any).seconds * 1000
