@@ -20940,6 +20940,63 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
   const isAnonAdmin = post.authorRole === 'admin' && post.isAnonymous;
   const showImage = !!post.postImageUrl && !isAnonAdmin;
 
+  if (isAnonAdmin) {
+    const tierGradients: Record<string, { from: string; via: string; to: string; glow: string }> = {
+      brown:     { from: '#4A2010', via: '#7C3A20', to: '#5C2D0E', glow: '#C4845C' },
+      lightblue: { from: '#0C4A6E', via: '#0369A1', to: '#1E3A5F', glow: '#38BDF8' },
+      red:       { from: '#7F1D1D', via: '#B91C1C', to: '#9F1239', glow: '#F87171' },
+      blue:      { from: '#1E1B4B', via: '#3730A3', to: '#4C1D95', glow: '#818CF8' },
+      gold:      { from: '#451A03', via: '#92400E', to: '#78350F', glow: '#FBBF24' },
+    };
+    const tg = (post.cardDefTier && tierGradients[post.cardDefTier]) || { from: '#1E1B4B', via: '#3730A3', to: '#4C1D95', glow: '#818CF8' };
+    return (
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="px-3 py-2">
+        <div className="relative rounded-3xl overflow-hidden shadow-xl" style={{ background: `linear-gradient(140deg, ${tg.from} 0%, ${tg.via} 55%, ${tg.to} 100%)` }}>
+          {/* Decorative glow orbs */}
+          <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full opacity-20 pointer-events-none" style={{ background: tg.glow, filter: 'blur(48px)' }} />
+          <div className="absolute -bottom-8 -left-8 w-36 h-36 rounded-full opacity-15 pointer-events-none" style={{ background: tg.glow, filter: 'blur(36px)' }} />
+
+          <div className="relative px-5 pt-5 pb-6 flex flex-col items-center gap-4">
+            {/* Alert label */}
+            <div className="flex items-center gap-1.5">
+              <div className="h-px flex-1 bg-white/20 w-8" />
+              <span className="text-[9px] font-black text-white/50 uppercase tracking-[0.22em]">Linq Alert</span>
+              <div className="h-px flex-1 bg-white/20 w-8" />
+            </div>
+
+            {/* Announcement text */}
+            {post.content && (
+              <p className="text-center text-white font-black text-[17px] leading-snug drop-shadow-sm max-w-[280px]">
+                {post.content}
+              </p>
+            )}
+
+            {/* Sticker / card image */}
+            {post.cardDefImageUrl && (
+              <div className="relative flex justify-center mt-1">
+                <div className="absolute inset-0 rounded-2xl opacity-60 blur-2xl scale-75" style={{ background: tg.glow }} />
+                <img
+                  src={post.cardDefImageUrl}
+                  alt={post.cardDefName || ''}
+                  className="relative max-h-52 w-auto object-contain"
+                  style={{ filter: `drop-shadow(0 6px 20px ${tg.glow}80)` }}
+                />
+              </div>
+            )}
+
+            {/* Card / sticker name + set */}
+            {(post.cardDefName || post.cardSetName) && (
+              <div className="flex flex-col items-center gap-0.5 mt-1">
+                {post.cardDefName && <span className="text-white font-bold text-sm">{post.cardDefName}</span>}
+                {post.cardSetName && <span className="text-white/45 text-[9px] font-bold uppercase tracking-[0.18em]">{post.cardSetName}</span>}
+              </div>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -21126,12 +21183,6 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
         )}
         {post.content && (
           <p className="text-[14px] font-semibold text-gray-800 leading-relaxed">{post.content}</p>
-        )}
-
-        {isAnonAdmin && post.cardDefImageUrl && (
-          <div className="flex justify-center pt-1">
-            <img src={post.cardDefImageUrl} alt={post.cardDefName || ''} className="max-h-48 rounded-2xl object-contain" />
-          </div>
         )}
 
         {post.postType === 'poll' && post.pollOptions && (
