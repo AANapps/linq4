@@ -9981,14 +9981,14 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
   );
 }
 
-function VisitScanSheet({ card, store, onClose }: { card: Card; store?: StoreProfile; onClose: () => void }) {
+function VisitScanSheet({ card, store, onClose, initialQty }: { card: Card; store?: StoreProfile; onClose: () => void; initialQty?: number; }) {
   type SS = 'idle' | 'scanning' | 'processing' | 'success' | 'error';
   const [scanState, setScanState] = useState<SS>('idle');
   const [scanMode, setScanMode] = useState<'nfc' | 'qr'>('nfc');
   const [statusMsg, setStatusMsg] = useState('');
   const [testId, setTestId] = useState('');
   const [scannedUID, setScannedUID] = useState('');
-  const [qty, setQty] = useState(store?.membershipStampsPerVisit || 1);
+  const [qty, setQty] = useState(initialQty ?? store?.membershipStampsPerVisit ?? 1);
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const hasNFC = 'NDEFReader' in window;
   const abortRef = useRef<AbortController | null>(null);
@@ -10007,6 +10007,7 @@ function VisitScanSheet({ card, store, onClose }: { card: Card; store?: StorePro
     streamRef.current = null;
   };
 
+  useEffect(() => { startQRCamera(); }, []);
   useEffect(() => () => { abortRef.current?.abort(); stopCamera(); }, []);
 
   const processId = async (storeId: string) => {
@@ -10135,7 +10136,7 @@ function VisitScanSheet({ card, store, onClose }: { card: Card; store?: StorePro
         <div className="relative z-10 pb-14 px-8 text-center">
           <p className="text-white font-bold text-sm mb-1">Point at vendor's QR code</p>
           <p className="text-white/60 text-xs mb-6">Scanning automatically…</p>
-          <button onClick={() => { stopCamera(); setScanState('idle'); }}
+          <button onClick={() => { stopCamera(); onClose(); }}
             className="px-8 py-3 rounded-2xl bg-white/15 text-white font-bold text-sm border border-white/20">
             Cancel
           </button>
@@ -10143,6 +10144,8 @@ function VisitScanSheet({ card, store, onClose }: { card: Card; store?: StorePro
       </motion.div>
     );
   }
+
+  if (scanState === 'idle') return null;
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -10259,7 +10262,7 @@ function VisitScanSheet({ card, store, onClose }: { card: Card; store?: StorePro
         {scanState === 'error' && (
           <div className="text-center">
             <p className="text-red-500 font-medium text-sm mb-4">{statusMsg}</p>
-            <button onClick={() => setScanState('idle')} className="w-full bg-brand-navy/10 text-brand-navy py-3 rounded-2xl font-bold text-sm mb-2">Try Again</button>
+            <button onClick={startQRCamera} className="w-full bg-brand-navy/10 text-brand-navy py-3 rounded-2xl font-bold text-sm mb-2">Try Again</button>
             <button onClick={onClose} className="text-brand-navy/75 text-sm font-bold mt-2">Close</button>
           </div>
         )}
@@ -13876,7 +13879,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
       </AnimatePresence>
       <AnimatePresence>
         {showVisitScan && (
-          <VisitScanSheet card={card} store={store} onClose={() => setShowVisitScan(false)} />
+          <VisitScanSheet card={card} store={store} initialQty={visitScanQty} onClose={() => setShowVisitScan(false)} />
         )}
       </AnimatePresence>
       <AnimatePresence>
@@ -14253,7 +14256,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
       </AnimatePresence>
       <AnimatePresence>
         {showVisitScan && (
-          <VisitScanSheet card={card} store={store} onClose={() => setShowVisitScan(false)} />
+          <VisitScanSheet card={card} store={store} initialQty={visitScanQty} onClose={() => setShowVisitScan(false)} />
         )}
       </AnimatePresence>
       <AnimatePresence>
