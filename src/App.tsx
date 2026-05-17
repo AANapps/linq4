@@ -12009,7 +12009,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   }, [showVendorQR]);
 
   useEffect(() => {
-    onVendorQRStatus?.(!!store && (
+    const isSpendOnly = store?.membershipEnabled === true && store.membershipType === 'spend';
+    onVendorQRStatus?.(!!store && !isSpendOnly && (
       (store.cardEnabled !== false && store.scanMethod === 'qr') ||
       (store.membershipEnabled === true && store.membershipType === 'visit')
     ));
