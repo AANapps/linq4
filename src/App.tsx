@@ -9587,13 +9587,13 @@ function VendorQRDisplay({ store, onClose }: { store: StoreProfile; onClose: () 
   );
 }
 
-function ConsumerQRScanner({ card, store, onClose, onPackReady }: {
-  card: Card; store?: StoreProfile; onClose: () => void; onPackReady?: (s: CollectibleSticker[]) => void;
+function ConsumerQRScanner({ card, store, onClose, onPackReady, initialQty }: {
+  card: Card; store?: StoreProfile; onClose: () => void; onPackReady?: (s: CollectibleSticker[]) => void; initialQty?: number;
 }) {
   type SS = 'idle' | 'scanning' | 'processing' | 'success' | 'error';
   const [scanState, setScanState] = useState<SS>('idle');
   const [statusMsg, setStatusMsg] = useState('');
-  const [qty, setQty] = useState(1);
+  const [qty, setQty] = useState(initialQty ?? 1);
   const [camError, setCamError] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -9693,6 +9693,7 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady }: {
     rafRef.current = requestAnimationFrame(tick);
   };
 
+  useEffect(() => { startCamera(); }, []);
   useEffect(() => () => stopCamera(), []);
 
   const handleClose = () => { stopCamera(); onClose(); };
@@ -9728,6 +9729,8 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady }: {
     );
   }
 
+  if (scanState === 'idle') return null;
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="fixed inset-0 z-[130] flex items-end justify-center" onClick={handleClose}>
@@ -9749,28 +9752,6 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady }: {
           </div>
         </div>
 
-        {scanState === 'idle' && (
-          <>
-            <div className="bg-brand-bg rounded-2xl p-5 mb-5 text-center">
-              <p className="text-brand-navy/75 text-[10px] font-bold uppercase tracking-widest mb-4">How many stamps?</p>
-              <div className="flex items-center justify-center gap-6">
-                <button onClick={() => setQty(q => Math.max(1, q - 1))}
-                  className="w-12 h-12 rounded-full bg-white shadow font-black text-2xl text-brand-navy flex items-center justify-center active:scale-90 transition-transform">−</button>
-                <span className="font-black text-6xl text-brand-navy leading-none w-16 text-center">{qty}</span>
-                <button onClick={() => setQty(q => Math.min(remaining, q + 1))}
-                  className="w-12 h-12 rounded-full bg-white shadow font-black text-2xl text-brand-navy flex items-center justify-center active:scale-90 transition-transform">+</button>
-              </div>
-              <p className="text-brand-navy/72 text-[10px] font-bold mt-3">{remaining} remaining to reward</p>
-            </div>
-            <button onClick={startCamera}
-              className="w-full flex items-center justify-center gap-2.5 text-white py-4 rounded-2xl font-black text-base mb-4 active:scale-[0.98] transition-transform"
-              style={{ backgroundColor: cardTheme }}>
-              <QrCode size={18} /> Scan QR Code
-            </button>
-            <button onClick={handleClose} className="w-full text-brand-navy/75 text-sm font-bold py-2">Close</button>
-          </>
-        )}
-
         {scanState === 'processing' && (
           <div className="text-center py-6">
             <Loader2 size={32} className="animate-spin text-brand-navy mx-auto mb-3" />
@@ -9789,7 +9770,7 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady }: {
             <p className={cn('font-bold text-base mb-1', scanState === 'success' ? 'text-green-600' : 'text-red-500')}>{statusMsg}</p>
             {scanState === 'success'
               ? <button onClick={handleClose} className="mt-4 w-full text-white py-3 rounded-2xl font-bold" style={{ backgroundColor: cardTheme }}>Done</button>
-              : <button onClick={() => setScanState('idle')} className="mt-4 w-full text-brand-navy/75 text-sm font-bold py-2">Try Again</button>}
+              : <button onClick={startCamera} className="mt-4 w-full text-brand-navy/75 text-sm font-bold py-2">Try Again</button>}
           </div>
         )}
       </motion.div>
@@ -14667,7 +14648,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
 
       <AnimatePresence>
         {showQRScan && (
-          <ConsumerQRScanner card={card} store={store} onClose={() => setShowQRScan(false)} />
+          <ConsumerQRScanner card={card} store={store} initialQty={testQty} onClose={() => setShowQRScan(false)} />
         )}
       </AnimatePresence>
 
