@@ -12651,17 +12651,15 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
               : "Show your QR code or scan a customer's QR code — or enter their handle manually."}</p>
 
             <div className="space-y-4">
-              {!store?.subCardEnabled && (
+              {!store?.subCardEnabled && store && storeCardActive(store) && (
                 <div className="flex gap-3">
-                  {store && storeCardActive(store) && (
-                    <button
-                      onClick={() => setShowQRScanner(true)}
-                      className="flex-1 bg-brand-gold text-brand-navy font-bold py-4 rounded-2xl flex items-center justify-center gap-2"
-                    >
-                      <QrCode className="w-5 h-5" />
-                      Show QR
-                    </button>
-                  )}
+                  <button
+                    onClick={() => setShowQRScanner(true)}
+                    className="flex-1 bg-brand-gold text-brand-navy font-bold py-4 rounded-2xl flex items-center justify-center gap-2"
+                  >
+                    <QrCode className="w-5 h-5" />
+                    Show QR
+                  </button>
                   <button
                     onClick={() => setIsScanning(true)}
                     className="flex-1 bg-teal-500 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2"
@@ -12793,18 +12791,20 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                   </div>
                 </button>
               )}
-              <button
-                onClick={() => setIsScanning(true)}
-                className="glass-card rounded-[2rem] p-6 flex flex-col items-center gap-4 active:scale-95 transition-transform text-center"
-              >
-                <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(135deg, #0f766e, #14b8a6)' }}>
-                  <Wifi size={28} className="text-white -rotate-90" />
-                </div>
-                <div>
-                  <p className="font-bold text-brand-navy">Stamp via NFC</p>
-                  <p className="text-xs text-brand-navy/80 mt-0.5">Customer taps NFC tag</p>
-                </div>
-              </button>
+              {store && storeCardActive(store) && (
+                <button
+                  onClick={() => setIsScanning(true)}
+                  className="glass-card rounded-[2rem] p-6 flex flex-col items-center gap-4 active:scale-95 transition-transform text-center"
+                >
+                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(135deg, #0f766e, #14b8a6)' }}>
+                    <Wifi size={28} className="text-white -rotate-90" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-brand-navy">Stamp via NFC</p>
+                    <p className="text-xs text-brand-navy/80 mt-0.5">Customer taps NFC tag</p>
+                  </div>
+                </button>
+              )}
               <button
                 onClick={() => setVendorIssueMode('card')}
                 className="glass-card rounded-[2rem] p-6 flex flex-col items-center gap-4 active:scale-95 transition-transform text-center"
