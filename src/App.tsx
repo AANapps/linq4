@@ -16957,7 +16957,6 @@ function ScanUserPanel({ store, onIssue }: {
 function VendorCardSection({ store }: { store: StoreProfile | null }) {
   const enabled = store?.cardEnabled !== false;
   const membershipEnabled = store?.membershipEnabled === true;
-  const [toggling, setToggling] = useState(false);
   const [togglingMembership, setTogglingMembership] = useState(false);
   // Initialise from Firestore: membership tab if membership is the active type
   const [activeTab, setActiveTab] = useState<'loyalty' | 'membership'>(
@@ -16966,15 +16965,12 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
   const [pendingTab, setPendingTab] = useState<'loyalty' | 'membership' | null>(null);
   const [switching, setSwitching] = useState(false);
 
-  const toggle = async () => {
-    if (!store?.id) return;
-    setToggling(true);
-    try {
-      await updateDoc(doc(db, 'stores', store.id), { cardEnabled: !enabled });
-    } finally {
-      setToggling(false);
+  // Auto-enable loyalty card whenever the loyalty tab is active
+  useEffect(() => {
+    if (activeTab === 'loyalty' && store?.id && store?.cardEnabled === false) {
+      updateDoc(doc(db, 'stores', store.id), { cardEnabled: true }).catch(console.error);
     }
-  };
+  }, [activeTab, store?.id, store?.cardEnabled]);
 
   const toggleMembership = async () => {
     if (!store?.id) return;
@@ -16999,7 +16995,7 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
       if (pendingTab === 'membership') {
         await updateDoc(doc(db, 'stores', store.id), { cardEnabled: false });
       } else {
-        await updateDoc(doc(db, 'stores', store.id), { membershipEnabled: false });
+        await updateDoc(doc(db, 'stores', store.id), { membershipEnabled: false, cardEnabled: true });
       }
     } finally {
       setSwitching(false);
@@ -17077,35 +17073,7 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
       {/* ─── Loyalty Card tab ─── */}
       {activeTab === 'loyalty' && (
         <div className="space-y-4">
-          <div className="glass-card rounded-[1.5rem] px-5 py-4 flex items-center justify-between gap-4">
-            <div>
-              <p className="font-bold text-brand-navy">Stamp Card</p>
-              <p className="text-xs text-brand-navy/80 mt-0.5">
-                {enabled ? 'Customers can collect stamps' : 'Hidden from customers'}
-              </p>
-            </div>
-            <button
-              onClick={toggle}
-              disabled={toggling}
-              className={cn('relative w-14 h-7 rounded-full transition-colors duration-200 shrink-0 disabled:opacity-40', enabled ? 'bg-emerald-500' : 'bg-brand-navy/20')}
-            >
-              <motion.div animate={{ x: enabled ? 28 : 2 }} transition={{ type: 'spring', stiffness: 500, damping: 35 }} className="absolute top-1 w-5 h-5 rounded-full bg-white shadow-md" />
-            </button>
-          </div>
-          <AnimatePresence>
-            {enabled && (
-              <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
-                <CardBuilder store={store} />
-              </motion.div>
-            )}
-          </AnimatePresence>
-          {!enabled && (
-            <div className="py-8 text-center text-brand-navy/25">
-              <CreditCard size={36} className="mx-auto mb-2 opacity-30" />
-              <p className="font-bold text-sm">Stamp card disabled</p>
-              <p className="text-xs mt-1">Toggle on to set up your loyalty card.</p>
-            </div>
-          )}
+          <CardBuilder store={store} />
         </div>
       )}
 
