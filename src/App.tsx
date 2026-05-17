@@ -8134,16 +8134,9 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   };
 
 
-  const activeCards = initialCards.filter(c => {
-    if (c.isArchived) return false;
-    // Membership cards have their own enable flag; skip the loyalty-card check
-    if (c.card_type === 'membership') {
-      const s = stores.find(st => st.id === c.store_id);
-      return !s || s.membershipEnabled === true;
-    }
-    const s = stores.find(st => st.id === c.store_id);
-    return !s || storeCardActive(s); // keep if store not yet loaded to avoid flicker
-  });
+  // Show every non-archived card the user holds — vendor's cardEnabled toggle should not
+  // hide cards already collected; it only gates new stamp collection.
+  const activeCards = initialCards.filter(c => !c.isArchived);
 
   return (
     <motion.div
