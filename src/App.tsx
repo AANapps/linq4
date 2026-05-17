@@ -9391,14 +9391,14 @@ function VendorQRScanner({ store, stampQty, onScanned, onClose }: {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[150] bg-black flex flex-col"
+      className="fixed inset-0 z-[150] qr-scanner-bg flex flex-col"
     >
       {/* Camera feed */}
       <video
         ref={videoRef}
         playsInline
         muted
-        className="absolute inset-0 w-full h-full object-cover"
+        className="absolute inset-0 w-full h-full object-cover opacity-40"
       />
 
       {/* Overlay */}
@@ -9416,16 +9416,15 @@ function VendorQRScanner({ store, stampQty, onScanned, onClose }: {
 
         {/* Viewfinder */}
         <div className="flex-1 flex items-center justify-center">
-          <div className="relative w-64 h-64">
+          <div className="relative w-48 h-48">
             {/* Corner brackets */}
-            <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 rounded-tl-lg" style={{ borderColor: cardTheme }} />
-            <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 rounded-tr-lg" style={{ borderColor: cardTheme }} />
-            <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 rounded-bl-lg" style={{ borderColor: cardTheme }} />
-            <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 rounded-br-lg" style={{ borderColor: cardTheme }} />
+            <div className="absolute top-0 left-0 w-7 h-7 border-t-4 border-l-4 rounded-tl-lg border-white" />
+            <div className="absolute top-0 right-0 w-7 h-7 border-t-4 border-r-4 rounded-tr-lg border-white" />
+            <div className="absolute bottom-0 left-0 w-7 h-7 border-b-4 border-l-4 rounded-bl-lg border-white" />
+            <div className="absolute bottom-0 right-0 w-7 h-7 border-b-4 border-r-4 rounded-br-lg border-white" />
             {/* Scan line */}
             <motion.div
-              className="absolute left-2 right-2 h-0.5"
-              style={{ backgroundColor: cardTheme }}
+              className="absolute left-2 right-2 h-0.5 bg-white/70"
               animate={{ top: ['10%', '90%', '10%'] }}
               transition={{ duration: 2.5, repeat: Infinity, ease: 'linear' }}
             />
@@ -9685,18 +9684,18 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady }: {
   if (scanState === 'scanning') {
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[130] bg-black flex flex-col">
+        className="fixed inset-0 z-[130] qr-scanner-bg flex flex-col">
         <canvas ref={canvasRef} className="hidden" />
-        <video ref={videoRef} playsInline muted className="absolute inset-0 w-full h-full object-cover" />
+        <video ref={videoRef} playsInline muted className="absolute inset-0 w-full h-full object-cover opacity-40" />
 
         {/* Viewfinder overlay */}
         <div className="relative flex-1 flex items-center justify-center pointer-events-none">
-          <div className="relative w-64 h-64">
-            <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 rounded-tl-lg" style={{ borderColor: cardTheme }} />
-            <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 rounded-tr-lg" style={{ borderColor: cardTheme }} />
-            <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 rounded-bl-lg" style={{ borderColor: cardTheme }} />
-            <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 rounded-br-lg" style={{ borderColor: cardTheme }} />
-            <motion.div className="absolute left-2 right-2 h-0.5" style={{ backgroundColor: cardTheme }}
+          <div className="relative w-48 h-48">
+            <div className="absolute top-0 left-0 w-7 h-7 border-t-4 border-l-4 rounded-tl-lg border-white" />
+            <div className="absolute top-0 right-0 w-7 h-7 border-t-4 border-r-4 rounded-tr-lg border-white" />
+            <div className="absolute bottom-0 left-0 w-7 h-7 border-b-4 border-l-4 rounded-bl-lg border-white" />
+            <div className="absolute bottom-0 right-0 w-7 h-7 border-b-4 border-r-4 rounded-br-lg border-white" />
+            <motion.div className="absolute left-2 right-2 h-0.5 bg-white/70"
               animate={{ top: ['10%', '90%', '10%'] }} transition={{ duration: 2.5, repeat: Infinity, ease: 'linear' }} />
           </div>
         </div>
