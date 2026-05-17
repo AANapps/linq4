@@ -9322,11 +9322,12 @@ function NFCScanOverlay({ phase, msg, onCancel }: {
   );
 }
 
-function VendorQRScanner({ store, stampQty, onScanned, onClose }: {
+function VendorQRScanner({ store, stampQty, onScanned, onClose, subtitle }: {
   store: StoreProfile;
   stampQty: number;
   onScanned: (userId: string) => void;
   onClose: () => void;
+  subtitle?: string;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -9426,7 +9427,7 @@ function VendorQRScanner({ store, stampQty, onScanned, onClose }: {
           </button>
           <div className="flex-1">
             <p className="text-white font-bold text-sm">{store.name}</p>
-            <p className="text-white/60 text-xs">Scan customer's QR code · {stampQty} stamp{stampQty > 1 ? 's' : ''}</p>
+            <p className="text-white/60 text-xs">{subtitle ?? `Scan customer's QR code · ${stampQty} stamp${stampQty > 1 ? 's' : ''}`}</p>
           </div>
         </div>
 
@@ -10188,6 +10189,15 @@ function VisitScanSheet({ card, store, onClose }: { card: Card; store?: StorePro
         </div>
         {scanState === 'idle' && (
           <>
+            {/* Identity QR — vendor scans this */}
+            {auth.currentUser && (
+              <div className="bg-brand-bg rounded-2xl p-4 mb-4 flex flex-col items-center gap-2">
+                <p className="text-brand-navy/75 text-[10px] font-bold uppercase tracking-widest">Show vendor to scan</p>
+                <div className="bg-white p-3 rounded-xl border border-brand-navy/8">
+                  <QRCodeSVG value={`stamp:${auth.currentUser.uid}:${card.store_id}`} size={120} />
+                </div>
+              </div>
+            )}
             <div className="bg-brand-bg rounded-2xl p-5 mb-5 text-center">
               <p className="text-brand-navy/75 text-[10px] font-bold uppercase tracking-widest mb-4">Points to collect</p>
               <span className="font-black text-6xl text-brand-navy leading-none">{qty}</span>
@@ -17220,6 +17230,7 @@ function ScanUserPanel({ store, onIssue }: {
   const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [working, setWorking] = useState(false);
   const [nfcScanning, setNfcScanning] = useState(false);
+  const [showVisitQRScanner, setShowVisitQRScanner] = useState(false);
 
   const memType = store?.membershipType ?? 'spend';
   const isVisit = memType === 'visit';
@@ -17302,20 +17313,52 @@ function ScanUserPanel({ store, onIssue }: {
         </p>
       </div>
 
-      {/* NFC scan button — visit type only */}
+      {/* NFC + QR scan buttons — visit type only */}
       {isVisit && (
-        <button
-          onClick={handleNFCScan}
-          disabled={nfcScanning || working}
-          className="w-full relative overflow-hidden flex items-center justify-center gap-3 py-5 rounded-2xl font-bold text-white text-sm shadow-lg active:scale-[0.98] transition-all disabled:opacity-60"
-          style={{ background: 'linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 40%, #2563eb 70%, #3b82f6 100%)' }}
-        >
-          <span className="card-shine-ray" />
-          {nfcScanning
-            ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full" /> Scanning…</>
-            : <><Wifi size={18} className="-rotate-90" /> Scan NFC to Issue Points</>}
-        </button>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={handleNFCScan}
+            disabled={nfcScanning || working}
+            className="relative overflow-hidden flex items-center justify-center gap-2 py-4 rounded-2xl font-bold text-white text-sm shadow-lg active:scale-[0.98] transition-all disabled:opacity-60"
+            style={{ background: 'linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 40%, #2563eb 70%, #3b82f6 100%)' }}
+          >
+            <span className="card-shine-ray" />
+            {nfcScanning
+              ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full" /> Scanning…</>
+              : <><Wifi size={16} className="-rotate-90" /> Scan NFC</>}
+          </button>
+          <button
+            onClick={() => setShowVisitQRScanner(true)}
+            disabled={working}
+            className="relative overflow-hidden flex items-center justify-center gap-2 py-4 rounded-2xl font-bold text-white text-sm shadow-lg active:scale-[0.98] transition-all disabled:opacity-60"
+            style={{ background: 'linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 40%, #2563eb 70%, #3b82f6 100%)' }}
+          >
+            <span className="card-shine-ray" />
+            <QrCode size={16} /> Scan QR Code
+          </button>
+        </div>
       )}
+      <AnimatePresence>
+        {showVisitQRScanner && store && (
+          <VendorQRScanner
+            store={store}
+            stampQty={0}
+            subtitle="Scan customer's QR code to issue visit points"
+            onScanned={async (userId) => {
+              setShowVisitQRScanner(false);
+              setWorking(true); setStatus(null);
+              try {
+                const userSnap = await getDoc(doc(db, 'users', userId));
+                if (!userSnap.exists()) { setStatus({ type: 'error', message: 'User not found' }); setWorking(false); return; }
+                const h = (userSnap.data() as UserProfile).handle || '';
+                if (!h) { setStatus({ type: 'error', message: 'Customer has no handle — ask them to set one' }); setWorking(false); return; }
+                onIssue(h, '', setStatus, setWorking);
+              } catch { setStatus({ type: 'error', message: 'Lookup failed — try again' }); setWorking(false); }
+            }}
+            onClose={() => setShowVisitQRScanner(false)}
+          />
+        )}
+      </AnimatePresence>
 
       <div className="glass-card rounded-[2rem] p-6 space-y-4">
         <p className="text-xs font-bold text-brand-navy/75 uppercase tracking-widest">Or enter manually</p>
