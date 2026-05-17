@@ -510,6 +510,10 @@ interface GlobalPost {
   adminIcon?: string;
   cardSetId?: string;
   cardSetName?: string;
+  cardDefId?: string;
+  cardDefName?: string;
+  cardDefImageUrl?: string;
+  cardDefTier?: string;
   isAnonymous?: boolean;
 }
 
@@ -6215,6 +6219,8 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
   const [selectedIcon, setSelectedIcon] = useState<string | null>(null);
   const [selectedCardSet, setSelectedCardSet] = useState<CollectibleCardSet | null>(null);
   const [cardSets, setCardSets] = useState<CollectibleCardSet[]>([]);
+  const [cardDefs, setCardDefs] = useState<CollectibleCardDef[]>([]);
+  const [selectedCardDef, setSelectedCardDef] = useState<CollectibleCardDef | null>(null);
   const [isAnonymous, setIsAnonymous] = useState(false);
 
   useEffect(() => {
@@ -6246,7 +6252,12 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
       snap => setCardSets(snap.docs.map(d => ({ id: d.id, ...d.data() } as CollectibleCardSet))),
       () => {}
     );
-    return () => { unsub1(); unsub2(); unsub3(); unsub4(); };
+    const unsub5 = onSnapshot(
+      collection(db, 'collectible_card_defs'),
+      snap => setCardDefs(snap.docs.map(d => ({ id: d.id, ...d.data() } as CollectibleCardDef))),
+      () => {}
+    );
+    return () => { unsub1(); unsub2(); unsub3(); unsub4(); unsub5(); };
   }, []);
 
   const base = tab === 'flagged' ? flaggedPosts : posts;
@@ -6302,15 +6313,17 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
         likesCount: 0,
         likedBy: [],
         ...(selectedBadge ? { adminBadgeIcon: selectedBadge.icon, adminBadgeName: selectedBadge.name, adminBadgeColor: selectedBadge.baseColor || selectedBadge.color } : {}),
-        ...(selectedIcon ? { adminIcon: selectedIcon } : {}),
+        ...(!isAnonymous && selectedIcon ? { adminIcon: selectedIcon } : {}),
         ...(selectedCardSet ? { cardSetId: selectedCardSet.id, cardSetName: selectedCardSet.name } : {}),
-        ...(postImageUrl ? { postImageUrl } : {}),
+        ...(selectedCardDef ? { cardDefId: selectedCardDef.id, cardDefName: selectedCardDef.name, cardDefImageUrl: selectedCardDef.imageUrl, cardDefTier: selectedCardDef.tier } : {}),
+        ...(!isAnonymous && postImageUrl ? { postImageUrl } : {}),
         createdAt: serverTimestamp(),
       });
       setContent('');
       setSelectedBadge(null);
       setSelectedIcon(null);
       setSelectedCardSet(null);
+      setSelectedCardDef(null);
       setIsAnonymous(false);
       setPostImageFile(null);
       setPostImagePreview(null);
@@ -6369,7 +6382,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
           <div className="px-5 pt-3 space-y-4">
             {/* Preview */}
             <div className="bg-white rounded-2xl border border-brand-navy/5 overflow-hidden">
-              {postImagePreview && (
+              {postImagePreview && !isAnonymous && (
                 <img src={postImagePreview} alt="" className="w-full object-cover max-h-48" />
               )}
               <div className="px-4 py-3">
@@ -6379,11 +6392,6 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
                       {selectedIcon
                         ? <span className="text-lg">{selectedIcon}</span>
                         : <span className="text-white font-black text-sm font-mono">L</span>}
-                    </div>
-                  )}
-                  {isAnonymous && selectedIcon && (
-                    <div className="w-9 h-9 rounded-full bg-brand-navy/8 flex items-center justify-center shrink-0">
-                      <span className="text-lg">{selectedIcon}</span>
                     </div>
                   )}
                   <div>
@@ -6420,7 +6428,8 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
               <span className="text-xs font-medium opacity-75">{isAnonymous ? 'Linq logo hidden' : 'Shows Linq logo'}</span>
             </button>
 
-            {/* Icon picker */}
+            {/* Icon picker — hidden when anonymous */}
+            {!isAnonymous && (
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/60 mb-2">Post Icon (optional)</p>
               <div className="flex flex-wrap gap-2">
@@ -6441,8 +6450,10 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
                 ))}
               </div>
             </div>
+            )}
 
-            {/* Image picker */}
+            {/* Image picker — hidden when anonymous */}
+            {!isAnonymous && (
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/60 mb-2">Image (optional)</p>
               <label className="block">
@@ -6473,6 +6484,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
                 )}
               </label>
             </div>
+            )}
 
             <textarea
               value={content}
@@ -6521,11 +6533,38 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
                   {cardSets.map(cs => (
                     <button
                       key={cs.id}
-                      onClick={() => setSelectedCardSet(selectedCardSet?.id === cs.id ? null : cs)}
+                      onClick={() => { const next = selectedCardSet?.id === cs.id ? null : cs; setSelectedCardSet(next); setSelectedCardDef(null); }}
                       className={cn('shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs font-bold border transition-all', selectedCardSet?.id === cs.id ? 'bg-purple-600 text-white border-purple-600' : 'bg-white border-brand-navy/15 text-brand-navy/80')}
                     >
                       <span>🃏</span>
                       <span className="max-w-[100px] truncate">{cs.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Specific card picker — shown when a set is selected and has card defs */}
+            {selectedCardSet && cardDefs.filter(d => d.setId === selectedCardSet.id).length > 0 && (
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/60 mb-2">Select Specific Card (optional)</p>
+                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                  <button
+                    onClick={() => setSelectedCardDef(null)}
+                    className={cn('shrink-0 px-3 py-1.5 rounded-2xl text-xs font-bold border transition-all', !selectedCardDef ? 'bg-brand-navy text-white border-brand-navy' : 'bg-white border-brand-navy/15 text-brand-navy/60')}
+                  >
+                    Any
+                  </button>
+                  {cardDefs.filter(d => d.setId === selectedCardSet.id).map(def => (
+                    <button
+                      key={def.id}
+                      onClick={() => setSelectedCardDef(selectedCardDef?.id === def.id ? null : def)}
+                      className={cn('shrink-0 flex flex-col items-center gap-1 px-2 py-1.5 rounded-2xl border transition-all', selectedCardDef?.id === def.id ? 'bg-purple-600 text-white border-purple-600' : 'bg-white border-brand-navy/15 text-brand-navy/80')}
+                    >
+                      {def.imageUrl
+                        ? <img src={def.imageUrl} alt={def.name} className="w-10 h-10 object-cover rounded-lg" />
+                        : <div className="w-10 h-10 rounded-lg bg-brand-navy/8 flex items-center justify-center"><span>🃏</span></div>}
+                      <span className="max-w-[60px] truncate text-[9px] font-bold">{def.name}</span>
                     </button>
                   ))}
                 </div>
@@ -20740,7 +20779,7 @@ function ProfileLink({ icon, label, onClick }: { icon: React.ReactNode, label: s
 
 // --- Social & Community Components ---
 
-function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewStore, onLike, onVote, onDelete, showPinnedTag }: {
+function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewStore, onLike, onVote, onDelete, showPinnedTag, hideDivider }: {
   key?: React.Key;
   post: GlobalPost;
   currentUser?: FirebaseUser;
@@ -20751,6 +20790,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
   onVote: (post: GlobalPost, optionIndex: number) => void | Promise<void>;
   onDelete?: (post: GlobalPost) => void | Promise<void>;
   showPinnedTag?: boolean;
+  hideDivider?: boolean;
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const [comments, setComments] = useState<any[]>([]);
@@ -20897,17 +20937,20 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
     );
   }
 
+  const isAnonAdmin = post.authorRole === 'admin' && post.isAnonymous;
+  const showImage = !!post.postImageUrl && !isAnonAdmin;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className={post.postImageUrl ? 'pt-0 pb-4' : 'py-4 px-4'}
+      className={showImage ? 'pt-0 pb-4' : 'py-4 px-4'}
     >
       {/* Full-bleed image */}
-      {post.postImageUrl && (
+      {showImage && (
         <img src={post.postImageUrl} alt="" className="w-full object-cover max-h-64 mb-3" />
       )}
-      <div className={post.postImageUrl ? 'px-4' : ''}>
+      <div className={showImage ? 'px-4' : ''}>
       {/* Pinned indicator — only on FYP */}
       {post.isPinned && showPinnedTag && (
         <div className="flex items-center gap-1.5 mb-2">
@@ -20917,13 +20960,10 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
       {/* Post header */}
       <div className="space-y-2.5">
         <div className="flex items-center gap-3">
+          {!isAnonAdmin && (
           <div className="w-10 h-10 rounded-full overflow-hidden border border-black/5 cursor-pointer shrink-0 bg-indigo-50 flex items-center justify-center" onClick={handleAvatarClick}>
             {post.authorRole === 'admin'
-              ? post.isAnonymous
-                ? post.adminIcon
-                  ? <div className="w-full h-full bg-brand-navy/8 flex items-center justify-center"><span className="text-xl">{post.adminIcon}</span></div>
-                  : <div className="w-full h-full bg-brand-navy/8 flex items-center justify-center"><UserIcon size={18} className="text-brand-navy/30" /></div>
-                : <div className="w-full h-full gradient-logo-blue flex items-center justify-center">
+              ? <div className="w-full h-full gradient-logo-blue flex items-center justify-center">
                     {post.adminIcon
                       ? <span className="text-xl">{post.adminIcon}</span>
                       : <span className="text-white font-black text-sm font-mono">L</span>}
@@ -20932,6 +20972,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
               ? <img src={authorProfile?.logoUrl || post.authorPhoto || ''} alt="" className="w-full h-full object-cover" />
               : <PixelAvatar config={authorProfile?.avatar} uid={post.authorUid} size={40} view="head" />}
           </div>
+          )}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
               {post.wallPost && post.storeName ? (
@@ -21125,7 +21166,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
       </div>
 
       {/* Interactions bar */}
-      <div className="pt-2.5 border-t border-gray-100">
+      <div className={cn("pt-2.5", !hideDivider && "border-t border-gray-100")}>
         <div className="flex items-center gap-4">
           <button
             onClick={() => onLike(post)}
@@ -21157,7 +21198,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
 
       {/* Comments thread — toggled by the chat icon */}
       {(comments.length > 0 || showAllComments) && (
-        <div className="pt-3 border-t border-gray-100 space-y-3">
+        <div className={cn("pt-3 space-y-3", !hideDivider && "border-t border-gray-100")}>
           {visibleComments.map(comment => {
             const commentLiked = currentUser ? (comment.likedBy || []).includes(currentUser.uid) : false;
             return (
@@ -21206,7 +21247,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
 
       {/* Comment input — always visible for logged-in users */}
       {currentUser && (
-        <div className="pt-3 border-t border-gray-100 flex gap-2">
+        <div className={cn("pt-3 flex gap-2", !hideDivider && "border-t border-gray-100")}>
           <div className="w-7 h-7 rounded-full overflow-hidden border border-black/5 shrink-0 bg-indigo-50 flex items-center justify-center">
             <LivePixelAvatar uid={currentUser.uid} size={28} view="head" />
           </div>
@@ -25159,6 +25200,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                 <FeedPostCard key={item.data.id} post={item.data} currentUser={user} onViewUser={onViewUser}
                   onLike={async (p) => { const ref = doc(db, 'global_posts', p.id); const liked = (p.likedBy || []).includes(user.uid); await updateDoc(ref, { likedBy: liked ? arrayRemove(user.uid) : arrayUnion(user.uid), likesCount: liked ? Math.max(0, p.likesCount - 1) : p.likesCount + 1 }); }}
                   onVote={async (p, idx) => { const ref = doc(db, 'global_posts', p.id); const votes = p.pollVotes || {}; const oldKey = Object.keys(votes).find(k => (votes[k] || []).includes(user.uid)); const updates: any = { [`pollVotes.${idx}`]: arrayUnion(user.uid) }; if (oldKey !== undefined && oldKey !== String(idx)) updates[`pollVotes.${oldKey}`] = arrayRemove(user.uid); await updateDoc(ref, updates); }}
+                  hideDivider
                 />
               ) : (() => {
                 const isOwnerPost = item.data.authorUid === store.ownerUid;
