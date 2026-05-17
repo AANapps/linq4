@@ -13256,32 +13256,6 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
               <h2 className="font-display text-3xl font-bold mb-1">Issue</h2>
               <p className="text-brand-navy/80 text-sm">Manage your card or create store offers.</p>
             </header>
-            {/* Hero QR scan button */}
-            <div className="flex flex-col items-center py-6">
-              <button
-                onClick={() => setShowQRScanner(true)}
-                className="relative flex flex-col items-center gap-5 active:scale-95 transition-transform"
-              >
-                <div className="relative">
-                  {/* Outer glow */}
-                  <div className="absolute inset-0 rounded-full gradient-logo-blue opacity-30 blur-xl scale-125" />
-                  {/* Pulsing ring */}
-                  <div className="absolute inset-0 rounded-full border-2 border-blue-400/50 animate-ping scale-110" />
-                  {/* Static ring */}
-                  <div className="absolute inset-0 rounded-full border-2 border-blue-300/30 scale-[1.18]" />
-                  {/* Circle */}
-                  <div className="relative w-28 h-28 rounded-full gradient-logo-blue flex items-center justify-center shadow-2xl shadow-blue-600/50 overflow-hidden">
-                    <span className="card-shine-ray" aria-hidden="true" />
-                    <QrCode size={40} className="text-white relative z-10" />
-                  </div>
-                </div>
-                <div className="text-center">
-                  <p className="font-bold text-brand-navy text-base">Scan Customer QR</p>
-                  <p className="text-xs text-brand-navy/55 mt-0.5">Point camera at customer's code</p>
-                </div>
-              </button>
-            </div>
-
             <div className="grid grid-cols-2 gap-4">
               <button
                 onClick={() => setVendorIssueMode('card')}
