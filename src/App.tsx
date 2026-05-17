@@ -515,6 +515,8 @@ interface GlobalPost {
   cardDefImageUrl?: string;
   cardDefTier?: string;
   isAnonymous?: boolean;
+  adminGifUrl?: string;
+  adminGifLabel?: string;
 }
 
 const ADMIN_EMAIL = 'info@adastranetwork.co.uk';
@@ -6222,6 +6224,8 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
   const [cardDefs, setCardDefs] = useState<CollectibleCardDef[]>([]);
   const [selectedCardDef, setSelectedCardDef] = useState<CollectibleCardDef | null>(null);
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [adminGifs, setAdminGifs] = useState<{ id: string; label: string; url: string }[]>([]);
+  const [selectedGif, setSelectedGif] = useState<{ id: string; label: string; url: string } | null>(null);
 
   useEffect(() => {
     const unsub1 = onSnapshot(
@@ -6257,7 +6261,12 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
       snap => setCardDefs(snap.docs.map(d => ({ id: d.id, ...d.data() } as CollectibleCardDef))),
       () => {}
     );
-    return () => { unsub1(); unsub2(); unsub3(); unsub4(); unsub5(); };
+    const unsub6 = onSnapshot(
+      query(collection(db, 'admin_gifs'), orderBy('order', 'asc')),
+      snap => setAdminGifs(snap.docs.map(d => ({ id: d.id, label: d.data().label || '', url: d.data().url || '' }))),
+      () => {}
+    );
+    return () => { unsub1(); unsub2(); unsub3(); unsub4(); unsub5(); unsub6(); };
   }, []);
 
   const base = tab === 'flagged' ? flaggedPosts : posts;
@@ -6317,6 +6326,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
         ...(selectedCardSet ? { cardSetId: selectedCardSet.id, cardSetName: selectedCardSet.name } : {}),
         ...(selectedCardDef ? { cardDefId: selectedCardDef.id, cardDefName: selectedCardDef.name, cardDefImageUrl: selectedCardDef.imageUrl, cardDefTier: selectedCardDef.tier } : {}),
         ...(!isAnonymous && postImageUrl ? { postImageUrl } : {}),
+        ...(selectedGif ? { adminGifUrl: selectedGif.url, adminGifLabel: selectedGif.label } : {}),
         createdAt: serverTimestamp(),
       });
       setContent('');
@@ -6327,6 +6337,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
       setIsAnonymous(false);
       setPostImageFile(null);
       setPostImagePreview(null);
+      setSelectedGif(null);
       setTab('all');
     } finally { setPublishing(false); setUploadingImage(false); }
   };
@@ -6384,6 +6395,9 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
             <div className="bg-white rounded-2xl border border-brand-navy/5 overflow-hidden">
               {postImagePreview && !isAnonymous && (
                 <img src={postImagePreview} alt="" className="w-full object-cover max-h-48" />
+              )}
+              {selectedGif && (
+                <img src={selectedGif.url} alt={selectedGif.label} className="w-full object-cover max-h-40" />
               )}
               <div className="px-4 py-3">
                 <div className="flex items-center gap-2.5 mb-2">
@@ -6568,6 +6582,36 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
                     </button>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* GIF picker */}
+            {adminGifs.length > 0 && (
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/60 mb-2">GIF (optional)</p>
+                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                  <button
+                    onClick={() => setSelectedGif(null)}
+                    className={cn('shrink-0 px-3 py-1.5 rounded-2xl text-xs font-bold border transition-all', !selectedGif ? 'bg-brand-navy text-white border-brand-navy' : 'bg-white border-brand-navy/15 text-brand-navy/60')}
+                  >
+                    None
+                  </button>
+                  {adminGifs.map(gif => (
+                    <button
+                      key={gif.id}
+                      onClick={() => setSelectedGif(selectedGif?.id === gif.id ? null : gif)}
+                      className={cn('shrink-0 flex flex-col items-center gap-1 rounded-2xl border overflow-hidden transition-all', selectedGif?.id === gif.id ? 'border-brand-gold ring-2 ring-brand-gold/30 scale-105' : 'border-brand-navy/15')}
+                    >
+                      <img src={gif.url} alt={gif.label} className="w-16 h-16 object-cover" />
+                      <span className="text-[9px] font-bold text-brand-navy/60 px-1.5 pb-1 max-w-[64px] truncate">{gif.label}</span>
+                    </button>
+                  ))}
+                </div>
+                {selectedGif && (
+                  <div className="mt-2 flex justify-center rounded-2xl overflow-hidden border border-brand-gold/30">
+                    <img src={selectedGif.url} alt={selectedGif.label} className="max-h-32 object-contain" />
+                  </div>
+                )}
               </div>
             )}
 
@@ -20957,18 +21001,18 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
           <div className="absolute -bottom-8 -left-8 w-36 h-36 rounded-full opacity-15 pointer-events-none" style={{ background: tg.glow, filter: 'blur(36px)' }} />
 
           <div className="relative px-5 pt-5 pb-6 flex flex-col items-center gap-4">
-            {/* Alert label */}
-            <div className="flex items-center gap-1.5">
-              <div className="h-px flex-1 bg-white/20 w-8" />
-              <span className="text-[9px] font-black text-white/50 uppercase tracking-[0.22em]">Linq Alert</span>
-              <div className="h-px flex-1 bg-white/20 w-8" />
-            </div>
-
             {/* Announcement text */}
             {post.content && (
               <p className="text-center text-white font-black text-[17px] leading-snug drop-shadow-sm max-w-[280px]">
                 {post.content}
               </p>
+            )}
+
+            {/* GIF */}
+            {post.adminGifUrl && (
+              <div className="w-full rounded-2xl overflow-hidden">
+                <img src={post.adminGifUrl} alt={post.adminGifLabel || ''} className="w-full object-cover max-h-48" />
+              </div>
             )}
 
             {/* Sticker / card image */}
