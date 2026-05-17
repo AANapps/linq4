@@ -8183,9 +8183,6 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
 
       {activeTab === 'home' && (
         <div className="space-y-6">
-          <header className="flex items-end justify-between">
-            <h2 className="font-display text-3xl font-bold">My Cards</h2>
-          </header>
 
           {/* Sub-tabs */}
           {(() => {
