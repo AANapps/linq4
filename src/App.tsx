@@ -13845,7 +13845,6 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
   const [showQR, setShowQR] = useState(autoOpen);
   const [showOptions, setShowOptions] = useState(false);
   const [showCompletionPopup, setShowCompletionPopup] = useState(false);
-  const [showCardScan, setShowCardScan] = useState(false);
   const [showQRScan, setShowQRScan] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -14026,7 +14025,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
     <>
       <motion.div
         whileTap={{ scale: 0.97 }}
-        onClick={() => !isCompleted && !card.isRedeemed && (store?.scanMethod === 'qr' ? setShowQRScan(true) : setShowCardScan(true))}
+        onClick={() => !isCompleted && !card.isRedeemed && (store?.scanMethod === 'qr' ? setShowQRScan(true) : onScan?.())}
         className={cn(
           "relative rounded-[2rem] overflow-hidden shadow-xl w-full select-none h-full flex flex-col",
           !isCompleted && !card.isRedeemed ? "cursor-pointer" : ""
@@ -14189,12 +14188,6 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
             : <><Wifi size={11} className="-rotate-90" /> Tap card to scan NFC tag</>}
         </p>
       )}
-
-      <AnimatePresence>
-        {showCardScan && (
-          <CardScanSheet card={card} store={store} onClose={() => setShowCardScan(false)} />
-        )}
-      </AnimatePresence>
 
       <AnimatePresence>
         {showQRScan && (
