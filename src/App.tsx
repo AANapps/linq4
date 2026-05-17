@@ -854,6 +854,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<string>('home');
   const [viewingStore, setViewingStore] = useState<StoreProfile | null>(null);
   const [viewingUser, setViewingUser] = useState<UserProfile | null>(null);
+  const [showVendorQR, setShowVendorQR] = useState(false);
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior }); }, [activeTab]);
   useEffect(() => { if (user) logEvent('screen_view', user.uid, { screen: activeTab }); }, [activeTab]);
@@ -1675,6 +1676,8 @@ export default function App() {
               setActiveChatId={setActiveChatId}
               onLogout={handleLogout}
               onDeleteAccount={handleDeleteAccount}
+              showVendorQR={showVendorQR}
+              setShowVendorQR={setShowVendorQR}
             />
           )}
         </AnimatePresence>
@@ -1763,13 +1766,20 @@ export default function App() {
 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto glass-panel border-t border-black/5 py-3 flex items-end z-50">
-        {['consumer','admin'].includes(profile?.role ?? '') && (
+        {['consumer','admin'].includes(profile?.role ?? '') ? (
           <NavButton
             active={activeTab === 'for-you'}
             onClick={() => { setActiveTab('for-you'); setViewingStore(null); setViewingUser(null); }}
             icon={<Zap />}
             label="For You"
             badgeCount={notifications.filter(n => !n.isRead).length}
+          />
+        ) : (
+          <NavButton
+            active={activeTab === 'home'}
+            onClick={() => { setActiveTab('home'); setViewingStore(null); setViewingUser(null); }}
+            icon={<LayoutDashboard />}
+            label="Dashboard"
           />
         )}
         {['consumer','admin'].includes(profile?.role ?? '') ? (
@@ -1800,12 +1810,16 @@ export default function App() {
             <span className={cn("text-[10px] font-bold uppercase tracking-wider", activeTab === 'home' ? "text-brand-gold" : "text-brand-navy/75")}>Wallet</span>
           </button>
         ) : (
-          <NavButton
-            active={activeTab === 'home'}
-            onClick={() => { setActiveTab('home'); setViewingStore(null); setViewingUser(null); }}
-            icon={<LayoutDashboard />}
-            label="Dashboard"
-          />
+          <button
+            onClick={() => setShowVendorQR(true)}
+            className="flex-1 flex flex-col items-center gap-1 -mb-1 -mt-7 transition-all"
+          >
+            <div className="relative overflow-hidden w-[58px] h-[58px] rounded-full gradient-logo-blue shadow-lg shadow-blue-500/30 flex items-center justify-center active:scale-95 transition-transform">
+              <span className="card-shine-ray" aria-hidden="true" />
+              <QrCode size={26} className="text-white relative z-10" />
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-brand-navy/75">QR Code</span>
+          </button>
         )}
         <NavButton
           active={activeTab === 'discover'}
@@ -11845,7 +11859,7 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
 
 // --- Vendor App ---
 
-function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notifications, activeChatId, setActiveChatId, onLogout, onDeleteAccount }: { activeTab: string, setActiveTab: (tab: string) => void, profile: UserProfile | null, user: FirebaseUser, onViewUser: (u: UserProfile) => void, notifications: Notification[], activeChatId: string | null, setActiveChatId: (id: string | null) => void, onLogout: () => void, onDeleteAccount: () => Promise<void>, key?: React.Key }) {
+function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notifications, activeChatId, setActiveChatId, onLogout, onDeleteAccount, showVendorQR, setShowVendorQR }: { activeTab: string, setActiveTab: (tab: string) => void, profile: UserProfile | null, user: FirebaseUser, onViewUser: (u: UserProfile) => void, notifications: Notification[], activeChatId: string | null, setActiveChatId: (id: string | null) => void, onLogout: () => void, onDeleteAccount: () => Promise<void>, showVendorQR?: boolean, setShowVendorQR?: (v: boolean) => void, key?: React.Key }) {
   const [store, setStore] = useState<StoreProfile | null>(null);
   const [userCards, setUserCards] = useState<Card[]>([]);
 
@@ -11882,6 +11896,10 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   const [isLoadingCheckout, setIsLoadingCheckout] = useState(false);
   const [tickNow, setTickNow] = useState(Date.now());
   const [showQRScanner, setShowQRScanner] = useState(false);
+
+  useEffect(() => {
+    if (showVendorQR) { setShowQRScanner(true); setShowVendorQR?.(false); }
+  }, [showVendorQR]);
 
   const trialEndsMs = store?.trialEndsAt
     ? (store.trialEndsAt as any).toMillis?.() ?? (store.trialEndsAt as any).seconds * 1000
