@@ -1639,7 +1639,6 @@ export default function App() {
             onClose={() => setShowSettings(false)}
             profile={profile}
             userCards={userCards}
-            stores={stores}
             isAdmin={isAppAdmin(profile, user?.email)}
             onOpenAdmin={() => { setShowSettings(false); setAdminView('menu'); }}
             onOpenStores={() => { setShowSettings(false); setAdminView('stores'); }}
@@ -20098,7 +20097,6 @@ function SettingsMenu({
   onClose,
   profile,
   userCards,
-  stores,
   isAdmin,
   onOpenAdmin,
   onOpenStores,
@@ -20107,7 +20105,6 @@ function SettingsMenu({
   onClose: () => void,
   profile: UserProfile | null,
   userCards: Card[],
-  stores: StoreProfile[],
   isAdmin?: boolean,
   onOpenAdmin?: () => void,
   onOpenStores?: () => void,
@@ -20117,6 +20114,7 @@ function SettingsMenu({
   const [isSeeding, setIsSeeding] = useState(false);
   const [archivedCards, setArchivedCards] = useState<Card[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [storeCache, setStoreCache] = useState<Map<string, StoreProfile>>(new Map());
 
   useEffect(() => {
     if (!profile) return;
@@ -20135,6 +20133,23 @@ function SettingsMenu({
       unsubHistory();
     };
   }, [profile?.uid]);
+
+  // Fetch any stores not yet cached when archive or history modals open
+  useEffect(() => {
+    if (!showArchive && !showHistory) return;
+    const needed = [...new Set([
+      ...archivedCards.map(c => c.store_id),
+      ...transactions.map(t => t.store_id),
+    ])].filter(id => id && !storeCache.has(id));
+    if (needed.length === 0) return;
+    Promise.all(needed.map(id => getDoc(doc(db, 'stores', id)))).then(snaps => {
+      setStoreCache(prev => {
+        const next = new Map(prev);
+        snaps.forEach(s => { if (s.exists()) next.set(s.id, { id: s.id, ...s.data() } as StoreProfile); });
+        return next;
+      });
+    }).catch(() => {});
+  }, [showArchive, showHistory, archivedCards, transactions]);
 
   const seedData = async () => {
     if (!profile) return;
@@ -20509,7 +20524,7 @@ function SettingsMenu({
             <Modal title="Archived Cards" onClose={() => setShowArchive(false)}>
               <div className="space-y-3">
                 {archivedCards.map(card => {
-                  const store = stores.find(s => s.id === card.store_id);
+                  const store = storeCache.get(card.store_id);
                   const completedAt = (card as any).last_tap_timestamp;
                   return (
                     <div key={card.id} className="glass-card p-4 rounded-2xl flex items-center gap-3">
@@ -20548,7 +20563,7 @@ function SettingsMenu({
             <Modal title="Stamp History" onClose={() => setShowHistory(false)}>
               <div className="space-y-0">
                 {transactions.map((tx, i) => {
-                  const store = stores.find(s => s.id === tx.store_id);
+                  const store = storeCache.get(tx.store_id);
                   const isCompletion = !!tx.stamps_at_completion;
                   const ts = tx.completed_at || tx.issued_at;
                   return (
