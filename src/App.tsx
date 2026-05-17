@@ -15030,12 +15030,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
             >
               <div className="bg-brand-navy/20 rounded-full mx-auto mb-5" style={{ width: 40, height: 4 }} />
               <h3 className="font-display text-xl font-bold text-center mb-1">{store?.name}</h3>
-              <p className="text-brand-navy/60 text-xs text-center mb-5">{points.toLocaleString()} pts · {visits} visits</p>
-              <div className="flex items-center justify-center gap-6 mb-6">
-                <button onClick={() => setScanQty(q => Math.max(1, q - 1))} className="w-11 h-11 rounded-full bg-brand-navy/8 flex items-center justify-center text-brand-navy font-bold text-2xl active:scale-95 transition-transform">−</button>
-                <span className="font-black text-5xl text-brand-navy w-14 text-center leading-none">{scanQty}</span>
-                <button onClick={() => setScanQty(q => q + 1)} className="w-11 h-11 rounded-full bg-brand-navy/8 flex items-center justify-center text-brand-navy font-bold text-2xl active:scale-95 transition-transform">+</button>
-              </div>
+              <p className="text-brand-navy/60 text-xs text-center mb-6">{points.toLocaleString()} pts · {visits} visits</p>
               <div className="grid grid-cols-2 gap-3 mb-5">
                 <button onClick={() => { setShowScanSheet(false); setShowQRScan(true); }}
                   className="flex flex-col items-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform gradient-logo-blue text-white shadow-lg relative overflow-hidden">
