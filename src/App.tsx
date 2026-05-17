@@ -507,6 +507,10 @@ interface GlobalPost {
   adminBadgeName?: string;
   adminBadgeColor?: string;
   postImageUrl?: string;
+  adminIcon?: string;
+  cardSetId?: string;
+  cardSetName?: string;
+  isAnonymous?: boolean;
 }
 
 const ADMIN_EMAIL = 'info@adastranetwork.co.uk';
@@ -6208,6 +6212,10 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
   const [postImageFile, setPostImageFile] = useState<File | null>(null);
   const [postImagePreview, setPostImagePreview] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [selectedIcon, setSelectedIcon] = useState<string | null>(null);
+  const [selectedCardSet, setSelectedCardSet] = useState<CollectibleCardSet | null>(null);
+  const [cardSets, setCardSets] = useState<CollectibleCardSet[]>([]);
+  const [isAnonymous, setIsAnonymous] = useState(false);
 
   useEffect(() => {
     const unsub1 = onSnapshot(
@@ -6233,7 +6241,12 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
       snap => setBadges(snap.docs.map(d => ({ id: d.id, ...d.data() } as AppBadge))),
       () => {}
     );
-    return () => { unsub1(); unsub2(); unsub3(); };
+    const unsub4 = onSnapshot(
+      collection(db, 'collectible_card_sets'),
+      snap => setCardSets(snap.docs.map(d => ({ id: d.id, ...d.data() } as CollectibleCardSet))),
+      () => {}
+    );
+    return () => { unsub1(); unsub2(); unsub3(); unsub4(); };
   }, []);
 
   const base = tab === 'flagged' ? flaggedPosts : posts;
@@ -6280,19 +6293,25 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
       }
       await addDoc(collection(db, 'global_posts'), {
         authorUid: 'linq_admin',
-        authorName: 'Linq',
+        authorName: isAnonymous ? '' : 'Linq',
         authorPhoto: '',
         authorRole: 'admin',
+        isAnonymous: isAnonymous || false,
         postType: 'post',
         content: content.trim(),
         likesCount: 0,
         likedBy: [],
         ...(selectedBadge ? { adminBadgeIcon: selectedBadge.icon, adminBadgeName: selectedBadge.name, adminBadgeColor: selectedBadge.baseColor || selectedBadge.color } : {}),
+        ...(selectedIcon ? { adminIcon: selectedIcon } : {}),
+        ...(selectedCardSet ? { cardSetId: selectedCardSet.id, cardSetName: selectedCardSet.name } : {}),
         ...(postImageUrl ? { postImageUrl } : {}),
         createdAt: serverTimestamp(),
       });
       setContent('');
       setSelectedBadge(null);
+      setSelectedIcon(null);
+      setSelectedCardSet(null);
+      setIsAnonymous(false);
       setPostImageFile(null);
       setPostImagePreview(null);
       setTab('all');
@@ -6355,24 +6374,71 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
               )}
               <div className="px-4 py-3">
                 <div className="flex items-center gap-2.5 mb-2">
-                  <div className="w-9 h-9 rounded-full gradient-logo-blue flex items-center justify-center shrink-0">
-                    <span className="text-white font-black text-sm font-mono">L</span>
-                  </div>
+                  {!isAnonymous && (
+                    <div className="w-9 h-9 rounded-full gradient-logo-blue flex items-center justify-center shrink-0">
+                      {selectedIcon
+                        ? <span className="text-lg">{selectedIcon}</span>
+                        : <span className="text-white font-black text-sm font-mono">L</span>}
+                    </div>
+                  )}
+                  {isAnonymous && selectedIcon && (
+                    <div className="w-9 h-9 rounded-full bg-brand-navy/8 flex items-center justify-center shrink-0">
+                      <span className="text-lg">{selectedIcon}</span>
+                    </div>
+                  )}
                   <div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-bold text-sm text-brand-navy">Linq</span>
-                      <span className="text-[9px] font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 px-1.5 py-0.5 rounded-full uppercase tracking-wide">Official</span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {!isAnonymous && <span className="font-bold text-sm text-brand-navy">Linq</span>}
+                      {!isAnonymous && <span className="text-[9px] font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 px-1.5 py-0.5 rounded-full uppercase tracking-wide">Official</span>}
+                      {isAnonymous && <span className="text-[10px] font-bold text-brand-navy/40 italic">Anonymous</span>}
                       {selectedBadge && (
                         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full border"
                           style={{ background: `${selectedBadge.baseColor || selectedBadge.color}18`, borderColor: `${selectedBadge.baseColor || selectedBadge.color}40`, color: selectedBadge.baseColor || selectedBadge.color }}>
                           {selectedBadge.icon} {selectedBadge.name}
                         </span>
                       )}
+                      {selectedCardSet && (
+                        <span className="text-[9px] font-bold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded-full">🃏 {selectedCardSet.name}</span>
+                      )}
                     </div>
                     <p className="text-[10px] text-brand-navy/50">Now</p>
                   </div>
                 </div>
                 <p className="text-[13px] font-semibold text-gray-800 whitespace-pre-wrap min-h-[20px]">{content || <span className="text-brand-navy/30">Your post will appear here…</span>}</p>
+              </div>
+            </div>
+
+            {/* Anonymous toggle */}
+            <button
+              onClick={() => setIsAnonymous(v => !v)}
+              className={cn(
+                'w-full flex items-center justify-between px-4 py-3 rounded-2xl border transition-all text-sm font-bold',
+                isAnonymous ? 'bg-brand-navy text-white border-brand-navy' : 'bg-white border-brand-navy/10 text-brand-navy/80'
+              )}
+            >
+              <span>Anonymous post</span>
+              <span className="text-xs font-medium opacity-75">{isAnonymous ? 'Linq logo hidden' : 'Shows Linq logo'}</span>
+            </button>
+
+            {/* Icon picker */}
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/60 mb-2">Post Icon (optional)</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setSelectedIcon(null)}
+                  className={cn('w-9 h-9 rounded-xl border text-xs font-bold transition-all flex items-center justify-center', !selectedIcon ? 'bg-brand-navy text-white border-brand-navy' : 'bg-white border-brand-navy/15 text-brand-navy/40')}
+                >
+                  ✕
+                </button>
+                {BADGE_ICONS.map((ic, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedIcon(selectedIcon === ic ? null : ic)}
+                    className={cn('w-9 h-9 rounded-xl border text-lg transition-all flex items-center justify-center', selectedIcon === ic ? 'bg-brand-navy/10 border-brand-navy/40 scale-110' : 'bg-white border-brand-navy/10')}
+                  >
+                    {ic}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -6435,6 +6501,31 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
                     >
                       <span>{b.icon}</span>
                       <span className="max-w-[80px] truncate">{b.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Card collection picker */}
+            {cardSets.length > 0 && (
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/60 mb-2">Link Card Collection (optional)</p>
+                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                  <button
+                    onClick={() => setSelectedCardSet(null)}
+                    className={cn('shrink-0 px-3 py-1.5 rounded-2xl text-xs font-bold border transition-all', !selectedCardSet ? 'bg-brand-navy text-white border-brand-navy' : 'bg-white border-brand-navy/15 text-brand-navy/60')}
+                  >
+                    None
+                  </button>
+                  {cardSets.map(cs => (
+                    <button
+                      key={cs.id}
+                      onClick={() => setSelectedCardSet(selectedCardSet?.id === cs.id ? null : cs)}
+                      className={cn('shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs font-bold border transition-all', selectedCardSet?.id === cs.id ? 'bg-purple-600 text-white border-purple-600' : 'bg-white border-brand-navy/15 text-brand-navy/80')}
+                    >
+                      <span>🃏</span>
+                      <span className="max-w-[100px] truncate">{cs.name}</span>
                     </button>
                   ))}
                 </div>
@@ -20828,7 +20919,15 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full overflow-hidden border border-black/5 cursor-pointer shrink-0 bg-indigo-50 flex items-center justify-center" onClick={handleAvatarClick}>
             {post.authorRole === 'admin'
-              ? <div className="w-full h-full gradient-logo-blue flex items-center justify-center"><span className="text-white font-black text-sm font-mono">L</span></div>
+              ? post.isAnonymous
+                ? post.adminIcon
+                  ? <div className="w-full h-full bg-brand-navy/8 flex items-center justify-center"><span className="text-xl">{post.adminIcon}</span></div>
+                  : <div className="w-full h-full bg-brand-navy/8 flex items-center justify-center"><UserIcon size={18} className="text-brand-navy/30" /></div>
+                : <div className="w-full h-full gradient-logo-blue flex items-center justify-center">
+                    {post.adminIcon
+                      ? <span className="text-xl">{post.adminIcon}</span>
+                      : <span className="text-white font-black text-sm font-mono">L</span>}
+                  </div>
               : post.authorRole === 'vendor'
               ? <img src={authorProfile?.logoUrl || post.authorPhoto || ''} alt="" className="w-full h-full object-cover" />
               : <PixelAvatar config={authorProfile?.avatar} uid={post.authorUid} size={40} view="head" />}
@@ -20882,8 +20981,10 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                 </p>
               ) : post.authorRole === 'admin' ? (
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="font-bold text-sm text-brand-navy">Linq</span>
-                  <span className="text-[9px] font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 px-1.5 py-0.5 rounded-full uppercase tracking-wide">Official</span>
+                  {!post.isAnonymous && <span className="font-bold text-sm text-brand-navy">Linq</span>}
+                  {!post.isAnonymous && <span className="text-[9px] font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 px-1.5 py-0.5 rounded-full uppercase tracking-wide">Official</span>}
+                  {post.isAnonymous && <span className="text-sm font-bold text-brand-navy/40 italic">Anonymous</span>}
+                  {post.cardSetName && <span className="text-[9px] font-bold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded-full">🃏 {post.cardSetName}</span>}
                 </span>
               ) : post.authorRole === 'vendor' && post.storeName && !post.wallPost ? (
                 <span
