@@ -9318,6 +9318,7 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady }: {
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number>(0);
   const detectorRef = useRef<any>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const hasBarcodeDetector = typeof window !== 'undefined' && 'BarcodeDetector' in window;
   const limit = card.stamps_required || store?.stamps_required_for_reward || 10;
   const remaining = Math.max(1, limit - (card.current_stamps || 0));
@@ -9339,16 +9340,20 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady }: {
     if (stickers.length > 0) onPackReady?.(stickers);
   };
 
+  const handleRawValue = async (raw: string) => {
+    const decoded = decodeVendorQR(raw);
+    if (!decoded) { setScanState('error'); setStatusMsg('Invalid or expired QR — ask vendor to refresh.'); stopCamera(); return; }
+    if (decoded.storeId !== card.store_id) { setScanState('error'); setStatusMsg('Wrong store QR code.'); stopCamera(); return; }
+    await processQR(decoded.storeId);
+  };
+
   const startCamera = async () => {
-    if (!hasBarcodeDetector) {
-      setScanState('error');
-      setStatusMsg('QR scanning is not supported on this browser. Ask your vendor to enter your handle manually.');
-      return;
-    }
     setScanState('scanning');
     setCamError('');
     try {
-      detectorRef.current = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+      if (hasBarcodeDetector) {
+        detectorRef.current = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+      }
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
       streamRef.current = stream;
       if (videoRef.current) {
@@ -9363,17 +9368,27 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady }: {
 
   const tick = async () => {
     const video = videoRef.current;
-    if (!video || video.readyState < 2 || !detectorRef.current) {
-      rafRef.current = requestAnimationFrame(tick); return;
-    }
+    if (!video || video.readyState < 2) { rafRef.current = requestAnimationFrame(tick); return; }
+
     try {
-      const barcodes = await detectorRef.current.detect(video);
-      for (const b of barcodes) {
-        const decoded = decodeVendorQR(b.rawValue as string);
-        if (!decoded) { setScanState('error'); setStatusMsg('Invalid or expired QR — ask vendor to refresh.'); stopCamera(); return; }
-        if (decoded.storeId !== card.store_id) { setScanState('error'); setStatusMsg('Wrong store QR code.'); stopCamera(); return; }
-        await processQR(decoded.storeId);
-        return;
+      if (hasBarcodeDetector && detectorRef.current) {
+        const barcodes = await detectorRef.current.detect(video);
+        for (const b of barcodes) { await handleRawValue(b.rawValue as string); return; }
+      } else {
+        // jsQR fallback for iOS / browsers without BarcodeDetector
+        const canvas = canvasRef.current;
+        if (canvas) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(video, 0, 0);
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const jsQR = (await import('jsqr')).default;
+            const result = jsQR(imgData.data, imgData.width, imgData.height);
+            if (result) { await handleRawValue(result.data); return; }
+          }
+        }
       }
     } catch { /* non-fatal */ }
     rafRef.current = requestAnimationFrame(tick);
@@ -9392,6 +9407,7 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady }: {
         className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-12 shadow-2xl"
         onClick={e => e.stopPropagation()}>
         <div className="bg-brand-navy/20 rounded-full mx-auto mb-6" style={{ width: 40, height: 4 }} />
+        <canvas ref={canvasRef} className="hidden" />
 
         {/* Store header */}
         <div className="flex items-center gap-3 mb-6">
