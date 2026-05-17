@@ -10002,6 +10002,7 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
 function VisitScanSheet({ card, store, onClose }: { card: Card; store?: StoreProfile; onClose: () => void }) {
   type SS = 'idle' | 'scanning' | 'processing' | 'success' | 'error';
   const [scanState, setScanState] = useState<SS>('idle');
+  const [scanMode, setScanMode] = useState<'nfc' | 'qr'>('nfc');
   const [statusMsg, setStatusMsg] = useState('');
   const [testId, setTestId] = useState('');
   const [scannedUID, setScannedUID] = useState('');
@@ -10009,10 +10010,22 @@ function VisitScanSheet({ card, store, onClose }: { card: Card; store?: StorePro
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const hasNFC = 'NDEFReader' in window;
   const abortRef = useRef<AbortController | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const rafRef = useRef<number>(0);
+  const detectorRef = useRef<any>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const hasBarcodeDetector = typeof window !== 'undefined' && 'BarcodeDetector' in window;
   const color = store?.membershipColor || '#0f4c81';
   const membershipVisits = card.membership_visits ?? 0;
 
-  useEffect(() => () => { abortRef.current?.abort(); }, []);
+  const stopCamera = () => {
+    cancelAnimationFrame(rafRef.current);
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    streamRef.current = null;
+  };
+
+  useEffect(() => () => { abortRef.current?.abort(); stopCamera(); }, []);
 
   const processId = async (storeId: string) => {
     if (storeId !== card.store_id) {
@@ -10033,6 +10046,68 @@ function VisitScanSheet({ card, store, onClose }: { card: Card; store?: StorePro
       setStatusMsg(`+${qty} point${qty !== 1 ? 's' : ''} added!`);
     } catch (err: any) {
       setScanState('error'); setStatusMsg(err?.message || 'Something went wrong.');
+    }
+  };
+
+  const handleQRValue = async (raw: string) => {
+    stopCamera();
+    const decoded = decodeVendorQR(raw);
+    if (!decoded || decoded.storeId !== card.store_id) {
+      setScanState('error'); setStatusMsg('Wrong store QR code.'); return;
+    }
+    setScanState('processing'); setStatusMsg('Verifying…');
+    try {
+      await runTransaction(db, async tx => {
+        const tokenRef = doc(db, 'qr_tokens', decoded.tokenId);
+        const tokenSnap = await tx.get(tokenRef);
+        if (!tokenSnap.exists()) throw new Error('QR code not found — ask vendor to refresh.');
+        const tData = tokenSnap.data();
+        if (tData.used) throw new Error('QR already used — ask vendor to show a new one.');
+        if (tData.storeId !== card.store_id) throw new Error('Wrong store QR code.');
+        const age = Date.now() - (tData.createdAt?.toMillis?.() ?? 0);
+        if (age > 120_000) throw new Error('QR expired — ask vendor to refresh.');
+        tx.update(tokenRef, { used: true, usedAt: serverTimestamp() });
+      });
+    } catch (err: any) {
+      setScanState('error'); setStatusMsg(err?.message || 'QR verification failed.'); return;
+    }
+    await processId(decoded.storeId);
+  };
+
+  const tickQR = async () => {
+    const video = videoRef.current;
+    if (!video || video.readyState < 2) { rafRef.current = requestAnimationFrame(tickQR); return; }
+    try {
+      if (hasBarcodeDetector && detectorRef.current) {
+        const barcodes = await detectorRef.current.detect(video);
+        for (const b of barcodes) { await handleQRValue(b.rawValue as string); return; }
+      } else {
+        const canvas = canvasRef.current;
+        if (canvas) {
+          canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(video, 0, 0);
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const jsQR = (await import('jsqr')).default;
+            const result = jsQR(imgData.data, imgData.width, imgData.height);
+            if (result) { await handleQRValue(result.data); return; }
+          }
+        }
+      }
+    } catch { /* non-fatal */ }
+    rafRef.current = requestAnimationFrame(tickQR);
+  };
+
+  const startQRCamera = async () => {
+    setScanMode('qr'); setScanState('scanning');
+    try {
+      if (hasBarcodeDetector) detectorRef.current = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      streamRef.current = stream;
+      if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play().then(tickQR); }
+    } catch (err: any) {
+      setScanState('error'); setStatusMsg(err?.message || 'Camera unavailable');
     }
   };
 
@@ -10065,6 +10140,28 @@ function VisitScanSheet({ card, store, onClose }: { card: Card; store?: StorePro
     }
   };
 
+  // Full-screen camera when QR scanning
+  if (scanState === 'scanning' && scanMode === 'qr') {
+    return (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[130] qr-scanner-bg flex flex-col">
+        <canvas ref={canvasRef} className="hidden" />
+        <video ref={videoRef} playsInline muted className="absolute inset-0 w-full h-full object-cover" />
+        <div className="relative flex-1 flex items-center justify-center pointer-events-none">
+          <div className="relative w-48 h-48 qr-cutout" />
+        </div>
+        <div className="relative z-10 pb-14 px-8 text-center">
+          <p className="text-white font-bold text-sm mb-1">Point at vendor's QR code</p>
+          <p className="text-white/60 text-xs mb-6">Scanning automatically…</p>
+          <button onClick={() => { stopCamera(); setScanState('idle'); }}
+            className="px-8 py-3 rounded-2xl bg-white/15 text-white font-bold text-sm border border-white/20">
+            Cancel
+          </button>
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="fixed inset-0 z-[130] flex items-end justify-center" onClick={onClose}>
@@ -10095,18 +10192,26 @@ function VisitScanSheet({ card, store, onClose }: { card: Card; store?: StorePro
               <p className="text-brand-navy/75 text-[10px] font-bold uppercase tracking-widest mb-4">Points to collect</p>
               <span className="font-black text-6xl text-brand-navy leading-none">{qty}</span>
             </div>
-            {isIOS ? (
-              <div className="bg-brand-bg rounded-2xl p-4 mb-4 text-center">
-                <Smartphone size={28} className="text-brand-navy mx-auto mb-2" />
-                <p className="text-sm text-brand-navy/75">Hold the top of your iPhone near the store's NFC tag</p>
-              </div>
-            ) : (
-              <button onClick={startScan}
-                className="w-full flex items-center justify-center gap-2.5 text-white py-4 rounded-2xl font-black text-base mb-4 active:scale-[0.98] transition-transform"
-                style={{ backgroundColor: color }}>
-                <Wifi size={18} className="-rotate-90" /> Scan NFC Tag
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              {isIOS ? (
+                <div className="col-span-2 bg-brand-bg rounded-2xl p-4 text-center">
+                  <Smartphone size={28} className="text-brand-navy mx-auto mb-2" />
+                  <p className="text-sm text-brand-navy/75">Hold the top of your iPhone near the store's NFC tag</p>
+                </div>
+              ) : (
+                <button onClick={() => { setScanMode('nfc'); startScan(); }}
+                  className="flex flex-col items-center gap-2 py-4 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform text-white"
+                  style={{ backgroundColor: color }}>
+                  <Wifi size={20} className="-rotate-90" />
+                  NFC Tag
+                </button>
+              )}
+              <button onClick={startQRCamera}
+                className={cn("flex flex-col items-center gap-2 py-4 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform gradient-logo-blue text-white", isIOS ? "col-span-2" : "")}>
+                <QrCode size={20} />
+                Scan QR Code
               </button>
-            )}
+            </div>
             <div className="flex gap-2 mb-3">
               <input value={testId} onChange={e => setTestId(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && testId.trim() && processId(testId.trim())}
@@ -10118,7 +10223,7 @@ function VisitScanSheet({ card, store, onClose }: { card: Card; store?: StorePro
             <button onClick={onClose} className="w-full text-brand-navy/75 text-sm font-bold py-2">Close</button>
           </>
         )}
-        {scanState === 'scanning' && (
+        {scanState === 'scanning' && scanMode === 'nfc' && (
           <div className="text-center py-2">
             {isIOS ? (
               <div className="mb-4">
@@ -11904,7 +12009,10 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   }, [showVendorQR]);
 
   useEffect(() => {
-    onVendorQRStatus?.(!!store && store.cardEnabled !== false && store.scanMethod === 'qr');
+    onVendorQRStatus?.(!!store && (
+      (store.cardEnabled !== false && store.scanMethod === 'qr') ||
+      (store.membershipEnabled === true && store.membershipType === 'visit')
+    ));
   }, [store]);
 
   const trialEndsMs = store?.trialEndsAt
@@ -13756,7 +13864,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                   style={{ background: `linear-gradient(135deg, ${color}99 0%, ${color}66 100%)` }}
                 >
                   <Wifi size={14} className="-rotate-90" />
-                  Scan NFC to Earn Points
+                  Scan to Earn Points
                 </button>
               </div>
             </motion.div>
@@ -14096,7 +14204,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                   style={{ background: `linear-gradient(135deg, ${color}99 0%, ${color}66 100%)` }}
                 >
                   <Wifi size={14} className="-rotate-90" />
-                  Scan NFC to Earn Points
+                  Scan to Earn Points
                 </button>
               </div>
             </motion.div>
