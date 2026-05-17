@@ -12843,32 +12843,50 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
               <h2 className="font-display text-3xl font-bold mb-1">Issue</h2>
               <p className="text-brand-navy/80 text-sm">Manage your card or create store offers.</p>
             </header>
+            {/* NFC / QR toggle */}
+            {store && storeCardActive(store) && (
+              <div className="glass-card rounded-2xl p-1 flex gap-1">
+                <button
+                  onClick={() => store.scanMethod !== 'nfc' && updateDoc(doc(db, 'stores', store.id), { scanMethod: 'nfc' })}
+                  className={cn('flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all', store.scanMethod !== 'qr' ? 'bg-brand-navy text-white shadow' : 'text-brand-navy/50')}
+                >
+                  <Wifi size={15} className="-rotate-90" /> NFC
+                </button>
+                <button
+                  onClick={() => store.scanMethod !== 'qr' && updateDoc(doc(db, 'stores', store.id), { scanMethod: 'qr' })}
+                  className={cn('flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all', store.scanMethod === 'qr' ? 'bg-brand-navy text-white shadow' : 'text-brand-navy/50')}
+                >
+                  <QrCode size={15} /> QR Code
+                </button>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
-              {store && storeCardActive(store) && (
+              {store && storeCardActive(store) && store.scanMethod === 'qr' && (
                 <button
                   onClick={() => setShowQRScanner(true)}
-                  className="glass-card rounded-[2rem] p-6 flex flex-col items-center gap-4 active:scale-95 transition-transform text-center"
+                  className="glass-card rounded-[2rem] p-6 flex flex-col items-center gap-4 active:scale-95 transition-transform text-center col-span-2"
                 >
                   <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(135deg, #2563eb, #60a5fa)' }}>
                     <QrCode size={28} className="text-white" />
                   </div>
                   <div>
                     <p className="font-bold text-brand-navy">Show QR Code</p>
-                    <p className="text-xs text-brand-navy/80 mt-0.5">Customer scans your QR</p>
+                    <p className="text-xs text-brand-navy/80 mt-0.5">Customer scans your QR to earn a stamp</p>
                   </div>
                 </button>
               )}
-              {store && storeCardActive(store) && (
+              {store && storeCardActive(store) && store.scanMethod !== 'qr' && (
                 <button
                   onClick={() => setIsScanning(true)}
-                  className="glass-card rounded-[2rem] p-6 flex flex-col items-center gap-4 active:scale-95 transition-transform text-center"
+                  className="glass-card rounded-[2rem] p-6 flex flex-col items-center gap-4 active:scale-95 transition-transform text-center col-span-2"
                 >
                   <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(135deg, #0f766e, #14b8a6)' }}>
                     <Wifi size={28} className="text-white -rotate-90" />
                   </div>
                   <div>
-                    <p className="font-bold text-brand-navy">Stamp via NFC</p>
-                    <p className="text-xs text-brand-navy/80 mt-0.5">Customer taps NFC tag</p>
+                    <p className="font-bold text-brand-navy">NFC Active</p>
+                    <p className="text-xs text-brand-navy/80 mt-0.5">Customer taps your NFC tag to earn a stamp</p>
                   </div>
                 </button>
               )}
@@ -14181,6 +14199,14 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
           );
         })()}
       </motion.div>
+
+      {!isCompleted && !card.isRedeemed && (
+        <p className="text-center text-brand-navy/40 text-[11px] font-bold mt-2 flex items-center justify-center gap-1">
+          {store?.scanMethod === 'qr'
+            ? <><QrCode size={11} /> Tap card to scan store QR</>
+            : <><Wifi size={11} className="-rotate-90" /> Tap card to scan NFC tag</>}
+        </p>
+      )}
 
       <AnimatePresence>
         {showCardScan && (
