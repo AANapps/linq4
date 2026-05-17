@@ -12843,24 +12843,6 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
               <h2 className="font-display text-3xl font-bold mb-1">Issue</h2>
               <p className="text-brand-navy/80 text-sm">Manage your card or create store offers.</p>
             </header>
-            {/* NFC / QR toggle */}
-            {store && storeCardActive(store) && (
-              <div className="glass-card rounded-2xl p-1 flex gap-1">
-                <button
-                  onClick={() => store.scanMethod !== 'nfc' && updateDoc(doc(db, 'stores', store.id), { scanMethod: 'nfc' })}
-                  className={cn('flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all', store.scanMethod !== 'qr' ? 'bg-brand-navy text-white shadow' : 'text-brand-navy/50')}
-                >
-                  <Wifi size={15} className="-rotate-90" /> NFC
-                </button>
-                <button
-                  onClick={() => store.scanMethod !== 'qr' && updateDoc(doc(db, 'stores', store.id), { scanMethod: 'qr' })}
-                  className={cn('flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all', store.scanMethod === 'qr' ? 'bg-brand-navy text-white shadow' : 'text-brand-navy/50')}
-                >
-                  <QrCode size={15} /> QR Code
-                </button>
-              </div>
-            )}
-
             <div className="grid grid-cols-2 gap-4">
               {store && storeCardActive(store) && store.scanMethod === 'qr' && (
                 <button
@@ -17057,6 +17039,8 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
   );
   const [pendingTab, setPendingTab] = useState<'loyalty' | 'membership' | null>(null);
   const [switching, setSwitching] = useState(false);
+  const [pendingScanMethod, setPendingScanMethod] = useState<'nfc' | 'qr' | null>(null);
+  const [switchingScanMethod, setSwitchingScanMethod] = useState(false);
 
   // Auto-enable loyalty card whenever the loyalty tab is active
   useEffect(() => {
@@ -17095,6 +17079,17 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
     }
     setActiveTab(pendingTab);
     setPendingTab(null);
+  };
+
+  const confirmScanMethodSwitch = async () => {
+    if (!pendingScanMethod || !store?.id) return;
+    setSwitchingScanMethod(true);
+    try {
+      await updateDoc(doc(db, 'stores', store.id), { scanMethod: pendingScanMethod });
+    } finally {
+      setSwitchingScanMethod(false);
+    }
+    setPendingScanMethod(null);
   };
 
   return (
@@ -17163,9 +17158,79 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
         )}
       </AnimatePresence>
 
+      {/* ─── Scan method warning dialog ─── */}
+      <AnimatePresence>
+        {pendingScanMethod && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm"
+          >
+            <div className="glass-card rounded-[2rem] p-6 w-full max-w-sm space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+                  <AlertTriangle size={20} className="text-amber-500" />
+                </div>
+                <h3 className="font-display text-lg font-bold text-brand-navy">
+                  Switch to {pendingScanMethod === 'qr' ? 'QR Code' : 'NFC'}?
+                </h3>
+              </div>
+              <p className="text-sm text-brand-navy/75">
+                {pendingScanMethod === 'qr'
+                  ? 'Customers will scan a QR code displayed on your screen instead of tapping an NFC tag.'
+                  : 'Customers will tap your physical NFC tag instead of scanning a QR code. Make sure your NFC tags are programmed and ready.'}
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setPendingScanMethod(null)}
+                  disabled={switchingScanMethod}
+                  className="flex-1 py-3 rounded-2xl border border-brand-navy/10 text-sm font-bold text-brand-navy/75 hover:bg-brand-navy/5 transition-colors disabled:opacity-40"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmScanMethodSwitch}
+                  disabled={switchingScanMethod}
+                  className="flex-1 py-3 rounded-2xl bg-brand-navy text-white text-sm font-bold hover:bg-brand-navy/90 transition-colors disabled:opacity-40"
+                >
+                  {switchingScanMethod ? 'Switching…' : 'Switch'}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ─── Loyalty Card tab ─── */}
       {activeTab === 'loyalty' && (
         <div className="space-y-4">
+          {/* NFC / QR toggle */}
+          <div className="glass-card rounded-[1.5rem] px-5 py-4 space-y-3">
+            <div>
+              <p className="font-bold text-brand-navy">Stamp Method</p>
+              <p className="text-xs text-brand-navy/80 mt-0.5">
+                {store?.scanMethod === 'qr'
+                  ? 'Customers scan a QR code on your screen'
+                  : 'Customers tap your physical NFC tag'}
+              </p>
+            </div>
+            <div className="flex gap-1 p-1 bg-brand-navy/5 rounded-2xl">
+              <button
+                onClick={() => store?.scanMethod !== 'nfc' && setPendingScanMethod('nfc')}
+                className={cn('flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all', store?.scanMethod !== 'qr' ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/50')}
+              >
+                <Wifi size={14} className="-rotate-90" /> NFC Tag
+              </button>
+              <button
+                onClick={() => store?.scanMethod !== 'qr' && setPendingScanMethod('qr')}
+                className={cn('flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all', store?.scanMethod === 'qr' ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/50')}
+              >
+                <QrCode size={14} /> QR Code
+              </button>
+            </div>
+          </div>
           <CardBuilder store={store} />
         </div>
       )}
