@@ -13472,6 +13472,7 @@ function SwipeConfirm({ onConfirm }: { onConfirm: () => void }) {
 function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, onScan, userHandle }: { card: Card; store?: StoreProfile; onViewStore?: (s: StoreProfile) => void; compact?: boolean; autoOpen?: 'spend' | 'nfc'; onScan?: () => void; userHandle?: string; key?: React.Key }) {
   const [showRedeemSheet, setShowRedeemSheet] = useState(autoOpen === 'spend' || autoOpen === 'nfc');
   const [showVisitScan, setShowVisitScan] = useState(false);
+  const [showVisitScanSheet, setShowVisitScanSheet] = useState(false);
   const [showRedeemFlow, setShowRedeemFlow] = useState(false);
   const [redeemDollars, setRedeemDollars] = useState('');
   const [redeemStage, setRedeemStage] = useState<'input' | 'swipe' | 'success'>('input');
@@ -13648,7 +13649,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
       <>
       <div
         className="rounded-3xl overflow-hidden"
-        onClick={() => setShowRedeemSheet(true)}
+        onClick={() => membershipType === 'visit' ? setShowVisitScanSheet(true) : setShowRedeemSheet(true)}
       >
         {/* Colored header — mirrors compact LoyaltyCard header */}
         <div className="relative overflow-hidden flex items-center gap-3 px-4 py-3" style={{ backgroundColor: color }}>
@@ -13896,6 +13897,37 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
           <VisitScanSheet card={card} store={store} onClose={() => setShowVisitScan(false)} />
         )}
       </AnimatePresence>
+      <AnimatePresence>
+        {showVisitScanSheet && (
+          <div className="fixed inset-0 z-[100] flex items-end justify-center">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setShowVisitScanSheet(false)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+              className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-10 shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="bg-brand-navy/20 rounded-full mx-auto mb-5" style={{ width: 40, height: 4 }} />
+              <h3 className="font-display text-xl font-bold text-center mb-1">{store?.name}</h3>
+              <p className="text-brand-navy/60 text-xs text-center mb-6">{membershipVisits} points</p>
+              <div className="grid grid-cols-2 gap-3 mb-5">
+                <button onClick={() => { setShowVisitScanSheet(false); setShowVisitScan(true); }}
+                  className="flex flex-col items-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform gradient-logo-blue text-white shadow-lg relative overflow-hidden">
+                  <span className="card-shine-ray" aria-hidden="true" />
+                  <QrCode size={28} className="relative z-10" />
+                  <span className="relative z-10">Scan QR Code</span>
+                </button>
+                <button onClick={() => { setShowVisitScanSheet(false); onScan?.(); }}
+                  className="flex flex-col items-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform bg-brand-navy/8 text-brand-navy">
+                  <Wifi size={28} className="-rotate-90" />
+                  Scan NFC
+                </button>
+              </div>
+              <button onClick={() => setShowVisitScanSheet(false)} className="w-full text-brand-navy/75 font-bold text-sm py-2">Close</button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
       </>
     );
   }
@@ -13904,7 +13936,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
     <>
       <motion.div
         className="relative rounded-[2rem] overflow-hidden select-none h-full flex flex-col"
-        onClick={() => setShowRedeemSheet(true)}
+        onClick={() => membershipType === 'visit' ? setShowVisitScanSheet(true) : setShowRedeemSheet(true)}
         whileTap={{ scale: 0.98 }}
       >
         {/* Gradient header — same structure as stamp card */}
@@ -14235,6 +14267,37 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
       <AnimatePresence>
         {showVisitScan && (
           <VisitScanSheet card={card} store={store} onClose={() => setShowVisitScan(false)} />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showVisitScanSheet && (
+          <div className="fixed inset-0 z-[100] flex items-end justify-center">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setShowVisitScanSheet(false)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+              className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-10 shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="bg-brand-navy/20 rounded-full mx-auto mb-5" style={{ width: 40, height: 4 }} />
+              <h3 className="font-display text-xl font-bold text-center mb-1">{store?.name}</h3>
+              <p className="text-brand-navy/60 text-xs text-center mb-6">{membershipVisits} points</p>
+              <div className="grid grid-cols-2 gap-3 mb-5">
+                <button onClick={() => { setShowVisitScanSheet(false); setShowVisitScan(true); }}
+                  className="flex flex-col items-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform gradient-logo-blue text-white shadow-lg relative overflow-hidden">
+                  <span className="card-shine-ray" aria-hidden="true" />
+                  <QrCode size={28} className="relative z-10" />
+                  <span className="relative z-10">Scan QR Code</span>
+                </button>
+                <button onClick={() => { setShowVisitScanSheet(false); onScan?.(); }}
+                  className="flex flex-col items-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform bg-brand-navy/8 text-brand-navy">
+                  <Wifi size={28} className="-rotate-90" />
+                  Scan NFC
+                </button>
+              </div>
+              <button onClick={() => setShowVisitScanSheet(false)} className="w-full text-brand-navy/75 font-bold text-sm py-2">Close</button>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
