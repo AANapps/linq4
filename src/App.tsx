@@ -9340,12 +9340,15 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady }: {
   };
 
   const startCamera = async () => {
+    if (!hasBarcodeDetector) {
+      setScanState('error');
+      setStatusMsg('QR scanning is not supported on this browser. Ask your vendor to enter your handle manually.');
+      return;
+    }
     setScanState('scanning');
     setCamError('');
     try {
-      if (hasBarcodeDetector) {
-        detectorRef.current = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
-      }
+      detectorRef.current = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
       streamRef.current = stream;
       if (videoRef.current) {
@@ -9425,25 +9428,18 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady }: {
 
         {scanState === 'scanning' && (
           <div className="text-center py-2">
-            {hasBarcodeDetector ? (
-              <>
-                <div className="relative w-full rounded-2xl overflow-hidden bg-black mb-4" style={{ height: 200 }}>
-                  <video ref={videoRef} playsInline muted className="w-full h-full object-cover" />
-                  {/* Corner brackets */}
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="relative w-32 h-32">
-                      <div className="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 rounded-tl" style={{ borderColor: cardTheme }} />
-                      <div className="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 rounded-tr" style={{ borderColor: cardTheme }} />
-                      <div className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 rounded-bl" style={{ borderColor: cardTheme }} />
-                      <div className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 rounded-br" style={{ borderColor: cardTheme }} />
-                    </div>
-                  </div>
+            <div className="relative w-full rounded-2xl overflow-hidden bg-black mb-4" style={{ height: 200 }}>
+              <video ref={videoRef} playsInline muted className="w-full h-full object-cover" />
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="relative w-32 h-32">
+                  <div className="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 rounded-tl" style={{ borderColor: cardTheme }} />
+                  <div className="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 rounded-tr" style={{ borderColor: cardTheme }} />
+                  <div className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 rounded-bl" style={{ borderColor: cardTheme }} />
+                  <div className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 rounded-br" style={{ borderColor: cardTheme }} />
                 </div>
-                <p className="text-brand-navy/75 text-sm font-bold mb-1">Point at the store's QR code</p>
-              </>
-            ) : (
-              <p className="text-brand-navy/60 text-sm mb-4">QR scanning not supported. Ask vendor for their store ID.</p>
-            )}
+              </div>
+            </div>
+            <p className="text-brand-navy/75 text-sm font-bold mb-1">Point at the store's QR code</p>
             {camError && <p className="text-red-500 text-xs mb-3">{camError}</p>}
             <button onClick={() => { stopCamera(); setScanState('idle'); }}
               className="w-full text-brand-navy/75 text-sm font-bold py-2">Cancel</button>
