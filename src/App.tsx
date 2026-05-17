@@ -5929,6 +5929,7 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
   const [search, setSearch] = useState('');
   const [confirmDeleteUid, setConfirmDeleteUid] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [togglingUid, setTogglingUid] = useState<string | null>(null);
 
   useEffect(() => {
     return onSnapshot(collection(db, 'users'), snap =>
@@ -5937,11 +5938,15 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
   }, []);
 
   const filtered = search.trim()
-    ? users.filter(u =>
-        u.name?.toLowerCase().includes(search.toLowerCase()) ||
-        u.handle?.toLowerCase().includes(search.toLowerCase()) ||
-        u.email?.toLowerCase().includes(search.toLowerCase())
-      )
+    ? users.filter(u => {
+        const q = search.toLowerCase();
+        return (
+          u.name?.toLowerCase().includes(q) ||
+          u.handle?.toLowerCase().includes(q) ||
+          u.email?.toLowerCase().includes(q) ||
+          u.phone?.replace(/\D/g, '').includes(q.replace(/\D/g, ''))
+        );
+      })
     : users;
 
   const handleDelete = async (uid: string) => {
@@ -5952,6 +5957,16 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
       setConfirmDeleteUid(null);
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const toggleAdmin = async (u: UserProfile) => {
+    setTogglingUid(u.uid);
+    try {
+      const newRole = u.role === 'admin' ? 'consumer' : 'admin';
+      await updateDoc(doc(db, 'users', u.uid), { role: newRole });
+    } finally {
+      setTogglingUid(null);
     }
   };
 
@@ -6021,6 +6036,20 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
                   </div>
                   <p className="text-[10px] text-brand-navy/75 truncate">{u.handle ? `@${u.handle}` : u.email}</p>
                 </div>
+                <button
+                  onClick={() => toggleAdmin(u)}
+                  disabled={togglingUid === u.uid}
+                  title={u.role === 'admin' ? 'Remove admin' : 'Make admin'}
+                  className={cn(
+                    'px-2 py-1 rounded-lg text-[10px] font-bold transition-all shrink-0',
+                    u.role === 'admin'
+                      ? 'bg-brand-gold/20 text-brand-gold'
+                      : 'bg-brand-navy/8 text-brand-navy/50 hover:bg-brand-gold/20 hover:text-brand-gold',
+                    togglingUid === u.uid && 'opacity-50'
+                  )}
+                >
+                  {u.role === 'admin' ? '★ Admin' : '☆ Admin'}
+                </button>
                 <button
                   onClick={() => setConfirmDeleteUid(u.uid)}
                   className="p-2 text-red-400 hover:text-red-600 transition-colors"
