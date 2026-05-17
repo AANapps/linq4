@@ -523,6 +523,33 @@ const ADMIN_EMAIL = 'info@adastranetwork.co.uk';
 const isAppAdmin = (profile: UserProfile | null, email?: string | null) =>
   email === ADMIN_EMAIL || profile?.email === ADMIN_EMAIL || profile?.role === 'admin';
 
+// ── Analytics ──────────────────────────────────────────────────────────────
+let SESSION_ID: string;
+try { SESSION_ID = crypto.randomUUID(); } catch { SESSION_ID = Math.random().toString(36).slice(2) + Date.now().toString(36); }
+
+const APP_VERSION = '1.0.0';
+
+function detectReferrer(): string {
+  const p = new URLSearchParams(window.location.search);
+  if (p.get('ref') === 'invite') return 'invite';
+  if (p.get('ref') === 'store_qr' || p.get('stamp')) return 'store_qr';
+  if (document.referrer) return 'web_referral';
+  return 'organic';
+}
+
+function logEvent(type: string, userId: string, meta: Record<string, unknown> = {}): void {
+  addDoc(collection(db, 'events'), {
+    type,
+    userId,
+    timestamp: serverTimestamp(),
+    sessionId: SESSION_ID,
+    platform: 'web',
+    appVersion: APP_VERSION,
+    ...meta,
+  }).catch(() => {});
+}
+// ───────────────────────────────────────────────────────────────────────────
+
 async function postActivity(uid: string, name: string, photo: string, content: string, emoji: string) {
   try {
     await addDoc(collection(db, 'global_posts'), {
@@ -829,6 +856,7 @@ export default function App() {
   const [viewingUser, setViewingUser] = useState<UserProfile | null>(null);
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior }); }, [activeTab]);
+  useEffect(() => { if (user) logEvent('screen_view', user.uid, { screen: activeTab }); }, [activeTab]);
   useEffect(() => { if (viewingStore || viewingUser) window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior }); }, [viewingStore, viewingUser]);
 
   // If the target user is a vendor, go straight to their store instead of their user profile
@@ -1175,6 +1203,17 @@ export default function App() {
           // Backfill phone number for phone-auth users who signed up before this field was stored
           if (inUsers && firebaseUser.phoneNumber && !data.phone) {
             updateDoc(doc(db, 'users', firebaseUser.uid), { phone: firebaseUser.phoneNumber }).catch(() => {});
+          }
+          // Analytics
+          const referrer = detectReferrer();
+          logEvent('session_start', firebaseUser.uid, { referrer, role: data.role || 'consumer' });
+          if (inUsers) {
+            const lastStampAt = data.lastStampAt?.toDate?.();
+            const daysDormant = lastStampAt ? Math.floor((Date.now() - lastStampAt.getTime()) / 86400000) : null;
+            if (daysDormant !== null && daysDormant >= 30) {
+              logEvent('reactivation', firebaseUser.uid, { daysDormant, triggerType: referrer === 'organic' ? 'organic' : 'referral' });
+            }
+            updateDoc(doc(db, 'users', firebaseUser.uid), { lastSeenAt: serverTimestamp() }).catch(() => {});
           }
         }
       } catch (err) {
@@ -3025,6 +3064,8 @@ async function issueUserStickers(uid: string, userName: string, qty: number): Pr
       updateDoc(cardDoc.ref, { stickers: arrayUnion(...newStickers), userName })
     ));
   }
+
+  newStickers.forEach(s => logEvent('sticker_earned', uid, { tier: s.tier, variant: s.variant, cardDefId: s.cardDefId || null, challengeId: s.challengeId || null }));
 
   return newStickers;
 }
@@ -8280,6 +8321,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         });
       }
       await updateDoc(doc(db, 'users', user.uid), { total_cards_held: increment(1) });
+      logEvent('store_joined', user.uid, { storeId: store.id, cardType: isSubCard ? 'sub' : 'loyalty', source: detectReferrer() });
       setActiveTab('home');
     }
   };
@@ -8299,6 +8341,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         uniqueTiers: [],
         userName,
       });
+      logEvent('store_joined', user.uid, { programmeId: prog.id, cardType: 'collectible', source: detectReferrer() });
     } catch (err: any) {
       console.error('join programme failed:', err);
       setJoinError(err?.message || 'Failed to join. Try again.');
@@ -9134,8 +9177,12 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
       await updateDoc(cardRef, { current_stamps: newStamps, total_completed_cycles: newCycles, last_tap_timestamp: serverTimestamp() });
     }
 
-    await updateDoc(doc(db, 'users', user.uid), { totalStamps: increment(qty) });
+    await updateDoc(doc(db, 'users', user.uid), { totalStamps: increment(qty), lastStampAt: serverTimestamp() });
     bumpStreak(user.uid).catch(console.error);
+    logEvent('stamp_issued', user.uid, { storeId: store.id, cardId, stampCount: qty, method: 'nfc' });
+    if (newStamps >= store.stamps_required_for_reward || 0) {
+      logEvent('card_completed', user.uid, { storeId: store.id, cardId, totalStamps: store.stamps_required_for_reward || 10 });
+    }
 
     // Update avatar mood on every stamp (food stores give a bigger boost)
     if (store.category === 'Food') {
@@ -12135,12 +12182,14 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
         const qty = Number(stampQuantity);
         const limit = store.stamps_required_for_reward;
 
+        let _cycleCompleted = false;
         if (cardDoc.exists()) {
           const data = cardDoc.data() as Card;
           let newStamps = data.current_stamps + qty;
           let newCycles = data.total_completed_cycles;
 
           const cycleCompleted = newStamps >= limit;
+          _cycleCompleted = cycleCompleted;
           if (cycleCompleted) {
             newCycles += 1;
             if (newStamps > limit) newStamps = limit;
@@ -12161,6 +12210,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
           let newCycles = 0;
 
           const cycleCompleted2 = newStamps >= limit;
+          _cycleCompleted = cycleCompleted2;
           if (cycleCompleted2) {
             newCycles = 1;
             if (newStamps > limit) newStamps = limit;
@@ -12197,9 +12247,11 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
         }]);
 
         await updateDoc(doc(db, 'users', customer.uid), {
-          totalStamps: increment(qty)
+          totalStamps: increment(qty), lastStampAt: serverTimestamp()
         });
         bumpStreak(customer.uid).catch(console.error);
+        logEvent('stamp_issued', customer.uid, { storeId: store.id, cardId: `${customer.uid}_${store.id}`, stampCount: qty, method: 'vendor_handle' });
+        if (_cycleCompleted) logEvent('card_completed', customer.uid, { storeId: store.id, cardId: `${customer.uid}_${store.id}`, totalStamps: limit });
 
         // Food stamps increase avatar mood and record date
         if (store.category === 'Food') {
@@ -12256,12 +12308,14 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
       const qty = Number(stampQuantity);
       const lim = store.stamps_required_for_reward;
       const cardDoc = await getDoc(cardRef);
+      let _uidCycleCompleted = false;
 
       if (cardDoc.exists()) {
         const data = cardDoc.data() as Card;
         let newStamps = data.current_stamps + qty;
         let newCycles = data.total_completed_cycles;
         const cycleCompleted = newStamps >= lim;
+        _uidCycleCompleted = cycleCompleted;
         if (cycleCompleted) { newCycles += 1; if (newStamps > lim) newStamps = lim; }
         const txData = cycleCompleted
           ? { user_id: userId, store_id: store.id, completed_at: serverTimestamp(), stamp_count: qty, stamps_at_completion: lim, reward_claimed: false }
@@ -12271,9 +12325,10 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
       } else {
         let newStamps = qty;
         let newCycles = 0;
-        const cycleCompleted = newStamps >= lim;
-        if (cycleCompleted) { newCycles = 1; if (newStamps > lim) newStamps = lim; }
-        const txData = cycleCompleted
+        const cycleCompleted2 = newStamps >= lim;
+        _uidCycleCompleted = cycleCompleted2;
+        if (cycleCompleted2) { newCycles = 1; if (newStamps > lim) newStamps = lim; }
+        const txData = cycleCompleted2
           ? { user_id: userId, store_id: store.id, completed_at: serverTimestamp(), stamp_count: qty, stamps_at_completion: lim, reward_claimed: false }
           : { user_id: userId, store_id: store.id, completed_at: serverTimestamp(), stamp_count: qty };
         await addDoc(collection(db, 'transactions'), txData);
@@ -12284,8 +12339,10 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
         });
         await updateDoc(doc(db, 'users', userId), { total_cards_held: increment(1) });
       }
-      await updateDoc(doc(db, 'users', userId), { totalStamps: increment(qty) });
+      await updateDoc(doc(db, 'users', userId), { totalStamps: increment(qty), lastStampAt: serverTimestamp() });
       bumpStreak(userId).catch(console.error);
+      logEvent('stamp_issued', userId, { storeId: store.id, cardId: `${userId}_${store.id}`, stampCount: qty, method: 'vendor_uid' });
+      if (_uidCycleCompleted) logEvent('card_completed', userId, { storeId: store.id, cardId: `${userId}_${store.id}`, totalStamps: lim });
       issueUserStickers(userId, customer.name, qty).catch(console.error);
       updateChallengeProgress(userId, store.id, qty).catch(console.error);
       setIssueStatus({ type: 'success', message: `${qty} stamp(s) issued to ${customer.name}!` });
@@ -13366,6 +13423,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
         total_value_redeemed: increment(redeemDollarNum),
         last_redeemed_at: serverTimestamp(),
       });
+      logEvent('redemption', card.user_id, { cardId: card.id, storeId: card.store_id, rewardValue: redeemDollarNum, cardType: 'membership_value' });
       setRedeemStage('success');
     } catch (err) {
       console.error(err);
@@ -14206,6 +14264,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
     const userName = auth.currentUser?.displayName || 'Someone';
     const userPhoto = auth.currentUser?.photoURL || '';
     const rewardLabel = store?.rewardTiers?.length ? store.rewardTiers[store.rewardTiers.length - 1].reward : (store?.reward || 'a reward');
+    logEvent('redemption', card.user_id, { cardId: card.id, storeId: card.store_id, rewardLabel, tiersCompleted: numTiers, cardType: 'loyalty', redeemedBy: 'staff' });
     postActivity(uid, userName, userPhoto, `${userName} just got ${rewardLabel} at ${store?.name || 'a store'}!`, '🎁');
   };
 
@@ -14607,6 +14666,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
         ...(selectedReward.moneyValue ? { money_value: selectedReward.moneyValue } : {}),
         redeemed_at: serverTimestamp(),
       });
+      logEvent('redemption', card.user_id, { cardId: card.id, storeId: card.store_id, pointsUsed: pointsToUse, rewardLabel: selectedReward.reward, cardType: 'sub' });
       setRedeemSuccess(selectedReward.reward);
       const u = auth.currentUser;
       if (u) postActivity(u.uid, u.displayName || 'Someone', u.photoURL || '', `${u.displayName || 'Someone'} redeemed ${pointsToUse} points at ${store?.name || 'a store'}!`, '⭐');
