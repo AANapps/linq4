@@ -37,7 +37,7 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
-      allow update: if isOwner(userId) || isAdmin() || (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['totalStamps', 'totalRedeemed', 'total_cards_held', 'totalSaved']));
+      allow update: if isOwner(userId) || isAdmin() || (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['totalStamps', 'totalRedeemed', 'total_cards_held', 'totalSaved', 'lastStampAt', 'lastSeenAt']));
       allow delete: if isAdmin();
     }
 
@@ -271,6 +271,22 @@ service cloud.firestore {
     match /qr_tokens/{tokenId} {
       // Vendors write tokens; consumers read and claim (mark used) via transaction
       allow read, write: if isAuthenticated();
+    }
+
+    match /events/{eventId} {
+      // Any authenticated user can append analytics events; only admin can read
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow read: if isAdmin();
+    }
+
+    match /admin_gifs/{gifId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /collectible_card_defs/{defId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
     }
 
     match /chats/{chatId} {
