@@ -55,16 +55,13 @@
   background: linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 40%, #2563eb 70%, #3b82f6 100%);
 }
 
-@keyframes qr-bg-shift {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+.qr-scanner-bg {
+  background: #1236a0;
 }
 
-.qr-scanner-bg {
-  background: linear-gradient(135deg, #0c1a3a, #0f2d6b, #1a4db5, #1e3a8a, #0a1628, #1d4ed8, #0c1a3a);
-  background-size: 400% 400%;
-  animation: qr-bg-shift 4s ease infinite;
+.qr-cutout {
+  box-shadow: 0 0 0 9999px rgba(18, 54, 160, 0.88);
+  border-radius: 4px;
 }
 
 @keyframes badge-shine-sweep {

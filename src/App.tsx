@@ -9393,12 +9393,12 @@ function VendorQRScanner({ store, stampQty, onScanned, onClose }: {
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[150] qr-scanner-bg flex flex-col"
     >
-      {/* Camera feed */}
+      {/* Camera feed — full opacity, square cutout punched through the blue overlay */}
       <video
         ref={videoRef}
         playsInline
         muted
-        className="absolute inset-0 w-full h-full object-cover opacity-40"
+        className="absolute inset-0 w-full h-full object-cover"
       />
 
       {/* Overlay */}
@@ -9416,7 +9416,7 @@ function VendorQRScanner({ store, stampQty, onScanned, onClose }: {
 
         {/* Viewfinder */}
         <div className="flex-1 flex items-center justify-center">
-          <div className="relative w-48 h-48">
+          <div className="relative w-48 h-48 qr-cutout">
             {/* Corner brackets */}
             <div className="absolute top-0 left-0 w-7 h-7 border-t-4 border-l-4 rounded-tl-lg border-white" />
             <div className="absolute top-0 right-0 w-7 h-7 border-t-4 border-r-4 rounded-tr-lg border-white" />
@@ -9686,11 +9686,11 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady }: {
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         className="fixed inset-0 z-[130] qr-scanner-bg flex flex-col">
         <canvas ref={canvasRef} className="hidden" />
-        <video ref={videoRef} playsInline muted className="absolute inset-0 w-full h-full object-cover opacity-40" />
+        <video ref={videoRef} playsInline muted className="absolute inset-0 w-full h-full object-cover" />
 
         {/* Viewfinder overlay */}
         <div className="relative flex-1 flex items-center justify-center pointer-events-none">
-          <div className="relative w-48 h-48">
+          <div className="relative w-48 h-48 qr-cutout">
             <div className="absolute top-0 left-0 w-7 h-7 border-t-4 border-l-4 rounded-tl-lg border-white" />
             <div className="absolute top-0 right-0 w-7 h-7 border-t-4 border-r-4 rounded-tr-lg border-white" />
             <div className="absolute bottom-0 left-0 w-7 h-7 border-b-4 border-l-4 rounded-bl-lg border-white" />
