@@ -366,6 +366,7 @@ interface StoreProfile {
   membershipVisitRewards?: { visits: number; reward: string }[];
   membershipStampsPerVisit?: number;
   membershipMenuItems?: { id: string; name: string; points: number; description?: string }[];
+  scanMethod?: 'nfc' | 'qr';
 }
 
 function storeCardActive(store: StoreProfile): boolean {
@@ -4619,6 +4620,17 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
     }
   };
 
+  const handleToggleScanMethod = async (store: StoreProfile) => {
+    setTogglingId(store.id);
+    try {
+      await updateDoc(doc(db, 'stores', store.id), {
+        scanMethod: store.scanMethod === 'qr' ? 'nfc' : 'qr',
+      });
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
   useEffect(() => {
     return onSnapshot(collection(db, 'stores'), snap =>
       setStores(snap.docs.map(d => ({ id: d.id, ...d.data() } as StoreProfile)).sort((a, b) => (a.name || '').localeCompare(b.name || '')))
@@ -4729,6 +4741,25 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
                     >
                       <motion.div
                         animate={{ x: isStoreTrial(store) ? 22 : 2 }}
+                        transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                        className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm"
+                      />
+                    </button>
+                  </div>
+
+                  {/* QR / NFC toggle */}
+                  <div className="flex flex-col items-center gap-0.5">
+                    <span className="text-[8px] font-bold text-brand-navy/72 uppercase tracking-wide">{store.scanMethod === 'qr' ? 'QR' : 'NFC'}</span>
+                    <button
+                      onClick={() => handleToggleScanMethod(store)}
+                      disabled={togglingId === store.id}
+                      className={cn(
+                        'relative w-10 h-5 rounded-full transition-colors duration-200 disabled:opacity-50',
+                        store.scanMethod === 'qr' ? 'bg-blue-400' : 'bg-brand-navy/15'
+                      )}
+                    >
+                      <motion.div
+                        animate={{ x: store.scanMethod === 'qr' ? 22 : 2 }}
                         transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                         className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm"
                       />
@@ -8977,6 +9008,168 @@ function NFCScanOverlay({ phase, msg, onCancel }: {
   );
 }
 
+function VendorQRScanner({ store, stampQty, onScanned, onClose }: {
+  store: StoreProfile;
+  stampQty: number;
+  onScanned: (userId: string) => void;
+  onClose: () => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const rafRef = useRef<number>(0);
+  const detectorRef = useRef<any>(null);
+  const [error, setError] = useState('');
+  const [manualUID, setManualUID] = useState('');
+  const hasBarcodeDetector = typeof window !== 'undefined' && 'BarcodeDetector' in window;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const tick = async () => {
+      if (cancelled) return;
+      const video = videoRef.current;
+      if (!video || video.readyState < 2 || !detectorRef.current) {
+        rafRef.current = requestAnimationFrame(tick);
+        return;
+      }
+      try {
+        const barcodes = await detectorRef.current.detect(video);
+        for (const b of barcodes) {
+          const val: string = b.rawValue;
+          if (val.startsWith('stamp:')) {
+            const parts = val.split(':');
+            if (parts.length >= 3) {
+              const userId = parts[1];
+              const storeId = parts[2];
+              if (storeId === store.id) {
+                cancelled = true;
+                onScanned(userId);
+                return;
+              } else {
+                setError('Wrong store — this QR is for a different shop.');
+                break;
+              }
+            }
+          }
+        }
+      } catch { /* detection errors are non-fatal */ }
+      if (!cancelled) rafRef.current = requestAnimationFrame(tick);
+    };
+
+    const start = async () => {
+      try {
+        if (hasBarcodeDetector) {
+          detectorRef.current = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+        }
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        streamRef.current = stream;
+        if (videoRef.current && !cancelled) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().then(() => { if (!cancelled) rafRef.current = requestAnimationFrame(tick); });
+        }
+      } catch (err: any) {
+        if (!cancelled) setError(err?.message || 'Camera unavailable');
+      }
+    };
+
+    start();
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(rafRef.current);
+      streamRef.current?.getTracks().forEach(t => t.stop());
+    };
+  }, [store.id, onScanned, hasBarcodeDetector]);
+
+  const handleManual = () => {
+    const id = manualUID.trim();
+    if (!id) return;
+    onScanned(id);
+  };
+
+  const cardTheme = store.theme || '#3a6fcc';
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[150] bg-black flex flex-col"
+    >
+      {/* Camera feed */}
+      <video
+        ref={videoRef}
+        playsInline
+        muted
+        className="absolute inset-0 w-full h-full object-cover"
+      />
+
+      {/* Overlay */}
+      <div className="relative z-10 flex flex-col h-full">
+        {/* Header */}
+        <div className="flex items-center gap-3 px-5 pt-12 pb-4">
+          <button onClick={onClose} className="p-2 bg-black/40 rounded-full text-white">
+            <X size={20} />
+          </button>
+          <div className="flex-1">
+            <p className="text-white font-bold text-sm">{store.name}</p>
+            <p className="text-white/60 text-xs">Scan customer's QR code · {stampQty} stamp{stampQty > 1 ? 's' : ''}</p>
+          </div>
+        </div>
+
+        {/* Viewfinder */}
+        <div className="flex-1 flex items-center justify-center">
+          <div className="relative w-64 h-64">
+            {/* Corner brackets */}
+            <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 rounded-tl-lg" style={{ borderColor: cardTheme }} />
+            <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 rounded-tr-lg" style={{ borderColor: cardTheme }} />
+            <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 rounded-bl-lg" style={{ borderColor: cardTheme }} />
+            <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 rounded-br-lg" style={{ borderColor: cardTheme }} />
+            {/* Scan line */}
+            <motion.div
+              className="absolute left-2 right-2 h-0.5"
+              style={{ backgroundColor: cardTheme }}
+              animate={{ top: ['10%', '90%', '10%'] }}
+              transition={{ duration: 2.5, repeat: Infinity, ease: 'linear' }}
+            />
+          </div>
+        </div>
+
+        {/* Bottom panel */}
+        <div className="bg-black/70 backdrop-blur-sm px-6 pt-5 pb-10 rounded-t-3xl space-y-4">
+          <p className="text-white/80 text-sm text-center font-bold">
+            {hasBarcodeDetector ? 'Point camera at customer QR code' : 'Camera QR detection not supported — use manual entry below'}
+          </p>
+
+          {error && (
+            <p className="text-red-400 text-xs text-center font-bold bg-red-500/10 rounded-xl px-4 py-2">{error}</p>
+          )}
+
+          {/* Manual UID fallback */}
+          <div className="flex gap-2">
+            <input
+              value={manualUID}
+              onChange={e => setManualUID(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleManual()}
+              placeholder="Paste customer user ID"
+              className="flex-1 bg-white/10 border border-white/20 rounded-2xl px-4 py-3 text-white placeholder:text-white/30 text-sm outline-none focus:border-white/40"
+            />
+            <button
+              onClick={handleManual}
+              disabled={!manualUID.trim()}
+              className="px-4 py-3 rounded-2xl text-brand-navy font-bold text-sm disabled:opacity-30"
+              style={{ backgroundColor: cardTheme }}
+            >
+              Issue
+            </button>
+          </div>
+
+          <button onClick={onClose} className="w-full text-white/60 text-sm font-bold py-2">Cancel</button>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 function CardScanSheet({ card, store, onClose, onPackReady }: {
   card: Card; store?: StoreProfile; onClose: () => void; onPackReady?: (s: CollectibleSticker[]) => void;
 }) {
@@ -11077,6 +11270,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   const [chartTransactions, setChartTransactions] = useState<any[]>([]);
   const [isLoadingCheckout, setIsLoadingCheckout] = useState(false);
   const [tickNow, setTickNow] = useState(Date.now());
+  const [showQRScanner, setShowQRScanner] = useState(false);
 
   const trialEndsMs = store?.trialEndsAt
     ? (store.trialEndsAt as any).toMillis?.() ?? (store.trialEndsAt as any).seconds * 1000
@@ -11478,6 +11672,60 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
       }
     } catch (error) {
       console.error(error);
+      setIssueStatus({ type: 'error', message: 'Failed to issue stamp' });
+    } finally {
+      setIsIssuing(false);
+    }
+  };
+
+  const handleIssueByUID = async (userId: string) => {
+    if (!store) return;
+    setIsIssuing(true);
+    setIssueStatus(null);
+    try {
+      const userSnap = await getDoc(doc(db, 'users', userId));
+      const customer = userSnap.exists() ? (userSnap.data() as UserProfile) : { uid: userId, name: 'Customer' } as UserProfile;
+      const cardId = `${userId}_${store.id}`;
+      const cardRef = doc(db, 'cards', cardId);
+      const qty = Number(stampQuantity);
+      const lim = store.stamps_required_for_reward;
+      const cardDoc = await getDoc(cardRef);
+
+      if (cardDoc.exists()) {
+        const data = cardDoc.data() as Card;
+        let newStamps = data.current_stamps + qty;
+        let newCycles = data.total_completed_cycles;
+        const cycleCompleted = newStamps >= lim;
+        if (cycleCompleted) { newCycles += 1; if (newStamps > lim) newStamps = lim; }
+        const txData = cycleCompleted
+          ? { user_id: userId, store_id: store.id, completed_at: serverTimestamp(), stamp_count: qty, stamps_at_completion: lim, reward_claimed: false }
+          : { user_id: userId, store_id: store.id, completed_at: serverTimestamp(), stamp_count: qty };
+        await addDoc(collection(db, 'transactions'), txData);
+        await updateDoc(cardRef, { current_stamps: newStamps, total_completed_cycles: newCycles, last_tap_timestamp: serverTimestamp() });
+      } else {
+        let newStamps = qty;
+        let newCycles = 0;
+        const cycleCompleted = newStamps >= lim;
+        if (cycleCompleted) { newCycles = 1; if (newStamps > lim) newStamps = lim; }
+        const txData = cycleCompleted
+          ? { user_id: userId, store_id: store.id, completed_at: serverTimestamp(), stamp_count: qty, stamps_at_completion: lim, reward_claimed: false }
+          : { user_id: userId, store_id: store.id, completed_at: serverTimestamp(), stamp_count: qty };
+        await addDoc(collection(db, 'transactions'), txData);
+        await setDoc(cardRef, {
+          user_id: userId, store_id: store.id, current_stamps: newStamps, total_completed_cycles: newCycles,
+          stamps_required: lim, isArchived: false, tiersCompleted: store.rewardTiers?.length || 1,
+          userName: customer.name, userPhoto: (customer as any).photoURL || '',
+        });
+        await updateDoc(doc(db, 'users', userId), { total_cards_held: increment(1) });
+      }
+      await updateDoc(doc(db, 'users', userId), { totalStamps: increment(qty) });
+      bumpStreak(userId).catch(console.error);
+      issueUserStickers(userId, customer.name, qty).catch(console.error);
+      updateChallengeProgress(userId, store.id, qty).catch(console.error);
+      setIssueStatus({ type: 'success', message: `${qty} stamp(s) issued to ${customer.name}!` });
+      setStampQuantity(1);
+    } catch (err) {
+      console.error(err);
       setIssueStatus({ type: 'error', message: 'Failed to issue stamp' });
     } finally {
       setIsIssuing(false);
@@ -12098,11 +12346,11 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
 
             <div className="space-y-4">
               <button
-                onClick={() => setIsScanning(true)}
+                onClick={() => store?.scanMethod === 'qr' ? setShowQRScanner(true) : setIsScanning(true)}
                 className="w-full bg-brand-gold text-brand-navy font-bold py-4 rounded-2xl flex items-center justify-center gap-3"
               >
                 <QrCode className="w-6 h-6" />
-                Open Scanner
+                {store?.scanMethod === 'qr' ? 'Scan Customer QR' : 'Open Scanner'}
               </button>
 
               <div className="flex gap-4">
@@ -12285,10 +12533,10 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
         )}
       </AnimatePresence>
 
-      {/* Scanner Modal Simulation */}
+      {/* Scanner Modal Simulation (NFC mode fallback) */}
       <AnimatePresence>
         {isScanning && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -12300,11 +12548,11 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
             </div>
             <h3 className="text-white text-xl font-bold mb-4">Scanning...</h3>
             <p className="text-white/60 text-center mb-12">Align the customer's QR code within the frame to issue a stamp.</p>
-            
+
             <div className="flex flex-col gap-4 w-full">
-              <button 
+              <button
                 onClick={() => {
-                  setCustomerHandle(user.email || ''); // Simulate scanning own QR
+                  setCustomerHandle(user.email || '');
                   setIsScanning(false);
                   setTimeout(() => handleIssueStamp(), 100);
                 }}
@@ -12312,7 +12560,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
               >
                 Simulate Successful Scan
               </button>
-              <button 
+              <button
                 onClick={() => setIsScanning(false)}
                 className="bg-white/10 text-white px-12 py-4 rounded-2xl font-bold"
               >
@@ -12320,6 +12568,21 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
               </button>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* QR Camera Scanner */}
+      <AnimatePresence>
+        {showQRScanner && store && (
+          <VendorQRScanner
+            store={store}
+            stampQty={stampQuantity}
+            onScanned={async (userId) => {
+              setShowQRScanner(false);
+              await handleIssueByUID(userId);
+            }}
+            onClose={() => setShowQRScanner(false)}
+          />
         )}
       </AnimatePresence>
     </motion.div>
@@ -13358,7 +13621,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
     <>
       <motion.div
         whileTap={{ scale: 0.97 }}
-        onClick={() => !isCompleted && !card.isRedeemed && setShowCardScan(true)}
+        onClick={() => !isCompleted && !card.isRedeemed && (store?.scanMethod === 'qr' ? setShowQR(true) : setShowCardScan(true))}
         className={cn(
           "relative rounded-[2rem] overflow-hidden shadow-xl w-full select-none h-full flex flex-col",
           !isCompleted && !card.isRedeemed ? "cursor-pointer" : ""
@@ -13580,7 +13843,10 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
               exit={{ scale: 0.9, opacity: 0 }}
               className="glass-panel w-full max-w-xs p-8 rounded-[3rem] text-center relative z-10"
             >
-              <h3 className="font-display text-2xl font-bold mb-2">{store?.name}</h3>
+              <h3 className="font-display text-2xl font-bold mb-1">{store?.name}</h3>
+              {store?.scanMethod === 'qr' && (
+                <p className="text-brand-navy/60 text-xs font-bold mb-3">Show this QR to the vendor to collect your stamp</p>
+              )}
               <div className="bg-white/80 p-4 rounded-2xl mb-6 flex justify-center border border-brand-rose/20">
                 <QRCodeSVG value={`stamp:${auth.currentUser?.uid}:${card.store_id}`} size={140} />
               </div>
