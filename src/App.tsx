@@ -10198,9 +10198,13 @@ function VisitScanSheet({ card, store, onClose }: { card: Card; store?: StorePro
                 </div>
               </div>
             )}
-            <div className="bg-brand-bg rounded-2xl p-5 mb-5 text-center">
-              <p className="text-brand-navy/75 text-[10px] font-bold uppercase tracking-widest mb-4">Points to collect</p>
-              <span className="font-black text-6xl text-brand-navy leading-none">{qty}</span>
+            <div className="mb-5">
+              <p className="text-brand-navy/75 text-[10px] font-bold uppercase tracking-widest text-center mb-3">Points to collect</p>
+              <div className="flex items-center justify-center gap-6">
+                <button onClick={() => setQty(q => Math.max(1, q - 1))} className="w-11 h-11 rounded-full bg-brand-navy/8 flex items-center justify-center text-brand-navy font-bold text-2xl active:scale-95 transition-transform">−</button>
+                <span className="font-black text-5xl text-brand-navy w-14 text-center leading-none">{qty}</span>
+                <button onClick={() => setQty(q => q + 1)} className="w-11 h-11 rounded-full bg-brand-navy/8 flex items-center justify-center text-brand-navy font-bold text-2xl active:scale-95 transition-transform">+</button>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3 mb-4">
               {isIOS ? (
@@ -14652,9 +14656,16 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
             >
               <div className="bg-brand-navy/20 rounded-full mx-auto mb-5" style={{ width: 40, height: 4 }} />
               <h3 className="font-display text-xl font-bold text-center mb-1">{store?.name}</h3>
-              <p className="text-brand-navy/60 text-xs text-center mb-6">{card.current_stamps}/{limit} stamps collected</p>
+              <p className="text-brand-navy/60 text-xs text-center mb-5">{card.current_stamps}/{limit} stamps collected</p>
 
-              <div className="grid grid-cols-2 gap-3 mb-6">
+              {/* Qty counter */}
+              <div className="flex items-center justify-center gap-6 mb-6">
+                <button onClick={() => setTestQty(q => Math.max(1, q - 1))} className="w-11 h-11 rounded-full bg-brand-navy/8 flex items-center justify-center text-brand-navy font-bold text-2xl active:scale-95 transition-transform">−</button>
+                <span className="font-black text-5xl text-brand-navy w-14 text-center leading-none">{testQty}</span>
+                <button onClick={() => setTestQty(q => Math.min(Math.max(1, limit - card.current_stamps), q + 1))} className="w-11 h-11 rounded-full bg-brand-navy/8 flex items-center justify-center text-brand-navy font-bold text-2xl active:scale-95 transition-transform">+</button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 mb-5">
                 <button
                   onClick={() => { setShowQR(false); setShowQRScan(true); }}
                   className="flex flex-col items-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform gradient-logo-blue text-white shadow-lg relative overflow-hidden"
@@ -14670,24 +14681,6 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                   <Wifi size={28} className="-rotate-90" />
                   Scan NFC
                 </button>
-              </div>
-
-              {/* Test Controls */}
-              <div className="p-4 bg-brand-bg rounded-2xl mb-4">
-                <p className="text-[10px] font-bold text-brand-navy/75 uppercase tracking-widest mb-3">Test: Simulate Stamp</p>
-                <div className="flex gap-2">
-                  <input
-                    type="number" min="1" max="10" value={testQty}
-                    onChange={(e) => setTestQty(parseInt(e.target.value) || 1)}
-                    className="w-16 px-3 py-2 rounded-xl bg-white border border-brand-navy/10 text-center font-bold text-sm outline-none"
-                  />
-                  <button
-                    onClick={handleTestStamp} disabled={isTestIssuing}
-                    className="flex-1 bg-brand-gold text-brand-navy py-2 rounded-xl font-bold text-sm disabled:opacity-50"
-                  >
-                    {isTestIssuing ? 'Issuing...' : 'Add Stamps'}
-                  </button>
-                </div>
               </div>
 
               <button onClick={closeQR} className="w-full text-brand-navy/75 font-bold text-sm py-2">Close</button>
@@ -14743,6 +14736,9 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
 
 function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: { card: Card; store?: StoreProfile; onViewStore?: (s: StoreProfile) => void; compact?: boolean; onScan?: () => void; key?: React.Key }) {
   const [showRedeemSheet, setShowRedeemSheet] = useState(false);
+  const [showScanSheet, setShowScanSheet] = useState(false);
+  const [showQRScan, setShowQRScan] = useState(false);
+  const [scanQty, setScanQty] = useState(1);
   const [isRedeeming, setIsRedeeming] = useState(false);
   const [redeemError, setRedeemError] = useState<string | null>(null);
   const [redeemSuccess, setRedeemSuccess] = useState<string | null>(null);
@@ -14829,6 +14825,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
         className="relative rounded-[2rem] overflow-hidden select-none h-full"
         style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4338ca 80%, #6366f1 100%)' }}
         whileTap={{ scale: 0.98 }}
+        onClick={() => setShowScanSheet(true)}
       >
         {/* Top row */}
         <div className="flex items-center gap-3 p-5 pb-0">
@@ -14890,10 +14887,10 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
           </div>
           <button
             onClick={(e) => { e.stopPropagation(); setShowRedeemSheet(true); }}
-            className="flex items-center gap-1.5 bg-white text-indigo-700 px-4 py-2 rounded-xl font-bold text-xs hover:scale-105 active:scale-95 transition-transform"
+            className="flex items-center gap-1.5 bg-white text-indigo-700 px-4 py-2 rounded-xl font-bold text-xs active:scale-95 transition-transform"
           >
             <Gift size={13} />
-            Redeem Points
+            Redeem
           </button>
         </div>
       </motion.div>
@@ -15017,6 +15014,49 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
               )}
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Scan sheet */}
+      <AnimatePresence>
+        {showScanSheet && (
+          <div className="fixed inset-0 z-[100] flex items-end justify-center">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setShowScanSheet(false)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+              className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-10 shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="bg-brand-navy/20 rounded-full mx-auto mb-5" style={{ width: 40, height: 4 }} />
+              <h3 className="font-display text-xl font-bold text-center mb-1">{store?.name}</h3>
+              <p className="text-brand-navy/60 text-xs text-center mb-5">{points.toLocaleString()} pts · {visits} visits</p>
+              <div className="flex items-center justify-center gap-6 mb-6">
+                <button onClick={() => setScanQty(q => Math.max(1, q - 1))} className="w-11 h-11 rounded-full bg-brand-navy/8 flex items-center justify-center text-brand-navy font-bold text-2xl active:scale-95 transition-transform">−</button>
+                <span className="font-black text-5xl text-brand-navy w-14 text-center leading-none">{scanQty}</span>
+                <button onClick={() => setScanQty(q => q + 1)} className="w-11 h-11 rounded-full bg-brand-navy/8 flex items-center justify-center text-brand-navy font-bold text-2xl active:scale-95 transition-transform">+</button>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mb-5">
+                <button onClick={() => { setShowScanSheet(false); setShowQRScan(true); }}
+                  className="flex flex-col items-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform gradient-logo-blue text-white shadow-lg relative overflow-hidden">
+                  <span className="card-shine-ray" aria-hidden="true" />
+                  <QrCode size={28} className="relative z-10" />
+                  <span className="relative z-10">Scan QR Code</span>
+                </button>
+                <button onClick={() => { setShowScanSheet(false); onScan?.(); }}
+                  className="flex flex-col items-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform bg-brand-navy/8 text-brand-navy">
+                  <Wifi size={28} className="-rotate-90" />
+                  Scan NFC
+                </button>
+              </div>
+              <button onClick={() => setShowScanSheet(false)} className="w-full text-brand-navy/75 font-bold text-sm py-2">Close</button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showQRScan && store && (
+          <ConsumerQRScanner card={card} store={store} onClose={() => setShowQRScan(false)} />
         )}
       </AnimatePresence>
     </>
