@@ -21024,8 +21024,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                 <span className="inline-flex items-center gap-1.5">
                   {!post.isAnonymous && <span className="font-bold text-sm text-brand-navy">Linq</span>}
                   {!post.isAnonymous && <span className="text-[9px] font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 px-1.5 py-0.5 rounded-full uppercase tracking-wide">Official</span>}
-                  {post.isAnonymous && <span className="text-sm font-bold text-brand-navy/40 italic">Anonymous</span>}
-                  {post.cardSetName && <span className="text-[9px] font-bold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded-full">🃏 {post.cardSetName}</span>}
+                  {!post.isAnonymous && post.cardSetName && <span className="text-[9px] font-bold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded-full">🃏 {post.cardSetName}</span>}
                 </span>
               ) : post.authorRole === 'vendor' && post.storeName && !post.wallPost ? (
                 <span
@@ -21050,9 +21049,11 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                 </span>
               )}
             </div>
+            {!isAnonAdmin && (
             <p className="text-[10px] text-brand-navy/75 font-medium">
               {post.createdAt ? format(post.createdAt.toDate(), 'MMM d · h:mm a') : 'Just now'}
             </p>
+            )}
           </div>
           <div className="flex items-center gap-1 shrink-0">
             {post.adminBadgeIcon && (
@@ -21127,6 +21128,12 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
           <p className="text-[14px] font-semibold text-gray-800 leading-relaxed">{post.content}</p>
         )}
 
+        {isAnonAdmin && post.cardDefImageUrl && (
+          <div className="flex justify-center pt-1">
+            <img src={post.cardDefImageUrl} alt={post.cardDefName || ''} className="max-h-48 rounded-2xl object-contain" />
+          </div>
+        )}
+
         {post.postType === 'poll' && post.pollOptions && (
           <div className="space-y-2 pt-1">
             {post.pollOptions.map((opt, i) => {
@@ -21165,7 +21172,8 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
         )}
       </div>
 
-      {/* Interactions bar */}
+      {/* Interactions bar — hidden for anonymous admin posts */}
+      {!isAnonAdmin && (
       <div className={cn("pt-2.5", !hideDivider && "border-t border-gray-100")}>
         <div className="flex items-center gap-4">
           <button
@@ -21195,9 +21203,10 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
           )}
         </div>
       </div>
+      )}
 
       {/* Comments thread — toggled by the chat icon */}
-      {(comments.length > 0 || showAllComments) && (
+      {!isAnonAdmin && (comments.length > 0 || showAllComments) && (
         <div className={cn("pt-3 space-y-3", !hideDivider && "border-t border-gray-100")}>
           {visibleComments.map(comment => {
             const commentLiked = currentUser ? (comment.likedBy || []).includes(currentUser.uid) : false;
@@ -21245,8 +21254,8 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
         </div>
       )}
 
-      {/* Comment input — always visible for logged-in users */}
-      {currentUser && (
+      {/* Comment input — hidden for anonymous admin posts */}
+      {!isAnonAdmin && currentUser && (
         <div className={cn("pt-3 flex gap-2", !hideDivider && "border-t border-gray-100")}>
           <div className="w-7 h-7 rounded-full overflow-hidden border border-black/5 shrink-0 bg-indigo-50 flex items-center justify-center">
             <LivePixelAvatar uid={currentUser.uid} size={28} view="head" />
