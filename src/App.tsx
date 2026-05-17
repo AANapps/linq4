@@ -47,7 +47,8 @@ import {
   arrayUnion,
   arrayRemove,
   startAfter,
-  Timestamp
+  Timestamp,
+  runTransaction
 } from 'firebase/firestore';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getFunctions, httpsCallable } from 'firebase/functions';
@@ -9230,34 +9231,57 @@ function VendorQRScanner({ store, stampQty, onScanned, onClose }: {
 }
 
 // QR window = 30-second rotating token
-const qrWindow = () => Math.floor(Date.now() / 30000);
-const encodeVendorQR = (storeId: string) => `linq4:stamp:${storeId}:${qrWindow()}`;
-const decodeVendorQR = (val: string): { storeId: string } | null => {
-  if (!val.startsWith('linq4:stamp:')) return null;
-  const parts = val.split(':'); // linq4 : stamp : storeId : window
-  if (parts.length < 4) return null;
-  const storeId = parts[2];
-  const win = parseInt(parts[3]);
-  const now = qrWindow();
-  if (win !== now && win !== now - 1) return null; // expired (>60s old)
-  return { storeId };
+const genToken = () =>
+  typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2) + Date.now().toString(36);
+
+// Write a fresh one-time token to Firestore and return its ID
+async function createQRToken(storeId: string): Promise<string> {
+  const tokenId = genToken();
+  await setDoc(doc(db, 'qr_tokens', tokenId), {
+    storeId,
+    createdAt: serverTimestamp(),
+    used: false,
+  });
+  return tokenId;
+}
+
+const encodeVendorQR = (storeId: string, tokenId: string) => `linq4:qr:${storeId}:${tokenId}`;
+const decodeVendorQR = (val: string): { storeId: string; tokenId: string } | null => {
+  if (!val.startsWith('linq4:qr:')) return null;
+  const rest = val.slice('linq4:qr:'.length);
+  const sep = rest.indexOf(':');
+  if (sep < 1) return null;
+  return { storeId: rest.slice(0, sep), tokenId: rest.slice(sep + 1) };
 };
 
 function VendorQRDisplay({ store, onClose }: { store: StoreProfile; onClose: () => void }) {
-  const [tick, setTick] = useState(0);
-  const [secsLeft, setSecsLeft] = useState(30 - (Date.now() / 1000 % 30 | 0));
+  const [tokenId, setTokenId] = useState<string | null>(null);
+  const [secsLeft, setSecsLeft] = useState(30);
   const cardTheme = store.theme || '#3a6fcc';
 
+  const rotateToken = useCallback(async () => {
+    const id = await createQRToken(store.id).catch(() => null);
+    if (id) setTokenId(id);
+  }, [store.id]);
+
+  // Create initial token
+  useEffect(() => { rotateToken(); }, [rotateToken]);
+
+  // Countdown + rotate every 30s
   useEffect(() => {
+    const start = Date.now();
     const id = setInterval(() => {
-      const s = 30 - (Math.floor(Date.now() / 1000) % 30);
-      setSecsLeft(s);
-      if (s === 30) setTick(t => t + 1); // new window started
+      const elapsed = Math.floor((Date.now() - start) / 1000) % 30;
+      const remaining = 30 - elapsed;
+      setSecsLeft(remaining);
+      if (remaining === 30) rotateToken();
     }, 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [rotateToken]);
 
-  const qrValue = encodeVendorQR(store.id);
+  const qrValue = tokenId ? encodeVendorQR(store.id, tokenId) : null;
   const progress = secsLeft / 30;
 
   return (
@@ -9280,8 +9304,11 @@ function VendorQRDisplay({ store, onClose }: { store: StoreProfile; onClose: () 
         </div>
 
         {/* QR code */}
-        <div className="bg-white rounded-3xl p-5 shadow-2xl">
-          <QRCodeSVG key={tick} value={qrValue} size={200} />
+        <div className="bg-white rounded-3xl p-5 shadow-2xl flex items-center justify-center" style={{ width: 230, height: 230 }}>
+          {qrValue
+            ? <QRCodeSVG key={tokenId} value={qrValue} size={200} />
+            : <div className="w-[200px] h-[200px] flex items-center justify-center"><Loader2 size={32} className="animate-spin text-brand-navy/30" /></div>
+          }
         </div>
 
         {/* Countdown */}
@@ -9342,8 +9369,26 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady }: {
 
   const handleRawValue = async (raw: string) => {
     const decoded = decodeVendorQR(raw);
-    if (!decoded) { setScanState('error'); setStatusMsg('Invalid or expired QR — ask vendor to refresh.'); stopCamera(); return; }
+    if (!decoded) { setScanState('error'); setStatusMsg('Invalid QR — ask vendor to refresh.'); stopCamera(); return; }
     if (decoded.storeId !== card.store_id) { setScanState('error'); setStatusMsg('Wrong store QR code.'); stopCamera(); return; }
+    stopCamera();
+    setScanState('processing'); setStatusMsg('Verifying…');
+    try {
+      await runTransaction(db, async tx => {
+        const tokenRef = doc(db, 'qr_tokens', decoded.tokenId);
+        const tokenSnap = await tx.get(tokenRef);
+        if (!tokenSnap.exists()) throw new Error('QR code not found — ask vendor to refresh.');
+        const data = tokenSnap.data();
+        if (data.used) throw new Error('QR already used — ask vendor to show a new one.');
+        if (data.storeId !== card.store_id) throw new Error('Wrong store QR code.');
+        const age = Date.now() - (data.createdAt?.toMillis?.() ?? 0);
+        if (age > 120_000) throw new Error('QR expired — ask vendor to refresh.');
+        tx.update(tokenRef, { used: true, usedAt: serverTimestamp() });
+      });
+    } catch (err: any) {
+      setScanState('error'); setStatusMsg(err?.message || 'QR verification failed.');
+      return;
+    }
     await processQR(decoded.storeId);
   };
 
@@ -9398,6 +9443,37 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady }: {
 
   const handleClose = () => { stopCamera(); onClose(); };
 
+  // Full-screen camera while scanning
+  if (scanState === 'scanning') {
+    return (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[130] bg-black flex flex-col">
+        <canvas ref={canvasRef} className="hidden" />
+        <video ref={videoRef} playsInline muted className="absolute inset-0 w-full h-full object-cover" />
+
+        {/* Viewfinder overlay */}
+        <div className="relative flex-1 flex items-center justify-center pointer-events-none">
+          <div className="relative w-64 h-64">
+            <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 rounded-tl-lg" style={{ borderColor: cardTheme }} />
+            <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 rounded-tr-lg" style={{ borderColor: cardTheme }} />
+            <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 rounded-bl-lg" style={{ borderColor: cardTheme }} />
+            <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 rounded-br-lg" style={{ borderColor: cardTheme }} />
+            <motion.div className="absolute left-2 right-2 h-0.5" style={{ backgroundColor: cardTheme }}
+              animate={{ top: ['10%', '90%', '10%'] }} transition={{ duration: 2.5, repeat: Infinity, ease: 'linear' }} />
+          </div>
+        </div>
+
+        {/* Bottom bar */}
+        <div className="bg-black/70 backdrop-blur-sm px-6 pt-5 pb-10 rounded-t-3xl">
+          <p className="text-white/80 text-sm text-center font-bold mb-2">Point at the store's QR code</p>
+          {camError && <p className="text-red-400 text-xs text-center mb-2">{camError}</p>}
+          <button onClick={() => { stopCamera(); setScanState('idle'); }}
+            className="w-full text-white/70 text-sm font-bold py-3">Cancel</button>
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="fixed inset-0 z-[130] flex items-end justify-center" onClick={handleClose}>
@@ -9407,7 +9483,6 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady }: {
         className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-12 shadow-2xl"
         onClick={e => e.stopPropagation()}>
         <div className="bg-brand-navy/20 rounded-full mx-auto mb-6" style={{ width: 40, height: 4 }} />
-        <canvas ref={canvasRef} className="hidden" />
 
         {/* Store header */}
         <div className="flex items-center gap-3 mb-6">
@@ -9440,26 +9515,6 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady }: {
             </button>
             <button onClick={handleClose} className="w-full text-brand-navy/75 text-sm font-bold py-2">Close</button>
           </>
-        )}
-
-        {scanState === 'scanning' && (
-          <div className="text-center py-2">
-            <div className="relative w-full rounded-2xl overflow-hidden bg-black mb-4" style={{ height: 200 }}>
-              <video ref={videoRef} playsInline muted className="w-full h-full object-cover" />
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="relative w-32 h-32">
-                  <div className="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 rounded-tl" style={{ borderColor: cardTheme }} />
-                  <div className="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 rounded-tr" style={{ borderColor: cardTheme }} />
-                  <div className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 rounded-bl" style={{ borderColor: cardTheme }} />
-                  <div className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 rounded-br" style={{ borderColor: cardTheme }} />
-                </div>
-              </div>
-            </div>
-            <p className="text-brand-navy/75 text-sm font-bold mb-1">Point at the store's QR code</p>
-            {camError && <p className="text-red-500 text-xs mb-3">{camError}</p>}
-            <button onClick={() => { stopCamera(); setScanState('idle'); }}
-              className="w-full text-brand-navy/75 text-sm font-bold py-2">Cancel</button>
-          </div>
         )}
 
         {scanState === 'processing' && (
