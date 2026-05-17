@@ -8620,7 +8620,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                         {/* Prize footer */}
                         <div className="bg-amber-50 border-t border-amber-100 px-5 py-2.5 flex items-center gap-2">
                           <span className="text-sm">🏆</span>
-                          <p className="text-xs text-amber-800 font-semibold">Collect 3 full sets to win the reward</p>
+                          <p className="text-xs text-amber-800 font-semibold">Collect 5 full sets to win the reward</p>
                         </div>
                       </div>
                     )}
