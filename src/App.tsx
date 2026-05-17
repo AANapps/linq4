@@ -7859,6 +7859,8 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
 
     if (scanResult.ok === false) {
       if (scanResult.cancelled) { setNfcPhase('idle'); return; }
+      // NFC simply not available on this platform — silently reset, no alarm
+      if (scanResult.error === 'NFC is not supported on this device.') { setNfcPhase('idle'); return; }
       setNfcPhase('error'); setNfcMsg(scanResult.error);
       setTimeout(() => setNfcPhase('idle'), 4000);
       return;
