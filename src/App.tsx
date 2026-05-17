@@ -17231,6 +17231,7 @@ function ScanUserPanel({ store, onIssue }: {
   const [working, setWorking] = useState(false);
   const [nfcScanning, setNfcScanning] = useState(false);
   const [showVisitQRScanner, setShowVisitQRScanner] = useState(false);
+  const [visitScanMode, setVisitScanMode] = useState<'nfc' | 'qr'>('nfc');
 
   const memType = store?.membershipType ?? 'spend';
   const isVisit = memType === 'visit';
@@ -17313,28 +17314,35 @@ function ScanUserPanel({ store, onIssue }: {
         </p>
       </div>
 
-      {/* NFC + QR scan buttons — visit type only */}
+      {/* NFC / QR toggle — visit type only */}
       {isVisit && (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-3">
+          <div className="flex gap-2 p-1 bg-brand-navy/5 rounded-2xl">
+            {(['nfc', 'qr'] as const).map(m => (
+              <button
+                key={m}
+                onClick={() => { setStatus(null); setNfcScanning(false); setVisitScanMode(m); }}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all',
+                  visitScanMode === m ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/50'
+                )}
+              >
+                {m === 'nfc' ? <><Wifi size={13} className="-rotate-90" /> NFC</> : <><QrCode size={13} /> QR Code</>}
+              </button>
+            ))}
+          </div>
           <button
-            onClick={handleNFCScan}
+            onClick={() => visitScanMode === 'qr' ? setShowVisitQRScanner(true) : handleNFCScan()}
             disabled={nfcScanning || working}
-            className="relative overflow-hidden flex items-center justify-center gap-2 py-4 rounded-2xl font-bold text-white text-sm shadow-lg active:scale-[0.98] transition-all disabled:opacity-60"
+            className="w-full relative overflow-hidden flex items-center justify-center gap-2 py-4 rounded-2xl font-bold text-white text-sm shadow-lg active:scale-[0.98] transition-all disabled:opacity-60"
             style={{ background: 'linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 40%, #2563eb 70%, #3b82f6 100%)' }}
           >
             <span className="card-shine-ray" />
             {nfcScanning
               ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full" /> Scanning…</>
-              : <><Wifi size={16} className="-rotate-90" /> Scan NFC</>}
-          </button>
-          <button
-            onClick={() => setShowVisitQRScanner(true)}
-            disabled={working}
-            className="relative overflow-hidden flex items-center justify-center gap-2 py-4 rounded-2xl font-bold text-white text-sm shadow-lg active:scale-[0.98] transition-all disabled:opacity-60"
-            style={{ background: 'linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 40%, #2563eb 70%, #3b82f6 100%)' }}
-          >
-            <span className="card-shine-ray" />
-            <QrCode size={16} /> Scan QR Code
+              : visitScanMode === 'qr'
+                ? <><QrCode size={16} /> Scan QR Code</>
+                : <><Wifi size={16} className="-rotate-90" /> Scan NFC</>}
           </button>
         </div>
       )}
