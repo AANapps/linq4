@@ -935,7 +935,7 @@ export default function App() {
   const moodDecayApplied = useRef(false);
   useEffect(() => {
     if (moodDecayApplied.current) return;
-    if (!user || !profile || profile.role !== 'consumer') return;
+    if (!user || !profile || !['consumer','admin'].includes(profile.role)) return;
     const av = profile.avatar;
     if (!av) return;
     moodDecayApplied.current = true;
@@ -1224,7 +1224,7 @@ export default function App() {
 
   // Once user & profile are ready, re-check sessionStorage for a pending stamp
   useEffect(() => {
-    if (!user || !profile || profile.role !== 'consumer') return;
+    if (!user || !profile || !['consumer','admin'].includes(profile.role)) return;
     const stored = sessionStorage.getItem('pendingNFCStamp');
     if (stored) {
       sessionStorage.removeItem('pendingNFCStamp');
@@ -1537,7 +1537,7 @@ export default function App() {
           <h1 className="font-display font-bold text-xl tracking-tight"><span className="text-brand-gold">Li</span>nq</h1>
         </button>
         <div className="flex items-center gap-0.5">
-          {profile?.role === 'consumer' && (
+          {['consumer','admin'].includes(profile?.role ?? '') && (
             <button
               onClick={() => setActiveTab('messages')}
               className="relative w-9 h-9 flex items-center justify-center text-brand-navy/75 hover:text-brand-navy transition-colors"
@@ -1595,7 +1595,7 @@ export default function App() {
                 setViewingStore(s);
               }}
             />
-          ) : profile?.role === 'consumer' ? (
+          ) : (['consumer','admin'].includes(profile?.role ?? '')) ? (
             <ConsumerApp
               key="consumer"
               activeTab={activeTab}
@@ -1714,7 +1714,7 @@ export default function App() {
 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto glass-panel border-t border-black/5 py-3 flex items-end z-50">
-        {profile?.role === 'consumer' && (
+        {['consumer','admin'].includes(profile?.role ?? '') && (
           <NavButton
             active={activeTab === 'for-you'}
             onClick={() => { setActiveTab('for-you'); setViewingStore(null); setViewingUser(null); }}
@@ -1723,7 +1723,7 @@ export default function App() {
             badgeCount={notifications.filter(n => !n.isRead).length}
           />
         )}
-        {profile?.role === 'consumer' ? (
+        {['consumer','admin'].includes(profile?.role ?? '') ? (
           <NavButton
             active={activeTab === 'deals'}
             onClick={() => { setActiveTab('deals'); setViewingStore(null); setViewingUser(null); }}
@@ -1739,7 +1739,7 @@ export default function App() {
             badgeCount={unreadMessages}
           />
         )}
-        {profile?.role === 'consumer' ? (
+        {['consumer','admin'].includes(profile?.role ?? '') ? (
           <button
             onClick={() => { setActiveTab('home'); setViewingStore(null); setViewingUser(null); }}
             className="flex-1 flex flex-col items-center gap-1 -mb-1 -mt-7 transition-all"
@@ -1761,8 +1761,8 @@ export default function App() {
         <NavButton
           active={activeTab === 'discover'}
           onClick={() => { setActiveTab('discover'); setViewingStore(null); setViewingUser(null); }}
-          icon={profile?.role === 'consumer' ? <Compass /> : <Plus />}
-          label={profile?.role === 'consumer' ? 'Discovery' : 'Issue'}
+          icon={['consumer','admin'].includes(profile?.role ?? '') ? <Compass /> : <Plus />}
+          label={['consumer','admin'].includes(profile?.role ?? '') ? 'Discovery' : 'Issue'}
         />
         <NavButton
           active={activeTab === 'profile'}
@@ -18665,13 +18665,13 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
   const [allBadges, setAllBadges] = useState<AppBadge[]>([]);
 
   useEffect(() => {
-    if (profile?.role !== 'consumer') return;
+    if (!['consumer','admin'].includes(profile?.role ?? '')) return;
     const q = query(collection(db, 'challenges'), where('type', '==', 'standard'), where('status', '==', 'active'));
     return onSnapshot(q, snap => setProfileChallenges(snap.docs.map(d => ({ id: d.id, ...d.data() } as Challenge))));
   }, [profile?.role]);
 
   useEffect(() => {
-    if (profile?.role !== 'consumer' || !user?.uid) return;
+    if (!['consumer','admin'].includes(profile?.role ?? '') || !user?.uid) return;
     const q = query(collection(db, 'challenge_entries'), where('uid', '==', user.uid));
     return onSnapshot(q, snap => {
       const m = new Map<string, any>();
