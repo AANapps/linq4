@@ -4560,6 +4560,7 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [extendingId, setExtendingId] = useState<string | null>(null);
   const [extendDays, setExtendDays] = useState('30');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const handleToggleSub = async (store: StoreProfile) => {
     setTogglingId(store.id);
@@ -4677,139 +4678,197 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
       </div>
 
       <div className="flex-1 overflow-y-auto px-5 py-2 space-y-2 pb-10">
-        {filtered.map(store => (
-          <div key={store.id} className="bg-white rounded-2xl border border-brand-navy/5 overflow-hidden">
-            {confirmDeleteId === store.id ? (
-              <div className="px-4 py-3 flex items-center gap-3">
-                <p className="flex-1 text-xs font-bold text-red-500">Delete "{store.name}"?</p>
-                <button
-                  onClick={() => handleDelete(store.id)}
-                  disabled={deleting}
-                  className="px-3 py-1.5 bg-red-500 text-white text-xs font-bold rounded-xl active:scale-95 transition-all disabled:opacity-50"
-                >
-                  {deleting ? '…' : 'Delete'}
-                </button>
-                <button
-                  onClick={() => setConfirmDeleteId(null)}
-                  className="px-3 py-1.5 bg-brand-navy/10 text-brand-navy text-xs font-bold rounded-xl active:scale-95 transition-all"
-                >
-                  Cancel
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-3 px-4 py-3">
-                <div
-                  className="w-10 h-10 rounded-xl overflow-hidden bg-brand-navy/5 shrink-0 cursor-pointer"
-                  onClick={() => setEditingStore(store)}
-                >
+        {filtered.map(store => {
+          const expanded = expandedId === store.id;
+          const isTrial = isStoreTrial(store);
+          const busy = togglingId === store.id;
+          const si = subStatusInfo(store);
+          const trialEnd = store.trialEndsAt
+            ? new Date((store.trialEndsAt as any).toMillis?.() ?? (store.trialEndsAt as any).seconds * 1000)
+            : null;
+
+          return (
+            <div key={store.id} className="bg-white rounded-2xl border border-brand-navy/8 overflow-hidden">
+              {/* Row header — always visible, tap to expand */}
+              <button
+                className="w-full flex items-center gap-3 px-4 py-3 text-left"
+                onClick={() => setExpandedId(expanded ? null : store.id)}
+              >
+                <div className="w-10 h-10 rounded-xl overflow-hidden bg-brand-navy/5 shrink-0">
                   {store.logoUrl
                     ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
                     : <Building2 size={18} className="m-auto mt-2.5 text-brand-navy/32" />}
                 </div>
-                <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setEditingStore(store)}>
+                <div className="flex-1 min-w-0">
                   <p className="font-bold text-sm text-brand-navy truncate">{store.name}</p>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className={cn('text-[9px] font-bold px-1.5 py-0.5 rounded-full', subStatusInfo(store).color)}>
-                      {subStatusInfo(store).label}
-                    </span>
-                    <span className="text-[10px] text-brand-navy/72">{store.category}</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {/* Activate / Deactivate */}
-                  <button
-                    onClick={() => handleToggleSub(store)}
-                    disabled={togglingId === store.id}
-                    className={cn(
-                      'px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all active:scale-95 disabled:opacity-50',
-                      store.subscriptionStatus === 'active' ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'
+                  <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                    <span className={cn('text-[9px] font-bold px-1.5 py-0.5 rounded-full', si.color)}>{si.label}</span>
+                    {isTrial && trialEnd && (
+                      <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">
+                        Trial ends {trialEnd.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                      </span>
                     )}
-                  >
-                    {togglingId === store.id ? '…' : store.subscriptionStatus === 'active' ? 'Deactivate' : 'Activate'}
-                  </button>
-
-                  {/* Trial toggle */}
-                  <div className="flex flex-col items-center gap-0.5">
-                    <span className="text-[8px] font-bold text-brand-navy/72 uppercase tracking-wide">Trial</span>
-                    <button
-                      onClick={() => handleToggleTrial(store)}
-                      disabled={togglingId === store.id}
-                      className={cn(
-                        'relative w-10 h-5 rounded-full transition-colors duration-200 disabled:opacity-50',
-                        isStoreTrial(store) ? 'bg-amber-400' : 'bg-brand-navy/15'
-                      )}
-                    >
-                      <motion.div
-                        animate={{ x: isStoreTrial(store) ? 22 : 2 }}
-                        transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                        className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm"
-                      />
-                    </button>
+                    <span className="text-[10px] text-brand-navy/50">{store.category}</span>
+                    <span className="text-[9px] font-bold text-brand-navy/40 uppercase tracking-wide">{store.scanMethod === 'qr' ? 'QR' : 'NFC'}</span>
                   </div>
-
-                  {/* QR / NFC toggle */}
-                  <div className="flex flex-col items-center gap-0.5">
-                    <span className="text-[8px] font-bold text-brand-navy/72 uppercase tracking-wide">{store.scanMethod === 'qr' ? 'QR' : 'NFC'}</span>
-                    <button
-                      onClick={() => handleToggleScanMethod(store)}
-                      disabled={togglingId === store.id}
-                      className={cn(
-                        'relative w-10 h-5 rounded-full transition-colors duration-200 disabled:opacity-50',
-                        store.scanMethod === 'qr' ? 'bg-blue-400' : 'bg-brand-navy/15'
-                      )}
-                    >
-                      <motion.div
-                        animate={{ x: store.scanMethod === 'qr' ? 22 : 2 }}
-                        transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                        className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm"
-                      />
-                    </button>
-                  </div>
-
-                  {/* + days */}
-                  {extendingId === store.id ? (
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="number"
-                        min="1"
-                        value={extendDays}
-                        onChange={e => setExtendDays(e.target.value)}
-                        className="w-10 px-1 py-1 rounded-lg border border-amber-300 text-[10px] font-bold text-center text-amber-700 outline-none"
-                      />
-                      <button
-                        onClick={() => handleExtendTrial(store)}
-                        disabled={togglingId === store.id}
-                        className="px-1.5 py-1 rounded-lg bg-amber-500 text-white text-[10px] font-bold disabled:opacity-50"
-                      >
-                        {togglingId === store.id ? '…' : '✓'}
-                      </button>
-                      <button onClick={() => setExtendingId(null)} className="px-1.5 py-1 rounded-lg bg-brand-navy/10 text-brand-navy/80 text-[10px] font-bold">✕</button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => { setExtendingId(store.id); setExtendDays('30'); }}
-                      className="w-7 h-7 rounded-xl bg-amber-50 text-amber-600 text-sm font-bold flex items-center justify-center active:scale-95 transition-all"
-                    >
-                      +
-                    </button>
-                  )}
                 </div>
-                <button
-                  onClick={() => setEditingStore(store)}
-                  className="p-2 text-brand-navy/72 hover:text-brand-navy/75 transition-colors"
-                >
-                  <Edit3 size={14} />
-                </button>
-                <button
-                  onClick={() => setConfirmDeleteId(store.id)}
-                  className="p-2 text-red-400 hover:text-red-600 transition-colors"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            )}
-          </div>
-        ))}
+                <ChevronDown
+                  size={16}
+                  className={cn('text-brand-navy/40 shrink-0 transition-transform duration-200', expanded && 'rotate-180')}
+                />
+              </button>
+
+              {/* Expanded editing panel */}
+              <AnimatePresence initial={false}>
+                {expanded && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="px-4 pb-4 pt-1 border-t border-brand-navy/6 space-y-3">
+                      {/* Subscription */}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-bold text-brand-navy">Subscription</p>
+                          <p className="text-[10px] text-brand-navy/50">{store.subscriptionStatus || 'none'}</p>
+                        </div>
+                        <button
+                          onClick={() => handleToggleSub(store)}
+                          disabled={busy}
+                          className={cn(
+                            'px-3 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95 disabled:opacity-50',
+                            store.subscriptionStatus === 'active' ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'
+                          )}
+                        >
+                          {busy ? '…' : store.subscriptionStatus === 'active' ? 'Deactivate' : 'Activate'}
+                        </button>
+                      </div>
+
+                      {/* Trial */}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-bold text-brand-navy">Trial</p>
+                          <p className="text-[10px] text-brand-navy/50">
+                            {isTrial && trialEnd ? `Ends ${trialEnd.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}` : 'Inactive'}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => handleToggleTrial(store)}
+                          disabled={busy}
+                          className={cn(
+                            'relative w-12 h-6 rounded-full transition-colors duration-200 disabled:opacity-50',
+                            isTrial ? 'bg-amber-400' : 'bg-brand-navy/15'
+                          )}
+                        >
+                          <motion.div
+                            animate={{ x: isTrial ? 26 : 2 }}
+                            transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                            className="absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm"
+                          />
+                        </button>
+                      </div>
+
+                      {/* Extend trial days */}
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-bold text-brand-navy">Extend trial</p>
+                        {extendingId === store.id ? (
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="number"
+                              min="1"
+                              value={extendDays}
+                              onChange={e => setExtendDays(e.target.value)}
+                              className="w-14 px-2 py-1.5 rounded-xl border border-amber-300 text-xs font-bold text-center text-amber-700 outline-none"
+                            />
+                            <span className="text-xs text-brand-navy/50">days</span>
+                            <button
+                              onClick={() => handleExtendTrial(store)}
+                              disabled={busy}
+                              className="px-2.5 py-1.5 rounded-xl bg-amber-500 text-white text-xs font-bold disabled:opacity-50"
+                            >
+                              {busy ? '…' : 'Add'}
+                            </button>
+                            <button onClick={() => setExtendingId(null)} className="p-1.5 rounded-xl bg-brand-navy/8 text-brand-navy/60">
+                              <X size={12} />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => { setExtendingId(store.id); setExtendDays('30'); }}
+                            className="px-3 py-1.5 rounded-xl bg-amber-50 text-amber-600 text-xs font-bold active:scale-95 transition-all"
+                          >
+                            + days
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Scan method */}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-bold text-brand-navy">Scan method</p>
+                          <p className="text-[10px] text-brand-navy/50">{store.scanMethod === 'qr' ? 'QR code — vendor scans customer' : 'NFC — customer taps tag'}</p>
+                        </div>
+                        <button
+                          onClick={() => handleToggleScanMethod(store)}
+                          disabled={busy}
+                          className={cn(
+                            'relative w-12 h-6 rounded-full transition-colors duration-200 disabled:opacity-50',
+                            store.scanMethod === 'qr' ? 'bg-blue-400' : 'bg-brand-navy/15'
+                          )}
+                        >
+                          <motion.div
+                            animate={{ x: store.scanMethod === 'qr' ? 26 : 2 }}
+                            transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                            className="absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm"
+                          />
+                        </button>
+                      </div>
+
+                      {/* Action buttons */}
+                      <div className="flex gap-2 pt-1">
+                        <button
+                          onClick={() => setEditingStore(store)}
+                          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-brand-navy/5 text-brand-navy text-xs font-bold active:scale-95 transition-all"
+                        >
+                          <Edit3 size={13} />
+                          Edit store
+                        </button>
+                        {confirmDeleteId === store.id ? (
+                          <div className="flex gap-1.5">
+                            <button
+                              onClick={() => handleDelete(store.id)}
+                              disabled={deleting}
+                              className="px-3 py-2.5 rounded-xl bg-red-500 text-white text-xs font-bold disabled:opacity-50"
+                            >
+                              {deleting ? '…' : 'Confirm'}
+                            </button>
+                            <button
+                              onClick={() => setConfirmDeleteId(null)}
+                              className="px-3 py-2.5 rounded-xl bg-brand-navy/8 text-brand-navy/70 text-xs font-bold"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setConfirmDeleteId(store.id)}
+                            className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-red-50 text-red-500 text-xs font-bold active:scale-95 transition-all"
+                          >
+                            <Trash2 size={13} />
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          );
+        })}
         {filtered.length === 0 && (
           <p className="text-center text-brand-navy/72 text-sm py-10">No businesses found</p>
         )}
