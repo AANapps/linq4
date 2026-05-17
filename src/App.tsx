@@ -197,7 +197,7 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
   return errInfo;
 }
 
-type UserRole = 'consumer' | 'vendor';
+type UserRole = 'consumer' | 'vendor' | 'admin';
 type Category = 'Food' | 'Beauty' | 'Barber' | 'Gym' | 'Parking' | 'Retail';
 
 const CATEGORY_ICON_MAP: Record<string, React.ElementType> = {
@@ -1639,6 +1639,7 @@ export default function App() {
             onClose={() => setShowSettings(false)}
             profile={profile}
             userCards={userCards}
+            stores={stores}
             isAdmin={isAppAdmin(profile, user?.email)}
             onOpenAdmin={() => { setShowSettings(false); setAdminView('menu'); }}
             onOpenStores={() => { setShowSettings(false); setAdminView('stores'); }}
@@ -8961,8 +8962,8 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
         if (newStamps > limit) newStamps = limit;
       }
       const txData1 = cycleComplete
-        ? { user_id: user.uid, store_id: store.id, completed_at: serverTimestamp(), stamp_count: qty, stamps_at_completion: limit, reward_claimed: false }
-        : { user_id: user.uid, store_id: store.id, completed_at: serverTimestamp(), stamp_count: qty };
+        ? { user_id: user.uid, store_id: store.id, completed_at: serverTimestamp(), stamp_count: qty, stamps_at_completion: limit, reward_claimed: false, userName, userPhoto }
+        : { user_id: user.uid, store_id: store.id, completed_at: serverTimestamp(), stamp_count: qty, userName, userPhoto };
       await addDoc(collection(db, 'transactions'), txData1);
       await updateDoc(cardRef, { current_stamps: newStamps, total_completed_cycles: newCycles, last_tap_timestamp: serverTimestamp() });
     }
@@ -11659,6 +11660,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   const [cardSaved, setCardSaved] = useState(false);
   const [statModal, setStatModal] = useState<null | 'members' | 'stamps' | 'activeCards'>(null);
   const [statModalSearch, setStatModalSearch] = useState('');
+  const [statModalVisible, setStatModalVisible] = useState(10);
   const [memberProfiles, setMemberProfiles] = useState<Map<string, UserProfile>>(new Map());
   const [showBroadcast, setShowBroadcast] = useState(false);
   const [chartMode, setChartMode] = useState<'days' | 'weeks'>('weeks');
@@ -11874,6 +11876,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   const openStatModal = async (type: 'members' | 'stamps' | 'activeCards') => {
     setStatModal(type);
     setStatModalSearch('');
+    setStatModalVisible(10);
     const uids: string[] = [...new Set<string>(storeCards.map((c: Card) => c.user_id))];
     const missing = uids.filter(uid => !memberProfiles.has(uid));
     if (missing.length === 0) return;
@@ -12669,7 +12672,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                     />
                   </div>
                   <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
-                    {statModal === 'members' && memberRows.map(({ uid, prof, totalStamps, cycles }) => (
+                    {statModal === 'members' && memberRows.slice(0, statModalVisible).map(({ uid, prof, totalStamps, cycles }) => (
                       <div key={uid} className="flex items-center gap-3 p-3 rounded-2xl bg-brand-bg">
                         <div className="w-9 h-9 rounded-full overflow-hidden bg-indigo-50 shrink-0 flex items-center justify-center">
                           <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={36} view="head" />
@@ -12685,7 +12688,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                       </div>
                     ))}
 
-                    {statModal === 'stamps' && stampRows.map(({ uid, prof, totalStamps }) => (
+                    {statModal === 'stamps' && stampRows.slice(0, statModalVisible).map(({ uid, prof, totalStamps }) => (
                       <div key={uid} className="flex items-center gap-3 p-3 rounded-2xl bg-brand-bg">
                         <div className="w-9 h-9 rounded-full overflow-hidden bg-indigo-50 shrink-0 flex items-center justify-center">
                           <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={36} view="head" />
@@ -12700,7 +12703,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                       </div>
                     ))}
 
-                    {statModal === 'activeCards' && activeRows.map(card => {
+                    {statModal === 'activeCards' && activeRows.slice(0, statModalVisible).map(card => {
                       const prof = memberProfiles.get(card.user_id);
                       return (
                         <div key={card.id} className="flex items-center gap-3 p-3 rounded-2xl bg-brand-bg">
@@ -12708,7 +12711,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                             <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? card.user_id} size={36} view="head" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1"><p className="font-bold text-sm truncate">{prof?.name || 'Unknown'}</p><StreakBadge streak={prof?.streak} /></div>
+                            <div className="flex items-center gap-1"><p className="font-bold text-sm truncate">{prof?.name || card.userName || 'Unknown'}</p><StreakBadge streak={prof?.streak} /></div>
                             <p className="text-[11px] text-brand-navy/75">@{prof?.handle || card.user_id.slice(0, 8)}</p>
                           </div>
                           <div className="text-right shrink-0">
@@ -12720,6 +12723,23 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                         </div>
                       );
                     })}
+
+                    {/* Load more */}
+                    {statModal === 'members' && memberRows.length > statModalVisible && (
+                      <button onClick={() => setStatModalVisible(v => v + 10)} className="w-full py-2.5 rounded-2xl bg-brand-navy/5 text-brand-navy/75 text-xs font-bold">
+                        Load 10 more ({memberRows.length - statModalVisible} remaining)
+                      </button>
+                    )}
+                    {statModal === 'stamps' && stampRows.length > statModalVisible && (
+                      <button onClick={() => setStatModalVisible(v => v + 10)} className="w-full py-2.5 rounded-2xl bg-brand-navy/5 text-brand-navy/75 text-xs font-bold">
+                        Load 10 more ({stampRows.length - statModalVisible} remaining)
+                      </button>
+                    )}
+                    {statModal === 'activeCards' && activeRows.length > statModalVisible && (
+                      <button onClick={() => setStatModalVisible(v => v + 10)} className="w-full py-2.5 rounded-2xl bg-brand-navy/5 text-brand-navy/75 text-xs font-bold">
+                        Load 10 more ({activeRows.length - statModalVisible} remaining)
+                      </button>
+                    )}
 
                     {((statModal === 'members' && memberRows.length === 0) ||
                       (statModal === 'stamps' && stampRows.length === 0) ||
@@ -12832,22 +12852,37 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             <h3 className="font-display text-xl font-bold">Recent Activity</h3>
-            {recentTransactions.map(tx => (
-              <div key={tx.id} className="glass-card p-4 rounded-2xl flex items-center gap-4">
-                <div className="w-10 h-10 bg-brand-bg rounded-full flex items-center justify-center">
-                  <UserIcon className="w-5 h-5 text-brand-navy/75" />
+            {recentTransactions.map(tx => {
+              const isCompletion = !!tx.stamps_at_completion;
+              const ts = tx.completed_at || tx.issued_at;
+              const name = tx.userName || memberProfiles.get(tx.user_id)?.name || 'Customer';
+              const photo = tx.userPhoto || memberProfiles.get(tx.user_id)?.photoURL || '';
+              return (
+                <div key={tx.id} className="glass-card p-3.5 rounded-2xl flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full overflow-hidden bg-brand-navy/5 shrink-0 flex items-center justify-center">
+                    {photo
+                      ? <img src={photo} alt="" className="w-full h-full object-cover" />
+                      : <UserIcon className="w-5 h-5 text-brand-navy/40" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-sm truncate">{name}</p>
+                    <p className="text-[11px] text-brand-navy/75">
+                      {isCompletion
+                        ? `Card completed · ${tx.stamp_count || tx.stamps_at_completion} stamp${(tx.stamp_count || 1) !== 1 ? 's' : ''}`
+                        : `${tx.stamp_count || tx.points_issued || 1} stamp${(tx.stamp_count || 1) !== 1 ? 's' : ''} issued`}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    {isCompletion && <div className="w-2 h-2 bg-brand-gold rounded-full mb-1 ml-auto" />}
+                    <p className="text-[10px] text-brand-navy/40">
+                      {ts ? format(ts.toDate(), 'h:mm a') : 'Just now'}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="font-bold text-sm">Card Completed</p>
-                  <p className="text-xs text-brand-navy/75">
-                    {tx.completed_at ? format(tx.completed_at.toDate(), 'h:mm a') : 'Just now'}
-                  </p>
-                </div>
-                <div className="w-2 h-2 bg-brand-gold rounded-full" />
-              </div>
-            ))}
+              );
+            })}
             {recentTransactions.length === 0 && (
               <div className="py-8 text-center text-brand-navy/32">
                 <Clock size={40} className="mx-auto mb-2 opacity-10" />
@@ -20070,6 +20105,7 @@ function SettingsMenu({
   onClose,
   profile,
   userCards,
+  stores,
   isAdmin,
   onOpenAdmin,
   onOpenStores,
@@ -20078,6 +20114,7 @@ function SettingsMenu({
   onClose: () => void,
   profile: UserProfile | null,
   userCards: Card[],
+  stores: StoreProfile[],
   isAdmin?: boolean,
   onOpenAdmin?: () => void,
   onOpenStores?: () => void,
@@ -20477,16 +20514,33 @@ function SettingsMenu({
         <AnimatePresence>
           {showArchive && (
             <Modal title="Archived Cards" onClose={() => setShowArchive(false)}>
-              <div className="space-y-4">
-                {archivedCards.map(card => (
-                  <div key={card.id} className="glass-card p-4 rounded-2xl">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="font-bold text-sm">Completed Program</p>
-                      <span className="text-[10px] font-bold text-brand-gold uppercase">Archived</span>
+              <div className="space-y-3">
+                {archivedCards.map(card => {
+                  const store = stores.find(s => s.id === card.store_id);
+                  const completedAt = (card as any).last_tap_timestamp;
+                  return (
+                    <div key={card.id} className="glass-card p-4 rounded-2xl flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-xl overflow-hidden bg-brand-navy/5 shrink-0 flex items-center justify-center">
+                        {store?.logoUrl
+                          ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
+                          : <Archive size={18} className="text-brand-navy/30" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm truncate">{store?.name || 'Unknown Store'}</p>
+                        <p className="text-[11px] text-brand-navy/75">
+                          {(card.total_completed_cycles || 1)}× completed
+                          {store?.reward ? ` · ${store.reward}` : ''}
+                        </p>
+                        {completedAt && (
+                          <p className="text-[10px] text-brand-navy/40 mt-0.5">
+                            {format(completedAt.toDate(), 'MMM d, yyyy')}
+                          </p>
+                        )}
+                      </div>
+                      <span className="text-[9px] font-bold text-brand-gold bg-brand-gold/10 px-2 py-1 rounded-full shrink-0">DONE</span>
                     </div>
-                    <p className="text-xs text-brand-navy/75">Completed cycles: {card.total_completed_cycles}</p>
-                  </div>
-                ))}
+                  );
+                })}
                 {archivedCards.length === 0 && (
                   <div className="py-12 text-center text-brand-navy/32">
                     <Archive size={48} className="mx-auto mb-4 opacity-10" />
@@ -20499,26 +20553,41 @@ function SettingsMenu({
 
           {showHistory && (
             <Modal title="Stamp History" onClose={() => setShowHistory(false)}>
-              <div className="space-y-4">
-                {transactions.map(tx => (
-                  <div key={tx.id} className="flex gap-4">
-                    <div className="flex flex-col items-center">
-                      <div className="w-8 h-8 bg-brand-gold rounded-full flex items-center justify-center text-brand-navy">
-                        <CheckCircle2 size={16} />
+              <div className="space-y-0">
+                {transactions.map((tx, i) => {
+                  const store = stores.find(s => s.id === tx.store_id);
+                  const isCompletion = !!tx.stamps_at_completion;
+                  const ts = tx.completed_at || tx.issued_at;
+                  return (
+                    <div key={tx.id} className="flex gap-3">
+                      <div className="flex flex-col items-center">
+                        <div className={cn(
+                          'w-8 h-8 rounded-full flex items-center justify-center shrink-0',
+                          isCompletion ? 'bg-brand-gold text-brand-navy' : 'bg-brand-navy/8 text-brand-navy/60'
+                        )}>
+                          {isCompletion ? <CheckCircle2 size={15} /> : <Star size={14} />}
+                        </div>
+                        {i < transactions.length - 1 && <div className="w-0.5 flex-1 bg-brand-navy/5 my-1" />}
                       </div>
-                      <div className="w-0.5 flex-1 bg-brand-navy/5 my-1" />
-                    </div>
-                    <div className="flex-1 pb-6">
-                      <p className="font-bold text-sm">Card Completed</p>
-                      <p className="text-xs text-brand-navy/75 mb-2">
-                        {tx.completed_at ? format(tx.completed_at.toDate(), 'MMM d, yyyy • h:mm a') : 'Recently'}
-                      </p>
-                      <div className="bg-brand-bg p-3 rounded-xl text-[10px] font-bold text-brand-navy/75 uppercase tracking-widest">
-                        {tx.stamps_at_completion} Stamps Collected
+                      <div className="flex-1 pb-5 min-w-0">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {store?.logoUrl && (
+                            <img src={store.logoUrl} alt="" className="w-5 h-5 rounded-md object-cover shrink-0" />
+                          )}
+                          <p className="font-bold text-sm truncate">{store?.name || 'Unknown Store'}</p>
+                        </div>
+                        <p className="text-[11px] text-brand-navy/75 mt-0.5">
+                          {isCompletion
+                            ? `Card completed · ${tx.stamp_count || tx.stamps_at_completion} stamp${(tx.stamp_count || 1) !== 1 ? 's' : ''}`
+                            : `${tx.stamp_count || 1} stamp${(tx.stamp_count || 1) !== 1 ? 's' : ''} collected`}
+                        </p>
+                        <p className="text-[10px] text-brand-navy/40 mt-0.5">
+                          {ts ? format(ts.toDate(), 'MMM d, yyyy · h:mm a') : 'Recently'}
+                        </p>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 {transactions.length === 0 && (
                   <div className="py-12 text-center text-brand-navy/32">
                     <Clock size={48} className="mx-auto mb-4 opacity-10" />
