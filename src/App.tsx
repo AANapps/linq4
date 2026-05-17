@@ -7640,7 +7640,7 @@ function buildStampCelebrationPages(
 function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onViewUser, cards: initialCards, notifications, activeChatId, setActiveChatId, onLogout, onDeleteAccount, pendingNFCStoreId, onClearPendingNFC }: { activeTab: string, setActiveTab: (tab: string) => void, profile: UserProfile | null, user: FirebaseUser, onViewStore: (s: StoreProfile) => void, onViewUser: (u: UserProfile) => void, cards: Card[], notifications: Notification[], activeChatId: string | null, setActiveChatId: (id: string | null) => void, onLogout: () => void, onDeleteAccount: () => Promise<void>, pendingNFCStoreId?: string | null, onClearPendingNFC?: () => void, key?: React.Key }) {
   const [stores, setStores] = useState<StoreProfile[]>([]);
   const [walletSubTab, setWalletSubTab] = useState<'stamps' | 'challenges'>('stamps');
-  const [walletLayout, setWalletLayout] = useState<'carousel' | 'list'>('list');
+  const [walletLayout, setWalletLayout] = useState<'carousel' | 'list'>('carousel');
   const [redeemingChallenge, setRedeemingChallenge] = useState<{ challenge: Challenge; entry: any; userName: string } | null>(null);
   const [myStickerCards, setMyStickerCards] = useState<StickerCardDoc[]>([]);
   const [openStickerCardId, setOpenStickerCardId] = useState<string | null>(null);
@@ -8184,13 +8184,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       {activeTab === 'home' && (
         <div className="space-y-6">
           <header className="flex items-end justify-between">
-            <h2 className="font-display text-3xl font-bold">Wallet</h2>
-            {(profile?.totalSaved ?? 0) > 0 && (
-              <div className="text-right pb-0.5">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/35">Total Saved</p>
-                <p className="font-display text-xl font-black text-emerald-500">${(profile!.totalSaved!).toFixed(2)}</p>
-              </div>
-            )}
+            <h2 className="font-display text-3xl font-bold">My Cards</h2>
           </header>
 
           {/* Sub-tabs */}
@@ -17362,7 +17356,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
               onChange={e => setNumTiers(parseInt(e.target.value))}
               className="w-full px-5 py-4 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-gold/30 appearance-none"
             >
-              {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n} {n === 1 ? 'Stage' : 'Stages'}</option>)}
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => <option key={n} value={n}>{n} {n === 1 ? 'Stage' : 'Stages'}</option>)}
             </select>
             <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-navy/75 pointer-events-none" />
           </div>
