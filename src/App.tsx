@@ -12766,6 +12766,34 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
               <p className="text-brand-navy/80 text-sm">Manage your card or create store offers.</p>
             </header>
             <div className="grid grid-cols-2 gap-4">
+              {/* QR stamp tile — shown instead of NFC instructions when in QR mode */}
+              {store?.scanMethod === 'qr' ? (
+                <button
+                  onClick={() => setShowQRScanner(true)}
+                  className="glass-card rounded-[2rem] p-6 flex flex-col items-center gap-4 active:scale-95 transition-transform text-center col-span-2"
+                >
+                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(135deg, #2563eb, #60a5fa)' }}>
+                    <QrCode size={28} className="text-white" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-brand-navy">Show QR Code</p>
+                    <p className="text-xs text-brand-navy/80 mt-0.5">Display your stamp QR for customers to scan</p>
+                  </div>
+                </button>
+              ) : (
+                <button
+                  onClick={() => setIsScanning(true)}
+                  className="glass-card rounded-[2rem] p-6 flex flex-col items-center gap-4 active:scale-95 transition-transform text-center col-span-2"
+                >
+                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(135deg, #0f766e, #14b8a6)' }}>
+                    <Wifi size={28} className="text-white -rotate-90" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-brand-navy">Stamp via NFC</p>
+                    <p className="text-xs text-brand-navy/80 mt-0.5">Customer taps your NFC tag to collect a stamp</p>
+                  </div>
+                </button>
+              )}
               <button
                 onClick={() => setVendorIssueMode('card')}
                 className="glass-card rounded-[2rem] p-6 flex flex-col items-center gap-4 active:scale-95 transition-transform text-center"
