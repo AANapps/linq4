@@ -22417,7 +22417,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
 
       {/* Interactions bar — hidden for anonymous admin posts */}
       {!isAnonAdmin && (
-      <div className={cn("pt-2.5", !hideDivider && "border-t border-gray-100")}>
+      <div className="pt-2.5">
         <div className="flex items-center gap-4">
           <button
             onClick={() => onLike(post)}
@@ -22450,7 +22450,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
 
       {/* Comments thread — toggled by the chat icon */}
       {!isAnonAdmin && (comments.length > 0 || showAllComments) && (
-        <div className={cn("pt-3 space-y-3", !hideDivider && "border-t border-gray-100")}>
+        <div className="pt-3 space-y-3">
           {visibleComments.map(comment => {
             const commentLiked = currentUser ? (comment.likedBy || []).includes(currentUser.uid) : false;
             return (
@@ -22499,7 +22499,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
 
       {/* Comment input — hidden for anonymous admin posts */}
       {!isAnonAdmin && currentUser && (
-        <div className={cn("pt-3 flex gap-2", !hideDivider && "border-t border-gray-100")}>
+        <div className="pt-3 flex gap-2">
           <div className="w-7 h-7 rounded-full overflow-hidden border border-black/5 shrink-0 bg-indigo-50 flex items-center justify-center">
             <LivePixelAvatar uid={currentUser.uid} size={28} view="head" />
           </div>
