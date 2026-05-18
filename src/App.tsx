@@ -21792,12 +21792,6 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
         <img src={post.postImageUrl} alt="" className="w-full object-cover max-h-64 mb-3" />
       )}
       <div className={showImage ? 'px-4' : ''}>
-      {/* Pinned indicator — only on FYP */}
-      {post.isPinned && showPinnedTag && (
-        <div className="flex items-center gap-1.5 mb-2">
-          <span className="text-[10px] font-bold text-brand-navy/60 uppercase tracking-widest">📌 Pinned</span>
-        </div>
-      )}
       {/* Post header */}
       <div className="space-y-2.5">
         <div className="flex items-center gap-3">
