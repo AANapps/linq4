@@ -22338,10 +22338,21 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
   }
 
   if (post.postType === 'reward') {
+    const REWARD_AVATAR_GRADS = [
+      'linear-gradient(135deg,#7C3AED,#A855F7)',
+      'linear-gradient(135deg,#059669,#34D399)',
+      'linear-gradient(135deg,#DC2626,#F87171)',
+      'linear-gradient(135deg,#D97706,#FBBF24)',
+      'linear-gradient(135deg,#0891B2,#38BDF8)',
+      'linear-gradient(135deg,#DB2777,#F472B6)',
+      'linear-gradient(135deg,#1D4ED8,#60A5FA)',
+      'linear-gradient(135deg,#65A30D,#A3E635)',
+    ];
+    const avatarGrad = REWARD_AVATAR_GRADS[(post.authorName?.charCodeAt(0) || 0) % REWARD_AVATAR_GRADS.length];
     return (
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="py-3 px-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full gradient-logo-blue flex items-center justify-center shrink-0 text-white font-black text-sm">
+          <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-white font-black text-sm" style={{ background: avatarGrad }}>
             {post.authorName?.[0]?.toUpperCase() || '?'}
           </div>
           <div className="flex-1 min-w-0">
@@ -23917,7 +23928,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
 
       {activeSubTab === 'following' ? (
         loading ? <FeedLoadingSpinner /> : (
-          <div className="divide-y-[3px] divide-gray-200 bg-white -mx-4">
+          <div className="divide-y-[3px] divide-gray-200 bg-white -mx-4 border-t border-gray-100">
             {followingFeed.map((item) =>
               !item._type
                 ? <FeedPostCard key={`gp-${item.id}`} post={item as GlobalPost} currentUser={currentUser} currentProfile={currentProfile} onViewUser={onViewUser} onViewStore={onViewStore} onLike={handleLike} onVote={handleVote} onDelete={async (p) => { await deleteDoc(doc(db, 'global_posts', p.id)); }} />
@@ -24292,7 +24303,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
 
           {/* Main mixed feed */}
           {loading ? <FeedLoadingSpinner /> : (
-            <div className="divide-y-[3px] divide-gray-200 bg-white -mx-4">
+            <div className="divide-y-[3px] divide-gray-200 bg-white -mx-4 border-t border-gray-100">
               {displayFeed.map((item) =>
                 !item._type
                   ? <FeedPostCard key={`gp-${item.id}`} post={item as GlobalPost} currentUser={currentUser} currentProfile={currentProfile} onViewUser={onViewUser} onViewStore={onViewStore} onLike={handleLike} onVote={handleVote} onDelete={async (p) => { await deleteDoc(doc(db, 'global_posts', p.id)); }} showPinnedTag />
