@@ -6539,6 +6539,9 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
   const [selectedGif, setSelectedGif] = useState<{ id: string; label: string; url: string } | null>(null);
   const [postImagePosition, setPostImagePosition] = useState({ x: 50, y: 50 });
   const [achName, setAchName] = useState('');
+  const [achPhoto, setAchPhoto] = useState('');
+  const [userPickerQuery, setUserPickerQuery] = useState('');
+  const [userPickerResults, setUserPickerResults] = useState<UserProfile[]>([]);
   const [achPrefix, setAchPrefix] = useState('just collected a');
   const [achReward, setAchReward] = useState('');
   const [publishingAch, setPublishingAch] = useState(false);
@@ -6696,7 +6699,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
       await addDoc(collection(db, 'global_posts'), {
         authorUid: 'linq_admin',
         authorName: achName.trim(),
-        authorPhoto: '',
+        authorPhoto: achPhoto,
         authorRole: 'admin',
         postType: 'reward',
         content: achPrefix.trim(),
@@ -6707,8 +6710,11 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
         createdAt: serverTimestamp(),
       });
       setAchName('');
+      setAchPhoto('');
       setAchReward('');
       setAchPrefix('just collected a');
+      setUserPickerQuery('');
+      setUserPickerResults([]);
     } finally { setPublishingAch(false); }
   };
 
@@ -7048,13 +7054,54 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
                 ))}
               </div>
 
-              {/* Name row */}
-              <div className="flex gap-2">
-                <input value={achName} onChange={e => setAchName(e.target.value)} placeholder="Name…"
-                  className="flex-1 px-3 py-2 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm text-brand-navy outline-none" />
-                <button onClick={randomName} className="px-3 py-2 rounded-xl bg-brand-bg border border-brand-navy/10 text-xs font-bold text-brand-navy/60 active:scale-95 transition-all">
-                  Random
-                </button>
+              {/* Name + user picker */}
+              <div className="space-y-1.5">
+                <div className="flex gap-2">
+                  <input value={achName} onChange={e => setAchName(e.target.value)} placeholder="Name…"
+                    className="flex-1 px-3 py-2 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm text-brand-navy outline-none" />
+                  <button onClick={randomName} className="px-3 py-2 rounded-xl bg-brand-bg border border-brand-navy/10 text-xs font-bold text-brand-navy/60 active:scale-95 transition-all">
+                    Random
+                  </button>
+                </div>
+                {/* User avatar search */}
+                <div className="relative">
+                  <input value={userPickerQuery} onChange={async e => {
+                    const q = e.target.value;
+                    setUserPickerQuery(q);
+                    if (q.trim().length < 2) { setUserPickerResults([]); return; }
+                    const snap = await getDocs(query(collection(db, 'users'), where('name', '>=', q), where('name', '<=', q + ''), limit(6)));
+                    setUserPickerResults(snap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile)));
+                  }} placeholder="Search users for photo…"
+                    className="w-full px-3 py-2 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm text-brand-navy outline-none" />
+                  {userPickerResults.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 z-50 bg-white rounded-2xl shadow-xl border border-brand-navy/8 overflow-hidden mt-1">
+                      {userPickerResults.map(u => (
+                        <button key={u.uid} onClick={() => {
+                          setAchName(u.name || achName);
+                          setAchPhoto(u.photoURL || '');
+                          setUserPickerQuery('');
+                          setUserPickerResults([]);
+                        }} className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-brand-bg transition-colors text-left">
+                          <div className="w-7 h-7 rounded-full overflow-hidden bg-indigo-50 shrink-0 flex items-center justify-center">
+                            {u.photoURL
+                              ? <img src={u.photoURL} alt="" className="w-full h-full object-cover" />
+                              : <LivePixelAvatar uid={u.uid} size={28} view="head" />}
+                          </div>
+                          <span className="text-sm font-semibold text-brand-navy truncate">{u.name}</span>
+                          {u.handle && <span className="text-xs text-brand-navy/45 truncate">@{u.handle}</span>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {/* Selected user preview */}
+                {achPhoto && (
+                  <div className="flex items-center gap-2 px-2 py-1.5 bg-brand-bg rounded-xl">
+                    <img src={achPhoto} alt="" className="w-6 h-6 rounded-full object-cover" />
+                    <span className="text-xs text-brand-navy/70 flex-1">Photo selected</span>
+                    <button onClick={() => setAchPhoto('')} className="text-brand-navy/40 hover:text-red-400 transition-colors"><X size={12} /></button>
+                  </div>
+                )}
               </div>
 
               {/* Prefix + reward */}
@@ -22494,9 +22541,12 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
     return (
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="py-3 px-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-white font-black text-sm" style={{ background: avatarGrad }}>
-            {post.authorName?.[0]?.toUpperCase() || '?'}
-          </div>
+          {post.authorPhoto
+            ? <img src={post.authorPhoto} alt="" className="w-10 h-10 rounded-full object-cover shrink-0 border border-black/5" />
+            : <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-white font-black text-sm" style={{ background: avatarGrad }}>
+                {post.authorName?.[0]?.toUpperCase() || '?'}
+              </div>
+          }
           <div className="flex-1 min-w-0">
             <p className="text-[13px] text-brand-navy leading-snug">
               <span className="font-bold">{post.authorName}</span>
