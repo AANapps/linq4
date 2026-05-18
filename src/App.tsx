@@ -26394,9 +26394,11 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
 
       <header className="relative">
         <div className="flex items-start gap-4">
-          <div className="bg-gradient-to-b from-indigo-50 to-purple-50 rounded-full p-2 border-4 border-white shadow-xl shrink-0">
-            <PixelAvatar config={targetUser.avatar} uid={targetUser.uid} size={64} view="full" />
-          </div>
+          {targetUser.role !== 'vendor' && (
+            <div className="bg-gradient-to-b from-indigo-50 to-purple-50 rounded-full p-2 border-4 border-white shadow-xl shrink-0">
+              <PixelAvatar config={targetUser.avatar} uid={targetUser.uid} size={64} view="full" />
+            </div>
+          )}
           <div className="flex-1 min-w-0 pt-1">
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="font-display text-2xl font-bold">{targetUser.name}</h2>
