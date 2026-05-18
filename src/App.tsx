@@ -12797,19 +12797,19 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
             </div>
           )}
 
-          <div className={needsPayment ? 'blur-sm pointer-events-none select-none' : ''}>
+          <div className={needsPayment ? 'pointer-events-none select-none' : ''}>
           {needsPayment ? (
-            /* ── Dummy preview data (blurred) ── */
+            /* ── Dummy preview: frames + labels visible, data blurred ── */
             <div className="space-y-5">
-              {/* Tab switcher dummy */}
+              {/* Tab switcher — fully visible structural frame */}
               <div className="flex p-1 bg-brand-navy/8 rounded-2xl gap-1">
                 {[{ label: 'Stamps', active: true }, { label: 'Spend Pts', active: false }, { label: 'Visit Pts', active: false }].map(({ label, active }) => (
-                  <div key={label} className={cn('flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-[10px] text-[11px] font-bold', active ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/60')}>
+                  <div key={label} className={cn('flex-1 flex items-center justify-center py-2.5 rounded-[10px] text-[11px] font-bold', active ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/60')}>
                     {label}
                   </div>
                 ))}
               </div>
-              {/* Stat grid dummy */}
+              {/* Stat tiles — label + icon visible, value blurred */}
               <div className="grid grid-cols-3 gap-3">
                 {[
                   { icon: <Users className="text-blue-500" />, label: 'Members', value: '247' },
@@ -12819,44 +12819,48 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                   { icon: <TrendingUp className="text-green-500" />, label: 'Avg/Wk/User', value: '2.4' },
                   { icon: <Gift className="text-rose-500" />, label: 'Rewards Given', value: '31' },
                 ].map(({ icon, label, value }) => (
-                  <StatSquare key={label} icon={icon} label={label} value={value} />
+                  <div key={label} className="glass-card aspect-square rounded-[1.5rem] flex flex-col items-center justify-center p-3">
+                    <div className="w-7 h-7 bg-brand-bg rounded-xl flex items-center justify-center mb-1.5">
+                      {React.cloneElement(icon as React.ReactElement, { size: 15 })}
+                    </div>
+                    <p className="font-display text-base font-bold text-brand-navy leading-none mb-0.5 blur-sm">{value}</p>
+                    <p className="text-[8px] text-brand-navy/75 font-bold uppercase tracking-wider text-center">{label}</p>
+                  </div>
                 ))}
               </div>
-              {/* Bar chart dummy */}
+              {/* Bar chart — title + x-axis labels visible, bars blurred */}
               <div className="glass-card p-5 rounded-[2rem] space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-bold text-brand-navy">Stamps Chart</p>
-                    <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">By week</p>
-                  </div>
+                <div>
+                  <p className="font-bold text-brand-navy">Stamps Chart</p>
+                  <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">By week</p>
                 </div>
                 <div className="flex items-end gap-1.5 h-28">
-                  {[30, 52, 41, 68, 55, 80, 62, 74].map((h, i) => (
+                  {[38, 55, 44, 70, 58, 82, 65, 76].map((h, i) => (
                     <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                      <div className="w-full rounded-t-lg bg-brand-navy/15" style={{ height: `${(h / 80) * 100}%` }} />
+                      <div className="w-full rounded-t-lg bg-brand-navy/25 blur-sm" style={{ height: `${(h / 82) * 100}%` }} />
                       <span className="text-[8px] text-brand-navy/40 font-bold">{['2/4','9/4','16/4','23/4','30/4','7/5','14/5','21/5'][i]}</span>
                     </div>
                   ))}
                 </div>
               </div>
-              {/* Recent activity dummy */}
+              {/* Recent activity — row frame + avatar visible, text content blurred */}
               <div className="space-y-3">
                 <h3 className="font-display text-xl font-bold">Recent Activity</h3>
                 {[
-                  { name: 'Emma R.', detail: '3 stamps · Coffee House', time: '2m ago' },
-                  { name: 'James T.', detail: '1 stamp · Coffee House', time: '14m ago' },
-                  { name: 'Sofia M.', detail: 'Reward redeemed · Free Coffee', time: '1h ago' },
-                  { name: 'Oliver K.', detail: '2 stamps · Coffee House', time: '2h ago' },
-                ].map(({ name, detail, time }) => (
-                  <div key={name} className="glass-card rounded-2xl px-4 py-3 flex items-center gap-3">
+                  { initials: 'ER', w1: 'w-20', w2: 'w-32', time: '2m ago' },
+                  { initials: 'JT', w1: 'w-24', w2: 'w-28', time: '14m ago' },
+                  { initials: 'SM', w1: 'w-16', w2: 'w-36', time: '1h ago' },
+                  { initials: 'OK', w1: 'w-20', w2: 'w-30', time: '2h ago' },
+                ].map(({ initials, w1, w2, time }, i) => (
+                  <div key={i} className="glass-card rounded-2xl px-4 py-3 flex items-center gap-3">
                     <div className="w-9 h-9 rounded-full bg-brand-navy/10 flex items-center justify-center shrink-0">
-                      <span className="text-xs font-bold text-brand-navy/60">{name[0]}</span>
+                      <span className="text-xs font-bold text-brand-navy/40 blur-sm">{initials}</span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-sm text-brand-navy truncate">{name}</p>
-                      <p className="text-xs text-brand-navy/60 truncate">{detail}</p>
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      <div className={cn('h-3 bg-brand-navy/20 rounded-full blur-sm', w1)} />
+                      <div className={cn('h-2.5 bg-brand-navy/12 rounded-full blur-sm', w2)} />
                     </div>
-                    <span className="text-[10px] text-brand-navy/40 font-bold shrink-0">{time}</span>
+                    <span className="text-[10px] text-brand-navy/40 font-bold shrink-0 blur-sm">{time}</span>
                   </div>
                 ))}
               </div>
