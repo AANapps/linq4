@@ -406,6 +406,7 @@ interface Card {
   total_value_redeemed?: number;
   total_visits_redeemed?: number;
   last_earned?: number;
+  last_transaction_at?: any;
   userName?: string;
   userPhoto?: string;
 }
@@ -11992,6 +11993,11 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   const [statModal, setStatModal] = useState<null | 'members' | 'stamps' | 'activeCards'>(null);
   const [statModalSearch, setStatModalSearch] = useState('');
   const [statModalVisible, setStatModalVisible] = useState(10);
+  const [dashTab, setDashTab] = useState<'stamps' | 'spend' | 'visit'>('stamps');
+  const [spendChartMode, setSpendChartMode] = useState<'days' | 'weeks'>('weeks');
+  const [spendChartOffset, setSpendChartOffset] = useState(0);
+  const [visitChartMode, setVisitChartMode] = useState<'days' | 'weeks'>('weeks');
+  const [visitChartOffset, setVisitChartOffset] = useState(0);
   const [memberProfiles, setMemberProfiles] = useState<Map<string, UserProfile>>(new Map());
   const [showBroadcast, setShowBroadcast] = useState(false);
   const [chartMode, setChartMode] = useState<'days' | 'weeks'>('weeks');
@@ -12177,27 +12183,63 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
       .catch(console.error);
   }, [store?.id, storeCards.length]);
 
-  const totalMembers = new Set(storeCards.map(c => c.user_id)).size;
+  const stampCards = storeCards.filter(c => !c.card_type || c.card_type === 'stamp');
+  const spendCards = storeCards.filter(c =>
+    (c.card_type === 'sub' && (store?.pointsEarnMode === 'spend' || store?.pointsEarnMode === 'both')) ||
+    (c.card_type === 'membership' && c.membership_type === 'spend')
+  );
+  const visitCards = storeCards.filter(c =>
+    (c.card_type === 'sub' && (store?.pointsEarnMode === 'visit' || store?.pointsEarnMode === 'both')) ||
+    (c.card_type === 'membership' && c.membership_type === 'visit')
+  );
+  const stampTxns = chartTransactions.filter(tx => !tx.card_type || tx.card_type === 'stamp');
+  const spendTxns = chartTransactions.filter(tx =>
+    (tx.card_type === 'sub' && tx.earn_mode !== 'visit') ||
+    (tx.card_type === 'membership' && tx.membership_type === 'spend')
+  );
+  const visitTxns = chartTransactions.filter(tx =>
+    (tx.card_type === 'sub' && tx.earn_mode !== 'spend') ||
+    (tx.card_type === 'membership' && tx.membership_type === 'visit')
+  );
+
+  const totalMembers = new Set(stampCards.map(c => c.user_id)).size;
   const stampsPerReward = store?.stamps_required_for_reward || 10;
-  const totalStampsGiven = storeCards.reduce((sum, c) => sum + (c.current_stamps || 0) + ((c.total_completed_cycles || 0) * stampsPerReward), 0);
-  const activeStoreCards = storeCards.filter(c => !c.isArchived).length;
-  const returningUsers = storeCards.filter(c => (c.total_completed_cycles || 0) > 0).length;
+  const totalStampsGiven = stampCards.reduce((sum, c) => sum + (c.current_stamps || 0) + ((c.total_completed_cycles || 0) * stampsPerReward), 0);
+  const activeStoreCards = stampCards.filter(c => !c.isArchived).length;
+  const returningUsers = stampCards.filter(c => (c.total_completed_cycles || 0) > 0).length;
   const returnRate = totalMembers > 0 ? Math.round((returningUsers / totalMembers) * 100) : 0;
-  const totalCompletedCycles = storeCards.reduce((sum, c) => sum + (c.total_completed_cycles || 0), 0);
+  const totalCompletedCycles = stampCards.reduce((sum, c) => sum + (c.total_completed_cycles || 0), 0);
   const redemptionRate = Math.round((totalCompletedCycles / Math.max(1, totalStampsGiven / stampsPerReward)) * 100);
   const avgScansPerWeekPerUser = (() => {
-    if (totalMembers === 0 || chartTransactions.length === 0) return '—';
-    const first = chartTransactions[0]?.completed_at?.toDate?.();
+    if (totalMembers === 0 || stampTxns.length === 0) return '—';
+    const first = stampTxns[0]?.completed_at?.toDate?.();
     if (!first) return '—';
     const weeksElapsed = Math.max(1, (Date.now() - first.getTime()) / (7 * 86400000));
-    return (chartTransactions.length / weeksElapsed / totalMembers).toFixed(1);
+    return (stampTxns.length / weeksElapsed / totalMembers).toFixed(1);
   })();
-  const storeTiersVendor = store?.rewardTiers?.length || Math.max(...storeCards.map(c => c.tiersCompleted || 0), 1);
+  const storeTiersVendor = store?.rewardTiers?.length || Math.max(...(stampCards.length > 0 ? stampCards.map(c => c.tiersCompleted || 0) : [0]), 1);
   const vendorRewardsGiven = Math.max(
-    storeCards.filter(c => !c.isArchived).reduce((sum, c) => sum + (c.total_completed_cycles || 0), 0) * storeTiersVendor,
-    storeCards.filter(c => c.isArchived && c.isRedeemed).length * storeTiersVendor,
+    stampCards.filter(c => !c.isArchived).reduce((sum, c) => sum + (c.total_completed_cycles || 0), 0) * storeTiersVendor,
+    stampCards.filter(c => c.isArchived && c.isRedeemed).length * storeTiersVendor,
     store?.rewardsGiven || 0
   );
+
+  const spendMembers = new Set(spendCards.map(c => c.user_id)).size;
+  const totalPointsIssued = spendCards.reduce((s, c) => s + (c.total_points_earned || 0), 0);
+  const totalPointsBalance = spendCards.reduce((s, c) => s + (c.current_points || 0) + (c.membership_points || 0), 0);
+  const totalPointsRedeemed = spendCards.reduce((s, c) => s + (c.total_points_redeemed || 0), 0);
+  const spendActiveCards = spendCards.filter(c => !c.isArchived).length;
+  const totalSpend = spendCards.filter(c => c.membership_type === 'spend').reduce((s, c) => s + (c.total_spent || 0), 0);
+  const spendRewardsGiven = spendCards.reduce((s, c) => s + (c.earned_rewards || 0), 0);
+
+  const visitMembers = new Set(visitCards.map(c => c.user_id)).size;
+  const totalVisits = visitCards.reduce((s, c) => s + (c.total_visits || 0) + (c.membership_visits || 0), 0);
+  const visitPointsGiven = visitCards.reduce((s, c) => s + (c.total_points_earned || 0), 0);
+  const visitPointsRedeemed = visitCards.reduce((s, c) => s + (c.total_points_redeemed || 0) + (c.total_visits_redeemed || 0), 0);
+  const visitActiveCards = visitCards.filter(c => !c.isArchived).length;
+  const visitReturning = visitCards.filter(c => (c.total_visits || 0) + (c.membership_visits || 0) > 1).length;
+  const visitReturnRate = visitMembers > 0 ? Math.round((visitReturning / visitMembers) * 100) : 0;
+  const avgVisitsPerUser = visitMembers > 0 ? (totalVisits / visitMembers).toFixed(1) : '—';
 
   // Pre-load member profiles for top-10 display
   useEffect(() => {
@@ -12220,7 +12262,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
     setStatModal(type);
     setStatModalSearch('');
     setStatModalVisible(10);
-    const uids: string[] = [...new Set<string>(storeCards.map((c: Card) => c.user_id))];
+    const uids: string[] = [...new Set<string>(stampCards.map((c: Card) => c.user_id))];
     const missing = uids.filter(uid => !memberProfiles.has(uid));
     if (missing.length === 0) return;
     const chunks: string[][] = [];
@@ -12701,409 +12743,750 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
           ) : (
           <>
 
-          {/* Stat tiles */}
-          <div className="grid grid-cols-3 gap-3">
-            <div onClick={() => openStatModal('members')} className="cursor-pointer active:scale-95 transition-transform">
-              <StatSquare icon={<Users className="text-blue-500" />} label="Members" value={String(totalMembers)} />
-            </div>
-            <div onClick={() => openStatModal('stamps')} className="cursor-pointer active:scale-95 transition-transform">
-              <StatSquare icon={<Stamp className="text-brand-gold" />} label="Stamps Given" value={String(totalStampsGiven)} />
-            </div>
-            <div onClick={() => openStatModal('activeCards')} className="cursor-pointer active:scale-95 transition-transform">
-              <StatSquare icon={<Wallet className="text-purple-500" />} label="Active Cards" value={String(activeStoreCards)} />
-            </div>
-            <StatSquare icon={<RefreshCw className="text-orange-500" />} label="Return Rate" value={`${returnRate}%`} />
-            <StatSquare icon={<TrendingUp className="text-green-500" />} label="Avg/Wk/User" value={String(avgScansPerWeekPerUser)} />
-            <StatSquare icon={<Gift className="text-rose-500" />} label="Rewards Given" value={String(vendorRewardsGiven)} />
+          {/* Card type tabs */}
+          <div className="flex p-1 bg-brand-navy/8 rounded-2xl gap-1">
+            {([
+              { key: 'stamps' as const, label: 'Stamps', icon: <Stamp size={13} />, active: 'text-brand-gold' },
+              { key: 'spend' as const, label: 'Spend Pts', icon: <DollarSign size={13} />, active: 'text-emerald-500' },
+              { key: 'visit' as const, label: 'Visit Pts', icon: <MapPin size={13} />, active: 'text-blue-500' },
+            ] as const).map(({ key, label, icon, active }) => (
+              <button
+                key={key}
+                onClick={() => { setDashTab(key); setStatModal(null); }}
+                className={cn('flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-[10px] text-[11px] font-bold transition-all', dashTab === key ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/60')}
+              >
+                <span className={dashTab === key ? active : ''}>{icon}</span>
+                {label}
+              </button>
+            ))}
           </div>
 
-          {/* Stamps chart */}
-          {(() => {
-            const periodCount = chartMode === 'weeks' ? 8 : 14;
-            const msPerPeriod = chartMode === 'weeks' ? 7 * 86400000 : 86400000;
-            const _todayMid = new Date(); _todayMid.setHours(0, 0, 0, 0);
-            const periodEnd = (_todayMid.getTime() + 86400000) - chartOffset * periodCount * msPerPeriod;
-            const periods: { label: string; count: number }[] = [];
-            for (let i = periodCount - 1; i >= 0; i--) {
-              const end = periodEnd - i * msPerPeriod;
-              const start = end - msPerPeriod;
-              const count = chartTransactions
-                .filter(tx => {
-                  const t = tx.completed_at?.toMillis?.() ?? (tx.completed_at?.seconds ?? 0) * 1000;
-                  return t >= start && t < end;
-                })
-                .reduce((sum, tx) => sum + (tx.stamp_count ?? 1), 0);
-              const d = new Date(start);
-              const label = chartMode === 'weeks'
-                ? `${d.getDate()}/${d.getMonth() + 1}`
-                : `${d.getDate()}/${d.getMonth() + 1}`;
-              periods.push({ label, count });
-            }
-            const maxVal = Math.max(...periods.map(p => p.count), 1);
-            return (
-              <div className="glass-card p-5 rounded-[2rem] space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-bold text-brand-navy">Stamps Chart</p>
-                    <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">
-                      {chartMode === 'weeks' ? 'By week' : 'By day'}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex p-0.5 bg-brand-navy/8 rounded-xl">
-                      {(['days', 'weeks'] as const).map(m => (
-                        <button key={m} onClick={() => { setChartMode(m); setChartOffset(0); }}
-                          className={cn('px-3 py-1.5 rounded-[10px] text-[10px] font-bold transition-all', chartMode === m ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/75')}>
-                          {m === 'days' ? 'Days' : 'Weeks'}
+          {/* ===== STAMPS TAB ===== */}
+          {dashTab === 'stamps' && (
+            <>
+              <div className="grid grid-cols-3 gap-3">
+                <div onClick={() => openStatModal('members')} className="cursor-pointer active:scale-95 transition-transform">
+                  <StatSquare icon={<Users className="text-blue-500" />} label="Members" value={String(totalMembers)} />
+                </div>
+                <div onClick={() => openStatModal('stamps')} className="cursor-pointer active:scale-95 transition-transform">
+                  <StatSquare icon={<Stamp className="text-brand-gold" />} label="Stamps Given" value={String(totalStampsGiven)} />
+                </div>
+                <div onClick={() => openStatModal('activeCards')} className="cursor-pointer active:scale-95 transition-transform">
+                  <StatSquare icon={<Wallet className="text-purple-500" />} label="Active Cards" value={String(activeStoreCards)} />
+                </div>
+                <StatSquare icon={<RefreshCw className="text-orange-500" />} label="Return Rate" value={`${returnRate}%`} />
+                <StatSquare icon={<TrendingUp className="text-green-500" />} label="Avg/Wk/User" value={String(avgScansPerWeekPerUser)} />
+                <StatSquare icon={<Gift className="text-rose-500" />} label="Rewards Given" value={String(vendorRewardsGiven)} />
+              </div>
+
+              {/* Stamps chart */}
+              {(() => {
+                const periodCount = chartMode === 'weeks' ? 8 : 14;
+                const msPerPeriod = chartMode === 'weeks' ? 7 * 86400000 : 86400000;
+                const _todayMid = new Date(); _todayMid.setHours(0, 0, 0, 0);
+                const periodEnd = (_todayMid.getTime() + 86400000) - chartOffset * periodCount * msPerPeriod;
+                const periods: { label: string; count: number }[] = [];
+                for (let i = periodCount - 1; i >= 0; i--) {
+                  const end = periodEnd - i * msPerPeriod;
+                  const start = end - msPerPeriod;
+                  const count = stampTxns
+                    .filter(tx => {
+                      const t = tx.completed_at?.toMillis?.() ?? (tx.completed_at?.seconds ?? 0) * 1000;
+                      return t >= start && t < end;
+                    })
+                    .reduce((sum, tx) => sum + (tx.stamp_count ?? 1), 0);
+                  const d = new Date(start);
+                  periods.push({ label: `${d.getDate()}/${d.getMonth() + 1}`, count });
+                }
+                const maxVal = Math.max(...periods.map(p => p.count), 1);
+                return (
+                  <div className="glass-card p-5 rounded-[2rem] space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-brand-navy">Stamps Chart</p>
+                        <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">
+                          {chartMode === 'weeks' ? 'By week' : 'By day'}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex p-0.5 bg-brand-navy/8 rounded-xl">
+                          {(['days', 'weeks'] as const).map(m => (
+                            <button key={m} onClick={() => { setChartMode(m); setChartOffset(0); }}
+                              className={cn('px-3 py-1.5 rounded-[10px] text-[10px] font-bold transition-all', chartMode === m ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/75')}>
+                              {m === 'days' ? 'Days' : 'Weeks'}
+                            </button>
+                          ))}
+                        </div>
+                        <button onClick={() => setChartOffset(o => o + 1)} className="p-1.5 rounded-xl bg-brand-navy/8 active:scale-90 transition-all">
+                          <ChevronLeft size={14} className="text-brand-navy" />
                         </button>
-                      ))}
-                    </div>
-                    <button onClick={() => setChartOffset(o => o + 1)} className="p-1.5 rounded-xl bg-brand-navy/8 active:scale-90 transition-all">
-                      <ChevronLeft size={14} className="text-brand-navy" />
-                    </button>
-                    <button onClick={() => setChartOffset(o => Math.max(0, o - 1))} disabled={chartOffset === 0} className="p-1.5 rounded-xl bg-brand-navy/8 disabled:opacity-30 active:scale-90 transition-all">
-                      <ChevronRight size={14} className="text-brand-navy" />
-                    </button>
-                  </div>
-                </div>
-                <div className="flex gap-1 items-end">
-                  <div className="flex flex-col justify-between text-right shrink-0 mb-3" style={{ height: '80px', minWidth: '16px' }}>
-                    <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{maxVal}</span>
-                    <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{Math.round(maxVal / 2)}</span>
-                    <span className="text-[8px] text-brand-navy/72 font-bold leading-none">0</span>
-                  </div>
-                  <div className="flex items-end gap-1 h-28 flex-1">
-                    {periods.map((p, i) => (
-                      <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                        <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
-                          <motion.div
-                            initial={{ height: 0 }} animate={{ height: `${Math.round((p.count / maxVal) * 80)}px` }}
-                            transition={{ duration: 0.4, delay: i * 0.03 }}
-                            className="w-full rounded-t-lg bg-brand-gold"
-                            style={{ minHeight: p.count > 0 ? '4px' : '0' }}
-                          />
-                        </div>
-                        <p className="text-[8px] text-brand-navy/72 font-bold leading-none">{p.label}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                {chartTransactions.length === 0 && (
-                  <p className="text-center text-xs text-brand-navy/72 font-bold py-2">No stamp data yet</p>
-                )}
-              </div>
-            );
-          })()}
-
-          {/* User base growth chart */}
-          {(() => {
-            // Cumulative unique members — seed from first transaction, fill gaps from card join date
-            const firstTxByUser = new Map<string, number>();
-            chartTransactions.forEach(tx => {
-              const uid = tx.user_id;
-              const ms = tx.completed_at?.toMillis?.() ?? (tx.completed_at?.seconds ?? 0) * 1000;
-              if (ms > 0 && (!firstTxByUser.has(uid) || ms < firstTxByUser.get(uid)!)) firstTxByUser.set(uid, ms);
-            });
-            storeCards.forEach(card => {
-              if (!firstTxByUser.has(card.user_id)) {
-                const ms = card.last_tap_timestamp?.toMillis?.() ?? (card.last_tap_timestamp?.seconds ?? 0) * 1000;
-                firstTxByUser.set(card.user_id, ms > 0 ? ms : Date.now());
-              }
-            });
-            const joinTimestamps = [...firstTxByUser.values()].sort((a, b) => a - b);
-            if (joinTimestamps.length === 0) return null;
-            const periodCount = 10;
-            const msPerDay = 86400000;
-            const _todayMid2 = new Date(); _todayMid2.setHours(0, 0, 0, 0);
-            const rangeMs = periodCount * msPerDay;
-            const rangeEnd = (_todayMid2.getTime() + 86400000) - signupsOffset * rangeMs;
-            const rangeStart = rangeEnd - rangeMs;
-            const points: { label: string; cumulative: number }[] = [];
-            for (let i = 0; i < periodCount; i++) {
-              const dayEnd = rangeStart + (i + 1) * msPerDay;
-              const cumulative = joinTimestamps.filter(ms => ms < dayEnd).length;
-              const d = new Date(rangeStart + i * msPerDay);
-              points.push({ label: `${d.getDate()}/${d.getMonth() + 1}`, cumulative });
-            }
-            const maxVal = Math.max(...points.map(p => p.cumulative), 1);
-            return (
-              <div className="glass-card p-5 rounded-[2rem] space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-bold text-brand-navy">User Base Growth</p>
-                    <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Cumulative members</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => setSignupsOffset(o => o + 1)} className="p-1.5 rounded-xl bg-brand-navy/8 active:scale-90 transition-all">
-                      <ChevronLeft size={14} className="text-brand-navy" />
-                    </button>
-                    <button onClick={() => setSignupsOffset(o => Math.max(0, o - 1))} disabled={signupsOffset === 0} className="p-1.5 rounded-xl bg-brand-navy/8 disabled:opacity-30 active:scale-90 transition-all">
-                      <ChevronRight size={14} className="text-brand-navy" />
-                    </button>
-                  </div>
-                </div>
-                <div className="flex gap-1 items-end">
-                  <div className="flex flex-col justify-between text-right shrink-0 mb-3" style={{ height: '80px', minWidth: '16px' }}>
-                    <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{maxVal}</span>
-                    <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{Math.round(maxVal / 2)}</span>
-                    <span className="text-[8px] text-brand-navy/72 font-bold leading-none">0</span>
-                  </div>
-                  <div className="flex items-end gap-1 h-28 flex-1">
-                    {points.map((p, i) => (
-                      <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                        <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
-                          <motion.div
-                            initial={{ height: 0 }} animate={{ height: `${Math.round((p.cumulative / maxVal) * 80)}px` }}
-                            transition={{ duration: 0.4, delay: i * 0.03 }}
-                            className="w-full rounded-t-lg bg-blue-400"
-                            style={{ minHeight: p.cumulative > 0 ? '4px' : '0' }}
-                          />
-                        </div>
-                        <p className="text-[8px] text-brand-navy/72 font-bold leading-none">{p.label}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Sign-ups per day chart */}
-          {(() => {
-            // New distinct users per day — first transaction if available, else card join date
-            const firstTxByUser2 = new Map<string, number>();
-            chartTransactions.forEach(tx => {
-              const uid = tx.user_id;
-              const ms = tx.completed_at?.toMillis?.() ?? (tx.completed_at?.seconds ?? 0) * 1000;
-              if (ms > 0 && (!firstTxByUser2.has(uid) || ms < firstTxByUser2.get(uid)!)) firstTxByUser2.set(uid, ms);
-            });
-            storeCards.forEach(card => {
-              if (!firstTxByUser2.has(card.user_id)) {
-                const ms = card.last_tap_timestamp?.toMillis?.() ?? (card.last_tap_timestamp?.seconds ?? 0) * 1000;
-                firstTxByUser2.set(card.user_id, ms > 0 ? ms : Date.now());
-              }
-            });
-            const [signupsDays, setSignupsDays] = [14, null] as any; // static 14-day window
-            const periodCount = 14;
-            const msPerDay = 86400000;
-            const _todayMid3 = new Date(); _todayMid3.setHours(0, 0, 0, 0);
-            const rangeEnd = (_todayMid3.getTime() + 86400000) - signupsOffset * periodCount * msPerDay;
-            const rangeStart = rangeEnd - periodCount * msPerDay;
-            const days: { label: string; count: number }[] = [];
-            for (let i = 0; i < periodCount; i++) {
-              const dayStart = rangeStart + i * msPerDay;
-              const dayEnd = dayStart + msPerDay;
-              const count = [...firstTxByUser2.values()].filter(ms => ms >= dayStart && ms < dayEnd).length;
-              const d = new Date(dayStart);
-              days.push({ label: `${d.getDate()}/${d.getMonth() + 1}`, count });
-            }
-            const maxVal = Math.max(...days.map(d => d.count), 1);
-            const totalNew = days.reduce((s, d) => s + d.count, 0);
-            return (
-              <div className="glass-card p-5 rounded-[2rem] space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-bold text-brand-navy">New Sign-ups / Day</p>
-                    <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">
-                      {totalNew} new in this period
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => setSignupsOffset(o => o + 1)} className="p-1.5 rounded-xl bg-brand-navy/8 active:scale-90 transition-all">
-                      <ChevronLeft size={14} className="text-brand-navy" />
-                    </button>
-                    <button onClick={() => setSignupsOffset(o => Math.max(0, o - 1))} disabled={signupsOffset === 0} className="p-1.5 rounded-xl bg-brand-navy/8 disabled:opacity-30 active:scale-90 transition-all">
-                      <ChevronRight size={14} className="text-brand-navy" />
-                    </button>
-                  </div>
-                </div>
-                <div className="flex gap-1 items-end">
-                  <div className="flex flex-col justify-between text-right shrink-0 mb-3" style={{ height: '80px', minWidth: '16px' }}>
-                    <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{maxVal}</span>
-                    <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{Math.round(maxVal / 2)}</span>
-                    <span className="text-[8px] text-brand-navy/72 font-bold leading-none">0</span>
-                  </div>
-                  <div className="flex items-end gap-1 h-28 flex-1">
-                    {days.map((d, i) => (
-                      <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                        <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
-                          <motion.div
-                            initial={{ height: 0 }} animate={{ height: `${Math.round((d.count / maxVal) * 80)}px` }}
-                            transition={{ duration: 0.4, delay: i * 0.03 }}
-                            className="w-full rounded-t-lg bg-emerald-400"
-                            style={{ minHeight: d.count > 0 ? '4px' : '0' }}
-                          />
-                        </div>
-                        <p className="text-[8px] text-brand-navy/72 font-bold leading-none">{d.label}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                {totalNew === 0 && (
-                  <p className="text-center text-xs text-brand-navy/72 font-bold py-2">No new sign-ups in this period</p>
-                )}
-              </div>
-            );
-          })()}
-
-          {/* Top 10 users */}
-          {(() => {
-            const top10 = [...new Set<string>(storeCards.map(c => c.user_id))]
-              .map(uid => {
-                const cards = storeCards.filter(c => c.user_id === uid);
-                const stamps = cards.reduce((s, c) => s + (c.current_stamps || 0) + ((c.total_completed_cycles || 0) * stampsPerReward), 0);
-                return { uid, stamps, prof: memberProfiles.get(uid) };
-              })
-              .sort((a, b) => b.stamps - a.stamps)
-              .slice(0, 10);
-            if (top10.length === 0) return null;
-            return (
-              <div className="glass-card p-5 rounded-[2rem] space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="font-bold text-brand-navy">Top 10 Users</p>
-                  <Trophy size={16} className="text-brand-gold" />
-                </div>
-                {top10.map(({ uid, stamps, prof }, i) => (
-                  <div key={uid} className="flex items-center gap-3">
-                    <span className="text-[11px] font-bold text-brand-navy/72 w-5 text-right">{i + 1}</span>
-                    <div className="w-8 h-8 rounded-full overflow-hidden bg-indigo-50 shrink-0 flex items-center justify-center">
-                      <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={32} view="head" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-sm truncate">{prof?.name || 'Customer'}</p>
-                      <div className="h-1 bg-brand-navy/8 rounded-full mt-1 overflow-hidden">
-                        <div className="h-full bg-brand-gold rounded-full" style={{ width: `${Math.round((stamps / (top10[0].stamps || 1)) * 100)}%` }} />
+                        <button onClick={() => setChartOffset(o => Math.max(0, o - 1))} disabled={chartOffset === 0} className="p-1.5 rounded-xl bg-brand-navy/8 disabled:opacity-30 active:scale-90 transition-all">
+                          <ChevronRight size={14} className="text-brand-navy" />
+                        </button>
                       </div>
                     </div>
-                    <span className="text-xs font-bold text-brand-navy/80 shrink-0">{stamps}</span>
+                    <div className="flex gap-1 items-end">
+                      <div className="flex flex-col justify-between text-right shrink-0 mb-3" style={{ height: '80px', minWidth: '16px' }}>
+                        <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{maxVal}</span>
+                        <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{Math.round(maxVal / 2)}</span>
+                        <span className="text-[8px] text-brand-navy/72 font-bold leading-none">0</span>
+                      </div>
+                      <div className="flex items-end gap-1 h-28 flex-1">
+                        {periods.map((p, i) => (
+                          <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                            <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
+                              <motion.div
+                                initial={{ height: 0 }} animate={{ height: `${Math.round((p.count / maxVal) * 80)}px` }}
+                                transition={{ duration: 0.4, delay: i * 0.03 }}
+                                className="w-full rounded-t-lg bg-brand-gold"
+                                style={{ minHeight: p.count > 0 ? '4px' : '0' }}
+                              />
+                            </div>
+                            <p className="text-[8px] text-brand-navy/72 font-bold leading-none">{p.label}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    {stampTxns.length === 0 && (
+                      <p className="text-center text-xs text-brand-navy/72 font-bold py-2">No stamp data yet</p>
+                    )}
                   </div>
-                ))}
-              </div>
-            );
-          })()}
+                );
+              })()}
 
-          <AnimatePresence>
-            {statModal && (() => {
-              const titles: Record<string, string> = { members: 'Members', stamps: 'Stamps Breakdown', activeCards: 'Active Cards' };
-              const uniqueUids = [...new Set<string>(storeCards.map(c => c.user_id))];
-              const q = statModalSearch.toLowerCase();
-
-              const matchesSearch = (uid: string) => {
-                if (!q) return true;
-                const prof = memberProfiles.get(uid);
-                return (prof?.name || '').toLowerCase().includes(q) || (prof?.handle || '').toLowerCase().includes(q) || uid.toLowerCase().includes(q);
-              };
-
-              const memberRows = uniqueUids.filter(matchesSearch).map(uid => {
-                const cards = storeCards.filter(c => c.user_id === uid);
-                const prof = memberProfiles.get(uid);
-                const totalStamps = cards.reduce((s, c) => s + (c.current_stamps || 0) + ((c.total_completed_cycles || 0) * stampsPerReward), 0);
-                const cycles = cards.reduce((s, c) => s + (c.total_completed_cycles || 0), 0);
-                return { uid, prof, totalStamps, cycles };
-              }).sort((a, b) => b.totalStamps - a.totalStamps);
-
-              const stampRows = uniqueUids.filter(matchesSearch).map(uid => {
-                const cards = storeCards.filter(c => c.user_id === uid);
-                const prof = memberProfiles.get(uid);
-                const totalStamps = cards.reduce((s, c) => s + (c.current_stamps || 0) + ((c.total_completed_cycles || 0) * stampsPerReward), 0);
-                return { uid, prof, totalStamps };
-              }).sort((a, b) => b.totalStamps - a.totalStamps);
-
-              const activeRows = storeCards.filter(c => !c.isArchived && matchesSearch(c.user_id)).sort((a, b) => (b.current_stamps || 0) - (a.current_stamps || 0));
-
-              return (
-                <Modal title={titles[statModal]} onClose={() => setStatModal(null)}>
-                  <div className="relative mb-3">
-                    <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-navy/72 pointer-events-none" />
-                    <input
-                      type="text"
-                      value={statModalSearch}
-                      onChange={e => setStatModalSearch(e.target.value)}
-                      placeholder="Search by name or handle…"
-                      className="w-full pl-9 pr-4 py-2.5 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/40"
-                      autoFocus
-                    />
+              {/* User base growth chart */}
+              {(() => {
+                const firstTxByUser = new Map<string, number>();
+                stampTxns.forEach(tx => {
+                  const uid = tx.user_id;
+                  const ms = tx.completed_at?.toMillis?.() ?? (tx.completed_at?.seconds ?? 0) * 1000;
+                  if (ms > 0 && (!firstTxByUser.has(uid) || ms < firstTxByUser.get(uid)!)) firstTxByUser.set(uid, ms);
+                });
+                stampCards.forEach(card => {
+                  if (!firstTxByUser.has(card.user_id)) {
+                    const ms = card.last_tap_timestamp?.toMillis?.() ?? (card.last_tap_timestamp?.seconds ?? 0) * 1000;
+                    firstTxByUser.set(card.user_id, ms > 0 ? ms : Date.now());
+                  }
+                });
+                const joinTimestamps = [...firstTxByUser.values()].sort((a, b) => a - b);
+                if (joinTimestamps.length === 0) return null;
+                const periodCount = 10;
+                const msPerDay = 86400000;
+                const _todayMid2 = new Date(); _todayMid2.setHours(0, 0, 0, 0);
+                const rangeMs = periodCount * msPerDay;
+                const rangeEnd = (_todayMid2.getTime() + 86400000) - signupsOffset * rangeMs;
+                const rangeStart = rangeEnd - rangeMs;
+                const points: { label: string; cumulative: number }[] = [];
+                for (let i = 0; i < periodCount; i++) {
+                  const dayEnd = rangeStart + (i + 1) * msPerDay;
+                  const cumulative = joinTimestamps.filter(ms => ms < dayEnd).length;
+                  const d = new Date(rangeStart + i * msPerDay);
+                  points.push({ label: `${d.getDate()}/${d.getMonth() + 1}`, cumulative });
+                }
+                const maxVal = Math.max(...points.map(p => p.cumulative), 1);
+                return (
+                  <div className="glass-card p-5 rounded-[2rem] space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-brand-navy">User Base Growth</p>
+                        <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Cumulative members</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => setSignupsOffset(o => o + 1)} className="p-1.5 rounded-xl bg-brand-navy/8 active:scale-90 transition-all">
+                          <ChevronLeft size={14} className="text-brand-navy" />
+                        </button>
+                        <button onClick={() => setSignupsOffset(o => Math.max(0, o - 1))} disabled={signupsOffset === 0} className="p-1.5 rounded-xl bg-brand-navy/8 disabled:opacity-30 active:scale-90 transition-all">
+                          <ChevronRight size={14} className="text-brand-navy" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex gap-1 items-end">
+                      <div className="flex flex-col justify-between text-right shrink-0 mb-3" style={{ height: '80px', minWidth: '16px' }}>
+                        <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{maxVal}</span>
+                        <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{Math.round(maxVal / 2)}</span>
+                        <span className="text-[8px] text-brand-navy/72 font-bold leading-none">0</span>
+                      </div>
+                      <div className="flex items-end gap-1 h-28 flex-1">
+                        {points.map((p, i) => (
+                          <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                            <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
+                              <motion.div
+                                initial={{ height: 0 }} animate={{ height: `${Math.round((p.cumulative / maxVal) * 80)}px` }}
+                                transition={{ duration: 0.4, delay: i * 0.03 }}
+                                className="w-full rounded-t-lg bg-blue-400"
+                                style={{ minHeight: p.cumulative > 0 ? '4px' : '0' }}
+                              />
+                            </div>
+                            <p className="text-[8px] text-brand-navy/72 font-bold leading-none">{p.label}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
-                    {statModal === 'members' && memberRows.slice(0, statModalVisible).map(({ uid, prof, totalStamps, cycles }) => (
-                      <div key={uid} className="flex items-center gap-3 p-3 rounded-2xl bg-brand-bg">
-                        <div className="w-9 h-9 rounded-full overflow-hidden bg-indigo-50 shrink-0 flex items-center justify-center">
-                          <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={36} view="head" />
+                );
+              })()}
+
+              {/* New sign-ups per day chart */}
+              {(() => {
+                const firstTxByUser2 = new Map<string, number>();
+                stampTxns.forEach(tx => {
+                  const uid = tx.user_id;
+                  const ms = tx.completed_at?.toMillis?.() ?? (tx.completed_at?.seconds ?? 0) * 1000;
+                  if (ms > 0 && (!firstTxByUser2.has(uid) || ms < firstTxByUser2.get(uid)!)) firstTxByUser2.set(uid, ms);
+                });
+                stampCards.forEach(card => {
+                  if (!firstTxByUser2.has(card.user_id)) {
+                    const ms = card.last_tap_timestamp?.toMillis?.() ?? (card.last_tap_timestamp?.seconds ?? 0) * 1000;
+                    firstTxByUser2.set(card.user_id, ms > 0 ? ms : Date.now());
+                  }
+                });
+                const periodCount = 14;
+                const msPerDay = 86400000;
+                const _todayMid3 = new Date(); _todayMid3.setHours(0, 0, 0, 0);
+                const rangeEnd = (_todayMid3.getTime() + 86400000) - signupsOffset * periodCount * msPerDay;
+                const rangeStart = rangeEnd - periodCount * msPerDay;
+                const days: { label: string; count: number }[] = [];
+                for (let i = 0; i < periodCount; i++) {
+                  const dayStart = rangeStart + i * msPerDay;
+                  const dayEnd = dayStart + msPerDay;
+                  const count = [...firstTxByUser2.values()].filter(ms => ms >= dayStart && ms < dayEnd).length;
+                  const d = new Date(dayStart);
+                  days.push({ label: `${d.getDate()}/${d.getMonth() + 1}`, count });
+                }
+                const maxVal = Math.max(...days.map(d => d.count), 1);
+                const totalNew = days.reduce((s, d) => s + d.count, 0);
+                return (
+                  <div className="glass-card p-5 rounded-[2rem] space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-brand-navy">New Sign-ups / Day</p>
+                        <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">
+                          {totalNew} new in this period
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => setSignupsOffset(o => o + 1)} className="p-1.5 rounded-xl bg-brand-navy/8 active:scale-90 transition-all">
+                          <ChevronLeft size={14} className="text-brand-navy" />
+                        </button>
+                        <button onClick={() => setSignupsOffset(o => Math.max(0, o - 1))} disabled={signupsOffset === 0} className="p-1.5 rounded-xl bg-brand-navy/8 disabled:opacity-30 active:scale-90 transition-all">
+                          <ChevronRight size={14} className="text-brand-navy" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex gap-1 items-end">
+                      <div className="flex flex-col justify-between text-right shrink-0 mb-3" style={{ height: '80px', minWidth: '16px' }}>
+                        <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{maxVal}</span>
+                        <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{Math.round(maxVal / 2)}</span>
+                        <span className="text-[8px] text-brand-navy/72 font-bold leading-none">0</span>
+                      </div>
+                      <div className="flex items-end gap-1 h-28 flex-1">
+                        {days.map((d, i) => (
+                          <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                            <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
+                              <motion.div
+                                initial={{ height: 0 }} animate={{ height: `${Math.round((d.count / maxVal) * 80)}px` }}
+                                transition={{ duration: 0.4, delay: i * 0.03 }}
+                                className="w-full rounded-t-lg bg-emerald-400"
+                                style={{ minHeight: d.count > 0 ? '4px' : '0' }}
+                              />
+                            </div>
+                            <p className="text-[8px] text-brand-navy/72 font-bold leading-none">{d.label}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    {totalNew === 0 && (
+                      <p className="text-center text-xs text-brand-navy/72 font-bold py-2">No new sign-ups in this period</p>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Top 10 users by stamps */}
+              {(() => {
+                const top10 = [...new Set<string>(stampCards.map(c => c.user_id))]
+                  .map(uid => {
+                    const cards = stampCards.filter(c => c.user_id === uid);
+                    const stamps = cards.reduce((s, c) => s + (c.current_stamps || 0) + ((c.total_completed_cycles || 0) * stampsPerReward), 0);
+                    return { uid, stamps, prof: memberProfiles.get(uid) };
+                  })
+                  .sort((a, b) => b.stamps - a.stamps)
+                  .slice(0, 10);
+                if (top10.length === 0) return null;
+                return (
+                  <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="font-bold text-brand-navy">Top 10 Users</p>
+                      <Trophy size={16} className="text-brand-gold" />
+                    </div>
+                    {top10.map(({ uid, stamps, prof }, i) => (
+                      <div key={uid} className="flex items-center gap-3">
+                        <span className="text-[11px] font-bold text-brand-navy/72 w-5 text-right">{i + 1}</span>
+                        <div className="w-8 h-8 rounded-full overflow-hidden bg-indigo-50 shrink-0 flex items-center justify-center">
+                          <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={32} view="head" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1"><p className="font-bold text-sm truncate">{prof?.name || 'Unknown'}</p><StreakBadge streak={prof?.streak} /></div>
-                          <p className="text-[11px] text-brand-navy/75">@{prof?.handle || uid.slice(0, 8)}</p>
+                          <p className="font-bold text-sm truncate">{prof?.name || 'Customer'}</p>
+                          <div className="h-1 bg-brand-navy/8 rounded-full mt-1 overflow-hidden">
+                            <div className="h-full bg-brand-gold rounded-full" style={{ width: `${Math.round((stamps / (top10[0].stamps || 1)) * 100)}%` }} />
+                          </div>
                         </div>
-                        <div className="text-right shrink-0">
-                          <p className="font-bold text-sm">{totalStamps} stamps</p>
-                          {cycles > 0 && <p className="text-[11px] text-brand-gold">{cycles}× completed</p>}
-                        </div>
+                        <span className="text-xs font-bold text-brand-navy/80 shrink-0">{stamps}</span>
                       </div>
                     ))}
+                  </div>
+                );
+              })()}
 
-                    {statModal === 'stamps' && stampRows.slice(0, statModalVisible).map(({ uid, prof, totalStamps }) => (
-                      <div key={uid} className="flex items-center gap-3 p-3 rounded-2xl bg-brand-bg">
-                        <div className="w-9 h-9 rounded-full overflow-hidden bg-indigo-50 shrink-0 flex items-center justify-center">
-                          <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={36} view="head" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1"><p className="font-bold text-sm truncate">{prof?.name || 'Unknown'}</p><StreakBadge streak={prof?.streak} /></div>
-                          <p className="text-[11px] text-brand-navy/75">@{prof?.handle || uid.slice(0, 8)}</p>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <p className="font-bold text-sm">{totalStamps} stamps</p>
-                        </div>
+              <AnimatePresence>
+                {statModal && (() => {
+                  const titles: Record<string, string> = { members: 'Members', stamps: 'Stamps Breakdown', activeCards: 'Active Cards' };
+                  const uniqueUids = [...new Set<string>(stampCards.map(c => c.user_id))];
+                  const q = statModalSearch.toLowerCase();
+                  const matchesSearch = (uid: string) => {
+                    if (!q) return true;
+                    const prof = memberProfiles.get(uid);
+                    return (prof?.name || '').toLowerCase().includes(q) || (prof?.handle || '').toLowerCase().includes(q) || uid.toLowerCase().includes(q);
+                  };
+                  const memberRows = uniqueUids.filter(matchesSearch).map(uid => {
+                    const cards = stampCards.filter(c => c.user_id === uid);
+                    const prof = memberProfiles.get(uid);
+                    const totalStamps = cards.reduce((s, c) => s + (c.current_stamps || 0) + ((c.total_completed_cycles || 0) * stampsPerReward), 0);
+                    const cycles = cards.reduce((s, c) => s + (c.total_completed_cycles || 0), 0);
+                    return { uid, prof, totalStamps, cycles };
+                  }).sort((a, b) => b.totalStamps - a.totalStamps);
+                  const stampRows = uniqueUids.filter(matchesSearch).map(uid => {
+                    const cards = stampCards.filter(c => c.user_id === uid);
+                    const prof = memberProfiles.get(uid);
+                    const totalStamps = cards.reduce((s, c) => s + (c.current_stamps || 0) + ((c.total_completed_cycles || 0) * stampsPerReward), 0);
+                    return { uid, prof, totalStamps };
+                  }).sort((a, b) => b.totalStamps - a.totalStamps);
+                  const activeRows = stampCards.filter(c => !c.isArchived && matchesSearch(c.user_id)).sort((a, b) => (b.current_stamps || 0) - (a.current_stamps || 0));
+                  return (
+                    <Modal title={titles[statModal]} onClose={() => setStatModal(null)}>
+                      <div className="relative mb-3">
+                        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-navy/72 pointer-events-none" />
+                        <input type="text" value={statModalSearch} onChange={e => setStatModalSearch(e.target.value)} placeholder="Search by name or handle…" className="w-full pl-9 pr-4 py-2.5 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/40" autoFocus />
                       </div>
-                    ))}
-
-                    {statModal === 'activeCards' && activeRows.slice(0, statModalVisible).map(card => {
-                      const prof = memberProfiles.get(card.user_id);
-                      return (
-                        <div key={card.id} className="flex items-center gap-3 p-3 rounded-2xl bg-brand-bg">
-                          <div className="w-9 h-9 rounded-full overflow-hidden bg-indigo-50 shrink-0 flex items-center justify-center">
-                            <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? card.user_id} size={36} view="head" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1"><p className="font-bold text-sm truncate">{prof?.name || card.userName || 'Unknown'}</p><StreakBadge streak={prof?.streak} /></div>
-                            <p className="text-[11px] text-brand-navy/75">@{prof?.handle || card.user_id.slice(0, 8)}</p>
-                          </div>
-                          <div className="text-right shrink-0">
-                            <p className="font-bold text-sm">{card.current_stamps}/{stampsPerReward}</p>
-                            <div className="w-16 h-1.5 bg-brand-navy/10 rounded-full mt-1">
-                              <div className="h-full bg-brand-gold rounded-full" style={{ width: `${Math.min(100, ((card.current_stamps || 0) / stampsPerReward) * 100)}%` }} />
+                      <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
+                        {statModal === 'members' && memberRows.slice(0, statModalVisible).map(({ uid, prof, totalStamps, cycles }) => (
+                          <div key={uid} className="flex items-center gap-3 p-3 rounded-2xl bg-brand-bg">
+                            <div className="w-9 h-9 rounded-full overflow-hidden bg-indigo-50 shrink-0 flex items-center justify-center"><PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={36} view="head" /></div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1"><p className="font-bold text-sm truncate">{prof?.name || 'Unknown'}</p><StreakBadge streak={prof?.streak} /></div>
+                              <p className="text-[11px] text-brand-navy/75">@{prof?.handle || uid.slice(0, 8)}</p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="font-bold text-sm">{totalStamps} stamps</p>
+                              {cycles > 0 && <p className="text-[11px] text-brand-gold">{cycles}× completed</p>}
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        ))}
+                        {statModal === 'stamps' && stampRows.slice(0, statModalVisible).map(({ uid, prof, totalStamps }) => (
+                          <div key={uid} className="flex items-center gap-3 p-3 rounded-2xl bg-brand-bg">
+                            <div className="w-9 h-9 rounded-full overflow-hidden bg-indigo-50 shrink-0 flex items-center justify-center"><PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={36} view="head" /></div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1"><p className="font-bold text-sm truncate">{prof?.name || 'Unknown'}</p><StreakBadge streak={prof?.streak} /></div>
+                              <p className="text-[11px] text-brand-navy/75">@{prof?.handle || uid.slice(0, 8)}</p>
+                            </div>
+                            <div className="text-right shrink-0"><p className="font-bold text-sm">{totalStamps} stamps</p></div>
+                          </div>
+                        ))}
+                        {statModal === 'activeCards' && activeRows.slice(0, statModalVisible).map(card => {
+                          const prof = memberProfiles.get(card.user_id);
+                          return (
+                            <div key={card.id} className="flex items-center gap-3 p-3 rounded-2xl bg-brand-bg">
+                              <div className="w-9 h-9 rounded-full overflow-hidden bg-indigo-50 shrink-0 flex items-center justify-center"><PixelAvatar config={prof?.avatar} uid={prof?.uid ?? card.user_id} size={36} view="head" /></div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1"><p className="font-bold text-sm truncate">{prof?.name || card.userName || 'Unknown'}</p><StreakBadge streak={prof?.streak} /></div>
+                                <p className="text-[11px] text-brand-navy/75">@{prof?.handle || card.user_id.slice(0, 8)}</p>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <p className="font-bold text-sm">{card.current_stamps}/{stampsPerReward}</p>
+                                <div className="w-16 h-1.5 bg-brand-navy/10 rounded-full mt-1"><div className="h-full bg-brand-gold rounded-full" style={{ width: `${Math.min(100, ((card.current_stamps || 0) / stampsPerReward) * 100)}%` }} /></div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {statModal === 'members' && memberRows.length > statModalVisible && <button onClick={() => setStatModalVisible(v => v + 10)} className="w-full py-2.5 rounded-2xl bg-brand-navy/5 text-brand-navy/75 text-xs font-bold">Load 10 more ({memberRows.length - statModalVisible} remaining)</button>}
+                        {statModal === 'stamps' && stampRows.length > statModalVisible && <button onClick={() => setStatModalVisible(v => v + 10)} className="w-full py-2.5 rounded-2xl bg-brand-navy/5 text-brand-navy/75 text-xs font-bold">Load 10 more ({stampRows.length - statModalVisible} remaining)</button>}
+                        {statModal === 'activeCards' && activeRows.length > statModalVisible && <button onClick={() => setStatModalVisible(v => v + 10)} className="w-full py-2.5 rounded-2xl bg-brand-navy/5 text-brand-navy/75 text-xs font-bold">Load 10 more ({activeRows.length - statModalVisible} remaining)</button>}
+                        {((statModal === 'members' && memberRows.length === 0) || (statModal === 'stamps' && stampRows.length === 0) || (statModal === 'activeCards' && activeRows.length === 0)) && (
+                          <p className="text-center text-brand-navy/72 py-8 font-bold text-sm">No data yet</p>
+                        )}
+                      </div>
+                    </Modal>
+                  );
+                })()}
+              </AnimatePresence>
+            </>
+          )}
 
-                    {/* Load more */}
-                    {statModal === 'members' && memberRows.length > statModalVisible && (
-                      <button onClick={() => setStatModalVisible(v => v + 10)} className="w-full py-2.5 rounded-2xl bg-brand-navy/5 text-brand-navy/75 text-xs font-bold">
-                        Load 10 more ({memberRows.length - statModalVisible} remaining)
-                      </button>
-                    )}
-                    {statModal === 'stamps' && stampRows.length > statModalVisible && (
-                      <button onClick={() => setStatModalVisible(v => v + 10)} className="w-full py-2.5 rounded-2xl bg-brand-navy/5 text-brand-navy/75 text-xs font-bold">
-                        Load 10 more ({stampRows.length - statModalVisible} remaining)
-                      </button>
-                    )}
-                    {statModal === 'activeCards' && activeRows.length > statModalVisible && (
-                      <button onClick={() => setStatModalVisible(v => v + 10)} className="w-full py-2.5 rounded-2xl bg-brand-navy/5 text-brand-navy/75 text-xs font-bold">
-                        Load 10 more ({activeRows.length - statModalVisible} remaining)
-                      </button>
-                    )}
-
-                    {((statModal === 'members' && memberRows.length === 0) ||
-                      (statModal === 'stamps' && stampRows.length === 0) ||
-                      (statModal === 'activeCards' && activeRows.length === 0)) && (
-                      <p className="text-center text-brand-navy/72 py-8 font-bold text-sm">No data yet</p>
-                    )}
+          {/* ===== SPEND POINTS TAB ===== */}
+          {dashTab === 'spend' && (
+            <>
+              {spendCards.length === 0 ? (
+                <div className="glass-card p-8 rounded-[2rem] text-center space-y-3">
+                  <DollarSign size={32} className="text-emerald-300 mx-auto" />
+                  <p className="font-bold text-brand-navy">No spend points data</p>
+                  <p className="text-sm text-brand-navy/60">Enable a spend points or spend membership card to see analytics here.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-3 gap-3">
+                    <StatSquare icon={<Users className="text-blue-500" />} label="Members" value={String(spendMembers)} />
+                    <StatSquare icon={<TrendingUp className="text-emerald-500" />} label="Pts Issued" value={String(totalPointsIssued)} />
+                    <StatSquare icon={<Wallet className="text-purple-500" />} label="Active Cards" value={String(spendActiveCards)} />
+                    <StatSquare icon={<RefreshCw className="text-orange-500" />} label="Pts Balance" value={String(totalPointsBalance)} />
+                    <StatSquare icon={<DollarSign className="text-green-500" />} label="Total Spend" value={totalSpend > 0 ? `$${totalSpend.toFixed(0)}` : '—'} />
+                    <StatSquare icon={<Gift className="text-rose-500" />} label="Rewards" value={String(spendRewardsGiven)} />
                   </div>
-                </Modal>
-              );
-            })()}
-          </AnimatePresence>
+
+                  {/* Points issued chart */}
+                  {(() => {
+                    const periodCount = spendChartMode === 'weeks' ? 8 : 14;
+                    const msPerPeriod = spendChartMode === 'weeks' ? 7 * 86400000 : 86400000;
+                    const _tMid = new Date(); _tMid.setHours(0, 0, 0, 0);
+                    const periodEnd = (_tMid.getTime() + 86400000) - spendChartOffset * periodCount * msPerPeriod;
+                    const periods: { label: string; count: number }[] = [];
+                    for (let i = periodCount - 1; i >= 0; i--) {
+                      const end = periodEnd - i * msPerPeriod;
+                      const start = end - msPerPeriod;
+                      const count = spendTxns
+                        .filter(tx => {
+                          const ts = (tx.issued_at ?? tx.completed_at)?.toMillis?.() ?? ((tx.issued_at ?? tx.completed_at)?.seconds ?? 0) * 1000;
+                          return ts >= start && ts < end;
+                        })
+                        .reduce((sum, tx) => sum + (tx.points_issued || tx.points_earned || 0), 0);
+                      const d = new Date(start);
+                      periods.push({ label: `${d.getDate()}/${d.getMonth() + 1}`, count });
+                    }
+                    const maxVal = Math.max(...periods.map(p => p.count), 1);
+                    return (
+                      <div className="glass-card p-5 rounded-[2rem] space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-bold text-brand-navy">Points Issued</p>
+                            <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">{spendChartMode === 'weeks' ? 'By week' : 'By day'}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex p-0.5 bg-brand-navy/8 rounded-xl">
+                              {(['days', 'weeks'] as const).map(m => (
+                                <button key={m} onClick={() => { setSpendChartMode(m); setSpendChartOffset(0); }} className={cn('px-3 py-1.5 rounded-[10px] text-[10px] font-bold transition-all', spendChartMode === m ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/75')}>
+                                  {m === 'days' ? 'Days' : 'Weeks'}
+                                </button>
+                              ))}
+                            </div>
+                            <button onClick={() => setSpendChartOffset(o => o + 1)} className="p-1.5 rounded-xl bg-brand-navy/8 active:scale-90 transition-all"><ChevronLeft size={14} className="text-brand-navy" /></button>
+                            <button onClick={() => setSpendChartOffset(o => Math.max(0, o - 1))} disabled={spendChartOffset === 0} className="p-1.5 rounded-xl bg-brand-navy/8 disabled:opacity-30 active:scale-90 transition-all"><ChevronRight size={14} className="text-brand-navy" /></button>
+                          </div>
+                        </div>
+                        <div className="flex gap-1 items-end">
+                          <div className="flex flex-col justify-between text-right shrink-0 mb-3" style={{ height: '80px', minWidth: '16px' }}>
+                            <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{maxVal}</span>
+                            <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{Math.round(maxVal / 2)}</span>
+                            <span className="text-[8px] text-brand-navy/72 font-bold leading-none">0</span>
+                          </div>
+                          <div className="flex items-end gap-1 h-28 flex-1">
+                            {periods.map((p, i) => (
+                              <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                                <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
+                                  <motion.div initial={{ height: 0 }} animate={{ height: `${Math.round((p.count / maxVal) * 80)}px` }} transition={{ duration: 0.4, delay: i * 0.03 }} className="w-full rounded-t-lg bg-emerald-400" style={{ minHeight: p.count > 0 ? '4px' : '0' }} />
+                                </div>
+                                <p className="text-[8px] text-brand-navy/72 font-bold leading-none">{p.label}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        {spendTxns.length === 0 && <p className="text-center text-xs text-brand-navy/72 font-bold py-2">No spend transactions yet</p>}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Spend user base growth */}
+                  {(() => {
+                    const firstTxByUser = new Map<string, number>();
+                    spendTxns.forEach(tx => {
+                      const uid = tx.user_id;
+                      const ms = (tx.issued_at ?? tx.completed_at)?.toMillis?.() ?? ((tx.issued_at ?? tx.completed_at)?.seconds ?? 0) * 1000;
+                      if (ms > 0 && (!firstTxByUser.has(uid) || ms < firstTxByUser.get(uid)!)) firstTxByUser.set(uid, ms);
+                    });
+                    spendCards.forEach(card => {
+                      if (!firstTxByUser.has(card.user_id)) {
+                        const ms = (card.last_transaction_at ?? card.last_tap_timestamp)?.toMillis?.() ?? ((card.last_transaction_at ?? card.last_tap_timestamp)?.seconds ?? 0) * 1000;
+                        firstTxByUser.set(card.user_id, ms > 0 ? ms : Date.now());
+                      }
+                    });
+                    const joinTimestamps = [...firstTxByUser.values()].sort((a, b) => a - b);
+                    if (joinTimestamps.length === 0) return null;
+                    const periodCount = 10;
+                    const msPerDay = 86400000;
+                    const _todayMid = new Date(); _todayMid.setHours(0, 0, 0, 0);
+                    const rangeEnd = (_todayMid.getTime() + 86400000) - signupsOffset * periodCount * msPerDay;
+                    const rangeStart = rangeEnd - periodCount * msPerDay;
+                    const pts: { label: string; cumulative: number }[] = [];
+                    for (let i = 0; i < periodCount; i++) {
+                      const dayEnd = rangeStart + (i + 1) * msPerDay;
+                      const cumulative = joinTimestamps.filter(ms => ms < dayEnd).length;
+                      const d = new Date(rangeStart + i * msPerDay);
+                      pts.push({ label: `${d.getDate()}/${d.getMonth() + 1}`, cumulative });
+                    }
+                    const maxVal = Math.max(...pts.map(p => p.cumulative), 1);
+                    return (
+                      <div className="glass-card p-5 rounded-[2rem] space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-bold text-brand-navy">User Base Growth</p>
+                            <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Cumulative spend members</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => setSignupsOffset(o => o + 1)} className="p-1.5 rounded-xl bg-brand-navy/8 active:scale-90 transition-all"><ChevronLeft size={14} className="text-brand-navy" /></button>
+                            <button onClick={() => setSignupsOffset(o => Math.max(0, o - 1))} disabled={signupsOffset === 0} className="p-1.5 rounded-xl bg-brand-navy/8 disabled:opacity-30 active:scale-90 transition-all"><ChevronRight size={14} className="text-brand-navy" /></button>
+                          </div>
+                        </div>
+                        <div className="flex gap-1 items-end">
+                          <div className="flex flex-col justify-between text-right shrink-0 mb-3" style={{ height: '80px', minWidth: '16px' }}>
+                            <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{maxVal}</span>
+                            <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{Math.round(maxVal / 2)}</span>
+                            <span className="text-[8px] text-brand-navy/72 font-bold leading-none">0</span>
+                          </div>
+                          <div className="flex items-end gap-1 h-28 flex-1">
+                            {pts.map((p, i) => (
+                              <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                                <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
+                                  <motion.div initial={{ height: 0 }} animate={{ height: `${Math.round((p.cumulative / maxVal) * 80)}px` }} transition={{ duration: 0.4, delay: i * 0.03 }} className="w-full rounded-t-lg bg-emerald-400" style={{ minHeight: p.cumulative > 0 ? '4px' : '0' }} />
+                                </div>
+                                <p className="text-[8px] text-brand-navy/72 font-bold leading-none">{p.label}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Top 10 by spend points */}
+                  {(() => {
+                    const top10 = [...new Set<string>(spendCards.map(c => c.user_id))]
+                      .map(uid => {
+                        const cards = spendCards.filter(c => c.user_id === uid);
+                        const pts = cards.reduce((s, c) => s + (c.total_points_earned || 0), 0);
+                        return { uid, pts, prof: memberProfiles.get(uid) };
+                      })
+                      .sort((a, b) => b.pts - a.pts)
+                      .slice(0, 10);
+                    if (top10.length === 0) return null;
+                    return (
+                      <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                        <div className="flex items-center justify-between">
+                          <p className="font-bold text-brand-navy">Top 10 by Points</p>
+                          <Trophy size={16} className="text-emerald-500" />
+                        </div>
+                        {top10.map(({ uid, pts, prof }, i) => (
+                          <div key={uid} className="flex items-center gap-3">
+                            <span className="text-[11px] font-bold text-brand-navy/72 w-5 text-right">{i + 1}</span>
+                            <div className="w-8 h-8 rounded-full overflow-hidden bg-indigo-50 shrink-0 flex items-center justify-center">
+                              <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={32} view="head" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold text-sm truncate">{prof?.name || 'Customer'}</p>
+                              <div className="h-1 bg-brand-navy/8 rounded-full mt-1 overflow-hidden">
+                                <div className="h-full bg-emerald-400 rounded-full" style={{ width: `${Math.round((pts / (top10[0].pts || 1)) * 100)}%` }} />
+                              </div>
+                            </div>
+                            <span className="text-xs font-bold text-brand-navy/80 shrink-0">{pts} pts</span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </>
+              )}
+            </>
+          )}
+
+          {/* ===== VISIT POINTS TAB ===== */}
+          {dashTab === 'visit' && (
+            <>
+              {visitCards.length === 0 ? (
+                <div className="glass-card p-8 rounded-[2rem] text-center space-y-3">
+                  <MapPin size={32} className="text-blue-300 mx-auto" />
+                  <p className="font-bold text-brand-navy">No visit points data</p>
+                  <p className="text-sm text-brand-navy/60">Enable a visit points or visit membership card to see analytics here.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-3 gap-3">
+                    <StatSquare icon={<Users className="text-blue-500" />} label="Members" value={String(visitMembers)} />
+                    <StatSquare icon={<MapPin className="text-blue-500" />} label="Total Visits" value={String(totalVisits)} />
+                    <StatSquare icon={<Wallet className="text-purple-500" />} label="Active Cards" value={String(visitActiveCards)} />
+                    <StatSquare icon={<RefreshCw className="text-orange-500" />} label="Return Rate" value={`${visitReturnRate}%`} />
+                    <StatSquare icon={<TrendingUp className="text-teal-500" />} label="Pts Given" value={String(visitPointsGiven)} />
+                    <StatSquare icon={<Gift className="text-rose-500" />} label="Pts Redeemed" value={String(visitPointsRedeemed)} />
+                  </div>
+
+                  {/* Visits chart */}
+                  {(() => {
+                    const periodCount = visitChartMode === 'weeks' ? 8 : 14;
+                    const msPerPeriod = visitChartMode === 'weeks' ? 7 * 86400000 : 86400000;
+                    const _tMid = new Date(); _tMid.setHours(0, 0, 0, 0);
+                    const periodEnd = (_tMid.getTime() + 86400000) - visitChartOffset * periodCount * msPerPeriod;
+                    const periods: { label: string; count: number }[] = [];
+                    for (let i = periodCount - 1; i >= 0; i--) {
+                      const end = periodEnd - i * msPerPeriod;
+                      const start = end - msPerPeriod;
+                      const count = visitTxns
+                        .filter(tx => {
+                          const ts = (tx.issued_at ?? tx.completed_at)?.toMillis?.() ?? ((tx.issued_at ?? tx.completed_at)?.seconds ?? 0) * 1000;
+                          return ts >= start && ts < end;
+                        })
+                        .reduce((sum, tx) => sum + (tx.stamps_per_visit || tx.visit_points || 1), 0);
+                      const d = new Date(start);
+                      periods.push({ label: `${d.getDate()}/${d.getMonth() + 1}`, count });
+                    }
+                    const maxVal = Math.max(...periods.map(p => p.count), 1);
+                    return (
+                      <div className="glass-card p-5 rounded-[2rem] space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-bold text-brand-navy">Visits Chart</p>
+                            <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">{visitChartMode === 'weeks' ? 'By week' : 'By day'}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex p-0.5 bg-brand-navy/8 rounded-xl">
+                              {(['days', 'weeks'] as const).map(m => (
+                                <button key={m} onClick={() => { setVisitChartMode(m); setVisitChartOffset(0); }} className={cn('px-3 py-1.5 rounded-[10px] text-[10px] font-bold transition-all', visitChartMode === m ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/75')}>
+                                  {m === 'days' ? 'Days' : 'Weeks'}
+                                </button>
+                              ))}
+                            </div>
+                            <button onClick={() => setVisitChartOffset(o => o + 1)} className="p-1.5 rounded-xl bg-brand-navy/8 active:scale-90 transition-all"><ChevronLeft size={14} className="text-brand-navy" /></button>
+                            <button onClick={() => setVisitChartOffset(o => Math.max(0, o - 1))} disabled={visitChartOffset === 0} className="p-1.5 rounded-xl bg-brand-navy/8 disabled:opacity-30 active:scale-90 transition-all"><ChevronRight size={14} className="text-brand-navy" /></button>
+                          </div>
+                        </div>
+                        <div className="flex gap-1 items-end">
+                          <div className="flex flex-col justify-between text-right shrink-0 mb-3" style={{ height: '80px', minWidth: '16px' }}>
+                            <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{maxVal}</span>
+                            <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{Math.round(maxVal / 2)}</span>
+                            <span className="text-[8px] text-brand-navy/72 font-bold leading-none">0</span>
+                          </div>
+                          <div className="flex items-end gap-1 h-28 flex-1">
+                            {periods.map((p, i) => (
+                              <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                                <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
+                                  <motion.div initial={{ height: 0 }} animate={{ height: `${Math.round((p.count / maxVal) * 80)}px` }} transition={{ duration: 0.4, delay: i * 0.03 }} className="w-full rounded-t-lg bg-blue-400" style={{ minHeight: p.count > 0 ? '4px' : '0' }} />
+                                </div>
+                                <p className="text-[8px] text-brand-navy/72 font-bold leading-none">{p.label}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        {visitTxns.length === 0 && <p className="text-center text-xs text-brand-navy/72 font-bold py-2">No visit data yet</p>}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Visit user base growth */}
+                  {(() => {
+                    const firstTxByUser = new Map<string, number>();
+                    visitTxns.forEach(tx => {
+                      const uid = tx.user_id;
+                      const ms = (tx.issued_at ?? tx.completed_at)?.toMillis?.() ?? ((tx.issued_at ?? tx.completed_at)?.seconds ?? 0) * 1000;
+                      if (ms > 0 && (!firstTxByUser.has(uid) || ms < firstTxByUser.get(uid)!)) firstTxByUser.set(uid, ms);
+                    });
+                    visitCards.forEach(card => {
+                      if (!firstTxByUser.has(card.user_id)) {
+                        const ms = (card.last_transaction_at ?? card.last_tap_timestamp)?.toMillis?.() ?? ((card.last_transaction_at ?? card.last_tap_timestamp)?.seconds ?? 0) * 1000;
+                        firstTxByUser.set(card.user_id, ms > 0 ? ms : Date.now());
+                      }
+                    });
+                    const joinTimestamps = [...firstTxByUser.values()].sort((a, b) => a - b);
+                    if (joinTimestamps.length === 0) return null;
+                    const periodCount = 10;
+                    const msPerDay = 86400000;
+                    const _todayMid = new Date(); _todayMid.setHours(0, 0, 0, 0);
+                    const rangeEnd = (_todayMid.getTime() + 86400000) - signupsOffset * periodCount * msPerDay;
+                    const rangeStart = rangeEnd - periodCount * msPerDay;
+                    const pts: { label: string; cumulative: number }[] = [];
+                    for (let i = 0; i < periodCount; i++) {
+                      const dayEnd = rangeStart + (i + 1) * msPerDay;
+                      const cumulative = joinTimestamps.filter(ms => ms < dayEnd).length;
+                      const d = new Date(rangeStart + i * msPerDay);
+                      pts.push({ label: `${d.getDate()}/${d.getMonth() + 1}`, cumulative });
+                    }
+                    const maxVal = Math.max(...pts.map(p => p.cumulative), 1);
+                    return (
+                      <div className="glass-card p-5 rounded-[2rem] space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-bold text-brand-navy">User Base Growth</p>
+                            <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Cumulative visit members</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => setSignupsOffset(o => o + 1)} className="p-1.5 rounded-xl bg-brand-navy/8 active:scale-90 transition-all"><ChevronLeft size={14} className="text-brand-navy" /></button>
+                            <button onClick={() => setSignupsOffset(o => Math.max(0, o - 1))} disabled={signupsOffset === 0} className="p-1.5 rounded-xl bg-brand-navy/8 disabled:opacity-30 active:scale-90 transition-all"><ChevronRight size={14} className="text-brand-navy" /></button>
+                          </div>
+                        </div>
+                        <div className="flex gap-1 items-end">
+                          <div className="flex flex-col justify-between text-right shrink-0 mb-3" style={{ height: '80px', minWidth: '16px' }}>
+                            <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{maxVal}</span>
+                            <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{Math.round(maxVal / 2)}</span>
+                            <span className="text-[8px] text-brand-navy/72 font-bold leading-none">0</span>
+                          </div>
+                          <div className="flex items-end gap-1 h-28 flex-1">
+                            {pts.map((p, i) => (
+                              <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                                <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
+                                  <motion.div initial={{ height: 0 }} animate={{ height: `${Math.round((p.cumulative / maxVal) * 80)}px` }} transition={{ duration: 0.4, delay: i * 0.03 }} className="w-full rounded-t-lg bg-blue-400" style={{ minHeight: p.cumulative > 0 ? '4px' : '0' }} />
+                                </div>
+                                <p className="text-[8px] text-brand-navy/72 font-bold leading-none">{p.label}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Top 10 by visits */}
+                  {(() => {
+                    const top10 = [...new Set<string>(visitCards.map(c => c.user_id))]
+                      .map(uid => {
+                        const cards = visitCards.filter(c => c.user_id === uid);
+                        const visits = cards.reduce((s, c) => s + (c.total_visits || 0) + (c.membership_visits || 0), 0);
+                        return { uid, visits, prof: memberProfiles.get(uid) };
+                      })
+                      .sort((a, b) => b.visits - a.visits)
+                      .slice(0, 10);
+                    if (top10.length === 0) return null;
+                    return (
+                      <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                        <div className="flex items-center justify-between">
+                          <p className="font-bold text-brand-navy">Top 10 by Visits</p>
+                          <Trophy size={16} className="text-blue-400" />
+                        </div>
+                        {top10.map(({ uid, visits, prof }, i) => (
+                          <div key={uid} className="flex items-center gap-3">
+                            <span className="text-[11px] font-bold text-brand-navy/72 w-5 text-right">{i + 1}</span>
+                            <div className="w-8 h-8 rounded-full overflow-hidden bg-indigo-50 shrink-0 flex items-center justify-center">
+                              <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={32} view="head" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold text-sm truncate">{prof?.name || 'Customer'}</p>
+                              <div className="h-1 bg-brand-navy/8 rounded-full mt-1 overflow-hidden">
+                                <div className="h-full bg-blue-400 rounded-full" style={{ width: `${Math.round((visits / (top10[0].visits || 1)) * 100)}%` }} />
+                              </div>
+                            </div>
+                            <span className="text-xs font-bold text-brand-navy/80 shrink-0">{visits} visits</span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </>
+              )}
+            </>
+          )}
 
 
           <div className="bg-brand-navy p-8 rounded-[2.5rem] text-white text-center">
