@@ -20652,16 +20652,18 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
 
       <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 pb-12">
 
-        {/* Avatar preview (customiser is on Profile tab) */}
-        <div className="space-y-3">
-          <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Avatar</label>
-          <div className="flex flex-col items-center gap-2 py-2">
-            <div className="bg-gradient-to-b from-indigo-50 to-purple-50 rounded-[1.5rem] p-3 shadow-inner">
-              <PixelAvatar config={profile.avatar} uid={profile.uid} size={64} view="full" />
+        {/* Avatar preview — consumers only */}
+        {profile.role !== 'vendor' && (
+          <div className="space-y-3">
+            <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Avatar</label>
+            <div className="flex flex-col items-center gap-2 py-2">
+              <div className="bg-gradient-to-b from-indigo-50 to-purple-50 rounded-[1.5rem] p-3 shadow-inner">
+                <PixelAvatar config={profile.avatar} uid={profile.uid} size={64} view="full" />
+              </div>
+              <p className="text-xs text-brand-navy/75">Customise your avatar on the Profile tab</p>
             </div>
-            <p className="text-xs text-brand-navy/75">Customise your avatar on the Profile tab</p>
           </div>
-        </div>
+        )}
 
         {/* Name */}
         <div className="space-y-2">
