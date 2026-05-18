@@ -22964,8 +22964,8 @@ function DealSliderSection({ title, icon, challenges, onViewStore, onViewChallen
   );
 }
 
-function StoreDealsSection({ stores, onViewStore, showAll, onToggleAll }: {
-  stores: StoreProfile[]; onViewStore?: (s: StoreProfile) => void; showAll: boolean; onToggleAll: () => void;
+function StoreDealsSection({ stores, onViewStore, showAll, onToggleAll, storeDistances }: {
+  stores: StoreProfile[]; onViewStore?: (s: StoreProfile) => void; showAll: boolean; onToggleAll: () => void; storeDistances?: Map<string, number>;
 }) {
   if (stores.length === 0) return null;
   const visible = showAll ? stores : stores.slice(0, 8);
@@ -22982,33 +22982,45 @@ function StoreDealsSection({ stores, onViewStore, showAll, onToggleAll }: {
       </div>
       <div className={cn('pb-2', showAll ? 'grid grid-cols-2 gap-3' : 'flex gap-3 overflow-x-auto')} style={!showAll ? { scrollbarWidth: 'none', msOverflowStyle: 'none' } : {}}>
         {visible.map((store, i) => {
-          const dealColor = DEAL_COLORS[i % DEAL_COLORS.length];
           const finalReward = store.rewardTiers?.length
             ? [...store.rewardTiers].sort((a, b) => b.stamps - a.stamps)[0]?.reward
             : store.reward;
+          const dist = storeDistances?.get(store.id);
+          const distLabel = dist != null
+            ? dist < 1 ? `${Math.round(dist * 1000)}m away` : `${dist.toFixed(1)}km away`
+            : null;
           return (
             <motion.div
               key={store.id}
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.04 }}
-              className={cn('rounded-[1.5rem] overflow-hidden flex flex-col cursor-pointer active:scale-[0.97] transition-transform shadow-md shadow-black/10', showAll ? '' : 'shrink-0 w-36')}
-              style={{ height: '160px' }}
+              className={cn('rounded-[1.5rem] overflow-hidden relative cursor-pointer active:scale-[0.97] transition-transform shadow-md shadow-black/10', showAll ? '' : 'shrink-0 w-40')}
+              style={{ height: '180px' }}
               onClick={() => onViewStore && onViewStore(store)}
             >
-              {/* Top half — logo */}
-              <div className="flex-1 bg-white/10 overflow-hidden relative">
-                {store.logoUrl
-                  ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
-                  : <div className="w-full h-full flex items-center justify-center bg-brand-navy/5"><Building2 size={24} className="text-brand-navy/72" /></div>}
+              {/* Full-bleed background image */}
+              {store.logoUrl
+                ? <img src={store.logoUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                : <div className="absolute inset-0 bg-brand-navy/10 flex items-center justify-center"><Building2 size={28} className="text-brand-navy/30" /></div>}
+
+              {/* Dark gradient overlay at bottom */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+              {/* Small red FREE label top-left */}
+              <div className="absolute top-2.5 left-2.5 bg-red-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest shadow-sm">
+                Free
               </div>
-              {/* Bottom half — gradient-logo-blue */}
-              <div className="gradient-logo-blue px-3 py-2 flex flex-col justify-center relative overflow-hidden" style={{ height: '72px' }}>
-                <span className="shine-ray" aria-hidden="true" />
-                <p className="font-extrabold text-white text-xs leading-tight line-clamp-2 relative z-10">
-                  {finalReward || `${store.stamps_required_for_reward} stamps reward`}
+
+              {/* Bottom text */}
+              <div className="absolute bottom-0 left-0 right-0 px-3 pb-3 pt-6">
+                <p className="font-extrabold text-white text-xs leading-snug line-clamp-2">
+                  {finalReward || `${store.stamps_required_for_reward} stamp reward`}
                 </p>
-                <p className="text-white/60 text-[9px] font-medium line-clamp-1 mt-0.5 relative z-10">{store.name}</p>
+                <p className="font-bold text-white text-[11px] leading-tight mt-0.5">{store.name}</p>
+                {distLabel && (
+                  <p className="text-white/60 text-[9px] font-medium mt-0.5">{distLabel}</p>
+                )}
               </div>
             </motion.div>
           );
@@ -23154,6 +23166,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
         onViewStore={onViewStore}
         showAll={showAllHot}
         onToggleAll={() => setShowAllHot(v => !v)}
+        storeDistances={storeDistances}
       />
 
       {/* Store Offers section */}
