@@ -12908,17 +12908,84 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
 
       {activeTab === 'messages' && (
         needsPayment ? (
-          <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center space-y-4">
-            <div className="w-14 h-14 bg-brand-navy/8 rounded-full flex items-center justify-center">
-              <Lock size={24} className="text-brand-navy/72" />
+          /* ── Messages paywall: landing page ── */
+          <div className="-mx-6 -mt-4">
+            {/* Hero */}
+            <div className="relative overflow-hidden px-6 pt-14 pb-10 text-white"
+              style={{ background: 'linear-gradient(160deg, #0f172a 0%, #1e1b4b 45%, #4f46e5 100%)' }}>
+              <div className="shine-ray" />
+              <div className="relative z-10">
+                <div className="w-14 h-14 bg-white/15 rounded-[1.25rem] flex items-center justify-center mb-6 border border-white/20">
+                  <MessageSquare size={26} className="text-white" />
+                </div>
+                <h1 className="font-display text-3xl font-bold leading-tight mb-3">Reach Customers Directly</h1>
+                <p className="text-white/75 text-sm leading-relaxed">Send messages straight to your customers' phones via push notifications — no email list, no spam folder, no guesswork.</p>
+              </div>
             </div>
-            <div>
-              <p className="font-bold text-brand-navy">Messaging locked</p>
-              <p className="text-sm text-brand-navy/80 mt-1">Subscribe to access customer messaging.</p>
+
+            {/* Stats comparison */}
+            <div className="px-6 pt-6 pb-2 bg-white">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-4">Why in-app beats email & SMS</p>
+              <div className="space-y-3">
+                {[
+                  { channel: 'Push (Linq)', open: '90%', ctr: '28%', cost: 'Included', highlight: true },
+                  { channel: 'Email', open: '21%', ctr: '2.5%', cost: '~$30/mo', highlight: false },
+                  { channel: 'SMS', open: '45%', ctr: '7%', cost: '~$60/mo', highlight: false },
+                ].map(({ channel, open, ctr, cost, highlight }) => (
+                  <div key={channel} className={cn('rounded-2xl px-4 py-3 flex items-center gap-3', highlight ? 'bg-indigo-50 border border-indigo-200' : 'bg-brand-bg border border-brand-navy/8')}>
+                    <div className="flex-1 min-w-0">
+                      <p className={cn('text-sm font-bold', highlight ? 'text-indigo-700' : 'text-brand-navy/60')}>{channel}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className={cn('text-xs font-black', highlight ? 'text-indigo-600' : 'text-brand-navy/50')}>{open}</p>
+                      <p className="text-[9px] text-brand-navy/40 font-bold uppercase tracking-wide">open rate</p>
+                    </div>
+                    <div className="text-center">
+                      <p className={cn('text-xs font-black', highlight ? 'text-indigo-600' : 'text-brand-navy/50')}>{ctr}</p>
+                      <p className="text-[9px] text-brand-navy/40 font-bold uppercase tracking-wide">click rate</p>
+                    </div>
+                    <div className="text-center">
+                      <p className={cn('text-xs font-black', highlight ? 'text-indigo-600' : 'text-brand-navy/50')}>{cost}</p>
+                      <p className="text-[9px] text-brand-navy/40 font-bold uppercase tracking-wide">cost</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <button onClick={handleSubscribe} className="bg-brand-navy text-white font-bold px-6 py-3 rounded-2xl text-sm active:scale-95 transition-transform">
-              Subscribe to access
-            </button>
+
+            {/* Feature list */}
+            <div className="px-6 py-5 bg-white space-y-3">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">What you get</p>
+              {[
+                { icon: <Bell size={15} className="text-indigo-500" />, text: 'Push notifications delivered instantly to all your customers' },
+                { icon: <MessageSquare size={15} className="text-indigo-500" />, text: 'Direct 1-to-1 chat with individual members' },
+                { icon: <Users size={15} className="text-indigo-500" />, text: 'Broadcast deals, events & rewards to everyone at once' },
+                { icon: <Zap size={15} className="text-indigo-500" />, text: 'Average 4× higher engagement than email campaigns' },
+              ].map(({ icon, text }) => (
+                <div key={text} className="flex items-start gap-3">
+                  <div className="w-7 h-7 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0 mt-0.5">{icon}</div>
+                  <p className="text-sm text-brand-navy/80 leading-snug">{text}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* CTA */}
+            <div className="px-6 pb-8 bg-white space-y-3">
+              <button
+                onClick={handleSubscribe}
+                className="w-full font-bold py-4 rounded-2xl active:scale-[0.98] transition-transform text-base text-white"
+                style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' }}
+              >
+                Subscribe Now — $50/month
+              </button>
+              <p className="text-center text-xs text-brand-navy/40">Secure payment via Stripe · Cancel anytime</p>
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+                <Clock size={15} className="text-amber-500 shrink-0 mt-0.5" />
+                <p className="text-amber-800 text-xs leading-relaxed">
+                  <span className="font-bold">After payment,</span> our team will manually grant access — usually within 24 hours.
+                </p>
+              </div>
+            </div>
           </div>
         ) : (
         <MessagesScreen
