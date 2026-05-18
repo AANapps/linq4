@@ -1587,7 +1587,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen pb-24 max-w-md mx-auto shadow-xl shadow-black/5 relative overflow-hidden bg-white">
+    <div className="min-h-screen pb-24 w-full relative overflow-hidden bg-white">
       {/* Header */}
       <header className="glass-panel sticky top-0 z-50 px-5 py-3.5 flex items-center justify-between">
         <button
