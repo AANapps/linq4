@@ -23347,9 +23347,6 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                   className="w-full gradient-logo-blue relative overflow-hidden px-5 py-4 flex items-center gap-4 active:opacity-90 transition-opacity"
                 >
                   <div className="shine-ray" />
-                  <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0 border border-white/20">
-                    <span className="text-white text-lg font-black">{sym}</span>
-                  </div>
                   <div className="flex-1 min-w-0 text-left">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-blue-200/80">Total Saved with Linq</p>
                     {saved > 0
@@ -23852,9 +23849,6 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
             <div className="gradient-logo-blue relative overflow-hidden mx-5 mt-2 mb-5 rounded-[1.5rem] px-5 py-5 shrink-0">
               <div className="shine-ray" />
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-white/15 flex items-center justify-center shrink-0 border border-white/20">
-                  <span className="text-white text-2xl font-black">{currencySymbol('AUD')}</span>
-                </div>
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-blue-200/70">Total Saved with Linq</p>
                   {(currentProfile?.totalSaved ?? 0) > 0
