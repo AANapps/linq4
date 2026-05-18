@@ -19840,7 +19840,6 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                     </span>
                   )}
                 </div>
-                <p className="text-[11px] text-white/60 mt-1">@{profile.handle || user.email?.split('@')[0]}</p>
               </div>
             </div>
           </div>
