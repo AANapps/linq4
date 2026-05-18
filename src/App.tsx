@@ -219,10 +219,10 @@ function StoreCategoryIcon({ category, size = 12, className }: { category?: stri
 
 // ─── Default gender-specific SVG avatars (no external URL, no data cost) ────
 const AVATAR_SVGS: Record<string, string> = {
-  Male: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#3b0764"/><circle cx="50" cy="36" r="19" fill="#7da5c8"/><rect x="28" y="57" width="44" height="6" rx="3" fill="#5a8aaa"/><path d="M14 100 Q14 66 50 66 Q86 66 86 100Z" fill="#7da5c8"/></svg>`,
-  Female: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#3b0764"/><ellipse cx="50" cy="34" rx="17" ry="20" fill="#e8a8bf"/><path d="M33 22 Q33 8 50 8 Q67 8 67 22" fill="#c47899"/><path d="M14 100 Q14 66 50 66 Q86 66 86 100Z" fill="#e8a8bf"/></svg>`,
-  'Non-binary': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#3b0764"/><circle cx="50" cy="36" r="19" fill="#a08fc4"/><path d="M14 100 Q14 66 50 66 Q86 66 86 100Z" fill="#a08fc4"/></svg>`,
-  default: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#3b0764"/><circle cx="50" cy="36" r="19" fill="#8fafc4"/><path d="M14 100 Q14 66 50 66 Q86 66 86 100Z" fill="#8fafc4"/></svg>`,
+  Male: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#1e3a5f"/><circle cx="50" cy="36" r="19" fill="#7da5c8"/><rect x="28" y="57" width="44" height="6" rx="3" fill="#5a8aaa"/><path d="M14 100 Q14 66 50 66 Q86 66 86 100Z" fill="#7da5c8"/></svg>`,
+  Female: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#1e3a5f"/><ellipse cx="50" cy="34" rx="17" ry="20" fill="#e8a8bf"/><path d="M33 22 Q33 8 50 8 Q67 8 67 22" fill="#c47899"/><path d="M14 100 Q14 66 50 66 Q86 66 86 100Z" fill="#e8a8bf"/></svg>`,
+  'Non-binary': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#1e3a5f"/><circle cx="50" cy="36" r="19" fill="#a08fc4"/><path d="M14 100 Q14 66 50 66 Q86 66 86 100Z" fill="#a08fc4"/></svg>`,
+  default: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#1e3a5f"/><circle cx="50" cy="36" r="19" fill="#8fafc4"/><path d="M14 100 Q14 66 50 66 Q86 66 86 100Z" fill="#8fafc4"/></svg>`,
 };
 
 function CountdownTimer({ endsAt }: { endsAt: any }) {
@@ -1587,7 +1587,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen pb-24 w-full relative overflow-hidden bg-brand-bg">
+    <div className="min-h-screen pb-24 w-full relative overflow-hidden bg-white">
       {/* Header */}
       <header className="glass-panel sticky top-0 z-50 px-5 py-3.5 flex items-center justify-between">
         <button
@@ -2006,7 +2006,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
     if (err) setError(err);
   };
 
-  const bg = { background: 'linear-gradient(160deg, #3b0764 0%, #4c1d95 40%, #6d28d9 70%, #7c3aed 100%)' };
+  const bg = { background: 'linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 40%, #2563eb 70%, #3b82f6 100%)' };
 
   if (mode === 'home') {
     return (
@@ -12912,7 +12912,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
           <div className="-mx-6 -mt-4">
             {/* Hero */}
             <div className="relative overflow-hidden px-6 pt-14 pb-10 text-white"
-              style={{ background: 'linear-gradient(160deg, #1a0533 0%, #3b0764 45%, #6d28d9 100%)' }}>
+              style={{ background: 'linear-gradient(160deg, #0f172a 0%, #1e1b4b 45%, #4f46e5 100%)' }}>
               <div className="shine-ray" />
               <div className="relative z-10">
                 <div className="w-14 h-14 bg-white/15 rounded-[1.25rem] flex items-center justify-center mb-6 border border-white/20">
@@ -13006,7 +13006,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
           <div className="-mx-6 -mt-4">
             {/* Hero — full-bleed gradient */}
             <div className="relative overflow-hidden px-6 pt-14 pb-10 text-white"
-              style={{ background: 'linear-gradient(160deg, #1a0533 0%, #3b0764 45%, #6d28d9 100%)' }}>
+              style={{ background: 'linear-gradient(160deg, #0f172a 0%, #1e3a5f 45%, #2563eb 100%)' }}>
               <div className="shine-ray" />
               <div className="relative z-10">
                 <div className="w-14 h-14 bg-white/15 rounded-[1.25rem] flex items-center justify-center mb-6 border border-white/20">
@@ -14197,7 +14197,7 @@ function BarcodeDisplay({ value, height = 60 }: { value: string; height?: number
         height,
         margin: 0,
         background: 'transparent',
-        lineColor: '#3b0764',
+        lineColor: '#1e3a5f',
       });
     } catch {
       // ignore invalid chars
@@ -15150,7 +15150,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
     const hit = tiers.find(t => t.stamps > prev && t.stamps <= curr);
     if (hit) {
       setUnlockedReward(hit.reward);
-      confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 }, zIndex: TOP_Z, colors: ['#f5a623', '#ffffff', '#6d28d9'] });
+      confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 }, zIndex: TOP_Z, colors: ['#f5a623', '#ffffff', '#1e3a5f'] });
       setTimeout(() => setUnlockedReward(null), 4000);
     }
   }, [card.current_stamps]);
@@ -18273,7 +18273,7 @@ function ScanUserPanel({ store, onIssue }: {
             onClick={() => visitScanMode === 'qr' ? setShowVisitQRScanner(true) : handleNFCScan()}
             disabled={nfcScanning || working}
             className="w-full relative overflow-hidden flex items-center justify-center gap-2 py-4 rounded-2xl font-bold text-white text-sm shadow-lg active:scale-[0.98] transition-all disabled:opacity-60"
-            style={{ background: 'linear-gradient(160deg, #3b0764 0%, #4c1d95 40%, #6d28d9 70%, #7c3aed 100%)' }}
+            style={{ background: 'linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 40%, #2563eb 70%, #3b82f6 100%)' }}
           >
             <span className="card-shine-ray" />
             {nfcScanning
@@ -18385,7 +18385,7 @@ function ScanUserPanel({ store, onIssue }: {
           onClick={lookupMode === 'phone' ? handlePhoneIssue : () => onIssue(handle, amount, setStatus, setWorking)}
           disabled={working || (lookupMode === 'handle' ? !handle : !phoneInput) || (!isVisit && !amount)}
           className="w-full py-4 rounded-2xl font-bold text-sm text-white disabled:opacity-40 transition-all active:scale-95"
-          style={{ background: 'linear-gradient(160deg, #3b0764 0%, #4c1d95 40%, #6d28d9 70%, #7c3aed 100%)' }}
+          style={{ background: 'linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 40%, #2563eb 70%, #3b82f6 100%)' }}
         >
           {working ? 'Issuing…' : isVisit ? 'Issue Points' : 'Issue Spend'}
         </button>
@@ -20105,7 +20105,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
 
   // ── Vendor profile layout ──
   if (profile.role === 'vendor') {
-    const theme = vendorStore?.theme || '#3b0764';
+    const theme = vendorStore?.theme || '#1e3a5f';
     return (
       <div className="space-y-6 pb-20 text-brand-navy">
         {settingsModal}
@@ -20462,7 +20462,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         <motion.button whileTap={{ scale: 0.97 }} onClick={() => setChallengeOpen(true)}
           className="flex-1 rounded-2xl overflow-hidden shadow-sm shadow-blue-500/30">
           <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3.5 overflow-hidden"
-            style={{ background: 'linear-gradient(160deg, #3b0764 0%, #4c1d95 40%, #6d28d9 70%, #7c3aed 100%)' }}>
+            style={{ background: 'linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 40%, #2563eb 70%, #3b82f6 100%)' }}>
             <span className="shine-ray" aria-hidden="true" />
             <p className="relative z-10 text-xl font-black leading-none text-white">{activeChallenges.length}</p>
             <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-blue-100/80">Challenges</span>
@@ -20472,7 +20472,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         <motion.button whileTap={{ scale: 0.97 }} onClick={() => setShowStickerModal(true)}
           className="flex-1 rounded-2xl overflow-hidden shadow-sm shadow-blue-500/30">
           <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3.5 overflow-hidden"
-            style={{ background: 'linear-gradient(160deg, #3b0764 0%, #4c1d95 40%, #6d28d9 70%, #7c3aed 100%)' }}>
+            style={{ background: 'linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 40%, #2563eb 70%, #3b82f6 100%)' }}>
             <span className="shine-ray" aria-hidden="true" />
             <p className="relative z-10 text-xl font-black leading-none text-white">{stickerData?.stickers.length ?? 0}</p>
             <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-blue-100/80">Stickers</span>
@@ -20923,12 +20923,12 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
 }
 
 const THEME_COLOURS = [
-  { label: 'Navy',   value: '#3b0764' },
+  { label: 'Navy',   value: '#1e3a5f' },
   { label: 'Gold',   value: '#f59e0b' },
   { label: 'Rose',   value: '#f43f5e' },
   { label: 'Green',  value: '#10b981' },
   { label: 'Purple', value: '#8b5cf6' },
-  { label: 'Blue',   value: '#7c3aed' },
+  { label: 'Blue',   value: '#3b82f6' },
   { label: 'Orange', value: '#f97316' },
   { label: 'Teal',   value: '#14b8a6' },
 ];
@@ -20954,7 +20954,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
   const [storeName, setStoreName] = useState('');
   const [storeReward, setStoreReward] = useState('');
   const [storeCategory, setStoreCategory] = useState<Category>('Food');
-  const [storeTheme, setStoreTheme] = useState('#3b0764');
+  const [storeTheme, setStoreTheme] = useState('#1e3a5f');
   const [storeLogo, setStoreLogo] = useState('');
   const [logoFetchUrl, setLogoFetchUrl] = useState('');
   const [logoFetching, setLogoFetching] = useState(false);
@@ -20978,7 +20978,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
         setStoreName(s.name || '');
         setStoreReward(s.reward || '');
         setStoreCategory(s.category || 'Food');
-        setStoreTheme(s.theme || '#3b0764');
+        setStoreTheme(s.theme || '#1e3a5f');
         setStoreLogo(s.logoUrl || '');
         setStoreLocation(s.location || s.address || '');
         const emptyLoc = { label: '', line1: '', line2: '', town: '', state: '', postcode: '' };
@@ -23045,7 +23045,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
       <button
         onClick={() => setShowBirthdaySheet(true)}
         className="w-full flex items-center gap-4 px-5 py-4 rounded-[1.5rem] active:scale-[0.98] transition-transform relative overflow-hidden"
-        style={{ background: 'linear-gradient(135deg, #3b0764 0%, #4c1d95 55%, #7c3aed 100%)' }}
+        style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 55%, #3b82f6 100%)' }}
       >
         {/* Confetti pieces */}
         {[
@@ -24100,8 +24100,8 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
 
         return (
           <div className="fixed inset-0 z-[100] flex flex-col" style={{ background: 'rgba(0,0,0,0.7)' }}>
-            <div className="flex-1 overflow-y-auto bg-[#f5f3ff] rounded-t-3xl mt-12">
-              <div className="sticky top-0 bg-[#f5f3ff] z-10 px-5 pt-5 pb-3 flex items-center justify-between border-b border-brand-navy/5">
+            <div className="flex-1 overflow-y-auto bg-[#f8f9fc] rounded-t-3xl mt-12">
+              <div className="sticky top-0 bg-[#f8f9fc] z-10 px-5 pt-5 pb-3 flex items-center justify-between border-b border-brand-navy/5">
                 <div>
                   <h2 className="font-extrabold text-brand-navy text-lg">All Deals Near You</h2>
                   <p className="text-brand-navy/75 text-xs mt-0.5">{displayStores.length} businesses</p>
@@ -26927,7 +26927,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
             <motion.button whileTap={{ scale: 0.97 }} onClick={() => setPubChallengeOpen(true)}
               className="flex-1 rounded-2xl overflow-hidden shadow-sm shadow-blue-500/30">
               <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3.5 overflow-hidden"
-                style={{ background: 'linear-gradient(160deg, #3b0764 0%, #4c1d95 40%, #6d28d9 70%, #7c3aed 100%)' }}>
+                style={{ background: 'linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 40%, #2563eb 70%, #3b82f6 100%)' }}>
                 <span className="shine-ray" aria-hidden="true" />
                 <p className="relative z-10 text-xl font-black leading-none text-white">{activePub.length}</p>
                 <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-blue-100/80">Challenges</span>
@@ -26936,7 +26936,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
             <motion.button whileTap={{ scale: 0.97 }} onClick={() => setPubStickerOpen(true)}
               className="flex-1 rounded-2xl overflow-hidden shadow-sm shadow-blue-500/30">
               <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3.5 overflow-hidden"
-                style={{ background: 'linear-gradient(160deg, #3b0764 0%, #4c1d95 40%, #6d28d9 70%, #7c3aed 100%)' }}>
+                style={{ background: 'linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 40%, #2563eb 70%, #3b82f6 100%)' }}>
                 <span className="shine-ray" aria-hidden="true" />
                 <p className="relative z-10 text-xl font-black leading-none text-white">{pubStickerCount}</p>
                 <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-blue-100/80">Stickers</span>
