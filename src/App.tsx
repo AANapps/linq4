@@ -16410,6 +16410,7 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady }: { curren
         <div className="relative h-full px-4 py-4 flex flex-col gap-3"
           style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #3730a3 40%, #6366f1 80%, #818cf8 100%)' }}>
           {voteData.imageUrl && <img src={voteData.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20 pointer-events-none" />}
+          <div className="absolute top-2 right-2 z-20 bg-red-500 text-white text-[8px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-full -rotate-6 shadow-md">Free Stickers</div>
           <div className="flex-1 min-w-0">
             <p className="text-[9px] font-bold uppercase tracking-widest text-indigo-200/70">Daily Vote</p>
             <p className="text-sm font-black text-white leading-tight mt-0.5 line-clamp-2">{voteData.question}</p>
@@ -23831,6 +23832,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                 <div className="relative w-full h-full flex flex-col items-center justify-center gap-1"
                   style={{ background: 'linear-gradient(135deg, #022c22 0%, #064e3b 40%, #059669 80%, #34d399 100%)' }}>
                   <MatrixRainCanvas opacity={0.35} fadeColor="rgba(2,44,34,0.18)" />
+                  <div className="absolute top-2 right-2 z-20 bg-red-500 text-white text-[8px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-full rotate-6 shadow-md">Free Stickers</div>
                   <p className="relative z-10 text-sm font-black text-white font-mono leading-none tracking-tight">LINQLE</p>
                   <p className="relative z-10 text-[11px] font-semibold text-emerald-200/80 tracking-wide">Win sticker packs</p>
                 </div>
