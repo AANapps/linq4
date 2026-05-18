@@ -512,6 +512,7 @@ interface GlobalPost {
   adminBadgeName?: string;
   adminBadgeColor?: string;
   postImageUrl?: string;
+  imageObjectPosition?: string;
   adminIcon?: string;
   cardSetId?: string;
   cardSetName?: string;
@@ -6529,6 +6530,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [adminGifs, setAdminGifs] = useState<{ id: string; label: string; url: string }[]>([]);
   const [selectedGif, setSelectedGif] = useState<{ id: string; label: string; url: string } | null>(null);
+  const [postImagePosition, setPostImagePosition] = useState({ x: 50, y: 50 });
   const [achName, setAchName] = useState('');
   const [achPrefix, setAchPrefix] = useState('just collected a');
   const [achReward, setAchReward] = useState('');
@@ -6634,7 +6636,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
         ...(!isAnonymous && selectedIcon ? { adminIcon: selectedIcon } : {}),
         ...(selectedCardSet ? { cardSetId: selectedCardSet.id, cardSetName: selectedCardSet.name } : {}),
         ...(selectedCardDef ? { cardDefId: selectedCardDef.id, cardDefName: selectedCardDef.name, cardDefImageUrl: selectedCardDef.imageUrl, cardDefTier: selectedCardDef.tier } : {}),
-        ...(!isAnonymous && postImageUrl ? { postImageUrl } : {}),
+        ...(!isAnonymous && postImageUrl ? { postImageUrl, imageObjectPosition: `${postImagePosition.x}% ${postImagePosition.y}%` } : {}),
         ...(selectedGif ? { adminGifUrl: selectedGif.url, adminGifLabel: selectedGif.label } : {}),
         createdAt: serverTimestamp(),
       });
@@ -6646,6 +6648,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
       setIsAnonymous(false);
       setPostImageFile(null);
       setPostImagePreview(null);
+      setPostImagePosition({ x: 50, y: 50 });
       setSelectedGif(null);
       setTab('all');
     } finally { setPublishing(false); setUploadingImage(false); }
@@ -6812,15 +6815,49 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
                   reader.readAsDataURL(file);
                 }} />
                 {postImagePreview ? (
-                  <div className="relative rounded-2xl overflow-hidden">
-                    <img src={postImagePreview} alt="" className="w-full object-cover max-h-40 rounded-2xl" />
-                    <button
-                      type="button"
-                      onClick={e => { e.preventDefault(); setPostImageFile(null); setPostImagePreview(null); }}
-                      className="absolute top-2 right-2 w-7 h-7 bg-black/50 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform"
+                  <div className="space-y-1.5">
+                    {/* Drag-to-reposition crop preview */}
+                    <div
+                      className="relative rounded-2xl overflow-hidden cursor-grab active:cursor-grabbing select-none"
+                      style={{ height: '160px' }}
+                      onMouseDown={e => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const move = (me: MouseEvent) => {
+                          const x = Math.round(Math.min(100, Math.max(0, ((me.clientX - rect.left) / rect.width) * 100)));
+                          const y = Math.round(Math.min(100, Math.max(0, ((me.clientY - rect.top) / rect.height) * 100)));
+                          setPostImagePosition({ x, y });
+                        };
+                        window.addEventListener('mousemove', move);
+                        window.addEventListener('mouseup', () => window.removeEventListener('mousemove', move), { once: true });
+                      }}
+                      onTouchMove={e => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const t = e.touches[0];
+                        const x = Math.round(Math.min(100, Math.max(0, ((t.clientX - rect.left) / rect.width) * 100)));
+                        const y = Math.round(Math.min(100, Math.max(0, ((t.clientY - rect.top) / rect.height) * 100)));
+                        setPostImagePosition({ x, y });
+                      }}
                     >
-                      <X size={14} />
-                    </button>
+                      <img src={postImagePreview} alt="" className="w-full h-full object-cover pointer-events-none"
+                        style={{ objectPosition: `${postImagePosition.x}% ${postImagePosition.y}%` }} />
+                      {/* crosshair */}
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="w-6 h-6 rounded-full border-2 border-white shadow-md bg-white/20" style={{
+                          position: 'absolute',
+                          left: `${postImagePosition.x}%`,
+                          top: `${postImagePosition.y}%`,
+                          transform: 'translate(-50%,-50%)'
+                        }} />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={e => { e.preventDefault(); setPostImageFile(null); setPostImagePreview(null); setPostImagePosition({ x: 50, y: 50 }); }}
+                        className="absolute top-2 right-2 w-7 h-7 bg-black/50 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-brand-navy/40 text-center">Drag to reposition crop</p>
                   </div>
                 ) : (
                   <div className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl border-2 border-dashed border-brand-navy/15 bg-white text-brand-navy/50 text-sm font-medium cursor-pointer hover:border-brand-navy/30 transition-colors">
@@ -22597,7 +22634,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
           </div>
         </div>
       </div>
-      {showImage && <img src={post.postImageUrl} alt="" className="w-full object-cover max-h-72 mb-3" />}
+      {showImage && <img src={post.postImageUrl} alt="" className="w-full object-cover max-h-72 mb-3" style={{ objectPosition: post.imageObjectPosition || 'center' }} />}
       <div className="px-4">
 
         {post.postType === 'review' && (
