@@ -497,8 +497,9 @@ interface GlobalPost {
   toName?: string;
   toPhoto?: string;
   content: string;
-  postType: 'post' | 'poll' | 'review' | 'activity';
+  postType: 'post' | 'poll' | 'review' | 'activity' | 'reward';
   activityEmoji?: string;
+  achievementText?: string;
   rating?: number;
   storeReviewId?: string;
   pollOptions?: { text: string }[];
@@ -6528,6 +6529,12 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [adminGifs, setAdminGifs] = useState<{ id: string; label: string; url: string }[]>([]);
   const [selectedGif, setSelectedGif] = useState<{ id: string; label: string; url: string } | null>(null);
+  const [achName, setAchName] = useState('');
+  const [achPrefix, setAchPrefix] = useState('just collected a');
+  const [achReward, setAchReward] = useState('');
+  const [publishingAch, setPublishingAch] = useState(false);
+  const RANDOM_NAMES = ['Sarah','James','Emily','Liam','Olivia','Noah','Emma','Oliver','Ava','Elijah','Sophia','Lucas','Mia','Mason','Charlotte','Ethan','Amelia','Logan','Harper','Aiden'];
+  const randomName = () => setAchName(RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)]);
 
   useEffect(() => {
     const unsub1 = onSnapshot(
@@ -6642,6 +6649,29 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
       setSelectedGif(null);
       setTab('all');
     } finally { setPublishing(false); setUploadingImage(false); }
+  };
+
+  const handlePublishActivity = async () => {
+    if (!achName.trim() || !achReward.trim()) return;
+    setPublishingAch(true);
+    try {
+      await addDoc(collection(db, 'global_posts'), {
+        authorUid: 'linq_admin',
+        authorName: achName.trim(),
+        authorPhoto: '',
+        authorRole: 'admin',
+        postType: 'reward',
+        content: achPrefix.trim(),
+        achievementText: achReward.trim(),
+        likesCount: 0,
+        likedBy: [],
+        isAnonymous: false,
+        createdAt: serverTimestamp(),
+      });
+      setAchName('');
+      setAchReward('');
+      setAchPrefix('just collected a');
+    } finally { setPublishingAch(false); }
   };
 
   const formatAge = (ts: any) => {
@@ -6924,6 +6954,57 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
             >
               {uploadingImage ? 'Uploading image…' : publishing ? 'Publishing…' : 'Publish to FYP'}
             </button>
+
+            {/* Activity / reward posts */}
+            <div className="bg-white rounded-2xl border border-brand-navy/8 p-4 space-y-3">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/60">Activity Post</p>
+
+              {/* Quick templates */}
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { prefix: 'just collected a', reward: 'legendary sticker' },
+                  { prefix: 'just collected a', reward: 'rare sticker' },
+                  { prefix: 'just earned a', reward: 'FREE burger' },
+                  { prefix: 'just got a', reward: 'FREE coffee' },
+                  { prefix: 'just unlocked a', reward: 'FREE dessert' },
+                  { prefix: 'just redeemed a', reward: '50% off voucher' },
+                ].map(t => (
+                  <button key={t.reward} onClick={() => { setAchPrefix(t.prefix); setAchReward(t.reward); if (!achName) randomName(); }}
+                    className="px-2.5 py-1 rounded-full bg-brand-bg border border-brand-navy/10 text-[10px] font-bold text-brand-navy/70 active:scale-95 transition-all">
+                    {t.reward}
+                  </button>
+                ))}
+              </div>
+
+              {/* Name row */}
+              <div className="flex gap-2">
+                <input value={achName} onChange={e => setAchName(e.target.value)} placeholder="Name…"
+                  className="flex-1 px-3 py-2 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm text-brand-navy outline-none" />
+                <button onClick={randomName} className="px-3 py-2 rounded-xl bg-brand-bg border border-brand-navy/10 text-xs font-bold text-brand-navy/60 active:scale-95 transition-all">
+                  Random
+                </button>
+              </div>
+
+              {/* Prefix + reward */}
+              <input value={achPrefix} onChange={e => setAchPrefix(e.target.value)} placeholder="just collected a…"
+                className="w-full px-3 py-2 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm text-brand-navy outline-none" />
+              <input value={achReward} onChange={e => setAchReward(e.target.value)} placeholder="legendary sticker / FREE burger…"
+                className="w-full px-3 py-2 rounded-xl bg-blue-50 border border-blue-200 text-sm font-bold text-blue-700 outline-none" />
+
+              {/* Preview */}
+              {(achName || achReward) && (
+                <div className="px-3 py-2 bg-brand-bg rounded-xl text-sm text-brand-navy/80">
+                  <span className="font-bold text-brand-navy">{achName || 'Name'}</span>
+                  {' '}{achPrefix || 'just got a'}{' '}
+                  <span className="bg-blue-600 text-white font-bold px-2 py-0.5 rounded-lg text-[12px]">{achReward || 'reward'}</span>
+                </div>
+              )}
+
+              <button onClick={handlePublishActivity} disabled={publishingAch || !achName.trim() || !achReward.trim()}
+                className="w-full py-2.5 rounded-2xl bg-blue-600 text-white font-bold text-sm disabled:opacity-40 active:scale-[0.98] transition-all">
+                {publishingAch ? 'Posting…' : 'Post Activity'}
+              </button>
+            </div>
           </div>
         ) : (
           <div className="px-5 pt-2 space-y-2">
@@ -22246,6 +22327,29 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
           <p className="text-sm text-brand-navy/80 leading-relaxed">
             <span className="mr-1">{post.activityEmoji}</span>{post.content}
           </p>
+        </div>
+      </motion.div>
+    );
+  }
+
+  if (post.postType === 'reward') {
+    return (
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="py-3 px-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full gradient-logo-blue flex items-center justify-center shrink-0 text-white font-black text-sm">
+            {post.authorName?.[0]?.toUpperCase() || '?'}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] text-brand-navy leading-snug">
+              <span className="font-bold">{post.authorName}</span>
+              {' '}<span className="text-brand-navy/70">{post.content}</span>{' '}
+              <span className="inline-block bg-blue-600 text-white font-bold px-2 py-0.5 rounded-lg text-[12px] leading-normal">{post.achievementText}</span>
+            </p>
+            <p className="text-[10px] text-brand-navy/45 mt-0.5">{post.createdAt?.toDate ? format(post.createdAt.toDate(), 'MMM d · h:mm a') : 'Just now'}</p>
+          </div>
+          <div className="w-8 h-8 bg-blue-50 rounded-full flex items-center justify-center shrink-0">
+            <Trophy size={15} className="text-blue-600" />
+          </div>
         </div>
       </motion.div>
     );
