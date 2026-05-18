@@ -13318,10 +13318,10 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                 <>
                   <div className="grid grid-cols-3 gap-3">
                     <StatSquare icon={<Users className="text-blue-500" />} label="Members" value={String(visitMembers)} />
-                    <StatSquare icon={<MapPin className="text-blue-500" />} label="Total Visits" value={String(totalVisits)} />
+                    <StatSquare icon={<TrendingUp className="text-blue-500" />} label="Total Points" value={String(visitPointsGiven)} />
                     <StatSquare icon={<Wallet className="text-purple-500" />} label="Active Cards" value={String(visitActiveCards)} />
                     <StatSquare icon={<RefreshCw className="text-orange-500" />} label="Return Rate" value={`${visitReturnRate}%`} />
-                    <StatSquare icon={<TrendingUp className="text-teal-500" />} label="Pts Given" value={String(visitPointsGiven)} />
+                    <StatSquare icon={<MapPin className="text-teal-500" />} label="Total Visits" value={String(totalVisits)} />
                     <StatSquare icon={<Gift className="text-rose-500" />} label="Pts Redeemed" value={String(visitPointsRedeemed)} />
                   </div>
 
