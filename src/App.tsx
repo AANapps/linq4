@@ -23007,17 +23007,14 @@ function StoreDealsSection({ stores, onViewStore, showAll, onToggleAll, storeDis
               {/* Dark gradient overlay at bottom */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
-              {/* Small red FREE label top-left */}
-              <div className="absolute top-2.5 left-2.5 bg-red-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest shadow-sm">
-                Free
+              {/* Red reward label top-left */}
+              <div className="absolute top-2.5 left-2.5 bg-red-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-sm max-w-[80%] truncate">
+                {finalReward || `${store.stamps_required_for_reward} stamp reward`}
               </div>
 
-              {/* Bottom text */}
+              {/* Bottom text — shop name + distance only */}
               <div className="absolute bottom-0 left-0 right-0 px-3 pb-3 pt-6">
-                <p className="font-extrabold text-white text-xs leading-snug line-clamp-2">
-                  {finalReward || `${store.stamps_required_for_reward} stamp reward`}
-                </p>
-                <p className="font-bold text-white text-[11px] leading-tight mt-0.5">{store.name}</p>
+                <p className="font-bold text-white text-[11px] leading-tight">{store.name}</p>
                 {distLabel && (
                   <p className="text-white/60 text-[9px] font-medium mt-0.5">{distLabel}</p>
                 )}
