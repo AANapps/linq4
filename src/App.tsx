@@ -8918,7 +8918,9 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                             const isComplete = allSetsWon(myRevealedCards);
                             const pct = Math.round((myProgSets / maxSets) * 100);
                             return (
-                              <div key={prog.id} className="px-4 py-3">
+                              <div key={prog.id}>
+                                {prog.imageUrl && <img src={prog.imageUrl} alt="" className="w-full object-cover h-36" />}
+                              <div className="px-4 py-3">
                                 <div className="flex items-center gap-3 mb-2">
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2">
@@ -8979,6 +8981,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                                   <p className="text-[10px] font-bold text-amber-600 mt-1">🏆 Complete! Claim: {prog.reward}</p>
                                 )}
                               </div>
+                              </div>
                             );
                           })}
                         </div>
@@ -9000,31 +9003,34 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                         </div>
                         <div className="bg-white divide-y divide-black/5">
                           {availableProgs.map(prog => (
-                            <div key={prog.id} className="px-4 py-3 flex items-center gap-3">
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-bold text-brand-navy truncate">{prog.title}</p>
-                                <p className="text-[10px] text-brand-navy/75 mt-0.5">🏆 {prog.reward}</p>
-                                {prog.endsAt && (
-                                  <div className="flex items-center gap-1 text-brand-navy/75 text-[10px] mt-0.5">
-                                    <Clock size={9} /><CountdownTimer endsAt={prog.endsAt} />
-                                  </div>
-                                )}
+                            <div key={prog.id}>
+                              {prog.imageUrl && <img src={prog.imageUrl} alt="" className="w-full object-cover h-36" />}
+                              <div className="px-4 py-3 flex items-center gap-3">
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-bold text-brand-navy truncate">{prog.title}</p>
+                                  <p className="text-[10px] text-brand-navy/75 mt-0.5">🏆 {prog.reward}</p>
+                                  {prog.endsAt && (
+                                    <div className="flex items-center gap-1 text-brand-navy/75 text-[10px] mt-0.5">
+                                      <Clock size={9} /><CountdownTimer endsAt={prog.endsAt} />
+                                    </div>
+                                  )}
+                                </div>
+                                {/* Rank preview tiles */}
+                                <div className="flex gap-0.5 shrink-0">
+                                  {STICKER_ORDER.map((tier, idx) => (
+                                    <div key={tier} className="w-7 h-7 rounded-md relative overflow-hidden"
+                                      style={{ background: STICKER_CONFIG[tier].solid, opacity: 0.5 }}>
+                                      <span className="card-shine-ray" style={{ animationDelay: `${idx * 0.4}s` }} />
+                                    </div>
+                                  ))}
+                                </div>
+                                <button
+                                  onClick={() => setOpenProgrammeId(prog.id)}
+                                  className="px-3 py-1.5 rounded-xl bg-brand-navy text-white text-[11px] font-bold active:scale-95 transition-all shrink-0"
+                                >
+                                  Join
+                                </button>
                               </div>
-                              {/* Rank preview tiles */}
-                              <div className="flex gap-0.5 shrink-0">
-                                {STICKER_ORDER.map((tier, idx) => (
-                                  <div key={tier} className="w-7 h-7 rounded-md relative overflow-hidden"
-                                    style={{ background: STICKER_CONFIG[tier].solid, opacity: 0.5 }}>
-                                    <span className="card-shine-ray" style={{ animationDelay: `${idx * 0.4}s` }} />
-                                  </div>
-                                ))}
-                              </div>
-                              <button
-                                onClick={() => setOpenProgrammeId(prog.id)}
-                                className="px-3 py-1.5 rounded-xl bg-brand-navy text-white text-[11px] font-bold active:scale-95 transition-all shrink-0"
-                              >
-                                Join
-                              </button>
                             </div>
                           ))}
                         </div>
