@@ -19962,6 +19962,8 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
   const [allPostsForVotes, setAllPostsForVotes] = useState<GlobalPost[]>([]);
   const [newPost, setNewPost] = useState('');
   const [isPosting, setIsPosting] = useState(false);
+  const [postImgFile, setPostImgFile] = useState<File | null>(null);
+  const [postImgPreview, setPostImgPreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (!profile?.uid) return;
@@ -20039,9 +20041,16 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
   }, [myGlobalPosts.length, profileHasMore, profile?.uid]);
 
   const handlePostOnWall = async () => {
-    if (!newPost.trim() || !profile) return;
+    if (!newPost.trim() && !postImgFile || !profile) return;
     setIsPosting(true);
     try {
+      let postImageUrl: string | undefined;
+      if (postImgFile) {
+        const blob = await compressImage(postImgFile, 1400);
+        const path = `user_posts/${user.uid}/${Date.now()}.webp`;
+        const snap = await uploadBytes(storageRef(storage, path), blob, { contentType: 'image/webp' });
+        postImageUrl = await getDownloadURL(snap.ref);
+      }
       await addDoc(collection(db, 'global_posts'), {
         authorUid: user.uid,
         authorName: profile.name || user.displayName || 'User',
@@ -20051,9 +20060,12 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         postType: 'post',
         createdAt: serverTimestamp(),
         likesCount: 0,
-        likedBy: []
+        likedBy: [],
+        ...(postImageUrl ? { postImageUrl } : {}),
       });
       setNewPost('');
+      setPostImgFile(null);
+      setPostImgPreview(null);
     } catch (error) {
       console.error(error);
     } finally {
@@ -20790,7 +20802,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
       {activeSubTab === 'posts' && (
         <div className="space-y-6">
           {/* Post composer */}
-          <div className="glass-card p-5 rounded-[2rem] space-y-4">
+          <div className="glass-card p-5 rounded-[2rem] space-y-3">
             <div className="flex items-start gap-3">
               <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-brand-navy/10 bg-indigo-50 flex items-center justify-center">
                 <PixelAvatar config={profile?.avatar} uid={profile?.uid} size={36} view="head" />
@@ -20802,13 +20814,39 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                 className="flex-1 p-3 rounded-2xl bg-brand-bg border-none focus:ring-2 focus:ring-brand-gold/20 text-sm h-20 resize-none"
               />
             </div>
-            <button
-              onClick={handlePostOnWall}
-              disabled={isPosting || !newPost.trim()}
-              className="w-full bg-brand-navy text-white py-3 rounded-2xl font-bold flex items-center justify-center gap-2 disabled:opacity-50 text-sm"
-            >
-              <Plus size={16} /> {isPosting ? 'Posting...' : 'Post'}
-            </button>
+            {postImgPreview && (
+              <div className="relative rounded-2xl overflow-hidden">
+                <img src={postImgPreview} alt="" className="w-full object-cover max-h-48 rounded-2xl" />
+                <button
+                  type="button"
+                  onClick={() => { setPostImgFile(null); setPostImgPreview(null); }}
+                  className="absolute top-2 right-2 w-7 h-7 bg-black/50 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-brand-bg border border-brand-navy/10 text-xs font-semibold text-brand-navy/60 cursor-pointer hover:border-brand-navy/25 transition-colors">
+                <input type="file" accept="image/*" className="hidden" onChange={e => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setPostImgFile(file);
+                  const reader = new FileReader();
+                  reader.onload = ev => setPostImgPreview(ev.target?.result as string);
+                  reader.readAsDataURL(file);
+                }} />
+                <Image size={14} />
+                <span>Photo</span>
+              </label>
+              <button
+                onClick={handlePostOnWall}
+                disabled={isPosting || (!newPost.trim() && !postImgFile)}
+                className="flex-1 bg-brand-navy text-white py-2.5 rounded-2xl font-bold flex items-center justify-center gap-2 disabled:opacity-50 text-sm"
+              >
+                <Plus size={15} /> {isPosting ? 'Posting...' : 'Post'}
+              </button>
+            </div>
           </div>
 
           {/* Posts feed */}
