@@ -23336,31 +23336,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
         )
       ) : (
         <>
-          {/* Total savings widget */}
-          {(() => {
-            const saved = currentProfile?.totalSaved ?? 0;
-            const sym = currencySymbol('AUD');
-            return (
-              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-[1.5rem] overflow-hidden shadow-lg shadow-blue-900/20">
-                <button
-                  onClick={() => setShowSavingsLb(true)}
-                  className="w-full gradient-logo-blue relative overflow-hidden px-5 py-4 flex items-center gap-4 active:opacity-90 transition-opacity"
-                >
-                  <div className="shine-ray" />
-                  <div className="flex-1 min-w-0 text-left">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-blue-200/80">Total Saved with Linq</p>
-                    {saved > 0
-                      ? <CountUpValue value={saved} prefix={sym} className="font-display text-2xl font-black text-white" />
-                      : <p className="text-sm font-bold text-white/60">Collect stamps to start saving</p>
-                    }
-                  </div>
-                  <ChevronDown size={18} className="text-white/50 shrink-0" />
-                </button>
-              </motion.div>
-            );
-          })()}
-
-          {/* Linqle + Daily Vote — same row */}
+          {/* Linqle + Total Saved + Daily Vote — top row */}
           <div className="flex gap-3 items-stretch" style={{ minHeight: '106px' }}>
             {onOpenLinqle && (
               <motion.button whileTap={{ scale: 0.97 }} onClick={onOpenLinqle}
@@ -23373,6 +23349,25 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                 </div>
               </motion.button>
             )}
+            {(() => {
+              const saved = currentProfile?.totalSaved ?? 0;
+              const sym = currencySymbol('AUD');
+              return (
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex-1 rounded-[1.5rem] overflow-hidden shadow-lg shadow-blue-900/20">
+                  <button
+                    onClick={() => setShowSavingsLb(true)}
+                    className="w-full h-full gradient-logo-blue relative overflow-hidden px-3 py-3 flex flex-col items-center justify-center gap-0.5 active:opacity-90 transition-opacity"
+                  >
+                    <div className="shine-ray" />
+                    <p className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-blue-200/80 text-center">Saved with Linq</p>
+                    {saved > 0
+                      ? <CountUpValue value={saved} prefix={sym} className="relative z-10 font-display text-xl font-black text-white" />
+                      : <p className="relative z-10 text-xs font-bold text-white/60 text-center leading-tight">Start saving</p>
+                    }
+                  </button>
+                </motion.div>
+              );
+            })()}
             {currentUser && currentProfile && (
               <DailyVoteFYPCard currentUser={currentUser} currentProfile={currentProfile} onPackReady={onPackReady} />
             )}
