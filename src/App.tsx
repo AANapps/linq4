@@ -23045,6 +23045,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
   const [selectedOffer, setSelectedOffer] = useState<StoreOffer | null>(null);
   const [offerIndex, setOfferIndex] = useState(0);
   const [dealsBdayCountdown, setDealsBdayCountdown] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
+  const [storeDistances, setStoreDistances] = useState<Map<string, number>>(new Map());
 
   useEffect(() => {
     const birthday = currentProfile?.birthday;
@@ -23072,6 +23073,19 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
       setAllStores(snap.docs.map(d => ({ id: d.id, ...d.data() } as StoreProfile)))
     , () => {});
   }, []);
+
+  useEffect(() => {
+    if (allStores.length === 0) return;
+    navigator.geolocation?.getCurrentPosition(pos => {
+      const { latitude: lat, longitude: lng } = pos.coords;
+      const distances = new Map<string, number>();
+      allStores.forEach(store => {
+        const coords = store.lat && store.lng ? { lat: store.lat, lng: store.lng } : null;
+        if (coords) distances.set(store.id, haversineKm(lat, lng, coords.lat, coords.lng));
+      });
+      setStoreDistances(distances);
+    });
+  }, [allStores.length]);
 
   useEffect(() => {
     const q = query(collection(db, 'challenges'), where('type', '==', 'standard'), where('status', '==', 'active'));
