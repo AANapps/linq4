@@ -17135,19 +17135,21 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
                           ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
                           : <div className="w-full h-full flex items-center justify-center"><Building2 size={24} className="text-brand-navy/20" /></div>}
                       {store.isVerified && (
-                        <div className="absolute top-1.5 left-1.5 w-4 h-4 bg-white/90 rounded-full flex items-center justify-center shadow-sm">
+                        <div className="absolute top-1.5 right-1.5 w-4 h-4 bg-white/90 rounded-full flex items-center justify-center shadow-sm">
                           <Sparkles size={8} className="text-brand-gold" />
+                        </div>
+                      )}
+                      {topReward && (
+                        <div className="absolute bottom-1.5 left-1.5 right-1.5 bg-red-500 text-white text-[7px] font-black px-1.5 py-0.5 rounded-full shadow-sm truncate text-center">
+                          {topReward}
                         </div>
                       )}
                     </div>
                     {/* Info — right side */}
                     <div className="flex-1 min-w-0 px-4 py-3 flex flex-col justify-center gap-0.5">
-                      <p className="font-extrabold text-brand-navy text-sm leading-snug line-clamp-2">
-                        {topReward ?? `${store.stamps_required_for_reward} stamp reward`}
-                      </p>
-                      <p className="text-brand-navy/50 text-xs font-medium line-clamp-1">{store.name}</p>
+                      <p className="font-bold text-brand-navy text-sm leading-snug line-clamp-1">{store.name}</p>
                       {distLabel && (
-                        <p className="text-brand-gold text-[10px] font-semibold flex items-center gap-0.5 mt-0.5">
+                        <p className="text-brand-gold text-[10px] font-semibold flex items-center gap-0.5">
                           <MapPin size={9} />{distLabel}
                         </p>
                       )}
@@ -17211,14 +17213,16 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
                                   <Sparkles size={9} className="text-brand-gold" />
                                 </div>
                               )}
+                              {topReward && (
+                                <div className="absolute top-2 left-2 bg-red-500 text-white text-[7px] font-black px-1.5 py-0.5 rounded-full shadow-sm max-w-[85%] truncate">
+                                  {topReward}
+                                </div>
+                              )}
                             </div>
                             <div className="px-3 py-2.5 flex flex-col gap-0.5">
-                              <p className="font-extrabold text-brand-navy text-[11px] leading-snug line-clamp-2">
-                                {topReward ?? `${store.stamps_required_for_reward} stamp reward`}
-                              </p>
                               <p className="text-brand-navy/45 text-[9px] font-medium line-clamp-1">{store.name}</p>
                               {distLabel && (
-                                <p className="text-brand-gold text-[9px] font-semibold mt-0.5 flex items-center gap-0.5">
+                                <p className="text-brand-gold text-[9px] font-semibold flex items-center gap-0.5">
                                   <MapPin size={8} />{distLabel}
                                 </p>
                               )}
@@ -17251,11 +17255,15 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
                             {store.coverUrl ? <img src={store.coverUrl} alt="" className="w-full h-full object-cover" />
                               : store.logoUrl ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
                               : <div className="w-full h-full flex items-center justify-center"><Building2 size={28} className="text-brand-navy/20" /></div>}
+                            {topReward && (
+                              <div className="absolute top-2 left-2 bg-red-500 text-white text-[7px] font-black px-1.5 py-0.5 rounded-full shadow-sm max-w-[85%] truncate">
+                                {topReward}
+                              </div>
+                            )}
                           </div>
                           <div className="px-3 py-2.5 flex flex-col gap-0.5">
-                            <p className="font-extrabold text-brand-navy text-[11px] leading-snug line-clamp-2">{topReward ?? `${store.stamps_required_for_reward} stamp reward`}</p>
                             <p className="text-brand-navy/45 text-[9px] font-medium line-clamp-1">{store.name}</p>
-                            {distLabel && <p className="text-brand-gold text-[9px] font-semibold mt-0.5 flex items-center gap-0.5"><MapPin size={8} />{distLabel}</p>}
+                            {distLabel && <p className="text-brand-gold text-[9px] font-semibold flex items-center gap-0.5"><MapPin size={8} />{distLabel}</p>}
                           </div>
                         </motion.div>
                       );
@@ -23104,7 +23112,13 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
     }, () => {});
   }, []);
 
-  const storeDeals = allStores.filter(s => s.reward || s.stamps_required_for_reward);
+  const byDist = (a: StoreProfile, b: StoreProfile) => (storeDistances.get(a.id) ?? Infinity) - (storeDistances.get(b.id) ?? Infinity);
+  const storeDeals = allStores.filter(s => s.reward || s.stamps_required_for_reward).sort(byDist);
+  const offersByDist = [...storeOffers].sort((a, b) => {
+    const sa = allStores.find(s => s.id === a.storeId);
+    const sb = allStores.find(s => s.id === b.storeId);
+    return (storeDistances.get(sa?.id ?? '') ?? Infinity) - (storeDistances.get(sb?.id ?? '') ?? Infinity);
+  });
   const experiences = challenges.filter(c => c.rewardTag === 'experience');
   const services = challenges.filter(c => c.rewardTag === 'service');
   const products = challenges.filter(c => c.rewardTag === 'product');
@@ -23170,10 +23184,10 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
       {/* Store Offers section */}
       {storeOffers.length > 0 && (() => {
         const cats: { label: string; icon: React.ReactNode; offers: StoreOffer[] }[] = [
-          { label: 'Products',    icon: <Package size={13} className="text-emerald-500" />,  offers: storeOffers.filter(o => o.category === 'product'   || o.category === 'Products')   },
-          { label: 'Experiences', icon: <Star size={13} className="text-purple-500" />,       offers: storeOffers.filter(o => o.category === 'experience' || o.category === 'Experiences') },
-          { label: 'Services',    icon: <Tag size={13} className="text-sky-500" />,           offers: storeOffers.filter(o => o.category === 'service'    || o.category === 'Services')   },
-          { label: 'Other',       icon: <Ticket size={13} className="text-violet-500" />,     offers: storeOffers.filter(o => !['product','Products','experience','Experiences','service','Services'].includes(o.category)) },
+          { label: 'Products',    icon: <Package size={13} className="text-emerald-500" />,  offers: offersByDist.filter(o => o.category === 'product'   || o.category === 'Products')   },
+          { label: 'Experiences', icon: <Star size={13} className="text-purple-500" />,       offers: offersByDist.filter(o => o.category === 'experience' || o.category === 'Experiences') },
+          { label: 'Services',    icon: <Tag size={13} className="text-sky-500" />,           offers: offersByDist.filter(o => o.category === 'service'    || o.category === 'Services')   },
+          { label: 'Other',       icon: <Ticket size={13} className="text-violet-500" />,     offers: offersByDist.filter(o => !['product','Products','experience','Experiences','service','Services'].includes(o.category)) },
         ].filter(c => c.offers.length > 0);
         return (
           <div className="space-y-4">
