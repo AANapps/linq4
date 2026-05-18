@@ -16410,7 +16410,9 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady }: { curren
         <div className="relative h-full px-4 py-4 flex flex-col gap-3"
           style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #3730a3 40%, #6366f1 80%, #818cf8 100%)' }}>
           {voteData.imageUrl && <img src={voteData.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20 pointer-events-none" />}
-          <div className="absolute top-2 right-2 z-20 bg-red-500 text-white text-[8px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-full -rotate-6 shadow-md">Free Stickers</div>
+          <div className="absolute top-2 right-2 z-20 w-7 h-7 bg-red-500 rounded-full flex items-center justify-center shadow-md">
+            <Gift size={14} className="text-white" strokeWidth={2.5} />
+          </div>
           <div className="flex-1 min-w-0">
             <p className="text-[9px] font-bold uppercase tracking-widest text-indigo-200/70">Daily Vote</p>
             <p className="text-sm font-black text-white leading-tight mt-0.5 line-clamp-2">{voteData.question}</p>
@@ -22315,13 +22317,55 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
       animate={{ opacity: 1, y: 0 }}
       className={showImage ? 'pt-0 pb-4' : 'py-4 px-4'}
     >
-      {/* Full-bleed image */}
+      {/* Full-bleed image with author overlay */}
       {showImage && (
-        <img src={post.postImageUrl} alt="" className="w-full object-cover max-h-64 mb-3" />
+        <div className="relative mb-3">
+          <img src={post.postImageUrl} alt="" className="w-full object-cover max-h-64" />
+          <div className="absolute inset-x-0 top-0 bg-gradient-to-b from-black/65 to-transparent px-4 pt-3 pb-10">
+            <div className="flex items-center gap-2.5">
+              {!isAnonAdmin && (
+                <div className="w-9 h-9 rounded-full overflow-hidden border border-white/20 shrink-0 cursor-pointer" onClick={handleAvatarClick}>
+                  {post.authorRole === 'admin'
+                    ? <div className="w-full h-full gradient-logo-blue flex items-center justify-center">
+                        {post.adminIcon ? <span className="text-lg">{post.adminIcon}</span> : <span className="text-white font-black text-sm font-mono">L</span>}
+                      </div>
+                    : post.authorRole === 'vendor'
+                    ? <img src={authorProfile?.logoUrl || post.authorPhoto || ''} alt="" className="w-full h-full object-cover" />
+                    : <PixelAvatar config={authorProfile?.avatar} uid={post.authorUid} size={36} view="head" />}
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                {post.authorRole === 'admin' && !post.isAnonymous
+                  ? <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-bold text-sm text-white">Linq</span>
+                      <span className="text-[9px] font-bold text-white bg-white/25 px-1.5 py-0.5 rounded-full uppercase tracking-wide">Official</span>
+                      {post.cardSetName && <span className="text-[9px] font-bold text-white bg-purple-500/40 px-1.5 py-0.5 rounded-full">🃏 {post.cardSetName}</span>}
+                    </div>
+                  : <span className="font-bold text-sm text-white">{authorProfile?.name || post.authorName}</span>}
+                {!isAnonAdmin && <p className="text-[10px] text-white/65 font-medium mt-0.5">{post.createdAt ? format(post.createdAt.toDate(), 'MMM d · h:mm a') : 'Just now'}</p>}
+              </div>
+              <div className="relative">
+                <button onClick={() => setShowMenu(v => !v)} className="w-7 h-7 rounded-lg flex items-center justify-center text-white/75 transition-all">
+                  <MoreVertical size={16} />
+                </button>
+                <AnimatePresence>
+                  {showMenu && (
+                    <motion.div initial={{ opacity: 0, scale: 0.9, y: -4 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: -4 }}
+                      className="absolute right-0 top-8 z-50 bg-white rounded-2xl shadow-xl border border-black/8 overflow-hidden min-w-[150px]"
+                      onMouseLeave={() => setShowMenu(false)}>
+                      {isOwn && <button onClick={() => { setShowMenu(false); onDelete?.(post); }} className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold text-red-500 hover:bg-red-50 transition-colors"><Trash2 size={15} /> Delete</button>}
+                      <button onClick={async () => { setShowMenu(false); if (!currentUser) return; await addDoc(collection(db, 'reports'), { postId: post.id, reportedBy: currentUser.uid, reason: 'User report', createdAt: serverTimestamp() }); setReportSent(true); setTimeout(() => setReportSent(false), 3000); }} className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold text-brand-navy/75 hover:bg-brand-bg transition-colors"><Flag size={15} /> {reportSent ? 'Reported!' : 'Report'}</button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
       <div className={showImage ? 'px-4' : ''}>
-      {/* Post header */}
-      <div className="space-y-2.5">
+      {/* Post header — only when no image */}
+      {!showImage && <div className="space-y-2.5">
         <div className="flex items-center gap-3">
           {!isAnonAdmin && (
           <div className="w-10 h-10 rounded-full overflow-hidden border border-black/5 cursor-pointer shrink-0 bg-indigo-50 flex items-center justify-center" onClick={handleAvatarClick}>
@@ -22477,7 +22521,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
               </AnimatePresence>
             </div>
           </div>
-        </div>
+        </div>}
 
         {post.postType === 'review' && (
           <div className="flex items-center gap-0.5">
@@ -23832,7 +23876,9 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                 <div className="relative w-full h-full flex flex-col items-center justify-center gap-1"
                   style={{ background: 'linear-gradient(135deg, #022c22 0%, #064e3b 40%, #059669 80%, #34d399 100%)' }}>
                   <MatrixRainCanvas opacity={0.35} fadeColor="rgba(2,44,34,0.18)" />
-                  <div className="absolute top-2 right-2 z-20 bg-red-500 text-white text-[8px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-full rotate-6 shadow-md">Free Stickers</div>
+                  <div className="absolute top-2 right-2 z-20 w-7 h-7 bg-red-500 rounded-full flex items-center justify-center shadow-md">
+                    <Gift size={14} className="text-white" strokeWidth={2.5} />
+                  </div>
                   <p className="relative z-10 text-sm font-black text-white font-mono leading-none tracking-tight">LINQLE</p>
                   <p className="relative z-10 text-[11px] font-semibold text-emerald-200/80 tracking-wide">Win sticker packs</p>
                 </div>
