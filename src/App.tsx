@@ -22938,32 +22938,21 @@ function DealSliderSection({ title, icon, challenges, onViewStore, onViewChallen
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.04 }}
-              className={cn('rounded-[1.5rem] overflow-hidden flex flex-col relative cursor-pointer active:scale-[0.97] transition-transform', showAll ? '' : 'shrink-0 w-36')}
-              style={{ background: `linear-gradient(145deg, ${colors[0]}dd, ${colors[1]}bb)`, backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)', border: '1px solid rgba(255,255,255,0.18)', height: '160px' }}
+              className={cn('rounded-[1.5rem] overflow-hidden relative cursor-pointer active:scale-[0.97] transition-transform bg-white shadow-sm border border-brand-navy/5', showAll ? '' : 'shrink-0 w-36')}
+              style={{ height: '160px' }}
               onClick={() => onViewChallenge?.(c)}
             >
-              {c.imageUrl && (
-                <div className="absolute inset-0">
-                  <img src={c.imageUrl} alt="" className="w-full h-full object-cover opacity-30" />
-                  <div className="absolute inset-0" style={{ background: `linear-gradient(145deg, ${colors[0]}99, ${colors[1]}77)` }} />
-                </div>
-              )}
-              <div className="relative z-10 flex flex-col h-full p-3">
-                <div className="w-8 h-8 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center mb-2 shrink-0">
-                  {c.rewardTag === 'experience' ? <Star size={14} className="text-white" />
-                    : c.rewardTag === 'service' ? <Tag size={14} className="text-white" />
-                    : <Package size={14} className="text-white" />}
-                </div>
-                <p className="font-extrabold text-white text-xs leading-tight line-clamp-2 mb-1">{c.reward}</p>
-                <div className="mt-auto">
-                  <p className="text-white/60 text-[9px] font-medium line-clamp-1">{c.title}</p>
-                  {c.endsAt && (
-                    <p className="text-white/40 text-[8px] font-medium mt-0.5 flex items-center gap-0.5">
-                      <Clock size={7} className="shrink-0" />
-                      <CountdownTimer endsAt={c.endsAt} />
-                    </p>
-                  )}
-                </div>
+              {c.imageUrl
+                ? <img src={c.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                : <div className="absolute inset-0 bg-brand-navy/3 flex items-center justify-center">
+                    {c.rewardTag === 'experience' ? <Star size={28} className="text-brand-navy/10" />
+                      : c.rewardTag === 'service' ? <Tag size={28} className="text-brand-navy/10" />
+                      : <Package size={28} className="text-brand-navy/10" />}
+                  </div>}
+              {c.imageUrl && <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />}
+              <div className="absolute bottom-0 left-0 right-0 px-3 pb-3">
+                <p className={cn('font-extrabold text-xs leading-tight line-clamp-2', c.imageUrl ? 'text-white' : 'text-brand-navy')}>{c.reward}</p>
+                <p className={cn('text-[9px] font-medium line-clamp-1 mt-0.5', c.imageUrl ? 'text-white/60' : 'text-brand-navy/45')}>{c.title}</p>
               </div>
             </motion.div>
           );
@@ -23196,29 +23185,38 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
               <h2 className="font-bold text-brand-navy text-sm">Store Offers</h2>
             </div>
             {cats.map(cat => (
-              <div key={cat.label} className="space-y-1.5">
-                <div className="flex items-center gap-1.5 px-1">
+              <div key={cat.label}>
+                <div className="flex items-center gap-1.5 px-1 mb-2">
                   {cat.icon}
                   <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/50">{cat.label}</p>
                 </div>
-                {cat.offers.map(offer => (
-                  <button
-                    key={offer.id}
-                    onClick={() => setSelectedOffer(offer)}
-                    className="w-full text-left bg-white rounded-2xl px-4 py-3 flex items-center gap-3 active:scale-[0.98] transition-transform border border-brand-navy/5 shadow-sm"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-brand-navy text-sm leading-tight truncate">{offer.title}</p>
-                      <p className="text-brand-navy/50 text-[11px] mt-0.5 truncate">{offer.storeName}</p>
-                    </div>
-                    {(offer.value ?? 0) > 0 && (
-                      <span className="shrink-0 bg-red-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full">
-                        Save ${offer.value!.toFixed(2)}
-                      </span>
-                    )}
-                    <ChevronRight size={14} className="text-brand-navy/30 shrink-0" />
-                  </button>
-                ))}
+                <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                  {cat.offers.map((offer, i) => (
+                    <motion.button
+                      key={offer.id}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: i * 0.04 }}
+                      onClick={() => setSelectedOffer(offer)}
+                      className="shrink-0 rounded-[1.5rem] overflow-hidden relative cursor-pointer active:scale-[0.97] transition-transform shadow-md shadow-black/10"
+                      style={{ width: '220px', height: '120px' }}
+                    >
+                      {offer.imageUrl
+                        ? <img src={offer.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                        : <div className="absolute inset-0 gradient-logo-blue flex items-center justify-center"><Ticket size={28} className="text-white/40" /></div>}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
+                      {(offer.value ?? 0) > 0 && (
+                        <div className="absolute top-2.5 left-2.5 bg-red-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-sm">
+                          Save ${offer.value!.toFixed(2)}
+                        </div>
+                      )}
+                      <div className="absolute bottom-0 left-0 right-0 px-3 pb-2.5">
+                        <p className="font-extrabold text-white text-xs leading-snug line-clamp-1">{offer.title}</p>
+                        <p className="text-white/60 text-[9px] font-medium mt-0.5">{offer.storeName}</p>
+                      </div>
+                    </motion.button>
+                  ))}
+                </div>
               </div>
             ))}
           </div>
