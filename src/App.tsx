@@ -22419,57 +22419,11 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className={showImage ? 'pt-0 pb-4' : 'py-4 px-4'}
+      className="py-4"
     >
-      {/* Full-bleed image with author overlay */}
-      {showImage && (
-        <div className="relative mb-3">
-          <img src={post.postImageUrl} alt="" className="w-full object-cover max-h-64" />
-          <div className="absolute inset-x-0 top-0 bg-gradient-to-b from-black/65 to-transparent px-4 pt-3 pb-10">
-            <div className="flex items-center gap-2.5">
-              {!isAnonAdmin && (
-                <div className="w-9 h-9 rounded-full overflow-hidden border border-white/20 shrink-0 cursor-pointer" onClick={handleAvatarClick}>
-                  {post.authorRole === 'admin'
-                    ? <div className="w-full h-full gradient-logo-blue flex items-center justify-center">
-                        {post.adminIcon ? <span className="text-lg">{post.adminIcon}</span> : <span className="text-white font-black text-sm font-mono">L</span>}
-                      </div>
-                    : post.authorRole === 'vendor'
-                    ? <img src={authorProfile?.logoUrl || post.authorPhoto || ''} alt="" className="w-full h-full object-cover" />
-                    : <PixelAvatar config={authorProfile?.avatar} uid={post.authorUid} size={36} view="head" />}
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                {post.authorRole === 'admin' && !post.isAnonymous
-                  ? <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="font-bold text-sm text-white">Linq</span>
-                      <span className="text-[9px] font-bold text-white bg-white/25 px-1.5 py-0.5 rounded-full uppercase tracking-wide">Official</span>
-                      {post.cardSetName && <span className="text-[9px] font-bold text-white bg-purple-500/40 px-1.5 py-0.5 rounded-full">🃏 {post.cardSetName}</span>}
-                    </div>
-                  : <span className="font-bold text-sm text-white">{authorProfile?.name || post.authorName}</span>}
-                {!isAnonAdmin && <p className="text-[10px] text-white/65 font-medium mt-0.5">{post.createdAt ? format(post.createdAt.toDate(), 'MMM d · h:mm a') : 'Just now'}</p>}
-              </div>
-              <div className="relative">
-                <button onClick={() => setShowMenu(v => !v)} className="w-7 h-7 rounded-lg flex items-center justify-center text-white/75 transition-all">
-                  <MoreVertical size={16} />
-                </button>
-                <AnimatePresence>
-                  {showMenu && (
-                    <motion.div initial={{ opacity: 0, scale: 0.9, y: -4 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: -4 }}
-                      className="absolute right-0 top-8 z-50 bg-white rounded-2xl shadow-xl border border-black/8 overflow-hidden min-w-[150px]"
-                      onMouseLeave={() => setShowMenu(false)}>
-                      {isOwn && <button onClick={() => { setShowMenu(false); onDelete?.(post); }} className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold text-red-500 hover:bg-red-50 transition-colors"><Trash2 size={15} /> Delete</button>}
-                      <button onClick={async () => { setShowMenu(false); if (!currentUser) return; await addDoc(collection(db, 'reports'), { postId: post.id, reportedBy: currentUser.uid, reason: 'User report', createdAt: serverTimestamp() }); setReportSent(true); setTimeout(() => setReportSent(false), 3000); }} className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold text-brand-navy/75 hover:bg-brand-bg transition-colors"><Flag size={15} /> {reportSent ? 'Reported!' : 'Report'}</button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      <div className={showImage ? 'px-4' : ''}>
-      {/* Post header — only when no image */}
-      {!showImage && <div className="space-y-2.5">
+      <div className="px-4">
+      {/* Post header */}
+      <div className="space-y-2.5 mb-3">
         <div className="flex items-center gap-3">
           {!isAnonAdmin && (
           <div className="w-10 h-10 rounded-full overflow-hidden border border-black/5 cursor-pointer shrink-0 bg-indigo-50 flex items-center justify-center" onClick={handleAvatarClick}>
@@ -22625,7 +22579,11 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
               </AnimatePresence>
             </div>
           </div>
-        </div>}
+        </div>
+      </div>
+      </div>
+      {showImage && <img src={post.postImageUrl} alt="" className="w-full object-cover max-h-72 mb-3" />}
+      <div className="px-4">
 
         {post.postType === 'review' && (
           <div className="flex items-center gap-0.5">
