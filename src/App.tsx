@@ -1627,7 +1627,7 @@ export default function App() {
       </header>
 
       {/* Main Content */}
-      <main className="px-6 pt-4 pb-8">
+      <main className="px-2 pt-2 pb-8">
         <AnimatePresence mode="wait">
           {viewingStore ? (
             <StoreProfileView
@@ -13094,7 +13094,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                 ))}
               </div>
               {/* Bar chart — title + x-axis labels visible, bars blurred */}
-              <div className="glass-card p-5 rounded-[2rem] space-y-4">
+              <div className="glass-card p-3 rounded-[1.5rem] space-y-4">
                 <div>
                   <p className="font-bold text-brand-navy">Stamps Chart</p>
                   <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">By week</p>
@@ -13223,7 +13223,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                 }
                 const maxVal = Math.max(...periods.map(p => p.count), 1);
                 return (
-                  <div className="glass-card p-5 rounded-[2rem] space-y-4">
+                  <div className="glass-card p-3 rounded-[1.5rem] space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-bold text-brand-navy">Stamps Chart</p>
@@ -13308,7 +13308,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                 }
                 const maxVal = Math.max(...points.map(p => p.cumulative), 1);
                 return (
-                  <div className="glass-card p-5 rounded-[2rem] space-y-4">
+                  <div className="glass-card p-3 rounded-[1.5rem] space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-bold text-brand-navy">User Base Growth</p>
@@ -13379,7 +13379,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                 const maxVal = Math.max(...days.map(d => d.count), 1);
                 const totalNew = days.reduce((s, d) => s + d.count, 0);
                 return (
-                  <div className="glass-card p-5 rounded-[2rem] space-y-4">
+                  <div className="glass-card p-3 rounded-[1.5rem] space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-bold text-brand-navy">New Sign-ups / Day</p>
@@ -13437,7 +13437,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                   .slice(0, 10);
                 if (top10.length === 0) return null;
                 return (
-                  <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                  <div className="glass-card p-3 rounded-[1.5rem] space-y-3">
                     <div className="flex items-center justify-between">
                       <p className="font-bold text-brand-navy">Top 10 Users</p>
                       <Trophy size={16} className="text-brand-gold" />
@@ -13586,7 +13586,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                     }
                     const maxVal = Math.max(...periods.map(p => p.count), 1);
                     return (
-                      <div className="glass-card p-5 rounded-[2rem] space-y-4">
+                      <div className="glass-card p-3 rounded-[1.5rem] space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="font-bold text-brand-navy">Points Issued</p>
@@ -13656,7 +13656,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                     }
                     const maxVal = Math.max(...pts.map(p => p.cumulative), 1);
                     return (
-                      <div className="glass-card p-5 rounded-[2rem] space-y-4">
+                      <div className="glass-card p-3 rounded-[1.5rem] space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="font-bold text-brand-navy">User Base Growth</p>
@@ -13700,7 +13700,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                       .slice(0, 10);
                     if (top10.length === 0) return null;
                     return (
-                      <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                      <div className="glass-card p-3 rounded-[1.5rem] space-y-3">
                         <div className="flex items-center justify-between">
                           <p className="font-bold text-brand-navy">Top 10 by Points</p>
                           <Trophy size={16} className="text-emerald-500" />
@@ -13769,7 +13769,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                     }
                     const maxVal = Math.max(...periods.map(p => p.count), 1);
                     return (
-                      <div className="glass-card p-5 rounded-[2rem] space-y-4">
+                      <div className="glass-card p-3 rounded-[1.5rem] space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="font-bold text-brand-navy">Visits Chart</p>
@@ -13839,7 +13839,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                     }
                     const maxVal = Math.max(...pts.map(p => p.cumulative), 1);
                     return (
-                      <div className="glass-card p-5 rounded-[2rem] space-y-4">
+                      <div className="glass-card p-3 rounded-[1.5rem] space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="font-bold text-brand-navy">User Base Growth</p>
@@ -13883,7 +13883,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                       .slice(0, 10);
                     if (top10.length === 0) return null;
                     return (
-                      <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                      <div className="glass-card p-3 rounded-[1.5rem] space-y-3">
                         <div className="flex items-center justify-between">
                           <p className="font-bold text-brand-navy">Top 10 by Visits</p>
                           <Trophy size={16} className="text-blue-400" />
@@ -14056,7 +14056,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
 
       {activeTab === 'discover' && (
         vendorIssueMode === null ? (
-          <div className="space-y-6 pb-20">
+          <div className="space-y-3 pb-20">
             <header>
               <h2 className="font-display text-3xl font-bold mb-1">Issue</h2>
               <p className="text-brand-navy/80 text-sm">Manage your card or create store offers.</p>
@@ -14513,12 +14513,12 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 </div>
               )}
               <div className="grid grid-cols-2 gap-3 mb-6">
-                <div className="glass-card p-5 rounded-2xl">
+                <div className="glass-card p-3 rounded-2xl">
                   <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-1">Available</p>
                   <p className="text-3xl font-black text-brand-navy">{netAvailablePoints.toLocaleString()}</p>
                   {pointsRate > 0 && <p className="text-[10px] text-brand-navy/75 mt-1">{pointsRate} pts per $1</p>}
                 </div>
-                <div className="glass-card p-5 rounded-2xl">
+                <div className="glass-card p-3 rounded-2xl">
                   <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-1">Value</p>
                   <p className="text-3xl font-black text-emerald-600">${redeemableValue.toFixed(2)}</p>
                   {redemptionRate > 0 && <p className="text-[10px] text-brand-navy/75 mt-1">{redemptionRate} pts = $1</p>}
@@ -14842,12 +14842,12 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
 
               {/* Balance row */}
               <div className="grid grid-cols-2 gap-3 mb-6">
-                <div className="glass-card p-5 rounded-2xl">
+                <div className="glass-card p-3 rounded-2xl">
                   <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-1">Available</p>
                   <p className="text-3xl font-black text-brand-navy">{netAvailablePoints.toLocaleString()}</p>
                   {pointsRate > 0 && <p className="text-[10px] text-brand-navy/75 mt-1">{pointsRate} pts per $1</p>}
                 </div>
-                <div className="glass-card p-5 rounded-2xl">
+                <div className="glass-card p-3 rounded-2xl">
                   <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-1">Value</p>
                   <p className="text-3xl font-black text-emerald-600">${redeemableValue.toFixed(2)}</p>
                   {redemptionRate > 0 && <p className="text-[10px] text-brand-navy/75 mt-1">{redemptionRate} pts = $1</p>}
@@ -17370,7 +17370,7 @@ function WallPostItem({ post, currentUser, wallOwnerUid, onViewUser }: { post: a
   };
 
   return (
-    <div className="glass-card p-6 rounded-[2.5rem] space-y-4 animation-fade-in">
+    <div className="glass-card p-3 rounded-[1.5rem] space-y-4 animation-fade-in">
       <div className="flex items-center justify-between">
         <button
           onClick={() => handleViewProfile(post.fromUid)}
@@ -17700,7 +17700,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
   const atLimit = offers.length >= 3;
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="space-y-3 pb-20">
       <header className="flex items-center justify-between">
         <div>
           <h2 className="font-display text-3xl font-bold mb-0.5">Offers</h2>
@@ -17722,7 +17722,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
         {showForm && (
           <motion.div
             initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-            className="glass-card p-5 rounded-[2rem] space-y-4"
+            className="glass-card p-3 rounded-[1.5rem] space-y-4"
           >
             <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Offer title (e.g. 20% off coffee)" className={inputCls} />
             <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Description — what the customer gets, any conditions..." rows={3} className={cn(inputCls, 'resize-none')} />
@@ -18464,7 +18464,7 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
   };
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="space-y-3 pb-20">
       <header>
         <h2 className="font-display text-3xl font-bold mb-1">Cards</h2>
         <p className="text-brand-navy/80 text-sm">Manage your loyalty and membership cards.</p>
@@ -18721,13 +18721,13 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
   const tierStampSet = new Set(tiers.map(t => t.stamps));
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="space-y-3 pb-20">
       <header>
         <h2 className="font-display text-3xl font-bold mb-1">Card Builder</h2>
         <p className="text-brand-navy/75">Design your loyalty reward tiers.</p>
       </header>
 
-      <div className="glass-card p-6 rounded-[2.5rem] space-y-6">
+      <div className="glass-card p-3 rounded-[1.5rem] space-y-6">
 
         {/* Number of reward stages */}
         <div className="space-y-2">
@@ -19081,7 +19081,7 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
         <p className="text-brand-navy/75 text-sm">Customise your membership card.</p>
       </header>
 
-      <div className="glass-card p-6 rounded-[2.5rem] space-y-6">
+      <div className="glass-card p-3 rounded-[1.5rem] space-y-6">
 
         {/* Name */}
         <div className="space-y-2">
@@ -20107,7 +20107,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
   if (profile.role === 'vendor') {
     const theme = vendorStore?.theme || '#1e3a5f';
     return (
-      <div className="space-y-6 pb-20 text-brand-navy">
+      <div className="space-y-3 pb-20 text-brand-navy">
         {settingsModal}
 
         {/* Business hero banner */}
@@ -20184,7 +20184,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                     onVote={async (p, idx) => { const ref = doc(db, 'global_posts', p.id); const votes = p.pollVotes || {}; const oldKey = Object.keys(votes).find(k => (votes[k] || []).includes(user.uid)); const updates: any = { [`pollVotes.${idx}`]: arrayUnion(user.uid) }; if (oldKey !== undefined && oldKey !== String(idx)) updates[`pollVotes.${oldKey}`] = arrayRemove(user.uid); await updateDoc(ref, updates); }}
                   />
                 ) : (
-                  <div key={item.data.id} className="glass-card p-5 rounded-[2rem] space-y-3">
+                  <div key={item.data.id} className="glass-card p-3 rounded-[1.5rem] space-y-3">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full overflow-hidden border border-brand-navy/5 bg-indigo-50 shrink-0 flex items-center justify-center">
                         <PixelAvatar uid={item.data.authorUid} size={36} view="head" />
@@ -20262,7 +20262,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
 
   // ── Consumer profile layout ──
   return (
-    <div className="space-y-6 pb-20 text-brand-navy">
+    <div className="space-y-3 pb-20 text-brand-navy">
       {/* Avatar customiser modal */}
       <AnimatePresence>
         {avatarViewOpen && (
@@ -20715,7 +20715,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
       {activeSubTab === 'posts' && (
         <div className="space-y-6">
           {/* Post composer */}
-          <div className="glass-card p-5 rounded-[2rem] space-y-4">
+          <div className="glass-card p-3 rounded-[1.5rem] space-y-4">
             <div className="flex items-start gap-3">
               <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-brand-navy/10 bg-indigo-50 flex items-center justify-center">
                 <PixelAvatar config={profile?.avatar} uid={profile?.uid} size={36} view="head" />
@@ -22199,13 +22199,13 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className={showImage ? 'pt-0 pb-4' : 'py-4 px-4'}
+      className={showImage ? 'pt-0 pb-2' : 'py-2 px-2'}
     >
       {/* Full-bleed image */}
       {showImage && (
         <img src={post.postImageUrl} alt="" className="w-full object-cover max-h-64 mb-3" />
       )}
-      <div className={showImage ? 'px-4' : ''}>
+      <div className={showImage ? 'px-2' : ''}>
       {/* Post header */}
       <div className="space-y-2.5">
         <div className="flex items-center gap-3">
@@ -22802,7 +22802,7 @@ const DEAL_COLORS = ['#EF4444', '#14B8A6', '#3B82F6', '#22C55E', '#F97316', '#A8
 
 function FeedVendorPostCard({ item }: { item: any }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-5 rounded-[2rem] space-y-3">
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-3 rounded-[1.5rem] space-y-2">
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-navy/5 shrink-0">
           <img src={item.authorPhoto || `https://picsum.photos/seed/${item.authorUid}/40`} alt="" className="w-full h-full object-cover" />
@@ -23035,7 +23035,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
 
   return (
     <>
-    <div className="space-y-6 pb-6">
+    <div className="space-y-3 pb-6">
       <div>
         <h1 className="font-display font-bold text-2xl text-brand-navy">Deals</h1>
         <p className="text-brand-navy/80 text-sm mt-0.5">Rewards waiting for you</p>
@@ -23668,7 +23668,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
 
   return (
     <>
-    <div className="space-y-5 pb-20">
+    <div className="space-y-3 pb-20">
       {/* Tab bar */}
       <div className="relative flex justify-center items-center gap-6">
         {(['discovery', 'following'] as const).map(tab => (
@@ -25827,7 +25827,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
 
       {/* Reward tiers — only shown when store has an active stamp card and user hasn't joined yet */}
       {storeCardActive(store) && tiers.length > 0 && !card && (
-        <div className="glass-card p-5 rounded-[2rem] space-y-3">
+        <div className="glass-card p-3 rounded-[1.5rem] space-y-3">
           <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75">
             {tiers.length > 1 ? `Reward ${tierSlideIdx + 1} of ${tiers.length}` : 'Reward'}
           </p>
@@ -25973,12 +25973,12 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
 
                     {/* Balance */}
                     <div className="grid grid-cols-2 gap-3 mb-4">
-                      <div className="glass-card p-5 rounded-2xl">
+                      <div className="glass-card p-3 rounded-2xl">
                         <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-1">Available</p>
                         <p className="text-3xl font-black text-brand-navy">{spvNetAvailable.toLocaleString()}</p>
                         {pointsRate > 0 && <p className="text-[10px] text-brand-navy/75 mt-1">{pointsRate} pts per £1</p>}
                       </div>
-                      <div className="glass-card p-5 rounded-2xl">
+                      <div className="glass-card p-3 rounded-2xl">
                         <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-1">Value</p>
                         <p className="text-3xl font-black text-emerald-600">£{redeemableValue.toFixed(2)}</p>
                         {redemptionRate > 0 && <p className="text-[10px] text-brand-navy/75 mt-1">{redemptionRate} pts = £1</p>}
@@ -26229,7 +26229,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                     </div>
 
                     {/* Points + next reward */}
-                    <div className="glass-card p-5 rounded-2xl mb-4 text-center">
+                    <div className="glass-card p-3 rounded-2xl mb-4 text-center">
                       <p className="text-brand-navy font-black text-5xl leading-none">{fmtK(netVisits)}</p>
                       <p className="text-brand-navy/75 text-xs font-bold uppercase tracking-widest mt-1.5">Points</p>
                       {nextReward && (
@@ -26354,7 +26354,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
       </AnimatePresence>
 
       {/* Top collectors */}
-      <div className="glass-card p-5 rounded-[2rem] space-y-4">
+      <div className="glass-card p-3 rounded-[1.5rem] space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-bold">{lbType === 'loyalty' ? 'Top Collectors' : lbType === 'visit' ? 'Top Visitors' : 'Top Spenders'}</h3>
           <Trophy size={18} className="text-brand-gold" />
@@ -26454,7 +26454,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                 const isOwnerPost = item.data.authorUid === store.ownerUid;
                 const displayName = isOwnerPost ? store.name : item.data.authorName;
                 return (
-                  <div key={item.data.id} className="glass-card p-5 rounded-[2rem] space-y-3">
+                  <div key={item.data.id} className="glass-card p-3 rounded-[1.5rem] space-y-3">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full overflow-hidden border border-brand-navy/5 shrink-0 bg-indigo-50 flex items-center justify-center">
                         {isOwnerPost
@@ -26518,7 +26518,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
           )}
           {/* Average rating summary */}
           {avgRating !== null && (
-            <div className="glass-card p-5 rounded-[2rem] flex items-center gap-4">
+            <div className="glass-card p-3 rounded-[1.5rem] flex items-center gap-4">
               <div className="text-center">
                 <p className="text-4xl font-extrabold text-brand-navy">{avgRating.toFixed(1)}</p>
                 <div className="flex items-center gap-0.5 mt-1 justify-center">
@@ -26536,7 +26536,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
 
           {/* Review list */}
           {visibleReviews.map(review => (
-            <div key={review.id} className="glass-card p-5 rounded-[2rem] space-y-2">
+            <div key={review.id} className="glass-card p-3 rounded-[1.5rem] space-y-2">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full overflow-hidden border border-brand-navy/5 shrink-0 bg-indigo-50 flex items-center justify-center">
                   <PixelAvatar uid={review.authorUid || review.id} size={36} view="head" />
@@ -26846,7 +26846,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="space-y-6 pb-20 text-brand-navy"
+      className="space-y-3 pb-20 text-brand-navy"
     >
       <div className="flex items-center justify-between">
         <button onClick={onBack} className="flex items-center gap-2 text-brand-navy/75 font-bold text-sm hover:text-brand-navy transition-colors">
