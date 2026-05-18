@@ -6513,6 +6513,13 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [pinning, setPinning] = useState(false);
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [editAchName, setEditAchName] = useState('');
+  const [editAchPrefix, setEditAchPrefix] = useState('');
+  const [editAchReward, setEditAchReward] = useState('');
+  const [editImgPos, setEditImgPos] = useState({ x: 50, y: 50 });
+  const [savingEdit, setSavingEdit] = useState(false);
 
   // Create form
   const [content, setContent] = useState('');
@@ -6607,6 +6614,34 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
       }
       await updateDoc(doc(db, 'global_posts', post.id), { isPinned: !post.isPinned });
     } finally { setPinning(false); }
+  };
+
+  const startEdit = (post: GlobalPost) => {
+    setEditingPostId(post.id);
+    setEditContent(post.content || '');
+    setEditAchName(post.authorName || '');
+    setEditAchPrefix(post.content || '');
+    setEditAchReward(post.achievementText || '');
+    const pos = post.imageObjectPosition?.match(/(\d+)%\s*(\d+)%/);
+    setEditImgPos(pos ? { x: Number(pos[1]), y: Number(pos[2]) } : { x: 50, y: 50 });
+  };
+
+  const handleSaveEdit = async (post: GlobalPost) => {
+    setSavingEdit(true);
+    try {
+      if (post.postType === 'reward') {
+        await updateDoc(doc(db, 'global_posts', post.id), {
+          authorName: editAchName.trim(),
+          content: editAchPrefix.trim(),
+          achievementText: editAchReward.trim(),
+        });
+      } else {
+        const updates: Record<string, any> = { content: editContent.trim() };
+        if (post.postImageUrl) updates.imageObjectPosition = `${editImgPos.x}% ${editImgPos.y}%`;
+        await updateDoc(doc(db, 'global_posts', post.id), updates);
+      }
+      setEditingPostId(null);
+    } finally { setSavingEdit(false); }
   };
 
   const handlePublish = async () => {
@@ -7065,6 +7100,67 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
                       Cancel
                     </button>
                   </div>
+                ) : editingPostId === post.id ? (
+                  <div className="px-4 py-3 space-y-3">
+                    {post.postType === 'reward' ? (
+                      <>
+                        <input value={editAchName} onChange={e => setEditAchName(e.target.value)} placeholder="Name…"
+                          className="w-full px-3 py-2 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm text-brand-navy outline-none" />
+                        <input value={editAchPrefix} onChange={e => setEditAchPrefix(e.target.value)} placeholder="just collected a…"
+                          className="w-full px-3 py-2 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm text-brand-navy outline-none" />
+                        <input value={editAchReward} onChange={e => setEditAchReward(e.target.value)} placeholder="legendary sticker…"
+                          className="w-full px-3 py-2 rounded-xl bg-blue-50 border border-blue-200 text-sm font-bold text-blue-700 outline-none" />
+                      </>
+                    ) : (
+                      <>
+                        <textarea value={editContent} onChange={e => setEditContent(e.target.value)} rows={3}
+                          className="w-full px-3 py-2 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm text-brand-navy outline-none resize-none" />
+                        {post.postImageUrl && (
+                          <div className="space-y-1.5">
+                            <p className="text-[10px] font-bold text-brand-navy/50 uppercase tracking-widest">Image crop position</p>
+                            <div className="relative rounded-xl overflow-hidden" style={{ height: '120px' }}
+                              onMouseDown={e => {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const move = (me: MouseEvent) => {
+                                  setEditImgPos({
+                                    x: Math.round(Math.min(100, Math.max(0, ((me.clientX - rect.left) / rect.width) * 100))),
+                                    y: Math.round(Math.min(100, Math.max(0, ((me.clientY - rect.top) / rect.height) * 100))),
+                                  });
+                                };
+                                window.addEventListener('mousemove', move);
+                                window.addEventListener('mouseup', () => window.removeEventListener('mousemove', move), { once: true });
+                              }}
+                              onTouchMove={e => {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const t = e.touches[0];
+                                setEditImgPos({
+                                  x: Math.round(Math.min(100, Math.max(0, ((t.clientX - rect.left) / rect.width) * 100))),
+                                  y: Math.round(Math.min(100, Math.max(0, ((t.clientY - rect.top) / rect.height) * 100))),
+                                });
+                              }}
+                            >
+                              <img src={post.postImageUrl} alt="" className="w-full h-full object-cover cursor-grab pointer-events-none"
+                                style={{ objectPosition: `${editImgPos.x}% ${editImgPos.y}%` }} />
+                              <div className="absolute pointer-events-none" style={{ left: `${editImgPos.x}%`, top: `${editImgPos.y}%`, transform: 'translate(-50%,-50%)' }}>
+                                <div className="w-5 h-5 rounded-full border-2 border-white shadow-md bg-white/30" />
+                              </div>
+                            </div>
+                            <p className="text-[9px] text-brand-navy/35 text-center">Drag to reposition</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+                    <div className="flex gap-2">
+                      <button onClick={() => handleSaveEdit(post)} disabled={savingEdit}
+                        className="flex-1 py-2 rounded-xl bg-brand-navy text-white text-xs font-bold active:scale-95 transition-all disabled:opacity-50">
+                        {savingEdit ? 'Saving…' : 'Save'}
+                      </button>
+                      <button onClick={() => setEditingPostId(null)}
+                        className="px-4 py-2 rounded-xl bg-brand-navy/8 text-brand-navy text-xs font-bold active:scale-95 transition-all">
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
                 ) : (
                   <div className="px-4 py-3">
                     <div className="flex items-start gap-2">
@@ -7083,9 +7179,18 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
                           {post.adminBadgeIcon && <span className="text-[9px]">{post.adminBadgeIcon}</span>}
                           <span className="text-[10px] text-brand-navy/45 ml-auto">{formatAge(post.createdAt)}</span>
                         </div>
-                        <p className="text-xs text-brand-navy/70 mt-0.5 line-clamp-2">{post.content}</p>
+                        <p className="text-xs text-brand-navy/70 mt-0.5 line-clamp-2">
+                          {post.postType === 'reward' ? `${post.content} ${post.achievementText}` : post.content}
+                        </p>
                       </div>
                       <div className="flex flex-col gap-1 shrink-0">
+                        <button
+                          onClick={() => startEdit(post)}
+                          className="p-1.5 rounded-xl bg-brand-navy/5 text-brand-navy/40 hover:text-brand-navy/70 transition-colors"
+                          title="Edit"
+                        >
+                          <Pencil size={13} />
+                        </button>
                         <button
                           onClick={() => handlePin(post)}
                           disabled={pinning}
