@@ -20463,21 +20463,33 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
       {/* One row: Challenges · Stickers · Badges */}
       <div className="flex gap-2">
         <motion.button whileTap={{ scale: 0.97 }} onClick={() => setChallengeOpen(true)}
-          className="flex-1 rounded-2xl bg-white border border-black/5 shadow shadow-black/8 flex flex-col items-center justify-center gap-0.5 px-3 py-3.5">
-          <p className="text-xl font-black text-black leading-none">{activeChallenges.length}</p>
-          <span className="text-[9px] font-bold uppercase tracking-widest text-black/40">Challenges</span>
+          className="flex-1 rounded-2xl overflow-hidden shadow-sm shadow-purple-400/30">
+          <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3.5"
+            style={{ background: 'linear-gradient(160deg, #581c87 0%, #7c3aed 45%, #a855f7 80%, #c084fc 100%)' }}>
+            <span className="shine-ray" aria-hidden="true" />
+            <p className="relative z-10 text-xl font-black text-white leading-none">{activeChallenges.length}</p>
+            <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-purple-200/80">Challenges</span>
+          </div>
         </motion.button>
 
         <motion.button whileTap={{ scale: 0.97 }} onClick={() => setShowStickerModal(true)}
-          className="flex-1 rounded-2xl bg-white border border-black/5 shadow shadow-black/8 flex flex-col items-center justify-center gap-0.5 px-3 py-3.5">
-          <p className="text-xl font-black text-black leading-none">{stickerData?.stickers.length ?? 0}</p>
-          <span className="text-[9px] font-bold uppercase tracking-widest text-black/40">Stickers</span>
+          className="flex-1 rounded-2xl overflow-hidden shadow-sm shadow-teal-400/30">
+          <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3.5"
+            style={{ background: 'linear-gradient(160deg, #134e4a 0%, #0f766e 40%, #14b8a6 75%, #5eead4 100%)' }}>
+            <span className="shine-ray" aria-hidden="true" />
+            <p className="relative z-10 text-xl font-black text-white leading-none">{stickerData?.stickers.length ?? 0}</p>
+            <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-teal-100/80">Stickers</span>
+          </div>
         </motion.button>
 
         <motion.button whileTap={{ scale: 0.97 }} onClick={() => setBadgesOpen(true)}
-          className="flex-1 rounded-2xl bg-white border border-black/5 shadow shadow-black/8 flex flex-col items-center justify-center gap-0.5 px-3 py-3.5">
-          <p className="text-xl font-black text-black leading-none">{earnedBadges.length}</p>
-          <span className="text-[9px] font-bold uppercase tracking-widest text-black/40">Badges</span>
+          className="flex-1 rounded-2xl overflow-hidden shadow-sm shadow-amber-400/40">
+          <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3.5 overflow-hidden"
+            style={{ background: 'linear-gradient(135deg, #fef08a 0%, #fbbf24 30%, #f59e0b 65%, #d97706 100%)' }}>
+            <span className="badge-shine-ray" aria-hidden="true" />
+            <p className="relative z-10 text-xl font-black leading-none" style={{ color: '#451a03' }}>{earnedBadges.length}</p>
+            <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest" style={{ color: '#78350f' }}>Badges</span>
+          </div>
         </motion.button>
       </div>
 
@@ -26916,19 +26928,31 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
         return (
           <div className="flex gap-2">
             <motion.button whileTap={{ scale: 0.97 }} onClick={() => setPubChallengeOpen(true)}
-              className="flex-1 rounded-2xl bg-white border border-black/5 shadow shadow-black/8 flex flex-col items-center justify-center gap-0.5 px-3 py-3.5">
-              <p className="text-xl font-black text-black leading-none">{activePub.length}</p>
-              <span className="text-[9px] font-bold uppercase tracking-widest text-black/40">Challenges</span>
+              className="flex-1 rounded-2xl overflow-hidden shadow-sm shadow-purple-400/30">
+              <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3.5"
+                style={{ background: 'linear-gradient(160deg, #581c87 0%, #7c3aed 45%, #a855f7 80%, #c084fc 100%)' }}>
+                <span className="shine-ray" aria-hidden="true" />
+                <p className="relative z-10 text-xl font-black text-white leading-none">{activePub.length}</p>
+                <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-purple-200/80">Challenges</span>
+              </div>
             </motion.button>
             <motion.button whileTap={{ scale: 0.97 }} onClick={() => setPubStickerOpen(true)}
-              className="flex-1 rounded-2xl bg-white border border-black/5 shadow shadow-black/8 flex flex-col items-center justify-center gap-0.5 px-3 py-3.5">
-              <p className="text-xl font-black text-black leading-none">{pubStickerCount}</p>
-              <span className="text-[9px] font-bold uppercase tracking-widest text-black/40">Stickers</span>
+              className="flex-1 rounded-2xl overflow-hidden shadow-sm shadow-teal-400/30">
+              <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3.5"
+                style={{ background: 'linear-gradient(160deg, #134e4a 0%, #0f766e 40%, #14b8a6 75%, #5eead4 100%)' }}>
+                <span className="shine-ray" aria-hidden="true" />
+                <p className="relative z-10 text-xl font-black text-white leading-none">{pubStickerCount}</p>
+                <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-teal-100/80">Stickers</span>
+              </div>
             </motion.button>
             <motion.button whileTap={{ scale: 0.97 }} onClick={() => setPubBadgesOpen(true)}
-              className="flex-1 rounded-2xl bg-white border border-black/5 shadow shadow-black/8 flex flex-col items-center justify-center gap-0.5 px-3 py-3.5">
-              <p className="text-xl font-black text-black leading-none">{earnedBadges.length}</p>
-              <span className="text-[9px] font-bold uppercase tracking-widest text-black/40">Badges</span>
+              className="flex-1 rounded-2xl overflow-hidden shadow-sm shadow-amber-400/40">
+              <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3.5 overflow-hidden"
+                style={{ background: 'linear-gradient(135deg, #fef08a 0%, #fbbf24 30%, #f59e0b 65%, #d97706 100%)' }}>
+                <span className="badge-shine-ray" aria-hidden="true" />
+                <p className="relative z-10 text-xl font-black leading-none" style={{ color: '#451a03' }}>{earnedBadges.length}</p>
+                <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest" style={{ color: '#78350f' }}>Badges</span>
+              </div>
             </motion.button>
           </div>
         );
