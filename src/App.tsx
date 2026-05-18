@@ -136,7 +136,9 @@ import {
   DollarSign,
   AlertTriangle,
   Pin,
-  Loader2
+  Loader2,
+  Megaphone,
+  Link
 } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
@@ -816,6 +818,18 @@ interface AppBadge {
   createdAt: any;
 }
 
+interface AdminBanner {
+  id: string;
+  title: string;
+  subtitle?: string;
+  bgFrom: string;
+  bgTo: string;
+  textLight: boolean;
+  destination: string;
+  order: number;
+  active: boolean;
+}
+
 // --- Image compression utility ---
 // Resizes to maxWidth and re-encodes as WebP at quality 0.85.
 // Keeps the original if it's already smaller than the compressed output.
@@ -881,7 +895,7 @@ export default function App() {
   const [pendingNFCStoreId, setPendingNFCStoreId] = useState<string | null>(null);
   const [userCards, setUserCards] = useState<Card[]>([]);
   const [showSettings, setShowSettings] = useState(false);
-  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges' | 'stores' | 'users' | 'posts' | 'offers' | 'linqle' | 'daily-vote' | 'cards'>(null);
+  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges' | 'stores' | 'users' | 'posts' | 'offers' | 'linqle' | 'daily-vote' | 'cards' | 'banners'>(null);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -1715,6 +1729,7 @@ export default function App() {
             onOpenLinqle={() => setAdminView('linqle')}
             onOpenDailyVote={() => setAdminView('daily-vote')}
             onOpenCards={() => setAdminView('cards')}
+            onOpenBanners={() => setAdminView('banners')}
           />
         )}
         {adminView === 'challenges' && (
@@ -1743,6 +1758,9 @@ export default function App() {
         )}
         {adminView === 'cards' && (
           <CardSetsAdminPanel onClose={() => setAdminView('menu')} />
+        )}
+        {adminView === 'banners' && (
+          <BannersAdminPanel onClose={() => setAdminView('menu')} />
         )}
       </AnimatePresence>
 
@@ -5326,7 +5344,7 @@ function CardSetsAdminPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
-function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts, onOpenOffers, onOpenLinqle, onOpenDailyVote, onOpenCards }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void; onOpenOffers: () => void; onOpenLinqle: () => void; onOpenDailyVote: () => void; onOpenCards: () => void }) {
+function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts, onOpenOffers, onOpenLinqle, onOpenDailyVote, onOpenCards, onOpenBanners }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void; onOpenOffers: () => void; onOpenLinqle: () => void; onOpenDailyVote: () => void; onOpenCards: () => void; onOpenBanners: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -5472,6 +5490,231 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores,
             </div>
           </motion.button>
 
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={onOpenBanners}
+            className="rounded-[2rem] bg-white border border-black/5 shadow-sm p-6 flex flex-col items-start gap-3 text-left active:bg-brand-navy/5 transition-colors"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-pink-100 flex items-center justify-center">
+              <Megaphone size={22} className="text-pink-500" />
+            </div>
+            <div>
+              <p className="font-bold text-brand-navy text-sm">Banners</p>
+              <p className="text-[11px] text-brand-navy/75 mt-0.5">Manage sliding banner tiles in feed</p>
+            </div>
+          </motion.button>
+
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+const BANNER_DEST_OPTIONS = [
+  { value: 'for-you', label: 'For You Feed' },
+  { value: 'home', label: 'Wallet / Home' },
+  { value: 'deals', label: 'Deals' },
+  { value: 'discover', label: 'Discover' },
+  { value: 'profile', label: 'Profile' },
+  { value: 'url', label: 'External URL…' },
+];
+
+function BannersAdminPanel({ onClose }: { onClose: () => void }) {
+  const [banners, setBanners] = useState<AdminBanner[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+
+  const blank = (): Omit<AdminBanner, 'id'> => ({
+    title: '', subtitle: '', bgFrom: '#6366f1', bgTo: '#8b5cf6',
+    textLight: true, destination: 'for-you', order: banners.length, active: true,
+  });
+  const [form, setForm] = useState<Omit<AdminBanner, 'id'>>(blank());
+  const [urlInput, setUrlInput] = useState('');
+
+  useEffect(() => {
+    const unsub = onSnapshot(
+      query(collection(db, 'banners'), orderBy('order', 'asc')),
+      snap => { setBanners(snap.docs.map(d => ({ id: d.id, ...d.data() } as AdminBanner))); setLoading(false); }
+    );
+    return unsub;
+  }, []);
+
+  const startEdit = (b: AdminBanner) => {
+    setEditId(b.id);
+    const { id, ...rest } = b;
+    setForm(rest);
+    setUrlInput(b.destination.startsWith('http') ? b.destination : '');
+  };
+
+  const cancelEdit = () => { setEditId(null); setForm(blank()); setUrlInput(''); };
+
+  const save = async () => {
+    const dest = form.destination === 'url' ? urlInput.trim() : form.destination;
+    if (!form.title.trim() || !dest) return;
+    setSaving(true);
+    try {
+      const payload = { ...form, destination: dest };
+      if (editId) {
+        await updateDoc(doc(db, 'banners', editId), payload);
+      } else {
+        await addDoc(collection(db, 'banners'), payload);
+      }
+      cancelEdit();
+    } catch (e) { console.error(e); }
+    finally { setSaving(false); }
+  };
+
+  const toggleActive = async (b: AdminBanner) => {
+    await updateDoc(doc(db, 'banners', b.id), { active: !b.active });
+  };
+
+  const remove = async (b: AdminBanner) => {
+    await deleteDoc(doc(db, 'banners', b.id));
+    if (editId === b.id) cancelEdit();
+  };
+
+  const move = async (b: AdminBanner, dir: -1 | 1) => {
+    const idx = banners.findIndex(x => x.id === b.id);
+    const swap = banners[idx + dir];
+    if (!swap) return;
+    await Promise.all([
+      updateDoc(doc(db, 'banners', b.id), { order: swap.order }),
+      updateDoc(doc(db, 'banners', swap.id), { order: b.order }),
+    ]);
+  };
+
+  const isUrl = form.destination === 'url';
+  const destLabel = (d: string) => {
+    if (d.startsWith('http')) return d;
+    return BANNER_DEST_OPTIONS.find(o => o.value === d)?.label ?? d;
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex flex-col max-w-md mx-auto">
+      <div className="bg-brand-bg flex-1 flex flex-col overflow-hidden rounded-t-[2rem] mt-16">
+        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-brand-navy/8 shrink-0">
+          <div>
+            <h2 className="font-display text-2xl font-bold text-brand-navy">Banners</h2>
+            <p className="text-xs text-brand-navy/60 mt-0.5">Sliding tiles shown in the For You feed</p>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm active:scale-95 transition-all">
+            <X size={18} className="text-brand-navy/75" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+          {/* Add / Edit form */}
+          <div className="bg-white rounded-[1.5rem] border border-black/5 shadow-sm p-4 space-y-3">
+            <p className="text-xs font-bold uppercase tracking-widest text-brand-navy/50">{editId ? 'Edit Banner' : 'New Banner'}</p>
+            <input
+              className="w-full rounded-xl border border-black/10 px-3 py-2 text-sm font-semibold text-brand-navy placeholder-brand-navy/30 focus:outline-none"
+              placeholder="Title *"
+              value={form.title}
+              onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+            />
+            <input
+              className="w-full rounded-xl border border-black/10 px-3 py-2 text-sm text-brand-navy placeholder-brand-navy/30 focus:outline-none"
+              placeholder="Subtitle (optional)"
+              value={form.subtitle ?? ''}
+              onChange={e => setForm(f => ({ ...f, subtitle: e.target.value }))}
+            />
+            <div className="flex gap-2 items-center">
+              <div className="flex-1">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-1">Gradient from</p>
+                <div className="flex items-center gap-2 border border-black/10 rounded-xl px-3 py-2">
+                  <input type="color" value={form.bgFrom} onChange={e => setForm(f => ({ ...f, bgFrom: e.target.value }))} className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent p-0" />
+                  <span className="text-xs font-mono text-brand-navy/60">{form.bgFrom}</span>
+                </div>
+              </div>
+              <div className="flex-1">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-1">Gradient to</p>
+                <div className="flex items-center gap-2 border border-black/10 rounded-xl px-3 py-2">
+                  <input type="color" value={form.bgTo} onChange={e => setForm(f => ({ ...f, bgTo: e.target.value }))} className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent p-0" />
+                  <span className="text-xs font-mono text-brand-navy/60">{form.bgTo}</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2 items-center">
+              <div className="flex-1">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-1">Text colour</p>
+                <div className="flex rounded-xl border border-black/10 overflow-hidden">
+                  <button onClick={() => setForm(f => ({ ...f, textLight: true }))} className={cn('flex-1 py-2 text-xs font-bold transition-colors', form.textLight ? 'bg-brand-navy text-white' : 'bg-white text-brand-navy/50')}>Light</button>
+                  <button onClick={() => setForm(f => ({ ...f, textLight: false }))} className={cn('flex-1 py-2 text-xs font-bold transition-colors', !form.textLight ? 'bg-brand-navy text-white' : 'bg-white text-brand-navy/50')}>Dark</button>
+                </div>
+              </div>
+              <div className="flex-1">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-1">Active</p>
+                <div className="flex rounded-xl border border-black/10 overflow-hidden">
+                  <button onClick={() => setForm(f => ({ ...f, active: true }))} className={cn('flex-1 py-2 text-xs font-bold transition-colors', form.active ? 'bg-emerald-500 text-white' : 'bg-white text-brand-navy/50')}>Yes</button>
+                  <button onClick={() => setForm(f => ({ ...f, active: false }))} className={cn('flex-1 py-2 text-xs font-bold transition-colors', !form.active ? 'bg-red-400 text-white' : 'bg-white text-brand-navy/50')}>No</button>
+                </div>
+              </div>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-1">Destination</p>
+              <select
+                className="w-full rounded-xl border border-black/10 px-3 py-2 text-sm text-brand-navy focus:outline-none bg-white"
+                value={form.destination}
+                onChange={e => setForm(f => ({ ...f, destination: e.target.value }))}
+              >
+                {BANNER_DEST_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+              {isUrl && (
+                <input
+                  className="mt-2 w-full rounded-xl border border-black/10 px-3 py-2 text-sm text-brand-navy placeholder-brand-navy/30 focus:outline-none"
+                  placeholder="https://…"
+                  value={urlInput}
+                  onChange={e => setUrlInput(e.target.value)}
+                />
+              )}
+            </div>
+            {/* Preview */}
+            <div className="rounded-[1rem] overflow-hidden h-16 flex items-center px-4 gap-3"
+              style={{ background: `linear-gradient(135deg, ${form.bgFrom} 0%, ${form.bgTo} 100%)` }}>
+              <Megaphone size={20} className={form.textLight ? 'text-white/80' : 'text-black/60'} />
+              <div>
+                <p className={cn('text-sm font-black leading-tight', form.textLight ? 'text-white' : 'text-black')}>{form.title || 'Banner title'}</p>
+                {form.subtitle && <p className={cn('text-[11px] font-semibold leading-tight', form.textLight ? 'text-white/70' : 'text-black/60')}>{form.subtitle}</p>}
+              </div>
+            </div>
+            <div className="flex gap-2 pt-1">
+              {editId && <button onClick={cancelEdit} className="flex-1 py-2.5 rounded-xl border border-black/10 text-sm font-bold text-brand-navy/60">Cancel</button>}
+              <button onClick={save} disabled={saving || !form.title.trim()} className="flex-1 py-2.5 rounded-xl bg-brand-navy text-white text-sm font-bold disabled:opacity-40 transition-opacity">
+                {saving ? 'Saving…' : editId ? 'Update' : 'Add Banner'}
+              </button>
+            </div>
+          </div>
+
+          {/* Banner list */}
+          {loading ? (
+            <div className="py-8 text-center text-brand-navy/40 text-sm">Loading…</div>
+          ) : banners.length === 0 ? (
+            <div className="py-8 text-center text-brand-navy/40 text-sm">No banners yet</div>
+          ) : banners.map((b, i) => (
+            <div key={b.id} className="bg-white rounded-[1.5rem] border border-black/5 shadow-sm overflow-hidden">
+              <div className="h-14 flex items-center px-4 gap-3" style={{ background: `linear-gradient(135deg, ${b.bgFrom} 0%, ${b.bgTo} 100%)` }}>
+                <Megaphone size={16} className={b.textLight ? 'text-white/80' : 'text-black/60'} />
+                <div className="flex-1 min-w-0">
+                  <p className={cn('text-sm font-black truncate', b.textLight ? 'text-white' : 'text-black')}>{b.title}</p>
+                  {b.subtitle && <p className={cn('text-[11px] truncate', b.textLight ? 'text-white/70' : 'text-black/60')}>{b.subtitle}</p>}
+                </div>
+                <span className={cn('text-[10px] font-bold px-2 py-0.5 rounded-full', b.active ? 'bg-white/20 text-white' : 'bg-black/20 text-white/60')}>{b.active ? 'Live' : 'Off'}</span>
+              </div>
+              <div className="px-4 py-3 flex items-center gap-2">
+                <Link size={12} className="text-brand-navy/30 shrink-0" />
+                <span className="text-[11px] text-brand-navy/50 flex-1 truncate">{destLabel(b.destination)}</span>
+                <button onClick={() => move(b, -1)} disabled={i === 0} className="p-1.5 rounded-lg hover:bg-brand-navy/5 disabled:opacity-20"><ChevronUp size={14} className="text-brand-navy/60" /></button>
+                <button onClick={() => move(b, 1)} disabled={i === banners.length - 1} className="p-1.5 rounded-lg hover:bg-brand-navy/5 disabled:opacity-20"><ChevronDown size={14} className="text-brand-navy/60" /></button>
+                <button onClick={() => toggleActive(b)} className="p-1.5 rounded-lg hover:bg-brand-navy/5">
+                  <Eye size={14} className={b.active ? 'text-emerald-500' : 'text-brand-navy/30'} />
+                </button>
+                <button onClick={() => startEdit(b)} className="p-1.5 rounded-lg hover:bg-brand-navy/5"><Pencil size={14} className="text-brand-navy/60" /></button>
+                <button onClick={() => remove(b)} className="p-1.5 rounded-lg hover:bg-red-50"><Trash2 size={14} className="text-red-400" /></button>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </motion.div>
@@ -8384,6 +8627,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           onViewChallenges={() => { setActiveTab('home'); setWalletSubTab('challenges'); }}
           onOpenLinqle={() => setViewingLinqle(true)}
           onPackReady={(stickers) => { setPendingPack(stickers); setPendingPackCardId(null); }}
+          onNavigate={(tab) => setActiveTab(tab)}
           currentUser={user}
           currentProfile={profile}
           userCards={initialCards}
@@ -22972,7 +23216,74 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
   );
 }
 
-function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle, onPackReady, currentUser, currentProfile, userCards = [] }: { onViewUser: (u: UserProfile) => void, onViewStore?: (s: StoreProfile) => void, onViewChallenges?: () => void, onOpenLinqle?: () => void, onPackReady?: (s: CollectibleSticker[]) => void, currentUser?: FirebaseUser, currentProfile?: UserProfile | null, userCards?: Card[] }) {
+function AdminBannerCarousel({ banners, onNavigate }: { banners: AdminBanner[]; onNavigate: (dest: string) => void }) {
+  const active = banners.filter(b => b.active).sort((a, b) => a.order - b.order);
+  const [idx, setIdx] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const resetTimer = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setIdx(i => (i + 1) % active.length), 4000);
+  };
+
+  useEffect(() => {
+    if (active.length > 1) resetTimer();
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [idx, active.length]);
+
+  useEffect(() => { setIdx(0); }, [active.length]);
+
+  if (!active.length) return null;
+
+  const cur = active[idx % active.length];
+
+  const go = (dir: 1 | -1) => {
+    setIdx(i => ((i + dir) + active.length) % active.length);
+    resetTimer();
+  };
+
+  return (
+    <div className="relative rounded-[1.5rem] overflow-hidden shadow-lg" style={{ minHeight: '80px' }}>
+      <AnimatePresence mode="wait">
+        <motion.button
+          key={cur.id}
+          initial={{ opacity: 0, x: 24 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -24 }}
+          transition={{ duration: 0.25 }}
+          onClick={() => onNavigate(cur.destination)}
+          className="w-full relative flex items-center px-5 py-4 gap-4 active:opacity-90 transition-opacity"
+          style={{ background: `linear-gradient(135deg, ${cur.bgFrom} 0%, ${cur.bgTo} 100%)` }}
+        >
+          <Megaphone size={22} className={cur.textLight ? 'text-white/80 shrink-0' : 'text-black/60 shrink-0'} />
+          <div className="flex-1 min-w-0 text-left">
+            <p className={cn('text-sm font-black leading-tight', cur.textLight ? 'text-white' : 'text-black')}>{cur.title}</p>
+            {cur.subtitle && <p className={cn('text-[11px] font-semibold mt-0.5 leading-tight', cur.textLight ? 'text-white/75' : 'text-black/60')}>{cur.subtitle}</p>}
+          </div>
+          <ChevronRight size={16} className={cur.textLight ? 'text-white/50 shrink-0' : 'text-black/30 shrink-0'} />
+        </motion.button>
+      </AnimatePresence>
+      {active.length > 1 && (
+        <>
+          <button onClick={() => go(-1)} className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-black/20 flex items-center justify-center active:bg-black/40">
+            <ChevronLeft size={14} className="text-white" />
+          </button>
+          <button onClick={() => go(1)} className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-black/20 flex items-center justify-center active:bg-black/40">
+            <ChevronRight size={14} className="text-white" />
+          </button>
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10">
+            {active.map((_, i) => (
+              <button key={i} onClick={() => { setIdx(i); resetTimer(); }}
+                className={cn('rounded-full transition-all', i === idx % active.length ? 'w-4 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/40')} />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle, onPackReady, onNavigate, currentUser, currentProfile, userCards = [] }: { onViewUser: (u: UserProfile) => void, onViewStore?: (s: StoreProfile) => void, onViewChallenges?: () => void, onOpenLinqle?: () => void, onPackReady?: (s: CollectibleSticker[]) => void, onNavigate?: (dest: string) => void, currentUser?: FirebaseUser, currentProfile?: UserProfile | null, userCards?: Card[] }) {
   const [globalPosts, setGlobalPosts] = useState<GlobalPost[]>([]);
   const [vendorPosts, setVendorPosts] = useState<any[]>([]);
   const [followingUids, setFollowingUids] = useState<Set<string>>(new Set());
@@ -22999,6 +23310,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
   const [savingsLbUsers, setSavingsLbUsers] = useState<UserProfile[]>([]);
   const [savingsLbLoading, setSavingsLbLoading] = useState(false);
   const [challengeIdx, setChallengeIdx] = useState(0);
+  const [adminBanners, setAdminBanners] = useState<AdminBanner[]>([]);
   const lastDocRef = useRef<any>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -23035,6 +23347,13 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
   };
 
   useEffect(() => { return loadInitial(); }, []);
+
+  useEffect(() => {
+    return onSnapshot(
+      query(collection(db, 'banners'), orderBy('order', 'asc')),
+      snap => setAdminBanners(snap.docs.map(d => ({ id: d.id, ...d.data() } as AdminBanner)))
+    );
+  }, []);
 
   // Re-observe whenever posts change so sentinel is re-checked after each page loads
   useEffect(() => {
@@ -23372,6 +23691,17 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
               <DailyVoteFYPCard currentUser={currentUser} currentProfile={currentProfile} onPackReady={onPackReady} />
             )}
           </div>
+
+          {/* Admin banner carousel */}
+          {adminBanners.some(b => b.active) && (
+            <AdminBannerCarousel
+              banners={adminBanners}
+              onNavigate={dest => {
+                if (dest.startsWith('http')) { window.open(dest, '_blank'); return; }
+                onNavigate?.(dest);
+              }}
+            />
+          )}
 
           {/* Challenges card + Leaderboard button — side by side */}
           {(feedChallenges.length > 0 || feedCompletedChallenges.length > 0 || true) && (
