@@ -16174,8 +16174,8 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
       });
     } catch (e) { console.error('leaderboard save failed', e); }
 
-    // Issue sticker pack
-    try {
+    // Issue sticker pack only on a win
+    if (didWin) try {
       const userName = currentProfile?.name || 'Anonymous';
       const newStickers = await issueUserStickers(currentUser.uid, userName, 3).catch(() => [] as CollectibleSticker[]);
       if (newStickers.length > 0 && onPackReady) {
