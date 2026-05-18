@@ -370,6 +370,7 @@ interface StoreProfile {
   membershipStampsPerVisit?: number;
   membershipMenuItems?: { id: string; name: string; points: number; description?: string }[];
   scanMethod?: 'nfc' | 'qr';
+  businessRules?: string;
 }
 
 function storeCardActive(store: StoreProfile): boolean {
@@ -15111,6 +15112,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
   const [showOptions, setShowOptions] = useState(false);
   const [showCompletionPopup, setShowCompletionPopup] = useState(false);
   const [showQRScan, setShowQRScan] = useState(false);
+  const [flipped, setFlipped] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [testQty, setTestQty] = useState(1);
@@ -15391,57 +15393,105 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
           /* ── Compact list card ── */
           if (compact) return (
             <div>
-              <div className="relative overflow-hidden flex items-center gap-3 px-4 py-3" style={{ backgroundColor: cardTheme }}>
-                <span className="card-shine-ray" aria-hidden="true" />
-                {cardPattern !== 'solid' && <div className="absolute inset-0 pointer-events-none" style={getCardPatternStyle(cardPattern)} />}
-                <div className="relative z-10 w-10 h-10 rounded-full overflow-hidden border-2 border-white/50 shrink-0 cursor-pointer shadow-md"
-                  onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}>
-                  <img src={store?.logoUrl || `https://picsum.photos/seed/${card.store_id}/200/200`} alt="" className="w-full h-full object-cover" />
-                </div>
-                <div className="relative z-10 flex-1 min-w-0 cursor-pointer"
-                  onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}>
-                  <h4 className="font-bold text-white text-sm leading-tight truncate">{store?.name || 'Store'}</h4>
-                  <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">{store?.category || 'Retail'}</p>
-                </div>
-                <div className="relative z-10 flex items-center gap-1.5 shrink-0">
-                  {isCompleted && !card.isRedeemed && <div className="bg-white/25 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest animate-pulse">Ready!</div>}
-                  {card.isRedeemed && <div className="bg-green-400 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">Claimed</div>}
-                  <button onClick={(e) => { e.stopPropagation(); setShowOptions(!showOptions); }} className="p-1 text-white/50 hover:text-white/80 transition-colors">
-                    <MoreVertical size={15} />
-                  </button>
-                </div>
+              <div style={{ perspective: '1000px' }}>
+                <motion.div
+                  animate={{ rotateY: flipped ? 180 : 0 }}
+                  transition={{ duration: 0.45, ease: 'easeInOut' }}
+                  style={{ transformStyle: 'preserve-3d', position: 'relative' }}
+                >
+                  {/* Front */}
+                  <div style={{ backfaceVisibility: 'hidden' }}>
+                    <div className="relative overflow-hidden flex items-center gap-3 px-4 py-3" style={{ backgroundColor: cardTheme }}>
+                      <span className="card-shine-ray" aria-hidden="true" />
+                      {cardPattern !== 'solid' && <div className="absolute inset-0 pointer-events-none" style={getCardPatternStyle(cardPattern)} />}
+                      <div className="relative z-10 w-10 h-10 rounded-full overflow-hidden border-2 border-white/50 shrink-0 cursor-pointer shadow-md"
+                        onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}>
+                        <img src={store?.logoUrl || `https://picsum.photos/seed/${card.store_id}/200/200`} alt="" className="w-full h-full object-cover" />
+                      </div>
+                      <div className="relative z-10 flex-1 min-w-0 cursor-pointer"
+                        onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}>
+                        <h4 className="font-bold text-white text-sm leading-tight truncate">{store?.name || 'Store'}</h4>
+                        <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">{store?.category || 'Retail'}</p>
+                      </div>
+                      <div className="relative z-10 flex items-center gap-1.5 shrink-0">
+                        {isCompleted && !card.isRedeemed && <div className="bg-white/25 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest animate-pulse">Ready!</div>}
+                        {card.isRedeemed && <div className="bg-green-400 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">Claimed</div>}
+                        <button onClick={(e) => { e.stopPropagation(); setShowOptions(!showOptions); }} className="p-1 text-white/50 hover:text-white/80 transition-colors">
+                          <MoreVertical size={15} />
+                        </button>
+                      </div>
+                    </div>
+                    {stampGrid(5, 'gap-1.5', 'px-4 pt-4 pb-4', 15, 'text-[11px]')}
+                    {store?.businessRules && (
+                      <div className="px-4 pb-3 flex justify-end">
+                        <button onClick={(e) => { e.stopPropagation(); setFlipped(true); }} className="text-[10px] text-brand-navy/35 font-semibold hover:text-brand-navy/60 transition-colors">T&amp;Cs</button>
+                      </div>
+                    )}
+                  </div>
+                  {/* Back */}
+                  <div style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)', position: 'absolute', inset: 0 }}
+                    className="bg-white flex flex-col p-4 gap-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">Terms &amp; Conditions</p>
+                      <button onClick={(e) => { e.stopPropagation(); setFlipped(false); }} className="text-[10px] text-brand-navy/40 font-semibold hover:text-brand-navy/70">✕ Close</button>
+                    </div>
+                    <p className="text-xs text-brand-navy/60 leading-relaxed">{store?.businessRules}</p>
+                  </div>
+                </motion.div>
               </div>
-              {stampGrid(5, 'gap-1.5', 'px-4 pt-4 pb-4', 15, 'text-[11px]')}
             </div>
           );
 
           /* ── Carousel portrait card ── */
           return (
-            <div className="flex flex-col h-full">
-              <div className="relative overflow-hidden pt-10 pb-8 flex flex-col items-center gap-2" style={{ backgroundColor: cardTheme }}>
-                <span className="card-shine-ray" aria-hidden="true" />
-                {cardPattern !== 'solid' && <div className="absolute inset-0 pointer-events-none" style={getCardPatternStyle(cardPattern)} />}
-                {isCompleted && !card.isRedeemed && (
-                  <div className="absolute top-4 left-4 bg-white/25 text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest animate-pulse z-10">Ready!</div>
-                )}
-                {card.isRedeemed && (
-                  <div className="absolute top-4 left-4 bg-green-400 text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest z-10">Claimed</div>
-                )}
-                <button onClick={(e) => { e.stopPropagation(); setShowOptions(!showOptions); }}
-                  className="absolute top-4 right-4 p-1.5 text-white/50 hover:text-white/80 transition-colors z-10">
-                  <MoreVertical size={16} />
-                </button>
-                <div className="relative z-10 w-[72px] h-[72px] rounded-full overflow-hidden border-[3px] border-white/60 shadow-xl cursor-pointer"
-                  onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}>
-                  <img src={store?.logoUrl || `https://picsum.photos/seed/${card.store_id}/200/200`} alt="" className="w-full h-full object-cover" />
+            <div style={{ perspective: '1000px' }}>
+              <motion.div
+                animate={{ rotateY: flipped ? 180 : 0 }}
+                transition={{ duration: 0.45, ease: 'easeInOut' }}
+                style={{ transformStyle: 'preserve-3d', position: 'relative' }}
+              >
+                {/* Front */}
+                <div style={{ backfaceVisibility: 'hidden' }} className="flex flex-col h-full">
+                  <div className="relative overflow-hidden pt-10 pb-8 flex flex-col items-center gap-2" style={{ backgroundColor: cardTheme }}>
+                    <span className="card-shine-ray" aria-hidden="true" />
+                    {cardPattern !== 'solid' && <div className="absolute inset-0 pointer-events-none" style={getCardPatternStyle(cardPattern)} />}
+                    {isCompleted && !card.isRedeemed && (
+                      <div className="absolute top-4 left-4 bg-white/25 text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest animate-pulse z-10">Ready!</div>
+                    )}
+                    {card.isRedeemed && (
+                      <div className="absolute top-4 left-4 bg-green-400 text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest z-10">Claimed</div>
+                    )}
+                    <button onClick={(e) => { e.stopPropagation(); setShowOptions(!showOptions); }}
+                      className="absolute top-4 right-4 p-1.5 text-white/50 hover:text-white/80 transition-colors z-10">
+                      <MoreVertical size={16} />
+                    </button>
+                    <div className="relative z-10 w-[72px] h-[72px] rounded-full overflow-hidden border-[3px] border-white/60 shadow-xl cursor-pointer"
+                      onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}>
+                      <img src={store?.logoUrl || `https://picsum.photos/seed/${card.store_id}/200/200`} alt="" className="w-full h-full object-cover" />
+                    </div>
+                    <div className="relative z-10 text-center cursor-pointer"
+                      onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}>
+                      <h4 className="font-bold text-white text-lg leading-tight">{store?.name || 'Store'}</h4>
+                      <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mt-0.5">{store?.category || 'Retail'}</p>
+                    </div>
+                  </div>
+                  {stampGrid(3, 'gap-3', 'px-8 pt-7 pb-6', 22, 'text-[15px]')}
+                  {store?.businessRules && (
+                    <div className="px-6 pb-3 flex justify-center">
+                      <button onClick={(e) => { e.stopPropagation(); setFlipped(true); }} className="text-[10px] text-brand-navy/35 font-semibold hover:text-brand-navy/60 transition-colors">T&amp;Cs apply</button>
+                    </div>
+                  )}
                 </div>
-                <div className="relative z-10 text-center cursor-pointer"
-                  onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}>
-                  <h4 className="font-bold text-white text-lg leading-tight">{store?.name || 'Store'}</h4>
-                  <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mt-0.5">{store?.category || 'Retail'}</p>
+                {/* Back */}
+                <div style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)', position: 'absolute', inset: 0 }}
+                  className="bg-white rounded-[inherit] flex flex-col p-6 gap-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">Terms &amp; Conditions</p>
+                    <button onClick={(e) => { e.stopPropagation(); setFlipped(false); }} className="text-[10px] text-brand-navy/40 font-semibold hover:text-brand-navy/70">✕ Close</button>
+                  </div>
+                  <p className="text-xs text-brand-navy/60 leading-relaxed">{store?.businessRules}</p>
                 </div>
-              </div>
-              {stampGrid(3, 'gap-3', 'px-8 pt-7 pb-6', 22, 'text-[15px]')}
+              </motion.div>
             </div>
           );
         })()}
@@ -18660,6 +18710,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
   const [cardPattern, setCardPattern] = useState(store?.cardPattern || 'solid');
   const [selectedIconGroup, setSelectedIconGroup] = useState(STAMP_ICON_GROUPS[0].group);
   const [openColorPicker, setOpenColorPicker] = useState<'primary' | 'secondary' | null>(null);
+  const [businessRules, setBusinessRules] = useState(store?.businessRules || '');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -18673,6 +18724,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
     setStampIcon(store.stampIcon || '⭐');
     setStampBorderColor(store.stampBorderColor || '#ffffff');
     setCardPattern(store.cardPattern || 'solid');
+    setBusinessRules(store.businessRules || '');
   }, [store?.id]);
 
   // When numTiers changes, resize tiers array
@@ -18706,6 +18758,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
         stampIcon,
         stampBorderColor,
         cardPattern,
+        businessRules,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -18988,6 +19041,19 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
         </div>
 
         <p className="text-xs text-brand-navy/75">Existing cards finish their current cycle first. New cycles use these settings.</p>
+
+        {/* Business Rules / T&Cs */}
+        <div className="space-y-2">
+          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Business Rules &amp; T&amp;Cs</label>
+          <textarea
+            value={businessRules}
+            onChange={e => setBusinessRules(e.target.value)}
+            placeholder="e.g. One stamp per visit. Reward valid for 30 days. Cannot be combined with other offers."
+            rows={4}
+            className="w-full px-4 py-3 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm text-brand-navy/80 focus:outline-none focus:ring-2 focus:ring-brand-gold/30 resize-none"
+          />
+          <p className="text-[11px] text-brand-navy/45 pl-1">Displayed on the back of the card when customers tap T&amp;Cs.</p>
+        </div>
 
         {store && (
           <div className="bg-brand-navy/5 rounded-2xl p-4 text-left">
