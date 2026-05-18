@@ -12798,6 +12798,70 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
           )}
 
           <div className={needsPayment ? 'blur-sm pointer-events-none select-none' : ''}>
+          {needsPayment ? (
+            /* ── Dummy preview data (blurred) ── */
+            <div className="space-y-5">
+              {/* Tab switcher dummy */}
+              <div className="flex p-1 bg-brand-navy/8 rounded-2xl gap-1">
+                {[{ label: 'Stamps', active: true }, { label: 'Spend Pts', active: false }, { label: 'Visit Pts', active: false }].map(({ label, active }) => (
+                  <div key={label} className={cn('flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-[10px] text-[11px] font-bold', active ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/60')}>
+                    {label}
+                  </div>
+                ))}
+              </div>
+              {/* Stat grid dummy */}
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { icon: <Users className="text-blue-500" />, label: 'Members', value: '247' },
+                  { icon: <Stamp className="text-brand-gold" />, label: 'Stamps Given', value: '1,432' },
+                  { icon: <Wallet className="text-purple-500" />, label: 'Active Cards', value: '89' },
+                  { icon: <RefreshCw className="text-orange-500" />, label: 'Return Rate', value: '68%' },
+                  { icon: <TrendingUp className="text-green-500" />, label: 'Avg/Wk/User', value: '2.4' },
+                  { icon: <Gift className="text-rose-500" />, label: 'Rewards Given', value: '31' },
+                ].map(({ icon, label, value }) => (
+                  <StatSquare key={label} icon={icon} label={label} value={value} />
+                ))}
+              </div>
+              {/* Bar chart dummy */}
+              <div className="glass-card p-5 rounded-[2rem] space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-brand-navy">Stamps Chart</p>
+                    <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">By week</p>
+                  </div>
+                </div>
+                <div className="flex items-end gap-1.5 h-28">
+                  {[30, 52, 41, 68, 55, 80, 62, 74].map((h, i) => (
+                    <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                      <div className="w-full rounded-t-lg bg-brand-navy/15" style={{ height: `${(h / 80) * 100}%` }} />
+                      <span className="text-[8px] text-brand-navy/40 font-bold">{['2/4','9/4','16/4','23/4','30/4','7/5','14/5','21/5'][i]}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* Recent activity dummy */}
+              <div className="space-y-3">
+                <h3 className="font-display text-xl font-bold">Recent Activity</h3>
+                {[
+                  { name: 'Emma R.', detail: '3 stamps · Coffee House', time: '2m ago' },
+                  { name: 'James T.', detail: '1 stamp · Coffee House', time: '14m ago' },
+                  { name: 'Sofia M.', detail: 'Reward redeemed · Free Coffee', time: '1h ago' },
+                  { name: 'Oliver K.', detail: '2 stamps · Coffee House', time: '2h ago' },
+                ].map(({ name, detail, time }) => (
+                  <div key={name} className="glass-card rounded-2xl px-4 py-3 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-brand-navy/10 flex items-center justify-center shrink-0">
+                      <span className="text-xs font-bold text-brand-navy/60">{name[0]}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-sm text-brand-navy truncate">{name}</p>
+                      <p className="text-xs text-brand-navy/60 truncate">{detail}</p>
+                    </div>
+                    <span className="text-[10px] text-brand-navy/40 font-bold shrink-0">{time}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
           <>
 
           {/* Card type tabs — only show tabs relevant to this store's enabled card types */}
@@ -13685,7 +13749,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
               </div>
             )}
           </div>
-          </> {/* end dashboard content */}
+          </> /* end real dashboard content */
+          )} {/* end needsPayment ternary */}
           </div> {/* end blur wrapper */}
           </div> {/* end relative wrapper */}
         </div>
