@@ -22995,8 +22995,8 @@ function StoreDealsSection({ stores, onViewStore, showAll, onToggleAll, storeDis
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.04 }}
-              className={cn('rounded-[1.5rem] overflow-hidden relative cursor-pointer active:scale-[0.97] transition-transform shadow-md shadow-black/10', showAll ? '' : 'shrink-0 w-40')}
-              style={{ height: '180px' }}
+              className={cn('rounded-[1.5rem] overflow-hidden relative cursor-pointer active:scale-[0.97] transition-transform shadow-md shadow-black/10', showAll ? '' : 'shrink-0 w-28')}
+              style={{ height: '140px' }}
               onClick={() => onViewStore && onViewStore(store)}
             >
               {/* Full-bleed background image */}
@@ -23205,7 +23205,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
                 transition={{ delay: i * 0.04 }}
                 onClick={() => setSelectedOffer(offer)}
                 className="shrink-0 rounded-[1.5rem] overflow-hidden relative cursor-pointer active:scale-[0.97] transition-transform shadow-md shadow-black/10"
-                style={{ width: '160px', height: '180px' }}
+                style={{ width: '220px', height: '130px' }}
               >
                 {/* Full-bleed image */}
                 {offer.imageUrl
