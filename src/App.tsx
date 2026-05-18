@@ -9231,7 +9231,13 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
         const stampsPerVisit = store.membershipStampsPerVisit || 1;
         await updateDoc(doc(db, 'cards', membershipId), {
           membership_visits: increment(stampsPerVisit),
+          total_points_earned: increment(stampsPerVisit),
           last_transaction_at: serverTimestamp(),
+        });
+        await addDoc(collection(db, 'transactions'), {
+          user_id: user.uid, store_id: store.id,
+          card_type: 'membership', membership_type: 'visit',
+          type: 'nfc_co_issue', points_earned: stampsPerVisit, issued_at: serverTimestamp(),
         });
       }
     }
@@ -10019,6 +10025,7 @@ function VisitScanSheet({ card, store, onClose, initialQty }: { card: Card; stor
     try {
       await updateDoc(doc(db, 'cards', card.id), {
         membership_visits: increment(qty),
+        total_points_earned: increment(qty),
         last_transaction_at: serverTimestamp(),
       });
       await addDoc(collection(db, 'transactions'), {
@@ -12234,7 +12241,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
 
   const visitMembers = new Set(visitCards.map(c => c.user_id)).size;
   const totalVisits = visitCards.reduce((s, c) => s + (c.total_visits || 0) + (c.membership_visits || 0), 0);
-  const visitPointsGiven = visitCards.reduce((s, c) => s + (c.total_points_earned || 0), 0);
+  const visitPointsGiven = visitCards.reduce((s, c) =>
+    s + (c.card_type === 'membership' ? (c.membership_visits || 0) : (c.total_points_earned || 0)), 0);
   const visitPointsRedeemed = visitCards.reduce((s, c) => s + (c.total_points_redeemed || 0) + (c.total_visits_redeemed || 0), 0);
   const visitActiveCards = visitCards.filter(c => !c.isArchived).length;
   const visitReturning = visitCards.filter(c => (c.total_visits || 0) + (c.membership_visits || 0) > 1).length;
@@ -13340,7 +13348,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                           const ts = (tx.issued_at ?? tx.completed_at)?.toMillis?.() ?? ((tx.issued_at ?? tx.completed_at)?.seconds ?? 0) * 1000;
                           return ts >= start && ts < end;
                         })
-                        .reduce((sum, tx) => sum + (tx.stamps_per_visit || tx.visit_points || 1), 0);
+                        .reduce((sum, tx) => sum + (tx.stamps_per_visit || tx.points_earned || tx.visit_points || 1), 0);
                       const d = new Date(start);
                       periods.push({ label: `${d.getDate()}/${d.getMonth() + 1}`, count });
                     }
