@@ -12934,116 +12934,70 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
       )}
 
       {activeTab === 'home' && (
-        <div className="space-y-6">
-          <header>
-            <h2 className="font-display text-3xl font-bold mb-1">Dashboard</h2>
-            <p className="text-brand-navy/75">{store?.name || 'Your Store'}</p>
-          </header>
-
-          {/* Trial / subscription banner */}
-          {isInTrial && (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3">
-              <Clock size={20} className="text-amber-500 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-amber-800 text-sm">
-                  Free trial — {trialCountdown} remaining
-                </p>
-                <p className="text-amber-600 text-xs truncate">Subscribe before your trial ends to keep access.</p>
+        needsPayment ? (
+          /* ── Out-of-trial paywall: landing page → blurred preview ── */
+          <div className="-mx-6 -mt-4">
+            {/* Hero — full-bleed gradient */}
+            <div className="relative overflow-hidden px-6 pt-14 pb-10 text-white"
+              style={{ background: 'linear-gradient(160deg, #0f172a 0%, #1e3a5f 45%, #2563eb 100%)' }}>
+              <div className="shine-ray" />
+              <div className="relative z-10">
+                <div className="w-14 h-14 bg-white/15 rounded-[1.25rem] flex items-center justify-center mb-6 border border-white/20">
+                  <LayoutDashboard size={26} className="text-white" />
+                </div>
+                <h1 className="font-display text-3xl font-bold leading-tight mb-3">Unlock Your Business Dashboard</h1>
+                <p className="text-white/75 text-sm leading-relaxed">Everything you need to grow your loyalty programme — in one place.</p>
               </div>
+            </div>
+
+            {/* Feature grid */}
+            <div className="px-6 pt-6 pb-2 bg-white">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-4">What's included</p>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { icon: <TrendingUp size={18} className="text-blue-500" />, label: 'Live Analytics', desc: 'Stamps, visits & spend trends at a glance' },
+                  { icon: <Users size={18} className="text-purple-500" />, label: 'Customer Insights', desc: "Who's visiting, how often, what they earn" },
+                  { icon: <BarChart2 size={18} className="text-emerald-500" />, label: 'Weekly Reports', desc: 'Charts to track growth week over week' },
+                  { icon: <Gift size={18} className="text-rose-500" />, label: 'Reward Tracking', desc: 'Every reward given and redeemed' },
+                  { icon: <MessageSquare size={18} className="text-amber-500" />, label: 'Broadcast', desc: 'Message all your customers at once' },
+                  { icon: <Stamp size={18} className="text-brand-gold" />, label: 'Issue Stamps', desc: 'Via QR, NFC, or manual entry' },
+                ].map(({ icon, label, desc }) => (
+                  <div key={label} className="rounded-[1.25rem] border border-brand-navy/8 bg-brand-bg p-4">
+                    <div className="mb-2">{icon}</div>
+                    <p className="font-bold text-brand-navy text-xs">{label}</p>
+                    <p className="text-brand-navy/50 text-[10px] mt-0.5 leading-tight">{desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* CTA + notes */}
+            <div className="px-6 py-6 bg-white space-y-3">
               <button
                 onClick={handleSubscribe}
-                className="bg-amber-500 text-white text-xs font-bold px-3 py-1.5 rounded-xl shrink-0 active:scale-95 transition-transform"
+                className="w-full bg-brand-navy text-white font-bold py-4 rounded-2xl active:scale-[0.98] transition-transform text-base"
               >
-                Subscribe
+                Subscribe Now — $50/month
               </button>
-            </div>
-          )}
-          {isSubscribed && (
-            <div className="bg-green-50 border border-green-200 rounded-2xl p-3 flex items-center gap-3">
-              <CheckCircle2 size={18} className="text-green-500 shrink-0" />
-              <p className="text-green-700 text-sm font-bold flex-1">Subscription active</p>
-              <button
-                onClick={handleManageBilling}
-                disabled={isLoadingCheckout}
-                className="text-green-600 text-xs font-bold underline underline-offset-2 disabled:opacity-50"
-              >
-                Manage
-              </button>
-            </div>
-          )}
-
-          {/* Dashboard content — blurred + locked overlay when payment needed */}
-          <div className="relative">
-          {needsPayment && (
-            <div className="absolute inset-0 z-20 flex flex-col items-start justify-start pt-4 pb-10 overflow-y-auto">
-              <div className="w-full space-y-5">
-                {/* Hero */}
-                <div className="rounded-[2rem] overflow-hidden" style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 100%)' }}>
-                  <div className="px-6 pt-8 pb-6 text-white">
-                    <div className="w-12 h-12 bg-white/15 rounded-2xl flex items-center justify-center mb-4">
-                      <LayoutDashboard size={24} className="text-white" />
-                    </div>
-                    <h2 className="font-display text-2xl font-bold mb-2 leading-tight">Unlock Your Business Dashboard</h2>
-                    <p className="text-white/75 text-sm leading-relaxed">Everything you need to grow your loyalty programme — in one place.</p>
-                  </div>
-                  {/* Feature highlights */}
-                  <div className="px-6 pb-6 grid grid-cols-2 gap-3">
-                    {[
-                      { icon: <TrendingUp size={16} />, label: 'Live Analytics', desc: 'Stamps, visits & spend trends at a glance' },
-                      { icon: <Users size={16} />, label: 'Customer Insights', desc: "Who's visiting, how often, and what they earn" },
-                      { icon: <BarChart2 size={16} />, label: 'Weekly Reports', desc: 'Charts to track growth week over week' },
-                      { icon: <Gift size={16} />, label: 'Reward Tracking', desc: 'See every reward given and redeemed' },
-                    ].map(({ icon, label, desc }) => (
-                      <div key={label} className="bg-white/10 rounded-2xl p-3">
-                        <div className="text-brand-gold mb-1.5">{icon}</div>
-                        <p className="text-white font-bold text-xs">{label}</p>
-                        <p className="text-white/60 text-[10px] mt-0.5 leading-tight">{desc}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* More benefits */}
-                <div className="bg-white rounded-[1.5rem] border border-brand-navy/8 p-5 space-y-3">
-                  <p className="font-bold text-brand-navy text-sm">What's included</p>
-                  {[
-                    'Real-time stamp & points activity feed',
-                    'Member count, return rate & avg visits',
-                    'Revenue charts by day or week',
-                    'Broadcast messages to all customers',
-                    'Issue stamps manually or via QR / NFC',
-                  ].map(b => (
-                    <div key={b} className="flex items-center gap-2.5">
-                      <CheckCircle2 size={15} className="text-green-500 shrink-0" />
-                      <p className="text-sm text-brand-navy/80">{b}</p>
-                    </div>
-                  ))}
-                </div>
-
-                {/* CTA */}
-                <button
-                  onClick={handleSubscribe}
-                  className="w-full bg-brand-navy text-white font-bold py-4 rounded-2xl active:scale-[0.98] transition-transform text-base"
-                >
-                  Subscribe Now — $50/month
-                </button>
-
-                {/* Disclaimer */}
-                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
-                  <Clock size={16} className="text-amber-500 shrink-0 mt-0.5" />
-                  <p className="text-amber-800 text-xs leading-relaxed">
-                    <span className="font-bold">Once payment is made,</span> our team will review and manually grant access to your dashboard. This usually takes less than 24 hours.
-                  </p>
-                </div>
-
-                <p className="text-center text-xs text-brand-navy/50">Secure payment via Stripe. Cancel anytime.</p>
+              <p className="text-center text-xs text-brand-navy/40">Secure payment via Stripe · Cancel anytime</p>
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+                <Clock size={15} className="text-amber-500 shrink-0 mt-0.5" />
+                <p className="text-amber-800 text-xs leading-relaxed">
+                  <span className="font-bold">After payment,</span> our team will manually grant access — usually within 24 hours.
+                </p>
               </div>
             </div>
-          )}
 
-          <div className={needsPayment ? 'pointer-events-none select-none' : ''}>
-          {needsPayment ? (
-            /* ── Dummy preview: frames + labels visible, data blurred ── */
+            {/* Scroll cue */}
+            <div className="bg-white px-6 pb-6 flex flex-col items-center gap-1">
+              <p className="text-[11px] text-brand-navy/35 font-semibold">Scroll to preview your dashboard</p>
+              <ChevronDown size={16} className="text-brand-navy/25 animate-bounce" />
+            </div>
+
+            {/* Blurred preview — flows below landing page */}
+          <div className="relative pointer-events-none select-none bg-brand-bg px-6 pt-4 pb-20">
+            <div className="absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-white to-transparent z-10" />
+
             <div className="space-y-5">
               {/* Tab switcher — fully visible structural frame */}
               <div className="flex p-1 bg-brand-navy/8 rounded-2xl gap-1">
@@ -13109,7 +13063,38 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                 ))}
               </div>
             </div>
-          ) : (
+            <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-brand-bg to-transparent z-10" />
+          </div>
+          </div>
+        ) : (
+          /* ── Normal dashboard ── */
+          <div className="space-y-6">
+          <header>
+            <h2 className="font-display text-3xl font-bold mb-1">Dashboard</h2>
+            <p className="text-brand-navy/75">{store?.name || 'Your Store'}</p>
+          </header>
+
+          {/* Trial / subscription banner */}
+          {isInTrial && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3">
+              <Clock size={20} className="text-amber-500 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-amber-800 text-sm">Free trial — {trialCountdown} remaining</p>
+                <p className="text-amber-600 text-xs truncate">Subscribe before your trial ends to keep access.</p>
+              </div>
+              <button onClick={handleSubscribe} className="bg-amber-500 text-white text-xs font-bold px-3 py-1.5 rounded-xl shrink-0 active:scale-95 transition-transform">
+                Subscribe
+              </button>
+            </div>
+          )}
+          {isSubscribed && (
+            <div className="bg-green-50 border border-green-200 rounded-2xl p-3 flex items-center gap-3">
+              <CheckCircle2 size={18} className="text-green-500 shrink-0" />
+              <p className="text-green-700 text-sm font-bold flex-1">Subscription active</p>
+              <button onClick={handleManageBilling} disabled={isLoadingCheckout} className="text-green-600 text-xs font-bold underline underline-offset-2 disabled:opacity-50">Manage</button>
+            </div>
+          )}
+
           <>
 
           {/* Card type tabs — only show tabs relevant to this store's enabled card types */}
@@ -13997,11 +13982,9 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
               </div>
             )}
           </div>
-          </> /* end real dashboard content */
-          )} {/* end needsPayment ternary */}
-          </div> {/* end blur wrapper */}
-          </div> {/* end relative wrapper */}
-        </div>
+          </>
+          </div>
+        )
       )}
 
       {activeTab === 'discover' && (
