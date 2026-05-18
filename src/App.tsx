@@ -22581,7 +22581,6 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
           </div>
         </div>
       </div>
-      </div>
       {showImage && <img src={post.postImageUrl} alt="" className="w-full object-cover max-h-72 mb-3" />}
       <div className="px-4">
 
