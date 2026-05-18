@@ -12000,7 +12000,19 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   const [statModal, setStatModal] = useState<null | 'members' | 'stamps' | 'activeCards'>(null);
   const [statModalSearch, setStatModalSearch] = useState('');
   const [statModalVisible, setStatModalVisible] = useState(10);
+  const availableDashTabs = (
+    [
+      store?.cardEnabled !== false ? 'stamps' : null,
+      store?.membershipEnabled && store?.membershipType === 'spend' ? 'spend' : null,
+      store?.membershipEnabled && store?.membershipType === 'visit' ? 'visit' : null,
+    ] as ('stamps' | 'spend' | 'visit' | null)[]
+  ).filter((t): t is 'stamps' | 'spend' | 'visit' => t !== null);
   const [dashTab, setDashTab] = useState<'stamps' | 'spend' | 'visit'>('stamps');
+  useEffect(() => {
+    if (availableDashTabs.length > 0 && !availableDashTabs.includes(dashTab)) {
+      setDashTab(availableDashTabs[0]);
+    }
+  }, [store?.cardEnabled, store?.membershipEnabled, store?.membershipType]);
   const [spendChartMode, setSpendChartMode] = useState<'days' | 'weeks'>('weeks');
   const [spendChartOffset, setSpendChartOffset] = useState(0);
   const [visitChartMode, setVisitChartMode] = useState<'days' | 'weeks'>('weeks');
@@ -12716,48 +12728,86 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
             </div>
           )}
 
-          {/* Paywall — shown when trial expired and no active subscription */}
-          {needsPayment ? (
-            <div className="flex flex-col items-center justify-center py-12 space-y-6">
-              <div className="glass-card rounded-[2rem] p-8 w-full space-y-5 text-center">
-                <div className="w-16 h-16 bg-brand-navy rounded-full flex items-center justify-center mx-auto">
-                  <Lock size={28} className="text-white" />
+          {/* Dashboard content — blurred + locked overlay when payment needed */}
+          <div className="relative">
+          {needsPayment && (
+            <div className="absolute inset-0 z-20 flex flex-col items-start justify-start pt-4 pb-10 overflow-y-auto">
+              <div className="w-full space-y-5">
+                {/* Hero */}
+                <div className="rounded-[2rem] overflow-hidden" style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 100%)' }}>
+                  <div className="px-6 pt-8 pb-6 text-white">
+                    <div className="w-12 h-12 bg-white/15 rounded-2xl flex items-center justify-center mb-4">
+                      <LayoutDashboard size={24} className="text-white" />
+                    </div>
+                    <h2 className="font-display text-2xl font-bold mb-2 leading-tight">Unlock Your Business Dashboard</h2>
+                    <p className="text-white/75 text-sm leading-relaxed">Everything you need to grow your loyalty programme — in one place.</p>
+                  </div>
+                  {/* Feature highlights */}
+                  <div className="px-6 pb-6 grid grid-cols-2 gap-3">
+                    {[
+                      { icon: <TrendingUp size={16} />, label: 'Live Analytics', desc: 'Stamps, visits & spend trends at a glance' },
+                      { icon: <Users size={16} />, label: 'Customer Insights', desc: "Who's visiting, how often, and what they earn" },
+                      { icon: <BarChart2 size={16} />, label: 'Weekly Reports', desc: 'Charts to track growth week over week' },
+                      { icon: <Gift size={16} />, label: 'Reward Tracking', desc: 'See every reward given and redeemed' },
+                    ].map(({ icon, label, desc }) => (
+                      <div key={label} className="bg-white/10 rounded-2xl p-3">
+                        <div className="text-brand-gold mb-1.5">{icon}</div>
+                        <p className="text-white font-bold text-xs">{label}</p>
+                        <p className="text-white/60 text-[10px] mt-0.5 leading-tight">{desc}</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div>
-                  <h2 className="font-display text-2xl font-bold mb-1">Trial Ended</h2>
-                  <p className="text-brand-navy/75 text-sm">Subscribe to continue using your vendor dashboard and issue stamps.</p>
+
+                {/* More benefits */}
+                <div className="bg-white rounded-[1.5rem] border border-brand-navy/8 p-5 space-y-3">
+                  <p className="font-bold text-brand-navy text-sm">What's included</p>
+                  {[
+                    'Real-time stamp & points activity feed',
+                    'Member count, return rate & avg visits',
+                    'Revenue charts by day or week',
+                    'Broadcast messages to all customers',
+                    'Issue stamps manually or via QR / NFC',
+                  ].map(b => (
+                    <div key={b} className="flex items-center gap-2.5">
+                      <CheckCircle2 size={15} className="text-green-500 shrink-0" />
+                      <p className="text-sm text-brand-navy/80">{b}</p>
+                    </div>
+                  ))}
                 </div>
-                <div className="bg-brand-bg rounded-2xl p-5">
-                  <p className="font-display font-bold text-4xl">
-                    $50
-                    <span className="text-lg font-normal text-brand-navy/80">/month</span>
-                  </p>
-                  <ul className="mt-3 space-y-1 text-sm text-brand-navy/70 text-left max-w-[220px] mx-auto">
-                    <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-green-500 shrink-0" />Full vendor dashboard</li>
-                    <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-green-500 shrink-0" />Unlimited stamp issuing</li>
-                    <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-green-500 shrink-0" />Analytics &amp; reports</li>
-                    <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-green-500 shrink-0" />Customer broadcasts</li>
-                  </ul>
-                </div>
+
+                {/* CTA */}
                 <button
                   onClick={handleSubscribe}
-                  className="w-full bg-brand-navy text-white font-bold py-4 rounded-2xl active:scale-[0.98] transition-transform"
+                  className="w-full bg-brand-navy text-white font-bold py-4 rounded-2xl active:scale-[0.98] transition-transform text-base"
                 >
                   Subscribe Now — $50/month
                 </button>
-                <p className="text-xs text-brand-navy/72">Secure payment via Stripe. Cancel anytime.</p>
+
+                {/* Disclaimer */}
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+                  <Clock size={16} className="text-amber-500 shrink-0 mt-0.5" />
+                  <p className="text-amber-800 text-xs leading-relaxed">
+                    <span className="font-bold">Once payment is made,</span> our team will review and manually grant access to your dashboard. This usually takes less than 24 hours.
+                  </p>
+                </div>
+
+                <p className="text-center text-xs text-brand-navy/50">Secure payment via Stripe. Cancel anytime.</p>
               </div>
             </div>
-          ) : (
+          )}
+
+          <div className={needsPayment ? 'blur-sm pointer-events-none select-none' : ''}>
           <>
 
-          {/* Card type tabs */}
+          {/* Card type tabs — only show tabs relevant to this store's enabled card types */}
+          {availableDashTabs.length > 1 && (
           <div className="flex p-1 bg-brand-navy/8 rounded-2xl gap-1">
             {([
               { key: 'stamps' as const, label: 'Stamps', icon: <Stamp size={13} />, active: 'text-brand-gold' },
               { key: 'spend' as const, label: 'Spend Pts', icon: <DollarSign size={13} />, active: 'text-emerald-500' },
               { key: 'visit' as const, label: 'Visit Pts', icon: <MapPin size={13} />, active: 'text-blue-500' },
-            ] as const).map(({ key, label, icon, active }) => (
+            ] as const).filter(({ key }) => availableDashTabs.includes(key)).map(({ key, label, icon, active }) => (
               <button
                 key={key}
                 onClick={() => { setDashTab(key); setStatModal(null); }}
@@ -12768,6 +12818,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
               </button>
             ))}
           </div>
+          )}
 
           {/* ===== STAMPS TAB ===== */}
           {dashTab === 'stamps' && (
@@ -13634,8 +13685,9 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
               </div>
             )}
           </div>
-          </> /* end non-paywall content */
-          )} {/* end needsPayment ternary */}
+          </> {/* end dashboard content */}
+          </div> {/* end blur wrapper */}
+          </div> {/* end relative wrapper */}
         </div>
       )}
 
