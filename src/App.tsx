@@ -23195,41 +23195,41 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
               View all <ChevronRight size={14} />
             </button>
           </div>
-          {/* Preview — 3 rotating offers */}
-          <div className="space-y-2">
-            {visibleOffers.map(offer => (
-              <button
+          {/* Preview — horizontal image tiles */}
+          <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            {visibleOffers.map((offer, i) => (
+              <motion.button
                 key={offer.id}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: i * 0.04 }}
                 onClick={() => setSelectedOffer(offer)}
-                className="w-full text-left glass-card rounded-[1.25rem] overflow-hidden flex items-stretch active:scale-[0.98] transition-transform"
+                className="shrink-0 rounded-[1.5rem] overflow-hidden relative cursor-pointer active:scale-[0.97] transition-transform shadow-md shadow-black/10"
+                style={{ width: '160px', height: '180px' }}
               >
-                {offer.imageUrl ? (
-                  <img src={offer.imageUrl} alt="" className="w-20 h-20 object-cover shrink-0" />
-                ) : (
-                  <div className="w-20 h-20 gradient-logo-blue shrink-0 flex items-center justify-center">
-                    <Ticket size={24} className="text-white/60" />
+                {/* Full-bleed image */}
+                {offer.imageUrl
+                  ? <img src={offer.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                  : <div className="absolute inset-0 gradient-logo-blue flex items-center justify-center"><Ticket size={28} className="text-white/40" /></div>}
+
+                {/* Dark overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+                {/* Red savings badge top-left */}
+                {(offer.value ?? 0) > 0 && (
+                  <div className="absolute top-2.5 left-2.5 bg-red-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-sm max-w-[80%] truncate">
+                    Save ${offer.value!.toFixed(2)}
                   </div>
                 )}
-                <div className="flex-1 min-w-0 px-4 py-3">
-                  <p className="font-bold text-brand-navy text-sm truncate">{offer.title}</p>
-                  <p className="text-xs text-brand-navy/80 mt-0.5">{offer.storeName}</p>
-                  {(offer.value ?? 0) > 0 && (
-                    <p className="text-xs font-bold text-emerald-600 mt-0.5">Save ${offer.value!.toFixed(2)}</p>
-                  )}
-                  <p className="text-xs text-brand-navy/75 mt-0.5 line-clamp-1">{offer.description}</p>
+
+                {/* Bottom text */}
+                <div className="absolute bottom-0 left-0 right-0 px-3 pb-3 pt-6">
+                  <p className="font-extrabold text-white text-xs leading-snug line-clamp-2">{offer.title}</p>
+                  <p className="text-white/60 text-[9px] font-medium mt-0.5">{offer.storeName}</p>
                 </div>
-                <div className="flex items-center pr-3">
-                  <ChevronRight size={16} className="text-brand-navy/72" />
-                </div>
-              </button>
+              </motion.button>
             ))}
           </div>
-          <button
-            onClick={() => setShowOffersModal(true)}
-            className="w-full py-3 rounded-2xl border-2 border-dashed border-brand-navy/10 text-sm font-bold text-brand-navy/75 active:opacity-60 transition-opacity"
-          >
-            See more
-          </button>
         </div>
       )}
 
