@@ -1592,15 +1592,15 @@ export default function App() {
       <header className="glass-panel sticky top-0 z-50 px-5 py-3.5 flex items-center justify-between">
         <button
           onClick={() => setShowCreatePost(true)}
-          className="w-9 h-9 gradient-red rounded-xl flex items-center justify-center shadow-md shadow-blue-500/20 active:scale-95 transition-transform"
+          className="w-9 h-9 bg-black rounded-xl flex items-center justify-center shadow-sm active:scale-95 transition-transform"
         >
           <Plus className="w-5 h-5 text-white" />
         </button>
-        <button onClick={() => setShowSettings(true)} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-          <div className="w-7 h-7 gradient-red rounded-lg flex items-center justify-center">
+        <button onClick={() => setShowSettings(true)} className="flex items-center gap-2 hover:opacity-70 transition-opacity">
+          <div className="w-7 h-7 bg-black rounded-lg flex items-center justify-center">
             <Sparkles className="w-4 h-4 text-white" />
           </div>
-          <h1 className="font-display font-bold text-xl tracking-tight"><span className="text-brand-gold">Li</span>nq</h1>
+          <h1 className="font-display font-bold text-xl tracking-tight text-black">Linq</h1>
         </button>
         <div className="flex items-center gap-0.5">
           {['consumer','admin'].includes(profile?.role ?? '') && (
@@ -1610,7 +1610,7 @@ export default function App() {
             >
               <MessageCircle className="w-6 h-6" />
               {unreadMessages > 0 && (
-                <span className="absolute top-1 right-1 w-2 h-2 bg-brand-rose rounded-full border-2 border-white" />
+                <span className="absolute top-1 right-1 w-2 h-2 bg-black rounded-full border-2 border-white" />
               )}
             </button>
           )}
@@ -1824,22 +1824,22 @@ export default function App() {
             onClick={() => { setActiveTab('home'); setViewingStore(null); setViewingUser(null); }}
             className="flex-1 flex flex-col items-center gap-1 -mb-1 -mt-7 transition-all"
           >
-            <div className="relative overflow-hidden w-[58px] h-[58px] rounded-full gradient-logo-blue shadow-lg shadow-blue-500/30 flex items-center justify-center active:scale-95 transition-transform">
+            <div className={cn("relative overflow-hidden w-[58px] h-[58px] rounded-full flex items-center justify-center active:scale-95 transition-transform shadow-lg shadow-black/20", activeTab === 'home' ? "bg-black ring-2 ring-black" : "bg-black")}>
               <span className="card-shine-ray" aria-hidden="true" />
               <Wallet size={26} className="text-white relative z-10" />
             </div>
-            <span className={cn("text-[10px] font-bold uppercase tracking-wider", activeTab === 'home' ? "text-brand-gold" : "text-brand-navy/75")}>Wallet</span>
+            <span className={cn("text-[10px] font-bold uppercase tracking-wider", activeTab === 'home' ? "text-black" : "text-neutral-400")}>Wallet</span>
           </button>
         ) : vendorQREnabled ? (
           <button
             onClick={() => setShowVendorQR(true)}
             className="flex-1 flex flex-col items-center gap-1 -mb-1 -mt-7 transition-all"
           >
-            <div className="relative overflow-hidden w-[58px] h-[58px] rounded-full gradient-logo-blue shadow-lg shadow-blue-500/30 flex items-center justify-center active:scale-95 transition-transform">
+            <div className="relative overflow-hidden w-[58px] h-[58px] rounded-full bg-black shadow-lg shadow-black/20 flex items-center justify-center active:scale-95 transition-transform">
               <span className="card-shine-ray" aria-hidden="true" />
               <QrCode size={26} className="text-white relative z-10" />
             </div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-brand-navy/75">QR Code</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">QR Code</span>
           </button>
         ) : null}
         <NavButton
@@ -2979,20 +2979,23 @@ function NavButton({ active, onClick, icon, label, badgeCount }: { active: boole
   return (
     <button
       onClick={onClick}
-      className={cn(
-        "flex-1 flex flex-col items-center gap-1 transition-all relative",
-        active ? "text-white" : "text-brand-navy/75 hover:text-brand-navy/75"
-      )}
+      className="flex-1 flex flex-col items-center gap-1 transition-all relative"
     >
       <div className={cn(
         "p-2 rounded-xl transition-all",
-        active ? "gradient-red shadow-md shadow-blue-500/20" : ""
+        active ? "bg-black ring-2 ring-black" : ""
       )}>
-        {React.cloneElement(icon as React.ReactElement, { size: 24 })}
+        {React.cloneElement(icon as React.ReactElement, {
+          size: 22,
+          className: active ? "text-white" : "text-neutral-400",
+        })}
       </div>
-      <span className={cn("text-[10px] font-bold uppercase tracking-wider", active && "text-brand-gold")}>{label}</span>
+      <span className={cn(
+        "text-[10px] font-bold uppercase tracking-wider",
+        active ? "text-black" : "text-neutral-400"
+      )}>{label}</span>
       {badgeCount !== undefined && badgeCount > 0 && (
-        <span className="absolute top-0 right-2 w-4 h-4 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center border-2 border-white">
+        <span className="absolute top-0 right-2 w-4 h-4 bg-black text-white text-[8px] font-bold rounded-full flex items-center justify-center border-2 border-white">
           {badgeCount > 9 ? '9+' : badgeCount}
         </span>
       )}
