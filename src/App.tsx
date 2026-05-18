@@ -8681,6 +8681,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           onViewStore={onViewStore}
           userCards={initialCards}
           onViewChallenge={(c) => { setActiveTab('home'); setWalletSubTab('challenges'); setHighlightedChallengeId(c.id); }}
+          onNavigate={(tab) => setActiveTab(tab)}
         />
       )}
 
@@ -22964,24 +22965,23 @@ function DealSliderSection({ title, icon, challenges, onViewStore, onViewChallen
   );
 }
 
-function StoreDealsSection({ stores, onViewStore, showAll, onToggleAll, storeDistances }: {
-  stores: StoreProfile[]; onViewStore?: (s: StoreProfile) => void; showAll: boolean; onToggleAll: () => void; storeDistances?: Map<string, number>;
+function StoreDealsSection({ stores, onViewStore, storeDistances, onNavigate }: {
+  stores: StoreProfile[]; onViewStore?: (s: StoreProfile) => void; storeDistances?: Map<string, number>; onNavigate?: (tab: string) => void;
 }) {
   if (stores.length === 0) return null;
-  const visible = showAll ? stores : stores.slice(0, 8);
   return (
     <div>
       <div className="flex items-center gap-1.5 mb-3 px-1">
         <Gift size={15} className="text-brand-rose" />
         <h3 className="font-extrabold text-brand-navy text-sm flex-1">Hot Deals</h3>
-        {stores.length > 5 && (
-          <button onClick={onToggleAll} className="text-[10px] font-bold text-brand-navy/75 flex items-center gap-0.5">
-            {showAll ? 'Less' : `All ${stores.length}`} <ChevronDown size={10} className={cn('transition-transform', showAll && 'rotate-180')} />
+        {onNavigate && (
+          <button onClick={() => onNavigate('discover')} className="text-[10px] font-bold text-brand-navy/75 flex items-center gap-0.5">
+            See all <ChevronRight size={10} />
           </button>
         )}
       </div>
-      <div className={cn('pb-2', showAll ? 'grid grid-cols-2 gap-3' : 'flex gap-3 overflow-x-auto')} style={!showAll ? { scrollbarWidth: 'none', msOverflowStyle: 'none' } : {}}>
-        {visible.map((store, i) => {
+      <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        {stores.map((store, i) => {
           const finalReward = store.rewardTiers?.length
             ? [...store.rewardTiers].sort((a, b) => b.stamps - a.stamps)[0]?.reward
             : store.reward;
@@ -22995,7 +22995,7 @@ function StoreDealsSection({ stores, onViewStore, showAll, onToggleAll, storeDis
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.04 }}
-              className={cn('rounded-[1.5rem] overflow-hidden relative cursor-pointer active:scale-[0.97] transition-transform shadow-md shadow-black/10', showAll ? '' : 'shrink-0 w-28')}
+              className="shrink-0 w-28 rounded-[1.5rem] overflow-hidden relative cursor-pointer active:scale-[0.97] transition-transform shadow-md shadow-black/10"
               style={{ height: '140px' }}
               onClick={() => onViewStore && onViewStore(store)}
             >
@@ -23027,20 +23027,18 @@ function StoreDealsSection({ stores, onViewStore, showAll, onToggleAll, storeDis
   );
 }
 
-function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge, userCards = [] }: {
-  currentUser?: FirebaseUser; currentProfile?: UserProfile | null; onViewStore?: (s: StoreProfile) => void; onViewChallenge?: (c: Challenge) => void; userCards?: Card[];
+function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge, onNavigate, userCards = [] }: {
+  currentUser?: FirebaseUser; currentProfile?: UserProfile | null; onViewStore?: (s: StoreProfile) => void; onViewChallenge?: (c: Challenge) => void; onNavigate?: (tab: string) => void; userCards?: Card[];
 }) {
   const [allStores, setAllStores] = useState<StoreProfile[]>([]);
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [storeOffers, setStoreOffers] = useState<StoreOffer[]>([]);
-  const [showAllHot, setShowAllHot] = useState(false);
   const [showAllExp, setShowAllExp] = useState(false);
   const [showAllSvc, setShowAllSvc] = useState(false);
   const [showAllProd, setShowAllProd] = useState(false);
   const [showOffersModal, setShowOffersModal] = useState(false);
   const [showBirthdaySheet, setShowBirthdaySheet] = useState(false);
   const [selectedOffer, setSelectedOffer] = useState<StoreOffer | null>(null);
-  const [offerIndex, setOfferIndex] = useState(0);
   const [dealsBdayCountdown, setDealsBdayCountdown] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
   const [storeDistances, setStoreDistances] = useState<Map<string, number>>(new Map());
 
@@ -23106,16 +23104,6 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
     }, () => {});
   }, []);
 
-  useEffect(() => {
-    if (storeOffers.length <= 3) return;
-    const id = setInterval(() => setOfferIndex(i => (i + 1) % storeOffers.length), 5000);
-    return () => clearInterval(id);
-  }, [storeOffers.length]);
-
-  const visibleOffers = storeOffers.length <= 3
-    ? storeOffers
-    : [0, 1, 2].map(i => storeOffers[(offerIndex + i) % storeOffers.length]);
-
   const storeDeals = allStores.filter(s => s.reward || s.stamps_required_for_reward);
   const experiences = challenges.filter(c => c.rewardTag === 'experience');
   const services = challenges.filter(c => c.rewardTag === 'service');
@@ -23175,63 +23163,53 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
       <StoreDealsSection
         stores={storeDeals}
         onViewStore={onViewStore}
-        showAll={showAllHot}
-        onToggleAll={() => setShowAllHot(v => !v)}
         storeDistances={storeDistances}
+        onNavigate={onNavigate}
       />
 
       {/* Store Offers section */}
-      {storeOffers.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+      {storeOffers.length > 0 && (() => {
+        const cats: { label: string; icon: React.ReactNode; offers: StoreOffer[] }[] = [
+          { label: 'Products',    icon: <Package size={13} className="text-emerald-500" />,  offers: storeOffers.filter(o => o.category === 'product'   || o.category === 'Products')   },
+          { label: 'Experiences', icon: <Star size={13} className="text-purple-500" />,       offers: storeOffers.filter(o => o.category === 'experience' || o.category === 'Experiences') },
+          { label: 'Services',    icon: <Tag size={13} className="text-sky-500" />,           offers: storeOffers.filter(o => o.category === 'service'    || o.category === 'Services')   },
+          { label: 'Other',       icon: <Ticket size={13} className="text-violet-500" />,     offers: storeOffers.filter(o => !['product','Products','experience','Experiences','service','Services'].includes(o.category)) },
+        ].filter(c => c.offers.length > 0);
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 px-1">
               <Ticket size={15} className="text-violet-500" />
               <h2 className="font-bold text-brand-navy text-sm">Store Offers</h2>
             </div>
-            <button
-              onClick={() => setShowOffersModal(true)}
-              className="text-xs font-bold text-blue-600 flex items-center gap-1"
-            >
-              View all <ChevronRight size={14} />
-            </button>
-          </div>
-          {/* Preview — horizontal image tiles */}
-          <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-            {visibleOffers.map((offer, i) => (
-              <motion.button
-                key={offer.id}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: i * 0.04 }}
-                onClick={() => setSelectedOffer(offer)}
-                className="shrink-0 rounded-[1.5rem] overflow-hidden relative cursor-pointer active:scale-[0.97] transition-transform shadow-md shadow-black/10"
-                style={{ width: '220px', height: '130px' }}
-              >
-                {/* Full-bleed image */}
-                {offer.imageUrl
-                  ? <img src={offer.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                  : <div className="absolute inset-0 gradient-logo-blue flex items-center justify-center"><Ticket size={28} className="text-white/40" /></div>}
-
-                {/* Dark overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-
-                {/* Red savings badge top-left */}
-                {(offer.value ?? 0) > 0 && (
-                  <div className="absolute top-2.5 left-2.5 bg-red-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-sm max-w-[80%] truncate">
-                    Save ${offer.value!.toFixed(2)}
-                  </div>
-                )}
-
-                {/* Bottom text */}
-                <div className="absolute bottom-0 left-0 right-0 px-3 pb-3 pt-6">
-                  <p className="font-extrabold text-white text-xs leading-snug line-clamp-2">{offer.title}</p>
-                  <p className="text-white/60 text-[9px] font-medium mt-0.5">{offer.storeName}</p>
+            {cats.map(cat => (
+              <div key={cat.label} className="space-y-1.5">
+                <div className="flex items-center gap-1.5 px-1">
+                  {cat.icon}
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/50">{cat.label}</p>
                 </div>
-              </motion.button>
+                {cat.offers.map(offer => (
+                  <button
+                    key={offer.id}
+                    onClick={() => setSelectedOffer(offer)}
+                    className="w-full text-left bg-white rounded-2xl px-4 py-3 flex items-center gap-3 active:scale-[0.98] transition-transform border border-brand-navy/5 shadow-sm"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-brand-navy text-sm leading-tight truncate">{offer.title}</p>
+                      <p className="text-brand-navy/50 text-[11px] mt-0.5 truncate">{offer.storeName}</p>
+                    </div>
+                    {(offer.value ?? 0) > 0 && (
+                      <span className="shrink-0 bg-red-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full">
+                        Save ${offer.value!.toFixed(2)}
+                      </span>
+                    )}
+                    <ChevronRight size={14} className="text-brand-navy/30 shrink-0" />
+                  </button>
+                ))}
+              </div>
             ))}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       <DealSliderSection
         title="Experiences"
