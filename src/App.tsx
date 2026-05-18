@@ -23045,7 +23045,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
       <button
         onClick={() => setShowBirthdaySheet(true)}
         className="w-full flex items-center gap-4 px-5 py-4 rounded-[1.5rem] active:scale-[0.98] transition-transform relative overflow-hidden"
-        style={{ background: 'linear-gradient(135deg, #be185d 0%, #ec4899 60%, #f9a8d4 100%)' }}
+        style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 55%, #3b82f6 100%)' }}
       >
         {/* Confetti pieces */}
         {[
