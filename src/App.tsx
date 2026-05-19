@@ -5817,6 +5817,8 @@ function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColo
   const [saving, setSaving] = useState(false);
   const [activeThemeId, setActiveThemeId] = useState<string>('teal');
   const [themeCustomHex, setThemeCustomHex] = useState<string>('#0D9488');
+  const [pendingThemeData, setPendingThemeData] = useState<{ themeId: string; customHex?: string } | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
     getDoc(doc(db, 'app_config', 'theme')).then(snap => {
@@ -5831,37 +5833,45 @@ function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColo
     }).catch(() => {});
   }, []);
 
-  const handleThemeColorChange = async (value: string) => {
-    const matchingPreset = THEME_PRESETS.find(
-      t => `linear-gradient(135deg, ${t.g1} 0%, ${t.g3} 100%)` === value
-    );
+  const handleThemeColorChange = (value: string) => {
+    const matchingPreset = THEME_PRESETS.find(t => t.g2 === value);
     if (matchingPreset) {
       setActiveThemeId(matchingPreset.id);
       applyBrandTheme(matchingPreset);
-      await setDoc(doc(db, 'app_config', 'theme'), { themeId: matchingPreset.id }).catch(console.error);
+      setPendingThemeData({ themeId: matchingPreset.id });
     } else if (/^#[0-9a-fA-F]{6}$/i.test(value)) {
       setActiveThemeId('custom');
       setThemeCustomHex(value);
       applyCustomThemeHex(value);
-      await setDoc(doc(db, 'app_config', 'theme'), { themeId: 'custom', customHex: value }).catch(console.error);
+      setPendingThemeData({ themeId: 'custom', customHex: value });
+    }
+    setIsDirty(true);
+  };
+
+  const saveAll = async () => {
+    setSaving(true);
+    try {
+      const payload = Object.fromEntries(
+        (Object.keys(colors) as (keyof UiColors)[]).map(k => {
+          const s = colors[k];
+          return [k, { css: s.css, dark: s.dark, ...(s.textColor ? { textColor: s.textColor } : {}) }];
+        })
+      );
+      await setDoc(doc(db, 'app_config', 'ui_colors'), payload, { merge: true });
+      if (pendingThemeData) {
+        await setDoc(doc(db, 'app_config', 'theme'), pendingThemeData);
+        setPendingThemeData(null);
+      }
+      setIsDirty(false);
+    } finally {
+      setSaving(false);
     }
   };
 
-  const saveColors = async (next: UiColors) => {
-    const payload = Object.fromEntries(
-      (Object.keys(next) as (keyof UiColors)[]).map(k => {
-        const s = next[k];
-        return [k, { css: s.css, dark: s.dark, ...(s.textColor ? { textColor: s.textColor } : {}) }];
-      })
-    );
-    await setDoc(doc(db, 'app_config', 'ui_colors'), payload, { merge: true });
-  };
-
-  const apply = async (next: UiColors) => {
+  const apply = (next: UiColors) => {
     setColors(next);
     onColorsChange(next);
-    setSaving(true);
-    try { await saveColors(next); } finally { setSaving(false); }
+    setIsDirty(true);
   };
 
   const pickBg = (key: keyof UiColors, css: string, dark?: boolean) =>
@@ -5878,18 +5888,15 @@ function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColo
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-display text-2xl font-bold text-brand-navy">UI Colours</h2>
-              <p className="text-xs text-brand-navy/80 mt-0.5">Tap the swatch to pick any colour</p>
+              <p className="text-xs text-brand-navy/80 mt-0.5">Pick colours then tap Save</p>
             </div>
-            <div className="flex items-center gap-2">
-              {saving && <p className="text-[10px] text-brand-navy/40 animate-pulse">Saving…</p>}
-              <button onClick={onClose} className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm active:scale-95 transition-all">
-                <X size={18} className="text-brand-navy/75" />
-              </button>
-            </div>
+            <button onClick={onClose} className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm active:scale-95 transition-all">
+              <X size={18} className="text-brand-navy/75" />
+            </button>
           </div>
         </div>
 
-        <div className="p-5 space-y-7">
+        <div className="p-5 space-y-7 pb-36">
           {/* Brand Theme — rainbow picker */}
           <div className="space-y-2.5">
             <div>
@@ -5899,10 +5906,10 @@ function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColo
             <ColorSwatchPicker
               value={activeThemeId === 'custom'
                 ? themeCustomHex
-                : (() => { const p = THEME_PRESETS.find(t => t.id === activeThemeId); return p ? `linear-gradient(135deg, ${p.g1} 0%, ${p.g3} 100%)` : '#0D9488'; })()
+                : (THEME_PRESETS.find(t => t.id === activeThemeId)?.g2 ?? '#0D9488')
               }
               onChange={handleThemeColorChange}
-              presets={THEME_PRESETS.map(t => ({ id: t.id, label: t.label, css: `linear-gradient(135deg, ${t.g1} 0%, ${t.g3} 100%)` }))}
+              presets={THEME_PRESETS.map(t => ({ id: t.id, label: t.label, css: t.g2 }))}
               label="Tap to pick theme colour"
             />
           </div>
@@ -5941,6 +5948,24 @@ function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColo
           })}
         </div>
       </div>
+
+      <AnimatePresence>
+        {isDirty && (
+          <motion.div
+            initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
+            transition={{ type: 'spring', damping: 22, stiffness: 300 }}
+            className="bg-brand-bg border-t border-brand-navy/8 px-5 py-4 safe-area-pb"
+          >
+            <button
+              onClick={saveAll}
+              disabled={saving}
+              className="w-full gradient-red text-white font-bold py-4 rounded-2xl active:scale-[0.98] transition-all disabled:opacity-60 text-sm tracking-wide"
+            >
+              {saving ? 'Saving…' : 'Save Changes'}
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
