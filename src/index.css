@@ -18,6 +18,14 @@
   --shadow-2xl: 0 28px 56px -10px rgba(17,24,39,0.24);
 }
 
+/* Runtime-overridable gradient stops (set via JS applyBrandTheme) */
+:root {
+  --brand-g1: #0F766E;
+  --brand-g2: #0D9488;
+  --brand-g3: #14B8A6;
+  --brand-g4: #2DD4BF;
+}
+
 @layer base {
   body {
     @apply font-sans antialiased;
@@ -47,11 +55,11 @@
 }
 
 .gradient-red {
-  background: linear-gradient(135deg, #0F766E 0%, #0D9488 50%, #14B8A6 100%);
+  background: linear-gradient(135deg, var(--brand-g1) 0%, var(--brand-g2) 50%, var(--brand-g3) 100%);
 }
 
 .gradient-logo-blue {
-  background: linear-gradient(160deg, #0F766E 0%, #0D9488 40%, #14B8A6 70%, #2DD4BF 100%);
+  background: linear-gradient(160deg, var(--brand-g1) 0%, var(--brand-g2) 40%, var(--brand-g3) 70%, var(--brand-g4) 100%);
 }
 
 .qr-scanner-bg {
@@ -136,11 +144,11 @@
 }
 
 .gradient-card {
-  background: linear-gradient(135deg, rgba(15, 118, 110, 0.95) 0%, rgba(13, 148, 136, 0.98) 100%);
+  background: linear-gradient(135deg, var(--brand-g1) 0%, var(--brand-g2) 100%);
 }
 
 .gradient-soft {
-  background: linear-gradient(135deg, #F0FDFA 0%, #CCFBF1 100%);
+  background: linear-gradient(135deg, var(--color-brand-rose) 0%, var(--color-brand-bg) 100%);
 }
 
 @keyframes scan {

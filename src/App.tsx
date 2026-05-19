@@ -217,6 +217,32 @@ function StoreCategoryIcon({ category, size = 12, className }: { category?: stri
   return <Icon size={size} className={className} />;
 }
 
+// ─── Brand theme presets ──────────────────────────────────────────────────────
+export const THEME_PRESETS = [
+  { id: 'teal',    label: 'Teal',    gold: '#0D9488', crimson: '#0F766E', rose: '#CCFBF1', g1: '#0F766E', g2: '#0D9488', g3: '#14B8A6', g4: '#2DD4BF' },
+  { id: 'blue',    label: 'Blue',    gold: '#2563EB', crimson: '#1D4ED8', rose: '#DBEAFE', g1: '#1D4ED8', g2: '#2563EB', g3: '#3B82F6', g4: '#60A5FA' },
+  { id: 'indigo',  label: 'Indigo',  gold: '#4F46E5', crimson: '#4338CA', rose: '#E0E7FF', g1: '#3730A3', g2: '#4F46E5', g3: '#6366F1', g4: '#818CF8' },
+  { id: 'purple',  label: 'Purple',  gold: '#7C3AED', crimson: '#6D28D9', rose: '#EDE9FE', g1: '#5B21B6', g2: '#7C3AED', g3: '#8B5CF6', g4: '#A78BFA' },
+  { id: 'rose',    label: 'Rose',    gold: '#E11D48', crimson: '#BE123C', rose: '#FFE4E6', g1: '#9F1239', g2: '#E11D48', g3: '#F43F5E', g4: '#FB7185' },
+  { id: 'orange',  label: 'Orange',  gold: '#EA580C', crimson: '#C2410C', rose: '#FFEDD5', g1: '#9A3412', g2: '#EA580C', g3: '#F97316', g4: '#FB923C' },
+  { id: 'amber',   label: 'Amber',   gold: '#D97706', crimson: '#B45309', rose: '#FEF3C7', g1: '#92400E', g2: '#D97706', g3: '#F59E0B', g4: '#FCD34D' },
+  { id: 'emerald', label: 'Emerald', gold: '#059669', crimson: '#047857', rose: '#D1FAE5', g1: '#065F46', g2: '#059669', g3: '#10B981', g4: '#34D399' },
+  { id: 'sky',     label: 'Sky',     gold: '#0284C7', crimson: '#0369A1', rose: '#E0F2FE', g1: '#075985', g2: '#0284C7', g3: '#0EA5E9', g4: '#38BDF8' },
+  { id: 'pink',    label: 'Pink',    gold: '#DB2777', crimson: '#BE185D', rose: '#FCE7F3', g1: '#9D174D', g2: '#DB2777', g3: '#EC4899', g4: '#F472B6' },
+] as const;
+export type ThemePreset = typeof THEME_PRESETS[number];
+
+export function applyBrandTheme(t: ThemePreset) {
+  const r = document.documentElement;
+  r.style.setProperty('--color-brand-gold', t.gold);
+  r.style.setProperty('--color-brand-crimson', t.crimson);
+  r.style.setProperty('--color-brand-rose', t.rose);
+  r.style.setProperty('--brand-g1', t.g1);
+  r.style.setProperty('--brand-g2', t.g2);
+  r.style.setProperty('--brand-g3', t.g3);
+  r.style.setProperty('--brand-g4', t.g4);
+}
+
 // ─── Default gender-specific SVG avatars (no external URL, no data cost) ────
 const AVATAR_SVGS: Record<string, string> = {
   Male: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#0F172A"/><circle cx="50" cy="36" r="19" fill="#5EEAD4"/><rect x="28" y="57" width="44" height="6" rx="3" fill="#2DD4BF"/><path d="M14 100 Q14 66 50 66 Q86 66 86 100Z" fill="#5EEAD4"/></svg>`,
@@ -878,6 +904,15 @@ export default function App() {
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior }); }, [activeTab]);
   useEffect(() => { if (user) logEvent('screen_view', user.uid, { screen: activeTab }); }, [activeTab]);
   useEffect(() => { if (viewingStore || viewingUser) window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior }); }, [viewingStore, viewingUser]);
+
+  // Load saved brand theme
+  useEffect(() => {
+    getDoc(doc(db, 'app_config', 'theme')).then(snap => {
+      if (!snap.exists()) return;
+      const saved = THEME_PRESETS.find(t => t.id === snap.data().themeId);
+      if (saved) applyBrandTheme(saved);
+    }).catch(() => {});
+  }, []);
 
   // If the target user is a vendor, go straight to their store instead of their user profile
   const handleViewUser = async (targetUser: UserProfile) => {
@@ -1590,8 +1625,8 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex justify-center">
-    <div className="w-full max-w-sm relative overflow-hidden pb-24">
+    <div className="min-h-screen bg-white md:flex md:justify-center">
+    <div className="w-full md:max-w-sm relative pb-24">
       {/* Header */}
       <header className="glass-panel sticky top-0 z-50 px-5 py-3.5 flex items-center justify-between">
         <button
@@ -1790,7 +1825,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-sm glass-panel border-t border-black/5 py-3 flex items-end z-50">
+      <nav className="fixed bottom-0 left-0 right-0 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-full md:max-w-sm glass-panel border-t border-black/5 py-3 flex items-end z-50">
         {['consumer','admin'].includes(profile?.role ?? '') ? (
           <NavButton
             active={activeTab === 'for-you'}
@@ -5350,6 +5385,26 @@ function CardSetsAdminPanel({ onClose }: { onClose: () => void }) {
 }
 
 function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts, onOpenOffers, onOpenLinqle, onOpenDailyVote, onOpenCards, onOpenBanners }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void; onOpenOffers: () => void; onOpenLinqle: () => void; onOpenDailyVote: () => void; onOpenCards: () => void; onOpenBanners: () => void }) {
+  const [activeThemeId, setActiveThemeId] = useState<string>('teal');
+  const [savingTheme, setSavingTheme] = useState(false);
+
+  useEffect(() => {
+    getDoc(doc(db, 'app_config', 'theme')).then(snap => {
+      if (snap.exists()) setActiveThemeId(snap.data().themeId || 'teal');
+    }).catch(() => {});
+  }, []);
+
+  const handleThemeSelect = async (t: ThemePreset) => {
+    setActiveThemeId(t.id);
+    applyBrandTheme(t);
+    setSavingTheme(true);
+    try {
+      await setDoc(doc(db, 'app_config', 'theme'), { themeId: t.id });
+    } finally {
+      setSavingTheme(false);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -5510,6 +5565,59 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores,
           </motion.button>
 
         </div>
+
+        {/* App Theme Picker */}
+        <div className="px-5 pb-8 pt-2">
+          <div className="flex items-center justify-between mb-3">
+            <p className="font-bold text-brand-navy text-sm">App Theme</p>
+            {savingTheme && <p className="text-[10px] text-brand-navy/40 animate-pulse">Saving…</p>}
+          </div>
+          <div className="grid grid-cols-5 gap-2">
+            {THEME_PRESETS.map(t => {
+              const active = t.id === activeThemeId;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => handleThemeSelect(t)}
+                  className={`flex flex-col items-center gap-1.5 p-2 rounded-2xl transition-all active:scale-95 ${active ? 'bg-brand-navy/8 ring-2 ring-brand-navy/20' : 'hover:bg-brand-navy/4'}`}
+                >
+                  <div
+                    className="w-10 h-10 rounded-xl shadow-sm relative overflow-hidden"
+                    style={{ background: `linear-gradient(135deg, ${t.g1} 0%, ${t.g3} 100%)` }}
+                  >
+                    {active && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-4 h-4 rounded-full bg-white/90 flex items-center justify-center">
+                          <Check size={10} className="text-brand-navy" strokeWidth={3} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <p className={`text-[9px] font-bold leading-none ${active ? 'text-brand-navy' : 'text-brand-navy/50'}`}>{t.label}</p>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Mini preview strip */}
+          <div className="mt-4 rounded-2xl overflow-hidden border border-brand-navy/8 shadow-sm">
+            <div className="gradient-logo-blue px-4 py-2.5 flex items-center gap-2">
+              <div className="w-5 h-5 rounded-lg bg-white/20 flex items-center justify-center">
+                <Sparkles size={11} className="text-white" />
+              </div>
+              <span className="font-display font-bold text-sm text-white tracking-tight">Linq</span>
+            </div>
+            <div className="bg-white px-4 py-3 flex items-center gap-3">
+              <div className="flex-1">
+                <div className="h-2 rounded-full bg-brand-navy/8 overflow-hidden">
+                  <div className="h-full w-3/5 rounded-full gradient-red" />
+                </div>
+              </div>
+              <button className="gradient-red text-white text-[10px] font-bold px-3 py-1.5 rounded-xl">Go</button>
+            </div>
+          </div>
+        </div>
+
       </div>
     </motion.div>
   );
