@@ -1590,7 +1590,8 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen pb-24 w-full relative overflow-hidden bg-white">
+    <div className="min-h-screen bg-white flex justify-center">
+    <div className="w-full max-w-sm relative overflow-hidden pb-24">
       {/* Header */}
       <header className="glass-panel sticky top-0 z-50 px-5 py-3.5 flex items-center justify-between">
         <button
@@ -1789,7 +1790,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto glass-panel border-t border-black/5 py-3 flex items-end z-50">
+      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-sm glass-panel border-t border-black/5 py-3 flex items-end z-50">
         {['consumer','admin'].includes(profile?.role ?? '') ? (
           <NavButton
             active={activeTab === 'for-you'}
@@ -1858,6 +1859,7 @@ export default function App() {
           label="Profile"
         />
       </nav>
+    </div>
     </div>
   );
 }
