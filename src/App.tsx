@@ -7235,7 +7235,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
                   <div>
                     <div className="flex items-center gap-1.5 flex-wrap">
                       {!isAnonymous && <span className="font-bold text-sm text-brand-navy">Linq</span>}
-                      {!isAnonymous && <span className="text-[9px] font-bold text-white bg-gradient-to-r from-teal-600 to-teal-800 px-1.5 py-0.5 rounded-full uppercase tracking-wide">Official</span>}
+                      {!isAnonymous && <span className="text-[9px] font-bold text-white px-1.5 py-0.5 rounded-full uppercase tracking-wide" style={{ background: 'var(--color-brand-gold)' }}>Official</span>}
                       {isAnonymous && <span className="text-[10px] font-bold text-brand-navy/40 italic">Anonymous</span>}
                       {selectedBadge && (
                         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full border"
@@ -23080,12 +23080,12 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
             <p className="text-[13px] text-brand-navy leading-snug">
               <span className="font-bold">{post.authorName}</span>
               {' '}<span className="text-brand-navy/70">{post.content}</span>{' '}
-              <span className="inline-block bg-teal-600 text-white font-bold px-2 py-0.5 rounded-lg text-[12px] leading-normal">{post.achievementText}</span>
+              <span className="inline-block text-white font-bold px-2 py-0.5 rounded-lg text-[12px] leading-normal" style={{ background: 'var(--color-brand-gold)' }}>{post.achievementText}</span>
             </p>
             <p className="text-[10px] text-brand-navy/45 mt-0.5">{post.createdAt?.toDate ? format(post.createdAt.toDate(), 'MMM d · h:mm a') : 'Just now'}</p>
           </div>
-          <div className="w-8 h-8 bg-teal-50 rounded-full flex items-center justify-center shrink-0">
-            <Trophy size={15} className="text-teal-600" />
+          <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: 'color-mix(in srgb, var(--color-brand-gold) 12%, transparent)' }}>
+            <Trophy size={15} style={{ color: 'var(--color-brand-gold)' }} />
           </div>
         </div>
       </motion.div>
@@ -23225,8 +23225,8 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
               ) : post.authorRole === 'admin' ? (
                 <span className="inline-flex items-center gap-1.5">
                   {!post.isAnonymous && <span className="font-bold text-sm text-brand-navy">Linq</span>}
-                  {!post.isAnonymous && <span className="text-[9px] font-bold text-white bg-gradient-to-r from-teal-600 to-teal-800 px-1.5 py-0.5 rounded-full uppercase tracking-wide">Official</span>}
-                  {!post.isAnonymous && post.cardSetName && <span className="text-[9px] font-bold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded-full">🃏 {post.cardSetName}</span>}
+                  {!post.isAnonymous && <span className="text-[9px] font-bold text-white px-1.5 py-0.5 rounded-full uppercase tracking-wide" style={{ background: 'var(--color-brand-gold)' }}>Official</span>}
+                  {!post.isAnonymous && post.cardSetName && <span className="text-[9px] font-bold text-white px-1.5 py-0.5 rounded-full" style={{ background: 'var(--color-brand-gold)' }}>🃏 {post.cardSetName}</span>}
                 </span>
               ) : post.authorRole === 'vendor' && post.storeName && !post.wallPost ? (
                 <span
