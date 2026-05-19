@@ -1807,6 +1807,7 @@ export default function App() {
               onDeleteAccount={handleDeleteAccount}
               pendingNFCStoreId={pendingNFCStoreId}
               onClearPendingNFC={() => setPendingNFCStoreId(null)}
+              uiColors={uiColors}
             />
           ) : (
             <VendorApp
@@ -3302,7 +3303,7 @@ function StickerCard({ sticker, isRevealed, onReveal, size = 'md' }: {
           transform: 'rotateY(180deg)',
           border: `2px solid ${cfg.border}`, borderRadius: 16,
           boxShadow: `0 4px 20px ${cfg.color}33`,
-          overflow: 'hidden', position: 'absolute' as any,
+          overflow: 'hidden',
         }}>
           {sticker.cardImageUrl
             ? <img src={sticker.cardImageUrl} alt={sticker.cardName} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -8716,7 +8717,8 @@ function buildStampCelebrationPages(
 
 // --- Consumer App ---
 
-function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onViewUser, cards: initialCards, notifications, activeChatId, setActiveChatId, onLogout, onDeleteAccount, pendingNFCStoreId, onClearPendingNFC }: { activeTab: string, setActiveTab: (tab: string) => void, profile: UserProfile | null, user: FirebaseUser, onViewStore: (s: StoreProfile) => void, onViewUser: (u: UserProfile) => void, cards: Card[], notifications: Notification[], activeChatId: string | null, setActiveChatId: (id: string | null) => void, onLogout: () => void, onDeleteAccount: () => Promise<void>, pendingNFCStoreId?: string | null, onClearPendingNFC?: () => void, key?: React.Key }) {
+function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onViewUser, cards: initialCards, notifications, activeChatId, setActiveChatId, onLogout, onDeleteAccount, pendingNFCStoreId, onClearPendingNFC, uiColors: uiColorsProp }: { activeTab: string, setActiveTab: (tab: string) => void, profile: UserProfile | null, user: FirebaseUser, onViewStore: (s: StoreProfile) => void, onViewUser: (u: UserProfile) => void, cards: Card[], notifications: Notification[], activeChatId: string | null, setActiveChatId: (id: string | null) => void, onLogout: () => void, onDeleteAccount: () => Promise<void>, pendingNFCStoreId?: string | null, onClearPendingNFC?: () => void, uiColors?: UiColors, key?: React.Key }) {
+  const uiColors = uiColorsProp ?? UI_COLOR_DEFAULTS;
   const [stores, setStores] = useState<StoreProfile[]>([]);
   const [walletSubTab, setWalletSubTab] = useState<'stamps' | 'challenges'>('stamps');
   const [walletLayout, setWalletLayout] = useState<'carousel' | 'list'>('carousel');
@@ -17029,7 +17031,7 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor 
   );
 }
 
-function MatrixScramble({ target, className }: { target: string; className?: string }) {
+function MatrixScramble({ target, className, style }: { target: string; className?: string; style?: React.CSSProperties }) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   const [display, setDisplay] = useState(target);
   useEffect(() => {
@@ -17042,7 +17044,7 @@ function MatrixScramble({ target, className }: { target: string; className?: str
     }, 90);
     return () => clearInterval(id);
   }, [target]);
-  return <span className={className}>{display}</span>;
+  return <span className={className} style={style}>{display}</span>;
 }
 
 function MatrixRainCanvas({ opacity = 0.35, fadeColor = 'rgba(17,40,110,0.18)' }: { opacity?: number; fadeColor?: string }) {
@@ -27593,6 +27595,13 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
     charity_animals: targetUser.charityAnimals || 0,
     charity_trees: targetUser.charityTrees || 0,
     charity_total: (targetUser.charityAnimals || 0) + (targetUser.charityTrees || 0),
+    linqle_wins: targetUser.linqleTotalWins || 0,
+    correct_polls: targetUser.correctPolls || 0,
+    rewards_redeemed: targetUser.totalRedeemed || 0,
+    streak: targetUser.streak || 0,
+    points_redeemed: allCards.reduce((sum, c) => sum + (c.total_points_redeemed || 0), 0),
+    visits: allCards.reduce((sum, c) => sum + (c.total_visits || 0), 0),
+    challenges_won: targetUser.challengesWon || 0,
   };
   const earnedBadges = allBadges.filter(b => (pubBadgeMetrics[b.metric] ?? 0) >= b.threshold);
 
