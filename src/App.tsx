@@ -244,7 +244,7 @@ export function applyBrandTheme(t: ThemePreset) {
 }
 
 // ─── UI Color Control ─────────────────────────────────────────────────────────
-type UiColorSlot = { css: string; dark: boolean };
+type UiColorSlot = { css: string; dark: boolean; textColor?: string };
 interface UiColors {
   linqleTile: UiColorSlot;
   savedTile: UiColorSlot;
@@ -301,6 +301,26 @@ const PASTEL_GRADIENT_PRESETS: UiColorPreset[] = [
   { id: 'grey-tint',        label: 'Grey Tint', css: 'rgba(241, 245, 249, 0.85)', dark: false },
   { id: 'light-grey',       label: 'Grey',      css: 'linear-gradient(135deg, #CBD5E1 0%, #E2E8F0 50%, #F8FAFC 100%)', dark: false },
 ];
+const TEXT_COLOR_PRESETS: { id: string; label: string; color: string }[] = [
+  { id: 'white',    label: 'White',   color: '#FFFFFF' },
+  { id: 'lt-grey',  label: 'Lt Grey', color: '#E2E8F0' },
+  { id: 'teal',     label: 'Teal',    color: '#14B8A6' },
+  { id: 'amber',    label: 'Amber',   color: '#F59E0B' },
+  { id: 'sky',      label: 'Sky',     color: '#38BDF8' },
+  { id: 'navy',     label: 'Navy',    color: '#1E3050' },
+  { id: 'dark',     label: 'Dark',    color: '#0F172A' },
+];
+
+function tileTextStyle(slot: UiColorSlot, alpha = 1): React.CSSProperties {
+  if (!slot.textColor) return {};
+  const hex = slot.textColor.replace('#', '');
+  if (alpha === 1 || hex.length !== 6) return { color: slot.textColor };
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  return { color: `rgba(${r},${g},${b},${alpha})` };
+}
+
 const UI_COLOR_DEFAULTS: UiColors = {
   linqleTile:        { css: '#3D5F7A', dark: true },
   savedTile:         { css: '#1E3050', dark: true },
@@ -997,7 +1017,7 @@ export default function App() {
       setUiColors(prev => {
         const merged = { ...prev };
         (Object.keys(UI_COLOR_DEFAULTS) as (keyof UiColors)[]).forEach(k => {
-          if (data[k]?.css) merged[k] = { css: data[k].css, dark: !!data[k].dark };
+          if (data[k]?.css) merged[k] = { css: data[k].css, dark: !!data[k].dark, textColor: data[k].textColor || undefined };
         });
         return merged;
       });
@@ -3333,7 +3353,7 @@ const CURRENCIES = [
 ];
 function currencySymbol(code?: string) { return CURRENCY_SYMBOLS[code || 'AUD'] ?? (code || 'A$'); }
 
-function CountUpValue({ value, prefix = '£', className = '' }: { value: number; prefix?: string; className?: string }) {
+function CountUpValue({ value, prefix = '£', className = '', style }: { value: number; prefix?: string; className?: string; style?: React.CSSProperties }) {
   const [display, setDisplay] = useState(0);
   useEffect(() => {
     const duration = 1200;
@@ -3348,7 +3368,7 @@ function CountUpValue({ value, prefix = '£', className = '' }: { value: number;
     };
     requestAnimationFrame(tick);
   }, [value]);
-  return <span className={className}>{prefix}{display.toFixed(2)}</span>;
+  return <span className={className} style={style}>{prefix}{display.toFixed(2)}</span>;
 }
 
 function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }: {
@@ -5749,19 +5769,30 @@ function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColo
   const [colors, setColors] = useState<UiColors>(uiColors);
   const [saving, setSaving] = useState(false);
 
+  const saveColors = async (next: UiColors) => {
+    const payload = Object.fromEntries(
+      (Object.keys(next) as (keyof UiColors)[]).map(k => {
+        const s = next[k];
+        return [k, { css: s.css, dark: s.dark, ...(s.textColor ? { textColor: s.textColor } : {}) }];
+      })
+    );
+    await setDoc(doc(db, 'app_config', 'ui_colors'), payload, { merge: true });
+  };
+
   const pick = async (key: keyof UiColors, preset: UiColorPreset) => {
-    const next = { ...colors, [key]: { css: preset.css, dark: preset.dark } };
+    const next = { ...colors, [key]: { css: preset.css, dark: preset.dark, textColor: colors[key].textColor } };
     setColors(next);
     onColorsChange(next);
     setSaving(true);
-    try {
-      const payload = Object.fromEntries(
-        (Object.keys(next) as (keyof UiColors)[]).map(k => [k, { css: next[k].css, dark: next[k].dark }])
-      );
-      await setDoc(doc(db, 'app_config', 'ui_colors'), payload, { merge: true });
-    } finally {
-      setSaving(false);
-    }
+    try { await saveColors(next); } finally { setSaving(false); }
+  };
+
+  const pickTextColor = async (key: keyof UiColors, textColor: string) => {
+    const next = { ...colors, [key]: { ...colors[key], textColor } };
+    setColors(next);
+    onColorsChange(next);
+    setSaving(true);
+    try { await saveColors(next); } finally { setSaving(false); }
   };
 
   return (
@@ -5815,6 +5846,21 @@ function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColo
                       </button>
                     );
                   })}
+                </div>
+                <div className="mt-3">
+                  <p className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-wider mb-1.5">Text colour</p>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {TEXT_COLOR_PRESETS.map(tc => {
+                      const activeText = (current.textColor ?? (current.dark ? '#FFFFFF' : '#0F172A')).toUpperCase() === tc.color.toUpperCase();
+                      return (
+                        <button key={tc.id} onClick={() => pickTextColor(slot.key, tc.color)}
+                          className={`flex flex-col items-center gap-0.5 p-1.5 rounded-xl transition-all active:scale-95 ${activeText ? 'ring-2 ring-brand-navy/30 bg-brand-navy/6' : ''}`}>
+                          <div className="w-7 h-7 rounded-lg border border-black/10 shadow-sm" style={{ background: tc.color }} />
+                          <p className={`text-[8px] font-bold ${activeText ? 'text-brand-navy' : 'text-brand-navy/40'}`}>{tc.label}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             );
@@ -9285,7 +9331,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                     'flex-1 py-2.5 rounded-xl text-sm font-bold transition-all relative overflow-hidden text-white',
                     walletSubTab === 'challenges' ? 'shadow-md opacity-100' : 'opacity-60'
                   )}
-                  style={{ background: uiColors.winTab.css }}
+                  style={{ background: uiColors.winTab.css, ...(uiColors.winTab.textColor ? { color: uiColors.winTab.textColor } : {}) }}
                 >
                   <span className="shine-ray" aria-hidden="true" />
                   <span className={cn('relative z-10', walletSubTab !== 'challenges' && 'tab-shake')}>🏆 Win</span>
@@ -16990,6 +17036,7 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor 
   const barBg = dvDark ? 'bg-white/15' : 'bg-teal-700/15';
   const barFill = dvDark ? 'bg-white' : 'bg-teal-700';
   const barFillDim = dvDark ? 'bg-white/40' : 'bg-teal-700/40';
+  const dvTextStyle = (alpha = 1) => tileTextStyle(tc, alpha);
 
   return (
     <>
@@ -17002,8 +17049,8 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor 
             <Gift size={14} className="text-white" strokeWidth={2.5} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className={`text-[9px] font-bold uppercase tracking-widest ${labelCls}`}>Daily Vote</p>
-            <p className={`text-sm font-black ${titleCls} leading-tight mt-0.5 line-clamp-2`}>{voteData.question}</p>
+            <p className={`text-[9px] font-bold uppercase tracking-widest ${labelCls}`} style={dvTextStyle(0.6)}>Daily Vote</p>
+            <p className={`text-sm font-black ${titleCls} leading-tight mt-0.5 line-clamp-2`} style={dvTextStyle()}>{voteData.question}</p>
           </div>
           {hasVoted && (
             <div className="space-y-1">
@@ -17016,11 +17063,11 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor 
                   </div>
                 );
               })}
-              <p className={`text-[9px] ${voteCls} pt-0.5`}>{liveTotal} votes</p>
+              <p className={`text-[9px] ${voteCls} pt-0.5`} style={dvTextStyle(0.6)}>{liveTotal} votes</p>
             </div>
           )}
           {!hasVoted && !voteData.closed && (
-            <p className={`text-[10px] font-bold ${voteCls}`}>Tap to vote →</p>
+            <p className={`text-[10px] font-bold ${voteCls}`} style={dvTextStyle(0.6)}>Tap to vote →</p>
           )}
         </div>
       </motion.button>
@@ -24462,8 +24509,15 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                   <div className="absolute top-2 right-2 z-20 w-7 h-7 bg-red-500 rounded-full flex items-center justify-center shadow-md">
                     <Gift size={14} className="text-white" strokeWidth={2.5} />
                   </div>
-                  <p className="relative z-10 text-sm font-black font-mono leading-none tracking-tight"><span className="text-teal-400">LI</span><span className="text-white">NQLE</span></p>
-                  <p className="relative z-10 text-[11px] font-semibold text-teal-400/70 tracking-wide">Win sticker packs</p>
+                  <p className="relative z-10 text-sm font-black font-mono leading-none tracking-tight"
+                    style={uiColors.linqleTile.textColor ? { color: uiColors.linqleTile.textColor } : undefined}>
+                    {uiColors.linqleTile.textColor
+                      ? 'LINQLE'
+                      : <><span className="text-teal-400">LI</span><span className="text-white">NQLE</span></>
+                    }
+                  </p>
+                  <p className="relative z-10 text-[11px] font-semibold tracking-wide"
+                    style={uiColors.linqleTile.textColor ? tileTextStyle(uiColors.linqleTile, 0.7) : { color: 'rgba(94,234,212,0.7)' }}>Win sticker packs</p>
                 </div>
               </motion.button>
             )}
@@ -24477,10 +24531,13 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                     className="w-full h-full relative overflow-hidden px-3 py-3 flex flex-col items-center justify-center gap-0.5 active:opacity-90 transition-opacity"
                     style={{ background: uiColors.savedTile.css }}
                   >
-                    <p className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-white/40 text-center">Saved with Linq</p>
+                    <p className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-white/40 text-center"
+                      style={tileTextStyle(uiColors.savedTile, 0.4)}>Saved with Linq</p>
                     {saved > 0
-                      ? <CountUpValue value={saved} prefix={sym} className="relative z-10 font-display text-xl font-black text-white" />
-                      : <p className="relative z-10 text-xs font-bold text-white/40 text-center leading-tight">Start saving</p>
+                      ? <CountUpValue value={saved} prefix={sym} className="relative z-10 font-display text-xl font-black text-white"
+                          style={tileTextStyle(uiColors.savedTile)} />
+                      : <p className="relative z-10 text-xs font-bold text-white/40 text-center leading-tight"
+                          style={tileTextStyle(uiColors.savedTile, 0.4)}>Start saving</p>
                     }
                   </button>
                 </motion.div>
@@ -24520,6 +24577,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                 const cToggleInactive = cDark ? 'bg-white/20 text-white/70' : 'bg-brand-navy/10 text-brand-navy/60';
                 const cDot = cDark ? 'bg-white' : 'bg-brand-navy';
                 const cDotDim = cDark ? 'bg-white/30' : 'bg-brand-navy/25';
+                const chTextStyle = (alpha = 1) => !isCompleted ? tileTextStyle(uiColors.challengesFypTile, alpha) : {};
                 return (
                   <div
                     className="flex-1 relative rounded-[1.5rem] overflow-hidden cursor-pointer active:scale-[0.97] transition-transform"
@@ -24579,11 +24637,11 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                     {/* Content */}
                     <div className="relative z-10 p-4 h-full flex flex-col justify-between" style={{ minHeight: '148px', paddingTop: '2.25rem' }}>
                       {list.length === 0 ? (
-                        <p className={`${cTextDim} text-xs font-bold text-center mt-6`}>No {isCompleted ? 'completed' : 'active'} challenges</p>
+                        <p className={`${cTextDim} text-xs font-bold text-center mt-6`} style={chTextStyle(0.5)}>No {isCompleted ? 'completed' : 'active'} challenges</p>
                       ) : (
                         <>
                           <div>
-                            <p className={`${cTextMid} text-[9px] font-black uppercase tracking-widest mb-1.5`}>{isCompleted ? 'Ended' : 'Win'}</p>
+                            <p className={`${cTextMid} text-[9px] font-black uppercase tracking-widest mb-1.5`} style={chTextStyle(0.7)}>{isCompleted ? 'Ended' : 'Win'}</p>
                             <AnimatePresence mode="wait">
                               <motion.div
                                 key={`${challengeView}-${idx}`}
@@ -24592,13 +24650,13 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                                 exit={{ opacity: 0, y: -8 }}
                                 transition={{ duration: 0.35 }}
                               >
-                                <p className={`${cText} font-black text-base leading-snug line-clamp-2`}>{current?.reward}</p>
-                                <p className={`${cTextDim} text-[10px] mt-1 line-clamp-1`}>{current?.title}</p>
+                                <p className={`${cText} font-black text-base leading-snug line-clamp-2`} style={chTextStyle()}>{current?.reward}</p>
+                                <p className={`${cTextDim} text-[10px] mt-1 line-clamp-1`} style={chTextStyle(0.5)}>{current?.title}</p>
                               </motion.div>
                             </AnimatePresence>
                           </div>
                           <div className="flex items-center justify-between mt-2">
-                            <p className={`${cTextDim} text-[9px] font-bold`}>{list.length} {isCompleted ? 'ended' : 'prizes'}</p>
+                            <p className={`${cTextDim} text-[9px] font-bold`} style={chTextStyle(0.5)}>{list.length} {isCompleted ? 'ended' : 'prizes'}</p>
                             <div className="flex gap-1 items-center">
                               {list.slice(0, Math.min(list.length, 5)).map((_, i) => (
                                 <div key={i} className={cn('rounded-full transition-all duration-300', i === (idx % list.length) ? `w-3 h-1.5 ${cDot}` : `w-1.5 h-1.5 ${cDotDim}`)} />
@@ -24651,10 +24709,12 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                   <div className={`w-12 h-12 rounded-xl overflow-hidden border-2 ${uiColors.leaderboardTile.dark ? 'border-white/30' : 'border-gray-300'} bg-teal-50 flex items-center justify-center`}>
                     <PixelAvatar config={currentProfile?.avatar} uid={currentProfile?.uid || ''} size={48} view="head" />
                   </div>
-                  <p className={`${uiColors.leaderboardTile.dark ? 'text-white' : 'text-gray-700'} font-bold text-[10px] text-center leading-tight line-clamp-2 w-full px-1`}>
+                  <p className={`${uiColors.leaderboardTile.dark ? 'text-white' : 'text-gray-700'} font-bold text-[10px] text-center leading-tight line-clamp-2 w-full px-1`}
+                    style={tileTextStyle(uiColors.leaderboardTile)}>
                     {currentProfile?.name || 'You'}
                   </p>
-                  <p className={`${uiColors.leaderboardTile.dark ? 'text-white/60' : 'text-gray-500'} text-[8px] font-bold uppercase tracking-wider`}>Leaderboard</p>
+                  <p className={`${uiColors.leaderboardTile.dark ? 'text-white/60' : 'text-gray-500'} text-[8px] font-bold uppercase tracking-wider`}
+                    style={tileTextStyle(uiColors.leaderboardTile, 0.6)}>Leaderboard</p>
                 </div>
               </button>
             </div>
