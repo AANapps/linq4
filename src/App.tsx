@@ -5779,91 +5779,65 @@ const BANNER_DEST_OPTIONS = [
   { value: 'url', label: 'External URL…' },
 ];
 
-function ColorPickerDropdown({ presets, currentCss, onSelect }: {
-  presets: UiColorPreset[];
-  currentCss: string;
-  onSelect: (p: UiColorPreset) => void;
+function ColorSwatchPicker({ value, onChange, presets, label }: {
+  value: string;
+  onChange: (v: string) => void;
+  presets?: { id: string; css: string; dark?: boolean; label: string }[];
+  label?: string;
 }) {
-  const [open, setOpen] = useState(false);
-  const current = presets.find(p => p.css === currentCss);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const solidValue = /^#[0-9a-fA-F]{6}$/.test(value) ? value : '#0D9488';
   return (
-    <div className="rounded-2xl border border-black/8 overflow-hidden bg-white shadow-sm">
-      <button onClick={() => setOpen(v => !v)}
-        className="flex items-center gap-2.5 px-3 py-2.5 w-full active:bg-brand-navy/4 transition-all">
-        <div className="w-8 h-8 rounded-xl border border-black/8 shrink-0" style={{ background: currentCss }} />
-        <span className="text-xs font-bold text-brand-navy flex-1 text-left">{current?.label ?? 'Custom'}</span>
-        <ChevronDown size={14} className={`text-brand-navy/40 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+    <div className="space-y-2">
+      {/* Large swatch — tap to open rainbow picker */}
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        className="relative w-full h-14 rounded-2xl border-2 border-black/10 overflow-hidden shadow-sm active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+        style={{ background: value }}
+      >
+        <input
+          ref={inputRef}
+          type="color"
+          value={solidValue}
+          onChange={e => onChange(e.target.value)}
+          onInput={e => onChange((e.target as HTMLInputElement).value)}
+          className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+          style={{ appearance: 'none' }}
+        />
+        <span className="relative z-10 text-[10px] font-bold tracking-wider opacity-60 mix-blend-overlay select-none">
+          {label ?? 'Tap to pick colour'}
+        </span>
       </button>
-      {open && (
-        <div className="border-t border-black/6 p-2.5 bg-brand-bg/40">
-          <div className="grid grid-cols-5 gap-2">
-            {presets.map(p => {
-              const active = currentCss === p.css;
-              return (
-                <button key={p.id} onClick={() => { onSelect(p); setOpen(false); }}
-                  className={`flex flex-col items-center gap-1 p-1.5 rounded-xl transition-all active:scale-95 ${active ? 'ring-2 ring-brand-navy/25 bg-brand-navy/5' : ''}`}>
-                  <div className="w-10 h-10 rounded-xl border border-black/8 relative overflow-hidden" style={{ background: p.css }}>
-                    {active && (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className={`w-5 h-5 rounded-full flex items-center justify-center ${p.dark ? 'bg-white/90' : 'bg-brand-navy/80'}`}>
-                          <Check size={10} className={p.dark ? 'text-brand-navy' : 'text-white'} strokeWidth={3} />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <p className={`text-[8px] font-bold leading-none text-center ${active ? 'text-brand-navy' : 'text-brand-navy/45'}`}>{p.label}</p>
-                </button>
-              );
-            })}
-          </div>
+      {/* Preset quick-picks row */}
+      {presets && presets.length > 0 && (
+        <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-hide">
+          {presets.map(p => {
+            const active = value === p.css;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => onChange(p.css)}
+                className={`shrink-0 w-8 h-8 rounded-xl border-2 transition-all active:scale-90 ${active ? 'border-brand-navy/60 scale-110' : 'border-transparent'}`}
+                style={{ background: p.css }}
+                title={p.label}
+              />
+            );
+          })}
         </div>
       )}
     </div>
   );
 }
 
-function TextColorDropdown({ currentColor, dark, onSelect }: {
-  currentColor?: string;
-  dark: boolean;
-  onSelect: (color: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const effectiveColor = currentColor ?? (dark ? '#FFFFFF' : '#0F172A');
-  const current = TEXT_COLOR_PRESETS.find(p => p.color.toUpperCase() === effectiveColor.toUpperCase());
-  return (
-    <div className="rounded-2xl border border-black/8 overflow-hidden bg-white shadow-sm">
-      <button onClick={() => setOpen(v => !v)}
-        className="flex items-center gap-2.5 px-3 py-2.5 w-full active:bg-brand-navy/4 transition-all">
-        <div className="w-8 h-8 rounded-xl border border-black/8 shrink-0" style={{ background: effectiveColor }} />
-        <span className="text-xs font-bold text-brand-navy flex-1 text-left">{current?.label ?? 'Custom'}</span>
-        <ChevronDown size={14} className={`text-brand-navy/40 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
-      </button>
-      {open && (
-        <div className="border-t border-black/6 p-2.5 bg-brand-bg/40">
-          <div className="flex flex-wrap gap-2">
-            {TEXT_COLOR_PRESETS.map(tc => {
-              const active = effectiveColor.toUpperCase() === tc.color.toUpperCase();
-              return (
-                <button key={tc.id} onClick={() => { onSelect(tc.color); setOpen(false); }}
-                  className={`flex flex-col items-center gap-0.5 p-1.5 rounded-xl transition-all active:scale-95 ${active ? 'ring-2 ring-brand-navy/25 bg-brand-navy/5' : ''}`}>
-                  <div className="w-9 h-9 rounded-lg border border-black/10 relative overflow-hidden" style={{ background: tc.color }}>
-                    {active && (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-4 h-4 rounded-full bg-brand-navy/40 flex items-center justify-center">
-                          <Check size={9} className="text-white" strokeWidth={3} />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <p className={`text-[8px] font-bold ${active ? 'text-brand-navy' : 'text-brand-navy/40'}`}>{tc.label}</p>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
-  );
+function isDarkColor(hex: string): boolean {
+  const h = hex.replace('#', '');
+  if (h.length !== 6) return true;
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 < 0.55;
 }
 
 function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColors; onColorsChange: (c: UiColors) => void; onClose: () => void }) {
@@ -5880,21 +5854,18 @@ function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColo
     await setDoc(doc(db, 'app_config', 'ui_colors'), payload, { merge: true });
   };
 
-  const pick = async (key: keyof UiColors, preset: UiColorPreset) => {
-    const next = { ...colors, [key]: { css: preset.css, dark: preset.dark, textColor: colors[key].textColor } };
+  const apply = async (next: UiColors) => {
     setColors(next);
     onColorsChange(next);
     setSaving(true);
     try { await saveColors(next); } finally { setSaving(false); }
   };
 
-  const pickTextColor = async (key: keyof UiColors, textColor: string) => {
-    const next = { ...colors, [key]: { ...colors[key], textColor } };
-    setColors(next);
-    onColorsChange(next);
-    setSaving(true);
-    try { await saveColors(next); } finally { setSaving(false); }
-  };
+  const pickBg = (key: keyof UiColors, css: string, dark?: boolean) =>
+    apply({ ...colors, [key]: { css, dark: dark ?? isDarkColor(css), textColor: colors[key].textColor } });
+
+  const pickTextColor = (key: keyof UiColors, textColor: string) =>
+    apply({ ...colors, [key]: { ...colors[key], textColor } });
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -5904,7 +5875,7 @@ function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColo
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-display text-2xl font-bold text-brand-navy">UI Colours</h2>
-              <p className="text-xs text-brand-navy/80 mt-0.5">Customise each tile and tab</p>
+              <p className="text-xs text-brand-navy/80 mt-0.5">Tap the swatch to pick any colour</p>
             </div>
             <div className="flex items-center gap-2">
               {saving && <p className="text-[10px] text-brand-navy/40 animate-pulse">Saving…</p>}
@@ -5915,30 +5886,31 @@ function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColo
           </div>
         </div>
 
-        <div className="p-5 space-y-6">
+        <div className="p-5 space-y-7">
           {UI_COLOR_SLOT_DEFS.map(slot => {
             const current = colors[slot.key];
             return (
-              <div key={slot.key} className="space-y-2.5">
+              <div key={slot.key} className="space-y-3">
                 <div>
                   <p className="font-bold text-brand-navy text-sm">{slot.label}</p>
                   <p className="text-[11px] text-brand-navy/60">{slot.desc}</p>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div>
                     <p className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-wider mb-1.5">Background</p>
-                    <ColorPickerDropdown
-                      presets={slot.presets}
-                      currentCss={current.css}
-                      onSelect={p => pick(slot.key, p)}
+                    <ColorSwatchPicker
+                      value={current.css}
+                      onChange={css => pickBg(slot.key, css)}
+                      presets={slot.presets.map(p => ({ id: p.id, css: p.css, label: p.label }))}
+                      label="Tap to open colour picker"
                     />
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-wider mb-1.5">Text</p>
-                    <TextColorDropdown
-                      currentColor={current.textColor}
-                      dark={current.dark}
-                      onSelect={color => pickTextColor(slot.key, color)}
+                    <p className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-wider mb-1.5">Text colour</p>
+                    <ColorSwatchPicker
+                      value={current.textColor ?? (current.dark ? '#ffffff' : '#0f172a')}
+                      onChange={color => pickTextColor(slot.key, color)}
+                      label="Tap to open colour picker"
                     />
                   </div>
                 </div>
@@ -21400,20 +21372,12 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                       </button>
                     </div>
                     <div className="px-5 py-4 pb-8">
-                      <div className="grid grid-cols-5 gap-3">
-                        {CARD_COLOR_PRESETS.map(cp => {
-                          const active = currentCardColor === cp.color;
-                          return (
-                            <button key={cp.id} onClick={() => saveCardColor(editingCardColorId, cp.color)}
-                              className={`flex flex-col items-center gap-1 p-1.5 rounded-2xl transition-all active:scale-95 ${active ? 'ring-2 ring-offset-1 ring-brand-navy/30' : ''}`}>
-                              <div className="w-11 h-11 rounded-2xl shadow-sm relative flex items-center justify-center" style={{ background: cp.color }}>
-                                {active && <Check size={14} className="text-white" strokeWidth={3} />}
-                              </div>
-                              <p className={`text-[8px] font-bold ${active ? 'text-brand-navy' : 'text-brand-navy/50'}`}>{cp.label}</p>
-                            </button>
-                          );
-                        })}
-                      </div>
+                      <ColorSwatchPicker
+                        value={currentCardColor}
+                        onChange={color => saveCardColor(editingCardColorId, color)}
+                        presets={CARD_COLOR_PRESETS.map(cp => ({ id: cp.id, css: cp.color, label: cp.label }))}
+                        label="Tap to open colour picker"
+                      />
                     </div>
                   </motion.div>
                 );
