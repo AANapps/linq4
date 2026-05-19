@@ -23981,6 +23981,8 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
     }, () => {});
   }, []);
 
+  const [searchQuery, setSearchQuery] = useState('');
+
   const byDist = (a: StoreProfile, b: StoreProfile) => (storeDistances.get(a.id) ?? Infinity) - (storeDistances.get(b.id) ?? Infinity);
   const storeDeals = allStores.filter(s => s.reward || s.stamps_required_for_reward).sort(byDist);
   const offersByDist = [...storeOffers].sort((a, b) => {
@@ -23993,6 +23995,18 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
   const products = challenges.filter(c => c.rewardTag === 'product');
   const birthdayOffers = storeOffers.filter(o => o.offerType === 'birthday');
 
+  const q = searchQuery.trim().toLowerCase();
+  const searchActive = q.length > 0;
+  const searchedStores = storeDeals.filter(s =>
+    s.name?.toLowerCase().includes(q) || (s.reward ?? '').toLowerCase().includes(q)
+  );
+  const searchedOffers = offersByDist.filter(o =>
+    o.title?.toLowerCase().includes(q) || o.storeName?.toLowerCase().includes(q) || o.category?.toLowerCase().includes(q)
+  );
+  const searchedChallenges = challenges.filter(c =>
+    c.reward?.toLowerCase().includes(q) || c.title?.toLowerCase().includes(q)
+  );
+
   return (
     <>
     <div className="space-y-6 pb-6">
@@ -24000,6 +24014,123 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
         <h1 className="font-display font-bold text-2xl text-brand-navy">Deals</h1>
         <p className="text-brand-navy/80 text-sm mt-0.5">Rewards waiting for you</p>
       </div>
+
+      {/* Search bar */}
+      <div className="relative">
+        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-navy/35 pointer-events-none" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          placeholder="Search deals, stores, rewards…"
+          className="w-full bg-brand-navy/5 rounded-2xl pl-10 pr-10 py-3.5 text-sm text-brand-navy placeholder:text-brand-navy/35 outline-none focus:ring-2 focus:ring-brand-gold/30 transition-all"
+        />
+        {searchActive && (
+          <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full bg-brand-navy/10 active:scale-90 transition-transform">
+            <X size={12} className="text-brand-navy/60" />
+          </button>
+        )}
+      </div>
+
+      {/* Search results */}
+      {searchActive && (
+        <div className="space-y-5">
+          {searchedStores.length === 0 && searchedOffers.length === 0 && searchedChallenges.length === 0 ? (
+            <div className="py-14 text-center text-brand-navy/32">
+              <Search size={40} className="mx-auto mb-3 opacity-20" />
+              <p className="font-bold text-sm">No results for "{searchQuery}"</p>
+            </div>
+          ) : (
+            <>
+              {searchedStores.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 px-1">Stores</p>
+                  <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                    {searchedStores.map((store, i) => {
+                      const finalReward = store.rewardTiers?.length
+                        ? [...store.rewardTiers].sort((a, b) => b.stamps - a.stamps)[0]?.reward
+                        : store.reward;
+                      const dist = storeDistances.get(store.id);
+                      const distLabel = dist != null ? (dist < 1 ? `${Math.round(dist * 1000)}m` : `${dist.toFixed(1)}km`) : null;
+                      return (
+                        <motion.div key={store.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.04 }}
+                          className="shrink-0 w-28 rounded-[1.5rem] overflow-hidden relative cursor-pointer active:scale-[0.97] transition-transform shadow-md shadow-black/10"
+                          style={{ height: '140px' }} onClick={() => onViewStore?.(store)}>
+                          {store.logoUrl
+                            ? <img src={store.logoUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                            : <div className="absolute inset-0 bg-brand-navy/10 flex items-center justify-center"><Building2 size={28} className="text-brand-navy/30" /></div>}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                          <div className="absolute top-2.5 left-2.5 bg-red-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-sm max-w-[80%] truncate">
+                            {finalReward || `${store.stamps_required_for_reward} stamp reward`}
+                          </div>
+                          <div className="absolute bottom-0 left-0 right-0 px-3 pb-3">
+                            <p className="font-bold text-white text-[11px] leading-tight">{store.name}</p>
+                            {distLabel && <p className="text-white/60 text-[9px] font-medium mt-0.5">{distLabel}</p>}
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              {searchedOffers.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 px-1">Offers</p>
+                  <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                    {searchedOffers.map((offer, i) => (
+                      <motion.button key={offer.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.04 }}
+                        onClick={() => setSelectedOffer(offer)}
+                        className="shrink-0 rounded-[1.5rem] overflow-hidden relative cursor-pointer active:scale-[0.97] transition-transform shadow-md shadow-black/10"
+                        style={{ width: '220px', height: '120px' }}>
+                        {offer.imageUrl
+                          ? <img src={offer.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                          : <div className="absolute inset-0 gradient-logo-blue flex items-center justify-center"><Ticket size={28} className="text-white/40" /></div>}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
+                        {(offer.value ?? 0) > 0 && (
+                          <div className="absolute top-2.5 left-2.5 bg-red-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-sm">Save ${offer.value!.toFixed(2)}</div>
+                        )}
+                        <div className="absolute bottom-0 left-0 right-0 px-3 pb-2.5">
+                          <p className="font-extrabold text-white text-xs leading-snug line-clamp-1">{offer.title}</p>
+                          <p className="text-white/60 text-[9px] font-medium mt-0.5">{offer.storeName}</p>
+                        </div>
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {searchedChallenges.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 px-1">Challenges</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {searchedChallenges.map((c, i) => {
+                      const colors = REWARD_TAG_COLORS[c.rewardTag || 'product'];
+                      return (
+                        <motion.div key={c.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.04 }}
+                          className="rounded-[1.5rem] overflow-hidden relative cursor-pointer active:scale-[0.97] transition-transform bg-white shadow-sm border border-brand-navy/5"
+                          style={{ height: '160px' }} onClick={() => onViewChallenge?.(c)}>
+                          {c.imageUrl
+                            ? <img src={c.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                            : <div className="absolute inset-0 bg-brand-navy/3 flex items-center justify-center">
+                                {c.rewardTag === 'experience' ? <Star size={28} className="text-brand-navy/10" /> : c.rewardTag === 'service' ? <Tag size={28} className="text-brand-navy/10" /> : <Package size={28} className="text-brand-navy/10" />}
+                              </div>}
+                          {c.imageUrl && <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />}
+                          <div className="absolute bottom-0 left-0 right-0 px-3 pb-3">
+                            <p className={cn('font-extrabold text-xs leading-tight line-clamp-2', c.imageUrl ? 'text-white' : 'text-brand-navy')}>{c.reward}</p>
+                            <p className={cn('text-[9px] font-medium line-clamp-1 mt-0.5', c.imageUrl ? 'text-white/60' : 'text-brand-navy/45')}>{c.title}</p>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Normal content — hidden while searching */}
+      {!searchActive && (<>
 
       {/* Birthday gifts banner */}
       <button
@@ -24140,6 +24271,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
           <p className="text-sm">Check back soon for rewards and challenges</p>
         </div>
       )}
+      </>)}
     </div>
 
     <AnimatePresence>
