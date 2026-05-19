@@ -243,6 +243,81 @@ export function applyBrandTheme(t: ThemePreset) {
   r.style.setProperty('--brand-g4', t.g4);
 }
 
+// ─── UI Color Control ─────────────────────────────────────────────────────────
+type UiColorSlot = { css: string; dark: boolean };
+interface UiColors {
+  linqleTile: UiColorSlot;
+  savedTile: UiColorSlot;
+  leaderboardTile: UiColorSlot;
+  challengesFypTile: UiColorSlot;
+  dailyVoteTile: UiColorSlot;
+  winTab: UiColorSlot;
+}
+type UiColorPreset = UiColorSlot & { id: string; label: string };
+
+const SOLID_DARK_PRESETS: UiColorPreset[] = [
+  { id: 'dull-blue',    label: 'Dull Blue',  css: '#3D5F7A', dark: true },
+  { id: 'mid-navy',     label: 'Navy',       css: '#1E3050', dark: true },
+  { id: 'deep-navy',    label: 'Deep Navy',  css: '#0F172A', dark: true },
+  { id: 'dark-purple',  label: 'Purple',     css: '#2D1B69', dark: true },
+  { id: 'dark-emerald', label: 'Emerald',    css: '#0D3B2E', dark: true },
+  { id: 'dark-slate',   label: 'Slate',      css: '#1E293B', dark: true },
+  { id: 'charcoal',     label: 'Charcoal',   css: '#1C1C2E', dark: true },
+  { id: 'dark-teal',    label: 'Dk Teal',    css: '#0D3B38', dark: true },
+  { id: 'dark-rose',    label: 'Dk Rose',    css: '#3B0A0A', dark: true },
+  { id: 'black',        label: 'Black',      css: '#000000', dark: true },
+];
+const LIGHT_GRADIENT_PRESETS: UiColorPreset[] = [
+  { id: 'light-grey',  label: 'Grey',     css: 'linear-gradient(135deg, #CBD5E1 0%, #E2E8F0 50%, #F8FAFC 100%)', dark: false },
+  { id: 'warm-gold',   label: 'Gold',     css: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 50%, #FFFBEB 100%)', dark: false },
+  { id: 'sky-blue',    label: 'Sky',      css: 'linear-gradient(135deg, #BAE6FD 0%, #E0F2FE 50%, #F0F9FF 100%)', dark: false },
+  { id: 'soft-mint',   label: 'Mint',     css: 'linear-gradient(135deg, #A7F3D0 0%, #D1FAE5 50%, #ECFDF5 100%)', dark: false },
+  { id: 'blush-rose',  label: 'Rose',     css: 'linear-gradient(135deg, #FECDD3 0%, #FFE4E6 50%, #FFF1F2 100%)', dark: false },
+  { id: 'warm-peach',  label: 'Peach',    css: 'linear-gradient(135deg, #FED7AA 0%, #FFEDD5 50%, #FFF7ED 100%)', dark: false },
+  { id: 'lavender',    label: 'Lavender', css: 'linear-gradient(135deg, #DDD6FE 0%, #EDE9FE 50%, #F5F3FF 100%)', dark: false },
+  { id: 'grey-tint',   label: 'Tint',     css: 'rgba(241, 245, 249, 0.85)', dark: false },
+];
+const VIVID_GRADIENT_PRESETS: UiColorPreset[] = [
+  { id: 'grey-tint',    label: 'Grey Tint',  css: 'rgba(241, 245, 249, 0.85)', dark: false },
+  { id: 'light-grey',   label: 'Light Grey', css: 'linear-gradient(135deg, #CBD5E1 0%, #E2E8F0 50%, #F8FAFC 100%)', dark: false },
+  { id: 'vivid-purple', label: 'Purple',     css: 'linear-gradient(135deg, #7C3AED 0%, #A855F7 55%, #C084FC 100%)', dark: true },
+  { id: 'vivid-blue',   label: 'Blue',       css: 'linear-gradient(135deg, #1D4ED8 0%, #3B82F6 55%, #60A5FA 100%)', dark: true },
+  { id: 'vivid-teal',   label: 'Teal',       css: 'linear-gradient(135deg, #0F766E 0%, #0D9488 55%, #14B8A6 100%)', dark: true },
+  { id: 'vivid-emerald',label: 'Emerald',    css: 'linear-gradient(135deg, #047857 0%, #059669 55%, #10B981 100%)', dark: true },
+  { id: 'vivid-amber',  label: 'Amber',      css: 'linear-gradient(135deg, #D97706 0%, #F59E0B 55%, #FCD34D 100%)', dark: true },
+  { id: 'vivid-rose',   label: 'Rose',       css: 'linear-gradient(135deg, #BE123C 0%, #F43F5E 55%, #FB7185 100%)', dark: true },
+  { id: 'vivid-indigo', label: 'Indigo',     css: 'linear-gradient(135deg, #3730A3 0%, #6366F1 55%, #818CF8 100%)', dark: true },
+  { id: 'vivid-sky',    label: 'Sky',        css: 'linear-gradient(135deg, #0369A1 0%, #0EA5E9 55%, #38BDF8 100%)', dark: true },
+];
+const PASTEL_GRADIENT_PRESETS: UiColorPreset[] = [
+  { id: 'pastel-turquoise', label: 'Turquoise', css: 'linear-gradient(135deg, #A7F3D0 0%, #6EE7D4 45%, #99F6E4 75%, #CCFBF1 100%)', dark: false },
+  { id: 'pastel-lavender',  label: 'Lavender',  css: 'linear-gradient(135deg, #EDE9FE 0%, #DDD6FE 45%, #C4B5FD 100%)', dark: false },
+  { id: 'pastel-peach',     label: 'Peach',     css: 'linear-gradient(135deg, #FFE4E6 0%, #FECDD3 45%, #FDA4AF 100%)', dark: false },
+  { id: 'pastel-sky',       label: 'Sky Blue',  css: 'linear-gradient(135deg, #E0F2FE 0%, #BAE6FD 45%, #7DD3FC 100%)', dark: false },
+  { id: 'pastel-mint',      label: 'Mint',      css: 'linear-gradient(135deg, #ECFDF5 0%, #BBF7D0 45%, #86EFAC 100%)', dark: false },
+  { id: 'pastel-lemon',     label: 'Lemon',     css: 'linear-gradient(135deg, #FEFCE8 0%, #FEF08A 45%, #FDE047 100%)', dark: false },
+  { id: 'pastel-rose',      label: 'Rose',      css: 'linear-gradient(135deg, #FFF1F2 0%, #FECDD3 45%, #FDA4AF 100%)', dark: false },
+  { id: 'pastel-lilac',     label: 'Lilac',     css: 'linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 45%, #DDD6FE 100%)', dark: false },
+  { id: 'grey-tint',        label: 'Grey Tint', css: 'rgba(241, 245, 249, 0.85)', dark: false },
+  { id: 'light-grey',       label: 'Grey',      css: 'linear-gradient(135deg, #CBD5E1 0%, #E2E8F0 50%, #F8FAFC 100%)', dark: false },
+];
+const UI_COLOR_DEFAULTS: UiColors = {
+  linqleTile:        { css: '#3D5F7A', dark: true },
+  savedTile:         { css: '#1E3050', dark: true },
+  leaderboardTile:   { css: 'linear-gradient(135deg, #CBD5E1 0%, #E2E8F0 50%, #F8FAFC 100%)', dark: false },
+  challengesFypTile: { css: 'rgba(241, 245, 249, 0.85)', dark: false },
+  dailyVoteTile:     { css: 'linear-gradient(135deg, #A7F3D0 0%, #6EE7D4 45%, #99F6E4 75%, #CCFBF1 100%)', dark: false },
+  winTab:            { css: 'linear-gradient(135deg, #d97706 0%, #f59e0b 35%, #fbbf24 60%, #f59e0b 100%)', dark: true },
+};
+const UI_COLOR_SLOT_DEFS: { key: keyof UiColors; label: string; desc: string; presets: UiColorPreset[] }[] = [
+  { key: 'linqleTile',        label: 'Linqle Tile',        desc: 'For You word game card',      presets: SOLID_DARK_PRESETS },
+  { key: 'savedTile',         label: 'Saved with Linq',    desc: 'For You savings card',        presets: SOLID_DARK_PRESETS },
+  { key: 'leaderboardTile',   label: 'Leaderboard Tile',   desc: 'For You leaderboard card',    presets: LIGHT_GRADIENT_PRESETS },
+  { key: 'challengesFypTile', label: 'Challenges Tile',    desc: 'For You challenges carousel', presets: VIVID_GRADIENT_PRESETS },
+  { key: 'dailyVoteTile',     label: 'Daily Vote Tile',    desc: 'For You daily poll card',     presets: PASTEL_GRADIENT_PRESETS },
+  { key: 'winTab',            label: 'Win Tab',            desc: 'Wallet challenges tab button', presets: VIVID_GRADIENT_PRESETS },
+];
+
 // ─── Default gender-specific SVG avatars (no external URL, no data cost) ────
 const AVATAR_SVGS: Record<string, string> = {
   Male: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#0F172A"/><circle cx="50" cy="36" r="19" fill="#5EEAD4"/><rect x="28" y="57" width="44" height="6" rx="3" fill="#2DD4BF"/><path d="M14 100 Q14 66 50 66 Q86 66 86 100Z" fill="#5EEAD4"/></svg>`,
@@ -914,6 +989,21 @@ export default function App() {
     }).catch(() => {});
   }, []);
 
+  const [uiColors, setUiColors] = useState<UiColors>(UI_COLOR_DEFAULTS);
+  useEffect(() => {
+    getDoc(doc(db, 'app_config', 'ui_colors')).then(snap => {
+      if (!snap.exists()) return;
+      const data = snap.data();
+      setUiColors(prev => {
+        const merged = { ...prev };
+        (Object.keys(UI_COLOR_DEFAULTS) as (keyof UiColors)[]).forEach(k => {
+          if (data[k]?.css) merged[k] = { css: data[k].css, dark: !!data[k].dark };
+        });
+        return merged;
+      });
+    }).catch(() => {});
+  }, []);
+
   // If the target user is a vendor, go straight to their store instead of their user profile
   const handleViewUser = async (targetUser: UserProfile) => {
     if (targetUser.role === 'vendor') {
@@ -933,7 +1023,7 @@ export default function App() {
   const [pendingNFCStoreId, setPendingNFCStoreId] = useState<string | null>(null);
   const [userCards, setUserCards] = useState<Card[]>([]);
   const [showSettings, setShowSettings] = useState(false);
-  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges' | 'stores' | 'users' | 'posts' | 'offers' | 'linqle' | 'daily-vote' | 'cards' | 'banners'>(null);
+  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges' | 'stores' | 'users' | 'posts' | 'offers' | 'linqle' | 'daily-vote' | 'cards' | 'banners' | 'ui-colors'>(null);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -1769,6 +1859,7 @@ export default function App() {
             onOpenDailyVote={() => setAdminView('daily-vote')}
             onOpenCards={() => setAdminView('cards')}
             onOpenBanners={() => setAdminView('banners')}
+            onOpenUiColors={() => setAdminView('ui-colors')}
           />
         )}
         {adminView === 'challenges' && (
@@ -1800,6 +1891,13 @@ export default function App() {
         )}
         {adminView === 'banners' && (
           <BannersAdminPanel onClose={() => setAdminView('menu')} />
+        )}
+        {adminView === 'ui-colors' && (
+          <UiColorsAdmin
+            uiColors={uiColors}
+            onColorsChange={setUiColors}
+            onClose={() => setAdminView('menu')}
+          />
         )}
       </AnimatePresence>
 
@@ -5384,7 +5482,7 @@ function CardSetsAdminPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
-function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts, onOpenOffers, onOpenLinqle, onOpenDailyVote, onOpenCards, onOpenBanners }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void; onOpenOffers: () => void; onOpenLinqle: () => void; onOpenDailyVote: () => void; onOpenCards: () => void; onOpenBanners: () => void }) {
+function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts, onOpenOffers, onOpenLinqle, onOpenDailyVote, onOpenCards, onOpenBanners, onOpenUiColors }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void; onOpenOffers: () => void; onOpenLinqle: () => void; onOpenDailyVote: () => void; onOpenCards: () => void; onOpenBanners: () => void; onOpenUiColors: () => void }) {
   const [activeThemeId, setActiveThemeId] = useState<string>('teal');
   const [savingTheme, setSavingTheme] = useState(false);
 
@@ -5564,6 +5662,20 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores,
             </div>
           </motion.button>
 
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={onOpenUiColors}
+            className="rounded-[2rem] bg-white border border-black/5 shadow-sm p-6 flex flex-col items-start gap-3 text-left active:bg-brand-navy/5 transition-colors"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 flex items-center justify-center">
+              <Palette size={22} className="text-purple-500" />
+            </div>
+            <div>
+              <p className="font-bold text-brand-navy text-sm">UI Colours</p>
+              <p className="text-[11px] text-brand-navy/75 mt-0.5">Colour each tile & tab component</p>
+            </div>
+          </motion.button>
+
         </div>
 
         {/* App Theme Picker */}
@@ -5631,6 +5743,86 @@ const BANNER_DEST_OPTIONS = [
   { value: 'profile', label: 'Profile' },
   { value: 'url', label: 'External URL…' },
 ];
+
+function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColors; onColorsChange: (c: UiColors) => void; onClose: () => void }) {
+  const [colors, setColors] = useState<UiColors>(uiColors);
+  const [saving, setSaving] = useState(false);
+
+  const pick = async (key: keyof UiColors, preset: UiColorPreset) => {
+    const next = { ...colors, [key]: { css: preset.css, dark: preset.dark } };
+    setColors(next);
+    onColorsChange(next);
+    setSaving(true);
+    try {
+      const payload = Object.fromEntries(
+        (Object.keys(next) as (keyof UiColors)[]).map(k => [k, { css: next[k].css, dark: next[k].dark }])
+      );
+      await setDoc(doc(db, 'app_config', 'ui_colors'), payload, { merge: true });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex flex-col max-w-md mx-auto">
+      <div className="flex-1 overflow-y-auto bg-brand-bg">
+        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm px-5 pt-5 pb-4 border-b border-black/5 z-10">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-display text-2xl font-bold text-brand-navy">UI Colours</h2>
+              <p className="text-xs text-brand-navy/80 mt-0.5">Customise each tile and tab</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {saving && <p className="text-[10px] text-brand-navy/40 animate-pulse">Saving…</p>}
+              <button onClick={onClose} className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm active:scale-95 transition-all">
+                <X size={18} className="text-brand-navy/75" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-5 space-y-6">
+          {UI_COLOR_SLOT_DEFS.map(slot => {
+            const current = colors[slot.key];
+            return (
+              <div key={slot.key}>
+                <div className="mb-2">
+                  <p className="font-bold text-brand-navy text-sm">{slot.label}</p>
+                  <p className="text-[11px] text-brand-navy/60">{slot.desc}</p>
+                </div>
+                <div className="grid grid-cols-5 gap-2">
+                  {slot.presets.map(p => {
+                    const active = current.css === p.css;
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => pick(slot.key, p)}
+                        className={`flex flex-col items-center gap-1 p-1.5 rounded-2xl transition-all active:scale-95 ${active ? 'ring-2 ring-brand-navy/30 bg-brand-navy/6' : ''}`}
+                      >
+                        <div className="w-11 h-11 rounded-xl shadow-sm relative overflow-hidden border border-black/8"
+                          style={{ background: p.css }}>
+                          {active && (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <div className={`w-5 h-5 rounded-full flex items-center justify-center ${p.dark ? 'bg-white/90' : 'bg-brand-navy/80'}`}>
+                                <Check size={11} className={p.dark ? 'text-brand-navy' : 'text-white'} strokeWidth={3} />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <p className={`text-[8px] font-bold leading-none text-center ${active ? 'text-brand-navy' : 'text-brand-navy/50'}`}>{p.label}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
 
 function BannersAdminPanel({ onClose }: { onClose: () => void }) {
   const [banners, setBanners] = useState<AdminBanner[]>([]);
@@ -9012,6 +9204,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           currentUser={user}
           currentProfile={profile}
           userCards={initialCards}
+          uiColors={uiColors}
         />
       )}
 
@@ -9090,7 +9283,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                     'flex-1 py-2.5 rounded-xl text-sm font-bold transition-all relative overflow-hidden text-white',
                     walletSubTab === 'challenges' ? 'shadow-md opacity-100' : 'opacity-60'
                   )}
-                  style={{ background: 'linear-gradient(135deg, #d97706 0%, #f59e0b 35%, #fbbf24 60%, #f59e0b 100%)' }}
+                  style={{ background: uiColors.winTab.css }}
                 >
                   <span className="shine-ray" aria-hidden="true" />
                   <span className={cn('relative z-10', walletSubTab !== 'challenges' && 'tab-shake')}>🏆 Win</span>
@@ -16753,7 +16946,7 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
   );
 }
 
-function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady }: { currentUser: FirebaseUser; currentProfile: UserProfile | null; onPackReady?: (s: CollectibleSticker[]) => void }) {
+function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor }: { currentUser: FirebaseUser; currentProfile: UserProfile | null; onPackReady?: (s: CollectibleSticker[]) => void; tileColor?: UiColorSlot }) {
   const today = new Date().toISOString().split('T')[0];
   const [voteData, setVoteData] = useState<DailyVoteData | null>(null);
   const [rawUserVote, setRawUserVote] = useState<{ optionIdx: number; voteId?: string } | null>(null);
@@ -16787,37 +16980,45 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady }: { curren
   const userVote = rawUserVote && voteId && rawUserVote.voteId === voteId ? rawUserVote.optionIdx : null;
   const total = Math.max(liveTotal, 1);
   const hasVoted = userVote !== null;
+  const tc = tileColor ?? UI_COLOR_DEFAULTS.dailyVoteTile;
+  const dvDark = tc.dark;
+  const labelCls = dvDark ? 'text-white/60' : 'text-teal-700/70';
+  const titleCls = dvDark ? 'text-white' : 'text-teal-900';
+  const voteCls = dvDark ? 'text-white/60' : 'text-teal-700/60';
+  const barBg = dvDark ? 'bg-white/15' : 'bg-teal-700/15';
+  const barFill = dvDark ? 'bg-white' : 'bg-teal-700';
+  const barFillDim = dvDark ? 'bg-white/40' : 'bg-teal-700/40';
 
   return (
     <>
       <motion.button whileTap={{ scale: 0.97 }} onClick={() => setOpen(true)}
         className="flex-1 rounded-[1.5rem] overflow-hidden shadow-lg shadow-teal-900/10 text-left">
         <div className="relative h-full px-4 py-4 flex flex-col gap-3"
-          style={{ background: 'linear-gradient(135deg, #A7F3D0 0%, #6EE7D4 45%, #99F6E4 75%, #CCFBF1 100%)' }}>
+          style={{ background: tc.css }}>
           {voteData.imageUrl && <img src={voteData.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20 pointer-events-none" />}
           <div className="absolute top-2 right-2 z-20 w-7 h-7 bg-red-500 rounded-full flex items-center justify-center shadow-md">
             <Gift size={14} className="text-white" strokeWidth={2.5} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[9px] font-bold uppercase tracking-widest text-teal-700/70">Daily Vote</p>
-            <p className="text-sm font-black text-teal-900 leading-tight mt-0.5 line-clamp-2">{voteData.question}</p>
+            <p className={`text-[9px] font-bold uppercase tracking-widest ${labelCls}`}>Daily Vote</p>
+            <p className={`text-sm font-black ${titleCls} leading-tight mt-0.5 line-clamp-2`}>{voteData.question}</p>
           </div>
           {hasVoted && (
             <div className="space-y-1">
               {voteData.options.map((_, i) => {
                 const pct = Math.round(((liveCounts[String(i)] ?? 0) / total) * 100);
                 return (
-                  <div key={i} className="h-1.5 bg-teal-700/15 rounded-full overflow-hidden">
+                  <div key={i} className={`h-1.5 ${barBg} rounded-full overflow-hidden`}>
                     <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.5, delay: i * 0.1 }}
-                      className={`h-full rounded-full ${userVote === i ? 'bg-teal-700' : 'bg-teal-700/40'}`} />
+                      className={`h-full rounded-full ${userVote === i ? barFill : barFillDim}`} />
                   </div>
                 );
               })}
-              <p className="text-[9px] text-teal-700/60 pt-0.5">{liveTotal} votes</p>
+              <p className={`text-[9px] ${voteCls} pt-0.5`}>{liveTotal} votes</p>
             </div>
           )}
           {!hasVoted && !voteData.closed && (
-            <p className="text-[10px] font-bold text-teal-700/60">Tap to vote →</p>
+            <p className={`text-[10px] font-bold ${voteCls}`}>Tap to vote →</p>
           )}
         </div>
       </motion.button>
@@ -23876,7 +24077,8 @@ function AdminBannerCarousel({ banners, onNavigate }: { banners: AdminBanner[]; 
   );
 }
 
-function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle, onPackReady, onNavigate, currentUser, currentProfile, userCards = [] }: { onViewUser: (u: UserProfile) => void, onViewStore?: (s: StoreProfile) => void, onViewChallenges?: () => void, onOpenLinqle?: () => void, onPackReady?: (s: CollectibleSticker[]) => void, onNavigate?: (dest: string) => void, currentUser?: FirebaseUser, currentProfile?: UserProfile | null, userCards?: Card[] }) {
+function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle, onPackReady, onNavigate, currentUser, currentProfile, userCards = [], uiColors: uc }: { onViewUser: (u: UserProfile) => void, onViewStore?: (s: StoreProfile) => void, onViewChallenges?: () => void, onOpenLinqle?: () => void, onPackReady?: (s: CollectibleSticker[]) => void, onNavigate?: (dest: string) => void, currentUser?: FirebaseUser, currentProfile?: UserProfile | null, userCards?: Card[], uiColors?: UiColors }) {
+  const uiColors = uc ?? UI_COLOR_DEFAULTS;
   const [globalPosts, setGlobalPosts] = useState<GlobalPost[]>([]);
   const [vendorPosts, setVendorPosts] = useState<any[]>([]);
   const [followingUids, setFollowingUids] = useState<Set<string>>(new Set());
@@ -24253,8 +24455,8 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
             {onOpenLinqle && (
               <motion.button whileTap={{ scale: 0.97 }} onClick={onOpenLinqle}
                 className="flex-1 rounded-[1.5rem] overflow-hidden shadow-lg shadow-black/20">
-                <div className="relative w-full h-full flex flex-col items-center justify-center gap-1 bg-[#3D5F7A]">
-                  <MatrixRainCanvas opacity={0.25} fadeColor="rgba(61,95,122,0.18)" />
+                <div className="relative w-full h-full flex flex-col items-center justify-center gap-1" style={{ background: uiColors.linqleTile.css }}>
+                  <MatrixRainCanvas opacity={0.25} fadeColor="rgba(0,0,0,0.18)" />
                   <div className="absolute top-2 right-2 z-20 w-7 h-7 bg-red-500 rounded-full flex items-center justify-center shadow-md">
                     <Gift size={14} className="text-white" strokeWidth={2.5} />
                   </div>
@@ -24270,7 +24472,8 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                 <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex-1 rounded-[1.5rem] overflow-hidden shadow-lg shadow-black/20">
                   <button
                     onClick={() => setShowSavingsLb(true)}
-                    className="w-full h-full bg-[#0F172A] relative overflow-hidden px-3 py-3 flex flex-col items-center justify-center gap-0.5 active:opacity-90 transition-opacity"
+                    className="w-full h-full relative overflow-hidden px-3 py-3 flex flex-col items-center justify-center gap-0.5 active:opacity-90 transition-opacity"
+                    style={{ background: uiColors.savedTile.css }}
                   >
                     <p className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-white/40 text-center">Saved with Linq</p>
                     {saved > 0
@@ -24282,7 +24485,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
               );
             })()}
             {currentUser && currentProfile && (
-              <DailyVoteFYPCard currentUser={currentUser} currentProfile={currentProfile} onPackReady={onPackReady} />
+              <DailyVoteFYPCard currentUser={currentUser} currentProfile={currentProfile} onPackReady={onPackReady} tileColor={uiColors.dailyVoteTile} />
             )}
           </div>
 
@@ -24307,21 +24510,29 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                 const list = isCompleted ? feedCompletedChallenges : feedChallenges;
                 const idx = isCompleted ? completedIdx : challengeIdx;
                 const current = list[idx % Math.max(list.length, 1)];
+                const cDark = isCompleted || uiColors.challengesFypTile.dark;
+                const cBg = isCompleted ? 'linear-gradient(135deg, #374151 0%, #4B5563 55%, #6B7280 100%)' : uiColors.challengesFypTile.css;
+                const cText = cDark ? 'text-white' : 'text-brand-navy';
+                const cTextMid = cDark ? 'text-white/70' : 'text-brand-navy/70';
+                const cTextDim = cDark ? 'text-white/50' : 'text-brand-navy/50';
+                const cToggleInactive = cDark ? 'bg-white/20 text-white/70' : 'bg-brand-navy/10 text-brand-navy/60';
+                const cDot = cDark ? 'bg-white' : 'bg-brand-navy';
+                const cDotDim = cDark ? 'bg-white/30' : 'bg-brand-navy/25';
                 return (
                   <div
                     className="flex-1 relative rounded-[1.5rem] overflow-hidden cursor-pointer active:scale-[0.97] transition-transform"
-                    style={{ background: isCompleted ? 'linear-gradient(135deg, #374151 0%, #4B5563 55%, #6B7280 100%)' : 'linear-gradient(135deg, #7C3AED 0%, #A855F7 55%, #C084FC 100%)', minHeight: '148px' }}
+                    style={{ background: cBg, minHeight: '148px' }}
                     onClick={() => onViewChallenges?.()}
                   >
                     {/* Toggle buttons */}
                     <div className="absolute top-2.5 left-2.5 z-20 flex gap-1.5" onClick={e => e.stopPropagation()}>
                       <button
                         onClick={() => setChallengeView('active')}
-                        className={cn('px-2 py-0.5 rounded-full text-[9px] font-bold transition-all', !isCompleted ? 'bg-white text-purple-700' : 'bg-white/20 text-white/70')}
+                        className={cn('px-2 py-0.5 rounded-full text-[9px] font-bold transition-all', !isCompleted ? 'bg-white text-purple-700' : cToggleInactive)}
                       >Challenges</button>
                       <button
                         onClick={() => setChallengeView('completed')}
-                        className={cn('px-2 py-0.5 rounded-full text-[9px] font-bold transition-all', isCompleted ? 'bg-white text-gray-700' : 'bg-white/20 text-white/70')}
+                        className={cn('px-2 py-0.5 rounded-full text-[9px] font-bold transition-all', isCompleted ? 'bg-white text-gray-700' : cToggleInactive)}
                       >Completed</button>
                     </div>
 
@@ -24336,7 +24547,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                           exit={{ opacity: 0 }}
                           transition={{ duration: 0.4 }}
                         >
-                          <img src={current.imageUrl} alt="" className="w-full h-full object-cover" style={{ opacity: 0.45 }} />
+                          <img src={current.imageUrl} alt="" className="w-full h-full object-cover" style={{ opacity: cDark ? 0.45 : 0.25 }} />
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -24366,11 +24577,11 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                     {/* Content */}
                     <div className="relative z-10 p-4 h-full flex flex-col justify-between" style={{ minHeight: '148px', paddingTop: '2.25rem' }}>
                       {list.length === 0 ? (
-                        <p className="text-white/50 text-xs font-bold text-center mt-6">No {isCompleted ? 'completed' : 'active'} challenges</p>
+                        <p className={`${cTextDim} text-xs font-bold text-center mt-6`}>No {isCompleted ? 'completed' : 'active'} challenges</p>
                       ) : (
                         <>
                           <div>
-                            <p className="text-white/70 text-[9px] font-black uppercase tracking-widest mb-1.5">{isCompleted ? 'Ended' : 'Win'}</p>
+                            <p className={`${cTextMid} text-[9px] font-black uppercase tracking-widest mb-1.5`}>{isCompleted ? 'Ended' : 'Win'}</p>
                             <AnimatePresence mode="wait">
                               <motion.div
                                 key={`${challengeView}-${idx}`}
@@ -24379,16 +24590,16 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                                 exit={{ opacity: 0, y: -8 }}
                                 transition={{ duration: 0.35 }}
                               >
-                                <p className="text-white font-black text-base leading-snug line-clamp-2">{current?.reward}</p>
-                                <p className="text-white/50 text-[10px] mt-1 line-clamp-1">{current?.title}</p>
+                                <p className={`${cText} font-black text-base leading-snug line-clamp-2`}>{current?.reward}</p>
+                                <p className={`${cTextDim} text-[10px] mt-1 line-clamp-1`}>{current?.title}</p>
                               </motion.div>
                             </AnimatePresence>
                           </div>
                           <div className="flex items-center justify-between mt-2">
-                            <p className="text-white/50 text-[9px] font-bold">{list.length} {isCompleted ? 'ended' : 'prizes'}</p>
+                            <p className={`${cTextDim} text-[9px] font-bold`}>{list.length} {isCompleted ? 'ended' : 'prizes'}</p>
                             <div className="flex gap-1 items-center">
                               {list.slice(0, Math.min(list.length, 5)).map((_, i) => (
-                                <div key={i} className={cn('rounded-full transition-all duration-300', i === (idx % list.length) ? 'w-3 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/30')} />
+                                <div key={i} className={cn('rounded-full transition-all duration-300', i === (idx % list.length) ? `w-3 h-1.5 ${cDot}` : `w-1.5 h-1.5 ${cDotDim}`)} />
                               ))}
                             </div>
                           </div>
@@ -24406,7 +24617,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                   confetti({ particleCount: 80, spread: 60, startVelocity: 30, gravity: 0.8, scalar: 0.9, origin: { y: 0.6 }, zIndex: 9999, colors: ['#FFD700', '#FFC200', '#FFE566', '#FFAA00', '#FFF8DC'] });
                 }}
                 className="relative rounded-[1.5rem] overflow-hidden active:scale-[0.97] transition-transform shrink-0"
-                style={{ background: 'linear-gradient(135deg, #CBD5E1 0%, #E2E8F0 50%, #F8FAFC 100%)', width: (feedChallenges.length > 0 || feedCompletedChallenges.length > 0) ? '136px' : '100%', minHeight: '148px' }}
+                style={{ background: uiColors.leaderboardTile.css, width: (feedChallenges.length > 0 || feedCompletedChallenges.length > 0) ? '136px' : '100%', minHeight: '148px' }}
               >
                 <div className="absolute top-3 left-3 text-lg leading-none">🥇</div>
                 <motion.div
@@ -24435,13 +24646,13 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                   />
                 ))}
                 <div className="relative z-10 h-full flex flex-col items-center justify-center gap-1.5 px-2 py-4" style={{ minHeight: '148px' }}>
-                  <div className="w-12 h-12 rounded-xl overflow-hidden border-2 border-gray-300 bg-teal-50 flex items-center justify-center">
+                  <div className={`w-12 h-12 rounded-xl overflow-hidden border-2 ${uiColors.leaderboardTile.dark ? 'border-white/30' : 'border-gray-300'} bg-teal-50 flex items-center justify-center`}>
                     <PixelAvatar config={currentProfile?.avatar} uid={currentProfile?.uid || ''} size={48} view="head" />
                   </div>
-                  <p className="text-gray-700 font-bold text-[10px] text-center leading-tight line-clamp-2 w-full px-1">
+                  <p className={`${uiColors.leaderboardTile.dark ? 'text-white' : 'text-gray-700'} font-bold text-[10px] text-center leading-tight line-clamp-2 w-full px-1`}>
                     {currentProfile?.name || 'You'}
                   </p>
-                  <p className="text-gray-500 text-[8px] font-bold uppercase tracking-wider">Leaderboard</p>
+                  <p className={`${uiColors.leaderboardTile.dark ? 'text-white/60' : 'text-gray-500'} text-[8px] font-bold uppercase tracking-wider`}>Leaderboard</p>
                 </div>
               </button>
             </div>
