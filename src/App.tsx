@@ -5819,6 +5819,7 @@ function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColo
   const [themeCustomHex, setThemeCustomHex] = useState<string>('#0D9488');
   const [pendingThemeData, setPendingThemeData] = useState<{ themeId: string; customHex?: string } | null>(null);
   const [isDirty, setIsDirty] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   useEffect(() => {
     getDoc(doc(db, 'app_config', 'theme')).then(snap => {
@@ -5850,6 +5851,7 @@ function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColo
 
   const saveAll = async () => {
     setSaving(true);
+    setSaveError('');
     try {
       const payload = Object.fromEntries(
         (Object.keys(colors) as (keyof UiColors)[]).map(k => {
@@ -5863,6 +5865,9 @@ function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColo
         setPendingThemeData(null);
       }
       setIsDirty(false);
+    } catch (err: any) {
+      console.error('UiColors save failed:', err);
+      setSaveError(err?.message || 'Save failed — check connection');
     } finally {
       setSaving(false);
     }
@@ -5896,7 +5901,7 @@ function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColo
           </div>
         </div>
 
-        <div className="p-5 space-y-7 pb-36">
+        <div className="p-5 space-y-7 pb-4">
           {/* Brand Theme — rainbow picker */}
           <div className="space-y-2.5">
             <div>
@@ -5949,23 +5954,18 @@ function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColo
         </div>
       </div>
 
-      <AnimatePresence>
-        {isDirty && (
-          <motion.div
-            initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
-            transition={{ type: 'spring', damping: 22, stiffness: 300 }}
-            className="bg-brand-bg border-t border-brand-navy/8 px-5 py-4 safe-area-pb"
-          >
-            <button
-              onClick={saveAll}
-              disabled={saving}
-              className="w-full gradient-red text-white font-bold py-4 rounded-2xl active:scale-[0.98] transition-all disabled:opacity-60 text-sm tracking-wide"
-            >
-              {saving ? 'Saving…' : 'Save Changes'}
-            </button>
-          </motion.div>
+      <div className="shrink-0 bg-brand-bg border-t border-brand-navy/8 px-5 pt-4 pb-8">
+        {saveError && (
+          <p className="text-red-500 text-xs font-bold text-center mb-2">{saveError}</p>
         )}
-      </AnimatePresence>
+        <button
+          onClick={saveAll}
+          disabled={saving || !isDirty}
+          className="w-full gradient-red text-white font-bold py-4 rounded-2xl active:scale-[0.98] transition-all disabled:opacity-40 text-sm tracking-wide"
+        >
+          {saving ? 'Saving…' : isDirty ? 'Save Changes' : 'Saved'}
+        </button>
+      </div>
     </motion.div>
   );
 }
