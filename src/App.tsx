@@ -8917,7 +8917,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
             <motion.div
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', stiffness: 380, damping: 36 }}
-              className="bg-brand-bg flex flex-col overflow-hidden flex-1"
+              className="bg-[#0F172A] flex flex-col overflow-hidden flex-1"
             >
               <LinqleMatrixBanner
                 onClose={() => setViewingLinqle(false)}
@@ -16389,11 +16389,11 @@ function scoreTileStates(guess: string, answer: string): TileState[] {
 }
 
 const TILE_COLORS: Record<TileState, string> = {
-  correct: 'bg-teal-600 border-blue-600 text-white',
+  correct: 'bg-teal-400 border-teal-400 text-white',
   present: 'bg-amber-400 border-amber-400 text-white',
-  absent: 'bg-brand-navy/60 border-brand-navy/60 text-white',
-  empty: 'bg-white border-brand-navy/15 text-brand-navy',
-  typing: 'bg-white border-brand-navy/40 text-brand-navy',
+  absent: 'bg-slate-700 border-slate-700 text-white',
+  empty: 'bg-transparent border-white/20 text-white',
+  typing: 'bg-white/10 border-white/50 text-white',
 };
 
 const KEYBOARD_ROWS = [['Q','W','E','R','T','Y','U','I','O','P'],['A','S','D','F','G','H','J','K','L'],['ENTER','Z','X','C','V','B','N','M','⌫']];
@@ -16771,13 +16771,13 @@ function MatrixRainCanvas({ opacity = 0.35, fadeColor = 'rgba(17,40,110,0.18)' }
 
 function LinqleMatrixBanner({ onClose, dateStr }: { onClose: () => void; dateStr: string }) {
   return (
-    <div className="relative flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/10 shrink-0 overflow-hidden gradient-logo-blue">
+    <div className="relative flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/8 shrink-0 overflow-hidden bg-[#0F172A]">
       <MatrixRainCanvas />
       <div className="relative z-10">
-        <h2 className="font-black text-xl text-white tracking-wide">Linqle</h2>
-        <p className="text-xs text-white/60">{dateStr}</p>
+        <h2 className="font-black text-xl tracking-wide"><span className="text-teal-400">Li</span><span className="text-white">nqle</span></h2>
+        <p className="text-xs text-teal-400/70">{dateStr}</p>
       </div>
-      <button onClick={onClose} className="relative z-10 w-9 h-9 rounded-full bg-white/15 flex items-center justify-center active:scale-90 transition-all">
+      <button onClick={onClose} className="relative z-10 w-9 h-9 rounded-full bg-white/10 flex items-center justify-center active:scale-90 transition-all">
         <X size={18} className="text-white" />
       </button>
     </div>
@@ -17029,10 +17029,10 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
           className="flex flex-col items-center px-6 pt-6 pb-4 gap-4 text-center shrink-0">
           <p className="text-4xl">{displayWon ? '🎉' : '😔'}</p>
           <div>
-            <p className="text-xs text-brand-navy/80 font-semibold mb-2">{displayWon ? 'You got it!' : 'The answer was'}</p>
+            <p className="text-xs text-white/60 font-semibold mb-2">{displayWon ? 'You got it!' : 'The answer was'}</p>
             <div className="flex gap-1.5 justify-center">
               {answer.split('').map((ch, i) => (
-                <div key={i} className="w-12 h-12 rounded-xl bg-green-500 flex items-center justify-center font-black text-xl text-white">
+                <div key={i} className="w-12 h-12 rounded-xl bg-teal-400 flex items-center justify-center font-black text-xl text-white">
                   {ch}
                 </div>
               ))}
@@ -17040,20 +17040,20 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
           </div>
           <div className="flex items-center gap-4 text-sm">
             {displayWon
-              ? <span className="text-brand-navy/75">{displayGuesses} guess{displayGuesses !== 1 ? 'es' : ''}{gameOver && elapsed > 0 ? ` · ${fmtTime(elapsed)}` : ''}</span>
-              : <span className="text-brand-navy/80">Better luck tomorrow</span>}
-            <span className={`flex items-center gap-1 font-bold px-3 py-1 rounded-full text-xs ${userStreak > 0 ? 'bg-orange-100 text-orange-600' : 'bg-brand-navy/8 text-brand-navy/75'}`}>
+              ? <span className="text-white/70">{displayGuesses} guess{displayGuesses !== 1 ? 'es' : ''}{gameOver && elapsed > 0 ? ` · ${fmtTime(elapsed)}` : ''}</span>
+              : <span className="text-white/70">Better luck tomorrow</span>}
+            <span className={`flex items-center gap-1 font-bold px-3 py-1 rounded-full text-xs ${userStreak > 0 ? 'bg-orange-400/20 text-orange-300' : 'bg-white/10 text-white/60'}`}>
               🔥 {userStreak} day streak
             </span>
           </div>
-          {submitting && <p className="text-xs text-brand-navy/75 animate-pulse">Saving…</p>}
+          {submitting && <p className="text-xs text-teal-400/80 animate-pulse">Saving…</p>}
         </motion.div>
 
         {/* Leaderboard tabs */}
         <div className="flex gap-1 mx-5 mb-3 shrink-0">
           {(['today', 'alltime'] as const).map(tab => (
             <button key={tab} onClick={() => setLbTab(tab)}
-              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${lbTab === tab ? 'bg-brand-navy text-white' : 'bg-brand-navy/8 text-brand-navy/80'}`}>
+              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${lbTab === tab ? 'bg-teal-400 text-white' : 'bg-white/10 text-white/70'}`}>
               {tab === 'today' ? "Today" : "All Time"}
             </button>
           ))}
@@ -17063,55 +17063,55 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
         <div className="flex-1 overflow-y-auto px-5 pb-6 space-y-2">
           {lbTab === 'today' ? (
             scores.length === 0
-              ? <p className="text-xs text-brand-navy/72 text-center py-8">No completions today yet</p>
+              ? <p className="text-xs text-white/50 text-center py-8">No completions today yet</p>
               : scores.map((s, idx) => (
-                <div key={s.id} className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl ${s.uid === currentUser.uid ? 'bg-green-50 border border-green-200' : 'bg-white border border-brand-navy/6'}`}>
-                  <span className="w-5 text-center font-bold text-xs text-brand-navy/75 shrink-0">{idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}</span>
-                  <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-brand-navy/10 bg-teal-50 flex items-center justify-center">
+                <div key={s.id} className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl ${s.uid === currentUser.uid ? 'bg-teal-400/15 border border-teal-400/30' : 'bg-white/8 border border-white/10'}`}>
+                  <span className="w-5 text-center font-bold text-xs text-white/60 shrink-0">{idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}</span>
+                  <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-white/15 bg-slate-700 flex items-center justify-center">
                     <PixelAvatar config={s.avatar} uid={s.uid} size={36} view="head" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-sm truncate text-brand-navy">{s.name}</p>
-                    {s.handle && <p className="text-[10px] text-brand-navy/75 truncate">@{s.handle}</p>}
+                    <p className="font-bold text-sm truncate text-white">{s.name}</p>
+                    {s.handle && <p className="text-[10px] text-white/50 truncate">@{s.handle}</p>}
                   </div>
-                  <span className="text-xs font-bold text-brand-navy/80 shrink-0">{s.won ? `${s.guesses}/6` : 'X/6'}</span>
-                  <span className="text-xs text-brand-navy/72 shrink-0">{fmtTime(s.timeMs)}</span>
+                  <span className="text-xs font-bold text-white/80 shrink-0">{s.won ? `${s.guesses}/6` : 'X/6'}</span>
+                  <span className="text-xs text-white/50 shrink-0">{fmtTime(s.timeMs)}</span>
                 </div>
               ))
           ) : (
             <>
               {top20.length === 0
-                ? <p className="text-xs text-brand-navy/72 text-center py-8">No all-time scores yet</p>
+                ? <p className="text-xs text-white/50 text-center py-8">No all-time scores yet</p>
                 : top20.map((s, idx) => (
-                  <div key={s.id} className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl ${s.uid === currentUser.uid ? 'bg-green-50 border border-green-200' : 'bg-white border border-brand-navy/6'}`}>
-                    <span className="w-5 text-center font-bold text-xs text-brand-navy/75 shrink-0">{idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}</span>
-                    <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-brand-navy/10 bg-teal-50 flex items-center justify-center">
+                  <div key={s.id} className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl ${s.uid === currentUser.uid ? 'bg-teal-400/15 border border-teal-400/30' : 'bg-white/8 border border-white/10'}`}>
+                    <span className="w-5 text-center font-bold text-xs text-white/60 shrink-0">{idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}</span>
+                    <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-white/15 bg-slate-700 flex items-center justify-center">
                       <PixelAvatar config={(s as any).avatar} uid={s.uid} size={36} view="head" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-sm truncate text-brand-navy">{s.name}</p>
-                      {(s as any).handle && <p className="text-[10px] text-brand-navy/75 truncate">@{(s as any).handle}</p>}
+                      <p className="font-bold text-sm truncate text-white">{s.name}</p>
+                      {(s as any).handle && <p className="text-[10px] text-white/50 truncate">@{(s as any).handle}</p>}
                     </div>
-                    <span className="text-xs font-bold text-green-600 shrink-0">{s.totalWins}W</span>
-                    <span className="text-xs text-brand-navy/72 shrink-0">best {s.bestGuesses}/6</span>
+                    <span className="text-xs font-bold text-teal-400 shrink-0">{s.totalWins}W</span>
+                    <span className="text-xs text-white/50 shrink-0">best {s.bestGuesses}/6</span>
                     {(s as any).streak > 1 && <span className="text-xs shrink-0">🔥{(s as any).streak}</span>}
                   </div>
                 ))}
               {/* User's entry if outside top 20 */}
               {!userInTop20 && userAtEntry && (
                 <>
-                  <div className="text-center text-xs text-brand-navy/32 py-1">· · ·</div>
-                  <div className="flex items-center gap-3 px-3 py-2.5 rounded-2xl bg-green-50 border border-green-200">
-                    <span className="w-5 text-center font-bold text-xs text-brand-navy/75 shrink-0">#{userAtIdx + 1}</span>
-                    <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-brand-navy/10 bg-teal-50 flex items-center justify-center">
+                  <div className="text-center text-xs text-white/20 py-1">· · ·</div>
+                  <div className="flex items-center gap-3 px-3 py-2.5 rounded-2xl bg-teal-400/15 border border-teal-400/30">
+                    <span className="w-5 text-center font-bold text-xs text-white/60 shrink-0">#{userAtIdx + 1}</span>
+                    <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-white/15 bg-slate-700 flex items-center justify-center">
                       <PixelAvatar config={(userAtEntry as any).avatar} uid={userAtEntry.uid} size={36} view="head" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-sm truncate text-brand-navy">{userAtEntry.name}</p>
-                      {(userAtEntry as any).handle && <p className="text-[10px] text-brand-navy/75 truncate">@{(userAtEntry as any).handle}</p>}
+                      <p className="font-bold text-sm truncate text-white">{userAtEntry.name}</p>
+                      {(userAtEntry as any).handle && <p className="text-[10px] text-white/50 truncate">@{(userAtEntry as any).handle}</p>}
                     </div>
-                    <span className="text-xs font-bold text-green-600 shrink-0">{userAtEntry.totalWins}W</span>
-                    <span className="text-xs text-brand-navy/72 shrink-0">best {userAtEntry.bestGuesses}/6</span>
+                    <span className="text-xs font-bold text-teal-400 shrink-0">{userAtEntry.totalWins}W</span>
+                    <span className="text-xs text-white/50 shrink-0">best {userAtEntry.bestGuesses}/6</span>
                     {(userAtEntry as any).streak > 1 && <span className="text-xs shrink-0">🔥{(userAtEntry as any).streak}</span>}
                   </div>
                 </>
@@ -17124,7 +17124,7 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
         <div className="px-5 py-4 shrink-0">
           <button
             onClick={onClose}
-            className="w-full py-3.5 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-[0.98] transition-all"
+            className="w-full py-3.5 rounded-2xl bg-teal-400 text-white font-bold text-sm active:scale-[0.98] transition-all"
           >
             Done
           </button>
@@ -17164,7 +17164,7 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
       {/* Keyboard */}
       <div className="pb-4 px-1 space-y-1.5">
         <button onClick={() => handleKey('ENTER')}
-          className="w-full h-11 rounded-xl gradient-logo-blue text-white text-sm font-black tracking-widest uppercase flex items-center justify-center shadow-sm active:scale-95 transition-transform">
+          className="w-full h-11 rounded-xl bg-teal-400 text-white text-sm font-black tracking-widest uppercase flex items-center justify-center shadow-sm active:scale-95 transition-transform">
           Enter
         </button>
         {KEYBOARD_ROWS.map((row, ri) => (
@@ -17174,7 +17174,7 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
               const wide = key === '⌫';
               return (
                 <button key={key} onClick={() => handleKey(key)}
-                  className={`${wide ? 'px-2 min-w-[44px]' : 'w-9'} h-12 rounded-lg text-sm font-bold flex items-center justify-center transition-colors ${kState ? TILE_COLORS[kState] : 'bg-brand-navy/10 text-brand-navy'}`}>
+                  className={`${wide ? 'px-2 min-w-[44px]' : 'w-9'} h-12 rounded-lg text-sm font-bold flex items-center justify-center transition-colors ${kState ? TILE_COLORS[kState] : 'bg-slate-700 text-white'}`}>
                   {key}
                 </button>
               );
@@ -24144,15 +24144,14 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
           <div className="flex gap-3 items-stretch" style={{ minHeight: '106px' }}>
             {onOpenLinqle && (
               <motion.button whileTap={{ scale: 0.97 }} onClick={onOpenLinqle}
-                className="flex-1 rounded-[1.5rem] overflow-hidden shadow-lg shadow-green-900/20">
-                <div className="relative w-full h-full flex flex-col items-center justify-center gap-1"
-                  style={{ background: 'linear-gradient(135deg, #022c22 0%, #064e3b 40%, #059669 80%, #34d399 100%)' }}>
-                  <MatrixRainCanvas opacity={0.35} fadeColor="rgba(2,44,34,0.18)" />
+                className="flex-1 rounded-[1.5rem] overflow-hidden shadow-lg shadow-black/20">
+                <div className="relative w-full h-full flex flex-col items-center justify-center gap-1 bg-[#0F172A]">
+                  <MatrixRainCanvas opacity={0.25} fadeColor="rgba(15,23,42,0.18)" />
                   <div className="absolute top-2 right-2 z-20 w-7 h-7 bg-red-500 rounded-full flex items-center justify-center shadow-md">
                     <Gift size={14} className="text-white" strokeWidth={2.5} />
                   </div>
-                  <p className="relative z-10 text-sm font-black text-white font-mono leading-none tracking-tight">LINQLE</p>
-                  <p className="relative z-10 text-[11px] font-semibold text-emerald-200/80 tracking-wide">Win sticker packs</p>
+                  <p className="relative z-10 text-sm font-black font-mono leading-none tracking-tight"><span className="text-teal-400">LI</span><span className="text-white">NQLE</span></p>
+                  <p className="relative z-10 text-[11px] font-semibold text-teal-400/70 tracking-wide">Win sticker packs</p>
                 </div>
               </motion.button>
             )}
@@ -24160,16 +24159,15 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
               const saved = currentProfile?.totalSaved ?? 0;
               const sym = currencySymbol('AUD');
               return (
-                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex-1 rounded-[1.5rem] overflow-hidden shadow-lg shadow-blue-900/20">
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex-1 rounded-[1.5rem] overflow-hidden shadow-lg shadow-black/20">
                   <button
                     onClick={() => setShowSavingsLb(true)}
-                    className="w-full h-full gradient-logo-blue relative overflow-hidden px-3 py-3 flex flex-col items-center justify-center gap-0.5 active:opacity-90 transition-opacity"
+                    className="w-full h-full bg-[#0F172A] relative overflow-hidden px-3 py-3 flex flex-col items-center justify-center gap-0.5 active:opacity-90 transition-opacity"
                   >
-                    <div className="shine-ray" />
-                    <p className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-teal-200/80 text-center">Saved with Linq</p>
+                    <p className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-white/40 text-center">Saved with Linq</p>
                     {saved > 0
                       ? <CountUpValue value={saved} prefix={sym} className="relative z-10 font-display text-xl font-black text-white" />
-                      : <p className="relative z-10 text-xs font-bold text-white/60 text-center leading-tight">Start saving</p>
+                      : <p className="relative z-10 text-xs font-bold text-white/40 text-center leading-tight">Start saving</p>
                     }
                   </button>
                 </motion.div>
@@ -24659,14 +24657,13 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
             </div>
 
             {/* Header card */}
-            <div className="gradient-logo-blue relative overflow-hidden mx-5 mt-2 mb-5 rounded-[1.5rem] px-5 py-5 shrink-0">
-              <div className="shine-ray" />
+            <div className="bg-[#0F172A] relative overflow-hidden mx-5 mt-2 mb-5 rounded-[1.5rem] px-5 py-5 shrink-0">
               <div className="flex items-center gap-4">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-teal-200/70">Total Saved with Linq</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">Total Saved with Linq</p>
                   {(currentProfile?.totalSaved ?? 0) > 0
                     ? <CountUpValue value={currentProfile!.totalSaved!} prefix={currencySymbol('AUD')} className="font-display text-3xl font-black text-white" />
-                    : <p className="text-base font-bold text-white/60">Collect stamps to start saving</p>
+                    : <p className="text-base font-bold text-white/40">Collect stamps to start saving</p>
                   }
                 </div>
               </div>
