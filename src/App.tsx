@@ -26441,6 +26441,9 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
   const [allStoreCards, setAllStoreCards] = useState<Card[]>([]);
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [distance, setDistance] = useState<number | null>(null);
+  const [storeOffers, setStoreOffers] = useState<StoreOffer[]>([]);
+  const [storeChallenges, setStoreChallenges] = useState<Challenge[]>([]);
+  const [selectedDealOffer, setSelectedDealOffer] = useState<StoreOffer | null>(null);
 
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(pos => {
@@ -26460,6 +26463,23 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
       if (coords) setDistance(haversineKm(userCoords.lat, userCoords.lng, coords.lat, coords.lng));
     });
   }, [store.lat, store.lng, store.address, store.location, userCoords]);
+
+  useEffect(() => {
+    const now = Date.now();
+    const q = query(collection(db, 'store_offers'), where('storeId', '==', store.id), where('status', '==', 'active'));
+    return onSnapshot(q, snap => {
+      setStoreOffers(
+        snap.docs.map(d => ({ id: d.id, ...d.data() } as StoreOffer))
+          .filter(o => !o.expiresAt || (o.expiresAt?.toDate?.() ?? new Date(o.expiresAt)).getTime() > now)
+          .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0))
+      );
+    }, () => {});
+  }, [store.id]);
+
+  useEffect(() => {
+    const q = query(collection(db, 'challenges'), where('status', '==', 'active'), where('vendorIds', 'array-contains', store.id));
+    return onSnapshot(q, snap => setStoreChallenges(snap.docs.map(d => ({ id: d.id, ...d.data() } as Challenge))), () => {});
+  }, [store.id]);
 
   useEffect(() => {
     const cardId = `${user.uid}_${store.id}`;
@@ -27466,6 +27486,73 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
             </div>
           );
         })()}
+      </AnimatePresence>
+
+      {/* Deals & Offers */}
+      {(storeOffers.length > 0 || storeChallenges.length > 0) && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Ticket size={15} className="text-brand-gold" />
+            <h3 className="font-bold text-brand-navy text-sm">Deals & Offers</h3>
+          </div>
+          {storeOffers.length > 0 && (
+            <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+              {storeOffers.map((offer, i) => (
+                <motion.button
+                  key={offer.id}
+                  initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.05 }}
+                  onClick={() => setSelectedDealOffer(offer)}
+                  className="shrink-0 rounded-[1.5rem] overflow-hidden relative active:scale-[0.97] transition-transform shadow-md shadow-black/10"
+                  style={{ width: '200px', height: '110px' }}
+                >
+                  {offer.imageUrl
+                    ? <img src={offer.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                    : <div className="absolute inset-0 flex items-center justify-center" style={{ background: store.theme ? `linear-gradient(135deg, ${store.theme}cc, ${store.theme}88)` : 'linear-gradient(135deg, #0F766E, #0D9488)' }}><Ticket size={28} className="text-white/40" /></div>}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+                  {(offer.value ?? 0) > 0 && (
+                    <div className="absolute top-2.5 left-2.5 bg-red-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-sm">Save ${offer.value!.toFixed(2)}</div>
+                  )}
+                  <div className="absolute bottom-0 left-0 right-0 px-3 pb-2.5">
+                    <p className="font-extrabold text-white text-xs leading-snug line-clamp-1">{offer.title}</p>
+                    <p className="text-white/60 text-[9px] font-medium mt-0.5 uppercase tracking-wide">{offer.category}</p>
+                  </div>
+                </motion.button>
+              ))}
+            </div>
+          )}
+          {storeChallenges.length > 0 && (
+            <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+              {storeChallenges.map((c, i) => (
+                <motion.div
+                  key={c.id}
+                  initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.05 }}
+                  className="shrink-0 rounded-[1.5rem] overflow-hidden relative cursor-pointer active:scale-[0.97] transition-transform bg-white shadow-sm border border-brand-navy/5"
+                  style={{ width: '150px', height: '150px' }}
+                >
+                  {c.imageUrl
+                    ? <img src={c.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                    : <div className="absolute inset-0 bg-brand-navy/3 flex items-center justify-center"><Gift size={28} className="text-brand-navy/10" /></div>}
+                  {c.imageUrl && <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />}
+                  <div className="absolute top-2.5 left-2.5">
+                    <span className="text-[8px] font-black uppercase tracking-wide px-2 py-0.5 rounded-full text-white" style={{ background: store.theme || '#0D9488' }}>
+                      {c.rewardTag || 'Challenge'}
+                    </span>
+                  </div>
+                  <div className="absolute bottom-0 left-0 right-0 px-3 pb-3">
+                    <p className={cn('font-extrabold text-xs leading-tight line-clamp-2', c.imageUrl ? 'text-white' : 'text-brand-navy')}>{c.reward}</p>
+                    <p className={cn('text-[9px] font-medium line-clamp-1 mt-0.5', c.imageUrl ? 'text-white/60' : 'text-brand-navy/45')}>{c.title}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <AnimatePresence>
+        {selectedDealOffer && (
+          <OfferDetailSheet offer={selectedDealOffer} currentUser={user} onClose={() => setSelectedDealOffer(null)} />
+        )}
       </AnimatePresence>
 
       {/* Top collectors */}
