@@ -301,6 +301,19 @@ const PASTEL_GRADIENT_PRESETS: UiColorPreset[] = [
   { id: 'grey-tint',        label: 'Grey Tint', css: 'rgba(241, 245, 249, 0.85)', dark: false },
   { id: 'light-grey',       label: 'Grey',      css: 'linear-gradient(135deg, #CBD5E1 0%, #E2E8F0 50%, #F8FAFC 100%)', dark: false },
 ];
+const CARD_COLOR_PRESETS: { id: string; label: string; color: string }[] = [
+  { id: 'teal',    label: 'Teal',    color: '#0D9488' },
+  { id: 'navy',    label: 'Navy',    color: '#1E3050' },
+  { id: 'purple',  label: 'Purple',  color: '#7C3AED' },
+  { id: 'rose',    label: 'Rose',    color: '#F43F5E' },
+  { id: 'amber',   label: 'Amber',   color: '#F59E0B' },
+  { id: 'emerald', label: 'Emerald', color: '#059669' },
+  { id: 'sky',     label: 'Sky',     color: '#0EA5E9' },
+  { id: 'indigo',  label: 'Indigo',  color: '#6366F1' },
+  { id: 'slate',   label: 'Slate',   color: '#64748B' },
+  { id: 'coral',   label: 'Coral',   color: '#FB7185' },
+];
+
 const TEXT_COLOR_PRESETS: { id: string; label: string; color: string }[] = [
   { id: 'white',    label: 'White',   color: '#FFFFFF' },
   { id: 'lt-grey',  label: 'Lt Grey', color: '#E2E8F0' },
@@ -533,6 +546,7 @@ interface Card {
   last_transaction_at?: any;
   userName?: string;
   userPhoto?: string;
+  profileColor?: string;
 }
 
 interface Notification {
@@ -5765,6 +5779,93 @@ const BANNER_DEST_OPTIONS = [
   { value: 'url', label: 'External URL…' },
 ];
 
+function ColorPickerDropdown({ presets, currentCss, onSelect }: {
+  presets: UiColorPreset[];
+  currentCss: string;
+  onSelect: (p: UiColorPreset) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const current = presets.find(p => p.css === currentCss);
+  return (
+    <div className="rounded-2xl border border-black/8 overflow-hidden bg-white shadow-sm">
+      <button onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-2.5 px-3 py-2.5 w-full active:bg-brand-navy/4 transition-all">
+        <div className="w-8 h-8 rounded-xl border border-black/8 shrink-0" style={{ background: currentCss }} />
+        <span className="text-xs font-bold text-brand-navy flex-1 text-left">{current?.label ?? 'Custom'}</span>
+        <ChevronDown size={14} className={`text-brand-navy/40 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="border-t border-black/6 p-2.5 bg-brand-bg/40">
+          <div className="grid grid-cols-5 gap-2">
+            {presets.map(p => {
+              const active = currentCss === p.css;
+              return (
+                <button key={p.id} onClick={() => { onSelect(p); setOpen(false); }}
+                  className={`flex flex-col items-center gap-1 p-1.5 rounded-xl transition-all active:scale-95 ${active ? 'ring-2 ring-brand-navy/25 bg-brand-navy/5' : ''}`}>
+                  <div className="w-10 h-10 rounded-xl border border-black/8 relative overflow-hidden" style={{ background: p.css }}>
+                    {active && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center ${p.dark ? 'bg-white/90' : 'bg-brand-navy/80'}`}>
+                          <Check size={10} className={p.dark ? 'text-brand-navy' : 'text-white'} strokeWidth={3} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <p className={`text-[8px] font-bold leading-none text-center ${active ? 'text-brand-navy' : 'text-brand-navy/45'}`}>{p.label}</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TextColorDropdown({ currentColor, dark, onSelect }: {
+  currentColor?: string;
+  dark: boolean;
+  onSelect: (color: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const effectiveColor = currentColor ?? (dark ? '#FFFFFF' : '#0F172A');
+  const current = TEXT_COLOR_PRESETS.find(p => p.color.toUpperCase() === effectiveColor.toUpperCase());
+  return (
+    <div className="rounded-2xl border border-black/8 overflow-hidden bg-white shadow-sm">
+      <button onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-2.5 px-3 py-2.5 w-full active:bg-brand-navy/4 transition-all">
+        <div className="w-8 h-8 rounded-xl border border-black/8 shrink-0" style={{ background: effectiveColor }} />
+        <span className="text-xs font-bold text-brand-navy flex-1 text-left">{current?.label ?? 'Custom'}</span>
+        <ChevronDown size={14} className={`text-brand-navy/40 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="border-t border-black/6 p-2.5 bg-brand-bg/40">
+          <div className="flex flex-wrap gap-2">
+            {TEXT_COLOR_PRESETS.map(tc => {
+              const active = effectiveColor.toUpperCase() === tc.color.toUpperCase();
+              return (
+                <button key={tc.id} onClick={() => { onSelect(tc.color); setOpen(false); }}
+                  className={`flex flex-col items-center gap-0.5 p-1.5 rounded-xl transition-all active:scale-95 ${active ? 'ring-2 ring-brand-navy/25 bg-brand-navy/5' : ''}`}>
+                  <div className="w-9 h-9 rounded-lg border border-black/10 relative overflow-hidden" style={{ background: tc.color }}>
+                    {active && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-4 h-4 rounded-full bg-brand-navy/40 flex items-center justify-center">
+                          <Check size={9} className="text-white" strokeWidth={3} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <p className={`text-[8px] font-bold ${active ? 'text-brand-navy' : 'text-brand-navy/40'}`}>{tc.label}</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColors; onColorsChange: (c: UiColors) => void; onClose: () => void }) {
   const [colors, setColors] = useState<UiColors>(uiColors);
   const [saving, setSaving] = useState(false);
@@ -5818,48 +5919,27 @@ function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColo
           {UI_COLOR_SLOT_DEFS.map(slot => {
             const current = colors[slot.key];
             return (
-              <div key={slot.key}>
-                <div className="mb-2">
+              <div key={slot.key} className="space-y-2.5">
+                <div>
                   <p className="font-bold text-brand-navy text-sm">{slot.label}</p>
                   <p className="text-[11px] text-brand-navy/60">{slot.desc}</p>
                 </div>
-                <div className="grid grid-cols-5 gap-2">
-                  {slot.presets.map(p => {
-                    const active = current.css === p.css;
-                    return (
-                      <button
-                        key={p.id}
-                        onClick={() => pick(slot.key, p)}
-                        className={`flex flex-col items-center gap-1 p-1.5 rounded-2xl transition-all active:scale-95 ${active ? 'ring-2 ring-brand-navy/30 bg-brand-navy/6' : ''}`}
-                      >
-                        <div className="w-11 h-11 rounded-xl shadow-sm relative overflow-hidden border border-black/8"
-                          style={{ background: p.css }}>
-                          {active && (
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <div className={`w-5 h-5 rounded-full flex items-center justify-center ${p.dark ? 'bg-white/90' : 'bg-brand-navy/80'}`}>
-                                <Check size={11} className={p.dark ? 'text-brand-navy' : 'text-white'} strokeWidth={3} />
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        <p className={`text-[8px] font-bold leading-none text-center ${active ? 'text-brand-navy' : 'text-brand-navy/50'}`}>{p.label}</p>
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="mt-3">
-                  <p className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-wider mb-1.5">Text colour</p>
-                  <div className="flex gap-1.5 flex-wrap">
-                    {TEXT_COLOR_PRESETS.map(tc => {
-                      const activeText = (current.textColor ?? (current.dark ? '#FFFFFF' : '#0F172A')).toUpperCase() === tc.color.toUpperCase();
-                      return (
-                        <button key={tc.id} onClick={() => pickTextColor(slot.key, tc.color)}
-                          className={`flex flex-col items-center gap-0.5 p-1.5 rounded-xl transition-all active:scale-95 ${activeText ? 'ring-2 ring-brand-navy/30 bg-brand-navy/6' : ''}`}>
-                          <div className="w-7 h-7 rounded-lg border border-black/10 shadow-sm" style={{ background: tc.color }} />
-                          <p className={`text-[8px] font-bold ${activeText ? 'text-brand-navy' : 'text-brand-navy/40'}`}>{tc.label}</p>
-                        </button>
-                      );
-                    })}
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-wider mb-1.5">Background</p>
+                    <ColorPickerDropdown
+                      presets={slot.presets}
+                      currentCss={current.css}
+                      onSelect={p => pick(slot.key, p)}
+                    />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-wider mb-1.5">Text</p>
+                    <TextColorDropdown
+                      currentColor={current.textColor}
+                      dark={current.dark}
+                      onSelect={color => pickTextColor(slot.key, color)}
+                    />
                   </div>
                 </div>
               </div>
@@ -16861,15 +16941,20 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
         transition={{ type: 'spring', stiffness: 380, damping: 36 }}
         className="bg-brand-bg flex flex-col overflow-hidden flex-1">
         {/* Header */}
-        <div className="relative overflow-hidden shrink-0" style={voteData.imageUrl ? {} : { background: 'linear-gradient(90deg, #1e1b4b 0%, #3730a3 35%, #6366f1 70%, #818cf8 100%)' }}>
-          {voteData.imageUrl ? (
-            <>
-              <img src={voteData.imageUrl} alt="" className="w-full object-cover" style={{ maxHeight: 220 }} />
-              <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(30,27,75,0.85) 0%, rgba(30,27,75,0.3) 50%, transparent 100%)' }} />
-            </>
-          ) : (
-            <MatrixRainCanvas opacity={0.22} fadeColor="rgba(20,17,60,0.2)" />
-          )}
+        <div className="relative overflow-hidden shrink-0" style={{ background: 'linear-gradient(90deg, #1e1b4b 0%, #3730a3 35%, #6366f1 70%, #818cf8 100%)' }}>
+          <MatrixRainCanvas opacity={0.22} fadeColor="rgba(20,17,60,0.2)" />
+          {[
+            { x: 7,  y: 15, size: 26, delay: 0,   dur: 3.4 },
+            { x: 68, y: 50, size: 20, delay: 0.9, dur: 2.9 },
+            { x: 40, y: 68, size: 30, delay: 1.6, dur: 3.6 },
+            { x: 82, y: 10, size: 22, delay: 0.3, dur: 3.0 },
+            { x: 22, y: 60, size: 18, delay: 1.2, dur: 2.7 },
+          ].map((e, i) => (
+            <motion.span key={i} className="absolute pointer-events-none select-none z-0"
+              style={{ left: `${e.x}%`, top: `${e.y}%`, fontSize: e.size, opacity: 0.10 }}
+              animate={{ y: [-6, -18, -6], rotate: [-10, 10, -10] }}
+              transition={{ duration: e.dur, repeat: Infinity, delay: e.delay, ease: 'easeInOut' }}>😂</motion.span>
+          ))}
           <div className="relative z-10 flex items-start justify-between px-5 pt-5 pb-3">
             <div className="flex-1 pr-4">
               <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-200/70">Daily Vote</p>
@@ -17044,7 +17129,17 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor 
         className="flex-1 rounded-[1.5rem] overflow-hidden shadow-lg shadow-teal-900/10 text-left">
         <div className="relative h-full px-4 py-4 flex flex-col gap-3"
           style={{ background: tc.css }}>
-          {voteData.imageUrl && <img src={voteData.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20 pointer-events-none" />}
+          {[
+            { x: 8,  y: 18, size: 18, delay: 0,   dur: 3.2 },
+            { x: 72, y: 55, size: 14, delay: 0.8, dur: 2.8 },
+            { x: 45, y: 70, size: 20, delay: 1.5, dur: 3.5 },
+            { x: 85, y: 12, size: 14, delay: 0.4, dur: 2.9 },
+          ].map((e, i) => (
+            <motion.span key={i} className="absolute pointer-events-none select-none z-0"
+              style={{ left: `${e.x}%`, top: `${e.y}%`, fontSize: e.size, opacity: 0.10 }}
+              animate={{ y: [-5, -14, -5], rotate: [-8, 8, -8] }}
+              transition={{ duration: e.dur, repeat: Infinity, delay: e.delay, ease: 'easeInOut' }}>😂</motion.span>
+          ))}
           <div className="absolute top-2 right-2 z-20 w-7 h-7 bg-red-500 rounded-full flex items-center justify-center shadow-md">
             <Gift size={14} className="text-white" strokeWidth={2.5} />
           </div>
@@ -20542,6 +20637,12 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
   const [badgesOpen, setBadgesOpen] = useState(false);
   const [showStickerModal, setShowStickerModal] = useState(false);
   const [stickerData, setStickerData] = useState<{ stickers: CollectibleSticker[]; revealedIds: string[] } | null>(null);
+  const [editingCardColorId, setEditingCardColorId] = useState<string | null>(null);
+
+  const saveCardColor = async (cardId: string, color: string) => {
+    setEditingCardColorId(null);
+    await updateDoc(doc(db, 'cards', cardId), { profileColor: color }).catch(console.error);
+  };
 
   useEffect(() => {
     if (!profile?.birthday) return;
@@ -21220,60 +21321,105 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         const activeCards = userCards.filter(c => !c.isArchived);
         if (activeCards.length === 0) return null;
         return (
-          <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 scrollbar-hide">
-            {activeCards.map(card => {
-              const store = (stores || []).find(s => s.id === card.store_id);
-              if (!store) return null;
-              const primary = '#0D9488';
-              const isMembership = card.card_type === 'membership';
-              const isVisit = isMembership && store.membershipType === 'visit';
-              const isSpend = isMembership && (store.membershipType === 'spend' || !store.membershipType);
-              const pct = Math.min(100, Math.round((card.current_stamps / (store.stamps_required_for_reward || 10)) * 100));
-              return (
-                <div key={card.id}
-                  onClick={() => onViewStore?.(store)}
-                  className="snap-start shrink-0 w-52 bg-white rounded-2xl overflow-hidden shadow-sm border border-brand-navy/8 active:scale-[0.98] transition-transform"
-                  style={{ cursor: onViewStore ? 'pointer' : 'default' }}>
-                  <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-brand-navy/6">
-                    <div className="w-8 h-8 rounded-xl overflow-hidden shrink-0 shadow-sm">
-                      <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
+          <>
+            <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 scrollbar-hide">
+              {activeCards.map(card => {
+                const store = (stores || []).find(s => s.id === card.store_id);
+                if (!store) return null;
+                const primary = card.profileColor || '#0D9488';
+                const isMembership = card.card_type === 'membership';
+                const isVisit = isMembership && store.membershipType === 'visit';
+                const pct = Math.min(100, Math.round((card.current_stamps / (store.stamps_required_for_reward || 10)) * 100));
+                return (
+                  <div key={card.id}
+                    className="snap-start shrink-0 w-52 bg-white rounded-2xl overflow-hidden shadow-sm border border-brand-navy/8"
+                    style={{ borderTopColor: primary, borderTopWidth: 2 }}>
+                    <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-brand-navy/6">
+                      <div className="w-8 h-8 rounded-xl overflow-hidden shrink-0 shadow-sm cursor-pointer active:scale-95 transition-transform"
+                        onClick={() => onViewStore?.(store)}>
+                        <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
+                      </div>
+                      <div className="min-w-0 flex-1 cursor-pointer" onClick={() => onViewStore?.(store)}>
+                        <p className="font-bold text-brand-navy text-xs truncate leading-tight">{store.name}</p>
+                        <p className="text-brand-navy/40 text-[9px] font-semibold uppercase tracking-wider">{store.category || 'Retail'}</p>
+                      </div>
+                      <button
+                        onClick={e => { e.stopPropagation(); setEditingCardColorId(card.id); }}
+                        className="w-6 h-6 rounded-full flex items-center justify-center active:scale-90 transition-transform shrink-0"
+                        style={{ background: `${primary}20` }}>
+                        <Palette size={12} style={{ color: primary }} />
+                      </button>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-bold text-brand-navy text-xs truncate leading-tight">{store.name}</p>
-                      <p className="text-brand-navy/40 text-[9px] font-semibold uppercase tracking-wider">{store.category || 'Retail'}</p>
-                    </div>
+                    {isMembership ? (
+                      <div className="px-3 py-2.5 flex items-center justify-between cursor-pointer" onClick={() => onViewStore?.(store)}>
+                        {isVisit ? (
+                          <>
+                            <span className="text-[10px] font-bold" style={{ color: primary }}>{card.total_visits ?? 0} visits</span>
+                            {(card.earned_rewards ?? 0) > 0 && <span className="text-[10px] font-bold text-green-600">{card.earned_rewards} rewards</span>}
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-[10px] font-bold" style={{ color: primary }}>{(card.membership_points ?? 0).toLocaleString()} pts</span>
+                            {(card.total_spent ?? 0) > 0 && <span className="text-[10px] font-bold text-brand-navy/50">£{(card.total_spent ?? 0).toFixed(2)}</span>}
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="px-3 py-2.5 cursor-pointer" onClick={() => onViewStore?.(store)}>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[10px] font-bold" style={{ color: primary }}>{card.current_stamps} / {store.stamps_required_for_reward || 10} stamps</span>
+                          <span className="text-[10px] font-semibold text-brand-navy/50">{pct}%</span>
+                        </div>
+                        <div className="h-1.5 rounded-full overflow-hidden bg-brand-navy/8">
+                          <motion.div className="h-full rounded-full" style={{ backgroundColor: primary }}
+                            initial={{ width: 0 }} animate={{ width: `${pct}%` }}
+                            transition={{ duration: 0.6, ease: 'easeOut' }} />
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  {isMembership ? (
-                    <div className="px-3 py-2.5 flex items-center justify-between">
-                      {isVisit ? (
-                        <>
-                          <span className="text-[10px] font-bold" style={{ color: primary }}>{card.total_visits ?? 0} visits</span>
-                          {(card.earned_rewards ?? 0) > 0 && <span className="text-[10px] font-bold text-green-600">{card.earned_rewards} rewards</span>}
-                        </>
-                      ) : (
-                        <>
-                          <span className="text-[10px] font-bold" style={{ color: primary }}>{(card.membership_points ?? 0).toLocaleString()} pts</span>
-                          {(card.total_spent ?? 0) > 0 && <span className="text-[10px] font-bold text-brand-navy/50">£{(card.total_spent ?? 0).toFixed(2)}</span>}
-                        </>
-                      )}
+                );
+              })}
+            </div>
+            {/* Card colour picker sheet */}
+            <AnimatePresence>
+              {editingCardColorId && (() => {
+                const editCard = userCards.find(c => c.id === editingCardColorId);
+                const currentCardColor = editCard?.profileColor || CARD_COLOR_PRESETS[0].color;
+                return (
+                  <motion.div
+                    initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+                    className="fixed inset-x-0 bottom-0 z-[300] bg-white rounded-t-3xl shadow-2xl max-w-md mx-auto"
+                    onClick={e => e.stopPropagation()}>
+                    <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-black/6">
+                      <p className="font-bold text-brand-navy text-sm">Card Colour</p>
+                      <button onClick={() => setEditingCardColorId(null)}
+                        className="w-8 h-8 rounded-full bg-brand-navy/8 flex items-center justify-center active:scale-90 transition-transform">
+                        <X size={16} className="text-brand-navy" />
+                      </button>
                     </div>
-                  ) : (
-                    <div className="px-3 py-2.5">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[10px] font-bold" style={{ color: primary }}>{card.current_stamps} / {store.stamps_required_for_reward || 10} stamps</span>
-                        <span className="text-[10px] font-semibold text-brand-navy/50">{pct}%</span>
-                      </div>
-                      <div className="h-1.5 rounded-full overflow-hidden bg-brand-navy/8">
-                        <motion.div className="h-full rounded-full" style={{ backgroundColor: primary }}
-                          initial={{ width: 0 }} animate={{ width: `${pct}%` }}
-                          transition={{ duration: 0.6, ease: 'easeOut' }} />
+                    <div className="px-5 py-4 pb-8">
+                      <div className="grid grid-cols-5 gap-3">
+                        {CARD_COLOR_PRESETS.map(cp => {
+                          const active = currentCardColor === cp.color;
+                          return (
+                            <button key={cp.id} onClick={() => saveCardColor(editingCardColorId, cp.color)}
+                              className={`flex flex-col items-center gap-1 p-1.5 rounded-2xl transition-all active:scale-95 ${active ? 'ring-2 ring-offset-1 ring-brand-navy/30' : ''}`}>
+                              <div className="w-11 h-11 rounded-2xl shadow-sm relative flex items-center justify-center" style={{ background: cp.color }}>
+                                {active && <Check size={14} className="text-white" strokeWidth={3} />}
+                              </div>
+                              <p className={`text-[8px] font-bold ${active ? 'text-brand-navy' : 'text-brand-navy/50'}`}>{cp.label}</p>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                  </motion.div>
+                );
+              })()}
+            </AnimatePresence>
+          </>
         );
       })()}
 
@@ -27943,7 +28089,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
             {cards.map(card => {
               const store = stores.find(s => s.id === card.store_id);
               if (!store) return null;
-              const primary = '#0D9488';
+              const primary = card.profileColor || '#0D9488';
               const isMembership = card.card_type === 'membership';
               const isVisit = isMembership && store.membershipType === 'visit';
               const pct = Math.min(100, Math.round((card.current_stamps / (store.stamps_required_for_reward || 10)) * 100));
@@ -27952,6 +28098,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
                   key={card.id}
                   onClick={() => onViewStore(store)}
                   className="snap-start shrink-0 w-52 bg-white rounded-2xl overflow-hidden cursor-pointer shadow-sm border border-brand-navy/8 active:scale-[0.98] transition-transform"
+                  style={{ borderTopColor: primary, borderTopWidth: 2 }}
                 >
                   <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-brand-navy/6">
                     <div className="w-8 h-8 rounded-xl overflow-hidden shrink-0 shadow-sm">
