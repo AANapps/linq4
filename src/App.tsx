@@ -252,6 +252,9 @@ interface UiColors {
   challengesFypTile: UiColorSlot;
   dailyVoteTile: UiColorSlot;
   winTab: UiColorSlot;
+  challengesTile: UiColorSlot;
+  stickersTile: UiColorSlot;
+  badgesTile: UiColorSlot;
 }
 type UiColorPreset = UiColorSlot & { id: string; label: string };
 
@@ -341,6 +344,9 @@ const UI_COLOR_DEFAULTS: UiColors = {
   challengesFypTile: { css: 'rgba(241, 245, 249, 0.85)', dark: false },
   dailyVoteTile:     { css: 'linear-gradient(135deg, #A7F3D0 0%, #6EE7D4 45%, #99F6E4 75%, #CCFBF1 100%)', dark: false },
   winTab:            { css: 'linear-gradient(135deg, #d97706 0%, #f59e0b 35%, #fbbf24 60%, #f59e0b 100%)', dark: true },
+  challengesTile:    { css: 'linear-gradient(160deg, #0F766E 0%, #0D9488 40%, #14B8A6 70%, #2DD4BF 100%)', dark: true },
+  stickersTile:      { css: 'linear-gradient(160deg, #0F766E 0%, #0D9488 40%, #14B8A6 70%, #2DD4BF 100%)', dark: true },
+  badgesTile:        { css: 'linear-gradient(135deg, #fef08a 0%, #fbbf24 30%, #f59e0b 65%, #d97706 100%)', dark: false },
 };
 const UI_COLOR_SLOT_DEFS: { key: keyof UiColors; label: string; desc: string; presets: UiColorPreset[] }[] = [
   { key: 'linqleTile',        label: 'Linqle Tile',        desc: 'For You word game card',      presets: SOLID_DARK_PRESETS },
@@ -349,6 +355,9 @@ const UI_COLOR_SLOT_DEFS: { key: keyof UiColors; label: string; desc: string; pr
   { key: 'challengesFypTile', label: 'Challenges Tile',    desc: 'For You challenges carousel', presets: VIVID_GRADIENT_PRESETS },
   { key: 'dailyVoteTile',     label: 'Daily Vote Tile',    desc: 'For You daily poll card',     presets: PASTEL_GRADIENT_PRESETS },
   { key: 'winTab',            label: 'Win Tab',            desc: 'Wallet challenges tab button', presets: VIVID_GRADIENT_PRESETS },
+  { key: 'challengesTile',   label: 'Challenges Tile',   desc: 'Profile challenges count + card backgrounds', presets: VIVID_GRADIENT_PRESETS },
+  { key: 'stickersTile',     label: 'Stickers Tile',     desc: 'Profile stickers count tile',  presets: VIVID_GRADIENT_PRESETS },
+  { key: 'badgesTile',       label: 'Badges Tile',       desc: 'Profile badges count tile',    presets: VIVID_GRADIENT_PRESETS },
 ];
 
 // ─── Default gender-specific SVG avatars (no external URL, no data cost) ────
@@ -1813,6 +1822,7 @@ export default function App() {
               onBack={() => setViewingUser(null)}
               currentUser={user}
               currentProfile={profile}
+              uiColors={uiColors}
               onViewUser={(u) => { setViewingUser(null); handleViewUser(u); }}
               onMessage={(chatId) => {
                 setActiveChatId(chatId);
@@ -5518,26 +5528,6 @@ function CardSetsAdminPanel({ onClose }: { onClose: () => void }) {
 }
 
 function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts, onOpenOffers, onOpenLinqle, onOpenDailyVote, onOpenCards, onOpenBanners, onOpenUiColors }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void; onOpenOffers: () => void; onOpenLinqle: () => void; onOpenDailyVote: () => void; onOpenCards: () => void; onOpenBanners: () => void; onOpenUiColors: () => void }) {
-  const [activeThemeId, setActiveThemeId] = useState<string>('teal');
-  const [savingTheme, setSavingTheme] = useState(false);
-
-  useEffect(() => {
-    getDoc(doc(db, 'app_config', 'theme')).then(snap => {
-      if (snap.exists()) setActiveThemeId(snap.data().themeId || 'teal');
-    }).catch(() => {});
-  }, []);
-
-  const handleThemeSelect = async (t: ThemePreset) => {
-    setActiveThemeId(t.id);
-    applyBrandTheme(t);
-    setSavingTheme(true);
-    try {
-      await setDoc(doc(db, 'app_config', 'theme'), { themeId: t.id });
-    } finally {
-      setSavingTheme(false);
-    }
-  };
-
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -5713,58 +5703,6 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores,
 
         </div>
 
-        {/* App Theme Picker */}
-        <div className="px-5 pb-8 pt-2">
-          <div className="flex items-center justify-between mb-3">
-            <p className="font-bold text-brand-navy text-sm">App Theme</p>
-            {savingTheme && <p className="text-[10px] text-brand-navy/40 animate-pulse">Saving…</p>}
-          </div>
-          <div className="grid grid-cols-5 gap-2">
-            {THEME_PRESETS.map(t => {
-              const active = t.id === activeThemeId;
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => handleThemeSelect(t)}
-                  className={`flex flex-col items-center gap-1.5 p-2 rounded-2xl transition-all active:scale-95 ${active ? 'bg-brand-navy/8 ring-2 ring-brand-navy/20' : 'hover:bg-brand-navy/4'}`}
-                >
-                  <div
-                    className="w-10 h-10 rounded-xl shadow-sm relative overflow-hidden"
-                    style={{ background: `linear-gradient(135deg, ${t.g1} 0%, ${t.g3} 100%)` }}
-                  >
-                    {active && (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-4 h-4 rounded-full bg-white/90 flex items-center justify-center">
-                          <Check size={10} className="text-brand-navy" strokeWidth={3} />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <p className={`text-[9px] font-bold leading-none ${active ? 'text-brand-navy' : 'text-brand-navy/50'}`}>{t.label}</p>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Mini preview strip */}
-          <div className="mt-4 rounded-2xl overflow-hidden border border-brand-navy/8 shadow-sm">
-            <div className="gradient-logo-blue px-4 py-2.5 flex items-center gap-2">
-              <div className="w-5 h-5 rounded-lg bg-white/20 flex items-center justify-center">
-                <Sparkles size={11} className="text-white" />
-              </div>
-              <span className="font-display font-bold text-sm text-white tracking-tight">Linq</span>
-            </div>
-            <div className="bg-white px-4 py-3 flex items-center gap-3">
-              <div className="flex-1">
-                <div className="h-2 rounded-full bg-brand-navy/8 overflow-hidden">
-                  <div className="h-full w-3/5 rounded-full gradient-red" />
-                </div>
-              </div>
-              <button className="gradient-red text-white text-[10px] font-bold px-3 py-1.5 rounded-xl">Go</button>
-            </div>
-          </div>
-        </div>
-
       </div>
     </motion.div>
   );
@@ -5843,6 +5781,19 @@ function isDarkColor(hex: string): boolean {
 function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColors; onColorsChange: (c: UiColors) => void; onClose: () => void }) {
   const [colors, setColors] = useState<UiColors>(uiColors);
   const [saving, setSaving] = useState(false);
+  const [activeThemeId, setActiveThemeId] = useState<string>('teal');
+
+  useEffect(() => {
+    getDoc(doc(db, 'app_config', 'theme')).then(snap => {
+      if (snap.exists()) setActiveThemeId(snap.data().themeId || 'teal');
+    }).catch(() => {});
+  }, []);
+
+  const handleThemeSelect = async (t: ThemePreset) => {
+    setActiveThemeId(t.id);
+    applyBrandTheme(t);
+    await setDoc(doc(db, 'app_config', 'theme'), { themeId: t.id }).catch(console.error);
+  };
 
   const saveColors = async (next: UiColors) => {
     const payload = Object.fromEntries(
@@ -5887,6 +5838,37 @@ function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColo
         </div>
 
         <div className="p-5 space-y-7">
+          {/* Brand Theme — preset palette */}
+          <div className="space-y-2.5">
+            <div>
+              <p className="font-bold text-brand-navy text-sm">Brand Theme</p>
+              <p className="text-[11px] text-brand-navy/60">App-wide gradient & accent colours</p>
+            </div>
+            <div className="grid grid-cols-5 gap-2">
+              {THEME_PRESETS.map(t => {
+                const active = t.id === activeThemeId;
+                return (
+                  <button key={t.id} onClick={() => handleThemeSelect(t)}
+                    className={`flex flex-col items-center gap-1.5 p-2 rounded-2xl transition-all active:scale-95 ${active ? 'bg-brand-navy/8 ring-2 ring-brand-navy/20' : ''}`}>
+                    <div className="w-10 h-10 rounded-xl shadow-sm relative overflow-hidden"
+                      style={{ background: `linear-gradient(135deg, ${t.g1} 0%, ${t.g3} 100%)` }}>
+                      {active && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-4 h-4 rounded-full bg-white/90 flex items-center justify-center">
+                            <Check size={10} className="text-brand-navy" strokeWidth={3} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <p className={`text-[9px] font-bold leading-none ${active ? 'text-brand-navy' : 'text-brand-navy/50'}`}>{t.label}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="border-t border-brand-navy/8" />
+
           {UI_COLOR_SLOT_DEFS.map(slot => {
             const current = colors[slot.key];
             return (
@@ -9970,6 +9952,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           onGoToDeals={() => setActiveTab('deals')}
           onOpenLinqle={() => setViewingLinqle(true)}
           user={user}
+          uiColors={uiColors}
         />
       )}
 
@@ -20585,7 +20568,8 @@ function StoreLeaderboard({ storeId, storeName, logoUrl, type, userId }: {
   );
 }
 
-function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, onViewUser, onViewStore, onGoToDeals, onOpenLinqle, user }: { profile: UserProfile | null, userCards: Card[], stores?: StoreProfile[], onLogout: () => void, onDeleteAccount: () => Promise<void>, onViewUser: (u: UserProfile) => void, onViewStore?: (s: StoreProfile) => void, onGoToDeals?: () => void, onOpenLinqle?: () => void, user: FirebaseUser }) {
+function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, onViewUser, onViewStore, onGoToDeals, onOpenLinqle, user, uiColors: uiColorsProp }: { profile: UserProfile | null, userCards: Card[], stores?: StoreProfile[], onLogout: () => void, onDeleteAccount: () => Promise<void>, onViewUser: (u: UserProfile) => void, onViewStore?: (s: StoreProfile) => void, onGoToDeals?: () => void, onOpenLinqle?: () => void, user: FirebaseUser, uiColors?: UiColors }) {
+  const uiColors = uiColorsProp ?? UI_COLOR_DEFAULTS;
   const [activeSubTab, setActiveSubTab] = useState<'posts' | 'interactions'>('posts');
   const [profileRedeemingChallenge, setProfileRedeemingChallenge] = useState<{ challenge: Challenge; entry: any; userName: string } | null>(null);
   const [showProfileSettings, setShowProfileSettings] = useState(false);
@@ -21258,32 +21242,38 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
       {/* One row: Challenges · Stickers · Badges */}
       <div className="flex gap-2">
         <motion.button whileTap={{ scale: 0.97 }} onClick={() => setChallengeOpen(true)}
-          className="flex-1 rounded-2xl overflow-hidden shadow-sm shadow-teal-500/30">
+          className="flex-1 rounded-2xl overflow-hidden shadow-sm">
           <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3.5 overflow-hidden"
-            style={{ background: 'linear-gradient(160deg, #0F766E 0%, #0D9488 40%, #14B8A6 70%, #2DD4BF 100%)' }}>
+            style={{ background: uiColors.challengesTile.css }}>
             <span className="shine-ray" aria-hidden="true" />
-            <p className="relative z-10 text-xl font-black leading-none text-white">{activeChallenges.length}</p>
-            <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-teal-100/80">Challenges</span>
+            <p className="relative z-10 text-xl font-black leading-none text-white"
+              style={tileTextStyle(uiColors.challengesTile)}>{activeChallenges.length}</p>
+            <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-white/70"
+              style={tileTextStyle(uiColors.challengesTile, 0.7)}>Challenges</span>
           </div>
         </motion.button>
 
         <motion.button whileTap={{ scale: 0.97 }} onClick={() => setShowStickerModal(true)}
-          className="flex-1 rounded-2xl overflow-hidden shadow-sm shadow-teal-500/30">
+          className="flex-1 rounded-2xl overflow-hidden shadow-sm">
           <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3.5 overflow-hidden"
-            style={{ background: 'linear-gradient(160deg, #0F766E 0%, #0D9488 40%, #14B8A6 70%, #2DD4BF 100%)' }}>
+            style={{ background: uiColors.stickersTile.css }}>
             <span className="shine-ray" aria-hidden="true" />
-            <p className="relative z-10 text-xl font-black leading-none text-white">{stickerData?.stickers.length ?? 0}</p>
-            <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-teal-100/80">Stickers</span>
+            <p className="relative z-10 text-xl font-black leading-none text-white"
+              style={tileTextStyle(uiColors.stickersTile)}>{stickerData?.stickers.length ?? 0}</p>
+            <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-white/70"
+              style={tileTextStyle(uiColors.stickersTile, 0.7)}>Stickers</span>
           </div>
         </motion.button>
 
         <motion.button whileTap={{ scale: 0.97 }} onClick={() => setBadgesOpen(true)}
-          className="flex-1 rounded-2xl overflow-hidden shadow-sm shadow-amber-400/50">
+          className="flex-1 rounded-2xl overflow-hidden shadow-sm">
           <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3.5 overflow-hidden"
-            style={{ background: 'linear-gradient(135deg, #fef08a 0%, #fbbf24 30%, #f59e0b 65%, #d97706 100%)' }}>
-            <span className="badge-shine-ray" aria-hidden="true" />
-            <p className="relative z-10 text-xl font-black leading-none" style={{ color: '#451a03' }}>{earnedBadges.length}</p>
-            <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest" style={{ color: '#78350f' }}>Badges</span>
+            style={{ background: uiColors.badgesTile.css }}>
+            <span className={uiColors.badgesTile.dark ? 'shine-ray' : 'badge-shine-ray'} aria-hidden="true" />
+            <p className="relative z-10 text-xl font-black leading-none"
+              style={{ color: uiColors.badgesTile.textColor ?? (uiColors.badgesTile.dark ? '#fff' : '#451a03') }}>{earnedBadges.length}</p>
+            <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest"
+              style={{ color: uiColors.badgesTile.textColor ? `${uiColors.badgesTile.textColor}b3` : (uiColors.badgesTile.dark ? 'rgba(255,255,255,0.7)' : '#78350f') }}>Badges</span>
           </div>
         </motion.button>
       </div>
@@ -21304,8 +21294,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                 const pct = Math.min(100, Math.round((card.current_stamps / (store.stamps_required_for_reward || 10)) * 100));
                 return (
                   <div key={card.id}
-                    className="snap-start shrink-0 w-52 bg-white rounded-2xl overflow-hidden shadow-sm border border-brand-navy/8"
-                    style={{ borderTopColor: primary, borderTopWidth: 2 }}>
+                    className="snap-start shrink-0 w-52 bg-white rounded-2xl overflow-hidden shadow-md border border-brand-navy/8">
                     <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-brand-navy/6">
                       <div className="w-8 h-8 rounded-xl overflow-hidden shrink-0 shadow-sm cursor-pointer active:scale-95 transition-transform"
                         onClick={() => onViewStore?.(store)}>
@@ -21425,17 +21414,20 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                       const pct = c.goal > 0 ? Math.min(100, Math.round((progress / c.goal) * 100)) : 0;
                       const done = pct >= 100;
                       return (
-                        <div key={c.id} className="gradient-logo-blue rounded-2xl px-4 py-3 pb-4 relative overflow-hidden shadow-lg space-y-2">
+                        <div key={c.id} className="rounded-2xl px-4 py-3 pb-4 relative overflow-hidden shadow-lg space-y-2"
+                          style={{ background: uiColors.challengesTile.css }}>
                           <span className="shine-ray" aria-hidden="true" />
                           <div className="flex items-center justify-between gap-2 relative z-10">
-                            <p className="text-xs font-bold leading-tight line-clamp-1 flex-1 text-white">{c.title}</p>
+                            <p className="text-xs font-bold leading-tight line-clamp-1 flex-1 text-white"
+                              style={tileTextStyle(uiColors.challengesTile)}>{c.title}</p>
                             <span className={cn('text-[10px] font-bold shrink-0', done ? 'text-green-300' : 'text-white/80')}>{done ? '✓ Done' : `${pct}%`}</span>
                           </div>
                           <div className="h-1.5 bg-white/20 rounded-full overflow-hidden relative z-10">
                             <motion.div className={cn('h-full rounded-full', done ? 'bg-green-400' : 'bg-white')}
                               initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.6, ease: 'easeOut' }} />
                           </div>
-                          <p className="text-[9px] font-medium text-white/60 relative z-10">{progress} / {c.goal} {c.unit} · 🎁 {c.reward}</p>
+                          <p className="text-[9px] font-medium text-white/60 relative z-10"
+                            style={tileTextStyle(uiColors.challengesTile, 0.6)}>{progress} / {c.goal} {c.unit} · 🎁 {c.reward}</p>
                           {done && entry && (
                             <button onClick={() => { setChallengeOpen(false); setProfileRedeemingChallenge({ challenge: c, entry, userName: profile.name || '' }); }}
                               className="w-full py-2.5 rounded-xl bg-white/20 backdrop-blur-sm border border-white/30 text-white font-bold text-xs relative z-10 active:scale-95 transition-all">
@@ -27489,7 +27481,8 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
 }
 
 
-function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser, currentProfile, onViewStore, onViewUser, onMessage }: { targetUser: UserProfile, onBack: () => void, currentUser: FirebaseUser, currentProfile: UserProfile | null, onViewStore: (s: StoreProfile) => void, onViewUser: (u: UserProfile) => void, onMessage?: (uid: string) => void, key?: React.Key }) {
+function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser, currentProfile, onViewStore, onViewUser, onMessage, uiColors: uiColorsProp }: { targetUser: UserProfile, onBack: () => void, currentUser: FirebaseUser, currentProfile: UserProfile | null, onViewStore: (s: StoreProfile) => void, onViewUser: (u: UserProfile) => void, onMessage?: (uid: string) => void, uiColors?: UiColors, key?: React.Key }) {
+  const uiColors = uiColorsProp ?? UI_COLOR_DEFAULTS;
   const [targetUser, setTargetUser] = useState<UserProfile>(initialTargetUser);
   const [cards, setCards] = useState<Card[]>([]);
   const [allCards, setAllCards] = useState<Card[]>([]);
@@ -27858,30 +27851,36 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
         return (
           <div className="flex gap-2">
             <motion.button whileTap={{ scale: 0.97 }} onClick={() => setPubChallengeOpen(true)}
-              className="flex-1 rounded-2xl overflow-hidden shadow-sm shadow-teal-500/30">
+              className="flex-1 rounded-2xl overflow-hidden shadow-sm">
               <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3.5 overflow-hidden"
-                style={{ background: 'linear-gradient(160deg, #0F766E 0%, #0D9488 40%, #14B8A6 70%, #2DD4BF 100%)' }}>
+                style={{ background: uiColors.challengesTile.css }}>
                 <span className="shine-ray" aria-hidden="true" />
-                <p className="relative z-10 text-xl font-black leading-none text-white">{activePub.length}</p>
-                <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-teal-100/80">Challenges</span>
+                <p className="relative z-10 text-xl font-black leading-none text-white"
+                  style={tileTextStyle(uiColors.challengesTile)}>{activePub.length}</p>
+                <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-white/70"
+                  style={tileTextStyle(uiColors.challengesTile, 0.7)}>Challenges</span>
               </div>
             </motion.button>
             <motion.button whileTap={{ scale: 0.97 }} onClick={() => setPubStickerOpen(true)}
-              className="flex-1 rounded-2xl overflow-hidden shadow-sm shadow-teal-500/30">
+              className="flex-1 rounded-2xl overflow-hidden shadow-sm">
               <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3.5 overflow-hidden"
-                style={{ background: 'linear-gradient(160deg, #0F766E 0%, #0D9488 40%, #14B8A6 70%, #2DD4BF 100%)' }}>
+                style={{ background: uiColors.stickersTile.css }}>
                 <span className="shine-ray" aria-hidden="true" />
-                <p className="relative z-10 text-xl font-black leading-none text-white">{pubStickerCount}</p>
-                <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-teal-100/80">Stickers</span>
+                <p className="relative z-10 text-xl font-black leading-none text-white"
+                  style={tileTextStyle(uiColors.stickersTile)}>{pubStickerCount}</p>
+                <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-white/70"
+                  style={tileTextStyle(uiColors.stickersTile, 0.7)}>Stickers</span>
               </div>
             </motion.button>
             <motion.button whileTap={{ scale: 0.97 }} onClick={() => setPubBadgesOpen(true)}
-              className="flex-1 rounded-2xl overflow-hidden shadow-sm shadow-amber-400/50">
+              className="flex-1 rounded-2xl overflow-hidden shadow-sm">
               <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3.5 overflow-hidden"
-                style={{ background: 'linear-gradient(135deg, #fef08a 0%, #fbbf24 30%, #f59e0b 65%, #d97706 100%)' }}>
-                <span className="badge-shine-ray" aria-hidden="true" />
-                <p className="relative z-10 text-xl font-black leading-none" style={{ color: '#451a03' }}>{earnedBadges.length}</p>
-                <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest" style={{ color: '#78350f' }}>Badges</span>
+                style={{ background: uiColors.badgesTile.css }}>
+                <span className={uiColors.badgesTile.dark ? 'shine-ray' : 'badge-shine-ray'} aria-hidden="true" />
+                <p className="relative z-10 text-xl font-black leading-none"
+                  style={{ color: uiColors.badgesTile.textColor ?? (uiColors.badgesTile.dark ? '#fff' : '#451a03') }}>{earnedBadges.length}</p>
+                <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest"
+                  style={{ color: uiColors.badgesTile.textColor ? `${uiColors.badgesTile.textColor}b3` : (uiColors.badgesTile.dark ? 'rgba(255,255,255,0.7)' : '#78350f') }}>Badges</span>
               </div>
             </motion.button>
           </div>
@@ -27923,17 +27922,20 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
                   const progress = entry ? Math.min(c.goal, entry.count || 0) : 0;
                   const pct = c.goal > 0 ? Math.min(100, Math.round((progress / c.goal) * 100)) : 0;
                   return (
-                    <div key={c.id} className="rounded-2xl px-4 py-3 gradient-logo-blue overflow-hidden relative">
+                    <div key={c.id} className="rounded-2xl px-4 py-3 overflow-hidden relative"
+                      style={{ background: uiColors.challengesTile.css }}>
                       <span className="shine-ray" aria-hidden="true" />
                       <div className="flex items-center justify-between mb-1.5 gap-2 relative z-10">
-                        <p className="text-xs font-bold leading-tight line-clamp-1 flex-1 text-white">{c.title}</p>
+                        <p className="text-xs font-bold leading-tight line-clamp-1 flex-1 text-white"
+                          style={tileTextStyle(uiColors.challengesTile)}>{c.title}</p>
                         <span className={`text-[10px] font-bold shrink-0 ${pct >= 100 ? 'text-green-300' : 'text-white/80'}`}>{pct >= 100 ? '✓ Done' : `${pct}%`}</span>
                       </div>
                       <div className="h-1.5 bg-white/20 rounded-full overflow-hidden relative z-10">
                         <motion.div className={`h-full rounded-full ${pct >= 100 ? 'bg-green-400' : 'bg-white'}`}
                           initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.6, ease: 'easeOut' }} />
                       </div>
-                      <p className="text-[9px] mt-1.5 font-medium text-white/60 relative z-10">{progress} / {c.goal} {c.unit} · 🎁 {c.reward}</p>
+                      <p className="text-[9px] mt-1.5 font-medium text-white/60 relative z-10"
+                        style={tileTextStyle(uiColors.challengesTile, 0.6)}>{progress} / {c.goal} {c.unit} · 🎁 {c.reward}</p>
                     </div>
                   );
                 })}
@@ -28061,8 +28063,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
                 <div
                   key={card.id}
                   onClick={() => onViewStore(store)}
-                  className="snap-start shrink-0 w-52 bg-white rounded-2xl overflow-hidden cursor-pointer shadow-sm border border-brand-navy/8 active:scale-[0.98] transition-transform"
-                  style={{ borderTopColor: primary, borderTopWidth: 2 }}
+                  className="snap-start shrink-0 w-52 bg-white rounded-2xl overflow-hidden cursor-pointer shadow-md border border-brand-navy/8 active:scale-[0.98] transition-transform"
                 >
                   <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-brand-navy/6">
                     <div className="w-8 h-8 rounded-xl overflow-hidden shrink-0 shadow-sm">
