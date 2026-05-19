@@ -21353,7 +21353,8 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
               {activeCards.map(card => {
                 const store = (stores || []).find(s => s.id === card.store_id);
                 if (!store) return null;
-                const primary = card.profileColor || '#0D9488';
+                const brandPrimary = getComputedStyle(document.documentElement).getPropertyValue('--color-brand-gold').trim() || '#0D9488';
+                const primary = card.profileColor || brandPrimary;
                 const isMembership = card.card_type === 'membership';
                 const isVisit = isMembership && store.membershipType === 'visit';
                 const pct = Math.min(100, Math.round((card.current_stamps / (store.stamps_required_for_reward || 10)) * 100));
@@ -23884,8 +23885,8 @@ function StoreDealsSection({ stores, onViewStore, storeDistances, onNavigate }: 
               {/* Dark gradient overlay at bottom */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
-              {/* Red reward label top-left */}
-              <div className="absolute top-2.5 left-2.5 bg-red-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-sm max-w-[80%] truncate">
+              {/* Reward label top-left */}
+              <div className="absolute top-2.5 left-2.5 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-sm max-w-[80%] truncate" style={{ background: 'var(--color-brand-gold)' }}>
                 {finalReward || `${store.stamps_required_for_reward} stamp reward`}
               </div>
 
@@ -24060,7 +24061,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
                             ? <img src={store.logoUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
                             : <div className="absolute inset-0 bg-brand-navy/10 flex items-center justify-center"><Building2 size={28} className="text-brand-navy/30" /></div>}
                           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                          <div className="absolute top-2.5 left-2.5 bg-red-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-sm max-w-[80%] truncate">
+                          <div className="absolute top-2.5 left-2.5 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-sm max-w-[80%] truncate" style={{ background: 'var(--color-brand-gold)' }}>
                             {finalReward || `${store.stamps_required_for_reward} stamp reward`}
                           </div>
                           <div className="absolute bottom-0 left-0 right-0 px-3 pb-3">
@@ -24136,7 +24137,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
       <button
         onClick={() => setShowBirthdaySheet(true)}
         className="w-full flex items-center gap-4 px-5 py-4 rounded-[1.5rem] active:scale-[0.98] transition-transform relative overflow-hidden"
-        style={{ background: 'linear-gradient(135deg, #0F766E 0%, #0D9488 55%, #14B8A6 100%)' }}
+        style={{ background: 'linear-gradient(135deg, var(--brand-g1) 0%, var(--brand-g2) 55%, var(--brand-g3) 100%)' }}
       >
         {/* Confetti pieces */}
         {[
