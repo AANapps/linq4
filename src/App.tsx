@@ -16791,33 +16791,33 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady }: { curren
   return (
     <>
       <motion.button whileTap={{ scale: 0.97 }} onClick={() => setOpen(true)}
-        className="flex-1 rounded-[1.5rem] overflow-hidden shadow-lg shadow-violet-900/20 text-left">
+        className="flex-1 rounded-[1.5rem] overflow-hidden shadow-lg shadow-teal-900/10 text-left">
         <div className="relative h-full px-4 py-4 flex flex-col gap-3"
-          style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #3730a3 40%, #6366f1 80%, #818cf8 100%)' }}>
+          style={{ background: 'linear-gradient(135deg, #A7F3D0 0%, #6EE7D4 45%, #99F6E4 75%, #CCFBF1 100%)' }}>
           {voteData.imageUrl && <img src={voteData.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20 pointer-events-none" />}
           <div className="absolute top-2 right-2 z-20 w-7 h-7 bg-red-500 rounded-full flex items-center justify-center shadow-md">
             <Gift size={14} className="text-white" strokeWidth={2.5} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[9px] font-bold uppercase tracking-widest text-indigo-200/70">Daily Vote</p>
-            <p className="text-sm font-black text-white leading-tight mt-0.5 line-clamp-2">{voteData.question}</p>
+            <p className="text-[9px] font-bold uppercase tracking-widest text-teal-700/70">Daily Vote</p>
+            <p className="text-sm font-black text-teal-900 leading-tight mt-0.5 line-clamp-2">{voteData.question}</p>
           </div>
           {hasVoted && (
             <div className="space-y-1">
               {voteData.options.map((_, i) => {
                 const pct = Math.round(((liveCounts[String(i)] ?? 0) / total) * 100);
                 return (
-                  <div key={i} className="h-1.5 bg-white/15 rounded-full overflow-hidden">
+                  <div key={i} className="h-1.5 bg-teal-700/15 rounded-full overflow-hidden">
                     <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.5, delay: i * 0.1 }}
-                      className={`h-full rounded-full ${userVote === i ? 'bg-white' : 'bg-white/40'}`} />
+                      className={`h-full rounded-full ${userVote === i ? 'bg-teal-700' : 'bg-teal-700/40'}`} />
                   </div>
                 );
               })}
-              <p className="text-[9px] text-indigo-200/60 pt-0.5">{liveTotal} votes</p>
+              <p className="text-[9px] text-teal-700/60 pt-0.5">{liveTotal} votes</p>
             </div>
           )}
           {!hasVoted && !voteData.closed && (
-            <p className="text-[10px] font-bold text-indigo-200/60">Tap to vote →</p>
+            <p className="text-[10px] font-bold text-teal-700/60">Tap to vote →</p>
           )}
         </div>
       </motion.button>
@@ -24253,8 +24253,8 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
             {onOpenLinqle && (
               <motion.button whileTap={{ scale: 0.97 }} onClick={onOpenLinqle}
                 className="flex-1 rounded-[1.5rem] overflow-hidden shadow-lg shadow-black/20">
-                <div className="relative w-full h-full flex flex-col items-center justify-center gap-1 bg-[#0F172A]">
-                  <MatrixRainCanvas opacity={0.25} fadeColor="rgba(15,23,42,0.18)" />
+                <div className="relative w-full h-full flex flex-col items-center justify-center gap-1 bg-[#3D5F7A]">
+                  <MatrixRainCanvas opacity={0.25} fadeColor="rgba(61,95,122,0.18)" />
                   <div className="absolute top-2 right-2 z-20 w-7 h-7 bg-red-500 rounded-full flex items-center justify-center shadow-md">
                     <Gift size={14} className="text-white" strokeWidth={2.5} />
                   </div>
@@ -24406,7 +24406,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                   confetti({ particleCount: 80, spread: 60, startVelocity: 30, gravity: 0.8, scalar: 0.9, origin: { y: 0.6 }, zIndex: 9999, colors: ['#FFD700', '#FFC200', '#FFE566', '#FFAA00', '#FFF8DC'] });
                 }}
                 className="relative rounded-[1.5rem] overflow-hidden active:scale-[0.97] transition-transform shrink-0"
-                style={{ background: 'linear-gradient(135deg, #0F766E 0%, #0D9488 50%, #14B8A6 100%)', width: (feedChallenges.length > 0 || feedCompletedChallenges.length > 0) ? '136px' : '100%', minHeight: '148px' }}
+                style={{ background: 'linear-gradient(135deg, #CBD5E1 0%, #E2E8F0 50%, #F8FAFC 100%)', width: (feedChallenges.length > 0 || feedCompletedChallenges.length > 0) ? '136px' : '100%', minHeight: '148px' }}
               >
                 <div className="absolute top-3 left-3 text-lg leading-none">🥇</div>
                 <motion.div
@@ -24435,13 +24435,13 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                   />
                 ))}
                 <div className="relative z-10 h-full flex flex-col items-center justify-center gap-1.5 px-2 py-4" style={{ minHeight: '148px' }}>
-                  <div className="w-12 h-12 rounded-xl overflow-hidden border-2 border-white/30 bg-teal-50 flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-xl overflow-hidden border-2 border-gray-300 bg-teal-50 flex items-center justify-center">
                     <PixelAvatar config={currentProfile?.avatar} uid={currentProfile?.uid || ''} size={48} view="head" />
                   </div>
-                  <p className="text-white font-bold text-[10px] text-center leading-tight line-clamp-2 w-full px-1">
+                  <p className="text-gray-700 font-bold text-[10px] text-center leading-tight line-clamp-2 w-full px-1">
                     {currentProfile?.name || 'You'}
                   </p>
-                  <p className="text-white/60 text-[8px] font-bold uppercase tracking-wider">Leaderboard</p>
+                  <p className="text-gray-500 text-[8px] font-bold uppercase tracking-wider">Leaderboard</p>
                 </div>
               </button>
             </div>
