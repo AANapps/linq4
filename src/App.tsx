@@ -232,6 +232,35 @@ export const THEME_PRESETS = [
 ] as const;
 export type ThemePreset = typeof THEME_PRESETS[number];
 
+function hexToThemeVars(hex: string) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const sc = (v: number, f: number) => Math.round(Math.min(255, Math.max(0, v * f))).toString(16).padStart(2, '0');
+  const lt = (v: number, f: number) => Math.round(Math.min(255, v + (255 - v) * f)).toString(16).padStart(2, '0');
+  return {
+    g1: `#${sc(r,0.70)}${sc(g,0.70)}${sc(b,0.70)}`,
+    g2: hex,
+    g3: `#${lt(r,0.18)}${lt(g,0.18)}${lt(b,0.18)}`,
+    g4: `#${lt(r,0.40)}${lt(g,0.40)}${lt(b,0.40)}`,
+    gold: hex,
+    crimson: `#${sc(r,0.70)}${sc(g,0.70)}${sc(b,0.70)}`,
+    rose: `#${lt(r,0.80)}${lt(g,0.80)}${lt(b,0.80)}`,
+  };
+}
+
+function applyCustomThemeHex(hex: string) {
+  const v = hexToThemeVars(hex);
+  const root = document.documentElement;
+  root.style.setProperty('--brand-g1', v.g1);
+  root.style.setProperty('--brand-g2', v.g2);
+  root.style.setProperty('--brand-g3', v.g3);
+  root.style.setProperty('--brand-g4', v.g4);
+  root.style.setProperty('--color-brand-gold', v.gold);
+  root.style.setProperty('--color-brand-crimson', v.crimson);
+  root.style.setProperty('--color-brand-rose', v.rose);
+}
+
 export function applyBrandTheme(t: ThemePreset) {
   const r = document.documentElement;
   r.style.setProperty('--color-brand-gold', t.gold);
@@ -1027,8 +1056,13 @@ export default function App() {
   useEffect(() => {
     getDoc(doc(db, 'app_config', 'theme')).then(snap => {
       if (!snap.exists()) return;
-      const saved = THEME_PRESETS.find(t => t.id === snap.data().themeId);
-      if (saved) applyBrandTheme(saved);
+      const data = snap.data();
+      if (data.themeId === 'custom' && /^#[0-9a-fA-F]{6}$/.test(data.customHex || '')) {
+        applyCustomThemeHex(data.customHex);
+      } else {
+        const saved = THEME_PRESETS.find(t => t.id === data.themeId);
+        if (saved) applyBrandTheme(saved);
+      }
     }).catch(() => {});
   }, []);
 
@@ -5782,17 +5816,35 @@ function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColo
   const [colors, setColors] = useState<UiColors>(uiColors);
   const [saving, setSaving] = useState(false);
   const [activeThemeId, setActiveThemeId] = useState<string>('teal');
+  const [themeCustomHex, setThemeCustomHex] = useState<string>('#0D9488');
 
   useEffect(() => {
     getDoc(doc(db, 'app_config', 'theme')).then(snap => {
-      if (snap.exists()) setActiveThemeId(snap.data().themeId || 'teal');
+      if (!snap.exists()) return;
+      const data = snap.data();
+      if (data.themeId === 'custom' && /^#[0-9a-fA-F]{6}$/.test(data.customHex || '')) {
+        setActiveThemeId('custom');
+        setThemeCustomHex(data.customHex);
+      } else {
+        setActiveThemeId(data.themeId || 'teal');
+      }
     }).catch(() => {});
   }, []);
 
-  const handleThemeSelect = async (t: ThemePreset) => {
-    setActiveThemeId(t.id);
-    applyBrandTheme(t);
-    await setDoc(doc(db, 'app_config', 'theme'), { themeId: t.id }).catch(console.error);
+  const handleThemeColorChange = async (value: string) => {
+    const matchingPreset = THEME_PRESETS.find(
+      t => `linear-gradient(135deg, ${t.g1} 0%, ${t.g3} 100%)` === value
+    );
+    if (matchingPreset) {
+      setActiveThemeId(matchingPreset.id);
+      applyBrandTheme(matchingPreset);
+      await setDoc(doc(db, 'app_config', 'theme'), { themeId: matchingPreset.id }).catch(console.error);
+    } else if (/^#[0-9a-fA-F]{6}$/i.test(value)) {
+      setActiveThemeId('custom');
+      setThemeCustomHex(value);
+      applyCustomThemeHex(value);
+      await setDoc(doc(db, 'app_config', 'theme'), { themeId: 'custom', customHex: value }).catch(console.error);
+    }
   };
 
   const saveColors = async (next: UiColors) => {
@@ -5838,33 +5890,21 @@ function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColo
         </div>
 
         <div className="p-5 space-y-7">
-          {/* Brand Theme — preset palette */}
+          {/* Brand Theme — rainbow picker */}
           <div className="space-y-2.5">
             <div>
               <p className="font-bold text-brand-navy text-sm">Brand Theme</p>
               <p className="text-[11px] text-brand-navy/60">App-wide gradient & accent colours</p>
             </div>
-            <div className="grid grid-cols-5 gap-2">
-              {THEME_PRESETS.map(t => {
-                const active = t.id === activeThemeId;
-                return (
-                  <button key={t.id} onClick={() => handleThemeSelect(t)}
-                    className={`flex flex-col items-center gap-1.5 p-2 rounded-2xl transition-all active:scale-95 ${active ? 'bg-brand-navy/8 ring-2 ring-brand-navy/20' : ''}`}>
-                    <div className="w-10 h-10 rounded-xl shadow-sm relative overflow-hidden"
-                      style={{ background: `linear-gradient(135deg, ${t.g1} 0%, ${t.g3} 100%)` }}>
-                      {active && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-4 h-4 rounded-full bg-white/90 flex items-center justify-center">
-                            <Check size={10} className="text-brand-navy" strokeWidth={3} />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    <p className={`text-[9px] font-bold leading-none ${active ? 'text-brand-navy' : 'text-brand-navy/50'}`}>{t.label}</p>
-                  </button>
-                );
-              })}
-            </div>
+            <ColorSwatchPicker
+              value={activeThemeId === 'custom'
+                ? themeCustomHex
+                : (() => { const p = THEME_PRESETS.find(t => t.id === activeThemeId); return p ? `linear-gradient(135deg, ${p.g1} 0%, ${p.g3} 100%)` : '#0D9488'; })()
+              }
+              onChange={handleThemeColorChange}
+              presets={THEME_PRESETS.map(t => ({ id: t.id, label: t.label, css: `linear-gradient(135deg, ${t.g1} 0%, ${t.g3} 100%)` }))}
+              label="Tap to pick theme colour"
+            />
           </div>
 
           <div className="border-t border-brand-navy/8" />
