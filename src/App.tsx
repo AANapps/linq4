@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import confetti from 'canvas-confetti';
 import { PixelAvatar, AvatarCustomiserModal, AvatarViewModal } from './PixelAvatar';
 import {
@@ -10939,7 +10940,7 @@ async function createQRToken(storeId: string): Promise<string> {
   const tokenId = genToken();
   await setDoc(doc(db, 'qr_tokens', tokenId), {
     storeId,
-    createdAt: serverTimestamp(),
+    createdAt: Date.now(),  // plain number — avoids serverTimestamp pending-state issues
     used: false,
   });
   return tokenId;
@@ -10957,11 +10958,14 @@ const decodeVendorQR = (val: string): { storeId: string; tokenId: string } | nul
 function VendorQRDisplay({ store, onClose }: { store: StoreProfile; onClose: () => void }) {
   const [tokenId, setTokenId] = useState<string | null>(null);
   const [secsLeft, setSecsLeft] = useState(30);
+  const [error, setError] = useState<string | null>(null);
   const cardTheme = store.theme || '#0D9488';
 
   const rotateToken = useCallback(async () => {
+    setError(null);
     const id = await createQRToken(store.id).catch(() => null);
-    if (id) setTokenId(id);
+    if (id) { setTokenId(id); setSecsLeft(30); }
+    else setError('Failed to generate QR — check connection.');
   }, [store.id]);
 
   // Create initial token
@@ -10969,12 +10973,11 @@ function VendorQRDisplay({ store, onClose }: { store: StoreProfile; onClose: () 
 
   // Countdown + rotate every 30s
   useEffect(() => {
-    const start = Date.now();
     const id = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - start) / 1000) % 30;
-      const remaining = 30 - elapsed;
-      setSecsLeft(remaining);
-      if (remaining === 30) rotateToken();
+      setSecsLeft(s => {
+        if (s <= 1) { rotateToken(); return 30; }
+        return s - 1;
+      });
     }, 1000);
     return () => clearInterval(id);
   }, [rotateToken]);
@@ -10982,52 +10985,65 @@ function VendorQRDisplay({ store, onClose }: { store: StoreProfile; onClose: () 
   const qrValue = tokenId ? encodeVendorQR(store.id, tokenId) : null;
   const progress = secsLeft / 30;
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: '100%' }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: '100%' }}
-      transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-      className="fixed inset-0 z-[130] flex flex-col items-center justify-center"
-      style={{ backgroundColor: cardTheme }}
-    >
-      <button onClick={onClose} className="absolute top-12 right-5 p-2 bg-white/20 rounded-full">
-        <X size={20} className="text-white" />
-      </button>
+  // Render via portal to escape any CSS-transform containing block from parent motion.div
+  return createPortal(
+    <AnimatePresence>
+      <motion.div
+        key="vendor-qr-display"
+        initial={{ opacity: 0, y: '100%' }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: '100%' }}
+        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+        className="fixed inset-0 z-[200] flex flex-col items-center justify-center"
+        style={{ backgroundColor: cardTheme }}
+      >
+        <button onClick={onClose} className="absolute top-12 right-5 p-2 bg-white/20 rounded-full">
+          <X size={20} className="text-white" />
+        </button>
 
-      <div className="flex flex-col items-center gap-6 px-8">
-        <div className="text-center">
-          <p className="text-white/70 text-xs font-bold uppercase tracking-widest mb-1">Show this to your customer</p>
-          <h2 className="text-white font-bold text-2xl">{store.name}</h2>
-        </div>
-
-        {/* QR code */}
-        <div className="bg-white rounded-3xl p-5 shadow-2xl flex items-center justify-center" style={{ width: 230, height: 230 }}>
-          {qrValue
-            ? <QRCodeSVG key={tokenId} value={qrValue} size={200} />
-            : <div className="w-[200px] h-[200px] flex items-center justify-center"><Loader2 size={32} className="animate-spin text-brand-navy/30" /></div>
-          }
-        </div>
-
-        {/* Countdown */}
-        <div className="flex flex-col items-center gap-2 w-48">
-          <div className="w-full h-1.5 bg-white/20 rounded-full overflow-hidden">
-            <motion.div
-              className="h-full bg-white rounded-full"
-              animate={{ width: `${progress * 100}%` }}
-              transition={{ duration: 0.9, ease: 'linear' }}
-            />
+        <div className="flex flex-col items-center gap-6 px-8">
+          <div className="text-center">
+            <p className="text-white/70 text-xs font-bold uppercase tracking-widest mb-1">Show this to your customer</p>
+            <h2 className="text-white font-bold text-2xl">{store.name}</h2>
           </div>
-          <p className="text-white/60 text-xs font-bold">
-            Refreshes in {secsLeft}s
+
+          {/* QR code */}
+          <div className="bg-white rounded-3xl p-5 shadow-2xl flex items-center justify-center" style={{ width: 230, height: 230 }}>
+            {error
+              ? <p className="text-xs text-red-500 text-center px-2">{error}</p>
+              : qrValue
+                ? <QRCodeSVG key={tokenId} value={qrValue} size={200} />
+                : <Loader2 size={32} className="animate-spin text-brand-navy/30" />
+            }
+          </div>
+
+          {/* Countdown */}
+          {!error && (
+            <div className="flex flex-col items-center gap-2 w-48">
+              <div className="w-full h-1.5 bg-white/20 rounded-full overflow-hidden">
+                <motion.div
+                  className="h-full bg-white rounded-full"
+                  animate={{ width: `${progress * 100}%` }}
+                  transition={{ duration: 0.9, ease: 'linear' }}
+                />
+              </div>
+              <p className="text-white/60 text-xs font-bold">Refreshes in {secsLeft}s</p>
+            </div>
+          )}
+
+          {error && (
+            <button onClick={rotateToken} className="px-6 py-2 bg-white/20 rounded-2xl text-white text-sm font-bold">
+              Retry
+            </button>
+          )}
+
+          <p className="text-white/50 text-xs text-center max-w-[220px]">
+            Customer scans this with the Linq app to earn their stamp
           </p>
         </div>
-
-        <p className="text-white/50 text-xs text-center max-w-[220px]">
-          Customer scans this with the Linq app to earn their stamp
-        </p>
-      </div>
-    </motion.div>
+      </motion.div>
+    </AnimatePresence>,
+    document.body
   );
 }
 
@@ -11079,8 +11095,10 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady, initialQty }: {
         const data = tokenSnap.data();
         if (data.used) throw new Error('QR already used — ask vendor to show a new one.');
         if (data.storeId !== card.store_id) throw new Error('Wrong store QR code.');
-        const age = Date.now() - (data.createdAt?.toMillis?.() ?? 0);
-        if (age > 120_000) throw new Error('QR expired — ask vendor to refresh.');
+        const createdMs = typeof data.createdAt === 'number'
+          ? data.createdAt
+          : (data.createdAt?.toMillis?.() ?? null);
+        if (createdMs !== null && Date.now() - createdMs > 300_000) throw new Error('QR expired — ask vendor to refresh.');
         tx.update(tokenRef, { used: true, usedAt: serverTimestamp() });
       });
     } catch (err: any) {
