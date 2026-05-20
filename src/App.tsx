@@ -545,6 +545,8 @@ interface StoreProfile {
   membershipMenuItems?: { id: string; name: string; points: number; description?: string }[];
   scanMethod?: 'nfc' | 'qr';
   businessRules?: string;
+  charityAnimalImageUrl?: string;
+  charityTreeImageUrl?: string;
 }
 
 function storeCardActive(store: StoreProfile): boolean {
@@ -951,6 +953,8 @@ interface RankEntry {
 
 interface CelebrationPage {
   type: 'stamp' | 'challenge' | 'upsell' | 'charity' | 'rank' | 'monopoly_pack' | 'challenges_list' | 'upsell_list' | 'stage_reward' | 'collectible_promo';
+  charityAnimalImageUrl?: string;
+  charityTreeImageUrl?: string;
   storeName?: string;
   challengeTitle?: string;
   upsellTitle?: string;
@@ -971,6 +975,7 @@ interface CelebrationPage {
   monopolyChallengeName?: string;
   challengesList?: Array<{ title: string; currentStamps: number; totalStamps: number; reward: string; done: boolean }>;
   upsellList?: Array<{ title: string; totalStamps: number; reward: string; id: string }>;
+  newChallengesList?: Array<{ title: string; totalStamps: number; reward: string; id: string }>;
   stageReward?: string;
   stageStoreName?: string;
   stageStamps?: number;
@@ -9012,15 +9017,18 @@ function buildStampCelebrationPages(
     encouragement: '',
     done: false,
     charityAnimal,
+    charityAnimalImageUrl: store.charityAnimalImageUrl,
+    charityTreeImageUrl: store.charityTreeImageUrl,
   });
 
-  // 4. All joined standard-challenge progresses in one list page
+  // 4. Joined challenge progress + up to 3 new unjoined challenges — one combined page
   const joined = challenges.filter(c =>
     (c.participantUids || []).includes(user.uid) &&
     (!c.vendorIds?.length || c.vendorIds.includes(store.id!))
   );
+  const notJoined = challenges.filter(c => !(c.participantUids || []).includes(user.uid)).slice(0, 3);
 
-  if (joined.length > 0) {
+  if (joined.length > 0 || notJoined.length > 0) {
     const challengesList = joined.map(c => {
       const entry = entries.get(c.id);
       const progress = c.vendorIds?.length
@@ -9028,14 +9036,8 @@ function buildStampCelebrationPages(
         : Math.min(c.goal, Math.max(0, ((profile?.totalStamps || 0) + 1) - (entry?.totalStampsAtJoin || 0)));
       return { title: c.title, currentStamps: progress, totalStamps: c.goal, reward: c.reward, done: progress >= c.goal };
     });
-    pages.push({ type: 'challenges_list', currentStamps: 0, totalStamps: 0, reward: '', encouragement: '', done: false, challengesList });
-  }
-
-  // 5. All unjoined challenges in one recommendation list page
-  const notJoined = challenges.filter(c => !(c.participantUids || []).includes(user.uid)).slice(0, 5);
-  if (notJoined.length > 0) {
-    const upsellList = notJoined.map(c => ({ title: c.title, totalStamps: c.goal, reward: c.reward, id: c.id }));
-    pages.push({ type: 'upsell_list', currentStamps: 0, totalStamps: 0, reward: '', encouragement: '', done: false, upsellList });
+    const newChallengesList = notJoined.map(c => ({ title: c.title, totalStamps: c.goal, reward: c.reward, id: c.id }));
+    pages.push({ type: 'challenges_list', currentStamps: 0, totalStamps: 0, reward: '', encouragement: '', done: false, challengesList, newChallengesList });
   }
 
   return pages;
@@ -9071,6 +9073,8 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const [celebrationPages, setCelebrationPages] = useState<CelebrationPage[] | null>(null);
   const prevCardStampsRef = useRef<Map<string, number>>(new Map());
   const cardsInitializedRef = useRef(false);
+  const prevMembershipVisitsRef = useRef<Map<string, number>>(new Map());
+  const membershipVisitsInitRef = useRef(false);
 
   // Sticker (monopoly) — no intermediate modal, pack opens directly
   const prevStickerCountRef = useRef<Map<string, number>>(new Map());
@@ -9175,6 +9179,52 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         }
       }
     })();
+  }, [initialCards]);
+
+  // Watch membership visit cards — trigger charity + challenges celebration when visit points increase
+  useEffect(() => {
+    const visitCards = initialCards.filter(c => c.card_type === 'membership' && c.membership_type === 'visit');
+    if (visitCards.length === 0) return;
+    if (!membershipVisitsInitRef.current) {
+      visitCards.forEach(c => prevMembershipVisitsRef.current.set(c.id, c.membership_visits ?? 0));
+      membershipVisitsInitRef.current = true;
+      return;
+    }
+    for (const card of visitCards) {
+      const prev = prevMembershipVisitsRef.current.get(card.id) ?? 0;
+      const current = card.membership_visits ?? 0;
+      if (current > prev) {
+        prevMembershipVisitsRef.current.set(card.id, current);
+        const store = stores.find(s => s.id === card.store_id);
+        const charityAnimal = ENDANGERED_ANIMALS[current % ENDANGERED_ANIMALS.length];
+        const joined = activeStandardChallenges.filter(c =>
+          (c.participantUids || []).includes(user.uid)
+        );
+        const notJoined = activeStandardChallenges.filter(c => !(c.participantUids || []).includes(user.uid)).slice(0, 3);
+        const pages: CelebrationPage[] = [];
+        pages.push({
+          type: 'charity',
+          currentStamps: current,
+          totalStamps: current,
+          reward: '',
+          encouragement: '',
+          done: false,
+          charityAnimal,
+          charityAnimalImageUrl: store?.charityAnimalImageUrl,
+          charityTreeImageUrl: store?.charityTreeImageUrl,
+        });
+        if (joined.length > 0 || notJoined.length > 0) {
+          const challengesList = joined.map(c => {
+            const entry = myStandardEntries.get(c.id);
+            const progress = Math.min(c.goal, Math.max(0, ((profile?.totalStamps || 0)) - (entry?.totalStampsAtJoin || 0)));
+            return { title: c.title, currentStamps: progress, totalStamps: c.goal, reward: c.reward, done: progress >= c.goal };
+          });
+          const newChallengesList = notJoined.map(c => ({ title: c.title, totalStamps: c.goal, reward: c.reward, id: c.id }));
+          pages.push({ type: 'challenges_list', currentStamps: 0, totalStamps: 0, reward: '', encouragement: '', done: false, challengesList, newChallengesList });
+        }
+        if (pages.length > 0) setCelebrationPages(pages);
+      }
+    }
   }, [initialCards]);
 
   // Watch myStickerCards for new stickers — open pack directly, no intermediate modal
@@ -11186,6 +11236,13 @@ function VisitScanSheet({ card, store, onClose, initialQty }: { card: Card; stor
         card_type: 'membership', membership_type: 'visit',
         type: 'nfc_scan', points_earned: qty, issued_at: serverTimestamp(),
       });
+      // Issue stickers, update challenges, bump streak — same as NFC stamp flow
+      const uid = auth.currentUser?.uid ?? card.user_id;
+      const userName = auth.currentUser?.displayName || 'Customer';
+      issueUserStickers(uid, userName, 3).catch(console.error);
+      updateChallengeProgress(uid, card.store_id, 1).catch(console.error);
+      bumpStreak(uid).catch(console.error);
+      updateDoc(doc(db, 'users', uid), { totalStamps: increment(1), lastStampAt: serverTimestamp() }).catch(console.error);
       setScanState('success');
       setStatusMsg(`+${qty} point${qty !== 1 ? 's' : ''} added!`);
     } catch (err: any) {
@@ -11801,7 +11858,9 @@ function StampCelebrationModal({
                           : 'border-brand-navy/10 bg-white hover:border-emerald-300 hover:bg-emerald-50/50',
                     )}
                   >
-                    <div className="text-4xl">{page.charityAnimal?.emoji ?? '🐾'}</div>
+                    {page.charityAnimalImageUrl
+                      ? <img src={page.charityAnimalImageUrl} alt={page.charityAnimal?.name ?? 'Animal'} className="w-full h-20 object-cover rounded-xl" />
+                      : <div className="text-4xl">{page.charityAnimal?.emoji ?? '🐾'}</div>}
                     <div className="w-full">
                       <p className="font-display font-bold text-sm text-brand-navy leading-tight">{page.charityAnimal?.name ?? 'Endangered Animal'}</p>
                       <p className="text-[10px] font-bold text-red-500 mt-0.5">{page.charityAnimal?.status}</p>
@@ -11828,7 +11887,9 @@ function StampCelebrationModal({
                           : 'border-brand-navy/10 bg-white hover:border-emerald-300 hover:bg-emerald-50/50',
                     )}
                   >
-                    <div className="text-4xl">🌳</div>
+                    {page.charityTreeImageUrl
+                      ? <img src={page.charityTreeImageUrl} alt="Tree planting" className="w-full h-20 object-cover rounded-xl" />
+                      : <div className="text-4xl">🌳</div>}
                     <div className="w-full">
                       <p className="font-display font-bold text-sm text-brand-navy leading-tight">Plant a Tree</p>
                       <p className="text-[10px] font-bold text-emerald-600 mt-0.5">Reforestation</p>
@@ -12083,115 +12144,84 @@ function StampCelebrationModal({
                 </motion.button>
               </>
             ) : isChallengesList ? (
-              /* ── All joined challenge progresses as a list ── */
+              /* ── Joined challenge progress + 3 new unjoined challenges ── */
               <>
                 <div className="text-center space-y-1">
                   <motion.p
                     initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
                     className="text-[10px] font-bold uppercase tracking-widest text-brand-gold"
                   >
-                    🏃 Challenge Updates
+                    🏃 Challenges
                   </motion.p>
                   <motion.h2
                     initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
                     className="font-display text-xl font-bold text-brand-navy leading-tight"
                   >
-                    Your Progress
+                    {(page.challengesList?.length ?? 0) > 0 ? 'Your Progress' : 'Make every stamp count!'}
                   </motion.h2>
                 </div>
 
-                <div className="space-y-3 max-h-60 overflow-y-auto">
-                  {page.challengesList?.map((c, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 + i * 0.08 }}
-                      className={cn('rounded-2xl p-4 space-y-2', c.done ? 'bg-green-50' : 'bg-brand-navy/5')}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="font-bold text-sm text-brand-navy truncate">{c.title}</p>
-                        {c.done && (
-                          <motion.span
-                            initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 400, damping: 14 }}
-                            className="text-[10px] font-black text-green-500 shrink-0"
-                          >✓ DONE!</motion.span>
-                        )}
-                      </div>
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-[10px] font-bold text-brand-navy/75">
-                          <span className="truncate max-w-[70%]">{c.reward}</span>
-                          <span>{c.currentStamps}/{c.totalStamps}</span>
-                        </div>
-                        <div className="h-1.5 bg-brand-navy/8 rounded-full overflow-hidden">
-                          <motion.div
-                            className={cn('h-full rounded-full', c.done ? 'bg-green-400' : 'bg-brand-gold')}
-                            initial={{ width: 0 }}
-                            animate={{ width: `${c.totalStamps > 0 ? Math.min(100, Math.round((c.currentStamps / c.totalStamps) * 100)) : 0}%` }}
-                            transition={{ duration: 0.8, ease: 'easeOut', delay: 0.2 + i * 0.08 }}
-                          />
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
+                <div className="space-y-2 max-h-72 overflow-y-auto">
+                  {/* Joined challenge progress */}
+                  {(page.challengesList?.length ?? 0) > 0 && (
+                    <div className="space-y-2">
+                      {page.challengesList!.map((c, i) => (
+                        <motion.div
+                          key={i}
+                          initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 + i * 0.07 }}
+                          className={cn('rounded-2xl p-3.5 space-y-2', c.done ? 'bg-green-50' : 'bg-brand-navy/5')}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-bold text-sm text-brand-navy truncate">{c.title}</p>
+                            {c.done
+                              ? <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 400, damping: 14 }} className="text-[10px] font-black text-green-500 shrink-0">✓ DONE!</motion.span>
+                              : <span className="text-[10px] font-bold text-brand-navy/60 shrink-0">{c.currentStamps}/{c.totalStamps}</span>}
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-[10px] text-brand-navy/75 truncate">{c.reward}</p>
+                            <div className="h-1.5 bg-brand-navy/8 rounded-full overflow-hidden">
+                              <motion.div
+                                className={cn('h-full rounded-full', c.done ? 'bg-green-400' : 'bg-brand-gold')}
+                                initial={{ width: 0 }}
+                                animate={{ width: `${c.totalStamps > 0 ? Math.min(100, Math.round((c.currentStamps / c.totalStamps) * 100)) : 0}%` }}
+                                transition={{ duration: 0.8, ease: 'easeOut', delay: 0.2 + i * 0.07 }}
+                              />
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  )}
 
-                {pages.length > 1 && (
-                  <div className="flex justify-center gap-1.5">
-                    {pages.map((_, i) => (
-                      <motion.div key={i} animate={{ width: i === pageIdx ? 16 : 6 }} className={cn('h-1.5 rounded-full transition-colors', i === pageIdx ? 'bg-brand-navy' : 'bg-brand-navy/20')} />
-                    ))}
-                  </div>
-                )}
+                  {/* Divider when both sections present */}
+                  {(page.challengesList?.length ?? 0) > 0 && (page.newChallengesList?.length ?? 0) > 0 && (
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 pt-1">✨ Join these</p>
+                  )}
 
-                <motion.button
-                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
-                  onClick={isLast ? onClose : () => setPageIdx(i => i + 1)}
-                  className="w-full py-3.5 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-[0.98] transition-all"
-                >
-                  {ctaLabel}
-                </motion.button>
-              </>
-            ) : isUpsellList ? (
-              /* ── Recommended challenges list ── */
-              <>
-                <div className="text-center space-y-1">
-                  <motion.p
-                    initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-                    className="text-[10px] font-bold uppercase tracking-widest text-brand-gold"
-                  >
-                    ✨ Level Up!
-                  </motion.p>
-                  <motion.h2
-                    initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-                    className="font-display text-xl font-bold text-brand-navy leading-tight"
-                  >
-                    Make every stamp count!
-                  </motion.h2>
-                </div>
-
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {page.upsellList?.map((c, i) => (
+                  {/* 3 new unjoined challenges */}
+                  {page.newChallengesList?.map((c, i) => (
                     <motion.div
                       key={c.id}
-                      initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 + i * 0.07 }}
-                      className="rounded-2xl bg-brand-navy/5 border border-brand-navy/8 p-3.5 flex items-center justify-between gap-3"
+                      initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 + i * 0.07 }}
+                      className="rounded-2xl bg-brand-gold/8 border border-brand-gold/20 p-3.5 flex items-center justify-between gap-3"
                     >
                       <div className="min-w-0">
                         <p className="font-bold text-sm text-brand-navy truncate">{c.title}</p>
-                        <p className="text-[11px] text-brand-navy/80 mt-0.5 truncate">🏆 {c.reward}</p>
+                        <p className="text-[10px] text-brand-navy/75 mt-0.5 truncate">🏆 {c.reward}</p>
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-[10px] font-bold text-brand-navy/75">{c.totalStamps} stamps</p>
-                      </div>
+                      <p className="text-[10px] font-bold text-brand-navy/60 shrink-0">{c.totalStamps} stamps</p>
                     </motion.div>
                   ))}
                 </div>
 
-                <motion.div
-                  initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
-                  className="rounded-2xl bg-brand-gold/10 border border-brand-gold/20 p-3.5 text-center"
-                >
-                  <p className="text-xs font-bold text-brand-navy">🎯 Join in the Challenges tab — every stamp counts!</p>
-                </motion.div>
+                {(page.newChallengesList?.length ?? 0) > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+                    className="rounded-2xl bg-brand-navy/5 p-3 text-center"
+                  >
+                    <p className="text-[11px] font-bold text-brand-navy/70">🎯 Join in the Challenges tab — every stamp counts!</p>
+                  </motion.div>
+                )}
 
                 {pages.length > 1 && (
                   <div className="flex justify-center gap-1.5">
@@ -12203,6 +12233,24 @@ function StampCelebrationModal({
 
                 <motion.button
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
+                  onClick={isLast ? onClose : () => setPageIdx(i => i + 1)}
+                  className="w-full py-3.5 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-[0.98] transition-all"
+                >
+                  {ctaLabel}
+                </motion.button>
+              </>
+            ) : isUpsellList ? (
+              /* ── Legacy upsell list (no longer built, kept for safety) ── */
+              <>
+                {pages.length > 1 && (
+                  <div className="flex justify-center gap-1.5">
+                    {pages.map((_, i) => (
+                      <motion.div key={i} animate={{ width: i === pageIdx ? 16 : 6 }} className={cn('h-1.5 rounded-full transition-colors', i === pageIdx ? 'bg-brand-navy' : 'bg-brand-navy/20')} />
+                    ))}
+                  </div>
+                )}
+                <motion.button
+                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
                   onClick={isLast ? onClose : () => setPageIdx(i => i + 1)}
                   className="w-full py-3.5 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-[0.98] transition-all"
                 >
@@ -19654,6 +19702,9 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
   const [selectedIconGroup, setSelectedIconGroup] = useState(STAMP_ICON_GROUPS[0].group);
   const [openColorPicker, setOpenColorPicker] = useState<'primary' | 'secondary' | null>(null);
   const [businessRules, setBusinessRules] = useState(store?.businessRules || '');
+  const [charityAnimalImageUrl, setCharityAnimalImageUrl] = useState(store?.charityAnimalImageUrl || '');
+  const [charityTreeImageUrl, setCharityTreeImageUrl] = useState(store?.charityTreeImageUrl || '');
+  const [uploadingCharity, setUploadingCharity] = useState<'animal' | 'tree' | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -19668,6 +19719,8 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
     setStampBorderColor(store.stampBorderColor || '#ffffff');
     setCardPattern(store.cardPattern || 'solid');
     setBusinessRules(store.businessRules || '');
+    setCharityAnimalImageUrl(store.charityAnimalImageUrl || '');
+    setCharityTreeImageUrl(store.charityTreeImageUrl || '');
   }, [store?.id]);
 
   // When numTiers changes, resize tiers array
@@ -19702,6 +19755,8 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
         stampBorderColor,
         cardPattern,
         businessRules,
+        charityAnimalImageUrl,
+        charityTreeImageUrl,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -19996,6 +20051,46 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
             className="w-full px-4 py-3 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm text-brand-navy/80 focus:outline-none focus:ring-2 focus:ring-brand-gold/30 resize-none"
           />
           <p className="text-[11px] text-brand-navy/45 pl-1">Displayed on the back of the card when customers tap T&amp;Cs.</p>
+        </div>
+
+        {/* Charity Images */}
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Charity Photos</label>
+            <p className="text-[11px] text-brand-navy/45 mt-1">Custom photos shown on the charity choice page when customers collect stamps. Leave blank to use the default emoji.</p>
+          </div>
+          {(['animal', 'tree'] as const).map(type => {
+            const url = type === 'animal' ? charityAnimalImageUrl : charityTreeImageUrl;
+            const setUrl = type === 'animal' ? setCharityAnimalImageUrl : setCharityTreeImageUrl;
+            return (
+              <div key={type} className="flex items-center gap-3">
+                {url
+                  ? <img src={url} alt={type} className="w-14 h-14 rounded-xl object-cover border border-brand-navy/10 shrink-0" />
+                  : <div className="w-14 h-14 rounded-xl bg-brand-navy/5 border border-brand-navy/10 flex items-center justify-center text-2xl shrink-0">{type === 'animal' ? '🐾' : '🌳'}</div>}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-brand-navy capitalize mb-1">{type === 'animal' ? 'Endangered Animal' : 'Tree Planting'}</p>
+                  <label className={`block w-full text-center py-2 rounded-xl text-xs font-bold cursor-pointer transition-all ${uploadingCharity === type ? 'bg-brand-navy/20 text-brand-navy/50' : 'bg-brand-navy/8 text-brand-navy hover:bg-brand-navy/15'}`}>
+                    {uploadingCharity === type ? 'Uploading…' : url ? 'Change Photo' : 'Upload Photo'}
+                    <input type="file" accept="image/*" className="hidden" disabled={!!uploadingCharity}
+                      onChange={async e => {
+                        const file = e.target.files?.[0]; if (!file || !store) return;
+                        setUploadingCharity(type);
+                        try {
+                          const blob = await compressImage(file, 800, 0.85);
+                          const snap = await uploadBytes(storageRef(storage, `stores/${store.id}/charity_${type}_${Date.now()}.webp`), blob, { contentType: 'image/webp' });
+                          const newUrl = await getDownloadURL(snap.ref);
+                          setUrl(newUrl);
+                        } catch (err) { console.error(err); }
+                        setUploadingCharity(null);
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
+                  {url && <button onClick={() => setUrl('')} className="w-full text-[10px] text-brand-navy/40 hover:text-red-400 font-bold mt-1 transition-colors">Remove</button>}
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         {store && (
