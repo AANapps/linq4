@@ -18847,13 +18847,11 @@ function SlideToRedeem({ onRedeem, disabled = false, label = 'Slide to redeem' }
 
 // ─── Vendor Offer Panel ──────────────────────────────────────────────────────
 function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
-  const OFFER_CATEGORIES = ['Food', 'Beauty', 'Barber', 'Gym', 'Parking', 'Retail', 'Other'];
   const MAX_OPTIONS = [{ v: 1, l: '1 time' }, { v: 2, l: '2 times' }, { v: 3, l: '3 times' }, { v: 5, l: '5 times' }, { v: 0, l: 'Unlimited' }];
 
   const [offers, setOffers] = useState<StoreOffer[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState(store?.category || 'Food');
   const [maxRedemptions, setMaxRedemptions] = useState(1);
   const [imageUrl, setImageUrl] = useState('');
   const [value, setValue] = useState('');
@@ -18914,7 +18912,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
         title: title.trim(),
         description: description.trim(),
         imageUrl,
-        category,
+        category: store.category || '',
         offerType,
         maxRedemptionsPerUser: maxRedemptions,
         value: parseFloat(value) || 0,
@@ -18923,7 +18921,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
         validDays,
         expiresAt,
       });
-      setTitle(''); setDescription(''); setImageUrl(''); setCategory(store?.category || 'Food'); setMaxRedemptions(1); setValue(''); setOfferType('standard'); setValidDays(30);
+      setTitle(''); setDescription(''); setImageUrl(''); setMaxRedemptions(1); setValue(''); setOfferType('standard'); setValidDays(30);
       setSaved(true); setTimeout(() => setSaved(false), 2000);
       setShowForm(false);
     } catch (e: any) {
@@ -19041,14 +19039,6 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
               )}
             </div>
 
-            {/* Category */}
-            <div className="relative">
-              <select value={category} onChange={e => setCategory(e.target.value)} className={cn(inputCls, 'appearance-none')}>
-                {OFFER_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-              <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-navy/75 pointer-events-none" />
-            </div>
-
             {/* Max redemptions */}
             <div>
               <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75 mb-2 block">Max Redemptions Per User</label>
@@ -19131,8 +19121,6 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
                     const days = Math.ceil(ms / 86400000);
                     return <span className={cn('text-[10px] font-black px-2 py-0.5 rounded-full', days <= 3 ? 'bg-red-100 text-red-500' : 'bg-amber-100 text-amber-600')}>{days}d left</span>;
                   })()}
-                  <span className="text-[11px] text-brand-navy/75 font-bold">{offer.category}</span>
-                  <span className="text-[11px] text-brand-navy/75 font-bold">•</span>
                   <span className="text-[11px] text-brand-navy/75 font-bold">{offer.maxRedemptionsPerUser === 0 ? 'Unlimited' : `${offer.maxRedemptionsPerUser}x`} per user</span>
                   {(offer.value ?? 0) > 0 && <><span className="text-[11px] text-brand-navy/75 font-bold">•</span><span className="text-[11px] font-bold text-emerald-600">${offer.value!.toFixed(2)} saving</span></>}
                 </div>
@@ -21725,7 +21713,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
             ...storeWallPosts.map(p => ({ _type: 'wall' as const, _ts: p.createdAt?.toMillis?.() ?? 0, data: p })),
           ].sort((a, b) => b._ts - a._ts);
           return (
-            <div className="divide-y-[3px] divide-gray-200 bg-white -mx-4 border-t border-gray-100">
+            <div className="divide-y-[3px] divide-gray-200 bg-white -mx-6 border-t border-gray-100">
               {merged.map(item =>
                 item._type === 'global' ? (
                   <FeedPostCard key={item.data.id} post={item.data} currentUser={user} onViewUser={onViewUser}
@@ -21733,7 +21721,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                     onVote={async (p, idx) => { const ref = doc(db, 'global_posts', p.id); const votes = p.pollVotes || {}; const oldKey = Object.keys(votes).find(k => (votes[k] || []).includes(user.uid)); const updates: any = { [`pollVotes.${idx}`]: arrayUnion(user.uid) }; if (oldKey !== undefined && oldKey !== String(idx)) updates[`pollVotes.${oldKey}`] = arrayRemove(user.uid); await updateDoc(ref, updates); }}
                   />
                 ) : (
-                  <div key={item.data.id} className="px-4 py-4 space-y-2.5">
+                  <div key={item.data.id} className="px-6 py-4 space-y-2.5">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full overflow-hidden border border-black/5 bg-teal-50 shrink-0 flex items-center justify-center">
                         <PixelAvatar uid={item.data.authorUid} size={40} view="head" />
@@ -21762,15 +21750,15 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         {activeSubTab === 'interactions' && (() => {
           const votedPolls = allPostsForVotes.filter(p => Object.values(p.pollVotes || {}).some(arr => (arr as string[]).includes(profile.uid)));
           return (
-            <div className="divide-y-[3px] divide-gray-200 bg-white -mx-4 border-t border-gray-100">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold px-4 py-3 flex items-center gap-2 bg-gray-50"><Heart size={12} fill="currentColor" /> Liked ({likedPosts.length})</p>
+            <div className="divide-y-[3px] divide-gray-200 bg-white -mx-6 border-t border-gray-100">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold px-6 py-3 flex items-center gap-2 bg-gray-50"><Heart size={12} fill="currentColor" /> Liked ({likedPosts.length})</p>
               {likedPosts.map(post => (
                 <FeedPostCard key={post.id} post={post} currentUser={user} onViewUser={onViewUser}
                   onLike={async (p) => { const ref = doc(db, 'global_posts', p.id); const liked = (p.likedBy || []).includes(user.uid); await updateDoc(ref, { likedBy: liked ? arrayRemove(user.uid) : arrayUnion(user.uid), likesCount: liked ? Math.max(0, p.likesCount - 1) : p.likesCount + 1 }); }}
                   onVote={async (p, idx) => { const ref = doc(db, 'global_posts', p.id); const votes = p.pollVotes || {}; const oldKey = Object.keys(votes).find(k => (votes[k] || []).includes(user.uid)); const updates: any = { [`pollVotes.${idx}`]: arrayUnion(user.uid) }; if (oldKey !== undefined && oldKey !== String(idx)) updates[`pollVotes.${oldKey}`] = arrayRemove(user.uid); await updateDoc(ref, updates); }}
                 />
               ))}
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold px-4 py-3 flex items-center gap-2 bg-gray-50"><BarChart2 size={12} /> Votes Cast ({votedPolls.length})</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold px-6 py-3 flex items-center gap-2 bg-gray-50"><BarChart2 size={12} /> Votes Cast ({votedPolls.length})</p>
               {votedPolls.map(post => (
                 <FeedPostCard key={post.id} post={post} currentUser={user} onViewUser={onViewUser}
                   onLike={async (p) => { const ref = doc(db, 'global_posts', p.id); const liked = (p.likedBy || []).includes(user.uid); await updateDoc(ref, { likedBy: liked ? arrayRemove(user.uid) : arrayUnion(user.uid), likesCount: liked ? Math.max(0, p.likesCount - 1) : p.likesCount + 1 }); }}
@@ -24584,12 +24572,19 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
 
       {/* Store Offers section */}
       {storeOffers.length > 0 && (() => {
-        const cats: { label: string; icon: React.ReactNode; offers: StoreOffer[] }[] = [
-          { label: 'Products',    icon: <Package size={13} className="text-emerald-500" />,  offers: offersByDist.filter(o => o.category === 'product'   || o.category === 'Products')   },
-          { label: 'Experiences', icon: <Star size={13} className="text-purple-500" />,       offers: offersByDist.filter(o => o.category === 'experience' || o.category === 'Experiences') },
-          { label: 'Services',    icon: <Tag size={13} className="text-sky-500" />,           offers: offersByDist.filter(o => o.category === 'service'    || o.category === 'Services')   },
-          { label: 'Other',       icon: <Ticket size={13} className="text-violet-500" />,     offers: offersByDist.filter(o => !['product','Products','experience','Experiences','service','Services'].includes(o.category)) },
-        ].filter(c => c.offers.length > 0);
+        const STORE_CAT_ICON: Record<string, React.ReactNode> = {
+          Food:    <Utensils  size={13} className="text-orange-500" />,
+          Beauty:  <Sparkles  size={13} className="text-pink-500"   />,
+          Barber:  <Scissors  size={13} className="text-blue-500"   />,
+          Gym:     <Dumbbell  size={13} className="text-red-500"    />,
+          Retail:  <ShoppingBag size={13} className="text-emerald-500" />,
+        };
+        const allCats = [...new Set(offersByDist.map(o => o.storeCategory || o.category || 'Other'))].sort();
+        const cats = allCats.map(label => ({
+          label,
+          icon: STORE_CAT_ICON[label] ?? <Ticket size={13} className="text-violet-500" />,
+          offers: offersByDist.filter(o => (o.storeCategory || o.category || 'Other') === label),
+        })).filter(c => c.offers.length > 0);
         return (
           <div className="space-y-4">
             <div className="flex items-center gap-2 px-1">
@@ -25207,7 +25202,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
 
       {activeSubTab === 'following' ? (
         loading ? <FeedLoadingSpinner /> : (
-          <div className="divide-y-[3px] divide-gray-200 bg-white -mx-4 border-t border-gray-100">
+          <div className="divide-y-[3px] divide-gray-200 bg-white -mx-6 border-t border-gray-100">
             {followingFeed.map((item) =>
               !item._type
                 ? <FeedPostCard key={`gp-${item.id}`} post={item as GlobalPost} currentUser={currentUser} currentProfile={currentProfile} onViewUser={onViewUser} onViewStore={onViewStore} onLike={handleLike} onVote={handleVote} onDelete={async (p) => { await deleteDoc(doc(db, 'global_posts', p.id)); }} />
@@ -25602,7 +25597,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
 
           {/* Main mixed feed */}
           {loading ? <FeedLoadingSpinner /> : (
-            <div className="divide-y-[3px] divide-gray-200 bg-white -mx-4 border-t border-gray-100">
+            <div className="divide-y-[3px] divide-gray-200 bg-white -mx-6 border-t border-gray-100">
               {displayFeed.map((item) =>
                 !item._type
                   ? <FeedPostCard key={`gp-${item.id}`} post={item as GlobalPost} currentUser={currentUser} currentProfile={currentProfile} onViewUser={onViewUser} onViewStore={onViewStore} onLike={handleLike} onVote={handleVote} onDelete={async (p) => { await deleteDoc(doc(db, 'global_posts', p.id)); }} showPinnedTag />
