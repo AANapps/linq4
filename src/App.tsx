@@ -20086,6 +20086,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
   const [selectedIconGroup, setSelectedIconGroup] = useState(STAMP_ICON_GROUPS[0].group);
   const [openColorPicker, setOpenColorPicker] = useState<'primary' | 'secondary' | null>(null);
   const [businessRules, setBusinessRules] = useState(store?.businessRules || '');
+  const [ruleTemplates, setRuleTemplates] = useState<string[]>([]);
   const [charityAnimalImageUrl, setCharityAnimalImageUrl] = useState(store?.charityAnimalImageUrl || '');
   const [charityTreeImageUrl, setCharityTreeImageUrl] = useState(store?.charityTreeImageUrl || '');
   const [uploadingCharity, setUploadingCharity] = useState<'animal' | 'tree' | null>(null);
@@ -20109,6 +20110,48 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
     setCharityAnimalImageUrl(store.charityAnimalImageUrl || '');
     setCharityTreeImageUrl(store.charityTreeImageUrl || '');
   }, [store?.id]);
+
+  const DEFAULT_RULE_TEMPLATES = [
+    'One stamp per visit.',
+    'One stamp per transaction.',
+    'One reward per customer.',
+    'Reward valid for 30 days.',
+    'Reward valid for 60 days.',
+    'Reward valid for 90 days.',
+    'No cash alternative.',
+    'Cannot be combined with other offers.',
+    'Subject to availability.',
+    'Management reserves the right to withdraw this offer at any time.',
+    'Card must be presented at time of purchase.',
+    'Stamps cannot be transferred between cards.',
+    'Lost or stolen cards cannot be replaced.',
+    'Minimum spend required per visit.',
+    'One card per customer.',
+    'Reward must be redeemed in a single visit.',
+    'Stamps earned on full-price items only.',
+    'Not valid on sale or promotional items.',
+    'Staff are not eligible to participate.',
+  ];
+
+  useEffect(() => {
+    getDocs(collection(db, 'rule_templates')).then(async snap => {
+      if (snap.empty) {
+        // Seed defaults
+        await Promise.all(
+          DEFAULT_RULE_TEMPLATES.map((text, order) =>
+            addDoc(collection(db, 'rule_templates'), { text, order })
+          )
+        );
+        setRuleTemplates(DEFAULT_RULE_TEMPLATES);
+      } else {
+        const sorted = snap.docs
+          .map(d => ({ text: d.data().text as string, order: d.data().order as number ?? 0 }))
+          .sort((a, b) => a.order - b.order)
+          .map(r => r.text);
+        setRuleTemplates(sorted);
+      }
+    }).catch(() => {});
+  }, []);
 
   // When numTiers changes, resize tiers array
   useEffect(() => {
@@ -20508,7 +20551,21 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
             rows={4}
             className="w-full px-4 py-3 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm text-brand-navy/80 focus:outline-none focus:ring-2 focus:ring-brand-gold/30 resize-none"
           />
-          <p className="text-[11px] text-brand-navy/45 pl-1">Displayed on the back of the card when customers tap T&amp;Cs.</p>
+          <p className="text-[11px] text-brand-navy/45 pl-1">Tap a rule to add it, or type your own above.</p>
+          {ruleTemplates.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {ruleTemplates.map(rule => (
+                <button
+                  key={rule}
+                  type="button"
+                  onClick={() => setBusinessRules(prev => prev ? `${prev.trimEnd()} ${rule}` : rule)}
+                  className="px-2.5 py-1 rounded-full bg-brand-bg border border-brand-navy/10 text-[11px] text-brand-navy/70 font-medium hover:border-brand-navy/30 hover:text-brand-navy active:scale-95 transition-all text-left"
+                >
+                  + {rule}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Charity Images */}
