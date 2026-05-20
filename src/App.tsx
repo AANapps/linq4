@@ -4445,11 +4445,16 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
             )}
 
             {phase === 'done' && (
-              <motion.p className="text-white text-3xl font-bold text-center"
-                initial={{ scale: 0.55, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: 'spring', damping: 9, stiffness: 200 }}
-              >{doneTitle}</motion.p>
+              <>
+                <motion.p className="text-white text-3xl font-bold text-center"
+                  initial={{ scale: 0.55, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: 'spring', damping: 9, stiffness: 200 }}
+                >{doneTitle}</motion.p>
+                <motion.p className="text-white/60 text-[11px] font-bold text-center uppercase tracking-widest"
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
+                >Play daily votes &amp; Linqle to unlock more packs</motion.p>
+              </>
             )}
 
             <div className="flex gap-4 justify-center items-end">
@@ -11881,35 +11886,6 @@ function StampCelebrationModal({
                   </motion.h2>
                 </div>
 
-                {/* Waving avatar with party hat */}
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2, type: 'spring', stiffness: 300 }}
-                  className="flex justify-center"
-                >
-                  <div className="relative flex items-end gap-2">
-                    {/* Avatar + party hat */}
-                    <motion.div
-                      animate={{ rotate: [0, -8, 8, -8, 8, 0] }}
-                      transition={{ duration: 1.4, repeat: Infinity, repeatDelay: 0.8, ease: 'easeInOut' }}
-                      className="relative"
-                    >
-                      {/* Party hat emoji above avatar head */}
-                      <div className="absolute -top-4 left-1/2 -translate-x-1/2 text-2xl z-10 select-none">🎉</div>
-                      <div className="bg-gradient-to-b from-emerald-100 to-teal-50 rounded-[1.5rem] p-3">
-                        <PixelAvatar config={avatarConfig} uid={userUid ?? 'x'} size={64} view="full" />
-                      </div>
-                    </motion.div>
-                    {/* Waving hand */}
-                    <motion.div
-                      animate={{ rotate: [0, 25, 0, 25, 0] }}
-                      transition={{ duration: 0.8, repeat: Infinity, repeatDelay: 1.4, ease: 'easeInOut' }}
-                      className="text-3xl mb-2 origin-bottom select-none"
-                    >
-                      👋
-                    </motion.div>
-                  </div>
-                </motion.div>
-
                 {/* Pick a cause */}
                 <motion.p
                   initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
@@ -11938,7 +11914,7 @@ function StampCelebrationModal({
                   >
                     {page.charityAnimalImageUrl
                       ? <img src={page.charityAnimalImageUrl} alt={page.charityAnimal?.name ?? 'Animal'} className="w-full h-20 object-cover rounded-xl" />
-                      : <div className="text-4xl">{page.charityAnimal?.emoji ?? '🐾'}</div>}
+                      : <div className="w-full h-20 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-200 text-4xl font-bold">🐾</div>}
                     <div className="w-full">
                       <p className="font-display font-bold text-sm text-brand-navy leading-tight">{page.charityAnimal?.name ?? 'Endangered Animal'}</p>
                       <p className="text-[10px] font-bold text-red-500 mt-0.5">{page.charityAnimal?.status}</p>
@@ -11967,7 +11943,7 @@ function StampCelebrationModal({
                   >
                     {page.charityTreeImageUrl
                       ? <img src={page.charityTreeImageUrl} alt="Tree planting" className="w-full h-20 object-cover rounded-xl" />
-                      : <div className="text-4xl">🌳</div>}
+                      : <div className="w-full h-20 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-200 text-4xl">🌳</div>}
                     <div className="w-full">
                       <p className="font-display font-bold text-sm text-brand-navy leading-tight">Plant a Tree</p>
                       <p className="text-[10px] font-bold text-emerald-600 mt-0.5">Reforestation</p>
@@ -20237,40 +20213,44 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
         <div className="space-y-3">
           <div>
             <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Charity Photos</label>
-            <p className="text-[11px] text-brand-navy/45 mt-1">Custom photos shown on the charity choice page when customers collect stamps. Leave blank to use the default emoji.</p>
+            <p className="text-[11px] text-brand-navy/45 mt-1">Photos shown on the donation choice page when customers collect stamps.</p>
           </div>
-          {(['animal', 'tree'] as const).map(type => {
-            const url = type === 'animal' ? charityAnimalImageUrl : charityTreeImageUrl;
-            const setUrl = type === 'animal' ? setCharityAnimalImageUrl : setCharityTreeImageUrl;
-            return (
-              <div key={type} className="flex items-center gap-3">
-                {url
-                  ? <img src={url} alt={type} className="w-14 h-14 rounded-xl object-cover border border-brand-navy/10 shrink-0" />
-                  : <div className="w-14 h-14 rounded-xl bg-brand-navy/5 border border-brand-navy/10 flex items-center justify-center text-2xl shrink-0">{type === 'animal' ? '🐾' : '🌳'}</div>}
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-brand-navy capitalize mb-1">{type === 'animal' ? 'Endangered Animal' : 'Tree Planting'}</p>
-                  <label className={`block w-full text-center py-2 rounded-xl text-xs font-bold cursor-pointer transition-all ${uploadingCharity === type ? 'bg-brand-navy/20 text-brand-navy/50' : 'bg-brand-navy/8 text-brand-navy hover:bg-brand-navy/15'}`}>
-                    {uploadingCharity === type ? 'Uploading…' : url ? 'Change Photo' : 'Upload Photo'}
-                    <input type="file" accept="image/*" className="hidden" disabled={!!uploadingCharity}
-                      onChange={async e => {
-                        const file = e.target.files?.[0]; if (!file || !store) return;
-                        setUploadingCharity(type);
-                        try {
-                          const blob = await compressImage(file, 800, 0.85);
-                          const snap = await uploadBytes(storageRef(storage, `stores/${store.id}/charity_${type}_${Date.now()}.webp`), blob, { contentType: 'image/webp' });
-                          const newUrl = await getDownloadURL(snap.ref);
-                          setUrl(newUrl);
-                        } catch (err) { console.error(err); }
-                        setUploadingCharity(null);
-                        e.target.value = '';
-                      }}
-                    />
-                  </label>
-                  {url && <button onClick={() => setUrl('')} className="w-full text-[10px] text-brand-navy/40 hover:text-red-400 font-bold mt-1 transition-colors">Remove</button>}
+          <div className="grid grid-cols-2 gap-3">
+            {(['animal', 'tree'] as const).map(type => {
+              const url = type === 'animal' ? charityAnimalImageUrl : charityTreeImageUrl;
+              const setUrl = type === 'animal' ? setCharityAnimalImageUrl : setCharityTreeImageUrl;
+              return (
+                <div key={type} className="rounded-2xl border border-brand-navy/10 overflow-hidden bg-white">
+                  <div className="relative w-full aspect-video bg-brand-navy/5">
+                    {url
+                      ? <img src={url} alt={type} className="w-full h-full object-cover" />
+                      : <div className="w-full h-full flex items-center justify-center text-brand-navy/15 text-4xl">{type === 'animal' ? '🐾' : '🌳'}</div>}
+                  </div>
+                  <div className="p-3 space-y-2">
+                    <p className="text-xs font-bold text-brand-navy">{type === 'animal' ? 'Endangered Animal' : 'Tree Planting'}</p>
+                    <label className={`block w-full text-center py-2 rounded-xl text-[11px] font-bold cursor-pointer transition-all ${uploadingCharity === type ? 'bg-brand-navy/20 text-brand-navy/50' : 'bg-brand-navy/8 text-brand-navy hover:bg-brand-navy/15'}`}>
+                      {uploadingCharity === type ? 'Uploading…' : url ? 'Change' : 'Upload Photo'}
+                      <input type="file" accept="image/*" className="hidden" disabled={!!uploadingCharity}
+                        onChange={async e => {
+                          const file = e.target.files?.[0]; if (!file || !store) return;
+                          setUploadingCharity(type);
+                          try {
+                            const blob = await compressImage(file, 800, 0.85);
+                            const snap = await uploadBytes(storageRef(storage, `stores/${store.id}/charity_${type}_${Date.now()}.webp`), blob, { contentType: 'image/webp' });
+                            const newUrl = await getDownloadURL(snap.ref);
+                            setUrl(newUrl);
+                          } catch (err) { console.error(err); }
+                          setUploadingCharity(null);
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+                    {url && <button onClick={() => setUrl('')} className="w-full text-[10px] text-brand-navy/40 hover:text-red-400 font-bold transition-colors">Remove</button>}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
 
         {store && (
@@ -27278,21 +27258,22 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
       rewardsPrefix: '£',
     });
   }
-  // Leaderboard: type-aware — stamps for loyalty, visits for visit membership, spend for spend membership.
-  const lbType = store.membershipEnabled && !store.cardEnabled
-    ? (store.membershipType === 'spend' ? 'spend' : 'visit')
-    : 'loyalty';
+  // Leaderboard: one tab per enabled card type
+  const lbTypes: Array<{ key: 'loyalty' | 'visit' | 'spend'; label: string }> = [];
+  if (store.cardEnabled) lbTypes.push({ key: 'loyalty', label: 'Loyalty Card' });
+  if (store.membershipEnabled && store.membershipType === 'visit') lbTypes.push({ key: 'visit', label: store.membershipName || 'Visit Card' });
+  if (store.membershipEnabled && store.membershipType === 'spend') lbTypes.push({ key: 'spend', label: store.membershipName || 'Spend Card' });
   const leaderboard = allStoreCards
     .filter(c => !c.isArchived && (
-      lbType === 'loyalty' ? (c.card_type !== 'membership' && c.card_type !== 'sub') :
-      lbType === 'visit'   ? (c.card_type === 'membership' && c.membership_type === 'visit') :
-                             (c.card_type === 'membership' && c.membership_type === 'spend')
+      lbActiveType === 'loyalty' ? (c.card_type !== 'membership' && c.card_type !== 'sub') :
+      lbActiveType === 'visit'   ? (c.card_type === 'membership' && c.membership_type === 'visit') :
+                                   (c.card_type === 'membership' && c.membership_type === 'spend')
     ))
     .map(c => ({
       ...c,
-      lifetimeStamps: lbType === 'loyalty'
+      lifetimeStamps: lbActiveType === 'loyalty'
         ? (c.current_stamps || 0) + (c.total_completed_cycles || 0) * stampsReq
-        : lbType === 'visit'
+        : lbActiveType === 'visit'
           ? (c.membership_visits || 0)
           : (c.membership_points || 0),
     }))
@@ -27309,6 +27290,9 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
     ? [...store.rewardTiers].sort((a, b) => a.stamps - b.stamps)
     : store.reward ? [{ stamps: store.stamps_required_for_reward || 10, reward: store.reward }] : [];
   const [tierSlideIdx, setTierSlideIdx] = React.useState(0);
+  const [lbActiveType, setLbActiveType] = React.useState<'loyalty' | 'visit' | 'spend'>(
+    store.cardEnabled ? 'loyalty' : store.membershipType === 'spend' ? 'spend' : 'visit'
+  );
 
   return (
     <motion.div
@@ -28044,19 +28028,34 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
       {/* Top collectors */}
       <div className="glass-card p-5 rounded-[2rem] space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-bold">{lbType === 'loyalty' ? 'Top Collectors' : lbType === 'visit' ? 'Top Visitors' : 'Top Spenders'}</h3>
+          <h3 className="font-bold">{lbActiveType === 'loyalty' ? 'Top Collectors' : lbActiveType === 'visit' ? 'Top Visitors' : 'Top Spenders'}</h3>
           <Trophy size={18} className="text-brand-gold" />
         </div>
+        {/* Type tabs — only shown when multiple card types are enabled */}
+        {lbTypes.length > 1 && (
+          <div className="flex gap-1.5 p-1 bg-brand-navy/5 rounded-2xl">
+            {lbTypes.map(t => (
+              <button
+                key={t.key}
+                onClick={() => setLbActiveType(t.key)}
+                className={cn(
+                  'flex-1 py-2 rounded-xl text-[11px] font-bold transition-all',
+                  lbActiveType === t.key ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/50'
+                )}
+              >{t.label}</button>
+            ))}
+          </div>
+        )}
         <div className="space-y-3">
           {leaderboard.map((entry, index) => {
             const lbProfile = leaderboardProfiles.get(entry.user_id);
             const displayName = lbProfile?.name || entry.userName || 'Loyal Customer';
-            const scoreLabel = lbType === 'loyalty'
+            const scoreLabel = lbActiveType === 'loyalty'
               ? `${entry.lifetimeStamps} Stamps`
               : `${entry.lifetimeStamps} Points`;
-            const subLabel = lbType === 'loyalty'
+            const subLabel = lbActiveType === 'loyalty'
               ? `${entry.total_completed_cycles || 0} Rewards Earned`
-              : lbType === 'visit'
+              : lbActiveType === 'visit'
                 ? `${entry.membership_visits || 0} Visits`
                 : `£${(entry.total_spent || 0).toFixed(2)} Spent`;
             return (
@@ -28082,7 +28081,9 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
             );
           })}
           {leaderboard.length === 0 && (
-            <p className="text-center py-4 text-xs text-brand-navy/75 font-bold uppercase tracking-widest">No collectors yet</p>
+            <p className="text-center py-4 text-xs text-brand-navy/75 font-bold uppercase tracking-widest">
+              No {lbActiveType === 'loyalty' ? 'collectors' : lbActiveType === 'visit' ? 'visitors' : 'spenders'} yet
+            </p>
           )}
         </div>
       </div>
