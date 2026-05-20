@@ -503,6 +503,7 @@ interface StoreProfile {
   reward?: string;
   theme?: string;
   stampIcon?: string;
+  stampIconUrl?: string;
   stampBorderColor?: string;
   cardPattern?: string;
   location?: string;
@@ -994,6 +995,7 @@ interface CelebrationPage {
   storeTheme?: string;
   storeCategory?: string;
   stampIcon?: string;
+  stampIconUrl?: string;
   cardPattern?: string;
   rewardTiers?: Array<{ stamps: number; reward: string }>;
 }
@@ -9044,6 +9046,7 @@ function buildStampCelebrationPages(
     storeTheme: store.theme || '#0D9488',
     storeCategory: store.category || '',
     stampIcon: store.stampIcon || '⭐',
+    stampIconUrl: store.stampIconUrl || '',
     cardPattern: store.cardPattern || 'solid',
     currentStamps: card.current_stamps,
     totalStamps: nextTier?.stamps || hitTier?.stamps || store.stamps_required_for_reward || 10,
@@ -12656,6 +12659,7 @@ function StampCelebrationModal({
                   (() => {
                     const cardTheme = page.storeTheme || '#0D9488';
                     const stampIcon = page.stampIcon || '⭐';
+                    const stampIconUrl = (page as any).stampIconUrl || '';
                     const cardPattern = page.cardPattern || 'solid';
                     const limit = page.rewardTiers?.length
                       ? Math.max(...page.rewardTiers.map(t => t.stamps))
@@ -12697,12 +12701,14 @@ function StampCelebrationModal({
                                       initial={isNewStamp ? { scale: 0.4, opacity: 0 } : { scale: 1, opacity: 1 }}
                                       animate={{ scale: 1, opacity: 1 }}
                                       transition={isNewStamp ? { type: 'spring', stiffness: 420, damping: 18, delay: 0.35 } : {}}
-                                      className="w-full h-full rounded-full flex items-center justify-center"
+                                      className="w-full h-full rounded-full flex items-center justify-center overflow-hidden"
                                       style={{ backgroundColor: isTier ? '#f5a623' : cardTheme }}
                                     >
                                       {isTier
                                         ? <Gift size={15} className="text-white" />
-                                        : <span className="leading-none" style={{ fontSize: 19 }}>{stampIcon}</span>
+                                        : stampIconUrl
+                                          ? <img src={stampIconUrl} alt="" className="w-full h-full object-cover" />
+                                          : <span className="leading-none" style={{ fontSize: 19 }}>{stampIcon}</span>
                                       }
                                     </motion.div>
                                   ) : (
@@ -16616,6 +16622,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
           const tierStamps = new Set(rewardTiers.map(t => t.stamps));
           const nextTier = rewardTiers.find(t => t.stamps > card.current_stamps);
           const stampIcon = store?.stampIcon || '⭐';
+          const stampIconUrl = store?.stampIconUrl || '';
           const cardPattern = store?.cardPattern || 'solid';
 
           /* ── Shared stamp renderer ── */
@@ -16633,12 +16640,14 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                           initial={{ scale: 0.4, opacity: 0 }}
                           animate={{ scale: 1, opacity: 1 }}
                           transition={{ type: 'spring', stiffness: 420, damping: 18 }}
-                          className="w-full h-full rounded-full flex items-center justify-center"
+                          className="w-full h-full rounded-full flex items-center justify-center overflow-hidden"
                           style={{ backgroundColor: isTier ? '#f5a623' : cardTheme }}
                         >
                           {isTier
                             ? <Gift size={iconSize} className="text-white" />
-                            : <span className="leading-none" style={{ fontSize: iconSize + 4 }}>{stampIcon}</span>
+                            : stampIconUrl
+                              ? <img src={stampIconUrl} alt="" className="w-full h-full object-cover" />
+                              : <span className="leading-none" style={{ fontSize: iconSize + 4 }}>{stampIcon}</span>
                           }
                         </motion.div>
                       ) : (
@@ -20070,6 +20079,8 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
   const [currency, setCurrency] = useState(store?.currency || 'AUD');
   const [theme, setTheme] = useState(store?.theme || '#0D9488');
   const [stampIcon, setStampIcon] = useState(store?.stampIcon || '⭐');
+  const [stampIconUrl, setStampIconUrl] = useState(store?.stampIconUrl || '');
+  const [stampIconUploading, setStampIconUploading] = useState(false);
   const [stampBorderColor, setStampBorderColor] = useState(store?.stampBorderColor || '#ffffff');
   const [cardPattern, setCardPattern] = useState(store?.cardPattern || 'solid');
   const [selectedIconGroup, setSelectedIconGroup] = useState(STAMP_ICON_GROUPS[0].group);
@@ -20091,6 +20102,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
     setCurrency(store.currency || 'AUD');
     setTheme(store.theme || '#1a1a2e');
     setStampIcon(store.stampIcon || '⭐');
+    setStampIconUrl(store.stampIconUrl || '');
     setStampBorderColor(store.stampBorderColor || '#ffffff');
     setCardPattern(store.cardPattern || 'solid');
     setBusinessRules(store.businessRules || '');
@@ -20147,7 +20159,8 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
         reward: topTier.reward,
         currency,
         theme,
-        stampIcon,
+        stampIcon: stampIconUrl ? '' : stampIcon,
+        stampIconUrl: stampIconUrl || '',
         stampBorderColor,
         cardPattern,
         businessRules,
@@ -20192,46 +20205,61 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
         </div>
 
         {/* Tier inputs */}
-        <div className="space-y-4">
+        <div className="space-y-2">
           <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Reward at Each Stage</label>
           {tiers.slice(0, numTiers).map((tier, i) => (
-            <div key={i} className="space-y-1.5">
-              <div className="flex items-center gap-1.5">
-                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-brand-gold/10 flex items-center justify-center">
-                  <span className="text-[10px] font-extrabold text-brand-gold">{i + 1}</span>
-                </div>
-                <span className="text-[10px] font-bold text-brand-navy/75 uppercase tracking-widest">Stage {i + 1}</span>
+            <div key={i} className="flex gap-2 items-center">
+              <div className="flex-shrink-0 w-6 h-6 rounded-full bg-brand-gold/10 flex items-center justify-center">
+                <span className="text-[10px] font-extrabold text-brand-gold">{i + 1}</span>
               </div>
-              <div className="flex gap-2 items-center min-w-0">
+              <input
+                type="number"
+                min="1"
+                value={tier.stamps}
+                onChange={e => updateTier(i, 'stamps', e.target.value)}
+                className="w-14 shrink-0 px-2 py-2.5 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm font-bold text-center focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+                placeholder="Stamps"
+              />
+              <input
+                value={tier.reward}
+                onChange={e => updateTier(i, 'reward', e.target.value)}
+                placeholder={i === numTiers - 1 ? 'e.g. Free coffee' : `Stage ${i + 1} reward`}
+                className="flex-1 min-w-0 px-3 py-2.5 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+              />
+              <div className="relative flex items-center shrink-0">
+                <span className="absolute left-2.5 text-xs font-bold text-emerald-600">{currencySymbol(currency)}</span>
                 <input
                   type="number"
-                  min="1"
-                  value={tier.stamps}
-                  onChange={e => updateTier(i, 'stamps', e.target.value)}
-                  className="w-14 shrink-0 px-2 py-2.5 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm font-bold text-center focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
-                  placeholder="Stamps"
+                  min="0"
+                  step="0.01"
+                  value={tier.value ?? ''}
+                  onChange={e => updateTier(i, 'value', e.target.value)}
+                  className="w-16 pl-6 pr-1.5 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-sm font-bold text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                  placeholder="0.00"
                 />
-                <input
-                  value={tier.reward}
-                  onChange={e => updateTier(i, 'reward', e.target.value)}
-                  placeholder={i === numTiers - 1 ? 'e.g. Free coffee' : `Stage ${i + 1} reward`}
-                  className="flex-1 min-w-0 px-3 py-2.5 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
-                />
-                <div className="relative flex items-center shrink-0">
-                  <span className="absolute left-2.5 text-xs font-bold text-emerald-600">{currencySymbol(currency)}</span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={tier.value ?? ''}
-                    onChange={e => updateTier(i, 'value', e.target.value)}
-                    className="w-16 pl-6 pr-1.5 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-sm font-bold text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-300"
-                    placeholder="0.00"
-                  />
-                </div>
               </div>
+              {numTiers > 1 && (
+                <button
+                  type="button"
+                  onClick={() => { setNumTiers(n => n - 1); setTiers(prev => prev.filter((_, idx) => idx !== i)); }}
+                  className="flex-shrink-0 w-8 h-8 rounded-xl bg-brand-rose/10 text-brand-rose flex items-center justify-center active:scale-95 transition-all"
+                >
+                  <Trash2 size={13} />
+                </button>
+              )}
             </div>
           ))}
+          <button
+            type="button"
+            onClick={() => {
+              const lastStamps = tiers[numTiers - 1]?.stamps || 10;
+              setTiers(prev => [...prev, { stamps: lastStamps + 5, reward: '' }]);
+              setNumTiers(n => n + 1);
+            }}
+            className="w-full py-2.5 rounded-xl border-2 border-dashed border-brand-navy/15 text-xs font-bold text-brand-navy/50 flex items-center justify-center gap-1.5 hover:border-brand-gold/40 hover:text-brand-navy/70 active:scale-[0.98] transition-all"
+          >
+            <Plus size={13} /> Add Stage
+          </button>
           <p className="text-[11px] text-brand-navy/72 pl-1">Set stamps, reward name, and the {currencySymbol(currency)} value saved at each stage.</p>
         </div>
 
@@ -20327,32 +20355,79 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
         {/* Stamp Icon */}
         <div className="space-y-3">
           <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Stamp Icon</label>
-          <div className="relative">
-            <select
-              value={selectedIconGroup}
-              onChange={e => setSelectedIconGroup(e.target.value)}
-              className="w-full px-5 py-3.5 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-gold/30 appearance-none"
-            >
-              {STAMP_ICON_GROUPS.map(({ group }) => (
-                <option key={group} value={group}>{group}</option>
-              ))}
-            </select>
-            <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-navy/75 pointer-events-none" />
+
+          {/* Upload custom image */}
+          <div className="flex items-center gap-3">
+            {stampIconUrl ? (
+              <div className="relative w-14 h-14 rounded-2xl overflow-hidden border-2 border-brand-gold shadow shrink-0">
+                <img src={stampIconUrl} alt="stamp icon" className="w-full h-full object-cover" />
+                <button
+                  onClick={() => setStampIconUrl('')}
+                  className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/50 flex items-center justify-center"
+                >
+                  <X size={10} className="text-white" />
+                </button>
+              </div>
+            ) : null}
+            <label className={cn(
+              'flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl border-2 border-dashed border-brand-navy/20 text-sm font-semibold text-brand-navy/75 cursor-pointer transition-all',
+              stampIconUploading ? 'opacity-50 pointer-events-none' : 'hover:border-brand-gold/50 hover:text-brand-navy active:scale-[0.98]'
+            )}>
+              {stampIconUploading ? 'Uploading...' : stampIconUrl ? '📁 Replace image' : '📁 Upload custom icon'}
+              <input type="file" accept="image/*" className="hidden" onChange={async e => {
+                const file = e.target.files?.[0];
+                if (!file || !store) return;
+                setStampIconUploading(true);
+                try {
+                  const blob = await compressImage(file, 400);
+                  const ext = file.name.split('.').pop() || 'jpg';
+                  const path = `stores/${store.id}/stamp_icon_${Date.now()}.${ext}`;
+                  const ref = storageRef(storage, path);
+                  await uploadBytes(ref, blob);
+                  const url = await getDownloadURL(ref);
+                  setStampIconUrl(url);
+                  setStampIcon('');
+                } catch (err) {
+                  console.error(err);
+                } finally {
+                  setStampIconUploading(false);
+                  e.target.value = '';
+                }
+              }} />
+            </label>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {(STAMP_ICON_GROUPS.find(g => g.group === selectedIconGroup)?.icons || []).map(icon => (
-              <button
-                key={icon}
-                onClick={() => setStampIcon(icon)}
-                className={cn(
-                  "w-11 h-11 rounded-xl flex items-center justify-center text-2xl transition-all",
-                  stampIcon === icon ? "bg-brand-gold/20 ring-2 ring-brand-gold scale-110 shadow" : "bg-brand-bg hover:bg-brand-navy/5"
-                )}
-              >
-                {icon}
-              </button>
-            ))}
-          </div>
+
+          {/* Or pick emoji */}
+          {!stampIconUrl && (
+            <>
+              <div className="relative">
+                <select
+                  value={selectedIconGroup}
+                  onChange={e => setSelectedIconGroup(e.target.value)}
+                  className="w-full px-5 py-3.5 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-gold/30 appearance-none"
+                >
+                  {STAMP_ICON_GROUPS.map(({ group }) => (
+                    <option key={group} value={group}>{group}</option>
+                  ))}
+                </select>
+                <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-navy/75 pointer-events-none" />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {(STAMP_ICON_GROUPS.find(g => g.group === selectedIconGroup)?.icons || []).map(icon => (
+                  <button
+                    key={icon}
+                    onClick={() => { setStampIcon(icon); setStampIconUrl(''); }}
+                    className={cn(
+                      "w-11 h-11 rounded-xl flex items-center justify-center text-2xl transition-all",
+                      stampIcon === icon && !stampIconUrl ? "bg-brand-gold/20 ring-2 ring-brand-gold scale-110 shadow" : "bg-brand-bg hover:bg-brand-navy/5"
+                    )}
+                  >
+                    {icon}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
 
@@ -20412,7 +20487,9 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
                     style={{ borderColor: isTier ? (isFilled ? stampBorderColor : `${stampBorderColor}99`) : (isFilled ? stampBorderColor : `${stampBorderColor}66`) }}
                   >
                     {isFilled
-                      ? isTier ? <Gift size={10} className="text-brand-navy" /> : <span className="text-base leading-none">{stampIcon}</span>
+                      ? isTier ? <Gift size={10} className="text-brand-navy" />
+                        : stampIconUrl ? <img src={stampIconUrl} alt="" className="w-full h-full object-cover rounded-[inherit]" />
+                        : <span className="text-base leading-none">{stampIcon}</span>
                       : isTier ? <Gift size={10} style={{ color: stampBorderColor, opacity: 0.7 }} /> : <span className="text-[8px] font-bold" style={{ color: stampBorderColor, opacity: 0.8 }}>{stampNum}</span>}
                   </div>
                 );
