@@ -20189,21 +20189,6 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
 
       <div className="glass-card p-6 rounded-[2.5rem] space-y-6">
 
-        {/* Number of reward stages */}
-        <div className="space-y-2">
-          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Number of Reward Stages</label>
-          <div className="relative">
-            <select
-              value={numTiers}
-              onChange={e => setNumTiers(parseInt(e.target.value))}
-              className="w-full px-5 py-4 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-gold/30 appearance-none"
-            >
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => <option key={n} value={n}>{n} {n === 1 ? 'Stage' : 'Stages'}</option>)}
-            </select>
-            <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-navy/75 pointer-events-none" />
-          </div>
-        </div>
-
         {/* Tier inputs */}
         <div className="space-y-2">
           <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Reward at Each Stage</label>
@@ -20883,47 +20868,46 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
 
         {/* Visit-based: rewards */}
         {membershipType === 'visit' && (
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Rewards</label>
-              {visitRewards.length < 10 && (
-                <button
-                  onClick={() => setVisitRewards(r => [...r, { visits: (r[r.length - 1]?.visits ?? 0) + 5, reward: '' }])}
-                  className="text-xs font-bold text-brand-navy flex items-center gap-1 px-3 py-1.5 bg-brand-bg rounded-xl border border-brand-navy/10 hover:border-brand-navy/30 transition-colors"
-                >
-                  <Plus size={12} /> Add Reward
-                </button>
-              )}
-            </div>
-            {visitRewards.length === 0 && (
-              <p className="text-xs text-brand-navy/72 text-center py-4">No rewards yet — add up to 10</p>
-            )}
-            <div className="space-y-2">
-              {visitRewards.map((r, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <div className="flex items-center gap-1.5 bg-brand-bg rounded-2xl px-3 py-3 border border-brand-navy/10 w-24 shrink-0">
-                    <span className="text-[10px] font-bold text-brand-navy/75">@</span>
-                    <input
-                      type="number"
-                      min="1"
-                      value={r.visits}
-                      onChange={e => setVisitRewards(prev => prev.map((x, idx) => idx === i ? { ...x, visits: Math.max(1, parseInt(e.target.value) || 1) } : x))}
-                      className="w-full text-sm font-bold text-brand-navy bg-transparent outline-none"
-                      placeholder="5"
-                    />
-                  </div>
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Rewards</label>
+            {visitRewards.map((r, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <div className="flex items-center gap-1 bg-brand-bg rounded-xl px-2.5 py-2.5 border border-brand-navy/10 w-20 shrink-0">
+                  <span className="text-[10px] font-bold text-brand-navy/50">@</span>
                   <input
-                    value={r.reward}
-                    onChange={e => setVisitRewards(prev => prev.map((x, idx) => idx === i ? { ...x, reward: e.target.value } : x))}
-                    className="flex-1 px-4 py-3 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-bold text-brand-navy outline-none focus:border-brand-navy/30"
-                    placeholder="e.g. Free coffee, 10% off"
+                    type="number"
+                    min="1"
+                    value={r.visits}
+                    onChange={e => setVisitRewards(prev => prev.map((x, idx) => idx === i ? { ...x, visits: Math.max(1, parseInt(e.target.value) || 1) } : x))}
+                    className="w-full text-sm font-bold text-brand-navy bg-transparent outline-none"
+                    placeholder="5"
                   />
-                  <button onClick={() => setVisitRewards(prev => prev.filter((_, idx) => idx !== i))} className="p-2 text-red-400 shrink-0">
-                    <Trash2 size={14} />
-                  </button>
                 </div>
-              ))}
-            </div>
+                <input
+                  value={r.reward}
+                  onChange={e => setVisitRewards(prev => prev.map((x, idx) => idx === i ? { ...x, reward: e.target.value } : x))}
+                  className="flex-1 min-w-0 px-3 py-2.5 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm font-medium text-brand-navy outline-none focus:border-brand-navy/30 focus:ring-2 focus:ring-brand-gold/30"
+                  placeholder="e.g. Free coffee, 10% off"
+                />
+                <button
+                  onClick={() => setVisitRewards(prev => prev.filter((_, idx) => idx !== i))}
+                  className="flex-shrink-0 w-8 h-8 rounded-xl bg-brand-rose/10 text-brand-rose flex items-center justify-center active:scale-95 transition-all"
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
+            ))}
+            {visitRewards.length < 10 && (
+              <button
+                onClick={() => setVisitRewards(r => [...r, { visits: (r[r.length - 1]?.visits ?? 0) + 5, reward: '' }])}
+                className="w-full py-2.5 rounded-xl border-2 border-dashed border-brand-navy/15 text-xs font-bold text-brand-navy/50 flex items-center justify-center gap-1.5 hover:border-brand-gold/40 hover:text-brand-navy/70 active:scale-[0.98] transition-all"
+              >
+                <Plus size={13} /> Add Reward
+              </button>
+            )}
+            {visitRewards.length === 0 && (
+              <p className="text-xs text-brand-navy/50 text-center py-2">No rewards yet</p>
+            )}
           </div>
         )}
 
@@ -21102,39 +21086,38 @@ function SubCardBuilder({ store }: { store: StoreProfile | null }) {
         </div>
       </div>
 
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Reward Tiers</label>
-          <button onClick={addReward} className="text-teal-600 text-xs font-bold hover:underline flex items-center gap-1">
-            <Plus size={12} /> Add tier
-          </button>
-        </div>
-        <div className="space-y-2">
-          {rewards.map((r, i) => (
-            <div key={i} className="flex gap-2 items-center">
-              <input
-                type="number"
-                min="1"
-                value={r.points}
-                onChange={(e) => updateReward(i, 'points', e.target.value)}
-                className="w-24 px-3 py-2.5 rounded-xl border border-brand-navy/10 bg-white focus:outline-none text-brand-navy font-bold text-sm text-center"
-                placeholder="pts"
-              />
-              <input
-                type="text"
-                value={r.reward}
-                onChange={(e) => updateReward(i, 'reward', e.target.value)}
-                placeholder="Reward description"
-                className="flex-1 px-3 py-2.5 rounded-xl border border-brand-navy/10 bg-white focus:outline-none text-brand-navy text-sm"
-              />
-              {rewards.length > 1 && (
-                <button onClick={() => removeReward(i)} className="text-red-400 hover:text-red-600 p-1">
-                  <X size={15} />
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
+      <div className="space-y-2">
+        <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Reward Tiers</label>
+        {rewards.map((r, i) => (
+          <div key={i} className="flex gap-2 items-center">
+            <input
+              type="number"
+              min="1"
+              value={r.points}
+              onChange={(e) => updateReward(i, 'points', e.target.value)}
+              className="w-20 shrink-0 px-2 py-2.5 rounded-xl border border-brand-navy/10 bg-white focus:outline-none text-brand-navy font-bold text-sm text-center"
+              placeholder="pts"
+            />
+            <input
+              type="text"
+              value={r.reward}
+              onChange={(e) => updateReward(i, 'reward', e.target.value)}
+              placeholder="Reward description"
+              className="flex-1 min-w-0 px-3 py-2.5 rounded-xl border border-brand-navy/10 bg-white focus:outline-none text-brand-navy text-sm"
+            />
+            {rewards.length > 1 && (
+              <button
+                onClick={() => removeReward(i)}
+                className="flex-shrink-0 w-8 h-8 rounded-xl bg-brand-rose/10 text-brand-rose flex items-center justify-center active:scale-95 transition-all"
+              >
+                <Trash2 size={13} />
+              </button>
+            )}
+          </div>
+        ))}
+        <button onClick={addReward} className="w-full py-2.5 rounded-xl border-2 border-dashed border-brand-navy/15 text-xs font-bold text-brand-navy/50 flex items-center justify-center gap-1.5 hover:border-teal-400/40 hover:text-brand-navy/70 active:scale-[0.98] transition-all">
+          <Plus size={13} /> Add Tier
+        </button>
       </div>
 
       <button
