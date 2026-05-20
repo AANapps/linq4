@@ -3208,11 +3208,12 @@ async function issueUserStickers(uid: string, userName: string, qty: number): Pr
 
 // --- Sticker Card (flip reveal) ---
 
-function StickerCard({ sticker, isRevealed, onReveal, size = 'md' }: {
+function StickerCard({ sticker, isRevealed, onReveal, onExpand, size = 'md' }: {
   sticker: CollectibleSticker;
   isRevealed: boolean;
   onReveal?: () => void;
-  size?: 'sm' | 'md';
+  onExpand?: () => void;
+  size?: 'sm' | 'md' | 'lg';
   key?: React.Key;
 }) {
   const [localRevealed, setLocalRevealed] = useState(isRevealed);
@@ -3221,10 +3222,11 @@ function StickerCard({ sticker, isRevealed, onReveal, size = 'md' }: {
 
   useEffect(() => { if (isRevealed) setLocalRevealed(true); }, [isRevealed]);
 
-  const dims = size === 'sm' ? { w: 60, h: 80 } : { w: 80, h: 108 };
+  const dims = size === 'sm' ? { w: 60, h: 80 } : size === 'lg' ? { w: 160, h: 220 } : { w: 80, h: 108 };
 
   const handleTap = () => {
-    if (localRevealed || !onReveal || animating) return;
+    if (localRevealed) { onExpand?.(); return; }
+    if (!onReveal || animating) return;
     setAnimating(true);
   };
 
@@ -3240,7 +3242,7 @@ function StickerCard({ sticker, isRevealed, onReveal, size = 'md' }: {
           onReveal?.();
         }
       }}
-      style={{ width: dims.w, height: dims.h, perspective: '800px', flexShrink: 0, cursor: localRevealed ? 'default' : 'pointer' }}
+      style={{ width: dims.w, height: dims.h, perspective: '800px', flexShrink: 0, cursor: (localRevealed && onExpand) || !localRevealed ? 'pointer' : 'default' }}
       className="relative"
     >
       <motion.div
@@ -3705,6 +3707,7 @@ function UserStickerPanel({ uid, isOwnProfile = false, onOpenPack }: {
 }) {
   const [col, setCol] = useState<{ stickers: CollectibleSticker[]; revealedIds: string[]; uniqueTiers: StickerTier[] } | null>(null);
   const [showCollection, setShowCollection] = useState(false);
+  const [expandedSticker, setExpandedSticker] = useState<CollectibleSticker | null>(null);
 
   useEffect(() => {
     return onSnapshot(doc(db, 'user_stickers', uid), snap => {
@@ -3757,13 +3760,22 @@ function UserStickerPanel({ uid, isOwnProfile = false, onOpenPack }: {
         {/* Slider */}
         <div className="flex gap-2 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-2 scrollbar-hide">
           {isOwnProfile && unrevealed.map(s => (
-            <div key={s.id} className="snap-start shrink-0">
-              <StickerCard sticker={s} isRevealed={false} onReveal={() => handleReveal(s.id)} size="sm" />
+            <div key={s.id} className="snap-start shrink-0 relative">
+              <motion.div
+                animate={{ rotate: [0, -4, 4, -3, 3, -2, 2, 0] }}
+                transition={{ duration: 0.55, repeat: Infinity, repeatDelay: 2.6 }}
+              >
+                <StickerCard sticker={s} isRevealed={false} onReveal={() => handleReveal(s.id)} size="sm" />
+              </motion.div>
+              <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center z-10 pointer-events-none"
+                style={{ boxShadow: '0 0 6px rgba(239,68,68,0.7)' }}>
+                <span className="text-white font-black leading-none" style={{ fontSize: 8 }}>!</span>
+              </div>
             </div>
           ))}
           {revealed.map(s => (
             <div key={s.id} className="snap-start shrink-0">
-              <StickerCard sticker={s} isRevealed={true} size="sm" />
+              <StickerCard sticker={s} isRevealed={true} size="sm" onExpand={() => setExpandedSticker(s)} />
             </div>
           ))}
         </div>
@@ -3781,6 +3793,48 @@ function UserStickerPanel({ uid, isOwnProfile = false, onOpenPack }: {
             onOpenPack={onOpenPack}
           />
         )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {expandedSticker && (() => {
+          const ecfg = STICKER_CONFIG[expandedSticker.tier];
+          return (
+            <motion.div
+              className="fixed inset-0 z-[400] flex items-center justify-center"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setExpandedSticker(null)}
+            >
+              <div className="absolute inset-0 bg-black/75 backdrop-blur-md" />
+              <motion.div
+                className="relative z-10 flex flex-col items-center gap-5"
+                initial={{ scale: 0.4, y: 60, opacity: 0 }}
+                animate={{ scale: 1, y: 0, opacity: 1 }}
+                exit={{ scale: 0.4, y: 60, opacity: 0 }}
+                transition={{ type: 'spring', damping: 18, stiffness: 220 }}
+                onClick={e => e.stopPropagation()}
+              >
+                {/* Tier glow */}
+                <motion.div style={{
+                  position: 'absolute', inset: -32, borderRadius: 48,
+                  background: ecfg.solid, filter: 'blur(48px)', zIndex: 0, opacity: 0.45,
+                }}
+                  animate={{ opacity: [0.3, 0.6, 0.3], scale: [0.9, 1.1, 0.9] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                />
+                <StickerCard sticker={expandedSticker} isRevealed={true} size="lg" />
+                <div className="relative z-10 text-center space-y-1">
+                  <p className="font-bold text-base text-white">{expandedSticker.cardName || ecfg.theme}</p>
+                  <p className="text-xs font-bold uppercase tracking-widest" style={{ color: ecfg.border }}>{ecfg.label}</p>
+                </div>
+                <button
+                  className="relative z-10 px-8 py-3 rounded-2xl font-bold text-sm text-white/80"
+                  style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)' }}
+                  onClick={() => setExpandedSticker(null)}
+                >Close</button>
+              </motion.div>
+            </motion.div>
+          );
+        })()}
       </AnimatePresence>
     </>
   );
@@ -3817,6 +3871,8 @@ function MysteryRevealCard({ sticker, isRevealed, onReveal }: {
   const [flipping, setFlipping] = useState(false);
   const [showFlash, setShowFlash] = useState(false);
   const cfg = STICKER_CONFIG[sticker.tier];
+  // slow anticipation rotation before reveal
+  const [rotDir] = useState(() => (Math.random() > 0.5 ? 1 : -1));
 
   useEffect(() => { if (isRevealed) setLocalRevealed(true); }, [isRevealed]);
 
@@ -3839,15 +3895,15 @@ function MysteryRevealCard({ sticker, isRevealed, onReveal }: {
           onReveal?.();
         }
       }}
-      style={{ width: 108, height: 148, perspective: '1000px', position: 'relative',
+      style={{ width: 140, height: 192, perspective: '1000px', position: 'relative',
         cursor: localRevealed ? 'default' : 'pointer', flexShrink: 0 }}
     >
       {/* Unrevealed glow pulse */}
       {!localRevealed && (
         <motion.div style={{
-          position: 'absolute', inset: -8, borderRadius: 28, zIndex: 0,
-          background: 'radial-gradient(circle, rgba(140,60,255,0.55) 0%, transparent 70%)',
-          filter: 'blur(8px)',
+          position: 'absolute', inset: -10, borderRadius: 32, zIndex: 0,
+          background: `radial-gradient(circle, ${cfg.solid}99 0%, transparent 70%)`,
+          filter: 'blur(10px)',
         }}
           animate={{ opacity: [0.3, 0.9, 0.3], scale: [0.92, 1.08, 0.92] }}
           transition={{ duration: 1.5, repeat: Infinity }}
@@ -3856,28 +3912,39 @@ function MysteryRevealCard({ sticker, isRevealed, onReveal }: {
       {/* Tier glow after reveal */}
       {localRevealed && (
         <motion.div style={{
-          position: 'absolute', inset: -6, borderRadius: 26, zIndex: 0,
-          background: cfg.solid, filter: 'blur(16px)',
+          position: 'absolute', inset: -8, borderRadius: 30, zIndex: 0,
+          background: cfg.solid, filter: 'blur(20px)',
         }}
-          initial={{ opacity: 0 }} animate={{ opacity: 0.45 }}
+          initial={{ opacity: 0 }} animate={{ opacity: 0.55 }}
           transition={{ duration: 0.4 }}
         />
       )}
 
+      {/* Slow anticipation rotate wrapper — stops after reveal */}
+      <motion.div
+        animate={!localRevealed ? { rotate: [0, rotDir * 7, 0, rotDir * -5, 0, rotDir * 4, 0] } : { rotate: 0 }}
+        transition={!localRevealed ? { duration: 4.5, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.3 }}
+        style={{ width: '100%', height: '100%', position: 'absolute', inset: 0, zIndex: 1 }}
+      >
       <motion.div
         initial={{ rotateY: isRevealed ? 180 : 0 }}
         animate={{ rotateY: localRevealed ? 180 : 0 }}
         transition={{ duration: 0.68, ease: [0.23, 1, 0.32, 1] }}
-        style={{ transformStyle: 'preserve-3d', WebkitTransformStyle: 'preserve-3d', width: '100%', height: '100%', position: 'relative', zIndex: 1 }}
+        style={{ transformStyle: 'preserve-3d', WebkitTransformStyle: 'preserve-3d', width: '100%', height: '100%', position: 'relative' }}
       >
-        {/* Front — mystery */}
+        {/* Front — mystery with tier-color border hint */}
         <div style={{
           position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
           background: 'linear-gradient(148deg, #16103A, #2B1458)',
-          border: '2px solid rgba(160,100,255,0.4)', borderRadius: 20,
+          border: `2.5px solid ${cfg.border}`, borderRadius: 20,
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8,
           overflow: 'hidden',
+          boxShadow: `0 0 18px ${cfg.color}55, inset 0 0 12px rgba(0,0,0,0.4)`,
         }}>
+          {/* Tier label hint top */}
+          <div style={{ position: 'absolute', top: 8, left: 0, right: 0, textAlign: 'center', zIndex: 3 }}>
+            <span style={{ fontSize: 8, fontWeight: 900, letterSpacing: '0.18em', color: cfg.border, textTransform: 'uppercase' }}>{cfg.label}</span>
+          </div>
           {/* Shimmer sweep */}
           <motion.div style={{
             position: 'absolute', inset: 0, borderRadius: 18,
@@ -3889,27 +3956,27 @@ function MysteryRevealCard({ sticker, isRevealed, onReveal }: {
           />
           {/* Rotating rings */}
           <motion.div style={{
-            position: 'absolute', width: 86, height: 86, borderRadius: '50%',
-            border: '1.5px solid rgba(170,110,255,0.28)',
+            position: 'absolute', width: 110, height: 110, borderRadius: '50%',
+            border: `1.5px solid ${cfg.border}44`,
           }}
             animate={{ rotate: 360 }}
             transition={{ duration: 5, repeat: Infinity, ease: 'linear' }}
           />
           <motion.div style={{
-            position: 'absolute', width: 58, height: 58, borderRadius: '50%',
-            border: '1.5px solid rgba(200,150,255,0.22)',
+            position: 'absolute', width: 75, height: 75, borderRadius: '50%',
+            border: `1.5px solid ${cfg.border}33`,
           }}
             animate={{ rotate: -360 }}
             transition={{ duration: 3.5, repeat: Infinity, ease: 'linear' }}
           />
           {/* Question mark */}
-          <motion.div style={{ fontSize: 54, lineHeight: 1, color: 'rgba(210,170,255,0.92)', fontWeight: 900,
-            filter: 'drop-shadow(0 0 18px rgba(190,110,255,0.85))', zIndex: 2 }}
+          <motion.div style={{ fontSize: 64, lineHeight: 1, color: cfg.border, fontWeight: 900,
+            filter: `drop-shadow(0 0 20px ${cfg.color}cc)`, zIndex: 2 }}
             animate={{ scale: [1, 1.12, 1], opacity: [0.75, 1, 0.75] }}
             transition={{ duration: 1.4, repeat: Infinity }}
           >?</motion.div>
-          <motion.div style={{ fontSize: 9, color: 'rgba(200,155,255,0.6)', fontWeight: 800,
-            letterSpacing: '0.16em', zIndex: 2 }}
+          <motion.div style={{ fontSize: 9, color: cfg.border, fontWeight: 800,
+            letterSpacing: '0.16em', zIndex: 2, opacity: 0.8 }}
             animate={{ opacity: [0.35, 1, 0.35] }}
             transition={{ duration: 1.1, repeat: Infinity, delay: 0.4 }}
           >TAP TO REVEAL</motion.div>
@@ -3919,8 +3986,8 @@ function MysteryRevealCard({ sticker, isRevealed, onReveal }: {
         <div style={{
           position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
           transform: 'rotateY(180deg)',
-          border: `2px solid ${cfg.border}`, borderRadius: 20,
-          boxShadow: `0 8px 32px ${cfg.color}44`,
+          border: `3px solid ${cfg.border}`, borderRadius: 20,
+          boxShadow: `0 12px 40px ${cfg.color}55, 0 0 0 1px ${cfg.border}44`,
           overflow: 'hidden',
         }}>
           {showFlash && (
@@ -3939,6 +4006,7 @@ function MysteryRevealCard({ sticker, isRevealed, onReveal }: {
           )}
         </div>
       </motion.div>
+      </motion.div>{/* end slow-rotation wrapper */}
     </motion.div>
   );
 }
@@ -4184,34 +4252,34 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
 
             <motion.div className="relative cursor-pointer select-none"
               onClick={handlePackOpen}
-              animate={{ y: [0, -9, 0], rotate: [0, -3.5, 3.5, -3.5, 3.5, 0] }}
-              transition={{ duration: 3.2, repeat: Infinity, repeatDelay: 0.6 }}
+              animate={{ y: [0, -16, 0, -12, 0], rotate: [0, -8, 0, 8, 0, -5, 0, 5, 0] }}
+              transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut', repeatDelay: 0.4 }}
               whileTap={{ scale: 0.84, rotate: 0 }}
             >
               {/* Halo glow */}
               <motion.div style={{
-                position: 'absolute', inset: -20, borderRadius: 36,
-                background: topCfg.solid, filter: 'blur(32px)', zIndex: 0,
+                position: 'absolute', inset: -28, borderRadius: 44,
+                background: topCfg.solid, filter: 'blur(40px)', zIndex: 0,
               }}
-                animate={{ opacity: [0.25, 0.6, 0.25], scale: [0.88, 1.12, 0.88] }}
+                animate={{ opacity: [0.25, 0.65, 0.25], scale: [0.88, 1.12, 0.88] }}
                 transition={{ duration: 2, repeat: Infinity }}
               />
               {/* Back cards */}
               {[2, 1].map(i => (
                 <div key={i} style={{
-                  position: 'absolute', width: 118, height: 162,
+                  position: 'absolute', width: 160, height: 220,
                   background: 'linear-gradient(148deg, #1E1244, #130B28)',
-                  borderRadius: 20, border: '1.5px solid rgba(255,255,255,0.09)',
-                  transform: `rotate(${(i - 1.5) * 9}deg) translateY(${i * 5}px)`, zIndex: i,
+                  borderRadius: 24, border: `1.5px solid ${topCfg.border}44`,
+                  transform: `rotate(${(i - 1.5) * 9}deg) translateY(${i * 6}px)`, zIndex: i,
                 }} />
               ))}
               {/* Top card */}
               <div style={{
-                position: 'relative', width: 118, height: 162, zIndex: 3,
-                background: `linear-gradient(148deg, ${topCfg.solid}60, #200E48)`,
-                borderRadius: 20, border: `2px solid ${topCfg.border}`,
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
-                boxShadow: `0 18px 56px ${topCfg.color}80, 0 0 0 1px ${topCfg.border}55`,
+                position: 'relative', width: 160, height: 220, zIndex: 3,
+                background: `linear-gradient(148deg, ${topCfg.solid}70, #200E48)`,
+                borderRadius: 24, border: `3px solid ${topCfg.border}`,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12,
+                boxShadow: `0 24px 72px ${topCfg.color}88, 0 0 0 1px ${topCfg.border}66`,
                 overflow: 'hidden',
               }}>
                 <motion.div style={{
@@ -4222,8 +4290,11 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
                   animate={{ backgroundPosition: ['-200% 0', '300% 0'] }}
                   transition={{ duration: 1.9, repeat: Infinity, ease: 'linear' }}
                 />
-                <span style={{ fontSize: 52, filter: 'drop-shadow(0 2px 14px rgba(0,0,0,0.65))' }}>🎴</span>
-                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.72)', fontWeight: 800, letterSpacing: '0.12em' }}>LINQ PACK</span>
+                <span style={{ fontSize: 68, filter: 'drop-shadow(0 2px 18px rgba(0,0,0,0.7))' }}>🎴</span>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                  <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', fontWeight: 800, letterSpacing: '0.14em' }}>LINQ PACK</span>
+                  <span style={{ fontSize: 10, color: topCfg.border, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>{topCfg.label}</span>
+                </div>
                 <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.38)' }}>{displayStickers.length} cards inside</span>
               </div>
             </motion.div>
@@ -4243,13 +4314,13 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
             transition={{ duration: 0.62, ease: 'easeIn' }}
           >
             <div style={{
-              width: 118, height: 162,
+              width: 160, height: 220,
               background: `linear-gradient(148deg, ${topCfg.solid}99, #200E48)`,
-              borderRadius: 20, border: `2px solid ${topCfg.border}`,
+              borderRadius: 24, border: `3px solid ${topCfg.border}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: `0 0 80px ${topCfg.solid}`,
+              boxShadow: `0 0 100px ${topCfg.solid}`,
             }}>
-              <motion.span style={{ fontSize: 56 }}
+              <motion.span style={{ fontSize: 72 }}
                 animate={{ rotate: [0, 360], scale: [1, 1.6, 1] }}
                 transition={{ duration: 0.6 }}
               >✨</motion.span>
@@ -4268,29 +4339,32 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
                 <AnimatePresence key={s.id}>
                   {dealtCount > i && (
                     <motion.div
-                      initial={{ y: -160, scale: 0.3, rotate: -25, opacity: 0 }}
+                      initial={{ y: -200, scale: 0.3, rotate: -25, opacity: 0 }}
                       animate={{ y: 0, scale: 1, rotate: (i - 1) * 4, opacity: 1 }}
                       transition={{ type: 'spring', damping: 16, stiffness: 260 }}
                       style={{
-                        width: 90, height: 124,
+                        width: 120, height: 165,
                         background: 'linear-gradient(148deg, #16103A, #2B1458)',
-                        border: '2px solid rgba(160,100,255,0.38)', borderRadius: 18,
+                        border: `2.5px solid ${STICKER_CONFIG[s.tier].border}`,
+                        borderRadius: 20,
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
-                        boxShadow: '0 8px 28px rgba(100,40,200,0.4)',
+                        boxShadow: `0 10px 36px ${STICKER_CONFIG[s.tier].color}55`,
                         overflow: 'hidden',
+                        position: 'relative',
                       }}
                     >
                       <motion.div style={{
-                        position: 'absolute', inset: 0, borderRadius: 16,
+                        position: 'absolute', inset: 0, borderRadius: 18,
                         background: 'linear-gradient(108deg, transparent 32%, rgba(255,255,255,0.1) 50%, transparent 68%)',
                         backgroundSize: '300% 100%',
                       }}
                         animate={{ backgroundPosition: ['-200% 0', '300% 0'] }}
                         transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
                       />
-                      <motion.div style={{ fontSize: 38, filter: 'drop-shadow(0 0 10px rgba(190,110,255,0.9))', lineHeight: 1 }}
+                      <motion.div style={{ fontSize: 46, filter: `drop-shadow(0 0 14px ${STICKER_CONFIG[s.tier].color}cc)`, lineHeight: 1, zIndex: 2 }}
                         animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 1.3, repeat: Infinity }}
                       >?</motion.div>
+                      <span style={{ fontSize: 8, fontWeight: 900, color: STICKER_CONFIG[s.tier].border, letterSpacing: '0.15em', zIndex: 2 }}>{STICKER_CONFIG[s.tier].label.toUpperCase()}</span>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -4323,11 +4397,11 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
               </>
             )}
 
-            <div className="flex gap-4 justify-center items-end">
+            <div className="flex gap-3 justify-center items-end">
               {displayStickers.map((s, i) => (
                 <motion.div key={s.id}
-                  initial={{ scale: 0, y: 40, rotate: (i - 1) * 8 }}
-                  animate={{ scale: 1, y: 0, rotate: (i - 1) * 4 }}
+                  initial={{ scale: 0, y: 60, rotate: (i - 1) * 10 }}
+                  animate={{ scale: 1, y: 0, rotate: (i - 1) * 5 }}
                   transition={{ type: 'spring', damping: 16, stiffness: 240, delay: i * 0.08 }}
                 >
                   <MysteryRevealCard
@@ -22361,30 +22435,32 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
 
           {/* Posts feed */}
           {myGlobalPosts.length > 0 && (
-            <div className="space-y-4">
-              {myGlobalPosts.map(post => (
-                <FeedPostCard
-                  key={post.id}
-                  post={post}
-                  currentUser={user}
-                  onViewUser={onViewUser}
-                  onLike={async (p) => {
-                    const ref = doc(db, 'global_posts', p.id);
-                    const liked = (p.likedBy || []).includes(user.uid);
-                    await updateDoc(ref, {
-                      likedBy: liked ? arrayRemove(user.uid) : arrayUnion(user.uid),
-                      likesCount: liked ? Math.max(0, p.likesCount - 1) : p.likesCount + 1
-                    });
-                  }}
-                  onVote={async (p, idx) => {
-                    const ref = doc(db, 'global_posts', p.id);
-                    const votes = p.pollVotes || {};
-                    const oldKey = Object.keys(votes).find(k => (votes[k] || []).includes(user.uid));
-                    const updates: any = { [`pollVotes.${idx}`]: arrayUnion(user.uid) };
-                    if (oldKey !== undefined && oldKey !== String(idx)) updates[`pollVotes.${oldKey}`] = arrayRemove(user.uid);
-                    await updateDoc(ref, updates);
-                  }}
-                />
+            <div className="bg-white -mx-6 border-t-[3px] border-gray-200">
+              {myGlobalPosts.map((post, idx) => (
+                <React.Fragment key={post.id}>
+                  {idx > 0 && <div className="h-[3px] bg-gray-200" />}
+                  <FeedPostCard
+                    post={post}
+                    currentUser={user}
+                    onViewUser={onViewUser}
+                    onLike={async (p) => {
+                      const ref = doc(db, 'global_posts', p.id);
+                      const liked = (p.likedBy || []).includes(user.uid);
+                      await updateDoc(ref, {
+                        likedBy: liked ? arrayRemove(user.uid) : arrayUnion(user.uid),
+                        likesCount: liked ? Math.max(0, p.likesCount - 1) : p.likesCount + 1
+                      });
+                    }}
+                    onVote={async (p, idx) => {
+                      const ref = doc(db, 'global_posts', p.id);
+                      const votes = p.pollVotes || {};
+                      const oldKey = Object.keys(votes).find(k => (votes[k] || []).includes(user.uid));
+                      const updates: any = { [`pollVotes.${idx}`]: arrayUnion(user.uid) };
+                      if (oldKey !== undefined && oldKey !== String(idx)) updates[`pollVotes.${oldKey}`] = arrayRemove(user.uid);
+                      await updateDoc(ref, updates);
+                    }}
+                  />
+                </React.Fragment>
               ))}
             </div>
           )}
@@ -22413,73 +22489,50 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         const votedPolls = allPostsForVotes.filter(p =>
           Object.values(p.pollVotes || {}).some(arr => (arr as string[]).includes(profile.uid))
         );
+        const allItems = [
+          { _kind: 'label' as const, text: `Liked (${likedPosts.length})`, icon: <Heart size={12} fill="currentColor" /> },
+          ...likedPosts.map(p => ({ _kind: 'post' as const, post: p })),
+          { _kind: 'label' as const, text: `Votes Cast (${votedPolls.length})`, icon: <BarChart2 size={12} /> },
+          ...votedPolls.map(p => ({ _kind: 'post' as const, post: p })),
+        ];
+        let pIdx = -1;
         return (
-          <div className="space-y-6">
-            {/* Liked posts */}
-            <div className="space-y-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold px-1 flex items-center gap-2">
-                <Heart size={12} fill="currentColor" /> Liked ({likedPosts.length})
-              </p>
-              {likedPosts.length === 0 ? (
-                <div className="glass-card rounded-2xl p-6 text-center text-brand-navy/72 text-sm">Nothing liked yet</div>
-              ) : likedPosts.map(post => (
-                <FeedPostCard
-                  key={post.id}
-                  post={post}
-                  currentUser={user}
-                  onViewUser={onViewUser}
-                  onLike={async (p) => {
-                    const ref = doc(db, 'global_posts', p.id);
-                    const liked = (p.likedBy || []).includes(user.uid);
-                    await updateDoc(ref, {
-                      likedBy: liked ? arrayRemove(user.uid) : arrayUnion(user.uid),
-                      likesCount: liked ? Math.max(0, p.likesCount - 1) : p.likesCount + 1
-                    });
-                  }}
-                  onVote={async (p, idx) => {
-                    const ref = doc(db, 'global_posts', p.id);
-                    const votes = p.pollVotes || {};
-                    const oldKey = Object.keys(votes).find(k => (votes[k] || []).includes(user.uid));
-                    const updates: any = { [`pollVotes.${idx}`]: arrayUnion(user.uid) };
-                    if (oldKey !== undefined && oldKey !== String(idx)) updates[`pollVotes.${oldKey}`] = arrayRemove(user.uid);
-                    await updateDoc(ref, updates);
-                  }}
-                />
-              ))}
-            </div>
-
-            {/* Voted polls */}
-            <div className="space-y-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold px-1 flex items-center gap-2">
-                <BarChart2 size={12} /> Votes Cast ({votedPolls.length})
-              </p>
-              {votedPolls.length === 0 ? (
-                <div className="glass-card rounded-2xl p-6 text-center text-brand-navy/72 text-sm">No polls voted in yet</div>
-              ) : votedPolls.map(post => (
-                <FeedPostCard
-                  key={post.id}
-                  post={post}
-                  currentUser={user}
-                  onViewUser={onViewUser}
-                  onLike={async (p) => {
-                    const ref = doc(db, 'global_posts', p.id);
-                    const liked = (p.likedBy || []).includes(user.uid);
-                    await updateDoc(ref, {
-                      likedBy: liked ? arrayRemove(user.uid) : arrayUnion(user.uid),
-                      likesCount: liked ? Math.max(0, p.likesCount - 1) : p.likesCount + 1
-                    });
-                  }}
-                  onVote={async (p, idx) => {
-                    const ref = doc(db, 'global_posts', p.id);
-                    const votes = p.pollVotes || {};
-                    const oldKey = Object.keys(votes).find(k => (votes[k] || []).includes(user.uid));
-                    const updates: any = { [`pollVotes.${idx}`]: arrayUnion(user.uid) };
-                    if (oldKey !== undefined && oldKey !== String(idx)) updates[`pollVotes.${oldKey}`] = arrayRemove(user.uid);
-                    await updateDoc(ref, updates);
-                  }}
-                />
-              ))}
-            </div>
+          <div className="bg-white -mx-6 border-t-[3px] border-gray-200">
+            {allItems.map((item, i) => {
+              if (item._kind === 'label') return (
+                <p key={`lbl-${i}`} className="text-[10px] font-bold uppercase tracking-widest text-brand-gold px-6 py-3 flex items-center gap-2 bg-gray-50">{item.icon} {item.text}</p>
+              );
+              pIdx++;
+              return (
+                <React.Fragment key={item.post.id}>
+                  {pIdx > 0 && <div className="h-[3px] bg-gray-200" />}
+                  <FeedPostCard
+                    post={item.post}
+                    currentUser={user}
+                    onViewUser={onViewUser}
+                    onLike={async (p) => {
+                      const ref = doc(db, 'global_posts', p.id);
+                      const liked = (p.likedBy || []).includes(user.uid);
+                      await updateDoc(ref, {
+                        likedBy: liked ? arrayRemove(user.uid) : arrayUnion(user.uid),
+                        likesCount: liked ? Math.max(0, p.likesCount - 1) : p.likesCount + 1
+                      });
+                    }}
+                    onVote={async (p, idx) => {
+                      const ref = doc(db, 'global_posts', p.id);
+                      const votes = p.pollVotes || {};
+                      const oldKey = Object.keys(votes).find(k => (votes[k] || []).includes(user.uid));
+                      const updates: any = { [`pollVotes.${idx}`]: arrayUnion(user.uid) };
+                      if (oldKey !== undefined && oldKey !== String(idx)) updates[`pollVotes.${oldKey}`] = arrayRemove(user.uid);
+                      await updateDoc(ref, updates);
+                    }}
+                  />
+                </React.Fragment>
+              );
+            })}
+            {likedPosts.length === 0 && votedPolls.length === 0 && (
+              <div className="py-12 text-center text-brand-navy/32 text-sm px-6">No interactions yet</div>
+            )}
           </div>
         );
       })()}
