@@ -27448,6 +27448,13 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
       rewardsPrefix: '£',
     });
   }
+  const [tierSlideIdx, setTierSlideIdx] = React.useState(0);
+  const [lbActiveType, setLbActiveType] = React.useState<'loyalty' | 'visit' | 'spend'>(
+    store.membershipEnabled && !store.cardEnabled
+      ? (store.membershipType === 'spend' ? 'spend' : 'visit')
+      : 'loyalty'
+  );
+
   // Leaderboard: one tab per enabled card type
   const lbTypes: Array<{ key: 'loyalty' | 'visit' | 'spend'; label: string }> = [];
   if (store.cardEnabled) lbTypes.push({ key: 'loyalty', label: 'Loyalty Card' });
@@ -27479,12 +27486,6 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
   const tiers = store.rewardTiers?.length
     ? [...store.rewardTiers].sort((a, b) => a.stamps - b.stamps)
     : store.reward ? [{ stamps: store.stamps_required_for_reward || 10, reward: store.reward }] : [];
-  const [tierSlideIdx, setTierSlideIdx] = React.useState(0);
-  const [lbActiveType, setLbActiveType] = React.useState<'loyalty' | 'visit' | 'spend'>(
-    store.membershipEnabled && !store.cardEnabled
-      ? (store.membershipType === 'spend' ? 'spend' : 'visit')
-      : 'loyalty'
-  );
 
   return (
     <motion.div
