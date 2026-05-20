@@ -3374,11 +3374,11 @@ function StickerCard({ sticker, isRevealed, onReveal, size = 'md' }: {
         initial={{ rotateY: isRevealed ? 180 : 0 }}
         animate={{ rotateY: localRevealed ? 180 : 0 }}
         transition={{ duration: 0.55, ease: [0.23, 1, 0.32, 1] }}
-        style={{ transformStyle: 'preserve-3d', width: '100%', height: '100%', position: 'relative' }}
+        style={{ transformStyle: 'preserve-3d', WebkitTransformStyle: 'preserve-3d', width: '100%', height: '100%', position: 'relative' }}
       >
         {/* Front — grey mystery */}
         <div style={{
-          position: 'absolute', inset: 0, backfaceVisibility: 'hidden',
+          position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
           background: 'linear-gradient(135deg, #F8FAFC, #E2E8F0)',
           border: '2px solid #CBD5E1', borderRadius: 16,
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
@@ -3388,7 +3388,7 @@ function StickerCard({ sticker, isRevealed, onReveal, size = 'md' }: {
         </div>
         {/* Back — card reveal */}
         <div style={{
-          position: 'absolute', inset: 0, backfaceVisibility: 'hidden',
+          position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
           transform: 'rotateY(180deg)',
           border: `2px solid ${cfg.border}`, borderRadius: 16,
           boxShadow: `0 4px 20px ${cfg.color}33`,
@@ -3995,11 +3995,11 @@ function MysteryRevealCard({ sticker, isRevealed, onReveal }: {
         initial={{ rotateY: isRevealed ? 180 : 0 }}
         animate={{ rotateY: localRevealed ? 180 : 0 }}
         transition={{ duration: 0.68, ease: [0.23, 1, 0.32, 1] }}
-        style={{ transformStyle: 'preserve-3d', width: '100%', height: '100%', position: 'relative', zIndex: 1 }}
+        style={{ transformStyle: 'preserve-3d', WebkitTransformStyle: 'preserve-3d', width: '100%', height: '100%', position: 'relative', zIndex: 1 }}
       >
         {/* Front — mystery */}
         <div style={{
-          position: 'absolute', inset: 0, backfaceVisibility: 'hidden',
+          position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
           background: 'linear-gradient(148deg, #16103A, #2B1458)',
           border: '2px solid rgba(160,100,255,0.4)', borderRadius: 20,
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8,
@@ -4044,7 +4044,7 @@ function MysteryRevealCard({ sticker, isRevealed, onReveal }: {
 
         {/* Back — card reveal */}
         <div style={{
-          position: 'absolute', inset: 0, backfaceVisibility: 'hidden',
+          position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
           transform: 'rotateY(180deg)',
           border: `2px solid ${cfg.border}`, borderRadius: 20,
           boxShadow: `0 8px 32px ${cfg.color}44`,
@@ -16305,10 +16305,10 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                 <motion.div
                   animate={{ rotateY: flipped ? 180 : 0 }}
                   transition={{ duration: 0.45, ease: 'easeInOut' }}
-                  style={{ transformStyle: 'preserve-3d', position: 'relative' }}
+                  style={{ transformStyle: 'preserve-3d', WebkitTransformStyle: 'preserve-3d', position: 'relative' }}
                 >
                   {/* Front */}
-                  <div style={{ backfaceVisibility: 'hidden' }}>
+                  <div style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
                     <div className="relative overflow-hidden flex items-center gap-3 px-4 py-3" style={{ backgroundColor: cardTheme }}>
                       <span className="card-shine-ray" aria-hidden="true" />
                       {cardPattern !== 'solid' && <div className="absolute inset-0 pointer-events-none" style={getCardPatternStyle(cardPattern)} />}
@@ -16337,7 +16337,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                     )}
                   </div>
                   {/* Back */}
-                  <div style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)', position: 'absolute', inset: 0 }}
+                  <div style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)', position: 'absolute', inset: 0 }}
                     className="bg-white flex flex-col p-4 gap-2">
                     <div className="flex items-center justify-between">
                       <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">Terms &amp; Conditions</p>
@@ -16356,10 +16356,10 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
               <motion.div
                 animate={{ rotateY: flipped ? 180 : 0 }}
                 transition={{ duration: 0.45, ease: 'easeInOut' }}
-                style={{ transformStyle: 'preserve-3d', position: 'relative' }}
+                style={{ transformStyle: 'preserve-3d', WebkitTransformStyle: 'preserve-3d', position: 'relative' }}
               >
                 {/* Front */}
-                <div style={{ backfaceVisibility: 'hidden' }} className="flex flex-col h-full">
+                <div style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }} className="flex flex-col h-full">
                   <div className="relative overflow-hidden pt-10 pb-8 flex flex-col items-center gap-2" style={{ backgroundColor: cardTheme }}>
                     <span className="card-shine-ray" aria-hidden="true" />
                     {cardPattern !== 'solid' && <div className="absolute inset-0 pointer-events-none" style={getCardPatternStyle(cardPattern)} />}
@@ -16391,7 +16391,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                   )}
                 </div>
                 {/* Back */}
-                <div style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)', position: 'absolute', inset: 0 }}
+                <div style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)', position: 'absolute', inset: 0 }}
                   className="bg-white rounded-[inherit] flex flex-col p-6 gap-3">
                   <div className="flex items-center justify-between">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">Terms &amp; Conditions</p>
