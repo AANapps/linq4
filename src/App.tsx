@@ -10963,9 +10963,14 @@ function VendorQRDisplay({ store, onClose }: { store: StoreProfile; onClose: () 
 
   const rotateToken = useCallback(async () => {
     setError(null);
-    const id = await createQRToken(store.id).catch(() => null);
-    if (id) { setTokenId(id); setSecsLeft(30); }
-    else setError('Failed to generate QR — check connection.');
+    try {
+      const id = await createQRToken(store.id);
+      setTokenId(id);
+      setSecsLeft(30);
+    } catch (e: any) {
+      console.error('[VendorQRDisplay] createQRToken failed:', e?.code, e?.message, e);
+      setError(`Failed to generate QR — ${e?.code ?? e?.message ?? 'check connection'}`);
+    }
   }, [store.id]);
 
   // Create initial token
