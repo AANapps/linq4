@@ -880,6 +880,9 @@ interface Challenge {
   isAvatarPrize?: boolean;
   avatarPrizeItemId?: string;
   imageUrl?: string;
+  city?: string;
+  challengeLat?: number;
+  challengeLng?: number;
 }
 
 interface StoreOffer {
@@ -7954,6 +7957,23 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
   const [stdRewardValue, setStdRewardValue] = useState('');
   const [stdImageUrl, setStdImageUrl] = useState('');
   const [stdImageUploading, setStdImageUploading] = useState(false);
+  const [stdCity, setStdCity] = useState('');
+  const [stdCityCoords, setStdCityCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [cityInputOpen, setCityInputOpen] = useState(false);
+
+  // Derive unique city names from registered stores
+  const registeredCities = React.useMemo(() => {
+    const set = new Set<string>();
+    allStores.forEach(s => {
+      const names = [
+        s.location,
+        (s as any).address,
+        ...(s.locations || []).map((l: any) => l.town || l.address),
+      ].filter(Boolean) as string[];
+      names.forEach(n => { const t = n.trim(); if (t) set.add(t); });
+    });
+    return Array.from(set).sort();
+  }, [allStores]);
 
   // Card sets for collectible form
   const [cardSets, setCardSets] = useState<CollectibleCardSet[]>([]);
@@ -7987,6 +8007,10 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
     if (!stdTitle.trim() || !stdReward.trim() || !stdUnit.trim() || isNaN(g) || g < 1) return;
     setDeploying(true);
     try {
+      let cityCoords = stdCityCoords;
+      if (stdCity.trim() && !cityCoords) {
+        cityCoords = await geocodeAddressGlobal(stdCity.trim());
+      }
       await addDoc(collection(db, 'challenges'), {
         title: stdTitle.trim(),
         description: stdDesc.trim() || `Reach ${g} ${stdUnit} to win.`,
@@ -8003,8 +8027,10 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
         ...(parseFloat(stdRewardValue) > 0 ? { rewardValue: parseFloat(stdRewardValue) } : {}),
         ...(stdIsAvatarPrize && stdAvatarPrizeItemId ? { isAvatarPrize: true, avatarPrizeItemId: stdAvatarPrizeItemId } : {}),
         ...(stdImageUrl ? { imageUrl: stdImageUrl } : {}),
+        ...(stdCity.trim() ? { city: stdCity.trim() } : {}),
+        ...(cityCoords ? { challengeLat: cityCoords.lat, challengeLng: cityCoords.lng } : {}),
       });
-      setStdTitle(''); setStdDesc(''); setStdGoal(''); setStdUnit(''); setStdReward(''); setStdRewardValue(''); setStdEndsAt(''); setStdVendorIds([]); setStdRewardTag(''); setStdIsAvatarPrize(false); setStdAvatarPrizeItemId(''); setStdImageUrl('');
+      setStdTitle(''); setStdDesc(''); setStdGoal(''); setStdUnit(''); setStdReward(''); setStdRewardValue(''); setStdEndsAt(''); setStdVendorIds([]); setStdRewardTag(''); setStdIsAvatarPrize(false); setStdAvatarPrizeItemId(''); setStdImageUrl(''); setStdCity(''); setStdCityCoords(null);
     } finally {
       setDeploying(false);
     }
@@ -8141,6 +8167,11 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
                 <span className="bg-brand-gold/10 text-brand-gold font-semibold px-1.5 py-0.5 rounded-full">
                   🎁 {c.reward}
                 </span>
+                {c.city && (
+                  <span className="bg-teal-50 text-teal-700 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                    <MapPin size={9} /> {c.city}
+                  </span>
+                )}
               </div>
             </div>
             <button
@@ -8337,6 +8368,61 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
             <div className="flex items-center gap-2">
               <label className="text-xs text-brand-navy/80 flex-shrink-0">End date</label>
               <input type="datetime-local" value={stdEndsAt} onChange={e => setStdEndsAt(e.target.value)} className={cn(inputCls, 'flex-1 text-xs')} />
+            </div>
+
+            {/* City / location (optional) */}
+            <div className="relative">
+              <div className="flex items-center gap-2">
+                <input
+                  value={stdCity}
+                  onChange={e => {
+                    setStdCity(e.target.value);
+                    setStdCityCoords(null);
+                    setCityInputOpen(true);
+                  }}
+                  onFocus={() => setCityInputOpen(true)}
+                  onBlur={() => setTimeout(() => setCityInputOpen(false), 150)}
+                  placeholder="City / location (optional — leave blank for global)"
+                  className={cn(inputCls, 'flex-1')}
+                />
+                {stdCity && (
+                  <button type="button" onClick={() => { setStdCity(''); setStdCityCoords(null); }} className="p-1.5 rounded-lg text-brand-navy/40 hover:text-brand-navy/80">
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+              {cityInputOpen && registeredCities.filter(c => c.toLowerCase().includes(stdCity.toLowerCase()) && c !== stdCity).length > 0 && (
+                <div className="absolute z-20 top-full mt-1 left-0 right-0 bg-white border border-brand-navy/10 rounded-2xl shadow-lg overflow-hidden max-h-44 overflow-y-auto">
+                  {registeredCities
+                    .filter(c => c.toLowerCase().includes(stdCity.toLowerCase()) && c !== stdCity)
+                    .slice(0, 8)
+                    .map(city => {
+                      const store = allStores.find(s => [s.location, (s as any).address, ...(s.locations || []).map((l: any) => l.town || l.address)].includes(city));
+                      const coords = store?.lat && store?.lng ? { lat: store.lat, lng: store.lng } : null;
+                      return (
+                        <button
+                          key={city}
+                          type="button"
+                          onMouseDown={() => {
+                            setStdCity(city);
+                            setStdCityCoords(coords);
+                            setCityInputOpen(false);
+                          }}
+                          className="w-full px-4 py-2.5 text-left text-sm text-brand-navy hover:bg-brand-navy/5 flex items-center gap-2"
+                        >
+                          <MapPin size={12} className="text-brand-navy/40 shrink-0" />
+                          {city}
+                        </button>
+                      );
+                    })}
+                </div>
+              )}
+              {stdCity && stdCityCoords && (
+                <p className="text-[10px] text-green-600 mt-1 pl-1">Coords locked · {stdCityCoords.lat.toFixed(3)}, {stdCityCoords.lng.toFixed(3)}</p>
+              )}
+              {stdCity && !stdCityCoords && (
+                <p className="text-[10px] text-brand-navy/50 mt-1 pl-1">Will geocode on deploy</p>
+              )}
             </div>
 
             {/* Vendor picker */}
@@ -9035,6 +9121,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const [activePrograms, setActivePrograms] = useState<Challenge[]>([]);
   const [activeStandardChallenges, setActiveStandardChallenges] = useState<Challenge[]>([]);
   const [myStandardEntries, setMyStandardEntries] = useState<Map<string, any>>(new Map());
+  const [userGeoCoords, setUserGeoCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [confirmLeaveChallengeId, setConfirmLeaveChallengeId] = useState<string | null>(null);
   const [joiningProgramId, setJoiningProgramId] = useState<string | null>(null);
   const [joinError, setJoinError] = useState<string | null>(null);
@@ -9088,7 +9175,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           prevCardStampsRef.current.set(card.id, card.current_stamps);
           const store = stores.find(s => s.id === card.store_id);
           if (store) {
-            const pages = buildStampCelebrationPages(store, card, activeStandardChallenges, myStandardEntries, profile, user, activePrograms, myStickerCards);
+            const pages = buildStampCelebrationPages(store, card, visibleActiveStandardChallenges, myStandardEntries, profile, user, visibleActivePrograms, myStickerCards);
 
             // Increment totalSaved if a valued tier was hit
             const storeTiers = store.rewardTiers?.length
@@ -9175,10 +9262,10 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         const store = stores.find(s => s.id === card.store_id);
         const qty = current - prev;
         const charityAnimal = ENDANGERED_ANIMALS[current % ENDANGERED_ANIMALS.length];
-        const joined = activeStandardChallenges.filter(c =>
+        const joined = visibleActiveStandardChallenges.filter(c =>
           (c.participantUids || []).includes(user.uid)
         );
-        const notJoined = activeStandardChallenges.filter(c => !(c.participantUids || []).includes(user.uid)).slice(0, 3);
+        const notJoined = visibleActiveStandardChallenges.filter(c => !(c.participantUids || []).includes(user.uid)).slice(0, 3);
         const pages: CelebrationPage[] = [];
         // First page: +X points with confetti + rank
         const visitPointsPage: CelebrationPage = {
@@ -9260,10 +9347,10 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         const store = stores.find(s => s.id === card.store_id);
         const qty = current - prev;
         const charityAnimal = ENDANGERED_ANIMALS[current % ENDANGERED_ANIMALS.length];
-        const joined = activeStandardChallenges.filter(c =>
+        const joined = visibleActiveStandardChallenges.filter(c =>
           (c.participantUids || []).includes(user.uid)
         );
-        const notJoined = activeStandardChallenges.filter(c => !(c.participantUids || []).includes(user.uid)).slice(0, 3);
+        const notJoined = visibleActiveStandardChallenges.filter(c => !(c.participantUids || []).includes(user.uid)).slice(0, 3);
         const pages: CelebrationPage[] = [];
         const spendPointsPage: CelebrationPage = {
           type: 'visit_points',
@@ -9463,17 +9550,33 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   }, [user.uid]);
 
   useEffect(() => {
+    navigator.geolocation?.getCurrentPosition(
+      pos => setUserGeoCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => {}
+    );
+  }, []);
+
+  const challengeInRange = (c: Challenge) => {
+    if (c.challengeLat == null || c.challengeLng == null) return true;
+    if (!userGeoCoords) return true;
+    return haversineKm(userGeoCoords.lat, userGeoCoords.lng, c.challengeLat, c.challengeLng) <= 1000;
+  };
+
+  useEffect(() => {
     const q = query(collection(db, 'challenges'), where('type', '==', 'collectible'));
     return onSnapshot(q, snap =>
       setActivePrograms(snap.docs.map(d => ({ id: d.id, ...d.data() } as Challenge)).filter(c => c.status === 'active'))
     );
   }, []);
 
+  const visibleActivePrograms = activePrograms.filter(challengeInRange);
+  const visibleActiveStandardChallenges = activeStandardChallenges.filter(challengeInRange);
+
   // Notify user about collectible programme they haven't joined (once per programme)
   useEffect(() => {
-    if (activePrograms.length === 0) return;
+    if (visibleActivePrograms.length === 0) return;
     const joinedIds = new Set(myStickerCards.map(sc => sc.programme_id));
-    const unjoined = activePrograms.find(p => !joinedIds.has(p.id));
+    const unjoined = visibleActivePrograms.find(p => !joinedIds.has(p.id));
     if (!unjoined) return;
     const key = `linq_monopoly_notif_${user.uid}_${unjoined.id}`;
     if (localStorage.getItem(key)) return;
@@ -9488,7 +9591,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       isRead: false,
       createdAt: serverTimestamp(),
     }).catch(() => {});
-  }, [activePrograms, myStickerCards]);
+  }, [visibleActivePrograms, myStickerCards]);
 
   useEffect(() => {
     const q = query(collection(db, 'challenges'), where('type', '==', 'standard'), where('status', '==', 'active'));
@@ -9857,7 +9960,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           {/* Challenges sub-tab — Monopoly sticker programme */}
           {walletSubTab === 'challenges' && (
             <div className="space-y-5">
-              {activePrograms.length === 0 ? (
+              {visibleActivePrograms.length === 0 ? (
                 <div className="glass-card p-10 rounded-[2.5rem] border-2 border-dashed border-amber-300/60 text-center">
                   <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Trophy className="w-8 h-8 text-amber-300" />
@@ -9865,8 +9968,8 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                   <p className="text-brand-navy/75">No active sticker programmes right now. Check back soon!</p>
                 </div>
               ) : (() => {
-                const joinedProgs = activePrograms.filter(p => myStickerCards.some(s => s.programme_id === p.id));
-                const availableProgs = activePrograms.filter(p => !myStickerCards.some(s => s.programme_id === p.id));
+                const joinedProgs = visibleActivePrograms.filter(p => myStickerCards.some(s => s.programme_id === p.id));
+                const availableProgs = visibleActivePrograms.filter(p => !myStickerCards.some(s => s.programme_id === p.id));
                 const maxSets = STICKER_ORDER.reduce((sum, t) => sum + STICKER_CONFIG[t].variants.length, 0);
                 return (
                   <>
@@ -10037,13 +10140,13 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                 );
               })()}
 
-              {activeStandardChallenges.length > 0 && (
+              {visibleActiveStandardChallenges.length > 0 && (
                 <div className="space-y-3">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/90 px-1">Challenges</p>
-                  {activeStandardChallenges.map(c => {
+                  {visibleActiveStandardChallenges.map(c => {
                     const joined = (c.participantUids || []).includes(user.uid);
                     const entry = myStandardEntries.get(c.id);
-                    const joinedCount = activeStandardChallenges.filter(ch => (ch.participantUids || []).includes(user.uid) && !myStandardEntries.get(ch.id)?.redeemed).length;
+                    const joinedCount = visibleActiveStandardChallenges.filter(ch => (ch.participantUids || []).includes(user.uid) && !myStandardEntries.get(ch.id)?.redeemed).length;
                     let stampsProgress = 0;
                     if (joined && entry) {
                       if (c.vendorIds?.length) {
@@ -24563,6 +24666,20 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
   const [selectedOffer, setSelectedOffer] = useState<StoreOffer | null>(null);
   const [dealsBdayCountdown, setDealsBdayCountdown] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
   const [storeDistances, setStoreDistances] = useState<Map<string, number>>(new Map());
+  const [dealsUserCoords, setDealsUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  useEffect(() => {
+    navigator.geolocation?.getCurrentPosition(
+      pos => setDealsUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => {}
+    );
+  }, []);
+
+  const visibleChallenges = challenges.filter(c => {
+    if (c.challengeLat == null || c.challengeLng == null) return true;
+    if (!dealsUserCoords) return true;
+    return haversineKm(dealsUserCoords.lat, dealsUserCoords.lng, c.challengeLat, c.challengeLng) <= 1000;
+  });
 
   useEffect(() => {
     const birthday = currentProfile?.birthday;
@@ -24635,9 +24752,9 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
     const sb = allStores.find(s => s.id === b.storeId);
     return (storeDistances.get(sa?.id ?? '') ?? Infinity) - (storeDistances.get(sb?.id ?? '') ?? Infinity);
   });
-  const experiences = challenges.filter(c => c.rewardTag === 'experience');
-  const services = challenges.filter(c => c.rewardTag === 'service');
-  const products = challenges.filter(c => c.rewardTag === 'product');
+  const experiences = visibleChallenges.filter(c => c.rewardTag === 'experience');
+  const services = visibleChallenges.filter(c => c.rewardTag === 'service');
+  const products = visibleChallenges.filter(c => c.rewardTag === 'product');
   const birthdayOffers = storeOffers.filter(o => o.offerType === 'birthday');
 
   const q = searchQuery.trim().toLowerCase();
@@ -24648,7 +24765,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
   const searchedOffers = offersByDist.filter(o =>
     o.title?.toLowerCase().includes(q) || o.storeName?.toLowerCase().includes(q) || o.category?.toLowerCase().includes(q)
   );
-  const searchedChallenges = challenges.filter(c =>
+  const searchedChallenges = visibleChallenges.filter(c =>
     c.reward?.toLowerCase().includes(q) || c.title?.toLowerCase().includes(q)
   );
 
@@ -25092,6 +25209,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
   const [showAllDeals, setShowAllDeals] = useState(false);
   const [feedChallenges, setFeedChallenges] = useState<Challenge[]>([]);
   const [feedCompletedChallenges, setFeedCompletedChallenges] = useState<Challenge[]>([]);
+  const [forYouUserCoords, setForYouUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [challengeView, setChallengeView] = useState<'active' | 'completed'>('active');
   const [completedIdx, setCompletedIdx] = useState(0);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
@@ -25310,6 +25428,24 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
     return () => { cancelled = true; };
   }, [allStores, currentProfile?.location]);
 
+  useEffect(() => {
+    navigator.geolocation?.getCurrentPosition(
+      pos => setForYouUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => {}
+    );
+  }, []);
+
+  const visibleFeedChallenges = feedChallenges.filter(c => {
+    if (c.challengeLat == null || c.challengeLng == null) return true;
+    if (!forYouUserCoords) return true;
+    return haversineKm(forYouUserCoords.lat, forYouUserCoords.lng, c.challengeLat, c.challengeLng) <= 1000;
+  });
+  const visibleFeedCompletedChallenges = feedCompletedChallenges.filter(c => {
+    if (c.challengeLat == null || c.challengeLng == null) return true;
+    if (!forYouUserCoords) return true;
+    return haversineKm(forYouUserCoords.lat, forYouUserCoords.lng, c.challengeLat, c.challengeLng) <= 1000;
+  });
+
   const handleJoinStore = async (store: StoreProfile) => {
     if (!currentUser) return;
     setJoiningStoreId(store.id);
@@ -25398,9 +25534,9 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
     return followingStoreIds.has(item.storeId || '');
   });
 
-  const totalActivePlayers = new Set(feedChallenges.flatMap(c => c.participantUids || [])).size;
+  const totalActivePlayers = new Set(visibleFeedChallenges.flatMap(c => c.participantUids || [])).size;
   const storeParticipantMap = new Map<string, number>();
-  for (const ch of feedChallenges) {
+  for (const ch of visibleFeedChallenges) {
     const sids = ch.vendorIds?.length ? ch.vendorIds : allStores.map(s => s.id);
     const cnt = ch.participantUids?.length || 0;
     for (const sid of sids) storeParticipantMap.set(sid, (storeParticipantMap.get(sid) || 0) + cnt);
@@ -25510,13 +25646,13 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
           )}
 
           {/* Challenges card + Leaderboard button — side by side */}
-          {(feedChallenges.length > 0 || feedCompletedChallenges.length > 0 || true) && (
+          {(visibleFeedChallenges.length > 0 || visibleFeedCompletedChallenges.length > 0 || true) && (
             <div className="flex gap-3 items-stretch">
 
               {/* Cycling challenges card with toggle */}
-              {(feedChallenges.length > 0 || feedCompletedChallenges.length > 0) && (() => {
+              {(visibleFeedChallenges.length > 0 || visibleFeedCompletedChallenges.length > 0) && (() => {
                 const isCompleted = challengeView === 'completed';
-                const list = isCompleted ? feedCompletedChallenges : feedChallenges;
+                const list = isCompleted ? visibleFeedCompletedChallenges : visibleFeedChallenges;
                 const idx = isCompleted ? completedIdx : challengeIdx;
                 const current = list[idx % Math.max(list.length, 1)];
                 const cDark = isCompleted || uiColors.challengesFypTile.dark;
@@ -25627,7 +25763,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                   confetti({ particleCount: 80, spread: 60, startVelocity: 30, gravity: 0.8, scalar: 0.9, origin: { y: 0.6 }, zIndex: 9999, colors: ['#FFD700', '#FFC200', '#FFE566', '#FFAA00', '#FFF8DC'] });
                 }}
                 className="relative rounded-[1.5rem] overflow-hidden active:scale-[0.97] transition-transform shrink-0"
-                style={{ background: uiColors.leaderboardTile.css, width: (feedChallenges.length > 0 || feedCompletedChallenges.length > 0) ? '136px' : '100%', minHeight: '148px' }}
+                style={{ background: uiColors.leaderboardTile.css, width: (visibleFeedChallenges.length > 0 || visibleFeedCompletedChallenges.length > 0) ? '136px' : '100%', minHeight: '148px' }}
               >
                 <div className="absolute top-3 left-3 text-lg leading-none">🥇</div>
                 <motion.div
