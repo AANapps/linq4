@@ -20508,39 +20508,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
             rows={4}
             className="w-full px-4 py-3 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm text-brand-navy/80 focus:outline-none focus:ring-2 focus:ring-brand-gold/30 resize-none"
           />
-          <p className="text-[11px] text-brand-navy/45 pl-1">Tap a rule to add it, or type your own above.</p>
-          <div className="flex flex-wrap gap-1.5">
-            {[
-              'One stamp per visit.',
-              'One stamp per transaction.',
-              'One reward per customer.',
-              'Reward valid for 30 days.',
-              'Reward valid for 60 days.',
-              'Reward valid for 90 days.',
-              'No cash alternative.',
-              'Cannot be combined with other offers.',
-              'Subject to availability.',
-              'Management reserves the right to withdraw this offer at any time.',
-              'Card must be presented at time of purchase.',
-              'Stamps cannot be transferred between cards.',
-              'Lost or stolen cards cannot be replaced.',
-              'Minimum spend required per visit.',
-              'One card per customer.',
-              'Reward must be redeemed in a single visit.',
-              'Stamps earned on full-price items only.',
-              'Not valid on sale or promotional items.',
-              'Staff are not eligible to participate.',
-            ].map(rule => (
-              <button
-                key={rule}
-                type="button"
-                onClick={() => setBusinessRules(prev => prev ? `${prev.trimEnd()} ${rule}` : rule)}
-                className="px-2.5 py-1 rounded-full bg-brand-bg border border-brand-navy/10 text-[11px] text-brand-navy/70 font-medium hover:border-brand-navy/30 hover:text-brand-navy active:scale-95 transition-all text-left"
-              >
-                + {rule}
-              </button>
-            ))}
-          </div>
+          <p className="text-[11px] text-brand-navy/45 pl-1">Displayed on the back of the card when customers tap T&amp;Cs.</p>
         </div>
 
         {/* Charity Images */}
