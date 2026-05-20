@@ -1055,6 +1055,35 @@ function compressImage(file: File, maxWidth = 1400, quality = 0.85): Promise<Blo
   });
 }
 
+// --- Error Boundary ---
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+class AppErrorBoundary extends (React.Component as any) {
+  // @ts-ignore
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  componentDidCatch(error: Error) { console.error('AppErrorBoundary:', error); }
+  render() {
+    // @ts-ignore
+    if (this.state.error) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-8 bg-white">
+          <p className="text-2xl font-bold text-brand-navy">Something went wrong</p>
+          {/* @ts-ignore */}
+          <p className="text-sm text-brand-navy/60 text-center max-w-xs">{this.state.error.message}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-2 px-6 py-3 rounded-2xl text-white font-bold text-sm"
+            style={{ background: '#0D9488' }}
+          >Reload app</button>
+        </div>
+      );
+    }
+    // @ts-ignore
+    return this.props.children;
+  }
+}
+
 // --- Main App Component ---
 
 export default function App() {
@@ -1892,6 +1921,7 @@ export default function App() {
               }}
             />
           ) : (['consumer','admin'].includes(profile?.role ?? '')) ? (
+            <AppErrorBoundary>
             <ConsumerApp
               key="consumer"
               activeTab={activeTab}
@@ -1910,7 +1940,9 @@ export default function App() {
               onClearPendingNFC={() => setPendingNFCStoreId(null)}
               uiColors={uiColors}
             />
+            </AppErrorBoundary>
           ) : (
+            <AppErrorBoundary>
             <VendorApp
               key="vendor"
               activeTab={activeTab}
@@ -1927,6 +1959,7 @@ export default function App() {
               setShowVendorQR={setShowVendorQR}
               onVendorQRStatus={setVendorQREnabled}
             />
+            </AppErrorBoundary>
           )}
         </AnimatePresence>
       </main>
