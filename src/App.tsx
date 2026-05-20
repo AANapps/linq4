@@ -699,6 +699,10 @@ interface GlobalPost {
   isAnonymous?: boolean;
   adminGifUrl?: string;
   adminGifLabel?: string;
+  anonBgType?: 'gradient' | 'solid';
+  anonBgFrom?: string;
+  anonBgTo?: string;
+  anonBgColor?: string;
 }
 
 const ADMIN_EMAIL = 'info@adastranetwork.co.uk';
@@ -5754,6 +5758,7 @@ const BANNER_DEST_OPTIONS = [
   { value: 'home', label: 'Wallet / Home' },
   { value: 'deals', label: 'Deals' },
   { value: 'discover', label: 'Discover' },
+  { value: 'challenges', label: 'Challenges' },
   { value: 'profile', label: 'Profile' },
   { value: 'url', label: 'External URL…' },
 ];
@@ -6037,7 +6042,7 @@ function BannersAdminPanel({ onClose }: { onClose: () => void }) {
 
   const save = async () => {
     const dest = form.destination === 'url' ? urlInput.trim() : form.destination;
-    if (!form.title.trim() || !dest) return;
+    if ((!form.title.trim() && !previewImage && !form.imageUrl) || !dest) return;
     setSaving(true);
     setUploadError('');
     try {
@@ -6233,7 +6238,7 @@ function BannersAdminPanel({ onClose }: { onClose: () => void }) {
             {uploadError && <p className="text-xs text-red-500">{uploadError}</p>}
             <div className="flex gap-2 pt-1">
               {editId && <button onClick={cancelEdit} className="flex-1 py-2.5 rounded-xl border border-black/10 text-sm font-bold text-brand-navy/60">Cancel</button>}
-              <button onClick={save} disabled={saving || !form.title.trim()} className="flex-1 py-2.5 rounded-xl bg-brand-navy text-white text-sm font-bold disabled:opacity-40 transition-opacity">
+              <button onClick={save} disabled={saving || (!form.title.trim() && !previewImage && !form.imageUrl)} className="flex-1 py-2.5 rounded-xl bg-brand-navy text-white text-sm font-bold disabled:opacity-40 transition-opacity">
                 {saving ? 'Saving…' : editId ? 'Update' : 'Add Banner'}
               </button>
             </div>
@@ -7088,6 +7093,10 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
   const [cardDefs, setCardDefs] = useState<CollectibleCardDef[]>([]);
   const [selectedCardDef, setSelectedCardDef] = useState<CollectibleCardDef | null>(null);
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [anonBgType, setAnonBgType] = useState<'gradient' | 'solid'>('gradient');
+  const [anonBgFrom, setAnonBgFrom] = useState('#1E1B4B');
+  const [anonBgTo, setAnonBgTo] = useState('#4C1D95');
+  const [anonBgColor, setAnonBgColor] = useState('#1E1B4B');
   const [adminGifs, setAdminGifs] = useState<{ id: string; label: string; url: string }[]>([]);
   const [selectedGif, setSelectedGif] = useState<{ id: string; label: string; url: string } | null>(null);
   const [postImagePosition, setPostImagePosition] = useState({ x: 50, y: 50 });
@@ -7234,6 +7243,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
         ...(selectedCardDef ? { cardDefId: selectedCardDef.id, cardDefName: selectedCardDef.name, cardDefImageUrl: selectedCardDef.imageUrl, cardDefTier: selectedCardDef.tier } : {}),
         ...(!isAnonymous && postImageUrl ? { postImageUrl, imageObjectPosition: `${postImagePosition.x}% ${postImagePosition.y}%`, imageZoom: postImageZoom } : {}),
         ...(selectedGif ? { adminGifUrl: selectedGif.url, adminGifLabel: selectedGif.label } : {}),
+        ...(isAnonymous ? { anonBgType, anonBgFrom, anonBgTo, anonBgColor } : {}),
         createdAt: serverTimestamp(),
       });
       setContent('');
@@ -7242,6 +7252,10 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
       setSelectedCardSet(null);
       setSelectedCardDef(null);
       setIsAnonymous(false);
+      setAnonBgType('gradient');
+      setAnonBgFrom('#1E1B4B');
+      setAnonBgTo('#4C1D95');
+      setAnonBgColor('#1E1B4B');
       setPostImageFile(null);
       setPostImagePreview(null);
       setPostImagePosition({ x: 50, y: 50 });
@@ -7376,6 +7390,73 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
               <span>Anonymous post</span>
               <span className="text-xs font-medium opacity-75">{isAnonymous ? 'Linq logo hidden' : 'Shows Linq logo'}</span>
             </button>
+
+            {/* Anonymous background picker */}
+            {isAnonymous && (
+              <div className="bg-white rounded-2xl border border-brand-navy/8 p-4 space-y-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/50">Background</p>
+                {/* Type toggle */}
+                <div className="flex rounded-xl border border-black/10 overflow-hidden">
+                  <button onClick={() => setAnonBgType('gradient')} className={cn('flex-1 py-2 text-xs font-bold transition-colors', anonBgType === 'gradient' ? 'bg-brand-navy text-white' : 'bg-white text-brand-navy/50')}>Gradient</button>
+                  <button onClick={() => setAnonBgType('solid')} className={cn('flex-1 py-2 text-xs font-bold transition-colors', anonBgType === 'solid' ? 'bg-brand-navy text-white' : 'bg-white text-brand-navy/50')}>Solid</button>
+                </div>
+                {anonBgType === 'gradient' ? (
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/40 mb-1">From</p>
+                        <div className="flex items-center gap-2 border border-black/10 rounded-xl px-3 py-2">
+                          <input type="color" value={anonBgFrom} onChange={e => setAnonBgFrom(e.target.value)} className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent p-0" />
+                          <span className="text-xs font-mono text-brand-navy/60">{anonBgFrom}</span>
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/40 mb-1">To</p>
+                        <div className="flex items-center gap-2 border border-black/10 rounded-xl px-3 py-2">
+                          <input type="color" value={anonBgTo} onChange={e => setAnonBgTo(e.target.value)} className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent p-0" />
+                          <span className="text-xs font-mono text-brand-navy/60">{anonBgTo}</span>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Gradient presets */}
+                    <div className="flex gap-1.5 flex-wrap">
+                      {[
+                        ['#1E1B4B','#4C1D95'],['#0A0A0A','#1a1a2e'],['#0C4A6E','#1E3A5F'],
+                        ['#14532D','#166534'],['#7F1D1D','#9F1239'],['#451A03','#78350F'],
+                        ['#134E4A','#0F3460'],['#4C0519','#881337'],
+                      ].map(([from,to]) => (
+                        <button key={from}
+                          onClick={() => { setAnonBgFrom(from); setAnonBgTo(to); }}
+                          className="w-8 h-6 rounded-lg border-2 transition-all active:scale-90"
+                          style={{ background: `linear-gradient(135deg, ${from}, ${to})`, borderColor: anonBgFrom === from && anonBgTo === to ? '#fff' : 'transparent' }}
+                        />
+                      ))}
+                    </div>
+                    {/* Preview strip */}
+                    <div className="h-8 rounded-xl" style={{ background: `linear-gradient(135deg, ${anonBgFrom}, ${anonBgTo})` }} />
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 border border-black/10 rounded-xl px-3 py-2">
+                      <input type="color" value={anonBgColor} onChange={e => setAnonBgColor(e.target.value)} className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent p-0" />
+                      <span className="text-xs font-mono text-brand-navy/60">{anonBgColor}</span>
+                    </div>
+                    {/* Solid presets */}
+                    <div className="flex gap-1.5 flex-wrap">
+                      {['#0D1B2A','#1E1B4B','#14532D','#7F1D1D','#1F2937','#134E4A','#451A03','#4C0519','#0C4A6E','#1a1a2e'].map(c => (
+                        <button key={c}
+                          onClick={() => setAnonBgColor(c)}
+                          className="w-8 h-6 rounded-lg border-2 transition-all active:scale-90"
+                          style={{ background: c, borderColor: anonBgColor === c ? '#fff' : 'transparent' }}
+                        />
+                      ))}
+                    </div>
+                    {/* Preview strip */}
+                    <div className="h-8 rounded-xl" style={{ background: anonBgColor }} />
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Icon picker — hidden when anonymous */}
             {!isAnonymous && (
@@ -21108,11 +21189,13 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         {/* Posts */}
         <div className="flex p-1 glass-card rounded-2xl">
           <button onClick={() => setActiveSubTab('posts')}
-            className={cn("flex-1 py-3 rounded-xl text-xs font-bold transition-all", activeSubTab === 'posts' ? "bg-brand-navy text-white shadow-lg" : "text-brand-navy/75")}>
+            className={cn("flex-1 py-3 rounded-xl text-xs font-bold transition-all", activeSubTab === 'posts' ? "text-white shadow-lg" : "text-brand-navy/75")}
+            style={activeSubTab === 'posts' ? { background: 'var(--color-brand-gold)' } : {}}>
             Posts
           </button>
           <button onClick={() => setActiveSubTab('interactions')}
-            className={cn("flex-1 py-3 rounded-xl text-xs font-bold transition-all", activeSubTab === 'interactions' ? "bg-brand-navy text-white shadow-lg" : "text-brand-navy/75")}>
+            className={cn("flex-1 py-3 rounded-xl text-xs font-bold transition-all", activeSubTab === 'interactions' ? "text-white shadow-lg" : "text-brand-navy/75")}
+            style={activeSubTab === 'interactions' ? { background: 'var(--color-brand-gold)' } : {}}>
             Interactions
           </button>
         </div>
@@ -21688,13 +21771,15 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
       <div className="flex p-1 glass-card rounded-2xl">
         <button
           onClick={() => setActiveSubTab('posts')}
-          className={cn("flex-1 py-3 rounded-xl text-xs font-bold transition-all", activeSubTab === 'posts' ? "bg-brand-navy text-white shadow-lg" : "text-brand-navy/75")}
+          className={cn("flex-1 py-3 rounded-xl text-xs font-bold transition-all", activeSubTab === 'posts' ? "text-white shadow-lg" : "text-brand-navy/75")}
+          style={activeSubTab === 'posts' ? { background: 'var(--color-brand-gold)' } : {}}
         >
           Posts
         </button>
         <button
           onClick={() => setActiveSubTab('interactions')}
-          className={cn("flex-1 py-3 rounded-xl text-xs font-bold transition-all", activeSubTab === 'interactions' ? "bg-brand-navy text-white shadow-lg" : "text-brand-navy/75")}
+          className={cn("flex-1 py-3 rounded-xl text-xs font-bold transition-all", activeSubTab === 'interactions' ? "text-white shadow-lg" : "text-brand-navy/75")}
+          style={activeSubTab === 'interactions' ? { background: 'var(--color-brand-gold)' } : {}}
         >
           Interactions
         </button>
@@ -23204,9 +23289,14 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
       gold:      { from: '#451A03', via: '#92400E', to: '#78350F', glow: '#FBBF24' },
     };
     const tg = (post.cardDefTier && tierGradients[post.cardDefTier]) || { from: '#1E1B4B', via: '#3730A3', to: '#4C1D95', glow: '#818CF8' };
+    const customBg = post.anonBgType === 'solid' && post.anonBgColor
+      ? post.anonBgColor
+      : post.anonBgType === 'gradient' && post.anonBgFrom && post.anonBgTo
+      ? `linear-gradient(140deg, ${post.anonBgFrom} 0%, ${post.anonBgTo} 100%)`
+      : `linear-gradient(140deg, ${tg.from} 0%, ${tg.via} 55%, ${tg.to} 100%)`;
     return (
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="px-3 py-2">
-        <div className="relative rounded-3xl overflow-hidden shadow-xl" style={{ background: `linear-gradient(140deg, ${tg.from} 0%, ${tg.via} 55%, ${tg.to} 100%)` }}>
+        <div className="relative rounded-3xl overflow-hidden shadow-xl" style={{ background: customBg }}>
           {/* Decorative glow orbs */}
           <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full opacity-20 pointer-events-none" style={{ background: tg.glow, filter: 'blur(48px)' }} />
           <div className="absolute -bottom-8 -left-8 w-36 h-36 rounded-full opacity-15 pointer-events-none" style={{ background: tg.glow, filter: 'blur(36px)' }} />
@@ -24520,13 +24610,17 @@ function AdminBannerCarousel({ banners, onNavigate }: { banners: AdminBanner[]; 
                 }}
               />
             )}
-            {b.imageUrl && <div className="absolute inset-0 bg-black/30" />}
-            <Megaphone size={22} className={cn('relative z-10', b.textLight ? 'text-white/80 shrink-0' : 'text-black/60 shrink-0')} />
-            <div className="relative z-10 flex-1 min-w-0 text-left">
-              <p className={cn('text-sm font-black leading-tight', b.textLight ? 'text-white' : 'text-black')}>{b.title}</p>
-              {b.subtitle && <p className={cn('text-[11px] font-semibold mt-0.5 leading-tight', b.textLight ? 'text-white/75' : 'text-black/60')}>{b.subtitle}</p>}
-            </div>
-            <ChevronRight size={16} className={cn('relative z-10', b.textLight ? 'text-white/50 shrink-0' : 'text-black/30 shrink-0')} />
+            {b.imageUrl && (b.title || b.subtitle) && <div className="absolute inset-0 bg-black/30" />}
+            {(b.title || b.subtitle) && (
+              <>
+                <Megaphone size={22} className={cn('relative z-10', b.textLight ? 'text-white/80 shrink-0' : 'text-black/60 shrink-0')} />
+                <div className="relative z-10 flex-1 min-w-0 text-left">
+                  <p className={cn('text-sm font-black leading-tight', b.textLight ? 'text-white' : 'text-black')}>{b.title}</p>
+                  {b.subtitle && <p className={cn('text-[11px] font-semibold mt-0.5 leading-tight', b.textLight ? 'text-white/75' : 'text-black/60')}>{b.subtitle}</p>}
+                </div>
+                <ChevronRight size={16} className={cn('relative z-10', b.textLight ? 'text-white/50 shrink-0' : 'text-black/30 shrink-0')} />
+              </>
+            )}
           </motion.button>
         ))}
       </AnimatePresence>
