@@ -1000,6 +1000,7 @@ interface AdminBanner {
   subtitle?: string;
   bgFrom: string;
   bgTo: string;
+  imageUrl?: string;
   textLight: boolean;
   destination: string;
   order: number;
@@ -5975,10 +5976,14 @@ function BannersAdminPanel({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState('');
+  const [uploadError, setUploadError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const blank = (): Omit<AdminBanner, 'id'> => ({
     title: '', subtitle: '', bgFrom: '#6366f1', bgTo: '#8b5cf6',
-    textLight: true, destination: 'for-you', order: banners.length, active: true,
+    imageUrl: '', textLight: true, destination: 'for-you', order: banners.length, active: true,
   });
   const [form, setForm] = useState<Omit<AdminBanner, 'id'>>(blank());
   const [urlInput, setUrlInput] = useState('');
@@ -5996,24 +6001,57 @@ function BannersAdminPanel({ onClose }: { onClose: () => void }) {
     const { id, ...rest } = b;
     setForm(rest);
     setUrlInput(b.destination.startsWith('http') ? b.destination : '');
+    setImageFile(null);
+    setImagePreview(b.imageUrl || '');
+    setUploadError('');
   };
 
-  const cancelEdit = () => { setEditId(null); setForm(blank()); setUrlInput(''); };
+  const cancelEdit = () => {
+    setEditId(null); setForm(blank()); setUrlInput('');
+    setImageFile(null); setImagePreview(''); setUploadError('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleImagePick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { setUploadError('Image must be under 5 MB.'); return; }
+    setUploadError('');
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview('');
+    setForm(f => ({ ...f, imageUrl: '' }));
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const save = async () => {
     const dest = form.destination === 'url' ? urlInput.trim() : form.destination;
     if (!form.title.trim() || !dest) return;
     setSaving(true);
+    setUploadError('');
     try {
-      const payload = { ...form, destination: dest };
+      let imageUrl = form.imageUrl || '';
+      if (imageFile) {
+        const blob = await compressImage(imageFile, 1200);
+        const path = `banner_images/${Date.now()}.webp`;
+        const snap = await uploadBytes(storageRef(storage, path), blob, { contentType: 'image/webp' });
+        imageUrl = await getDownloadURL(snap.ref);
+      }
+      const payload = { ...form, destination: dest, imageUrl };
       if (editId) {
         await updateDoc(doc(db, 'banners', editId), payload);
       } else {
         await addDoc(collection(db, 'banners'), payload);
       }
       cancelEdit();
-    } catch (e) { console.error(e); }
-    finally { setSaving(false); }
+    } catch (e: any) {
+      console.error(e);
+      setUploadError(e?.message || 'Save failed. Try again.');
+    } finally { setSaving(false); }
   };
 
   const toggleActive = async (b: AdminBanner) => {
@@ -6036,6 +6074,7 @@ function BannersAdminPanel({ onClose }: { onClose: () => void }) {
   };
 
   const isUrl = form.destination === 'url';
+  const previewImage = imagePreview || form.imageUrl || '';
   const destLabel = (d: string) => {
     if (d.startsWith('http')) return d;
     return BANNER_DEST_OPTIONS.find(o => o.value === d)?.label ?? d;
@@ -6071,22 +6110,48 @@ function BannersAdminPanel({ onClose }: { onClose: () => void }) {
               value={form.subtitle ?? ''}
               onChange={e => setForm(f => ({ ...f, subtitle: e.target.value }))}
             />
-            <div className="flex gap-2 items-center">
-              <div className="flex-1">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-1">Gradient from</p>
-                <div className="flex items-center gap-2 border border-black/10 rounded-xl px-3 py-2">
-                  <input type="color" value={form.bgFrom} onChange={e => setForm(f => ({ ...f, bgFrom: e.target.value }))} className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent p-0" />
-                  <span className="text-xs font-mono text-brand-navy/60">{form.bgFrom}</span>
+
+            {/* Photo upload */}
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-1">Background photo (optional)</p>
+              {previewImage ? (
+                <div className="relative rounded-xl overflow-hidden h-20">
+                  <img src={previewImage} alt="" className="w-full h-full object-cover" />
+                  <button onClick={removeImage}
+                    className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center">
+                    <X size={12} className="text-white" />
+                  </button>
                 </div>
-              </div>
-              <div className="flex-1">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-1">Gradient to</p>
-                <div className="flex items-center gap-2 border border-black/10 rounded-xl px-3 py-2">
-                  <input type="color" value={form.bgTo} onChange={e => setForm(f => ({ ...f, bgTo: e.target.value }))} className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent p-0" />
-                  <span className="text-xs font-mono text-brand-navy/60">{form.bgTo}</span>
-                </div>
-              </div>
+              ) : (
+                <button onClick={() => fileInputRef.current?.click()}
+                  className="w-full h-14 rounded-xl border-2 border-dashed border-black/10 flex items-center justify-center gap-2 text-brand-navy/40 hover:border-brand-navy/20 hover:text-brand-navy/60 transition-colors">
+                  <Image size={16} />
+                  <span className="text-xs font-semibold">Upload photo</span>
+                </button>
+              )}
+              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImagePick} />
+              {!previewImage && <p className="text-[10px] text-brand-navy/35 mt-1">If no photo, gradient is used instead</p>}
             </div>
+
+            {!previewImage && (
+              <div className="flex gap-2 items-center">
+                <div className="flex-1">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-1">Gradient from</p>
+                  <div className="flex items-center gap-2 border border-black/10 rounded-xl px-3 py-2">
+                    <input type="color" value={form.bgFrom} onChange={e => setForm(f => ({ ...f, bgFrom: e.target.value }))} className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent p-0" />
+                    <span className="text-xs font-mono text-brand-navy/60">{form.bgFrom}</span>
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-1">Gradient to</p>
+                  <div className="flex items-center gap-2 border border-black/10 rounded-xl px-3 py-2">
+                    <input type="color" value={form.bgTo} onChange={e => setForm(f => ({ ...f, bgTo: e.target.value }))} className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent p-0" />
+                    <span className="text-xs font-mono text-brand-navy/60">{form.bgTo}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-2 items-center">
               <div className="flex-1">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-1">Text colour</p>
@@ -6122,14 +6187,17 @@ function BannersAdminPanel({ onClose }: { onClose: () => void }) {
               )}
             </div>
             {/* Preview */}
-            <div className="rounded-[1rem] overflow-hidden h-16 flex items-center px-4 gap-3"
-              style={{ background: `linear-gradient(135deg, ${form.bgFrom} 0%, ${form.bgTo} 100%)` }}>
-              <Megaphone size={20} className={form.textLight ? 'text-white/80' : 'text-black/60'} />
-              <div>
+            <div className="rounded-[1rem] overflow-hidden h-16 flex items-center px-4 gap-3 relative"
+              style={previewImage ? {} : { background: `linear-gradient(135deg, ${form.bgFrom} 0%, ${form.bgTo} 100%)` }}>
+              {previewImage && <img src={previewImage} alt="" className="absolute inset-0 w-full h-full object-cover" />}
+              {previewImage && <div className="absolute inset-0 bg-black/30" />}
+              <Megaphone size={20} className={cn('relative z-10', form.textLight ? 'text-white/80' : 'text-black/60')} />
+              <div className="relative z-10">
                 <p className={cn('text-sm font-black leading-tight', form.textLight ? 'text-white' : 'text-black')}>{form.title || 'Banner title'}</p>
                 {form.subtitle && <p className={cn('text-[11px] font-semibold leading-tight', form.textLight ? 'text-white/70' : 'text-black/60')}>{form.subtitle}</p>}
               </div>
             </div>
+            {uploadError && <p className="text-xs text-red-500">{uploadError}</p>}
             <div className="flex gap-2 pt-1">
               {editId && <button onClick={cancelEdit} className="flex-1 py-2.5 rounded-xl border border-black/10 text-sm font-bold text-brand-navy/60">Cancel</button>}
               <button onClick={save} disabled={saving || !form.title.trim()} className="flex-1 py-2.5 rounded-xl bg-brand-navy text-white text-sm font-bold disabled:opacity-40 transition-opacity">
@@ -6145,13 +6213,16 @@ function BannersAdminPanel({ onClose }: { onClose: () => void }) {
             <div className="py-8 text-center text-brand-navy/40 text-sm">No banners yet</div>
           ) : banners.map((b, i) => (
             <div key={b.id} className="bg-white rounded-[1.5rem] border border-black/5 shadow-sm overflow-hidden">
-              <div className="h-14 flex items-center px-4 gap-3" style={{ background: `linear-gradient(135deg, ${b.bgFrom} 0%, ${b.bgTo} 100%)` }}>
-                <Megaphone size={16} className={b.textLight ? 'text-white/80' : 'text-black/60'} />
-                <div className="flex-1 min-w-0">
+              <div className="h-14 flex items-center px-4 gap-3 relative"
+                style={b.imageUrl ? {} : { background: `linear-gradient(135deg, ${b.bgFrom} 0%, ${b.bgTo} 100%)` }}>
+                {b.imageUrl && <img src={b.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />}
+                {b.imageUrl && <div className="absolute inset-0 bg-black/30" />}
+                <Megaphone size={16} className={cn('relative z-10', b.textLight ? 'text-white/80' : 'text-black/60')} />
+                <div className="relative z-10 flex-1 min-w-0">
                   <p className={cn('text-sm font-black truncate', b.textLight ? 'text-white' : 'text-black')}>{b.title}</p>
                   {b.subtitle && <p className={cn('text-[11px] truncate', b.textLight ? 'text-white/70' : 'text-black/60')}>{b.subtitle}</p>}
                 </div>
-                <span className={cn('text-[10px] font-bold px-2 py-0.5 rounded-full', b.active ? 'bg-white/20 text-white' : 'bg-black/20 text-white/60')}>{b.active ? 'Live' : 'Off'}</span>
+                <span className={cn('relative z-10 text-[10px] font-bold px-2 py-0.5 rounded-full', b.active ? 'bg-white/20 text-white' : 'bg-black/20 text-white/60')}>{b.active ? 'Live' : 'Off'}</span>
               </div>
               <div className="px-4 py-3 flex items-center gap-2">
                 <Link size={12} className="text-brand-navy/30 shrink-0" />
@@ -24395,15 +24466,17 @@ function AdminBannerCarousel({ banners, onNavigate }: { banners: AdminBanner[]; 
           exit={{ opacity: 0, x: -24 }}
           transition={{ duration: 0.25 }}
           onClick={() => onNavigate(cur.destination)}
-          className="w-full relative flex items-center px-5 py-4 gap-4 active:opacity-90 transition-opacity"
-          style={{ background: `linear-gradient(135deg, ${cur.bgFrom} 0%, ${cur.bgTo} 100%)` }}
+          className="w-full relative flex items-center px-5 py-4 gap-4 active:opacity-90 transition-opacity overflow-hidden"
+          style={cur.imageUrl ? {} : { background: `linear-gradient(135deg, ${cur.bgFrom} 0%, ${cur.bgTo} 100%)` }}
         >
-          <Megaphone size={22} className={cur.textLight ? 'text-white/80 shrink-0' : 'text-black/60 shrink-0'} />
-          <div className="flex-1 min-w-0 text-left">
+          {cur.imageUrl && <img src={cur.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />}
+          {cur.imageUrl && <div className="absolute inset-0 bg-black/30" />}
+          <Megaphone size={22} className={cn('relative z-10', cur.textLight ? 'text-white/80 shrink-0' : 'text-black/60 shrink-0')} />
+          <div className="relative z-10 flex-1 min-w-0 text-left">
             <p className={cn('text-sm font-black leading-tight', cur.textLight ? 'text-white' : 'text-black')}>{cur.title}</p>
             {cur.subtitle && <p className={cn('text-[11px] font-semibold mt-0.5 leading-tight', cur.textLight ? 'text-white/75' : 'text-black/60')}>{cur.subtitle}</p>}
           </div>
-          <ChevronRight size={16} className={cur.textLight ? 'text-white/50 shrink-0' : 'text-black/30 shrink-0'} />
+          <ChevronRight size={16} className={cn('relative z-10', cur.textLight ? 'text-white/50 shrink-0' : 'text-black/30 shrink-0')} />
         </motion.button>
       </AnimatePresence>
       {active.length > 1 && (
