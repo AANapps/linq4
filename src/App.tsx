@@ -19975,6 +19975,8 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
   const [charityAnimalImageUrl, setCharityAnimalImageUrl] = useState(store?.charityAnimalImageUrl || '');
   const [charityTreeImageUrl, setCharityTreeImageUrl] = useState(store?.charityTreeImageUrl || '');
   const [uploadingCharity, setUploadingCharity] = useState<'animal' | 'tree' | null>(null);
+  const [charityStats, setCharityStats] = useState<{ animals: number; trees: number } | null>(null);
+  const [loadingCharityStats, setLoadingCharityStats] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -20007,6 +20009,27 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
 
   const updateTier = (i: number, field: 'stamps' | 'reward' | 'value', val: string) => {
     setTiers(prev => prev.map((t, idx) => idx === i ? { ...t, [field]: field === 'stamps' ? Math.max(1, parseInt(val) || 1) : field === 'value' ? (parseFloat(val) || 0) : val } : t));
+  };
+
+  const loadCharityStats = async () => {
+    if (!store || loadingCharityStats) return;
+    setLoadingCharityStats(true);
+    try {
+      const cardsSnap = await getDocs(query(collection(db, 'cards'), where('store_id', '==', store.id)));
+      const uids = [...new Set(cardsSnap.docs.map(d => d.data().user_id as string).filter(Boolean))];
+      let animals = 0, trees = 0;
+      const chunks: string[][] = [];
+      for (let i = 0; i < uids.length; i += 10) chunks.push(uids.slice(i, i + 10));
+      await Promise.all(chunks.map(async chunk => {
+        const snap = await getDocs(query(collection(db, 'users'), where('uid', 'in', chunk)));
+        snap.docs.forEach(d => {
+          animals += (d.data().charityAnimals || 0);
+          trees += (d.data().charityTrees || 0);
+        });
+      }));
+      setCharityStats({ animals, trees });
+    } catch (err) { console.error(err); }
+    setLoadingCharityStats(false);
   };
 
   const handleSave = async () => {
@@ -20365,6 +20388,52 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
               );
             })}
           </div>
+
+          {/* Charity vote stats */}
+          <button
+            onClick={loadCharityStats}
+            disabled={loadingCharityStats}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-brand-navy/6 text-brand-navy/70 text-[11px] font-bold hover:bg-brand-navy/10 transition-colors disabled:opacity-50"
+          >
+            <BarChart2 size={13} />
+            {loadingCharityStats ? 'Loading…' : charityStats ? 'Refresh Vote Stats' : 'View Charity Votes'}
+          </button>
+
+          {charityStats && (() => {
+            const total = charityStats.animals + charityStats.trees;
+            const animalPct = total > 0 ? Math.round((charityStats.animals / total) * 100) : 0;
+            const treePct = total > 0 ? 100 - animalPct : 0;
+            return (
+              <div className="rounded-2xl bg-white border border-brand-navy/8 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/60">Charity Votes</p>
+                  <p className="text-[10px] font-bold text-brand-navy/40">{total} total</p>
+                </div>
+                <div className="space-y-2.5">
+                  {/* Animal bar */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-xs font-bold">
+                      <span className="text-brand-navy">🐾 Animals</span>
+                      <span className="text-brand-navy/60">{charityStats.animals} ({animalPct}%)</span>
+                    </div>
+                    <div className="h-2.5 bg-brand-navy/8 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full bg-emerald-400 transition-all duration-700" style={{ width: `${animalPct}%` }} />
+                    </div>
+                  </div>
+                  {/* Tree bar */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-xs font-bold">
+                      <span className="text-brand-navy">🌳 Trees</span>
+                      <span className="text-brand-navy/60">{charityStats.trees} ({treePct}%)</span>
+                    </div>
+                    <div className="h-2.5 bg-brand-navy/8 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full bg-teal-400 transition-all duration-700" style={{ width: `${treePct}%` }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {store && (
