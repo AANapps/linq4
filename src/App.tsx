@@ -1852,7 +1852,7 @@ export default function App() {
 
       {/* Main Content */}
       <main className="px-6 pt-4 pb-8">
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="popLayout">
           {viewingStore ? (
             <StoreProfileView
               key="store-profile"
@@ -27097,9 +27097,14 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
   const [selectedDealOffer, setSelectedDealOffer] = useState<StoreOffer | null>(null);
 
   useEffect(() => {
-    navigator.geolocation?.getCurrentPosition(pos => {
-      setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-    });
+    if (!navigator.geolocation) return;
+    navigator.permissions?.query({ name: 'geolocation' }).then(status => {
+      if (status.state === 'granted') {
+        navigator.geolocation.getCurrentPosition(pos => {
+          setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        });
+      }
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -27483,9 +27488,10 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 20 }}
+      exit={{ opacity: 0, y: 16 }}
+      transition={{ duration: 0.18, ease: 'easeOut' }}
       className="space-y-5"
     >
       <div className="flex items-center justify-between">
