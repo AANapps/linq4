@@ -21713,35 +21713,38 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
             ...storeWallPosts.map(p => ({ _type: 'wall' as const, _ts: p.createdAt?.toMillis?.() ?? 0, data: p })),
           ].sort((a, b) => b._ts - a._ts);
           return (
-            <div className="divide-y-[3px] divide-gray-200 bg-white -mx-6 border-t border-gray-100">
-              {merged.map(item =>
-                item._type === 'global' ? (
-                  <FeedPostCard key={item.data.id} post={item.data} currentUser={user} onViewUser={onViewUser}
-                    onLike={async (p) => { const ref = doc(db, 'global_posts', p.id); const liked = (p.likedBy || []).includes(user.uid); await updateDoc(ref, { likedBy: liked ? arrayRemove(user.uid) : arrayUnion(user.uid), likesCount: liked ? Math.max(0, p.likesCount - 1) : p.likesCount + 1 }); }}
-                    onVote={async (p, idx) => { const ref = doc(db, 'global_posts', p.id); const votes = p.pollVotes || {}; const oldKey = Object.keys(votes).find(k => (votes[k] || []).includes(user.uid)); const updates: any = { [`pollVotes.${idx}`]: arrayUnion(user.uid) }; if (oldKey !== undefined && oldKey !== String(idx)) updates[`pollVotes.${oldKey}`] = arrayRemove(user.uid); await updateDoc(ref, updates); }}
-                  />
-                ) : (
-                  <div key={item.data.id} className="px-6 py-4 space-y-2.5">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full overflow-hidden border border-black/5 bg-teal-50 shrink-0 flex items-center justify-center">
-                        <PixelAvatar uid={item.data.authorUid} size={40} view="head" />
+            <div className="bg-white -mx-6 border-t-[3px] border-gray-200">
+              {merged.map((item, idx) => (
+                <React.Fragment key={item._type === 'global' ? item.data.id : `w-${item.data.id}`}>
+                  {idx > 0 && <div className="h-[3px] bg-gray-200" />}
+                  {item._type === 'global' ? (
+                    <FeedPostCard post={item.data} currentUser={user} onViewUser={onViewUser}
+                      onLike={async (p) => { const ref = doc(db, 'global_posts', p.id); const liked = (p.likedBy || []).includes(user.uid); await updateDoc(ref, { likedBy: liked ? arrayRemove(user.uid) : arrayUnion(user.uid), likesCount: liked ? Math.max(0, p.likesCount - 1) : p.likesCount + 1 }); }}
+                      onVote={async (p, i) => { const ref = doc(db, 'global_posts', p.id); const votes = p.pollVotes || {}; const oldKey = Object.keys(votes).find(k => (votes[k] || []).includes(user.uid)); const updates: any = { [`pollVotes.${i}`]: arrayUnion(user.uid) }; if (oldKey !== undefined && oldKey !== String(i)) updates[`pollVotes.${oldKey}`] = arrayRemove(user.uid); await updateDoc(ref, updates); }}
+                    />
+                  ) : (
+                    <div className="px-6 py-4 space-y-2.5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full overflow-hidden border border-black/5 bg-teal-50 shrink-0 flex items-center justify-center">
+                          <PixelAvatar uid={item.data.authorUid} size={40} view="head" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm leading-snug">
+                            <span className="font-bold cursor-pointer hover:text-brand-gold transition-colors"
+                              onClick={async () => { const snap = await getDoc(doc(db, 'users', item.data.authorUid)).catch(() => null); if (snap?.exists()) onViewUser({ uid: snap.id, ...snap.data() } as UserProfile); }}>
+                              {item.data.authorName}
+                            </span>
+                            <span className="text-brand-navy/40 mx-1">›</span>
+                            <span className="font-bold text-brand-gold">{vendorStore?.name || profile.name}</span>
+                          </p>
+                          <p className="text-[10px] text-brand-navy/45 font-medium">{item.data.createdAt ? format(item.data.createdAt.toDate(), 'MMM d · h:mm a') : 'Just now'}</p>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm leading-snug">
-                          <span className="font-bold cursor-pointer hover:text-brand-gold transition-colors"
-                            onClick={async () => { const snap = await getDoc(doc(db, 'users', item.data.authorUid)).catch(() => null); if (snap?.exists()) onViewUser({ uid: snap.id, ...snap.data() } as UserProfile); }}>
-                            {item.data.authorName}
-                          </span>
-                          <span className="text-brand-navy/40 mx-1">›</span>
-                          <span className="font-bold text-brand-gold">{vendorStore?.name || profile.name}</span>
-                        </p>
-                        <p className="text-[10px] text-brand-navy/45 font-medium">{item.data.createdAt ? format(item.data.createdAt.toDate(), 'MMM d · h:mm a') : 'Just now'}</p>
-                      </div>
+                      <p className="text-sm text-brand-navy/80 leading-relaxed">{item.data.content}</p>
                     </div>
-                    <p className="text-sm text-brand-navy/80 leading-relaxed">{item.data.content}</p>
-                  </div>
-                )
-              )}
+                  )}
+                </React.Fragment>
+              ))}
               {merged.length === 0 && <div className="py-16 text-center text-brand-navy/32"><MessageSquare size={48} className="mx-auto mb-3 opacity-10" /><p className="font-bold text-sm">No posts yet</p></div>}
             </div>
           );
@@ -21749,22 +21752,30 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
 
         {activeSubTab === 'interactions' && (() => {
           const votedPolls = allPostsForVotes.filter(p => Object.values(p.pollVotes || {}).some(arr => (arr as string[]).includes(profile.uid)));
+          const allItems = [
+            { _kind: 'label' as const, text: `Liked (${likedPosts.length})`, icon: <Heart size={12} fill="currentColor" /> },
+            ...likedPosts.map(p => ({ _kind: 'post' as const, post: p })),
+            { _kind: 'label' as const, text: `Votes Cast (${votedPolls.length})`, icon: <BarChart2 size={12} /> },
+            ...votedPolls.map(p => ({ _kind: 'post' as const, post: p })),
+          ];
+          let postIdx = -1;
           return (
-            <div className="divide-y-[3px] divide-gray-200 bg-white -mx-6 border-t border-gray-100">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold px-6 py-3 flex items-center gap-2 bg-gray-50"><Heart size={12} fill="currentColor" /> Liked ({likedPosts.length})</p>
-              {likedPosts.map(post => (
-                <FeedPostCard key={post.id} post={post} currentUser={user} onViewUser={onViewUser}
-                  onLike={async (p) => { const ref = doc(db, 'global_posts', p.id); const liked = (p.likedBy || []).includes(user.uid); await updateDoc(ref, { likedBy: liked ? arrayRemove(user.uid) : arrayUnion(user.uid), likesCount: liked ? Math.max(0, p.likesCount - 1) : p.likesCount + 1 }); }}
-                  onVote={async (p, idx) => { const ref = doc(db, 'global_posts', p.id); const votes = p.pollVotes || {}; const oldKey = Object.keys(votes).find(k => (votes[k] || []).includes(user.uid)); const updates: any = { [`pollVotes.${idx}`]: arrayUnion(user.uid) }; if (oldKey !== undefined && oldKey !== String(idx)) updates[`pollVotes.${oldKey}`] = arrayRemove(user.uid); await updateDoc(ref, updates); }}
-                />
-              ))}
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold px-6 py-3 flex items-center gap-2 bg-gray-50"><BarChart2 size={12} /> Votes Cast ({votedPolls.length})</p>
-              {votedPolls.map(post => (
-                <FeedPostCard key={post.id} post={post} currentUser={user} onViewUser={onViewUser}
-                  onLike={async (p) => { const ref = doc(db, 'global_posts', p.id); const liked = (p.likedBy || []).includes(user.uid); await updateDoc(ref, { likedBy: liked ? arrayRemove(user.uid) : arrayUnion(user.uid), likesCount: liked ? Math.max(0, p.likesCount - 1) : p.likesCount + 1 }); }}
-                  onVote={async (p, idx) => { const ref = doc(db, 'global_posts', p.id); const votes = p.pollVotes || {}; const oldKey = Object.keys(votes).find(k => (votes[k] || []).includes(user.uid)); const updates: any = { [`pollVotes.${idx}`]: arrayUnion(user.uid) }; if (oldKey !== undefined && oldKey !== String(idx)) updates[`pollVotes.${oldKey}`] = arrayRemove(user.uid); await updateDoc(ref, updates); }}
-                />
-              ))}
+            <div className="bg-white -mx-6 border-t-[3px] border-gray-200">
+              {allItems.map((item, idx) => {
+                if (item._kind === 'label') return (
+                  <p key={`lbl-${idx}`} className="text-[10px] font-bold uppercase tracking-widest text-brand-gold px-6 py-3 flex items-center gap-2 bg-gray-50">{item.icon} {item.text}</p>
+                );
+                postIdx++;
+                return (
+                  <React.Fragment key={item.post.id}>
+                    {postIdx > 0 && <div className="h-[3px] bg-gray-200" />}
+                    <FeedPostCard post={item.post} currentUser={user} onViewUser={onViewUser}
+                      onLike={async (p) => { const ref = doc(db, 'global_posts', p.id); const liked = (p.likedBy || []).includes(user.uid); await updateDoc(ref, { likedBy: liked ? arrayRemove(user.uid) : arrayUnion(user.uid), likesCount: liked ? Math.max(0, p.likesCount - 1) : p.likesCount + 1 }); }}
+                      onVote={async (p, i) => { const ref = doc(db, 'global_posts', p.id); const votes = p.pollVotes || {}; const oldKey = Object.keys(votes).find(k => (votes[k] || []).includes(user.uid)); const updates: any = { [`pollVotes.${i}`]: arrayUnion(user.uid) }; if (oldKey !== undefined && oldKey !== String(i)) updates[`pollVotes.${oldKey}`] = arrayRemove(user.uid); await updateDoc(ref, updates); }}
+                    />
+                  </React.Fragment>
+                );
+              })}
             </div>
           );
         })()}
@@ -28827,32 +28838,34 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
 
 
       {/* Posts */}
-      <div className="-mx-6 divide-y-[3px] divide-gray-200 bg-white border-t border-gray-100">
-        {userPosts.map(post => (
-          <FeedPostCard
-            key={post.id}
-            post={post}
-            currentUser={currentUser}
-            currentProfile={currentProfile}
-            onViewUser={onViewUser}
-            onLike={async (p) => {
-              const ref = doc(db, 'global_posts', p.id);
-              const alreadyLiked = (p.likedBy || []).includes(currentUser.uid);
-              await updateDoc(ref, {
-                likedBy: alreadyLiked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid),
-                likesCount: alreadyLiked ? Math.max(0, p.likesCount - 1) : p.likesCount + 1,
-              });
-            }}
-            onVote={async (p, optionIndex) => {
-              const ref = doc(db, 'global_posts', p.id);
-              const votes = p.pollVotes || {};
-              const currentVoteKey = Object.keys(votes).find(k => (votes[k] || []).includes(currentUser.uid));
-              const updates: any = {};
-              if (currentVoteKey !== undefined) updates[`pollVotes.${currentVoteKey}`] = arrayRemove(currentUser.uid);
-              if (currentVoteKey !== String(optionIndex)) updates[`pollVotes.${optionIndex}`] = arrayUnion(currentUser.uid);
-              if (Object.keys(updates).length > 0) await updateDoc(ref, updates);
-            }}
-          />
+      <div className="-mx-6 bg-white border-t-[3px] border-gray-200">
+        {userPosts.map((post, idx) => (
+          <React.Fragment key={post.id}>
+            {idx > 0 && <div className="h-[3px] bg-gray-200" />}
+            <FeedPostCard
+              post={post}
+              currentUser={currentUser}
+              currentProfile={currentProfile}
+              onViewUser={onViewUser}
+              onLike={async (p) => {
+                const ref = doc(db, 'global_posts', p.id);
+                const alreadyLiked = (p.likedBy || []).includes(currentUser.uid);
+                await updateDoc(ref, {
+                  likedBy: alreadyLiked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid),
+                  likesCount: alreadyLiked ? Math.max(0, p.likesCount - 1) : p.likesCount + 1,
+                });
+              }}
+              onVote={async (p, optionIndex) => {
+                const ref = doc(db, 'global_posts', p.id);
+                const votes = p.pollVotes || {};
+                const currentVoteKey = Object.keys(votes).find(k => (votes[k] || []).includes(currentUser.uid));
+                const updates: any = {};
+                if (currentVoteKey !== undefined) updates[`pollVotes.${currentVoteKey}`] = arrayRemove(currentUser.uid);
+                if (currentVoteKey !== String(optionIndex)) updates[`pollVotes.${optionIndex}`] = arrayUnion(currentUser.uid);
+                if (Object.keys(updates).length > 0) await updateDoc(ref, updates);
+              }}
+            />
+          </React.Fragment>
         ))}
         {userPosts.length === 0 && (
           <p className="text-center py-12 text-xs text-brand-navy/60 font-bold uppercase tracking-widest italic">No posts yet</p>
