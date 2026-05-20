@@ -5524,7 +5524,63 @@ function CardSetsAdminPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
+const SEED_USER_IDS = ['demo_u1','demo_u2','demo_u3','demo_u4','demo_u5','demo_v1','demo_v2','demo_v3','demo_v4'];
+
+async function purgeSeedData(): Promise<string> {
+  const results: string[] = [];
+  try {
+    // Delete seed stores (ownerUid === 'demo-vendor')
+    const storesSnap = await getDocs(query(collection(db, 'stores'), where('ownerUid', '==', 'demo-vendor')));
+    const seedStoreIds = storesSnap.docs.map(d => d.id);
+    for (const d of storesSnap.docs) await deleteDoc(d.ref);
+    results.push(`${storesSnap.size} demo stores`);
+
+    // Delete seed users
+    for (const uid of SEED_USER_IDS) {
+      await deleteDoc(doc(db, 'users', uid)).catch(() => {});
+      await deleteDoc(doc(db, 'vendors', uid)).catch(() => {});
+    }
+    results.push(`${SEED_USER_IDS.length} demo users`);
+
+    // Delete global_posts by seed users
+    if (SEED_USER_IDS.length > 0) {
+      const postsSnap = await getDocs(query(collection(db, 'global_posts'), where('authorUid', 'in', SEED_USER_IDS)));
+      for (const d of postsSnap.docs) await deleteDoc(d.ref);
+      results.push(`${postsSnap.size} demo posts`);
+    }
+
+    // Delete cards belonging to seed users
+    if (SEED_USER_IDS.length > 0) {
+      const cardsSnap = await getDocs(query(collection(db, 'cards'), where('user_id', 'in', SEED_USER_IDS)));
+      for (const d of cardsSnap.docs) await deleteDoc(d.ref);
+      results.push(`${cardsSnap.size} demo cards`);
+    }
+
+    // Delete reviews for seed stores
+    if (seedStoreIds.length > 0) {
+      const reviewsSnap = await getDocs(query(collection(db, 'user_reviews'), where('storeId', 'in', seedStoreIds)));
+      for (const d of reviewsSnap.docs) await deleteDoc(d.ref);
+      if (reviewsSnap.size > 0) results.push(`${reviewsSnap.size} demo reviews`);
+    }
+  } catch (e: any) {
+    return `Error: ${e?.message || e}`;
+  }
+  return `Deleted: ${results.join(', ')}`;
+}
+
 function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts, onOpenOffers, onOpenLinqle, onOpenDailyVote, onOpenCards, onOpenBanners, onOpenUiColors }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void; onOpenOffers: () => void; onOpenLinqle: () => void; onOpenDailyVote: () => void; onOpenCards: () => void; onOpenBanners: () => void; onOpenUiColors: () => void }) {
+  const [purging, setPurging] = useState(false);
+  const [purgeResult, setPurgeResult] = useState<string | null>(null);
+  const [confirmPurge, setConfirmPurge] = useState(false);
+
+  const handlePurge = async () => {
+    setPurging(true);
+    const result = await purgeSeedData();
+    setPurgeResult(result);
+    setPurging(false);
+    setConfirmPurge(false);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -5698,6 +5754,35 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores,
             </div>
           </motion.button>
 
+        </div>
+
+        {/* Seed data purge */}
+        <div className="px-1 pb-4">
+          {purgeResult ? (
+            <div className="rounded-2xl bg-green-50 border border-green-200 p-4 text-center space-y-1">
+              <p className="text-sm font-bold text-green-700">✓ Done</p>
+              <p className="text-xs text-green-600">{purgeResult}</p>
+              <button onClick={() => setPurgeResult(null)} className="text-xs text-green-700 underline mt-1">Dismiss</button>
+            </div>
+          ) : confirmPurge ? (
+            <div className="rounded-2xl bg-red-50 border border-red-200 p-4 space-y-3">
+              <p className="text-sm font-bold text-red-700 text-center">Delete all seed/demo data?</p>
+              <p className="text-xs text-red-600 text-center">This removes demo stores, users, posts and cards from Firestore. Cannot be undone.</p>
+              <div className="flex gap-2">
+                <button onClick={() => setConfirmPurge(false)} className="flex-1 py-2.5 rounded-xl bg-white border border-red-200 text-red-600 font-bold text-sm">Cancel</button>
+                <button onClick={handlePurge} disabled={purging} className="flex-1 py-2.5 rounded-xl bg-red-500 text-white font-bold text-sm disabled:opacity-50">
+                  {purging ? 'Deleting…' : 'Yes, delete'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmPurge(true)}
+              className="w-full py-3 rounded-2xl bg-red-50 border border-red-200 text-red-600 font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+            >
+              <Trash2 size={15} /> Purge Seed Data
+            </button>
+          )}
         </div>
 
       </div>
@@ -20057,22 +20142,13 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
   ];
 
   useEffect(() => {
-    getDocs(collection(db, 'rule_templates')).then(async snap => {
-      if (snap.empty) {
-        // Seed defaults
-        await Promise.all(
-          DEFAULT_RULE_TEMPLATES.map((text, order) =>
-            addDoc(collection(db, 'rule_templates'), { text, order })
-          )
-        );
-        setRuleTemplates(DEFAULT_RULE_TEMPLATES);
-      } else {
-        const sorted = snap.docs
-          .map(d => ({ text: d.data().text as string, order: d.data().order as number ?? 0 }))
-          .sort((a, b) => a.order - b.order)
-          .map(r => r.text);
-        setRuleTemplates(sorted);
-      }
+    getDocs(collection(db, 'rule_templates')).then(snap => {
+      if (snap.empty) { setRuleTemplates(DEFAULT_RULE_TEMPLATES); return; }
+      const sorted = snap.docs
+        .map(d => ({ text: d.data().text as string, order: d.data().order as number ?? 0 }))
+        .sort((a, b) => a.order - b.order)
+        .map(r => r.text);
+      setRuleTemplates(sorted);
     }).catch(() => {});
   }, []);
 
