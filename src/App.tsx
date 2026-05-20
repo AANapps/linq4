@@ -13602,7 +13602,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   useEffect(() => {
     const isSpendOnly = store?.membershipEnabled === true && store.membershipType === 'spend';
     onVendorQRStatus?.(!!store && !isSpendOnly && (
-      (store.cardEnabled !== false && store.scanMethod === 'qr') ||
+      (store.cardEnabled !== false && store.scanMethod !== 'nfc') ||
       (store.membershipEnabled === true && store.membershipType === 'visit')
     ));
   }, [store]);
@@ -28343,7 +28343,6 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
   const [allCards, setAllCards] = useState<Card[]>([]);
   const [stores, setStores] = useState<StoreProfile[]>([]);
   const [vendorStore, setVendorStore] = useState<StoreProfile | null>(null);
-  const [transactionHistory, setTransactionHistory] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
   const [newReview, setNewReview] = useState('');
   const [rating, setRating] = useState(5);
@@ -28420,36 +28419,33 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
       console.error("Public profile cards error:", error);
     });
 
-    // Fetch all cards (including archived) for lifetime stamp count
-    const allQ = query(collection(db, 'cards'), where('user_id', '==', initialTargetUser.uid));
+    // Fetch non-archived cards for lifetime stamp count (archived cards are private per Firestore rules)
+    const allQ = query(collection(db, 'cards'), where('user_id', '==', initialTargetUser.uid), where('isArchived', '==', false));
     const unsubAllCards = onSnapshot(allQ, (snap) => {
       setAllCards(snap.docs.map(d => ({ id: d.id, ...d.data() } as Card)));
-    });
-
-    const hq = query(collection(db, 'transactions'), where('user_id', '==', initialTargetUser.uid), orderBy('completed_at', 'desc'), limit(10));
-    const unsubHistory = onSnapshot(hq, (snap) => {
-      setTransactionHistory(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
+    }, () => {});
 
     const rq = query(collection(db, 'user_reviews'), where('toUid', '==', initialTargetUser.uid), orderBy('createdAt', 'desc'));
     const unsubReviews = onSnapshot(rq, (snap) => {
       setReviews(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
+    }, () => {});
 
     // Follow listener
     const followId = `${currentUser.uid}_${initialTargetUser.uid}`;
     const unsubFollow = onSnapshot(doc(db, 'follows', followId), (snap) => {
       setIsFollowing(snap.exists());
-    });
+    }, () => {});
 
     // Target user follower/following counts
     const unsubTargetFollowers = onSnapshot(
       query(collection(db, 'follows'), where('followingUid', '==', initialTargetUser.uid)),
-      (snap) => setTargetFollowers(snap.size)
+      (snap) => setTargetFollowers(snap.size),
+      () => {}
     );
     const unsubTargetFollowing = onSnapshot(
       query(collection(db, 'follows'), where('followerUid', '==', initialTargetUser.uid)),
-      (snap) => setTargetFollowing(snap.size)
+      (snap) => setTargetFollowing(snap.size),
+      () => {}
     );
 
     let unsubStore = () => {};
@@ -28477,7 +28473,6 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
       unsubCards();
       unsubAllCards();
       unsubStore();
-      unsubHistory();
       unsubReviews();
       unsubTargetFollowers();
       unsubTargetFollowing();
