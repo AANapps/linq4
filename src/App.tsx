@@ -8986,35 +8986,7 @@ function buildStampCelebrationPages(
     });
   }
 
-  // 2. Monopoly pack page — right after card progress (rank spliced at position 2 by caller)
-  const joinedStickerCardIds = new Set(joinedStickerCards.map(sc => sc.programme_id));
-  const joinedProg = collectiblePrograms.find(p => joinedStickerCardIds.has(p.id));
-  if (joinedProg) {
-    pages.push({
-      type: 'monopoly_pack',
-      currentStamps: card.current_stamps,
-      totalStamps: card.current_stamps,
-      reward: '',
-      encouragement: '',
-      done: false,
-      monopolyChallengeName: joinedProg.title,
-    });
-  } else if (collectiblePrograms.length > 0) {
-    // User hasn't joined — show a promo teaser for the first active programme
-    const promo = collectiblePrograms[0];
-    pages.push({
-      type: 'collectible_promo',
-      currentStamps: card.current_stamps,
-      totalStamps: card.current_stamps,
-      reward: '',
-      encouragement: '',
-      done: false,
-      collectiblePromoName: promo.title,
-      collectiblePromoReward: promo.reward,
-    });
-  }
-
-  // 3. Charity deed page (rank is spliced in at position 2 by caller, after the pack reveal)
+  // 2. Charity deed page
   const charityAnimal = ENDANGERED_ANIMALS[card.current_stamps % ENDANGERED_ANIMALS.length];
   pages.push({
     type: 'charity',
@@ -9153,20 +9125,16 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
               const rankWeeklyChange = rankWeeklyBefore - rankWeeklyAfter;
 
               if (rankAfter > 0) {
-                pages.splice(1, 0, {
-                  type: 'rank',
-                  currentStamps: newStamps,
-                  totalStamps: newStamps,
-                  reward: '',
-                  encouragement: '',
-                  done: false,
-                  rankBefore,
-                  rankAfter,
-                  rankChange,
-                  rankWeeklyBefore,
-                  rankWeeklyAfter,
-                  rankWeeklyChange,
-                });
+                // Embed rank into the stamp page rather than a separate slide
+                const stampPage = pages.find(p => p.type === 'stamp');
+                if (stampPage) {
+                  stampPage.rankBefore = rankBefore;
+                  stampPage.rankAfter = rankAfter;
+                  stampPage.rankChange = rankChange;
+                  stampPage.rankWeeklyBefore = rankWeeklyBefore;
+                  stampPage.rankWeeklyAfter = rankWeeklyAfter;
+                  stampPage.rankWeeklyChange = rankWeeklyChange;
+                }
               }
 
               if (rankChange > 0) {
@@ -9212,8 +9180,8 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         );
         const notJoined = activeStandardChallenges.filter(c => !(c.participantUids || []).includes(user.uid)).slice(0, 3);
         const pages: CelebrationPage[] = [];
-        // First page: +X points with confetti
-        pages.push({
+        // First page: +X points with confetti + rank
+        const visitPointsPage: CelebrationPage = {
           type: 'visit_points',
           currentStamps: current,
           totalStamps: current,
@@ -9224,7 +9192,32 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           storeName: store?.name,
           storeLogoUrl: store?.logoUrl,
           membershipColor: store?.membershipColor,
-        });
+        };
+        pages.push(visitPointsPage);
+        // Fetch rank and attach to visit_points page
+        (async () => {
+          try {
+            const snap = await getDocs(collection(db, 'users'));
+            const allUsers = snap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile)).filter(u => (u.totalStamps || 0) > 0).sort((a, b) => (b.totalStamps || 0) - (a.totalStamps || 0));
+            const newStamps = profile?.totalStamps || 0;
+            const oldStamps = newStamps - 1;
+            const userIdx = allUsers.findIndex(u => u.uid === user.uid);
+            const rankAfter = userIdx >= 0 ? userIdx + 1 : allUsers.length + 1;
+            const rankBefore = allUsers.filter(u => u.uid !== user.uid && (u.totalStamps || 0) > oldStamps).length + 1;
+            const rankChange = rankBefore - rankAfter;
+            const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+            const weeklyUsers = allUsers.filter(u => u.lastStreakDate && u.lastStreakDate >= sevenDaysAgo);
+            const weeklyUserIdx = weeklyUsers.findIndex(u => u.uid === user.uid);
+            const rankWeeklyAfter = weeklyUserIdx >= 0 ? weeklyUserIdx + 1 : weeklyUsers.length + 1;
+            const rankWeeklyChange = (weeklyUsers.filter(u => u.uid !== user.uid && (u.totalStamps || 0) > oldStamps).length + 1) - rankWeeklyAfter;
+            visitPointsPage.rankAfter = rankAfter;
+            visitPointsPage.rankBefore = rankBefore;
+            visitPointsPage.rankChange = rankChange;
+            visitPointsPage.rankWeeklyAfter = rankWeeklyAfter;
+            visitPointsPage.rankWeeklyBefore = rankWeeklyAfter + rankWeeklyChange;
+            visitPointsPage.rankWeeklyChange = rankWeeklyChange;
+          } catch (_) { /* rank is optional */ }
+        })();
         pages.push({
           type: 'charity',
           currentStamps: current,
@@ -9272,7 +9265,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         );
         const notJoined = activeStandardChallenges.filter(c => !(c.participantUids || []).includes(user.uid)).slice(0, 3);
         const pages: CelebrationPage[] = [];
-        pages.push({
+        const spendPointsPage: CelebrationPage = {
           type: 'visit_points',
           currentStamps: current,
           totalStamps: current,
@@ -9283,7 +9276,31 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           storeName: store?.name,
           storeLogoUrl: store?.logoUrl,
           membershipColor: store?.membershipColor,
-        });
+        };
+        pages.push(spendPointsPage);
+        (async () => {
+          try {
+            const snap = await getDocs(collection(db, 'users'));
+            const allUsers = snap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile)).filter(u => (u.totalStamps || 0) > 0).sort((a, b) => (b.totalStamps || 0) - (a.totalStamps || 0));
+            const newStamps = profile?.totalStamps || 0;
+            const oldStamps = newStamps - 1;
+            const userIdx = allUsers.findIndex(u => u.uid === user.uid);
+            const rankAfter = userIdx >= 0 ? userIdx + 1 : allUsers.length + 1;
+            const rankBefore = allUsers.filter(u => u.uid !== user.uid && (u.totalStamps || 0) > oldStamps).length + 1;
+            const rankChange = rankBefore - rankAfter;
+            const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+            const weeklyUsers = allUsers.filter(u => u.lastStreakDate && u.lastStreakDate >= sevenDaysAgo);
+            const weeklyUserIdx = weeklyUsers.findIndex(u => u.uid === user.uid);
+            const rankWeeklyAfter = weeklyUserIdx >= 0 ? weeklyUserIdx + 1 : weeklyUsers.length + 1;
+            const rankWeeklyChange = (weeklyUsers.filter(u => u.uid !== user.uid && (u.totalStamps || 0) > oldStamps).length + 1) - rankWeeklyAfter;
+            spendPointsPage.rankAfter = rankAfter;
+            spendPointsPage.rankBefore = rankBefore;
+            spendPointsPage.rankChange = rankChange;
+            spendPointsPage.rankWeeklyAfter = rankWeeklyAfter;
+            spendPointsPage.rankWeeklyBefore = rankWeeklyAfter + rankWeeklyChange;
+            spendPointsPage.rankWeeklyChange = rankWeeklyChange;
+          } catch (_) { /* rank is optional */ }
+        })();
         pages.push({
           type: 'charity',
           currentStamps: current,
@@ -11656,14 +11673,14 @@ function StampCelebrationModal({
     setCharityFeedback(null);
     setMonopolyPackOpen(false);
     setStageRedeemed(false);
-    if (!isCharity && !isRank && !isMonopolyPack) {
+    if (!isCharity && !isMonopolyPack) {
       fireCelebAnimation(PAGE_ANIM[pageKey] ?? 'sparkles');
     }
   }, [pageIdx]);
 
-  // Drumroll countdown effect for rank page
+  // Drumroll countdown effect for pages with embedded rank
   useEffect(() => {
-    if (!isRank || !rankAfterVal) return;
+    if (!rankAfterVal) return;
     setRankRevealed(false);
 
     const gTarget = rankAfterVal;
@@ -11700,7 +11717,7 @@ function StampCelebrationModal({
     }, 1200);
 
     return () => { clearInterval(iv1); clearTimeout(t1); clearInterval(iv2); };
-  }, [pageIdx, isRank]);
+  }, [pageIdx, rankAfterVal]);
 
   const handleCharityChoice = (choice: 'animal' | 'tree') => {
     if (charityPicked) return;
@@ -12434,6 +12451,50 @@ function StampCelebrationModal({
                   </motion.div>
                 </div>
 
+                {/* Inline rank tiles for visit/spend points pages */}
+                {rankAfterVal > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38 }}
+                    className="space-y-1.5"
+                  >
+                    <motion.p
+                      animate={!rankRevealed ? { opacity: [1, 0.4, 1] } : { opacity: 1 }}
+                      transition={!rankRevealed ? { duration: 0.55, repeat: Infinity } : {}}
+                      className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/60 text-center"
+                    >
+                      {rankRevealed ? '🏆 Your rank' : '🥁 Calculating rank...'}
+                    </motion.p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className={cn('rounded-2xl p-3 text-center space-y-0.5 border transition-colors duration-300', rankRevealed ? (rankChange > 0 ? 'bg-emerald-50 border-emerald-200' : rankChange < 0 ? 'bg-red-50/60 border-red-100' : 'bg-brand-navy/4 border-brand-navy/8') : 'bg-brand-navy/4 border-brand-navy/8')}>
+                        <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/60">Global</p>
+                        <motion.p
+                          key={rankRevealed ? 'g-final' : 'g-spin'}
+                          animate={rankRevealed ? { scale: [0.7, 1.2, 1] } : {}}
+                          className={cn('font-display font-black text-2xl leading-none tabular-nums', rankRevealed ? (rankChange > 0 ? 'text-emerald-600' : rankChange < 0 ? 'text-red-500' : 'text-brand-navy') : 'text-brand-navy/25')}
+                        >#{displayRankGlobal || '—'}</motion.p>
+                        {rankRevealed && rankChange !== 0 && (
+                          <p className={cn('text-[10px] font-black', rankChange > 0 ? 'text-emerald-500' : 'text-red-400')}>
+                            {rankChange > 0 ? `↑ +${rankChange}` : `↓ ${rankChange}`}
+                          </p>
+                        )}
+                      </div>
+                      <div className={cn('rounded-2xl p-3 text-center space-y-0.5 border transition-colors duration-300', rankRevealed ? (weeklyRankChange > 0 ? 'bg-emerald-50 border-emerald-200' : weeklyRankChange < 0 ? 'bg-red-50/60 border-red-100' : 'bg-brand-navy/4 border-brand-navy/8') : 'bg-brand-navy/4 border-brand-navy/8')}>
+                        <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/60">This Week</p>
+                        <motion.p
+                          key={rankRevealed ? 'w-final' : 'w-spin'}
+                          animate={rankRevealed ? { scale: [0.7, 1.2, 1] } : {}}
+                          className={cn('font-display font-black text-2xl leading-none tabular-nums', rankRevealed ? (weeklyRankChange > 0 ? 'text-emerald-600' : weeklyRankChange < 0 ? 'text-red-500' : 'text-brand-navy') : 'text-brand-navy/25')}
+                        >#{displayRankWeekly || '—'}</motion.p>
+                        {rankRevealed && weeklyRankChange !== 0 && (
+                          <p className={cn('text-[10px] font-black', weeklyRankChange > 0 ? 'text-emerald-500' : 'text-red-400')}>
+                            {weeklyRankChange > 0 ? `↑ +${weeklyRankChange}` : `↓ ${weeklyRankChange}`}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
                 {pages.length > 1 && (
                   <div className="flex justify-center gap-1.5">
                     {pages.map((_, i) => (
@@ -12591,6 +12652,50 @@ function StampCelebrationModal({
                       <div className="absolute inset-0 flex flex-col items-center justify-center">
                         <span className="text-3xl font-display font-bold text-brand-navy leading-none">{page.currentStamps}</span>
                         <span className="text-xs text-brand-navy/75 font-bold">/ {page.totalStamps}</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Inline rank tiles — shown on stamp pages when rank data is available */}
+                {page.type === 'stamp' && rankAfterVal > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                    className="space-y-1.5"
+                  >
+                    <motion.p
+                      animate={!rankRevealed ? { opacity: [1, 0.4, 1] } : { opacity: 1 }}
+                      transition={!rankRevealed ? { duration: 0.55, repeat: Infinity } : {}}
+                      className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/60 text-center"
+                    >
+                      {rankRevealed ? '🏆 Your rank' : '🥁 Calculating rank...'}
+                    </motion.p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className={cn('rounded-2xl p-3 text-center space-y-0.5 border transition-colors duration-300', rankRevealed ? (rankChange > 0 ? 'bg-emerald-50 border-emerald-200' : rankChange < 0 ? 'bg-red-50/60 border-red-100' : 'bg-brand-navy/4 border-brand-navy/8') : 'bg-brand-navy/4 border-brand-navy/8')}>
+                        <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/60">Global</p>
+                        <motion.p
+                          key={rankRevealed ? 'g-final' : 'g-spin'}
+                          animate={rankRevealed ? { scale: [0.7, 1.2, 1] } : {}}
+                          className={cn('font-display font-black text-2xl leading-none tabular-nums', rankRevealed ? (rankChange > 0 ? 'text-emerald-600' : rankChange < 0 ? 'text-red-500' : 'text-brand-navy') : 'text-brand-navy/25')}
+                        >#{displayRankGlobal || '—'}</motion.p>
+                        {rankRevealed && rankChange !== 0 && (
+                          <p className={cn('text-[10px] font-black', rankChange > 0 ? 'text-emerald-500' : 'text-red-400')}>
+                            {rankChange > 0 ? `↑ +${rankChange}` : `↓ ${rankChange}`}
+                          </p>
+                        )}
+                      </div>
+                      <div className={cn('rounded-2xl p-3 text-center space-y-0.5 border transition-colors duration-300', rankRevealed ? (weeklyRankChange > 0 ? 'bg-emerald-50 border-emerald-200' : weeklyRankChange < 0 ? 'bg-red-50/60 border-red-100' : 'bg-brand-navy/4 border-brand-navy/8') : 'bg-brand-navy/4 border-brand-navy/8')}>
+                        <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/60">This Week</p>
+                        <motion.p
+                          key={rankRevealed ? 'w-final' : 'w-spin'}
+                          animate={rankRevealed ? { scale: [0.7, 1.2, 1] } : {}}
+                          className={cn('font-display font-black text-2xl leading-none tabular-nums', rankRevealed ? (weeklyRankChange > 0 ? 'text-emerald-600' : weeklyRankChange < 0 ? 'text-red-500' : 'text-brand-navy') : 'text-brand-navy/25')}
+                        >#{displayRankWeekly || '—'}</motion.p>
+                        {rankRevealed && weeklyRankChange !== 0 && (
+                          <p className={cn('text-[10px] font-black', weeklyRankChange > 0 ? 'text-emerald-500' : 'text-red-400')}>
+                            {weeklyRankChange > 0 ? `↑ +${weeklyRankChange}` : `↓ ${weeklyRankChange}`}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </motion.div>
@@ -22914,6 +23019,8 @@ function SettingsMenu({
         if (snap.empty) {
           const storeRef = await addDoc(collection(db, 'stores'), {
             ...s,
+            cardEnabled: true,
+            reward: s.name === 'The Daily Grind' ? 'Free Coffee' : s.name === 'Glow Beauty Bar' ? 'Free Treatment' : s.name === 'Iron Haven Gym' ? 'Free Session' : s.name === 'The Barber Shop' ? 'Free Haircut' : 'Free Meal',
             ownerUid: "system_seed",
             email: "contact@" + s.name.toLowerCase().replace(/\s/g, '') + ".com",
             createdAt: serverTimestamp()
@@ -22921,7 +23028,7 @@ function SettingsMenu({
           storeId = storeRef.id;
         } else {
           storeId = snap.docs[0].id;
-          await updateDoc(doc(db, 'stores', storeId), { ...s });
+          await updateDoc(doc(db, 'stores', storeId), { ...s, cardEnabled: true });
         }
         seededStoreIds.push(storeId);
       }
@@ -27300,7 +27407,9 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
     : store.reward ? [{ stamps: store.stamps_required_for_reward || 10, reward: store.reward }] : [];
   const [tierSlideIdx, setTierSlideIdx] = React.useState(0);
   const [lbActiveType, setLbActiveType] = React.useState<'loyalty' | 'visit' | 'spend'>(
-    store.cardEnabled ? 'loyalty' : store.membershipType === 'spend' ? 'spend' : 'visit'
+    store.membershipEnabled && !store.cardEnabled
+      ? (store.membershipType === 'spend' ? 'spend' : 'visit')
+      : 'loyalty'
   );
 
   return (
