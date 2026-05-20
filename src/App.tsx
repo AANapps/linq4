@@ -952,9 +952,11 @@ interface RankEntry {
 }
 
 interface CelebrationPage {
-  type: 'stamp' | 'challenge' | 'upsell' | 'charity' | 'rank' | 'monopoly_pack' | 'challenges_list' | 'upsell_list' | 'stage_reward' | 'collectible_promo';
+  type: 'stamp' | 'challenge' | 'upsell' | 'charity' | 'rank' | 'monopoly_pack' | 'challenges_list' | 'upsell_list' | 'stage_reward' | 'collectible_promo' | 'visit_points';
   charityAnimalImageUrl?: string;
   charityTreeImageUrl?: string;
+  visitPoints?: number;
+  membershipColor?: string;
   storeName?: string;
   challengeTitle?: string;
   upsellTitle?: string;
@@ -9196,12 +9198,26 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       if (current > prev) {
         prevMembershipVisitsRef.current.set(card.id, current);
         const store = stores.find(s => s.id === card.store_id);
+        const qty = current - prev;
         const charityAnimal = ENDANGERED_ANIMALS[current % ENDANGERED_ANIMALS.length];
         const joined = activeStandardChallenges.filter(c =>
           (c.participantUids || []).includes(user.uid)
         );
         const notJoined = activeStandardChallenges.filter(c => !(c.participantUids || []).includes(user.uid)).slice(0, 3);
         const pages: CelebrationPage[] = [];
+        // First page: +X points with confetti
+        pages.push({
+          type: 'visit_points',
+          currentStamps: current,
+          totalStamps: current,
+          reward: '',
+          encouragement: '',
+          done: false,
+          visitPoints: qty,
+          storeName: store?.name,
+          storeLogoUrl: store?.logoUrl,
+          membershipColor: store?.membershipColor,
+        });
         pages.push({
           type: 'charity',
           currentStamps: current,
@@ -11489,8 +11505,8 @@ function VisitScanSheet({ card, store, onClose, initialQty }: { card: Card; stor
   );
 }
 
-const PAGE_ICONS: Record<string, string> = { stamp: '⭐', challenge: '🏆', challenge_done: '🎉', upsell: '🎯', monopoly_pack: '🎰', challenges_list: '🏃', upsell_list: '🎯', stage_reward: '🎁', collectible_promo: '🎴' };
-const PAGE_ANIM: Record<string, CelebAnimType> = { stamp: 'confetti', challenge: 'sparkles', challenge_done: 'fireworks', upsell: 'burst', monopoly_pack: 'sparks', challenges_list: 'sparkles', upsell_list: 'burst', stage_reward: 'fireworks', collectible_promo: 'sparks' };
+const PAGE_ICONS: Record<string, string> = { stamp: '⭐', challenge: '🏆', challenge_done: '🎉', upsell: '🎯', monopoly_pack: '🎰', challenges_list: '🏃', upsell_list: '🎯', stage_reward: '🎁', collectible_promo: '🎴', visit_points: '🎉' };
+const PAGE_ANIM: Record<string, CelebAnimType> = { stamp: 'confetti', challenge: 'sparkles', challenge_done: 'fireworks', upsell: 'burst', monopoly_pack: 'sparks', challenges_list: 'sparkles', upsell_list: 'burst', stage_reward: 'fireworks', collectible_promo: 'sparks', visit_points: 'confetti' };
 const CTA_LABELS = ['Keep smashing it! 🚀', 'You\'re on fire! 🔥', 'Unstoppable! 💪', 'Legend! ⭐', 'Amazing work! 🎉'];
 
 function getCharityFeedback(type: 'animal' | 'tree', newCount: number): { emoji: string; title: string; detail: string } {
@@ -11551,6 +11567,7 @@ function StampCelebrationModal({
   const isUpsellList = page.type === 'upsell_list';
   const isStageReward = page.type === 'stage_reward';
   const isCollectiblePromo = page.type === 'collectible_promo';
+  const isVisitPoints = page.type === 'visit_points';
   const pageKey = page.type === 'challenge' && page.done ? 'challenge_done' : page.type;
 
   // Rank page data
@@ -11565,7 +11582,7 @@ function StampCelebrationModal({
     setMonopolyPackOpen(false);
     setStageRedeemed(false);
     if (!isCharity && !isRank && !isMonopolyPack) {
-      fireCelebAnimation(PAGE_ANIM[pageKey] || 'sparkles');
+      fireCelebAnimation(PAGE_ANIM[pageKey] ?? 'sparkles');
     }
   }, [pageIdx]);
 
@@ -12314,6 +12331,76 @@ function StampCelebrationModal({
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
                   onClick={isLast ? onClose : () => setPageIdx(i => i + 1)}
                   className="w-full py-3.5 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-[0.98] transition-all"
+                >
+                  {ctaLabel}
+                </motion.button>
+              </>
+            ) : isVisitPoints ? (
+              /* ── Visit points collected ── */
+              <>
+                <div className="flex flex-col items-center gap-4 py-2">
+                  {/* Store logo */}
+                  {page.storeLogoUrl && (
+                    <motion.div
+                      initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                      transition={{ type: 'spring', stiffness: 340, damping: 18, delay: 0.05 }}
+                      className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-white shadow-lg"
+                      style={{ borderColor: page.membershipColor || '#0D9488' }}
+                    >
+                      <img src={page.storeLogoUrl} alt={page.storeName} className="w-full h-full object-cover" />
+                    </motion.div>
+                  )}
+
+                  {/* Big +X points */}
+                  <motion.div
+                    initial={{ scale: 0.3, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: 'spring', stiffness: 380, damping: 14, delay: 0.1 }}
+                    className="text-center"
+                  >
+                    <p
+                      className="font-display font-black leading-none"
+                      style={{ fontSize: 72, color: page.membershipColor || '#0D9488' }}
+                    >
+                      +{page.visitPoints ?? 1}
+                    </p>
+                    <p className="font-bold text-brand-navy/70 text-base mt-1">
+                      point{(page.visitPoints ?? 1) !== 1 ? 's' : ''} added
+                    </p>
+                  </motion.div>
+
+                  {page.storeName && (
+                    <motion.p
+                      initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+                      className="text-sm font-bold text-brand-navy/60"
+                    >
+                      {page.storeName} membership
+                    </motion.p>
+                  )}
+
+                  {/* Running total */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32 }}
+                    className="rounded-2xl px-6 py-3 text-center"
+                    style={{ background: `${page.membershipColor || '#0D9488'}18` }}
+                  >
+                    <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: page.membershipColor || '#0D9488' }}>Total points</p>
+                    <p className="font-display font-black text-3xl text-brand-navy">{page.currentStamps}</p>
+                  </motion.div>
+                </div>
+
+                {pages.length > 1 && (
+                  <div className="flex justify-center gap-1.5">
+                    {pages.map((_, i) => (
+                      <motion.div key={i} animate={{ width: i === pageIdx ? 16 : 6 }} className={cn('h-1.5 rounded-full transition-colors', i === pageIdx ? 'bg-brand-navy' : 'bg-brand-navy/20')} />
+                    ))}
+                  </div>
+                )}
+
+                <motion.button
+                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+                  onClick={isLast ? onClose : () => setPageIdx(i => i + 1)}
+                  className="w-full py-3.5 rounded-2xl font-bold text-sm text-white active:scale-[0.98] transition-all"
+                  style={{ background: `linear-gradient(135deg, ${page.membershipColor || '#0D9488'}, ${page.membershipColor || '#0D9488'}cc)` }}
                 >
                   {ctaLabel}
                 </motion.button>
