@@ -21371,7 +21371,7 @@ function StoreLeaderboard({ storeId, storeName, logoUrl, type, userId }: {
         </div>
         <div className="flex-1 min-w-0">
           <h4 className="font-bold text-brand-navy text-sm truncate">{storeName}</h4>
-          <p className="text-brand-navy/75 text-[9px] font-bold uppercase tracking-widest">{type === 'visit' ? 'Points' : 'Points'} Leaderboard</p>
+          <p className="text-brand-navy/75 text-[9px] font-bold uppercase tracking-widest">{type === 'visit' ? 'Visit' : 'Spend'} Leaderboard</p>
         </div>
         {myRank > 0 && (
           <span className="text-brand-navy/80 text-xs font-bold shrink-0">#{myRank}</span>
@@ -28057,13 +28057,15 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
             const lbProfile = leaderboardProfiles.get(entry.user_id);
             const displayName = lbProfile?.name || entry.userName || 'Loyal Customer';
             const scoreLabel = lbActiveType === 'loyalty'
-              ? `${entry.lifetimeStamps} Stamps`
-              : `${entry.lifetimeStamps} Points`;
-            const subLabel = lbActiveType === 'loyalty'
-              ? `${entry.total_completed_cycles || 0} Rewards Earned`
+              ? `${entry.lifetimeStamps} stamps`
               : lbActiveType === 'visit'
-                ? `${entry.membership_visits || 0} Visits`
-                : `£${(entry.total_spent || 0).toFixed(2)} Spent`;
+                ? `${entry.lifetimeStamps} visits`
+                : `${entry.lifetimeStamps} pts`;
+            const subLabel = lbActiveType === 'loyalty'
+              ? `${entry.total_completed_cycles || 0} rewards earned`
+              : lbActiveType === 'visit'
+                ? `${entry.membership_visits || 0} total visits`
+                : `£${(entry.total_spent || 0).toFixed(2)} spent`;
             return (
               <div
                 key={`lb-${entry.id}`}
