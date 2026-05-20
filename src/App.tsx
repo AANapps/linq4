@@ -138,7 +138,9 @@ import {
   Pin,
   Loader2,
   Megaphone,
-  Link
+  Link,
+  ZoomIn,
+  ZoomOut
 } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
@@ -686,6 +688,7 @@ interface GlobalPost {
   adminBadgeColor?: string;
   postImageUrl?: string;
   imageObjectPosition?: string;
+  imageZoom?: number;
   adminIcon?: string;
   cardSetId?: string;
   cardSetName?: string;
@@ -1001,6 +1004,9 @@ interface AdminBanner {
   bgFrom: string;
   bgTo: string;
   imageUrl?: string;
+  imgX?: number;
+  imgY?: number;
+  imgZoom?: number;
   textLight: boolean;
   destination: string;
   order: number;
@@ -5983,7 +5989,8 @@ function BannersAdminPanel({ onClose }: { onClose: () => void }) {
 
   const blank = (): Omit<AdminBanner, 'id'> => ({
     title: '', subtitle: '', bgFrom: '#6366f1', bgTo: '#8b5cf6',
-    imageUrl: '', textLight: true, destination: 'for-you', order: banners.length, active: true,
+    imageUrl: '', imgX: 50, imgY: 50, imgZoom: 1,
+    textLight: true, destination: 'for-you', order: banners.length, active: true,
   });
   const [form, setForm] = useState<Omit<AdminBanner, 'id'>>(blank());
   const [urlInput, setUrlInput] = useState('');
@@ -5999,7 +6006,7 @@ function BannersAdminPanel({ onClose }: { onClose: () => void }) {
   const startEdit = (b: AdminBanner) => {
     setEditId(b.id);
     const { id, ...rest } = b;
-    setForm(rest);
+    setForm({ imgX: 50, imgY: 50, imgZoom: 1, ...rest });
     setUrlInput(b.destination.startsWith('http') ? b.destination : '');
     setImageFile(null);
     setImagePreview(b.imageUrl || '');
@@ -6115,12 +6122,38 @@ function BannersAdminPanel({ onClose }: { onClose: () => void }) {
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-1">Background photo (optional)</p>
               {previewImage ? (
-                <div className="relative rounded-xl overflow-hidden h-20">
-                  <img src={previewImage} alt="" className="w-full h-full object-cover" />
-                  <button onClick={removeImage}
-                    className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center">
-                    <X size={12} className="text-white" />
-                  </button>
+                <div className="space-y-2">
+                  <div className="relative rounded-xl overflow-hidden h-24">
+                    <img src={previewImage} alt="" className="absolute inset-0 w-full h-full object-cover"
+                      style={{
+                        objectPosition: `${form.imgX ?? 50}% ${form.imgY ?? 50}%`,
+                        transform: `scale(${form.imgZoom ?? 1})`,
+                        transformOrigin: `${form.imgX ?? 50}% ${form.imgY ?? 50}%`,
+                      }} />
+                    <button onClick={removeImage}
+                      className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center z-10">
+                      <X size={12} className="text-white" />
+                    </button>
+                  </div>
+                  {/* Position & zoom controls */}
+                  <div className="flex items-center gap-3">
+                    <div className="grid grid-cols-3 gap-0.5">
+                      <div />
+                      <button onClick={() => setForm(f => ({ ...f, imgY: Math.max(0, (f.imgY ?? 50) - 5) }))} className="w-8 h-8 rounded-lg bg-brand-navy/8 flex items-center justify-center active:bg-brand-navy/20"><ChevronUp size={14} className="text-brand-navy" /></button>
+                      <div />
+                      <button onClick={() => setForm(f => ({ ...f, imgX: Math.max(0, (f.imgX ?? 50) - 5) }))} className="w-8 h-8 rounded-lg bg-brand-navy/8 flex items-center justify-center active:bg-brand-navy/20"><ChevronLeft size={14} className="text-brand-navy" /></button>
+                      <button onClick={() => setForm(f => ({ ...f, imgX: 50, imgY: 50 }))} className="w-8 h-8 rounded-lg bg-brand-navy/8 flex items-center justify-center active:bg-brand-navy/20"><div className="w-1.5 h-1.5 rounded-full bg-brand-navy/40" /></button>
+                      <button onClick={() => setForm(f => ({ ...f, imgX: Math.min(100, (f.imgX ?? 50) + 5) }))} className="w-8 h-8 rounded-lg bg-brand-navy/8 flex items-center justify-center active:bg-brand-navy/20"><ChevronRight size={14} className="text-brand-navy" /></button>
+                      <div />
+                      <button onClick={() => setForm(f => ({ ...f, imgY: Math.min(100, (f.imgY ?? 50) + 5) }))} className="w-8 h-8 rounded-lg bg-brand-navy/8 flex items-center justify-center active:bg-brand-navy/20"><ChevronDown size={14} className="text-brand-navy" /></button>
+                      <div />
+                    </div>
+                    <div className="flex flex-col items-center gap-0.5">
+                      <button onClick={() => setForm(f => ({ ...f, imgZoom: Math.min(3, Number(((f.imgZoom ?? 1) + 0.1).toFixed(1))) }))} className="w-8 h-8 rounded-lg bg-brand-navy/8 flex items-center justify-center active:bg-brand-navy/20"><ZoomIn size={14} className="text-brand-navy" /></button>
+                      <span className="text-[10px] font-bold text-brand-navy/50">{(form.imgZoom ?? 1).toFixed(1)}x</span>
+                      <button onClick={() => setForm(f => ({ ...f, imgZoom: Math.max(1, Number(((f.imgZoom ?? 1) - 0.1).toFixed(1))) }))} className="w-8 h-8 rounded-lg bg-brand-navy/8 flex items-center justify-center active:bg-brand-navy/20"><ZoomOut size={14} className="text-brand-navy" /></button>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <button onClick={() => fileInputRef.current?.click()}
@@ -7038,6 +7071,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
   const [editAchPrefix, setEditAchPrefix] = useState('');
   const [editAchReward, setEditAchReward] = useState('');
   const [editImgPos, setEditImgPos] = useState({ x: 50, y: 50 });
+  const [editImgZoom, setEditImgZoom] = useState(1);
   const [savingEdit, setSavingEdit] = useState(false);
 
   // Create form
@@ -7057,6 +7091,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
   const [adminGifs, setAdminGifs] = useState<{ id: string; label: string; url: string }[]>([]);
   const [selectedGif, setSelectedGif] = useState<{ id: string; label: string; url: string } | null>(null);
   const [postImagePosition, setPostImagePosition] = useState({ x: 50, y: 50 });
+  const [postImageZoom, setPostImageZoom] = useState(1);
   const [achName, setAchName] = useState('');
   const [achPhoto, setAchPhoto] = useState('');
   const [userPickerQuery, setUserPickerQuery] = useState('');
@@ -7146,6 +7181,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
     setEditAchReward(post.achievementText || '');
     const pos = post.imageObjectPosition?.match(/(\d+)%\s*(\d+)%/);
     setEditImgPos(pos ? { x: Number(pos[1]), y: Number(pos[2]) } : { x: 50, y: 50 });
+    setEditImgZoom(post.imageZoom ?? 1);
   };
 
   const handleSaveEdit = async (post: GlobalPost) => {
@@ -7159,7 +7195,10 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
         });
       } else {
         const updates: Record<string, any> = { content: editContent.trim() };
-        if (post.postImageUrl) updates.imageObjectPosition = `${editImgPos.x}% ${editImgPos.y}%`;
+        if (post.postImageUrl) {
+          updates.imageObjectPosition = `${editImgPos.x}% ${editImgPos.y}%`;
+          updates.imageZoom = editImgZoom;
+        }
         await updateDoc(doc(db, 'global_posts', post.id), updates);
       }
       setEditingPostId(null);
@@ -7193,7 +7232,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
         ...(!isAnonymous && selectedIcon ? { adminIcon: selectedIcon } : {}),
         ...(selectedCardSet ? { cardSetId: selectedCardSet.id, cardSetName: selectedCardSet.name } : {}),
         ...(selectedCardDef ? { cardDefId: selectedCardDef.id, cardDefName: selectedCardDef.name, cardDefImageUrl: selectedCardDef.imageUrl, cardDefTier: selectedCardDef.tier } : {}),
-        ...(!isAnonymous && postImageUrl ? { postImageUrl, imageObjectPosition: `${postImagePosition.x}% ${postImagePosition.y}%` } : {}),
+        ...(!isAnonymous && postImageUrl ? { postImageUrl, imageObjectPosition: `${postImagePosition.x}% ${postImagePosition.y}%`, imageZoom: postImageZoom } : {}),
         ...(selectedGif ? { adminGifUrl: selectedGif.url, adminGifLabel: selectedGif.label } : {}),
         createdAt: serverTimestamp(),
       });
@@ -7206,6 +7245,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
       setPostImageFile(null);
       setPostImagePreview(null);
       setPostImagePosition({ x: 50, y: 50 });
+      setPostImageZoom(1);
       setSelectedGif(null);
       setTab('all');
     } finally { setPublishing(false); setUploadingImage(false); }
@@ -7375,49 +7415,40 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
                   reader.readAsDataURL(file);
                 }} />
                 {postImagePreview ? (
-                  <div className="space-y-1.5">
-                    {/* Drag-to-reposition crop preview */}
-                    <div
-                      className="relative rounded-2xl overflow-hidden cursor-grab active:cursor-grabbing select-none"
-                      style={{ height: '160px' }}
-                      onMouseDown={e => {
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        const move = (me: MouseEvent) => {
-                          const x = Math.round(Math.min(100, Math.max(0, ((me.clientX - rect.left) / rect.width) * 100)));
-                          const y = Math.round(Math.min(100, Math.max(0, ((me.clientY - rect.top) / rect.height) * 100)));
-                          setPostImagePosition({ x, y });
-                        };
-                        window.addEventListener('mousemove', move);
-                        window.addEventListener('mouseup', () => window.removeEventListener('mousemove', move), { once: true });
-                      }}
-                      onTouchMove={e => {
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        const t = e.touches[0];
-                        const x = Math.round(Math.min(100, Math.max(0, ((t.clientX - rect.left) / rect.width) * 100)));
-                        const y = Math.round(Math.min(100, Math.max(0, ((t.clientY - rect.top) / rect.height) * 100)));
-                        setPostImagePosition({ x, y });
-                      }}
-                    >
-                      <img src={postImagePreview} alt="" className="w-full h-full object-cover pointer-events-none"
-                        style={{ objectPosition: `${postImagePosition.x}% ${postImagePosition.y}%` }} />
-                      {/* crosshair */}
-                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <div className="w-6 h-6 rounded-full border-2 border-white shadow-md bg-white/20" style={{
-                          position: 'absolute',
-                          left: `${postImagePosition.x}%`,
-                          top: `${postImagePosition.y}%`,
-                          transform: 'translate(-50%,-50%)'
+                  <div className="space-y-2">
+                    <div className="relative rounded-2xl overflow-hidden" style={{ height: '160px' }}>
+                      <img src={postImagePreview} alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                        style={{
+                          objectPosition: `${postImagePosition.x}% ${postImagePosition.y}%`,
+                          transform: `scale(${postImageZoom})`,
+                          transformOrigin: `${postImagePosition.x}% ${postImagePosition.y}%`,
                         }} />
-                      </div>
                       <button
                         type="button"
-                        onClick={e => { e.preventDefault(); setPostImageFile(null); setPostImagePreview(null); setPostImagePosition({ x: 50, y: 50 }); }}
-                        className="absolute top-2 right-2 w-7 h-7 bg-black/50 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform"
+                        onClick={e => { e.preventDefault(); setPostImageFile(null); setPostImagePreview(null); setPostImagePosition({ x: 50, y: 50 }); setPostImageZoom(1); }}
+                        className="absolute top-2 right-2 z-10 w-7 h-7 bg-black/50 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform"
                       >
                         <X size={14} />
                       </button>
                     </div>
-                    <p className="text-[10px] text-brand-navy/40 text-center">Drag to reposition crop</p>
+                    <div className="flex items-center gap-3">
+                      <div className="grid grid-cols-3 gap-0.5">
+                        <div />
+                        <button type="button" onClick={() => setPostImagePosition(p => ({ ...p, y: Math.max(0, p.y - 5) }))} className="w-8 h-8 rounded-lg bg-brand-navy/8 flex items-center justify-center active:bg-brand-navy/20"><ChevronUp size={14} className="text-brand-navy" /></button>
+                        <div />
+                        <button type="button" onClick={() => setPostImagePosition(p => ({ ...p, x: Math.max(0, p.x - 5) }))} className="w-8 h-8 rounded-lg bg-brand-navy/8 flex items-center justify-center active:bg-brand-navy/20"><ChevronLeft size={14} className="text-brand-navy" /></button>
+                        <button type="button" onClick={() => { setPostImagePosition({ x: 50, y: 50 }); setPostImageZoom(1); }} className="w-8 h-8 rounded-lg bg-brand-navy/8 flex items-center justify-center active:bg-brand-navy/20"><div className="w-1.5 h-1.5 rounded-full bg-brand-navy/40" /></button>
+                        <button type="button" onClick={() => setPostImagePosition(p => ({ ...p, x: Math.min(100, p.x + 5) }))} className="w-8 h-8 rounded-lg bg-brand-navy/8 flex items-center justify-center active:bg-brand-navy/20"><ChevronRight size={14} className="text-brand-navy" /></button>
+                        <div />
+                        <button type="button" onClick={() => setPostImagePosition(p => ({ ...p, y: Math.min(100, p.y + 5) }))} className="w-8 h-8 rounded-lg bg-brand-navy/8 flex items-center justify-center active:bg-brand-navy/20"><ChevronDown size={14} className="text-brand-navy" /></button>
+                        <div />
+                      </div>
+                      <div className="flex flex-col items-center gap-0.5">
+                        <button type="button" onClick={() => setPostImageZoom(z => Math.min(3, Number((z + 0.1).toFixed(1))))} className="w-8 h-8 rounded-lg bg-brand-navy/8 flex items-center justify-center active:bg-brand-navy/20"><ZoomIn size={14} className="text-brand-navy" /></button>
+                        <span className="text-[10px] font-bold text-brand-navy/50">{postImageZoom.toFixed(1)}x</span>
+                        <button type="button" onClick={() => setPostImageZoom(z => Math.max(1, Number((z - 0.1).toFixed(1))))} className="w-8 h-8 rounded-lg bg-brand-navy/8 flex items-center justify-center active:bg-brand-navy/20"><ZoomOut size={14} className="text-brand-navy" /></button>
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <div className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl border-2 border-dashed border-brand-navy/15 bg-white text-brand-navy/50 text-sm font-medium cursor-pointer hover:border-brand-navy/30 transition-colors">
@@ -7682,36 +7713,34 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
                         <textarea value={editContent} onChange={e => setEditContent(e.target.value)} rows={3}
                           className="w-full px-3 py-2 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm text-brand-navy outline-none resize-none" />
                         {post.postImageUrl && (
-                          <div className="space-y-1.5">
-                            <p className="text-[10px] font-bold text-brand-navy/50 uppercase tracking-widest">Image crop position</p>
-                            <div className="relative rounded-xl overflow-hidden" style={{ height: '120px' }}
-                              onMouseDown={e => {
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                const move = (me: MouseEvent) => {
-                                  setEditImgPos({
-                                    x: Math.round(Math.min(100, Math.max(0, ((me.clientX - rect.left) / rect.width) * 100))),
-                                    y: Math.round(Math.min(100, Math.max(0, ((me.clientY - rect.top) / rect.height) * 100))),
-                                  });
-                                };
-                                window.addEventListener('mousemove', move);
-                                window.addEventListener('mouseup', () => window.removeEventListener('mousemove', move), { once: true });
-                              }}
-                              onTouchMove={e => {
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                const t = e.touches[0];
-                                setEditImgPos({
-                                  x: Math.round(Math.min(100, Math.max(0, ((t.clientX - rect.left) / rect.width) * 100))),
-                                  y: Math.round(Math.min(100, Math.max(0, ((t.clientY - rect.top) / rect.height) * 100))),
-                                });
-                              }}
-                            >
-                              <img src={post.postImageUrl} alt="" className="w-full h-full object-cover cursor-grab pointer-events-none"
-                                style={{ objectPosition: `${editImgPos.x}% ${editImgPos.y}%` }} />
-                              <div className="absolute pointer-events-none" style={{ left: `${editImgPos.x}%`, top: `${editImgPos.y}%`, transform: 'translate(-50%,-50%)' }}>
-                                <div className="w-5 h-5 rounded-full border-2 border-white shadow-md bg-white/30" />
+                          <div className="space-y-2">
+                            <p className="text-[10px] font-bold text-brand-navy/50 uppercase tracking-widest">Image position & zoom</p>
+                            <div className="relative rounded-xl overflow-hidden" style={{ height: '120px' }}>
+                              <img src={post.postImageUrl} alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                                style={{
+                                  objectPosition: `${editImgPos.x}% ${editImgPos.y}%`,
+                                  transform: `scale(${editImgZoom})`,
+                                  transformOrigin: `${editImgPos.x}% ${editImgPos.y}%`,
+                                }} />
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="grid grid-cols-3 gap-0.5">
+                                <div />
+                                <button onClick={() => setEditImgPos(p => ({ ...p, y: Math.max(0, p.y - 5) }))} className="w-8 h-8 rounded-lg bg-brand-navy/8 flex items-center justify-center active:bg-brand-navy/20"><ChevronUp size={14} className="text-brand-navy" /></button>
+                                <div />
+                                <button onClick={() => setEditImgPos(p => ({ ...p, x: Math.max(0, p.x - 5) }))} className="w-8 h-8 rounded-lg bg-brand-navy/8 flex items-center justify-center active:bg-brand-navy/20"><ChevronLeft size={14} className="text-brand-navy" /></button>
+                                <button onClick={() => { setEditImgPos({ x: 50, y: 50 }); setEditImgZoom(1); }} className="w-8 h-8 rounded-lg bg-brand-navy/8 flex items-center justify-center active:bg-brand-navy/20"><div className="w-1.5 h-1.5 rounded-full bg-brand-navy/40" /></button>
+                                <button onClick={() => setEditImgPos(p => ({ ...p, x: Math.min(100, p.x + 5) }))} className="w-8 h-8 rounded-lg bg-brand-navy/8 flex items-center justify-center active:bg-brand-navy/20"><ChevronRight size={14} className="text-brand-navy" /></button>
+                                <div />
+                                <button onClick={() => setEditImgPos(p => ({ ...p, y: Math.min(100, p.y + 5) }))} className="w-8 h-8 rounded-lg bg-brand-navy/8 flex items-center justify-center active:bg-brand-navy/20"><ChevronDown size={14} className="text-brand-navy" /></button>
+                                <div />
+                              </div>
+                              <div className="flex flex-col items-center gap-0.5">
+                                <button onClick={() => setEditImgZoom(z => Math.min(3, Number((z + 0.1).toFixed(1))))} className="w-8 h-8 rounded-lg bg-brand-navy/8 flex items-center justify-center active:bg-brand-navy/20"><ZoomIn size={14} className="text-brand-navy" /></button>
+                                <span className="text-[10px] font-bold text-brand-navy/50">{editImgZoom.toFixed(1)}x</span>
+                                <button onClick={() => setEditImgZoom(z => Math.max(1, Number((z - 0.1).toFixed(1))))} className="w-8 h-8 rounded-lg bg-brand-navy/8 flex items-center justify-center active:bg-brand-navy/20"><ZoomOut size={14} className="text-brand-navy" /></button>
                               </div>
                             </div>
-                            <p className="text-[9px] text-brand-navy/35 text-center">Drag to reposition</p>
                           </div>
                         )}
                       </>
@@ -23389,7 +23418,21 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
           </div>
         </div>
       </div>
-      {showImage && <img src={post.postImageUrl} alt="" className="w-full object-cover max-h-72 mb-3" style={{ objectPosition: post.imageObjectPosition || 'center' }} />}
+      {showImage && (
+        <div className="overflow-hidden max-h-72 mb-3">
+          <img
+            src={post.postImageUrl}
+            alt=""
+            className="w-full object-cover"
+            style={{
+              objectPosition: post.imageObjectPosition || 'center',
+              transform: post.imageZoom && post.imageZoom > 1 ? `scale(${post.imageZoom})` : undefined,
+              transformOrigin: post.imageObjectPosition || 'center',
+              display: 'block',
+            }}
+          />
+        </div>
+      )}
       <div className="px-4">
 
         {post.postType === 'review' && (
@@ -24437,7 +24480,7 @@ function AdminBannerCarousel({ banners, onNavigate }: { banners: AdminBanner[]; 
 
   const resetTimer = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => setIdx(i => (i + 1) % active.length), 4000);
+    timerRef.current = setTimeout(() => setIdx(i => (i + 1) % active.length), 4500);
   };
 
   useEffect(() => {
@@ -24449,51 +24492,51 @@ function AdminBannerCarousel({ banners, onNavigate }: { banners: AdminBanner[]; 
 
   if (!active.length) return null;
 
-  const cur = active[idx % active.length];
-
-  const go = (dir: 1 | -1) => {
-    setIdx(i => ((i + dir) + active.length) % active.length);
-    resetTimer();
-  };
+  const curIdx = idx % active.length;
 
   return (
-    <div className="relative rounded-[1.5rem] overflow-hidden shadow-lg" style={{ minHeight: '80px' }}>
-      <AnimatePresence mode="wait">
-        <motion.button
-          key={cur.id}
-          initial={{ opacity: 0, x: 24 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -24 }}
-          transition={{ duration: 0.25 }}
-          onClick={() => onNavigate(cur.destination)}
-          className="w-full relative flex items-center px-5 py-4 gap-4 active:opacity-90 transition-opacity overflow-hidden"
-          style={cur.imageUrl ? {} : { background: `linear-gradient(135deg, ${cur.bgFrom} 0%, ${cur.bgTo} 100%)` }}
-        >
-          {cur.imageUrl && <img src={cur.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />}
-          {cur.imageUrl && <div className="absolute inset-0 bg-black/30" />}
-          <Megaphone size={22} className={cn('relative z-10', cur.textLight ? 'text-white/80 shrink-0' : 'text-black/60 shrink-0')} />
-          <div className="relative z-10 flex-1 min-w-0 text-left">
-            <p className={cn('text-sm font-black leading-tight', cur.textLight ? 'text-white' : 'text-black')}>{cur.title}</p>
-            {cur.subtitle && <p className={cn('text-[11px] font-semibold mt-0.5 leading-tight', cur.textLight ? 'text-white/75' : 'text-black/60')}>{cur.subtitle}</p>}
-          </div>
-          <ChevronRight size={16} className={cn('relative z-10', cur.textLight ? 'text-white/50 shrink-0' : 'text-black/30 shrink-0')} />
-        </motion.button>
+    <div className="relative rounded-[1.5rem] overflow-hidden shadow-lg" style={{ height: '130px' }}>
+      <AnimatePresence initial={false}>
+        {active.map((b, i) => i !== curIdx ? null : (
+          <motion.button
+            key={b.id}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4, ease: 'easeInOut' }}
+            onClick={() => onNavigate(b.destination)}
+            className="absolute inset-0 w-full flex items-center px-5 py-4 gap-4 active:opacity-90 overflow-hidden"
+            style={b.imageUrl ? {} : { background: `linear-gradient(135deg, ${b.bgFrom} 0%, ${b.bgTo} 100%)` }}
+          >
+            {b.imageUrl && (
+              <img
+                src={b.imageUrl}
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover"
+                style={{
+                  objectPosition: `${b.imgX ?? 50}% ${b.imgY ?? 50}%`,
+                  transform: `scale(${b.imgZoom ?? 1})`,
+                  transformOrigin: `${b.imgX ?? 50}% ${b.imgY ?? 50}%`,
+                }}
+              />
+            )}
+            {b.imageUrl && <div className="absolute inset-0 bg-black/30" />}
+            <Megaphone size={22} className={cn('relative z-10', b.textLight ? 'text-white/80 shrink-0' : 'text-black/60 shrink-0')} />
+            <div className="relative z-10 flex-1 min-w-0 text-left">
+              <p className={cn('text-sm font-black leading-tight', b.textLight ? 'text-white' : 'text-black')}>{b.title}</p>
+              {b.subtitle && <p className={cn('text-[11px] font-semibold mt-0.5 leading-tight', b.textLight ? 'text-white/75' : 'text-black/60')}>{b.subtitle}</p>}
+            </div>
+            <ChevronRight size={16} className={cn('relative z-10', b.textLight ? 'text-white/50 shrink-0' : 'text-black/30 shrink-0')} />
+          </motion.button>
+        ))}
       </AnimatePresence>
       {active.length > 1 && (
-        <>
-          <button onClick={() => go(-1)} className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-black/20 flex items-center justify-center active:bg-black/40">
-            <ChevronLeft size={14} className="text-white" />
-          </button>
-          <button onClick={() => go(1)} className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-black/20 flex items-center justify-center active:bg-black/40">
-            <ChevronRight size={14} className="text-white" />
-          </button>
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10">
-            {active.map((_, i) => (
-              <button key={i} onClick={() => { setIdx(i); resetTimer(); }}
-                className={cn('rounded-full transition-all', i === idx % active.length ? 'w-4 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/40')} />
-            ))}
-          </div>
-        </>
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10">
+          {active.map((_, i) => (
+            <button key={i} onClick={() => { setIdx(i); resetTimer(); }}
+              className={cn('rounded-full transition-all', i === curIdx ? 'w-4 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/40')} />
+          ))}
+        </div>
       )}
     </div>
   );
