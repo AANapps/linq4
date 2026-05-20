@@ -10973,11 +10973,14 @@ function VendorQRDisplay({ store, onClose }: { store: StoreProfile; onClose: () 
 
   // Countdown + rotate every 30s
   useEffect(() => {
+    let secs = 30;
     const id = setInterval(() => {
-      setSecsLeft(s => {
-        if (s <= 1) { rotateToken(); return 30; }
-        return s - 1;
-      });
+      secs -= 1;
+      if (secs <= 0) {
+        secs = 30;
+        rotateToken();
+      }
+      setSecsLeft(secs);
     }, 1000);
     return () => clearInterval(id);
   }, [rotateToken]);
