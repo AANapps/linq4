@@ -13601,10 +13601,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
 
   useEffect(() => {
     const isSpendOnly = store?.membershipEnabled === true && store.membershipType === 'spend';
-    onVendorQRStatus?.(!!store && !isSpendOnly && (
-      (store.cardEnabled !== false && store.scanMethod !== 'nfc') ||
-      (store.membershipEnabled === true && store.membershipType === 'visit')
-    ));
+    onVendorQRStatus?.(!!store && !isSpendOnly && store.cardEnabled !== false);
   }, [store]);
 
   const trialEndsMs = store?.trialEndsAt
