@@ -2234,7 +2234,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
     if (err) setError(err);
   };
 
-  const bg = { background: 'linear-gradient(160deg, #0F766E 0%, #0D9488 40%, #14B8A6 70%, #2DD4BF 100%)' };
+  const bg = { background: 'linear-gradient(160deg, var(--brand-g1) 0%, var(--brand-g2) 40%, var(--brand-g3) 70%, var(--brand-g4) 100%)' };
 
   if (mode === 'home') {
     return (
