@@ -27702,17 +27702,10 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
     });
   }
   const [tierSlideIdx, setTierSlideIdx] = React.useState(0);
-  const [lbActiveType, setLbActiveType] = React.useState<'loyalty' | 'visit' | 'spend'>(
-    store.membershipEnabled && !store.cardEnabled
-      ? (store.membershipType === 'spend' ? 'spend' : 'visit')
-      : 'loyalty'
-  );
-
-  // Leaderboard: one tab per enabled card type
-  const lbTypes: Array<{ key: 'loyalty' | 'visit' | 'spend'; label: string }> = [];
-  if (store.cardEnabled) lbTypes.push({ key: 'loyalty', label: 'Loyalty Card' });
-  if (store.membershipEnabled && store.membershipType === 'visit') lbTypes.push({ key: 'visit', label: store.membershipName || 'Visit Card' });
-  if (store.membershipEnabled && store.membershipType === 'spend') lbTypes.push({ key: 'spend', label: store.membershipName || 'Spend Card' });
+  // Leaderboard type is fixed by what the store has — no switching
+  const lbActiveType: 'loyalty' | 'visit' | 'spend' = store.cardEnabled
+    ? 'loyalty'
+    : store.membershipType === 'spend' ? 'spend' : 'visit';
   const leaderboard = allStoreCards
     .filter(c => !c.isArchived && (
       lbActiveType === 'loyalty' ? (c.card_type !== 'membership' && c.card_type !== 'sub') :
@@ -28478,21 +28471,6 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
           <h3 className="font-bold">{lbActiveType === 'loyalty' ? 'Top Collectors' : lbActiveType === 'visit' ? 'Top Visitors' : 'Top Spenders'}</h3>
           <Trophy size={18} className="text-brand-gold" />
         </div>
-        {/* Type tabs — only shown when multiple card types are enabled */}
-        {lbTypes.length > 1 && (
-          <div className="flex gap-1.5 p-1 bg-brand-navy/5 rounded-2xl">
-            {lbTypes.map(t => (
-              <button
-                key={t.key}
-                onClick={() => setLbActiveType(t.key)}
-                className={cn(
-                  'flex-1 py-2 rounded-xl text-[11px] font-bold transition-all',
-                  lbActiveType === t.key ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/50'
-                )}
-              >{t.label}</button>
-            ))}
-          </div>
-        )}
         <div className="space-y-3">
           {leaderboard.map((entry, index) => {
             const lbProfile = leaderboardProfiles.get(entry.user_id);
