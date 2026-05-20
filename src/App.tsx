@@ -9077,6 +9077,8 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const cardsInitializedRef = useRef(false);
   const prevMembershipVisitsRef = useRef<Map<string, number>>(new Map());
   const membershipVisitsInitRef = useRef(false);
+  const prevMembershipPointsRef = useRef<Map<string, number>>(new Map());
+  const membershipPointsInitRef = useRef(false);
 
   // Sticker (monopoly) — no intermediate modal, pack opens directly
   const prevStickerCountRef = useRef<Map<string, number>>(new Map());
@@ -9206,6 +9208,65 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         const notJoined = activeStandardChallenges.filter(c => !(c.participantUids || []).includes(user.uid)).slice(0, 3);
         const pages: CelebrationPage[] = [];
         // First page: +X points with confetti
+        pages.push({
+          type: 'visit_points',
+          currentStamps: current,
+          totalStamps: current,
+          reward: '',
+          encouragement: '',
+          done: false,
+          visitPoints: qty,
+          storeName: store?.name,
+          storeLogoUrl: store?.logoUrl,
+          membershipColor: store?.membershipColor,
+        });
+        pages.push({
+          type: 'charity',
+          currentStamps: current,
+          totalStamps: current,
+          reward: '',
+          encouragement: '',
+          done: false,
+          charityAnimal,
+          charityAnimalImageUrl: store?.charityAnimalImageUrl,
+          charityTreeImageUrl: store?.charityTreeImageUrl,
+        });
+        if (joined.length > 0 || notJoined.length > 0) {
+          const challengesList = joined.map(c => {
+            const entry = myStandardEntries.get(c.id);
+            const progress = Math.min(c.goal, Math.max(0, ((profile?.totalStamps || 0)) - (entry?.totalStampsAtJoin || 0)));
+            return { title: c.title, currentStamps: progress, totalStamps: c.goal, reward: c.reward, done: progress >= c.goal };
+          });
+          const newChallengesList = notJoined.map(c => ({ title: c.title, totalStamps: c.goal, reward: c.reward, id: c.id }));
+          pages.push({ type: 'challenges_list', currentStamps: 0, totalStamps: 0, reward: '', encouragement: '', done: false, challengesList, newChallengesList });
+        }
+        if (pages.length > 0) setCelebrationPages(pages);
+      }
+    }
+  }, [initialCards]);
+
+  // Watch membership spend cards — trigger celebration when points increase
+  useEffect(() => {
+    const spendCards = initialCards.filter(c => c.card_type === 'membership' && c.membership_type === 'spend');
+    if (spendCards.length === 0) return;
+    if (!membershipPointsInitRef.current) {
+      spendCards.forEach(c => prevMembershipPointsRef.current.set(c.id, c.membership_points ?? 0));
+      membershipPointsInitRef.current = true;
+      return;
+    }
+    for (const card of spendCards) {
+      const prev = prevMembershipPointsRef.current.get(card.id) ?? 0;
+      const current = card.membership_points ?? 0;
+      if (current > prev) {
+        prevMembershipPointsRef.current.set(card.id, current);
+        const store = stores.find(s => s.id === card.store_id);
+        const qty = current - prev;
+        const charityAnimal = ENDANGERED_ANIMALS[current % ENDANGERED_ANIMALS.length];
+        const joined = activeStandardChallenges.filter(c =>
+          (c.participantUids || []).includes(user.uid)
+        );
+        const notJoined = activeStandardChallenges.filter(c => !(c.participantUids || []).includes(user.uid)).slice(0, 3);
+        const pages: CelebrationPage[] = [];
         pages.push({
           type: 'visit_points',
           currentStamps: current,
@@ -13866,6 +13927,10 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
         await addDoc(collection(db, 'transactions'), { user_id: customer.uid, store_id: store.id, card_type: 'membership', membership_type: 'spend', transaction_amount: txAmount, points_earned: earnedPts, rewards_earned: newRewards - Math.floor(prevSpent / (threshold || 1)), issued_at: serverTimestamp() });
         const ptsTxt = earnedPts > 0 ? ` · +${earnedPts} pts` : '';
         setStatus({ type: 'success', message: `$${txAmount.toFixed(2)} added — $${newSpent.toFixed(2)} total${ptsTxt}` });
+        issueUserStickers(customer.uid, customer.name || '', 3).catch(console.error);
+        updateChallengeProgress(customer.uid, store.id, 1).catch(console.error);
+        bumpStreak(customer.uid).catch(console.error);
+        updateDoc(doc(db, 'users', customer.uid), { totalStamps: increment(1), lastStampAt: serverTimestamp() }).catch(console.error);
       } else {
         const stampsThisVisit = store.membershipStampsPerVisit || 1;
         if (cardDoc.exists()) {
@@ -13876,6 +13941,10 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
         }
         await addDoc(collection(db, 'transactions'), { user_id: customer.uid, store_id: store.id, card_type: 'membership', membership_type: 'visit', stamps_per_visit: stampsThisVisit, issued_at: serverTimestamp() });
         setStatus({ type: 'success', message: `+${stampsThisVisit} points issued to ${customer.name}!` });
+        issueUserStickers(customer.uid, customer.name || '', 3).catch(console.error);
+        updateChallengeProgress(customer.uid, store.id, 1).catch(console.error);
+        bumpStreak(customer.uid).catch(console.error);
+        updateDoc(doc(db, 'users', customer.uid), { totalStamps: increment(1), lastStampAt: serverTimestamp() }).catch(console.error);
       }
     } catch (err) {
       console.error(err);
@@ -15516,13 +15585,9 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               {redeemableValue > 0 && (
                 <p className="text-brand-navy/75 font-bold text-xs mt-1.5">≈ ${redeemableValue.toFixed(2)} redeemable</p>
               )}
-              {userHandle && (
-                <div className="mt-3 w-full bg-brand-navy/5 rounded-2xl px-3 py-2.5">
-                  <p className="text-brand-navy/75 text-[9px] font-bold uppercase tracking-widest mb-0.5">Your handle</p>
-                  <p className="text-brand-navy font-black text-sm">@{userHandle}</p>
-                  <p className="text-brand-navy/75 text-[9px] mt-0.5">Give this to the vendor when you spend</p>
-                </div>
-              )}
+              <div className="mt-3 w-full bg-brand-navy/5 rounded-2xl px-3 py-2 text-center">
+                <p className="text-brand-navy/75 text-[9px] font-bold uppercase tracking-widest">Tap to show QR to vendor</p>
+              </div>
             </>
           ) : (
             <>
@@ -15545,17 +15610,14 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 <div><h3 className="font-display text-2xl font-bold">{membershipName}</h3><p className="text-brand-navy/75 text-xs mt-0.5">Points & Redemption</p></div>
                 <button onClick={() => setShowRedeemSheet(false)} className="p-2 text-brand-navy/75 hover:text-brand-navy"><X size={20} /></button>
               </div>
-              {userHandle && (
-                <div className="bg-brand-navy rounded-2xl px-5 py-4 mb-6 flex items-center gap-4">
-                  <div className="flex-1">
-                    <p className="text-white/50 text-[9px] font-bold uppercase tracking-widest mb-0.5">Your handle</p>
-                    <p className="text-white font-black text-xl">@{userHandle}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-white/60 text-[10px] font-bold leading-tight">Give this to the<br />vendor when you spend</p>
-                  </div>
+              {/* QR code — show to vendor */}
+              <div className="bg-brand-navy rounded-2xl px-5 py-4 mb-6 flex flex-col items-center gap-3">
+                <p className="text-white/50 text-[9px] font-bold uppercase tracking-widest">Show this to the vendor</p>
+                <div className="bg-white p-2 rounded-xl">
+                  <QRCodeSVG value={`stamp:${card.user_id}:${card.store_id}`} size={140} />
                 </div>
-              )}
+                {userHandle && <p className="text-white font-black text-base">@{userHandle}</p>}
+              </div>
               <div className="grid grid-cols-2 gap-3 mb-6">
                 <div className="glass-card p-5 rounded-2xl">
                   <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-1">Available</p>
@@ -15811,15 +15873,12 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                   <p className="text-brand-navy text-2xl font-black mt-2 leading-none">≈ ${redeemableValue.toFixed(2)} off</p>
                 )}
               </div>
-              {userHandle && (
-                <div className="bg-brand-navy/5 rounded-2xl px-4 py-3 mb-3 text-center">
-                  <p className="text-brand-navy/75 text-[9px] font-bold uppercase tracking-widest mb-0.5">Your handle — give this to the vendor</p>
-                  <p className="text-brand-navy font-black text-lg">@{userHandle}</p>
-                </div>
-              )}
+              <div className="bg-brand-navy/5 rounded-2xl px-4 py-2 mb-3 text-center">
+                <p className="text-brand-navy/75 text-[9px] font-bold uppercase tracking-widest">Tap to show QR to vendor</p>
+              </div>
               <div className="flex items-center justify-between">
                 <span className="text-brand-navy/35 text-[11px] font-bold">${totalSpent.toFixed(2)} spent{earnedRewards > 0 ? ` · ${earnedRewards} rewards` : ''}</span>
-                <span className="text-brand-navy/75 text-[10px] font-bold flex items-center gap-1"><Gift size={11} /> Tap to redeem</span>
+                <span className="text-brand-navy/75 text-[10px] font-bold flex items-center gap-1"><Gift size={11} /> Tap to view</span>
               </div>
             </>
           ) : (
@@ -15871,18 +15930,14 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 <button onClick={() => setShowRedeemSheet(false)} className="p-2 text-brand-navy/75 hover:text-brand-navy"><X size={20} /></button>
               </div>
 
-              {/* Handle — give to vendor */}
-              {userHandle && (
-                <div className="bg-brand-navy rounded-2xl px-5 py-4 mb-6 flex items-center gap-4">
-                  <div className="flex-1">
-                    <p className="text-white/50 text-[9px] font-bold uppercase tracking-widest mb-0.5">Your handle</p>
-                    <p className="text-white font-black text-xl">@{userHandle}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-white/60 text-[10px] font-bold leading-tight">Give this to the<br />vendor when you spend</p>
-                  </div>
+              {/* QR code — show to vendor */}
+              <div className="bg-brand-navy rounded-2xl px-5 py-4 mb-6 flex flex-col items-center gap-3">
+                <p className="text-white/50 text-[9px] font-bold uppercase tracking-widest">Show this to the vendor</p>
+                <div className="bg-white p-2 rounded-xl">
+                  <QRCodeSVG value={`stamp:${card.user_id}:${card.store_id}`} size={140} />
                 </div>
-              )}
+                {userHandle && <p className="text-white font-black text-base">@{userHandle}</p>}
+              </div>
 
               {/* Balance row */}
               <div className="grid grid-cols-2 gap-3 mb-6">
@@ -19297,6 +19352,7 @@ function ScanUserPanel({ store, onIssue }: {
   const [working, setWorking] = useState(false);
   const [nfcScanning, setNfcScanning] = useState(false);
   const [showVisitQRScanner, setShowVisitQRScanner] = useState(false);
+  const [showSpendQRScanner, setShowSpendQRScanner] = useState(false);
   const [visitScanMode, setVisitScanMode] = useState<'nfc' | 'qr'>('nfc');
 
   const memType = store?.membershipType ?? 'spend';
@@ -19434,8 +19490,45 @@ function ScanUserPanel({ store, onIssue }: {
         )}
       </AnimatePresence>
 
+      {/* QR scanner button — spend type */}
+      {!isVisit && (
+        <button
+          onClick={() => { setStatus(null); setShowSpendQRScanner(true); }}
+          disabled={working}
+          className="w-full relative overflow-hidden flex items-center justify-center gap-2 py-4 rounded-2xl font-bold text-white text-sm shadow-lg active:scale-[0.98] transition-all disabled:opacity-60"
+          style={{ background: 'linear-gradient(160deg, var(--brand-g1) 0%, var(--brand-g2) 40%, var(--brand-g3) 70%, var(--brand-g4) 100%)' }}
+        >
+          <span className="card-shine-ray" />
+          <QrCode size={16} /> Scan Customer QR
+        </button>
+      )}
+      <AnimatePresence>
+        {showSpendQRScanner && store && (
+          <VendorQRScanner
+            store={store}
+            stampQty={0}
+            subtitle="Scan customer's QR code to add spend"
+            onScanned={async (userId) => {
+              setShowSpendQRScanner(false);
+              setWorking(true); setStatus(null);
+              try {
+                const userSnap = await getDoc(doc(db, 'users', userId));
+                if (!userSnap.exists()) { setStatus({ type: 'error', message: 'User not found' }); setWorking(false); return; }
+                const h = (userSnap.data() as UserProfile).handle || '';
+                if (!h) { setStatus({ type: 'error', message: 'Customer has no handle' }); setWorking(false); return; }
+                setHandle(h);
+                setLookupMode('handle');
+                setStatus({ type: 'success', message: `Found @${h} — enter the transaction amount below` });
+              } catch { setStatus({ type: 'error', message: 'Lookup failed — try again' }); }
+              setWorking(false);
+            }}
+            onClose={() => setShowSpendQRScanner(false)}
+          />
+        )}
+      </AnimatePresence>
+
       <div className="glass-card rounded-[2rem] p-6 space-y-4">
-        <p className="text-xs font-bold text-brand-navy/75 uppercase tracking-widest">Or enter manually</p>
+        <p className="text-xs font-bold text-brand-navy/75 uppercase tracking-widest">{isVisit ? 'Or enter manually' : 'Or enter manually'}</p>
 
         {/* Lookup mode toggle */}
         <div className="flex gap-2 p-1 bg-brand-navy/5 rounded-2xl">
