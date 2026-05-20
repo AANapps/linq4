@@ -10622,75 +10622,93 @@ function VendorQRScanner({ store, stampQty, onScanned, onClose, subtitle }: {
   subtitle?: string;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number>(0);
   const detectorRef = useRef<any>(null);
+  const onScannedRef = useRef(onScanned);
+  const storeRef = useRef(store);
+  useEffect(() => { onScannedRef.current = onScanned; }, [onScanned]);
+  useEffect(() => { storeRef.current = store; }, [store]);
+
   const [error, setError] = useState('');
   const [manualUID, setManualUID] = useState('');
   const hasBarcodeDetector = typeof window !== 'undefined' && 'BarcodeDetector' in window;
 
-  useEffect(() => {
-    let cancelled = false;
+  const stopCamera = () => {
+    cancelAnimationFrame(rafRef.current);
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    streamRef.current = null;
+  };
 
-    const tick = async () => {
-      if (cancelled) return;
-      const video = videoRef.current;
-      if (!video || video.readyState < 2 || !detectorRef.current) {
-        rafRef.current = requestAnimationFrame(tick);
-        return;
-      }
-      try {
+  const handleRawValue = (val: string) => {
+    if (!val.startsWith('stamp:')) return false;
+    const parts = val.split(':');
+    if (parts.length < 3) return false;
+    const userId = parts[1];
+    const scannedStoreId = parts[2];
+    if (scannedStoreId === storeRef.current.id) {
+      stopCamera();
+      onScannedRef.current(userId);
+      return true;
+    } else {
+      setError('Wrong store — this QR is for a different shop.');
+      return false;
+    }
+  };
+
+  const tick = async () => {
+    const video = videoRef.current;
+    if (!video || video.readyState < 2) { rafRef.current = requestAnimationFrame(tick); return; }
+    try {
+      if (hasBarcodeDetector && detectorRef.current) {
         const barcodes = await detectorRef.current.detect(video);
-        for (const b of barcodes) {
-          const val: string = b.rawValue;
-          if (val.startsWith('stamp:')) {
-            const parts = val.split(':');
-            if (parts.length >= 3) {
-              const userId = parts[1];
-              const storeId = parts[2];
-              if (storeId === store.id) {
-                cancelled = true;
-                onScanned(userId);
-                return;
-              } else {
-                setError('Wrong store — this QR is for a different shop.');
-                break;
-              }
-            }
+        for (const b of barcodes) { if (handleRawValue(b.rawValue as string)) return; }
+      } else {
+        // jsQR fallback — works on iOS Safari and Firefox
+        const canvas = canvasRef.current;
+        if (canvas) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(video, 0, 0);
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const jsQR = (await import('jsqr')).default;
+            const result = jsQR(imgData.data, imgData.width, imgData.height);
+            if (result && handleRawValue(result.data)) return;
           }
         }
-      } catch { /* detection errors are non-fatal */ }
-      if (!cancelled) rafRef.current = requestAnimationFrame(tick);
-    };
-
-    const start = async () => {
-      try {
-        if (hasBarcodeDetector) {
-          detectorRef.current = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
-        }
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        streamRef.current = stream;
-        if (videoRef.current && !cancelled) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play().then(() => { if (!cancelled) rafRef.current = requestAnimationFrame(tick); });
-        }
-      } catch (err: any) {
-        if (!cancelled) setError(err?.message || 'Camera unavailable');
       }
-    };
+    } catch { /* non-fatal */ }
+    rafRef.current = requestAnimationFrame(tick);
+  };
 
-    start();
-    return () => {
-      cancelled = true;
-      cancelAnimationFrame(rafRef.current);
-      streamRef.current?.getTracks().forEach(t => t.stop());
-    };
-  }, [store.id, onScanned, hasBarcodeDetector]);
+  const startCamera = async () => {
+    setError('');
+    try {
+      if (hasBarcodeDetector) {
+        detectorRef.current = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play().then(tick);
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Camera unavailable');
+    }
+  };
+
+  useEffect(() => { startCamera(); }, []);
+  useEffect(() => () => stopCamera(), []);
 
   const handleManual = () => {
     const id = manualUID.trim();
     if (!id) return;
-    onScanned(id);
+    stopCamera();
+    onScannedRef.current(id);
   };
 
   const cardTheme = store.theme || '#0D9488';
@@ -10702,13 +10720,8 @@ function VendorQRScanner({ store, stampQty, onScanned, onClose, subtitle }: {
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[150] qr-scanner-bg flex flex-col"
     >
-      {/* Camera feed — full opacity, square cutout punched through the blue overlay */}
-      <video
-        ref={videoRef}
-        playsInline
-        muted
-        className="absolute inset-0 w-full h-full object-cover"
-      />
+      <canvas ref={canvasRef} className="hidden" />
+      <video ref={videoRef} playsInline muted className="absolute inset-0 w-full h-full object-cover" />
 
       {/* Overlay */}
       <div className="relative z-10 flex flex-col h-full">
@@ -10726,12 +10739,10 @@ function VendorQRScanner({ store, stampQty, onScanned, onClose, subtitle }: {
         {/* Viewfinder */}
         <div className="flex-1 flex items-center justify-center">
           <div className="relative w-48 h-48 qr-cutout">
-            {/* Corner brackets */}
             <div className="absolute top-0 left-0 w-7 h-7 border-t-4 border-l-4 rounded-tl-lg border-white" />
             <div className="absolute top-0 right-0 w-7 h-7 border-t-4 border-r-4 rounded-tr-lg border-white" />
             <div className="absolute bottom-0 left-0 w-7 h-7 border-b-4 border-l-4 rounded-bl-lg border-white" />
             <div className="absolute bottom-0 right-0 w-7 h-7 border-b-4 border-r-4 rounded-br-lg border-white" />
-            {/* Scan line */}
             <motion.div
               className="absolute left-2 right-2 h-0.5 bg-white/70"
               animate={{ top: ['10%', '90%', '10%'] }}
@@ -10742,9 +10753,7 @@ function VendorQRScanner({ store, stampQty, onScanned, onClose, subtitle }: {
 
         {/* Bottom panel */}
         <div className="bg-black/70 backdrop-blur-sm px-6 pt-5 pb-10 rounded-t-3xl space-y-4">
-          <p className="text-white/80 text-sm text-center font-bold">
-            {hasBarcodeDetector ? 'Point camera at customer QR code' : 'Camera QR detection not supported — use manual entry below'}
-          </p>
+          <p className="text-white/80 text-sm text-center font-bold">Point camera at customer QR code</p>
 
           {error && (
             <p className="text-red-400 text-xs text-center font-bold bg-red-500/10 rounded-xl px-4 py-2">{error}</p>
