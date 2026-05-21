@@ -21513,6 +21513,8 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
 
         {/* Recent members — list */}
         {storeCards.length > 0 && (() => {
+          const isVisit = vendorStore?.membershipEnabled && vendorStore?.membershipType === 'visit';
+          const isSpend = vendorStore?.membershipEnabled && vendorStore?.membershipType === 'spend';
           const recent = [...new Map(
             [...storeCards]
               .sort((a, b) => (b.last_tap_timestamp?.toMillis?.() ?? 0) - (a.last_tap_timestamp?.toMillis?.() ?? 0))
@@ -21531,6 +21533,12 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
               <div className="divide-y divide-brand-navy/5">
                 {recent.map(c => {
                   const lastSeen = c.last_tap_timestamp?.toDate?.();
+                  const metricVal = isVisit
+                    ? (c.membership_visits ?? c.total_points_earned ?? 0)
+                    : isSpend
+                      ? (c.membership_points ?? 0)
+                      : (c.current_stamps ?? 0);
+                  const metricLabel = isVisit ? 'pts' : isSpend ? 'pts' : 'stamps';
                   return (
                     <div key={c.id} className="flex items-center gap-3 px-4 py-2.5">
                       <div className="w-9 h-9 rounded-full overflow-hidden bg-teal-50 shrink-0 flex items-center justify-center">
@@ -21543,8 +21551,8 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                         )}
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-xs font-bold text-brand-gold">{c.current_stamps ?? 0} <span className="text-brand-navy/40 font-normal">stamps</span></p>
-                        {(c.total_completed_cycles ?? 0) > 0 && (
+                        <p className="text-xs font-bold text-brand-gold">{metricVal} <span className="text-brand-navy/40 font-normal">{metricLabel}</span></p>
+                        {!isVisit && !isSpend && (c.total_completed_cycles ?? 0) > 0 && (
                           <p className="text-[10px] text-brand-navy/40">{c.total_completed_cycles} reward{c.total_completed_cycles !== 1 ? 's' : ''}</p>
                         )}
                       </div>
@@ -27193,7 +27201,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
   const statsMiddle = lbActiveType === 'loyalty'
     ? { val: totalStampsGiven, label: 'Stamps' }
     : lbActiveType === 'visit'
-      ? { val: visitMemberCardsAll.reduce((s, c) => s + (c.total_points_earned || c.membership_visits || 0), 0), label: 'Visits' }
+      ? { val: visitMemberCardsAll.reduce((s, c) => s + (c.total_points_earned || c.membership_visits || 0), 0), label: 'Pts Given' }
       : { val: spendMemberCardsAll.reduce((s, c) => s + (c.total_points_earned || c.membership_points || 0), 0), label: 'Pts Earned' };
   const statsRewards = lbActiveType === 'loyalty'
     ? { val: publicStoreRewards, label: 'Rewards' }
