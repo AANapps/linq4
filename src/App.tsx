@@ -27152,9 +27152,8 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
     });
   }
   const [tierSlideIdx, setTierSlideIdx] = React.useState(0);
-  // Derive leaderboard type from the single active card type
+  // Derive leaderboard type from the single active card type — membership takes priority
   const lbActiveType: 'loyalty' | 'visit' | 'spend' =
-    storeCardActive(store) ? 'loyalty' :
     store.membershipEnabled && store.membershipType === 'spend' ? 'spend' :
     store.membershipEnabled && store.membershipType === 'visit' ? 'visit' :
     'loyalty';
@@ -27394,8 +27393,8 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
         />
       )}
 
-      {/* Stamp card tile — shown after joining a stamp card */}
-      {card && storeCardActive(store) && !store.membershipEnabled && (() => {
+      {/* Stamp card tile — shown after joining a stamp card (not for visit/spend stores) */}
+      {card && storeCardActive(store) && !store.membershipEnabled && store.membershipType !== 'visit' && store.membershipType !== 'spend' && (() => {
         const stamps = card.current_stamps ?? 0;
         const required = store.stamps_required_for_reward || 10;
         const completed = card.total_completed_cycles ?? 0;
