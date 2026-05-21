@@ -19870,55 +19870,36 @@ function ScanUserPanel({ store, onIssue }: {
 
 // ─── Vendor Card Section (toggle + builder) ──────────────────────────────────
 function VendorCardSection({ store }: { store: StoreProfile | null }) {
-  const enabled = store?.cardEnabled !== false;
-  const membershipEnabled = store?.membershipEnabled === true;
-  const [togglingMembership, setTogglingMembership] = useState(false);
-  // Initialise from Firestore: membership tab if membership is the active type
-  const [activeTab, setActiveTab] = useState<'loyalty' | 'membership'>(
-    store?.membershipEnabled === true ? 'membership' : 'loyalty'
-  );
-  const [pendingTab, setPendingTab] = useState<'loyalty' | 'membership' | null>(null);
+  // Derive active card type from Firestore state — single source of truth
+  const activeType: 'stamp' | 'spend' | 'visit' =
+    store?.cardEnabled !== false ? 'stamp' :
+    store?.membershipEnabled && store?.membershipType === 'visit' ? 'visit' :
+    store?.membershipEnabled && store?.membershipType === 'spend' ? 'spend' :
+    'stamp';
+
+  const [pendingType, setPendingType] = useState<'stamp' | 'spend' | 'visit' | null>(null);
   const [switching, setSwitching] = useState(false);
   const [pendingScanMethod, setPendingScanMethod] = useState<'nfc' | 'qr' | null>(null);
   const [switchingScanMethod, setSwitchingScanMethod] = useState(false);
 
-  // Auto-enable loyalty card whenever the loyalty tab is active
-  useEffect(() => {
-    if (activeTab === 'loyalty' && store?.id && store?.cardEnabled === false) {
-      updateDoc(doc(db, 'stores', store.id), { cardEnabled: true }).catch(console.error);
-    }
-  }, [activeTab, store?.id, store?.cardEnabled]);
-
-  const toggleMembership = async () => {
-    if (!store?.id) return;
-    setTogglingMembership(true);
-    try {
-      await updateDoc(doc(db, 'stores', store.id), { membershipEnabled: !membershipEnabled });
-    } finally {
-      setTogglingMembership(false);
-    }
-  };
-
-  const handleTabClick = (tab: 'loyalty' | 'membership') => {
-    if (tab === activeTab) return;
-    setPendingTab(tab);
+  const handleTypeClick = (type: 'stamp' | 'spend' | 'visit') => {
+    if (type === activeType) return;
+    setPendingType(type);
   };
 
   const confirmSwitch = async () => {
-    if (!pendingTab || !store?.id) return;
+    if (!pendingType || !store?.id) return;
     setSwitching(true);
     try {
-      // Disable the outgoing card type so it disappears from the vendor profile
-      if (pendingTab === 'membership') {
-        await updateDoc(doc(db, 'stores', store.id), { cardEnabled: false });
+      if (pendingType === 'stamp') {
+        await updateDoc(doc(db, 'stores', store.id), { cardEnabled: true, membershipEnabled: false });
       } else {
-        await updateDoc(doc(db, 'stores', store.id), { membershipEnabled: false, cardEnabled: true });
+        await updateDoc(doc(db, 'stores', store.id), { cardEnabled: false, membershipEnabled: true, membershipType: pendingType });
       }
     } finally {
       setSwitching(false);
     }
-    setActiveTab(pendingTab);
-    setPendingTab(null);
+    setPendingType(null);
   };
 
   const confirmScanMethodSwitch = async () => {
@@ -19939,27 +19920,29 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
         <p className="text-brand-navy/80 text-sm">Manage your loyalty and membership cards.</p>
       </header>
 
-      {/* ─── Tab selector ─── */}
+      {/* ─── 3-way card type selector ─── */}
       <div className="flex gap-1 p-1 bg-brand-navy/5 rounded-2xl">
-        {(['loyalty', 'membership'] as const).map(tab => (
+        {([
+          { key: 'stamp'  as const, label: 'Stamps',    icon: <Stamp size={12} />      },
+          { key: 'spend'  as const, label: 'Spend Pts', icon: <DollarSign size={12} /> },
+          { key: 'visit'  as const, label: 'Visit Pts', icon: <MapPin size={12} />     },
+        ]).map(({ key, label, icon }) => (
           <button
-            key={tab}
-            onClick={() => handleTabClick(tab)}
+            key={key}
+            onClick={() => handleTypeClick(key)}
             className={cn(
-              'flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-200',
-              activeTab === tab
-                ? 'bg-white text-brand-navy shadow-sm'
-                : 'text-brand-navy/75 hover:text-brand-navy/70'
+              'flex-1 flex items-center justify-center gap-1 py-2.5 rounded-xl text-xs font-bold transition-all duration-200',
+              activeType === key ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/75'
             )}
           >
-            {tab === 'loyalty' ? 'Loyalty Card' : 'Membership Card'}
+            {icon} {label}
           </button>
         ))}
       </div>
 
-      {/* ─── Warning dialog ─── */}
+      {/* ─── Switch confirmation dialog ─── */}
       <AnimatePresence>
-        {pendingTab && (
+        {pendingType && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -19975,22 +19958,22 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
                 <h3 className="font-display text-lg font-bold text-brand-navy">Switch card type?</h3>
               </div>
               <p className="text-sm text-brand-navy/75">
-                Switching to <span className="font-bold text-brand-navy">{pendingTab === 'loyalty' ? 'Loyalty' : 'Membership'}</span> will disable your current <span className="font-bold text-brand-navy">{pendingTab === 'loyalty' ? 'Membership' : 'Loyalty'}</span> card. Customers will no longer see it on your profile until you switch back.
+                Switching to <span className="font-bold text-brand-navy">{pendingType === 'stamp' ? 'Stamps' : pendingType === 'spend' ? 'Spend Points' : 'Visit Points'}</span> will disable your current card. Customers won't see it on your profile until you switch back.
               </p>
               <div className="flex gap-3">
                 <button
-                  onClick={() => setPendingTab(null)}
+                  onClick={() => setPendingType(null)}
                   disabled={switching}
-                  className="flex-1 py-3 rounded-2xl border border-brand-navy/10 text-sm font-bold text-brand-navy/75 hover:bg-brand-navy/5 transition-colors disabled:opacity-40"
+                  className="flex-1 py-3 rounded-2xl border border-brand-navy/10 text-sm font-bold text-brand-navy/75 disabled:opacity-40"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={confirmSwitch}
                   disabled={switching}
-                  className="flex-1 py-3 rounded-2xl bg-brand-navy text-white text-sm font-bold hover:bg-brand-navy/90 transition-colors disabled:opacity-40"
+                  className="flex-1 py-3 rounded-2xl bg-brand-navy text-white text-sm font-bold disabled:opacity-40"
                 >
-                  {switching ? 'Switching…' : 'Switch anyway'}
+                  {switching ? 'Switching…' : 'Switch'}
                 </button>
               </div>
             </div>
@@ -20043,10 +20026,9 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
         )}
       </AnimatePresence>
 
-      {/* ─── Loyalty Card tab ─── */}
-      {activeTab === 'loyalty' && (
+      {/* ─── Stamps content ─── */}
+      {activeType === 'stamp' && (
         <div className="space-y-4">
-          {/* NFC / QR toggle */}
           <div className="glass-card rounded-[1.5rem] px-5 py-4 space-y-3">
             <div>
               <p className="font-bold text-brand-navy">Stamp Method</p>
@@ -20075,39 +20057,9 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
         </div>
       )}
 
-      {/* ─── Membership Card tab ─── */}
-      {activeTab === 'membership' && (
-        <div className="space-y-4">
-          <div className="glass-card rounded-[1.5rem] px-5 py-4 flex items-center justify-between gap-4">
-            <div>
-              <p className="font-bold text-brand-navy">Membership</p>
-              <p className="text-xs text-brand-navy/80 mt-0.5">
-                {membershipEnabled ? 'Customers can join your membership programme' : 'Enable a membership card'}
-              </p>
-            </div>
-            <button
-              onClick={toggleMembership}
-              disabled={togglingMembership}
-              className={cn('relative w-14 h-7 rounded-full transition-colors duration-200 shrink-0 disabled:opacity-40', membershipEnabled ? 'bg-purple-500' : 'bg-brand-navy/20')}
-            >
-              <motion.div animate={{ x: membershipEnabled ? 28 : 2 }} transition={{ type: 'spring', stiffness: 500, damping: 35 }} className="absolute top-1 w-5 h-5 rounded-full bg-white shadow-md" />
-            </button>
-          </div>
-          <AnimatePresence>
-            {membershipEnabled && (
-              <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
-                <MembershipCardBuilder store={store} />
-              </motion.div>
-            )}
-          </AnimatePresence>
-          {!membershipEnabled && (
-            <div className="py-8 text-center text-brand-navy/25">
-              <Star size={36} className="mx-auto mb-2 opacity-30" />
-              <p className="font-bold text-sm">Membership disabled</p>
-              <p className="text-xs mt-1">Toggle on to set up your membership card.</p>
-            </div>
-          )}
-        </div>
+      {/* ─── Spend / Visit membership content ─── */}
+      {(activeType === 'spend' || activeType === 'visit') && (
+        <MembershipCardBuilder store={store} />
       )}
     </div>
   );
@@ -20753,7 +20705,7 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
     setVisitRewards(store.membershipVisitRewards || []);
     setStampsPerVisit(store.membershipStampsPerVisit?.toString() || '1');
     setMenuItems(store.membershipMenuItems || []);
-  }, [store?.id]);
+  }, [store?.id, store?.membershipType]);
 
   const MEMBER_COLORS = ['#0f4c81', '#7c3aed', '#0e7490', '#065f46', '#92400e', '#9f1239'];
 
@@ -20813,25 +20765,6 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
             rows={2}
             className="w-full px-5 py-4 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-gold/30 resize-none"
           />
-        </div>
-
-        {/* Type */}
-        <div className="space-y-2">
-          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Membership Type</label>
-          <div className="grid grid-cols-2 gap-3">
-            {(['spend', 'visit'] as const).map(t => (
-              <button
-                key={t}
-                onClick={() => setMembershipType(t)}
-                className={cn(
-                  "py-3 rounded-2xl text-sm font-bold border transition-all",
-                  membershipType === t ? "bg-brand-navy text-white border-brand-navy" : "bg-brand-bg text-brand-navy/80 border-brand-navy/10 hover:border-brand-navy/30"
-                )}
-              >
-                {t === 'spend' ? 'Spend-Based' : 'Points (Per Visit)'}
-              </button>
-            ))}
-          </div>
         </div>
 
         {/* Color */}
@@ -27481,10 +27414,12 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
     });
   }
   const [tierSlideIdx, setTierSlideIdx] = React.useState(0);
-  // Leaderboard type is fixed by what the store has — no switching
-  const lbActiveType: 'loyalty' | 'visit' | 'spend' = store.cardEnabled
-    ? 'loyalty'
-    : store.membershipType === 'spend' ? 'spend' : 'visit';
+  // Derive leaderboard type from the single active card type
+  const lbActiveType: 'loyalty' | 'visit' | 'spend' =
+    storeCardActive(store) ? 'loyalty' :
+    store.membershipEnabled && store.membershipType === 'spend' ? 'spend' :
+    store.membershipEnabled && store.membershipType === 'visit' ? 'visit' :
+    'loyalty';
   const leaderboard = allStoreCards
     .filter(c => !c.isArchived && (
       lbActiveType === 'loyalty' ? (c.card_type !== 'membership' && c.card_type !== 'sub') :
