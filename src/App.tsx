@@ -923,30 +923,6 @@ interface StoreAutomation {
 
 type BadgeMetric = 'stamps' | 'cards_completed' | 'challenges_joined' | 'memberships' | 'followers' | 'following' | 'posts' | 'charity_animals' | 'charity_trees' | 'charity_total' | 'linqle_wins' | 'correct_polls' | 'rewards_redeemed' | 'streak' | 'points_redeemed' | 'visits' | 'challenges_won';
 
-interface EndangeredAnimal {
-  name: string;
-  emoji: string;
-  status: 'Critically Endangered' | 'Endangered';
-  fact: string;
-}
-
-const ENDANGERED_ANIMALS: EndangeredAnimal[] = [
-  { name: 'Amur Leopard', emoji: '🐆', status: 'Critically Endangered', fact: 'Fewer than 100 remain in the wild' },
-  { name: 'Sumatran Orangutan', emoji: '🦧', status: 'Critically Endangered', fact: 'Lost 80% of habitat in just 20 years' },
-  { name: 'Vaquita Porpoise', emoji: '🐬', status: 'Critically Endangered', fact: 'Fewer than 10 remain on Earth' },
-  { name: 'Javan Rhino', emoji: '🦏', status: 'Critically Endangered', fact: 'Only ~70 survive in the wild' },
-  { name: 'Cross River Gorilla', emoji: '🦍', status: 'Critically Endangered', fact: 'Fewer than 300 individuals remain' },
-  { name: 'Hawksbill Sea Turtle', emoji: '🐢', status: 'Critically Endangered', fact: 'Still hunted for their beautiful shells' },
-  { name: 'Kakapo Parrot', emoji: '🦜', status: 'Critically Endangered', fact: "World's only flightless parrot" },
-  { name: 'Siberian Tiger', emoji: '🐯', status: 'Endangered', fact: 'Only ~500 survive in the wild' },
-  { name: 'Snow Leopard', emoji: '🐆', status: 'Endangered', fact: 'Lives in the high mountains of central Asia' },
-  { name: 'Blue Whale', emoji: '🐋', status: 'Endangered', fact: "Earth's largest animal, still recovering from hunting" },
-  { name: 'Leatherback Sea Turtle', emoji: '🐢', status: 'Critically Endangered', fact: 'Population fell 40% in just 3 generations' },
-  { name: 'Sumatran Elephant', emoji: '🐘', status: 'Critically Endangered', fact: 'Half their population lost in one generation' },
-  { name: 'African Wild Dog', emoji: '🐕', status: 'Endangered', fact: 'Only ~6,600 remain across Africa' },
-  { name: 'Giant Panda', emoji: '🐼', status: 'Endangered', fact: 'A global symbol of conservation' },
-  { name: 'Mountain Gorilla', emoji: '🦍', status: 'Endangered', fact: 'Fewer than 1,100 survive in the wild' },
-];
 
 interface RankEntry {
   uid: string;
@@ -957,9 +933,7 @@ interface RankEntry {
 }
 
 interface CelebrationPage {
-  type: 'stamp' | 'challenge' | 'upsell' | 'charity' | 'rank' | 'monopoly_pack' | 'challenges_list' | 'upsell_list' | 'stage_reward' | 'collectible_promo' | 'visit_points';
-  charityAnimalImageUrl?: string;
-  charityTreeImageUrl?: string;
+  type: 'stamp' | 'challenge' | 'upsell' | 'rank' | 'monopoly_pack' | 'challenges_list' | 'upsell_list' | 'stage_reward' | 'collectible_promo' | 'visit_points';
   visitPoints?: number;
   membershipColor?: string;
   storeName?: string;
@@ -970,7 +944,6 @@ interface CelebrationPage {
   reward: string;
   encouragement: string;
   done: boolean;
-  charityAnimal?: EndangeredAnimal;
   rankBefore?: number;
   rankAfter?: number;
   rankChange?: number;
@@ -9096,20 +9069,6 @@ function buildStampCelebrationPages(
     });
   }
 
-  // 2. Charity deed page
-  const charityAnimal = ENDANGERED_ANIMALS[card.current_stamps % ENDANGERED_ANIMALS.length];
-  pages.push({
-    type: 'charity',
-    currentStamps: card.current_stamps,
-    totalStamps: nextTier?.stamps || store.stamps_required_for_reward || 10,
-    reward: '',
-    encouragement: '',
-    done: false,
-    charityAnimal,
-    charityAnimalImageUrl: store.charityAnimalImageUrl,
-    charityTreeImageUrl: store.charityTreeImageUrl,
-  });
-
   // 4. Joined challenge progress + up to 3 new unjoined challenges — one combined page
   const joined = challenges.filter(c =>
     (c.participantUids || []).includes(user.uid) &&
@@ -9285,7 +9244,6 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         prevMembershipVisitsRef.current.set(card.id, current);
         const store = stores.find(s => s.id === card.store_id);
         const qty = current - prev;
-        const charityAnimal = ENDANGERED_ANIMALS[current % ENDANGERED_ANIMALS.length];
         const joined = visibleActiveStandardChallenges.filter(c =>
           (c.participantUids || []).includes(user.uid)
         );
@@ -9329,17 +9287,6 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
             visitPointsPage.rankWeeklyChange = rankWeeklyChange;
           } catch (_) { /* rank is optional */ }
         })();
-        pages.push({
-          type: 'charity',
-          currentStamps: current,
-          totalStamps: current,
-          reward: '',
-          encouragement: '',
-          done: false,
-          charityAnimal,
-          charityAnimalImageUrl: store?.charityAnimalImageUrl,
-          charityTreeImageUrl: store?.charityTreeImageUrl,
-        });
         if (joined.length > 0 || notJoined.length > 0) {
           const challengesList = joined.map(c => {
             const entry = myStandardEntries.get(c.id);
@@ -9370,7 +9317,6 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         prevMembershipPointsRef.current.set(card.id, current);
         const store = stores.find(s => s.id === card.store_id);
         const qty = current - prev;
-        const charityAnimal = ENDANGERED_ANIMALS[current % ENDANGERED_ANIMALS.length];
         const joined = visibleActiveStandardChallenges.filter(c =>
           (c.participantUids || []).includes(user.uid)
         );
@@ -9412,17 +9358,6 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
             spendPointsPage.rankWeeklyChange = rankWeeklyChange;
           } catch (_) { /* rank is optional */ }
         })();
-        pages.push({
-          type: 'charity',
-          currentStamps: current,
-          totalStamps: current,
-          reward: '',
-          encouragement: '',
-          done: false,
-          charityAnimal,
-          charityAnimalImageUrl: store?.charityAnimalImageUrl,
-          charityTreeImageUrl: store?.charityTreeImageUrl,
-        });
         if (joined.length > 0 || notJoined.length > 0) {
           const challengesList = joined.map(c => {
             const entry = myStandardEntries.get(c.id);
@@ -10488,12 +10423,6 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
             }}
             avatarConfig={profile?.avatar}
             userUid={user.uid}
-            charityAnimals={profile?.charityAnimals ?? 0}
-            charityTrees={profile?.charityTrees ?? 0}
-            onCharityPick={async (choice) => {
-              const field = choice === 'animal' ? 'charityAnimals' : 'charityTrees';
-              await updateDoc(doc(db, 'users', user.uid), { [field]: increment(1) });
-            }}
             pendingPack={pendingPack}
             pendingPackCardId={pendingPackCardId}
             onPackClosed={(cardId) => {
@@ -11776,9 +11705,6 @@ function StampCelebrationModal({
   onClose,
   avatarConfig,
   userUid,
-  onCharityPick,
-  charityAnimals = 0,
-  charityTrees = 0,
   pendingPack,
   pendingPackCardId,
   onPackClosed,
@@ -11787,16 +11713,11 @@ function StampCelebrationModal({
   onClose: () => void;
   avatarConfig?: UserAvatar;
   userUid?: string;
-  onCharityPick?: (choice: 'animal' | 'tree') => void;
-  charityAnimals?: number;
-  charityTrees?: number;
   pendingPack?: CollectibleSticker[] | null;
   pendingPackCardId?: string | null;
   onPackClosed?: (cardId: string | null) => void;
 }) {
   const [pageIdx, setPageIdx] = useState(0);
-  const [charityPicked, setCharityPicked] = useState<'animal' | 'tree' | null>(null);
-  const [charityFeedback, setCharityFeedback] = useState<{ emoji: string; title: string; detail: string } | null>(null);
   const [displayRankGlobal, setDisplayRankGlobal] = useState(0);
   const [displayRankWeekly, setDisplayRankWeekly] = useState(0);
   const [rankRevealed, setRankRevealed] = useState(false);
@@ -11807,7 +11728,6 @@ function StampCelebrationModal({
   const pct = Math.min(100, page.totalStamps > 0 ? Math.round((page.currentStamps / page.totalStamps) * 100) : 0);
   const circumference = 2 * Math.PI * 42;
   const isUpsell = page.type === 'upsell';
-  const isCharity = page.type === 'charity';
   const isRank = page.type === 'rank';
   const isMonopolyPack = page.type === 'monopoly_pack';
   const isChallengesList = page.type === 'challenges_list';
@@ -11824,11 +11744,9 @@ function StampCelebrationModal({
   const weeklyRankChange = page.rankWeeklyChange ?? 0;
 
   useEffect(() => {
-    setCharityPicked(null);
-    setCharityFeedback(null);
     setMonopolyPackOpen(false);
     setStageRedeemed(false);
-    if (!isCharity && !isMonopolyPack) {
+    if (!isMonopolyPack) {
       fireCelebAnimation(PAGE_ANIM[pageKey] ?? 'sparkles');
     }
   }, [pageIdx]);
@@ -11873,19 +11791,6 @@ function StampCelebrationModal({
 
     return () => { clearInterval(iv1); clearTimeout(t1); clearInterval(iv2); };
   }, [pageIdx, rankAfterVal]);
-
-  const handleCharityChoice = (choice: 'animal' | 'tree') => {
-    if (charityPicked) return;
-    setCharityPicked(choice);
-    onCharityPick?.(choice);
-    const currentCount = choice === 'animal' ? charityAnimals : charityTrees;
-    const feedback = getCharityFeedback(choice, currentCount + 1);
-    setCharityFeedback(feedback);
-    setTimeout(() => {
-      if (isLast) onClose();
-      else setPageIdx(i => i + 1);
-    }, 2600);
-  };
 
   const ctaLabel = isLast
     ? (isUpsell ? 'Join the challenge! 🎯' : isUpsellList ? 'Explore Challenges! 🎯' : CTA_LABELS[pageIdx % CTA_LABELS.length])
@@ -12047,117 +11952,6 @@ function StampCelebrationModal({
                 >
                   {ctaLabel}
                 </motion.button>
-              </>
-            ) : isCharity ? (
-              /* ── Charity deed page ── */
-              <>
-                {/* Header */}
-                <div className="text-center space-y-1">
-                  <motion.p
-                    initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-                    className="text-[10px] font-bold uppercase tracking-widest text-emerald-500"
-                  >
-                    🌍 Do a Good Deed!
-                  </motion.p>
-                  <motion.h2
-                    initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-                    className="font-display text-xl font-bold text-brand-navy leading-tight"
-                  >
-                    Your stamp can help the planet
-                  </motion.h2>
-                </div>
-
-                {/* Pick a cause */}
-                <motion.p
-                  initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-                  className="text-center text-xs font-bold text-brand-navy/80 uppercase tracking-widest"
-                >
-                  Pick what to champion today:
-                </motion.p>
-
-                {/* Animal + Tree cards */}
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
-                  className="grid grid-cols-2 gap-3"
-                >
-                  {/* Endangered animal card */}
-                  <button
-                    onClick={() => handleCharityChoice('animal')}
-                    disabled={!!charityPicked}
-                    className={cn(
-                      'flex flex-col items-center gap-2 p-4 rounded-2xl border-2 text-left transition-all active:scale-[0.97]',
-                      charityPicked === 'animal'
-                        ? 'border-emerald-400 bg-emerald-50 scale-[0.97]'
-                        : charityPicked === 'tree'
-                          ? 'border-brand-navy/10 bg-white opacity-40'
-                          : 'border-brand-navy/10 bg-white hover:border-emerald-300 hover:bg-emerald-50/50',
-                    )}
-                  >
-                    {page.charityAnimalImageUrl
-                      ? <img src={page.charityAnimalImageUrl} alt={page.charityAnimal?.name ?? 'Animal'} className="w-full h-20 object-cover rounded-xl" />
-                      : <div className="w-full h-20 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-200 text-4xl font-bold">🐾</div>}
-                    <div className="w-full">
-                      <p className="font-display font-bold text-sm text-brand-navy leading-tight">{page.charityAnimal?.name ?? 'Endangered Animal'}</p>
-                      <p className="text-[10px] font-bold text-red-500 mt-0.5">{page.charityAnimal?.status}</p>
-                      <p className="text-[10px] text-brand-navy/80 mt-1 leading-tight">{page.charityAnimal?.fact}</p>
-                    </div>
-                    {charityPicked === 'animal' && (
-                      <motion.div
-                        initial={{ scale: 0 }} animate={{ scale: 1 }}
-                        className="text-xl"
-                      >✅</motion.div>
-                    )}
-                  </button>
-
-                  {/* Plant a tree card */}
-                  <button
-                    onClick={() => handleCharityChoice('tree')}
-                    disabled={!!charityPicked}
-                    className={cn(
-                      'flex flex-col items-center gap-2 p-4 rounded-2xl border-2 text-left transition-all active:scale-[0.97]',
-                      charityPicked === 'tree'
-                        ? 'border-emerald-400 bg-emerald-50 scale-[0.97]'
-                        : charityPicked === 'animal'
-                          ? 'border-brand-navy/10 bg-white opacity-40'
-                          : 'border-brand-navy/10 bg-white hover:border-emerald-300 hover:bg-emerald-50/50',
-                    )}
-                  >
-                    {page.charityTreeImageUrl
-                      ? <img src={page.charityTreeImageUrl} alt="Tree planting" className="w-full h-20 object-cover rounded-xl" />
-                      : <div className="w-full h-20 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-200 text-4xl">🌳</div>}
-                    <div className="w-full">
-                      <p className="font-display font-bold text-sm text-brand-navy leading-tight">Plant a Tree</p>
-                      <p className="text-[10px] font-bold text-emerald-600 mt-0.5">Reforestation</p>
-                      <p className="text-[10px] text-brand-navy/80 mt-1 leading-tight">Help restore forests and fight climate change</p>
-                    </div>
-                    {charityPicked === 'tree' && (
-                      <motion.div
-                        initial={{ scale: 0 }} animate={{ scale: 1 }}
-                        className="text-xl"
-                      >✅</motion.div>
-                    )}
-                  </button>
-                </motion.div>
-
-                {/* Donation note */}
-                <motion.div
-                  initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
-                  className="rounded-2xl bg-emerald-50 border border-emerald-200 p-3 flex items-start gap-2"
-                >
-                  <span className="text-lg shrink-0">💚</span>
-                  <p className="text-[11px] text-emerald-700 font-medium leading-snug">
-                    We donate <strong>10% of our profits</strong> to charitable organisations supporting wildlife conservation and reforestation.
-                  </p>
-                </motion.div>
-
-                {/* Page dots */}
-                {pages.length > 1 && (
-                  <div className="flex justify-center gap-1.5">
-                    {pages.map((_, i) => (
-                      <motion.div key={i} animate={{ width: i === pageIdx ? 16 : 6 }} className={cn('h-1.5 rounded-full transition-colors', i === pageIdx ? 'bg-brand-navy' : 'bg-brand-navy/20')} />
-                    ))}
-                  </div>
-                )}
               </>
             ) : isStageReward ? (
               /* ── Stage reward page (2-step: reward → next stage progress) ── */
@@ -20085,11 +19879,6 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
   const [openColorPicker, setOpenColorPicker] = useState<'primary' | 'secondary' | null>(null);
   const [businessRules, setBusinessRules] = useState(store?.businessRules || '');
   const [ruleTemplates, setRuleTemplates] = useState<string[]>([]);
-  const [charityAnimalImageUrl, setCharityAnimalImageUrl] = useState(store?.charityAnimalImageUrl || '');
-  const [charityTreeImageUrl, setCharityTreeImageUrl] = useState(store?.charityTreeImageUrl || '');
-  const [uploadingCharity, setUploadingCharity] = useState<'animal' | 'tree' | null>(null);
-  const [charityStats, setCharityStats] = useState<{ animals: number; trees: number } | null>(null);
-  const [loadingCharityStats, setLoadingCharityStats] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -20105,8 +19894,6 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
     setStampBorderColor(store.stampBorderColor || '#ffffff');
     setCardPattern(store.cardPattern || 'solid');
     setBusinessRules(store.businessRules || '');
-    setCharityAnimalImageUrl(store.charityAnimalImageUrl || '');
-    setCharityTreeImageUrl(store.charityTreeImageUrl || '');
   }, [store?.id]);
 
   const DEFAULT_RULE_TEMPLATES = [
@@ -20158,27 +19945,6 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
     setTiers(prev => prev.map((t, idx) => idx === i ? { ...t, [field]: field === 'stamps' ? Math.max(1, parseInt(val) || 1) : field === 'value' ? (parseFloat(val) || 0) : val } : t));
   };
 
-  const loadCharityStats = async () => {
-    if (!store || loadingCharityStats) return;
-    setLoadingCharityStats(true);
-    try {
-      const cardsSnap = await getDocs(query(collection(db, 'cards'), where('store_id', '==', store.id)));
-      const uids = [...new Set(cardsSnap.docs.map(d => d.data().user_id as string).filter(Boolean))];
-      let animals = 0, trees = 0;
-      const chunks: string[][] = [];
-      for (let i = 0; i < uids.length; i += 10) chunks.push(uids.slice(i, i + 10));
-      await Promise.all(chunks.map(async chunk => {
-        const snap = await getDocs(query(collection(db, 'users'), where('uid', 'in', chunk)));
-        snap.docs.forEach(d => {
-          animals += (d.data().charityAnimals || 0);
-          trees += (d.data().charityTrees || 0);
-        });
-      }));
-      setCharityStats({ animals, trees });
-    } catch (err) { console.error(err); }
-    setLoadingCharityStats(false);
-  };
-
   const handleSave = async () => {
     if (!store) return;
     setSaving(true);
@@ -20196,8 +19962,6 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
         stampBorderColor,
         cardPattern,
         businessRules,
-        charityAnimalImageUrl,
-        charityTreeImageUrl,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -20558,96 +20322,6 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
               ))}
             </div>
           )}
-        </div>
-
-        {/* Charity Images */}
-        <div className="space-y-3">
-          <div>
-            <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Charity Photos</label>
-            <p className="text-[11px] text-brand-navy/45 mt-1">Photos shown on the donation choice page when customers collect stamps.</p>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {(['animal', 'tree'] as const).map(type => {
-              const url = type === 'animal' ? charityAnimalImageUrl : charityTreeImageUrl;
-              const setUrl = type === 'animal' ? setCharityAnimalImageUrl : setCharityTreeImageUrl;
-              return (
-                <div key={type} className="rounded-2xl border border-brand-navy/10 overflow-hidden bg-white">
-                  <div className="relative w-full aspect-video bg-brand-navy/5">
-                    {url
-                      ? <img src={url} alt={type} className="w-full h-full object-cover" />
-                      : <div className="w-full h-full flex items-center justify-center text-brand-navy/15 text-4xl">{type === 'animal' ? '🐾' : '🌳'}</div>}
-                  </div>
-                  <div className="p-3 space-y-2">
-                    <p className="text-xs font-bold text-brand-navy">{type === 'animal' ? 'Endangered Animal' : 'Tree Planting'}</p>
-                    <label className={`block w-full text-center py-2 rounded-xl text-[11px] font-bold cursor-pointer transition-all ${uploadingCharity === type ? 'bg-brand-navy/20 text-brand-navy/50' : 'bg-brand-navy/8 text-brand-navy hover:bg-brand-navy/15'}`}>
-                      {uploadingCharity === type ? 'Uploading…' : url ? 'Change' : 'Upload Photo'}
-                      <input type="file" accept="image/*" className="hidden" disabled={!!uploadingCharity}
-                        onChange={async e => {
-                          const file = e.target.files?.[0]; if (!file || !store) return;
-                          setUploadingCharity(type);
-                          try {
-                            const blob = await compressImage(file, 800, 0.85);
-                            const snap = await uploadBytes(storageRef(storage, `stores/${store.id}/charity_${type}_${Date.now()}.webp`), blob, { contentType: 'image/webp' });
-                            const newUrl = await getDownloadURL(snap.ref);
-                            setUrl(newUrl);
-                          } catch (err) { console.error(err); }
-                          setUploadingCharity(null);
-                          e.target.value = '';
-                        }}
-                      />
-                    </label>
-                    {url && <button onClick={() => setUrl('')} className="w-full text-[10px] text-brand-navy/40 hover:text-red-400 font-bold transition-colors">Remove</button>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Charity vote stats */}
-          <button
-            onClick={loadCharityStats}
-            disabled={loadingCharityStats}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-brand-navy/6 text-brand-navy/70 text-[11px] font-bold hover:bg-brand-navy/10 transition-colors disabled:opacity-50"
-          >
-            <BarChart2 size={13} />
-            {loadingCharityStats ? 'Loading…' : charityStats ? 'Refresh Vote Stats' : 'View Charity Votes'}
-          </button>
-
-          {charityStats && (() => {
-            const total = charityStats.animals + charityStats.trees;
-            const animalPct = total > 0 ? Math.round((charityStats.animals / total) * 100) : 0;
-            const treePct = total > 0 ? 100 - animalPct : 0;
-            return (
-              <div className="rounded-2xl bg-white border border-brand-navy/8 p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/60">Charity Votes</p>
-                  <p className="text-[10px] font-bold text-brand-navy/40">{total} total</p>
-                </div>
-                <div className="space-y-2.5">
-                  {/* Animal bar */}
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between text-xs font-bold">
-                      <span className="text-brand-navy">🐾 Animals</span>
-                      <span className="text-brand-navy/60">{charityStats.animals} ({animalPct}%)</span>
-                    </div>
-                    <div className="h-2.5 bg-brand-navy/8 rounded-full overflow-hidden">
-                      <div className="h-full rounded-full bg-emerald-400 transition-all duration-700" style={{ width: `${animalPct}%` }} />
-                    </div>
-                  </div>
-                  {/* Tree bar */}
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between text-xs font-bold">
-                      <span className="text-brand-navy">🌳 Trees</span>
-                      <span className="text-brand-navy/60">{charityStats.trees} ({treePct}%)</span>
-                    </div>
-                    <div className="h-2.5 bg-brand-navy/8 rounded-full overflow-hidden">
-                      <div className="h-full rounded-full bg-teal-400 transition-all duration-700" style={{ width: `${treePct}%` }} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
         </div>
 
         {store && (
