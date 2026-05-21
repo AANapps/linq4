@@ -1597,18 +1597,22 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="flex items-end gap-2">
-          <PixelAvatar config={{ skinTone: 'skin1', hairStyle: 'hair_short', hairColor: 'black', facialHair: null, top: 'top_stripes', bottom: 'bottom_jeans', shoes: 'shoes_sneakers', accessory: null, mood: 80, inventory: [] }} uid="linq-mascot" size={48} view="full" />
+      <div className="min-h-screen flex flex-col items-center justify-between bg-white py-16 px-6">
+        <div className="flex-1 flex items-center justify-center">
           <div className="relative overflow-hidden px-3 py-1 rounded-xl">
-            <span className="font-display text-5xl font-black tracking-tight text-brand-navy select-none">linq</span>
+            <span className="font-display text-6xl font-black tracking-tight select-none" style={{ color: 'var(--color-brand-gold)' }}>linq</span>
             <motion.div
               className="absolute inset-0 pointer-events-none"
-              style={{ background: 'linear-gradient(100deg, transparent 15%, rgba(245,166,35,0.22) 40%, rgba(255,255,255,0.72) 50%, rgba(245,166,35,0.22) 60%, transparent 85%)' }}
+              style={{ background: 'linear-gradient(100deg, transparent 15%, rgba(255,255,255,0.6) 50%, transparent 85%)' }}
               animate={{ x: ['-160%', '220%'] }}
               transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut', repeatDelay: 0.9 }}
             />
           </div>
+        </div>
+        <div className="flex flex-col items-center gap-2">
+          <img src="/app-logo.png" alt="Ket House" className="w-8 h-8 rounded-xl object-contain" />
+          <p className="text-[10px] text-brand-navy/40 font-medium">from</p>
+          <p className="text-xs font-bold text-brand-navy/60 tracking-wide">Ad Astra Network</p>
         </div>
       </div>
     );
@@ -1628,18 +1632,22 @@ export default function App() {
 
   if (!profile) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="flex items-end gap-2">
-          <PixelAvatar config={{ skinTone: 'skin1', hairStyle: 'hair_short', hairColor: 'black', facialHair: null, top: 'top_stripes', bottom: 'bottom_jeans', shoes: 'shoes_sneakers', accessory: null, mood: 80, inventory: [] }} uid="linq-mascot" size={48} view="full" />
+      <div className="min-h-screen flex flex-col items-center justify-between bg-white py-16 px-6">
+        <div className="flex-1 flex items-center justify-center">
           <div className="relative overflow-hidden px-3 py-1 rounded-xl">
-            <span className="font-display text-5xl font-black tracking-tight text-brand-navy select-none">linq</span>
+            <span className="font-display text-6xl font-black tracking-tight select-none" style={{ color: 'var(--color-brand-gold)' }}>linq</span>
             <motion.div
               className="absolute inset-0 pointer-events-none"
-              style={{ background: 'linear-gradient(100deg, transparent 15%, rgba(245,166,35,0.22) 40%, rgba(255,255,255,0.72) 50%, rgba(245,166,35,0.22) 60%, transparent 85%)' }}
+              style={{ background: 'linear-gradient(100deg, transparent 15%, rgba(255,255,255,0.6) 50%, transparent 85%)' }}
               animate={{ x: ['-160%', '220%'] }}
               transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut', repeatDelay: 0.9 }}
             />
           </div>
+        </div>
+        <div className="flex flex-col items-center gap-2">
+          <img src="/app-logo.png" alt="Ket House" className="w-8 h-8 rounded-xl object-contain" />
+          <p className="text-[10px] text-brand-navy/40 font-medium">from</p>
+          <p className="text-xs font-bold text-brand-navy/60 tracking-wide">Ad Astra Network</p>
         </div>
       </div>
     );
@@ -1656,10 +1664,7 @@ export default function App() {
         >
           <Plus className="w-5 h-5 text-white" />
         </button>
-        <button onClick={() => setShowSettings(true)} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-          <div className="w-7 h-7 gradient-red rounded-lg flex items-center justify-center">
-            <Sparkles className="w-4 h-4 text-white" />
-          </div>
+        <button onClick={() => setShowSettings(true)} className="hover:opacity-80 transition-opacity">
           <h1 className="font-display font-bold text-xl tracking-tight"><span className="text-brand-gold">Li</span>nq</h1>
         </button>
         <div className="flex items-center gap-0.5">
