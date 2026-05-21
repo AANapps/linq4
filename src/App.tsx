@@ -266,6 +266,12 @@ function applyCustomThemeHex(hex: string) {
   root.style.setProperty('--color-brand-rose', v.rose);
 }
 
+function storeFallbackImg(name?: string | null, color?: string | null): string {
+  const letter = (name || 'S')[0].toUpperCase();
+  const bg = color || '#0D9488';
+  return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="${bg}"/><text x="50" y="67" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="800" font-size="50" fill="rgba(255,255,255,0.9)">${letter}</text></svg>`)}`;
+}
+
 export function applyBrandTheme(t: ThemePreset) {
   const r = document.documentElement;
   r.style.setProperty('--color-brand-gold', t.gold);
@@ -11213,7 +11219,7 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady, initialQty }: {
         {/* Store header */}
         <div className="flex items-center gap-3 mb-6">
           <div className="w-12 h-12 rounded-2xl overflow-hidden shrink-0">
-            <img src={store?.logoUrl || `https://picsum.photos/seed/${card.store_id}/200/200`} alt="" className="w-full h-full object-cover" />
+            <img src={store?.logoUrl || storeFallbackImg(store?.name, store?.theme)} alt="" className="w-full h-full object-cover" />
           </div>
           <div className="min-w-0">
             <h3 className="font-display text-lg font-bold text-brand-navy">{store?.name || 'Store'}</h3>
@@ -11324,7 +11330,7 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
         {/* Store header */}
         <div className="flex items-center gap-3 mb-6">
           <div className="w-12 h-12 rounded-2xl overflow-hidden shrink-0">
-            <img src={store?.logoUrl || `https://picsum.photos/seed/${card.store_id}/200/200`} alt="" className="w-full h-full object-cover" />
+            <img src={store?.logoUrl || storeFallbackImg(store?.name, store?.theme)} alt="" className="w-full h-full object-cover" />
           </div>
           <div className="min-w-0">
             <h3 className="font-display text-lg font-bold text-brand-navy">{store?.name || 'Store'}</h3>
@@ -11639,7 +11645,7 @@ function VisitScanSheet({ card, store, onClose, initialQty }: { card: Card; stor
         {/* Store header */}
         <div className="flex items-center gap-3 mb-6">
           <div className="w-12 h-12 rounded-2xl overflow-hidden shrink-0">
-            <img src={store?.logoUrl || `https://picsum.photos/seed/${card.store_id}/200/200`} alt="" className="w-full h-full object-cover" />
+            <img src={store?.logoUrl || storeFallbackImg(store?.name, store?.theme)} alt="" className="w-full h-full object-cover" />
           </div>
           <div className="min-w-0">
             <h3 className="font-display text-lg font-bold text-brand-navy">{store?.name || 'Store'}</h3>
@@ -12568,7 +12574,7 @@ function StampCelebrationModal({
                           <span className="card-shine-ray" aria-hidden="true" />
                           {cardPattern !== 'solid' && <div className="absolute inset-0 pointer-events-none" style={getCardPatternStyle(cardPattern)} />}
                           <div className="relative z-10 w-10 h-10 rounded-full overflow-hidden border-2 border-white/50 shrink-0 shadow-md">
-                            <img src={page.storeLogoUrl || `https://picsum.photos/seed/store/200/200`} alt="" className="w-full h-full object-cover" />
+                            <img src={page.storeLogoUrl || storeFallbackImg(page.storeName, page.storeTheme)} alt="" className="w-full h-full object-cover" />
                           </div>
                           <div className="relative z-10 flex-1 min-w-0">
                             <h4 className="font-bold text-white text-sm leading-tight truncate">{page.storeName}</h4>
@@ -15639,7 +15645,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
             className="relative z-10 w-10 h-10 rounded-full overflow-hidden border-2 border-white/50 shrink-0 shadow-md"
             onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}
           >
-            <img src={store?.logoUrl || `https://picsum.photos/seed/${card.store_id}/200/200`} alt="" className="w-full h-full object-cover" />
+            <img src={store?.logoUrl || storeFallbackImg(store?.name, store?.theme)} alt="" className="w-full h-full object-cover" />
           </div>
           <div
             className="relative z-10 flex-1 min-w-0"
@@ -15928,7 +15934,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
             className="relative z-10 w-[72px] h-[72px] rounded-full overflow-hidden border-[3px] border-white/60 shadow-xl cursor-pointer"
             onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}
           >
-            <img src={store?.logoUrl || `https://picsum.photos/seed/${card.store_id}/200/200`} alt="" className="w-full h-full object-cover" />
+            <img src={store?.logoUrl || storeFallbackImg(store?.name, store?.theme)} alt="" className="w-full h-full object-cover" />
           </div>
           <div
             className="relative z-10 text-center cursor-pointer"
@@ -16287,7 +16293,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
   const [showOptions, setShowOptions] = useState(false);
   const [showCompletionPopup, setShowCompletionPopup] = useState(false);
   const [showQRScan, setShowQRScan] = useState(false);
-  const [flipped, setFlipped] = useState(false);
+  const [showTCModal, setShowTCModal] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [testQty, setTestQty] = useState(1);
@@ -16573,105 +16579,69 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
           /* ── Compact list card ── */
           if (compact) return (
             <div>
-              <div style={{ perspective: '1000px' }}>
-                <motion.div
-                  animate={{ rotateY: flipped ? 180 : 0 }}
-                  transition={{ duration: 0.45, ease: 'easeInOut' }}
-                  style={{ transformStyle: 'preserve-3d', WebkitTransformStyle: 'preserve-3d', position: 'relative' }}
-                >
-                  {/* Front */}
-                  <div style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
-                    <div className="relative overflow-hidden flex items-center gap-3 px-4 py-3" style={{ backgroundColor: cardTheme }}>
-                      <span className="card-shine-ray" aria-hidden="true" />
-                      {cardPattern !== 'solid' && <div className="absolute inset-0 pointer-events-none" style={getCardPatternStyle(cardPattern)} />}
-                      <div className="relative z-10 w-10 h-10 rounded-full overflow-hidden border-2 border-white/50 shrink-0 cursor-pointer shadow-md"
-                        onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}>
-                        <img src={store?.logoUrl || `https://picsum.photos/seed/${card.store_id}/200/200`} alt="" className="w-full h-full object-cover" />
-                      </div>
-                      <div className="relative z-10 flex-1 min-w-0 cursor-pointer"
-                        onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}>
-                        <h4 className="font-bold text-white text-sm leading-tight truncate">{store?.name || 'Store'}</h4>
-                        <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">{store?.category || 'Retail'}</p>
-                      </div>
-                      <div className="relative z-10 flex items-center gap-1.5 shrink-0">
-                        {isCompleted && !card.isRedeemed && <div className="bg-white/25 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest animate-pulse">Ready!</div>}
-                        {card.isRedeemed && <div className="bg-green-400 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">Claimed</div>}
-                        <button onClick={(e) => { e.stopPropagation(); setShowOptions(!showOptions); }} className="p-1 text-white/50 hover:text-white/80 transition-colors">
-                          <MoreVertical size={15} />
-                        </button>
-                      </div>
-                    </div>
-                    {stampGrid(5, 'gap-1.5', 'px-4 pt-4 pb-4', 15, 'text-[11px]')}
-                    {store?.businessRules && (
-                      <div className="px-4 pb-3 flex justify-end">
-                        <button onClick={(e) => { e.stopPropagation(); setFlipped(true); }} className="text-[10px] text-brand-navy/35 font-semibold hover:text-brand-navy/60 transition-colors">T&amp;Cs</button>
-                      </div>
-                    )}
-                  </div>
-                  {/* Back */}
-                  <div style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)', position: 'absolute', inset: 0 }}
-                    className="bg-white flex flex-col p-4 gap-2">
-                    <div className="flex items-center justify-between">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">Terms &amp; Conditions</p>
-                      <button onClick={(e) => { e.stopPropagation(); setFlipped(false); }} className="text-[10px] text-brand-navy/40 font-semibold hover:text-brand-navy/70">✕ Close</button>
-                    </div>
-                    <p className="text-xs text-brand-navy/60 leading-relaxed">{store?.businessRules}</p>
-                  </div>
-                </motion.div>
+              <div className="relative overflow-hidden flex items-center gap-3 px-4 py-3" style={{ backgroundColor: cardTheme }}>
+                <span className="card-shine-ray" aria-hidden="true" />
+                {cardPattern !== 'solid' && <div className="absolute inset-0 pointer-events-none" style={getCardPatternStyle(cardPattern)} />}
+                <div className="relative z-10 w-10 h-10 rounded-full overflow-hidden border-2 border-white/50 shrink-0 cursor-pointer shadow-md"
+                  onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}>
+                  <img src={store?.logoUrl || storeFallbackImg(store?.name, store?.theme)} alt="" className="w-full h-full object-cover" />
+                </div>
+                <div className="relative z-10 flex-1 min-w-0 cursor-pointer"
+                  onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}>
+                  <h4 className="font-bold text-white text-sm leading-tight truncate">{store?.name || 'Store'}</h4>
+                  <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">{store?.category || 'Retail'}</p>
+                </div>
+                <div className="relative z-10 flex items-center gap-1.5 shrink-0">
+                  {isCompleted && !card.isRedeemed && <div className="bg-white/25 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest animate-pulse">Ready!</div>}
+                  {card.isRedeemed && <div className="bg-green-400 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">Claimed</div>}
+                  <button onClick={(e) => { e.stopPropagation(); setShowOptions(!showOptions); }} className="p-1 text-white/50 hover:text-white/80 transition-colors">
+                    <MoreVertical size={15} />
+                  </button>
+                </div>
               </div>
+              {stampGrid(5, 'gap-1.5', 'px-4 pt-4 pb-4', 15, 'text-[11px]')}
+              {store?.businessRules && (
+                <div className="px-4 pb-3 flex justify-end">
+                  <button onClick={(e) => { e.stopPropagation(); setShowTCModal(true); }} className="text-[10px] text-brand-navy/35 font-semibold hover:text-brand-navy/60 transition-colors">T&amp;Cs</button>
+                </div>
+              )}
             </div>
           );
 
           /* ── Carousel portrait card ── */
           return (
-            <div style={{ perspective: '1000px' }}>
-              <motion.div
-                animate={{ rotateY: flipped ? 180 : 0 }}
-                transition={{ duration: 0.45, ease: 'easeInOut' }}
-                style={{ transformStyle: 'preserve-3d', WebkitTransformStyle: 'preserve-3d', position: 'relative' }}
-              >
-                {/* Front */}
-                <div style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }} className="flex flex-col h-full">
-                  <div className="relative overflow-hidden pt-10 pb-8 flex flex-col items-center gap-2" style={{ backgroundColor: cardTheme }}>
-                    <span className="card-shine-ray" aria-hidden="true" />
-                    {cardPattern !== 'solid' && <div className="absolute inset-0 pointer-events-none" style={getCardPatternStyle(cardPattern)} />}
-                    {isCompleted && !card.isRedeemed && (
-                      <div className="absolute top-4 left-4 bg-white/25 text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest animate-pulse z-10">Ready!</div>
-                    )}
-                    {card.isRedeemed && (
-                      <div className="absolute top-4 left-4 bg-green-400 text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest z-10">Claimed</div>
-                    )}
-                    <button onClick={(e) => { e.stopPropagation(); setShowOptions(!showOptions); }}
-                      className="absolute top-4 right-4 p-1.5 text-white/50 hover:text-white/80 transition-colors z-10">
-                      <MoreVertical size={16} />
-                    </button>
-                    <div className="relative z-10 w-[72px] h-[72px] rounded-full overflow-hidden border-[3px] border-white/60 shadow-xl cursor-pointer"
-                      onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}>
-                      <img src={store?.logoUrl || `https://picsum.photos/seed/${card.store_id}/200/200`} alt="" className="w-full h-full object-cover" />
-                    </div>
-                    <div className="relative z-10 text-center cursor-pointer"
-                      onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}>
-                      <h4 className="font-bold text-white text-lg leading-tight">{store?.name || 'Store'}</h4>
-                      <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mt-0.5">{store?.category || 'Retail'}</p>
-                    </div>
-                  </div>
-                  {stampGrid(3, 'gap-3', 'px-8 pt-7 pb-6', 22, 'text-[15px]')}
-                  {store?.businessRules && (
-                    <div className="px-6 pb-3 flex justify-center">
-                      <button onClick={(e) => { e.stopPropagation(); setFlipped(true); }} className="text-[10px] text-brand-navy/35 font-semibold hover:text-brand-navy/60 transition-colors">T&amp;Cs apply</button>
-                    </div>
+            <div>
+              <div className="flex flex-col h-full">
+                <div className="relative overflow-hidden pt-10 pb-8 flex flex-col items-center gap-2" style={{ backgroundColor: cardTheme }}>
+                  <span className="card-shine-ray" aria-hidden="true" />
+                  {cardPattern !== 'solid' && <div className="absolute inset-0 pointer-events-none" style={getCardPatternStyle(cardPattern)} />}
+                  {isCompleted && !card.isRedeemed && (
+                    <div className="absolute top-4 left-4 bg-white/25 text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest animate-pulse z-10">Ready!</div>
                   )}
-                </div>
-                {/* Back */}
-                <div style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)', position: 'absolute', inset: 0 }}
-                  className="bg-white rounded-[inherit] flex flex-col p-6 gap-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">Terms &amp; Conditions</p>
-                    <button onClick={(e) => { e.stopPropagation(); setFlipped(false); }} className="text-[10px] text-brand-navy/40 font-semibold hover:text-brand-navy/70">✕ Close</button>
+                  {card.isRedeemed && (
+                    <div className="absolute top-4 left-4 bg-green-400 text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest z-10">Claimed</div>
+                  )}
+                  <button onClick={(e) => { e.stopPropagation(); setShowOptions(!showOptions); }}
+                    className="absolute top-4 right-4 p-1.5 text-white/50 hover:text-white/80 transition-colors z-10">
+                    <MoreVertical size={16} />
+                  </button>
+                  <div className="relative z-10 w-[72px] h-[72px] rounded-full overflow-hidden border-[3px] border-white/60 shadow-xl cursor-pointer"
+                    onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}>
+                    <img src={store?.logoUrl || storeFallbackImg(store?.name, store?.theme)} alt="" className="w-full h-full object-cover" />
                   </div>
-                  <p className="text-xs text-brand-navy/60 leading-relaxed">{store?.businessRules}</p>
+                  <div className="relative z-10 text-center cursor-pointer"
+                    onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}>
+                    <h4 className="font-bold text-white text-lg leading-tight">{store?.name || 'Store'}</h4>
+                    <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mt-0.5">{store?.category || 'Retail'}</p>
+                  </div>
                 </div>
-              </motion.div>
+                {stampGrid(3, 'gap-3', 'px-8 pt-7 pb-6', 22, 'text-[15px]')}
+                {store?.businessRules && (
+                  <div className="px-6 pb-3 flex justify-center">
+                    <button onClick={(e) => { e.stopPropagation(); setShowTCModal(true); }} className="text-[10px] text-brand-navy/35 font-semibold hover:text-brand-navy/60 transition-colors">T&amp;Cs apply</button>
+                  </div>
+                )}
+              </div>
             </div>
           );
         })()}
@@ -16732,6 +16702,29 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                   Close
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+
+        {showTCModal && (
+          <div
+            className="fixed inset-0 z-[110] flex items-end justify-center p-4 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowTCModal(false)}
+          >
+            <motion.div
+              initial={{ y: 40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 40, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+              className="w-full max-w-md bg-white rounded-[2rem] p-6 space-y-3 mb-2"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="w-10 h-1 bg-brand-navy/20 rounded-full mx-auto mb-1" />
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">Terms &amp; Conditions</p>
+                <button onClick={() => setShowTCModal(false)} className="text-[10px] text-brand-navy/40 font-semibold hover:text-brand-navy/70 transition-colors">✕ Close</button>
+              </div>
+              <p className="text-xs text-brand-navy/60 leading-relaxed">{store?.businessRules}</p>
             </motion.div>
           </div>
         )}
@@ -16899,7 +16892,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
         >
           <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/30 shrink-0"
             onClick={(e) => { e.stopPropagation(); store && onViewStore && onViewStore(store); }}>
-            <img src={store?.logoUrl || `https://picsum.photos/seed/${card.store_id}/200/200`} alt="" className="w-full h-full object-cover" />
+            <img src={store?.logoUrl || storeFallbackImg(store?.name, store?.theme)} alt="" className="w-full h-full object-cover" />
           </div>
           <div className="flex-1 min-w-0" onClick={(e) => { e.stopPropagation(); store && onViewStore && onViewStore(store); }}>
             <p className="font-bold text-white text-sm truncate">{store?.name || 'Store'}</p>
@@ -16964,7 +16957,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
             className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/30 shrink-0 cursor-pointer"
             onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}
           >
-            <img src={store?.logoUrl || `https://picsum.photos/seed/${card.store_id}/200/200`} alt="" className="w-full h-full object-cover" />
+            <img src={store?.logoUrl || storeFallbackImg(store?.name, store?.theme)} alt="" className="w-full h-full object-cover" />
           </div>
           <div
             className="flex-1 min-w-0 cursor-pointer"
@@ -17203,7 +17196,7 @@ function StoreCard({ store, card, onJoin, onClick, distance, town }: { store: St
       className="glass-card p-4 rounded-3xl flex items-center gap-3 hover:shadow-lg transition-all cursor-pointer group"
     >
       <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0 border border-brand-navy/5">
-        <img src={store.logoUrl || `https://picsum.photos/seed/${store.id}/200/200`} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+        <img src={store.logoUrl || storeFallbackImg(store.name, store.theme)} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1 mb-0.5">
@@ -21124,7 +21117,7 @@ function StoreLeaderboard({ storeId, storeName, logoUrl, type, userId }: {
     <div className="bg-white rounded-3xl p-5 shadow-sm border border-brand-navy/5">
       <div className="flex items-center gap-3 mb-4">
         <div className="w-9 h-9 rounded-xl overflow-hidden shrink-0">
-          <img src={logoUrl || `https://picsum.photos/seed/${storeId}/100/100`} alt="" className="w-full h-full object-cover" />
+          <img src={logoUrl || storeFallbackImg(storeName)} alt="" className="w-full h-full object-cover" />
         </div>
         <div className="flex-1 min-w-0">
           <h4 className="font-bold text-brand-navy text-sm truncate">{storeName}</h4>
@@ -24072,7 +24065,7 @@ function FeedVendorPostCard({ item }: { item: any }) {
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-5 rounded-[2rem] space-y-3">
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-navy/5 shrink-0">
-          <img src={item.authorPhoto || `https://picsum.photos/seed/${item.authorUid}/40`} alt="" className="w-full h-full object-cover" />
+          <img src={item.authorPhoto || storeFallbackImg(item.authorName)} alt="" className="w-full h-full object-cover" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
@@ -27558,7 +27551,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
               <div className="relative overflow-hidden px-5 py-4 flex items-center gap-3" style={{ backgroundColor: color }}>
                 <span className="card-shine-ray" aria-hidden="true" />
                 <div className="relative z-10 w-10 h-10 rounded-full overflow-hidden border-2 border-white/50 shrink-0">
-                  <img src={store.logoUrl || `https://picsum.photos/seed/${store.id}/200/200`} alt="" className="w-full h-full object-cover" />
+                  <img src={store.logoUrl || storeFallbackImg(store.name, store.theme)} alt="" className="w-full h-full object-cover" />
                 </div>
                 <div className="relative z-10 flex-1 min-w-0">
                   <p className="text-white font-black text-sm">{store.membershipName || 'Membership'}</p>
@@ -27825,7 +27818,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
               <div className="relative overflow-hidden px-5 py-4 flex items-center gap-3" style={{ backgroundColor: color }}>
                 <span className="card-shine-ray" aria-hidden="true" />
                 <div className="relative z-10 w-10 h-10 rounded-full overflow-hidden border-2 border-white/50 shrink-0">
-                  <img src={store.logoUrl || `https://picsum.photos/seed/${store.id}/200/200`} alt="" className="w-full h-full object-cover" />
+                  <img src={store.logoUrl || storeFallbackImg(store.name, store.theme)} alt="" className="w-full h-full object-cover" />
                 </div>
                 <div className="relative z-10 flex-1 min-w-0">
                   <p className="text-white font-black text-sm">{store.membershipName || 'Membership'}</p>
