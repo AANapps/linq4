@@ -21193,6 +21193,22 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
     return onSnapshot(q, snap => setStoreWallPosts(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
   }, [vendorStore?.id]);
 
+  const [vendorOffers, setVendorOffers] = useState<StoreOffer[]>([]);
+  useEffect(() => {
+    if (!vendorStore) return;
+    const q = query(collection(db, 'store_offers'), where('storeId', '==', vendorStore.id));
+    return onSnapshot(q, snap => {
+      const now = Date.now();
+      const loaded: StoreOffer[] = [];
+      snap.docs.forEach(d => {
+        const o = { id: d.id, ...d.data() } as StoreOffer;
+        if (o.expiresAt && o.expiresAt.toMillis?.() <= now) return;
+        loaded.push(o);
+      });
+      setVendorOffers(loaded);
+    });
+  }, [vendorStore?.id]);
+
   useEffect(() => {
     if (!vendorStore) return;
     getDocs(query(collection(db, 'store_follows'), where('storeId', '==', vendorStore.id)))
@@ -21495,16 +21511,16 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           </div>
         )}
 
-        {/* Recent members */}
+        {/* Recent members — list */}
         {storeCards.length > 0 && (() => {
           const recent = [...new Map(
             [...storeCards]
               .sort((a, b) => (b.last_tap_timestamp?.toMillis?.() ?? 0) - (a.last_tap_timestamp?.toMillis?.() ?? 0))
               .map(c => [c.user_id, c])
-          ).values()].slice(0, 6);
+          ).values()].slice(0, 8);
           return (
-            <div className="glass-card rounded-2xl px-4 py-3">
-              <div className="flex items-center justify-between mb-3">
+            <div className="glass-card rounded-2xl overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-brand-navy/5">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">Recent Members</p>
                 {onSeeAllMembers && (
                   <button onClick={onSeeAllMembers} className="text-[11px] font-bold text-brand-gold active:opacity-70 transition-opacity">
@@ -21512,13 +21528,60 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                   </button>
                 )}
               </div>
-              <div className="flex gap-2 flex-wrap">
-                {recent.map(c => (
-                  <div key={c.id} className="flex items-center gap-1.5 bg-brand-bg rounded-full pl-1 pr-3 py-1">
-                    <div className="w-6 h-6 rounded-full overflow-hidden bg-teal-50 shrink-0 flex items-center justify-center">
-                      <PixelAvatar uid={c.user_id} size={24} view="head" />
+              <div className="divide-y divide-brand-navy/5">
+                {recent.map(c => {
+                  const lastSeen = c.last_tap_timestamp?.toDate?.();
+                  return (
+                    <div key={c.id} className="flex items-center gap-3 px-4 py-2.5">
+                      <div className="w-9 h-9 rounded-full overflow-hidden bg-teal-50 shrink-0 flex items-center justify-center">
+                        <PixelAvatar uid={c.user_id} size={36} view="head" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold truncate">{c.userName || 'Member'}</p>
+                        {lastSeen && (
+                          <p className="text-[11px] text-brand-navy/40">{format(lastSeen, 'MMM d, h:mm a')}</p>
+                        )}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-xs font-bold text-brand-gold">{c.current_stamps ?? 0} <span className="text-brand-navy/40 font-normal">stamps</span></p>
+                        {(c.total_completed_cycles ?? 0) > 0 && (
+                          <p className="text-[10px] text-brand-navy/40">{c.total_completed_cycles} reward{c.total_completed_cycles !== 1 ? 's' : ''}</p>
+                        )}
+                      </div>
                     </div>
-                    <span className="text-xs font-bold truncate max-w-[80px]">{c.userName || 'Member'}</span>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Offers */}
+        {vendorOffers.length > 0 && (() => {
+          const theme = vendorStore?.theme || '#0D9488';
+          return (
+            <div className="glass-card rounded-2xl overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-brand-navy/5">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">Offers</p>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: theme }}>{vendorOffers.length}</span>
+              </div>
+              <div className="divide-y divide-brand-navy/5">
+                {vendorOffers.map(o => (
+                  <div key={o.id} className="flex items-center gap-3 px-4 py-3">
+                    {o.imageUrl
+                      ? <img src={o.imageUrl} alt="" className="w-10 h-10 rounded-xl object-cover shrink-0" />
+                      : <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center text-white text-lg" style={{ background: theme }}>
+                          <Tag size={18} />
+                        </div>
+                    }
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold truncate">{o.title}</p>
+                      <p className="text-[11px] text-brand-navy/50 truncate">{o.description}</p>
+                    </div>
+                    <span className={cn(
+                      "text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0",
+                      o.status === 'active' ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-400'
+                    )}>{o.status === 'active' ? 'Active' : 'Paused'}</span>
                   </div>
                 ))}
               </div>
@@ -27330,6 +27393,48 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
           onJoinMembership={handleJoinMembership}
         />
       )}
+
+      {/* Stamp card tile — shown after joining a stamp card */}
+      {card && storeCardActive(store) && !store.membershipEnabled && (() => {
+        const stamps = card.current_stamps ?? 0;
+        const required = store.stamps_required_for_reward || 10;
+        const completed = card.total_completed_cycles ?? 0;
+        const topTier = (store.rewardTiers ?? []).slice().sort((a: any, b: any) => b.stamps - a.stamps)[0];
+        const reward = topTier?.reward || store.reward || 'Reward';
+        const pct = Math.min(100, Math.round((stamps / required) * 100));
+        const color = store.theme || '#0D9488';
+        return (
+          <button
+            className="w-full rounded-[2rem] overflow-hidden shadow-lg active:scale-[0.98] transition-transform text-left"
+          >
+            <div className="relative overflow-hidden px-5 py-4 flex items-center gap-3" style={{ backgroundColor: color }}>
+              <span className="card-shine-ray" aria-hidden="true" />
+              <div className="relative z-10 w-10 h-10 rounded-full overflow-hidden border-2 border-white/50 shrink-0">
+                {store.logoUrl
+                  ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
+                  : <div className="w-full h-full bg-white/20 flex items-center justify-center"><Stamp size={20} className="text-white" /></div>}
+              </div>
+              <div className="relative z-10 flex-1 min-w-0">
+                <p className="text-white font-black text-sm">{store.name}</p>
+                <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">Stamp Card</p>
+              </div>
+              <div className="relative z-10 text-right shrink-0">
+                <p className="text-white font-black text-2xl leading-none">{stamps}</p>
+                <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">/ {required}</p>
+              </div>
+            </div>
+            <div className="bg-white px-5 py-3 space-y-2">
+              <div className="w-full h-1.5 bg-brand-navy/10 rounded-full overflow-hidden">
+                <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-brand-navy/75 text-[10px] font-bold">{required - stamps} more → {reward}</span>
+                {completed > 0 && <span className="text-brand-navy/45 text-[10px] font-bold">{completed} reward{completed !== 1 ? 's' : ''} earned</span>}
+              </div>
+            </div>
+          </button>
+        );
+      })()}
 
       {/* Spend card — collect points tile */}
       {membershipCard && store.membershipType === 'spend' && (() => {
