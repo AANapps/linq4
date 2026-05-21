@@ -16664,6 +16664,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
 
         {(() => {
           const cardTheme = store?.theme || '#0D9488';
+          const accentColor = store?.stampBorderColor || '#ffffff';
           const rewardTiers = store?.rewardTiers?.length ? store.rewardTiers : [{ stamps: limit, reward: store?.reward || '' }];
           const tierStamps = new Set(rewardTiers.map(t => t.stamps));
           const nextTier = rewardTiers.find(t => t.stamps > card.current_stamps);
@@ -16699,11 +16700,11 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                       ) : (
                         <div
                           className="w-full h-full rounded-full flex items-center justify-center bg-white"
-                          style={{ borderWidth: compact ? 2 : 3, borderStyle: isTier ? 'dashed' : 'solid', borderColor: cardTheme }}
+                          style={{ borderWidth: compact ? 2 : 3, borderStyle: isTier ? 'dashed' : 'solid', borderColor: accentColor }}
                         >
                           {isTier
-                            ? <Gift size={iconSize - 3} style={{ color: cardTheme, opacity: 0.4 }} />
-                            : <span className={`font-bold ${emptyTextSize}`} style={{ color: cardTheme, opacity: 0.35 }}>{stampNum}</span>
+                            ? <Gift size={iconSize - 3} style={{ color: accentColor, opacity: 0.6 }} />
+                            : <span className={`font-bold ${emptyTextSize}`} style={{ color: accentColor, opacity: 0.6 }}>{stampNum}</span>
                           }
                         </div>
                       )}
@@ -20334,6 +20335,10 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
         {/* Colours — primary & secondary side by side */}
         <div className="space-y-2">
           <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Colours</label>
+          <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-2xl px-3 py-2.5 mb-1">
+            <span className="text-amber-500 text-xs mt-0.5">💡</span>
+            <p className="text-[10px] text-amber-800 leading-relaxed">Use a <strong>light secondary</strong> on a dark card, or <strong>dark secondary</strong> on a light card, for readable stamps.</p>
+          </div>
           <div className="flex gap-3">
 
             {/* Primary — card background & brand colour */}
@@ -21872,52 +21877,6 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           </div>
         )}
 
-        {/* Business stats */}
-        <div className="grid grid-cols-2 gap-3">
-          {(vis?.members !== false) && (
-            <div className="glass-card rounded-2xl px-4 py-3 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-teal-50 flex items-center justify-center shrink-0">
-                <Users size={18} className="text-teal-500" />
-              </div>
-              <div>
-                <p className="text-xl font-bold leading-tight">{totalMembers}</p>
-                <p className="text-[10px] text-brand-navy/50 font-bold uppercase tracking-wide">Members</p>
-              </div>
-            </div>
-          )}
-          {(vis?.stamps !== false) && (
-            <div className="glass-card rounded-2xl px-4 py-3 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
-                <Star size={18} className="text-amber-500" />
-              </div>
-              <div>
-                <p className="text-xl font-bold leading-tight">{totalStampsGiven}</p>
-                <p className="text-[10px] text-brand-navy/50 font-bold uppercase tracking-wide">Stamps Issued</p>
-              </div>
-            </div>
-          )}
-          <div className="glass-card rounded-2xl px-4 py-3 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-rose-50 flex items-center justify-center shrink-0">
-              <Gift size={18} className="text-rose-400" />
-            </div>
-            <div>
-              <p className="text-xl font-bold leading-tight">{profileRewardsGiven}</p>
-              <p className="text-[10px] text-brand-navy/50 font-bold uppercase tracking-wide">Rewards Given</p>
-            </div>
-          </div>
-          {(vis?.returnRate !== false) && (
-            <div className="glass-card rounded-2xl px-4 py-3 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
-                <RefreshCw size={18} className="text-indigo-400" />
-              </div>
-              <div>
-                <p className="text-xl font-bold leading-tight">{returnRate}%</p>
-                <p className="text-[10px] text-brand-navy/50 font-bold uppercase tracking-wide">Return Rate</p>
-              </div>
-            </div>
-          )}
-        </div>
-
         {/* Recent members */}
         {storeCards.length > 0 && (() => {
           const recent = [...storeCards]
@@ -22808,6 +22767,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
   const [storeReward, setStoreReward] = useState('');
   const [storeCategory, setStoreCategory] = useState<Category>('Food');
   const [storeTheme, setStoreTheme] = useState('#0F172A');
+  const [storeSecondaryColor, setStoreSecondaryColor] = useState('#ffffff');
   const [storeLogo, setStoreLogo] = useState('');
   const [logoFetchUrl, setLogoFetchUrl] = useState('');
   const [logoFetching, setLogoFetching] = useState(false);
@@ -22832,6 +22792,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
         setStoreReward(s.reward || '');
         setStoreCategory(s.category || 'Food');
         setStoreTheme(s.theme || '#0D9488');
+        setStoreSecondaryColor(s.stampBorderColor || '#ffffff');
         setStoreLogo(s.logoUrl || '');
         setStoreLocation(s.location || s.address || '');
         const emptyLoc = { label: '', line1: '', line2: '', town: '', state: '', postcode: '' };
@@ -22874,7 +22835,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
         const primary = geocoded[0];
         const primaryAddr = primary ? composeAddress(primary.line1, primary.line2, primary.town, primary.state, primary.postcode) : storeLocation;
         await updateDoc(doc(db, 'stores', store.id), {
-          name: storeName, reward: storeReward, category: storeCategory, theme: storeTheme,
+          name: storeName, reward: storeReward, category: storeCategory, theme: storeTheme, stampBorderColor: storeSecondaryColor,
           logoUrl: storeLogo,
           address: primaryAddr,
           location: primaryAddr,
@@ -23142,26 +23103,71 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
               )}
             </div>
 
-            {/* Colour Theme */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Brand Colour</label>
-                <Palette size={13} className="text-brand-navy/72" />
+            {/* Colours */}
+            <div className="space-y-5">
+              <SectionLabel icon={<Palette size={14} className="text-brand-gold" />} label="Brand Colours" />
+
+              {/* Contrast tip */}
+              <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
+                <span className="text-amber-500 text-sm mt-0.5">💡</span>
+                <p className="text-[11px] text-amber-800 leading-relaxed">
+                  For best readability: use a <strong>light secondary colour</strong> on a dark card, or a <strong>dark secondary colour</strong> on a light card.
+                </p>
               </div>
-              <div className="grid grid-cols-4 gap-3">
-                {THEME_COLOURS.map(c => (
-                  <button key={c.value} onClick={() => setStoreTheme(c.value)}
-                    className={cn("h-12 rounded-2xl transition-all active:scale-95 relative", storeTheme === c.value ? "ring-4 ring-offset-2 ring-brand-navy/30 scale-105" : "")}
-                    style={{ backgroundColor: c.value }}>
-                    {storeTheme === c.value && <CheckCircle2 size={16} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white drop-shadow" />}
-                  </button>
-                ))}
+
+              {/* Primary — card background */}
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Primary — Card Colour</label>
+                <div className="grid grid-cols-4 gap-3">
+                  {THEME_COLOURS.map(c => (
+                    <button key={c.value} onClick={() => setStoreTheme(c.value)}
+                      className={cn("h-12 rounded-2xl transition-all active:scale-95 relative", storeTheme === c.value ? "ring-4 ring-offset-2 ring-brand-navy/30 scale-105" : "")}
+                      style={{ backgroundColor: c.value }}>
+                      {storeTheme === c.value && <CheckCircle2 size={16} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white drop-shadow" />}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-3">
+                  <label className="text-xs text-brand-navy/75 font-bold">Custom</label>
+                  <input type="color" value={storeTheme} onChange={e => setStoreTheme(e.target.value)}
+                    className="w-10 h-10 rounded-xl border border-brand-navy/10 cursor-pointer p-1 bg-white" />
+                  <span className="text-sm font-mono text-brand-navy/75">{storeTheme}</span>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <label className="text-xs text-brand-navy/75 font-bold">Custom</label>
-                <input type="color" value={storeTheme} onChange={e => setStoreTheme(e.target.value)}
-                  className="w-10 h-10 rounded-xl border border-brand-navy/10 cursor-pointer p-1 bg-white" />
-                <span className="text-sm font-mono text-brand-navy/75">{storeTheme}</span>
+
+              {/* Secondary — stamp borders + card text */}
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Secondary — Stamp Borders &amp; Text</label>
+                <div className="flex flex-wrap gap-3">
+                  {['#ffffff', '#f5f5f5', '#f5a623', '#a78bfa', '#34d399', '#fb7185', '#60a5fa', '#0F172A'].map(c => (
+                    <button key={c} onClick={() => setStoreSecondaryColor(c)}
+                      className={cn("w-11 h-11 rounded-2xl border-2 transition-all active:scale-95 relative", storeSecondaryColor === c ? "ring-4 ring-offset-2 ring-brand-navy/30 scale-110" : "border-brand-navy/10")}
+                      style={{ backgroundColor: c }}>
+                      {storeSecondaryColor === c && (
+                        <CheckCircle2 size={14} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 drop-shadow"
+                          style={{ color: c === '#ffffff' || c === '#f5f5f5' ? '#0F172A' : '#ffffff' }} />
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-3">
+                  <label className="text-xs text-brand-navy/75 font-bold">Custom</label>
+                  <input type="color" value={storeSecondaryColor} onChange={e => setStoreSecondaryColor(e.target.value)}
+                    className="w-10 h-10 rounded-xl border border-brand-navy/10 cursor-pointer p-1 bg-white" />
+                  <span className="text-sm font-mono text-brand-navy/75">{storeSecondaryColor}</span>
+                </div>
+                {/* Live preview swatch */}
+                <div className="rounded-2xl overflow-hidden h-12 flex items-center justify-center gap-3 px-4" style={{ backgroundColor: storeTheme }}>
+                  <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center" style={{ border: `2.5px solid ${storeSecondaryColor}` }}>
+                    <span className="text-[10px] font-bold" style={{ color: storeSecondaryColor }}>1</span>
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center" style={{ border: `2.5px solid ${storeSecondaryColor}` }}>
+                    <span className="text-[10px] font-bold" style={{ color: storeSecondaryColor }}>2</span>
+                  </div>
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: storeTheme === '#ffffff' ? storeSecondaryColor : storeTheme, border: `2.5px solid ${storeSecondaryColor}` }}>
+                    <span className="text-[10px]">⭐</span>
+                  </div>
+                </div>
               </div>
             </div>
 
