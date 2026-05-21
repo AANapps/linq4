@@ -13501,7 +13501,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   const [statModalVisible, setStatModalVisible] = useState(10);
   const availableDashTabs = (
     [
-      store?.cardEnabled !== false ? 'stamps' : null,
+      !store?.membershipEnabled && store?.cardEnabled !== false ? 'stamps' : null,
       store?.membershipEnabled && store?.membershipType === 'spend' ? 'spend' : null,
       store?.membershipEnabled && store?.membershipType === 'visit' ? 'visit' : null,
     ] as ('stamps' | 'spend' | 'visit' | null)[]
@@ -28136,35 +28136,17 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
           {leaderboard.map((entry, index) => {
             const lbProfile = leaderboardProfiles.get(entry.user_id);
             const displayName = lbProfile?.name || entry.userName || 'Loyal Customer';
-            const scoreLabel = lbActiveType === 'loyalty'
-              ? `${entry.lifetimeStamps} stamps`
-              : lbActiveType === 'visit'
-                ? `${entry.lifetimeStamps} visits`
-                : `${entry.lifetimeStamps} pts`;
-            const subLabel = lbActiveType === 'loyalty'
-              ? `${entry.total_completed_cycles || 0} rewards earned`
-              : lbActiveType === 'visit'
-                ? `${entry.membership_visits || 0} total visits`
-                : `£${(entry.total_spent || 0).toFixed(2)} spent`;
             return (
               <div
                 key={`lb-${entry.id}`}
                 onClick={() => lbProfile && onViewUser(lbProfile)}
-                className="flex items-center justify-between p-3 rounded-2xl hover:bg-brand-bg transition-colors cursor-pointer group"
+                className="flex items-center gap-3 p-3 rounded-2xl hover:bg-brand-bg transition-colors cursor-pointer group"
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-6 h-6 flex items-center justify-center font-bold text-xs text-brand-navy/75">#{index + 1}</div>
-                  <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-navy/5 bg-teal-50 flex items-center justify-center">
-                    <PixelAvatar config={lbProfile?.avatar} uid={lbProfile?.uid ?? entry.user_id} size={40} view="head" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-sm group-hover:text-brand-gold transition-colors">{displayName}</p>
-                    <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest">{subLabel}</p>
-                  </div>
+                <div className="w-6 h-6 flex items-center justify-center font-bold text-xs text-brand-navy/75 shrink-0">#{index + 1}</div>
+                <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-navy/5 bg-teal-50 flex items-center justify-center shrink-0">
+                  <PixelAvatar config={lbProfile?.avatar} uid={lbProfile?.uid ?? entry.user_id} size={40} view="head" />
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold text-brand-navy">{scoreLabel}</p>
-                </div>
+                <p className="font-bold text-sm group-hover:text-brand-gold transition-colors truncate">{displayName}</p>
               </div>
             );
           })}
