@@ -13062,8 +13062,14 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
     return [...s];
   })();
 
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const alreadySentToday = broadcastHistory.some(b => {
+    const ts = b.sentAt?.toDate?.() ?? (b.sentAt instanceof Date ? b.sentAt : null);
+    return ts && ts.toISOString().slice(0, 10) === todayStr;
+  });
+
   const handleSend = async () => {
-    if (!msgTitle.trim() || !msgBody.trim() || recipientUids.length === 0) return;
+    if (!msgTitle.trim() || !msgBody.trim() || recipientUids.length === 0 || alreadySentToday) return;
     setSending(true);
     setSentCount(null);
     setSendError(null);
@@ -13244,9 +13250,15 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
                   </div>
                 )}
 
+                {alreadySentToday && (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl text-center">
+                    <p className="text-sm font-bold text-amber-700">You've already sent a broadcast today. Try again tomorrow.</p>
+                  </div>
+                )}
+
                 <button
                   onClick={handleSend}
-                  disabled={sending || !msgTitle.trim() || !msgBody.trim() || recipientUids.length === 0}
+                  disabled={sending || alreadySentToday || !msgTitle.trim() || !msgBody.trim() || recipientUids.length === 0}
                   className="w-full bg-brand-navy text-white font-bold py-4 rounded-2xl text-sm flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-40"
                 >
                   <Send size={16} />
@@ -26243,7 +26255,16 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
       )}
 
       <div className="space-y-3">
-        {chats.filter(c => !(c.isBroadcast && vendorStore && c.storeId === vendorStore.id)).map(chat => (
+        {chats.filter(c => {
+          // Hide vendor's own broadcasts from their inbox
+          if (c.isBroadcast && vendorStore && c.storeId === vendorStore.id) return false;
+          // Auto-expire broadcast messages after 24 hours
+          if (c.isBroadcast && c.lastActivity) {
+            const age = Date.now() - (c.lastActivity.toMillis?.() ?? 0);
+            if (age > 24 * 60 * 60 * 1000) return false;
+          }
+          return true;
+        }).map(chat => (
           <ChatListItem
             key={chat.id}
             chat={chat}
