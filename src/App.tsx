@@ -15386,9 +15386,15 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-sm truncate">{name}</p>
                     <p className="text-[11px] text-brand-navy/75">
-                      {isCompletion
-                        ? `Card completed · ${tx.stamp_count || tx.stamps_at_completion} stamp${(tx.stamp_count || 1) !== 1 ? 's' : ''}`
-                        : `${tx.stamp_count || tx.points_issued || 1} stamp${(tx.stamp_count || 1) !== 1 ? 's' : ''} issued`}
+                      {tx.card_type === 'membership' && tx.membership_type === 'spend'
+                        ? `£${(tx.transaction_amount || 0).toFixed(2)} spend · ${tx.points_earned || 0} pts`
+                        : tx.card_type === 'membership' && tx.membership_type === 'visit'
+                          ? `Visit · ${tx.stamps_per_visit || tx.points_earned || 0} pts`
+                          : tx.card_type === 'sub'
+                            ? `${tx.points_issued || tx.points_earned || 0} pts issued`
+                            : isCompletion
+                              ? `Card completed · ${tx.stamp_count || tx.stamps_at_completion} stamp${(tx.stamp_count || 1) !== 1 ? 's' : ''}`
+                              : `${tx.stamp_count || 1} stamp${(tx.stamp_count || 1) !== 1 ? 's' : ''} issued`}
                     </p>
                   </div>
                   <div className="text-right shrink-0">
@@ -27506,6 +27512,23 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
     ? [...store.rewardTiers].sort((a, b) => a.stamps - b.stamps)
     : store.reward ? [{ stamps: store.stamps_required_for_reward || 10, reward: store.reward }] : [];
 
+  // Type-aware stats bar values
+  const statsMembers = lbActiveType === 'loyalty'
+    ? new Set(stampCardsAll.map(c => c.user_id)).size
+    : lbActiveType === 'visit'
+      ? new Set(visitMemberCardsAll.map(c => c.user_id)).size
+      : new Set(spendMemberCardsAll.map(c => c.user_id)).size;
+  const statsMiddle = lbActiveType === 'loyalty'
+    ? { val: totalStampsGiven, label: 'Stamps' }
+    : lbActiveType === 'visit'
+      ? { val: visitMemberCardsAll.reduce((s, c) => s + (c.total_points_earned || c.membership_visits || 0), 0), label: 'Visits' }
+      : { val: spendMemberCardsAll.reduce((s, c) => s + (c.total_points_earned || c.membership_points || 0), 0), label: 'Pts Earned' };
+  const statsRewards = lbActiveType === 'loyalty'
+    ? { val: publicStoreRewards, label: 'Rewards' }
+    : lbActiveType === 'visit'
+      ? { val: visitMemberCardsAll.reduce((s, c) => s + (c.total_visits_redeemed || 0), 0), label: 'Pts Redeemed' }
+      : { val: spendMemberCardsAll.reduce((s, c) => s + (c.earned_rewards || 0), 0), label: 'Rewards' };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -27557,9 +27580,9 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
       <div className="pt-10">
         <div className="flex items-center divide-x divide-brand-navy/10">
           {[
-            { val: totalMembers,       label: 'Members' },
-            { val: totalStampsGiven,   label: 'Stamps'  },
-            { val: publicStoreRewards, label: 'Rewards' },
+            { val: statsMembers,       label: 'Members'          },
+            { val: statsMiddle.val,    label: statsMiddle.label  },
+            { val: statsRewards.val,   label: statsRewards.label },
           ].map(s => (
             <div key={s.label} className="flex-1 flex flex-col items-center gap-0.5 py-2">
               <p className="font-black text-base leading-none text-brand-navy">{s.val}</p>
