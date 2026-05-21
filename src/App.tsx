@@ -15482,6 +15482,10 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
           onDeleteAccount={onDeleteAccount}
           onViewUser={onViewUser}
           onGoToDeals={() => setActiveTab('deals')}
+          onSeeAllMembers={() => {
+            setActiveTab('home');
+            if (isSubscribed) openStatModal('members');
+          }}
           user={user}
         />
       )}
@@ -21502,7 +21506,7 @@ function StoreLeaderboard({ storeId, storeName, logoUrl, type, userId }: {
   );
 }
 
-function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, onViewUser, onViewStore, onGoToDeals, onOpenLinqle, user, uiColors: uiColorsProp }: { profile: UserProfile | null, userCards: Card[], stores?: StoreProfile[], onLogout: () => void, onDeleteAccount: () => Promise<void>, onViewUser: (u: UserProfile) => void, onViewStore?: (s: StoreProfile) => void, onGoToDeals?: () => void, onOpenLinqle?: () => void, user: FirebaseUser, uiColors?: UiColors }) {
+function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, onViewUser, onViewStore, onGoToDeals, onOpenLinqle, onSeeAllMembers, user, uiColors: uiColorsProp }: { profile: UserProfile | null, userCards: Card[], stores?: StoreProfile[], onLogout: () => void, onDeleteAccount: () => Promise<void>, onViewUser: (u: UserProfile) => void, onViewStore?: (s: StoreProfile) => void, onGoToDeals?: () => void, onOpenLinqle?: () => void, onSeeAllMembers?: () => void, user: FirebaseUser, uiColors?: UiColors }) {
   const uiColors = uiColorsProp ?? UI_COLOR_DEFAULTS;
   const [activeSubTab, setActiveSubTab] = useState<'posts' | 'interactions'>('posts');
   const [profileRedeemingChallenge, setProfileRedeemingChallenge] = useState<{ challenge: Challenge; entry: any; userName: string } | null>(null);
@@ -21886,7 +21890,14 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           ).values()].slice(0, 6);
           return (
             <div className="glass-card rounded-2xl px-4 py-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-3">Recent Members</p>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">Recent Members</p>
+                {onSeeAllMembers && (
+                  <button onClick={onSeeAllMembers} className="text-[11px] font-bold text-brand-gold active:opacity-70 transition-opacity">
+                    See All
+                  </button>
+                )}
+              </div>
               <div className="flex gap-2 flex-wrap">
                 {recent.map(c => (
                   <div key={c.id} className="flex items-center gap-1.5 bg-brand-bg rounded-full pl-1 pr-3 py-1">
