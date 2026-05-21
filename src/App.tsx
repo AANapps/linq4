@@ -11525,8 +11525,11 @@ function VisitScanSheet({ card, store, onClose, initialQty }: { card: Card; stor
         const tData = tokenSnap.data();
         if (tData.used) throw new Error('QR already used — ask vendor to show a new one.');
         if (tData.storeId !== card.store_id) throw new Error('Wrong store QR code.');
-        const age = Date.now() - (tData.createdAt?.toMillis?.() ?? 0);
-        if (age > 120_000) throw new Error('QR expired — ask vendor to refresh.');
+        const createdMs = typeof tData.createdAt === 'number'
+          ? tData.createdAt
+          : (tData.createdAt?.toMillis?.() ?? null);
+        const age = createdMs !== null ? Date.now() - createdMs : 0;
+        if (age > 300_000) throw new Error('QR expired — ask vendor to refresh.');
         tx.update(tokenRef, { used: true, usedAt: serverTimestamp() });
       });
     } catch (err: any) {
