@@ -27317,21 +27317,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
         </div>
       </div>
 
-      {/* Stats — clean separator row */}
-      <div className="pt-10">
-        <div className="flex items-center divide-x divide-brand-navy/10">
-          {[
-            { val: statsMembers,       label: 'Members'          },
-            { val: statsMiddle.val,    label: statsMiddle.label  },
-            { val: statsRewards.val,   label: statsRewards.label },
-          ].map(s => (
-            <div key={s.label} className="flex-1 flex flex-col items-center gap-0.5 py-2">
-              <p className="font-black text-base leading-none text-brand-navy">{s.val}</p>
-              <p className="text-[9px] font-bold uppercase tracking-wider text-brand-navy/50">{s.label}</p>
-            </div>
-          ))}
-        </div>
-      </div>
+      <div className="pt-10" />
 
       {/* Name + info row with message/follow on RHS */}
       <div className="flex items-start gap-3">
@@ -28060,7 +28046,6 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                 onClick={() => lbProfile && onViewUser(lbProfile)}
                 className="flex items-center gap-3 p-3 rounded-2xl hover:bg-brand-bg transition-colors cursor-pointer group"
               >
-                <div className="w-6 h-6 flex items-center justify-center font-bold text-xs text-brand-navy/75 shrink-0">#{index + 1}</div>
                 <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-navy/5 bg-teal-50 flex items-center justify-center shrink-0">
                   <PixelAvatar config={lbProfile?.avatar} uid={lbProfile?.uid ?? entry.user_id} size={40} view="head" />
                 </div>
