@@ -21170,14 +21170,15 @@ function HexBadge({ badge, size = 56 }: { badge: AppBadge; size?: number }) {
   const innerSize = size - Math.round(size * 0.20);
   const scrambleTarget = badge.name.slice(0, 3).toUpperCase();
   return (
-    <div style={{ width: size, height: size, flexShrink: 0, clipPath: HEX_CLIP, background: border, display: 'flex', alignItems: 'center', justifyContent: 'center', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.18))' }}>
+    <div style={{ width: size, height: size, flexShrink: 0, clipPath: HEX_CLIP, background: border, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+      <div className="badge-shine-ray" />
       <div style={{
         width: innerSize, height: innerSize,
         clipPath: HEX_CLIP,
         background: isLinqle
           ? 'linear-gradient(180deg, #1a5c32 0%, #051209 100%)'
-          : `linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.28) 100%), ${fill}`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+          : fill,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', zIndex: 1,
       }}>
         {isLinqle
           ? <MatrixScramble target={scrambleTarget} className="font-black text-green-300 font-mono tracking-tighter" style={{ fontSize: Math.round(size * 0.32) } as React.CSSProperties} />
