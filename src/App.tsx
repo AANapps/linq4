@@ -21975,12 +21975,6 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                         <p className="font-bold text-brand-navy text-xs truncate leading-tight">{store.name}</p>
                         <p className="text-brand-navy/40 text-[9px] font-semibold uppercase tracking-wider">{store.category || 'Retail'}</p>
                       </div>
-                      <button
-                        onClick={e => { e.stopPropagation(); setEditingCardColorId(card.id); }}
-                        className="w-6 h-6 rounded-full flex items-center justify-center active:scale-90 transition-transform shrink-0"
-                        style={{ background: `${primary}20` }}>
-                        <Palette size={12} style={{ color: primary }} />
-                      </button>
                     </div>
                     {isMembership ? (
                       <div className="px-3 py-2.5 flex items-center justify-between cursor-pointer" onClick={() => onViewStore?.(store)}>
@@ -22013,36 +22007,6 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                 );
               })}
             </div>
-            {/* Card colour picker sheet */}
-            <AnimatePresence>
-              {editingCardColorId && (() => {
-                const editCard = userCards.find(c => c.id === editingCardColorId);
-                const currentCardColor = editCard?.profileColor || CARD_COLOR_PRESETS[0].color;
-                return (
-                  <motion.div
-                    initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-                    className="fixed inset-x-0 bottom-0 z-[300] bg-white rounded-t-3xl shadow-2xl max-w-md mx-auto"
-                    onClick={e => e.stopPropagation()}>
-                    <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-black/6">
-                      <p className="font-bold text-brand-navy text-sm">Card Colour</p>
-                      <button onClick={() => setEditingCardColorId(null)}
-                        className="w-8 h-8 rounded-full bg-brand-navy/8 flex items-center justify-center active:scale-90 transition-transform">
-                        <X size={16} className="text-brand-navy" />
-                      </button>
-                    </div>
-                    <div className="px-5 py-4 pb-8">
-                      <ColorSwatchPicker
-                        value={currentCardColor}
-                        onChange={color => saveCardColor(editingCardColorId, color)}
-                        presets={CARD_COLOR_PRESETS.map(cp => ({ id: cp.id, css: cp.color, label: cp.label }))}
-                        label="Tap to open colour picker"
-                      />
-                    </div>
-                  </motion.div>
-                );
-              })()}
-            </AnimatePresence>
           </>
         );
       })()}
@@ -25776,6 +25740,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
   const [showCustomerPicker, setShowCustomerPicker] = useState(false);
   const [storeCustomers, setStoreCustomers] = useState<UserProfile[]>([]);
   const [showBroadcast, setShowBroadcast] = useState(false);
+  const [partnerUnreadCount, setPartnerUnreadCount] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -25876,6 +25841,17 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
     });
     return () => { cancelled = true; };
   }, [messages, activeChatId]);
+
+  // Live subscription for partner's unread count (drives read-receipt avatar)
+  useEffect(() => {
+    if (!activeChatId) { setPartnerUnreadCount(0); return; }
+    return onSnapshot(doc(db, 'chats', activeChatId), snap => {
+      if (!snap.exists()) return;
+      const data = snap.data();
+      const partnerUid = (data.uids as string[])?.find((id: string) => id !== currentUser.uid);
+      setPartnerUnreadCount(partnerUid ? (data.unreadCount?.[partnerUid] ?? 0) : 0);
+    });
+  }, [activeChatId, currentUser.uid]);
 
   const loadOlderMessages = async () => {
     if (!activeChatId || msgLoadingMoreRef.current || !msgHasMore || !msgLastDocRef.current) return;
@@ -26082,56 +26058,81 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
               </motion.div>
             </div>
           )}
-          {[...olderMessages, ...messages].map((msg, idx, all) => {
-            const isMe = msg.senderUid === currentUser.uid;
-            const showName = idx === 0 || all[idx-1].senderUid !== msg.senderUid;
-            const isSelected = selectedMsgId === msg.id;
-            return (
-              <div key={msg.id} className="w-full px-2">
-                {showName && !isMe && !activeChatBusinessInfo && <span className="text-[10px] font-bold text-brand-navy/75 mb-1 ml-1 block">{msg.senderName}</span>}
-                <div
-                  className={cn("flex items-end gap-2 w-full", isMe ? "flex-row-reverse" : "flex-row")}
-                  onClick={e => { e.stopPropagation(); if (isMe) setSelectedMsgId(isSelected ? null : msg.id); }}
-                >
-                  {/* Vendor logo next to their messages */}
-                  {!isMe && activeChatBusinessInfo && (
-                    showName ? (
-                      <div className="w-8 h-8 rounded-xl overflow-hidden border border-white shadow-sm bg-brand-navy/5 flex items-center justify-center shrink-0">
-                        {activeChatBusinessInfo.businessLogoUrl
-                          ? <img src={activeChatBusinessInfo.businessLogoUrl} alt="" className="w-full h-full object-cover" />
-                          : <Store size={14} className="text-brand-navy/60" />}
+          {(() => {
+            const allMsgs = [...olderMessages, ...messages];
+            // Index of last message sent by me (for read-receipt avatar)
+            const lastMineIdx = allMsgs.reduce((acc, m, i) => m.senderUid === currentUser.uid ? i : acc, -1);
+            const partnerRead = partnerUnreadCount === 0 && lastMineIdx >= 0;
+            return allMsgs.map((msg, idx) => {
+              const isMe = msg.senderUid === currentUser.uid;
+              const nextMsg = allMsgs[idx + 1];
+              const isLastInGroup = !nextMsg || nextMsg.senderUid !== msg.senderUid;
+              const isSelected = selectedMsgId === msg.id;
+              const showReadReceipt = isMe && partnerRead && idx === lastMineIdx;
+              const showPartnerAvatar = !isMe && isLastInGroup;
+              return (
+                <div key={msg.id} className="w-full px-3">
+                  <div
+                    className={cn("flex items-end gap-1.5", isMe ? "flex-row-reverse" : "flex-row")}
+                    onClick={e => { e.stopPropagation(); if (isMe) setSelectedMsgId(isSelected ? null : msg.id); }}
+                  >
+                    {/* Avatar slot — left for partner, right for me */}
+                    <div className="w-7 shrink-0 flex flex-col items-center justify-end pb-0.5">
+                      {isMe ? (
+                        showReadReceipt && (
+                          <div className="w-5 h-5 rounded-full overflow-hidden border border-white/30 bg-teal-50">
+                            <PixelAvatar uid={currentUser.uid} size={20} view="head" />
+                          </div>
+                        )
+                      ) : (
+                        showPartnerAvatar && (
+                          activeChatBusinessInfo ? (
+                            <div className="w-6 h-6 rounded-lg overflow-hidden border border-white shadow-sm bg-brand-navy/5 flex items-center justify-center">
+                              {activeChatBusinessInfo.businessLogoUrl
+                                ? <img src={activeChatBusinessInfo.businessLogoUrl} alt="" className="w-full h-full object-cover" />
+                                : <Store size={11} className="text-brand-navy/60" />}
+                            </div>
+                          ) : (
+                            <div className="w-6 h-6 rounded-full overflow-hidden border border-white/30 bg-teal-50">
+                              <PixelAvatar uid={msg.senderUid} size={24} view="head" />
+                            </div>
+                          )
+                        )
+                      )}
+                    </div>
+                    <div className="flex flex-col max-w-[72%]">
+                      {!isMe && !activeChatBusinessInfo && idx > 0 && allMsgs[idx-1].senderUid !== msg.senderUid && (
+                        <span className="text-[10px] font-bold text-brand-navy/75 mb-1 ml-1">{msg.senderName}</span>
+                      )}
+                      <div className={cn(
+                        "px-4 py-3 rounded-2xl text-sm shadow-sm",
+                        isMe ? "gradient-red text-white" : "glass-card text-brand-navy"
+                      )}>
+                        {msg.text}
                       </div>
-                    ) : (
-                      <div className="w-8 shrink-0" />
-                    )
-                  )}
-                  <div className={cn(
-                    "flex-1 px-4 py-3 rounded-2xl text-sm shadow-sm",
-                    isMe ? "gradient-red text-white" : "glass-card text-brand-navy"
-                  )}>
-                    {msg.text}
+                    </div>
+                    <AnimatePresence>
+                      {isSelected && isMe && (
+                        <motion.button
+                          initial={{ opacity: 0, scale: 0.7 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.7 }}
+                          onClick={async e => {
+                            e.stopPropagation();
+                            await deleteDoc(doc(db, 'chats', activeChatId!, 'messages', msg.id));
+                            setSelectedMsgId(null);
+                          }}
+                          className="w-7 h-7 rounded-full bg-red-100 flex items-center justify-center shrink-0 mb-0.5"
+                        >
+                          <Trash2 size={13} className="text-red-500" />
+                        </motion.button>
+                      )}
+                    </AnimatePresence>
                   </div>
-                  <AnimatePresence>
-                    {isSelected && isMe && (
-                      <motion.button
-                        initial={{ opacity: 0, scale: 0.7 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.7 }}
-                        onClick={async e => {
-                          e.stopPropagation();
-                          await deleteDoc(doc(db, 'chats', activeChatId!, 'messages', msg.id));
-                          setSelectedMsgId(null);
-                        }}
-                        className="w-7 h-7 rounded-full bg-red-100 flex items-center justify-center shrink-0 mb-0.5"
-                      >
-                        <Trash2 size={13} className="text-red-500" />
-                      </motion.button>
-                    )}
-                  </AnimatePresence>
                 </div>
-              </div>
-            );
-          })}
+              );
+            });
+          })()}
         </div>
 
         <div className="p-6 bg-white border-t border-brand-navy/5">
