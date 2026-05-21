@@ -26348,7 +26348,12 @@ function ChatListItem({ chat, currentUser, isVendor = false, onClick, vendorLogo
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-center mb-1">
-          <h4 className="font-bold text-sm truncate">{displayName}</h4>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <h4 className="font-bold text-sm truncate">{displayName}</h4>
+            {chat.isBroadcast && (
+              <span className="shrink-0 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-brand-navy/8 text-brand-navy/50">Broadcast</span>
+            )}
+          </div>
           <div className="flex items-center gap-2 shrink-0">
             {unread > 0 && (
               <span className="w-5 h-5 rounded-full bg-brand-gold text-brand-navy text-[10px] font-bold flex items-center justify-center">
