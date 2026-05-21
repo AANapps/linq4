@@ -12591,7 +12591,16 @@ function StampCelebrationModal({
                               const isTier = tierStamps.has(stampNum);
                               const isNewStamp = i === page.currentStamps - 1;
                               return (
-                                <div key={i} className="aspect-square">
+                                <div key={i} className="aspect-square relative">
+                                  {isTier && (
+                                    <motion.div
+                                      animate={{ scale: [1, 1.35, 1], opacity: [0.5, 1, 0.5] }}
+                                      transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut', delay: i * 0.18 }}
+                                      className="absolute -top-1 -right-1 z-10 pointer-events-none"
+                                    >
+                                      <Sparkles size={8} style={{ color: isFilled ? '#f5a623' : cardTheme }} />
+                                    </motion.div>
+                                  )}
                                   {isFilled ? (
                                     <motion.div
                                       initial={isNewStamp ? { scale: 0.4, opacity: 0, rotate: ((i * 53 + 7) % 16) - 8 } : { scale: 1, opacity: 1 }}
@@ -16290,17 +16299,17 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
 
 function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = false, onClose, onScan }: { card: Card, store?: StoreProfile, onViewStore?: (s: StoreProfile) => void, compact?: boolean, autoOpen?: boolean, onClose?: () => void, onScan?: () => void, key?: React.Key }) {
   const [showQR, setShowQR] = useState(autoOpen);
-  const [showOptions, setShowOptions] = useState(false);
   const [showCompletionPopup, setShowCompletionPopup] = useState(false);
   const [showQRScan, setShowQRScan] = useState(false);
   const [showTCModal, setShowTCModal] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [testQty, setTestQty] = useState(1);
   const [isTestIssuing, setIsTestIssuing] = useState(false);
   const [lastTestTime, setLastTestTime] = useState(0);
   const limit = card.stamps_required || store?.stamps_required_for_reward || 10;
   const isCompleted = card.current_stamps >= limit;
+  const _rewardTiers = store?.rewardTiers?.length ? store.rewardTiers : [{ stamps: limit, reward: store?.reward || '' }];
+  const claimableTier = !card.isRedeemed ? [..._rewardTiers].reverse().find(t => t.stamps <= card.current_stamps) ?? null : null;
   const [unlockedReward, setUnlockedReward] = useState<string | null>(null);
   const [stampJustAdded, setStampJustAdded] = useState(false);
   const prevStampsRef = useRef(card.current_stamps);
@@ -16480,25 +16489,6 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
           !isCompleted && !card.isRedeemed ? "cursor-pointer" : ""
         )}
       >
-        <AnimatePresence>
-          {showOptions && (
-            <motion.div
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              className="absolute top-14 right-4 z-30 glass-panel rounded-2xl shadow-xl p-2 min-w-[140px]"
-            >
-              <button
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="w-full flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-50 rounded-xl transition-colors text-xs font-bold"
-              >
-                <Trash2 size={16} />
-                {isDeleting ? 'Removing...' : 'Remove Card'}
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {(() => {
           const cardTheme = store?.theme || '#0D9488';
@@ -16520,7 +16510,16 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                   const isFilled = i < card.current_stamps;
                   const isTier = tierStamps.has(stampNum);
                   return (
-                    <div key={i} className="aspect-square">
+                    <div key={i} className="aspect-square relative">
+                      {isTier && (
+                        <motion.div
+                          animate={{ scale: [1, 1.35, 1], opacity: [0.5, 1, 0.5] }}
+                          transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut', delay: i * 0.18 }}
+                          className="absolute -top-1 -right-1 z-10 pointer-events-none"
+                        >
+                          <Sparkles size={compact ? 8 : 10} style={{ color: isFilled ? '#f5a623' : accentColor }} />
+                        </motion.div>
+                      )}
                       {isFilled ? (
                         <motion.div
                           initial={{ scale: 0.4, opacity: 0 }}
@@ -16551,27 +16550,30 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                   );
                 })}
               </div>
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-brand-navy/35 text-[11px] font-bold">{card.current_stamps}/{limit} stamps</span>
-                {card.isRedeemed ? (
-                  <button onClick={(e) => { e.stopPropagation(); handleReset(e); }}
-                    className="text-brand-navy/72 text-[11px] font-bold underline">
-                    Start over
-                  </button>
-                ) : isCompleted ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-brand-navy/35 text-[11px] font-bold">{card.current_stamps}/{limit} stamps</span>
+                  {card.isRedeemed ? (
+                    <button onClick={(e) => { e.stopPropagation(); handleReset(e); }}
+                      className="text-brand-navy/72 text-[11px] font-bold underline">
+                      Start over
+                    </button>
+                  ) : nextTier && !claimableTier ? (
+                    <span className="text-brand-navy/72 text-[10px] text-right leading-snug">
+                      {nextTier.stamps - card.current_stamps} more →{' '}
+                      <span className="font-semibold" style={{ color: cardTheme }}>{nextTier.reward}</span>
+                    </span>
+                  ) : null}
+                </div>
+                {claimableTier && (
                   <button
                     onClick={(e) => { e.stopPropagation(); setShowCompletionPopup(true); }}
-                    className="text-white text-[11px] font-bold px-4 py-1.5 rounded-full active:scale-95 transition-transform"
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-white text-sm font-bold active:scale-[0.98] transition-transform"
                     style={{ backgroundColor: cardTheme }}
                   >
-                    Claim Reward 🎁
+                    <Gift size={15} /> Redeem: {claimableTier.reward}
                   </button>
-                ) : nextTier ? (
-                  <span className="text-brand-navy/72 text-[10px] text-right leading-snug">
-                    {nextTier.stamps - card.current_stamps} more →{' '}
-                    <span className="font-semibold" style={{ color: cardTheme }}>{nextTier.reward}</span>
-                  </span>
-                ) : null}
+                )}
               </div>
             </div>
           );
@@ -16592,11 +16594,8 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                   <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">{store?.category || 'Retail'}</p>
                 </div>
                 <div className="relative z-10 flex items-center gap-1.5 shrink-0">
-                  {isCompleted && !card.isRedeemed && <div className="bg-white/25 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest animate-pulse">Ready!</div>}
+                  {claimableTier && !card.isRedeemed && <div className="bg-white/25 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest animate-pulse">Redeem!</div>}
                   {card.isRedeemed && <div className="bg-green-400 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">Claimed</div>}
-                  <button onClick={(e) => { e.stopPropagation(); setShowOptions(!showOptions); }} className="p-1 text-white/50 hover:text-white/80 transition-colors">
-                    <MoreVertical size={15} />
-                  </button>
                 </div>
               </div>
               {stampGrid(5, 'gap-1.5', 'px-4 pt-4 pb-4', 15, 'text-[11px]')}
@@ -16621,10 +16620,6 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                   {card.isRedeemed && (
                     <div className="absolute top-4 left-4 bg-green-400 text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest z-10">Claimed</div>
                   )}
-                  <button onClick={(e) => { e.stopPropagation(); setShowOptions(!showOptions); }}
-                    className="absolute top-4 right-4 p-1.5 text-white/50 hover:text-white/80 transition-colors z-10">
-                    <MoreVertical size={16} />
-                  </button>
                   <div className="relative z-10 w-[72px] h-[72px] rounded-full overflow-hidden border-[3px] border-white/60 shadow-xl cursor-pointer"
                     onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}>
                     <img src={store?.logoUrl || storeFallbackImg(store?.name, store?.theme)} alt="" className="w-full h-full object-cover" />
@@ -16676,32 +16671,30 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
               exit={{ scale: 0.9, y: 20, opacity: 0 }}
               className="glass-panel w-full max-w-sm p-10 rounded-[3.5rem] text-center relative z-10 shadow-2xl"
             >
-              <div className="w-24 h-24 bg-brand-gold/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Trophy className="w-12 h-12 text-brand-gold" />
+              <div className="w-16 h-16 bg-brand-gold/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Gift className="w-8 h-8 text-brand-gold" />
               </div>
-              <h3 className="font-display text-3xl font-bold mb-2">Congratulations!</h3>
-              <p className="text-brand-navy/75 mb-8">You've reached {limit} stamps at {store?.name}! Show this screen to the shop staff to claim your reward.</p>
-              
-              <div className="bg-teal-50/80 p-6 rounded-3xl mb-8 border-2 border-dashed border-brand-gold/40">
-                <p className="text-[10px] font-bold text-brand-gold uppercase tracking-widest mb-2">Staff Action Required</p>
-                <p className="text-sm font-bold text-brand-navy">Scan NFC Tag or Stamp again to confirm redemption</p>
+              <h3 className="font-display text-2xl font-bold mb-1">Show Vendor</h3>
+              <p className="text-brand-navy/60 text-sm mb-5">Ask the vendor to slide to confirm your reward.</p>
+
+              <div className="bg-brand-gold/10 border border-brand-gold/30 rounded-2xl p-4 mb-6 text-center">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold mb-1">Your Reward</p>
+                <p className="font-bold text-brand-navy text-base">{claimableTier?.reward || store?.reward || 'Reward'}</p>
               </div>
 
-              <div className="space-y-3">
-                <button 
-                  onClick={handleArchive}
-                  disabled={isArchiving}
-                  className="w-full bg-brand-navy text-white py-5 rounded-2xl font-bold flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
-                >
-                  {isArchiving ? 'Processing...' : 'Confirm & Redeem'}
-                </button>
-                <button 
-                  onClick={() => setShowCompletionPopup(false)}
-                  className="w-full py-4 text-brand-navy/75 font-bold text-sm"
-                >
-                  Close
-                </button>
-              </div>
+              {isArchiving ? (
+                <div className="flex items-center justify-center gap-2 py-4 text-brand-navy/60 font-bold text-sm">
+                  <Loader2 size={16} className="animate-spin" /> Processing…
+                </div>
+              ) : (
+                <SwipeConfirm onConfirm={handleArchive} />
+              )}
+              <button
+                onClick={() => setShowCompletionPopup(false)}
+                className="w-full mt-3 py-3 text-brand-navy/75 font-bold text-sm"
+              >
+                Close
+              </button>
             </motion.div>
           </div>
         )}
@@ -16999,8 +16992,18 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
           </div>
         </div>
 
+        {/* Slide-to-redeem when a reward stage is unlocked */}
+        {unlockedRewards.length > 0 && (
+          <div className="px-5 pb-3 pt-1" onClick={e => e.stopPropagation()}>
+            <SwipeConfirm onConfirm={() => {
+              setSelectedReward(unlockedRewards[unlockedRewards.length - 1]);
+              setShowRedeemSheet(true);
+            }} />
+          </div>
+        )}
+
         {/* Bottom row */}
-        <div className="flex items-center justify-between px-5 py-4">
+        <div className="flex items-center justify-between px-5 py-3">
           <div className="flex items-center gap-1.5 text-indigo-200">
             <TrendingUp size={13} />
             {store?.pointsEarnMode === 'visit'
@@ -17009,13 +17012,15 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
               ? <span className="text-[11px] font-bold">{store.pointsPerDollar || 1} pts/$1 + {store.pointsPerVisit ?? 0}/visit</span>
               : <span className="text-[11px] font-bold">{store?.pointsPerDollar || 1} pts/$1</span>}
           </div>
-          <button
-            onClick={(e) => { e.stopPropagation(); setShowRedeemSheet(true); }}
-            className="flex items-center gap-1.5 bg-white text-teal-700 px-4 py-2 rounded-xl font-bold text-xs active:scale-95 transition-transform"
-          >
-            <Gift size={13} />
-            Redeem
-          </button>
+          {unlockedRewards.length === 0 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowRedeemSheet(true); }}
+              className="flex items-center gap-1.5 bg-white text-teal-700 px-4 py-2 rounded-xl font-bold text-xs active:scale-95 transition-transform"
+            >
+              <Gift size={13} />
+              Redeem
+            </button>
+          )}
         </div>
       </motion.div>
 
