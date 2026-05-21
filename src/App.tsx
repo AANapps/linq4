@@ -12747,17 +12747,17 @@ function StampCelebrationModal({
                                 <div key={i} className="aspect-square">
                                   {isFilled ? (
                                     <motion.div
-                                      initial={isNewStamp ? { scale: 0.4, opacity: 0 } : { scale: 1, opacity: 1 }}
+                                      initial={isNewStamp ? { scale: 0.4, opacity: 0, rotate: ((i * 53 + 7) % 16) - 8 } : { scale: 1, opacity: 1 }}
                                       animate={{ scale: 1, opacity: 1 }}
-                                      transition={isNewStamp ? { type: 'spring', stiffness: 420, damping: 18, delay: 0.35 } : {}}
+                                      transition={isNewStamp ? { type: 'spring', stiffness: 420, damping: 22, delay: 0.35 } : {}}
                                       className="w-full h-full rounded-full flex items-center justify-center overflow-hidden"
                                       style={{ backgroundColor: isTier ? '#f5a623' : cardTheme }}
                                     >
                                       {isTier
                                         ? <Gift size={15} className="text-white" />
                                         : stampIconUrl
-                                          ? <img src={stampIconUrl} alt="" className="w-full h-full object-cover" />
-                                          : <span className="leading-none" style={{ fontSize: 19 }}>{stampIcon}</span>
+                                          ? <img src={stampIconUrl} alt="" className="w-[68%] h-[68%] object-contain" style={{ transform: `rotate(${((i * 53 + 7) % 16) - 8}deg)` }} />
+                                          : <span className="leading-none" style={{ fontSize: 16, transform: `rotate(${((i * 53 + 7) % 16) - 8}deg)`, display: 'inline-block' }}>{stampIcon}</span>
                                       }
                                     </motion.div>
                                   ) : (
@@ -16704,8 +16704,8 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                           {isTier
                             ? <Gift size={iconSize} className="text-white" />
                             : stampIconUrl
-                              ? <img src={stampIconUrl} alt="" className="w-full h-full object-cover" />
-                              : <span className="leading-none" style={{ fontSize: iconSize + 4 }}>{stampIcon}</span>
+                              ? <img src={stampIconUrl} alt="" className="w-[68%] h-[68%] object-contain" style={{ transform: `rotate(${((i * 53 + 7) % 16) - 8}deg)` }} />
+                              : <span className="leading-none" style={{ fontSize: iconSize + 2, transform: `rotate(${((i * 53 + 7) % 16) - 8}deg)`, display: 'inline-block' }}>{stampIcon}</span>
                           }
                         </motion.div>
                       ) : (
