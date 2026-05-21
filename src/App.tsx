@@ -20443,10 +20443,9 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
                 setStampIconUploading(true);
                 try {
                   const blob = await compressImage(file, 400);
-                  const ext = file.name.split('.').pop() || 'jpg';
-                  const path = `stores/${store.id}/stamp_icon_${Date.now()}.${ext}`;
+                  const path = `stores/${store.id}/stamp_icon_${Date.now()}.webp`;
                   const ref = storageRef(storage, path);
-                  await uploadBytes(ref, blob);
+                  await uploadBytes(ref, blob, { contentType: 'image/webp' });
                   const url = await getDownloadURL(ref);
                   setStampIconUrl(url);
                   setStampIcon('');

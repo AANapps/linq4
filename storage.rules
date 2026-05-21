@@ -7,6 +7,13 @@ service firebase.storage {
       allow read: if true;
     }
 
+    // Store assets (stamp icons, charity images, etc.) — any authenticated vendor may upload
+    match /stores/{storeId}/{fileName} {
+      allow write: if request.auth != null
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
     // Store logos — any authenticated user may upload (admins manage logos for stores they don't own)
     match /store_logos/{storeOrUid}/{fileName} {
       allow write: if request.auth != null
