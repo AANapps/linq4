@@ -16668,7 +16668,8 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
 
         {(() => {
           const cardTheme = store?.theme || '#0D9488';
-          const accentColor = store?.stampBorderColor || '#ffffff';
+          const rawAccent = store?.stampBorderColor || '#ffffff';
+          const accentColor = rawAccent === '#ffffff' ? cardTheme : rawAccent;
           const rewardTiers = store?.rewardTiers?.length ? store.rewardTiers : [{ stamps: limit, reward: store?.reward || '' }];
           const tierStamps = new Set(rewardTiers.map(t => t.stamps));
           const nextTier = rewardTiers.find(t => t.stamps > card.current_stamps);
