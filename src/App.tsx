@@ -49,7 +49,8 @@ import {
   arrayRemove,
   startAfter,
   Timestamp,
-  runTransaction
+  runTransaction,
+  writeBatch
 } from 'firebase/firestore';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getFunctions, httpsCallable } from 'firebase/functions';
@@ -593,6 +594,7 @@ interface Card {
   userPhoto?: string;
   profileColor?: string;
   isHidden?: boolean;
+  vendorDisabled?: boolean;
 }
 
 interface Notification {
@@ -9731,8 +9733,8 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
 
 
   // Show every non-archived, non-hidden card the user holds.
-  const activeCards = initialCards.filter(c => !c.isArchived && !c.isHidden);
-  const allNonArchivedCards = initialCards.filter(c => !c.isArchived);
+  const activeCards = initialCards.filter(c => !c.isArchived && !c.isHidden && !c.vendorDisabled);
+  const allNonArchivedCards = initialCards.filter(c => !c.isArchived && !c.vendorDisabled);
 
   return (
     <motion.div
@@ -11883,29 +11885,6 @@ function StampCelebrationModal({
             transition={{ duration: 0.2 }}
             className="relative overflow-hidden p-6 pb-12 space-y-5"
           >
-            {/* ── Big reward overlay — slides in after charity pick ── */}
-            <AnimatePresence>
-              {charityFeedback && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.88, y: 24 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ type: 'spring', stiffness: 300, damping: 22 }}
-                  className="absolute inset-0 bg-brand-bg z-20 flex flex-col items-center justify-center p-8 text-center gap-4"
-                >
-                  <motion.div
-                    initial={{ scale: 0 }} animate={{ scale: 1 }}
-                    transition={{ type: 'spring', stiffness: 280, damping: 14, delay: 0.12 }}
-                    className="text-7xl select-none"
-                  >{charityFeedback.emoji}</motion.div>
-                  <div className="space-y-1">
-                    <p className="text-[11px] font-bold uppercase tracking-widest text-emerald-500">Thank you! 💚</p>
-                    <h2 className="font-display font-bold text-2xl text-brand-navy leading-tight">{charityFeedback.title}</h2>
-                  </div>
-                  <p className="text-sm text-brand-navy/70 leading-relaxed max-w-xs">{charityFeedback.detail}</p>
-                </motion.div>
-              )}
-            </AnimatePresence>
 
             {isRank ? (
               /* ── Rank reveal with drumroll countdown ── */
@@ -12613,7 +12592,7 @@ function StampCelebrationModal({
                                       animate={{ scale: 1, opacity: 1 }}
                                       transition={isNewStamp ? { type: 'spring', stiffness: 420, damping: 22, delay: 0.35 } : {}}
                                       className="w-full h-full rounded-full flex items-center justify-center overflow-hidden"
-                                      style={{ backgroundColor: isTier ? '#f5a623' : cardTheme }}
+                                      style={{ backgroundColor: isTier ? '#f5a623' : (stampIconUrl ? '#ffffff' : cardTheme), border: (!isTier && stampIconUrl) ? '2px solid #000' : undefined }}
                                     >
                                       {isTier
                                         ? <Gift size={15} className="text-white" />
@@ -13527,6 +13506,32 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   const [isLoadingCheckout, setIsLoadingCheckout] = useState(false);
   const [tickNow, setTickNow] = useState(Date.now());
   const [showQRScanner, setShowQRScanner] = useState(false);
+  const [togglingCard, setTogglingCard] = useState(false);
+
+  const cardIsActive = !!(store?.cardEnabled !== false || store?.membershipEnabled);
+
+  const handleToggleCard = async (active: boolean) => {
+    if (!store) return;
+    setTogglingCard(true);
+    try {
+      const allCards = [...storeCards];
+      if (active) {
+        const hasMembership = store.membershipType === 'visit' || store.membershipType === 'spend';
+        await updateDoc(doc(db, 'stores', store.id), hasMembership
+          ? { cardEnabled: false, membershipEnabled: true }
+          : { cardEnabled: true, membershipEnabled: false });
+      } else {
+        await updateDoc(doc(db, 'stores', store.id), { cardEnabled: false, membershipEnabled: false });
+      }
+      for (let i = 0; i < allCards.length; i += 500) {
+        const batch = writeBatch(db);
+        allCards.slice(i, i + 500).forEach(c => batch.update(doc(db, 'cards', c.id), { vendorDisabled: !active }));
+        await batch.commit();
+      }
+    } finally {
+      setTogglingCard(false);
+    }
+  };
 
   useEffect(() => {
     if (showVendorQR) { setShowQRScanner(true); setShowVendorQR?.(false); }
@@ -14717,9 +14722,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                       <p className="font-bold text-brand-navy">Top 10 Users</p>
                       <Trophy size={16} className="text-brand-gold" />
                     </div>
-                    {top10.map(({ uid, stamps, prof }, i) => (
+                    {top10.map(({ uid, stamps, prof }) => (
                       <div key={uid} className="flex items-center gap-3">
-                        <span className="text-[11px] font-bold text-brand-navy/72 w-5 text-right">{i + 1}</span>
                         <div className="w-8 h-8 rounded-full overflow-hidden bg-teal-50 shrink-0 flex items-center justify-center">
                           <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={32} view="head" />
                         </div>
@@ -14979,9 +14983,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                           <p className="font-bold text-brand-navy">Top 10 by Points</p>
                           <Trophy size={16} className="text-emerald-500" />
                         </div>
-                        {top10.map(({ uid, pts, prof }, i) => (
+                        {top10.map(({ uid, pts, prof }) => (
                           <div key={uid} className="flex items-center gap-3">
-                            <span className="text-[11px] font-bold text-brand-navy/72 w-5 text-right">{i + 1}</span>
                             <div className="w-8 h-8 rounded-full overflow-hidden bg-teal-50 shrink-0 flex items-center justify-center">
                               <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={32} view="head" />
                             </div>
@@ -15161,9 +15164,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                           <p className="font-bold text-brand-navy">Top 10 by Visits</p>
                           <Trophy size={16} className="text-teal-400" />
                         </div>
-                        {top10.map(({ uid, visits, prof }, i) => (
+                        {top10.map(({ uid, visits, prof }) => (
                           <div key={uid} className="flex items-center gap-3">
-                            <span className="text-[11px] font-bold text-brand-navy/72 w-5 text-right">{i + 1}</span>
                             <div className="w-8 h-8 rounded-full overflow-hidden bg-teal-50 shrink-0 flex items-center justify-center">
                               <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={32} view="head" />
                             </div>
@@ -16519,7 +16521,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                           animate={{ scale: 1, opacity: 1 }}
                           transition={{ type: 'spring', stiffness: 420, damping: 18 }}
                           className="w-full h-full rounded-full flex items-center justify-center overflow-hidden"
-                          style={{ backgroundColor: isTier ? '#f5a623' : cardTheme }}
+                          style={{ backgroundColor: isTier ? '#f5a623' : (stampIconUrl ? '#ffffff' : cardTheme), border: (!isTier && stampIconUrl) ? '2px solid #000' : undefined }}
                         >
                           {isTier
                             ? <Gift size={iconSize} className="text-white" />
@@ -20206,6 +20208,10 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
               }} />
             </label>
           </div>
+
+          <p className="text-[11px] text-amber-600 font-medium leading-snug">
+            Use a JPG with a <strong>white background</strong> — the stamp circle has a white background with a black border, so images with transparent or coloured backgrounds will look best when prepared on white.
+          </p>
 
           {/* Or pick emoji */}
           {!stampIconUrl && (
