@@ -21879,13 +21879,11 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
 
         {/* Recent members */}
         {storeCards.length > 0 && (() => {
-          const recent = [...storeCards]
-            .sort((a, b) => {
-              const ta = a.last_tap_timestamp?.toMillis?.() ?? 0;
-              const tb = b.last_tap_timestamp?.toMillis?.() ?? 0;
-              return tb - ta;
-            })
-            .slice(0, 6);
+          const recent = [...new Map(
+            [...storeCards]
+              .sort((a, b) => (b.last_tap_timestamp?.toMillis?.() ?? 0) - (a.last_tap_timestamp?.toMillis?.() ?? 0))
+              .map(c => [c.user_id, c])
+          ).values()].slice(0, 6);
           return (
             <div className="glass-card rounded-2xl px-4 py-3">
               <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-3">Recent Members</p>
