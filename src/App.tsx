@@ -13049,9 +13049,11 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
   }, [store.id, store.ownerUid]);
 
   useEffect(() => {
-    getDocs(query(collection(db, 'stores', store.id, 'broadcasts'), orderBy('sentAt', 'desc'), limit(20)))
-      .then(snap => setBroadcastHistory(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
-      .catch(() => {});
+    return onSnapshot(
+      query(collection(db, 'stores', store.id, 'broadcasts'), orderBy('sentAt', 'desc'), limit(20)),
+      snap => setBroadcastHistory(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+      () => {}
+    );
   }, [store.id]);
 
   const recipientUids = (() => {
@@ -13074,6 +13076,20 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
     setSentCount(null);
     setSendError(null);
     try {
+      // Create broadcast doc first so we have an ID to stamp on every chat
+      const record: any = {
+        title: msgTitle.trim(),
+        message: msgBody.trim(),
+        filter,
+        recipientCount: recipientUids.length,
+        sentAt: serverTimestamp(),
+        viewers: [],
+        repliers: [],
+      };
+      if (filter === 'topX') record.topXCount = topXCount;
+      const broadcastRef = await addDoc(collection(db, 'stores', store.id, 'broadcasts'), record);
+      const broadcastId = broadcastRef.id;
+
       for (let i = 0; i < recipientUids.length; i += 50) {
         await Promise.all(recipientUids.slice(i, i + 50).map(async uid => {
           const chatId = `broadcast_${store.id}_${uid}`;
@@ -13084,6 +13100,7 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
             storeId: store.id,
             storeName: store.name,
             storeLogoUrl: store.logoUrl || '',
+            broadcastId,
             lastMessage: msgBody.trim(),
             lastActivity: serverTimestamp(),
           }, { merge: true });
@@ -13094,21 +13111,11 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
             senderName: store.name,
             title: msgTitle.trim(),
             text: msgBody.trim(),
+            broadcastId,
             createdAt: serverTimestamp(),
           });
         }));
       }
-      const record: any = {
-        title: msgTitle.trim(),
-        message: msgBody.trim(),
-        filter,
-        recipientCount: recipientUids.length,
-        sentAt: serverTimestamp(),
-      };
-      if (filter === 'topX') record.topXCount = topXCount;
-      await addDoc(collection(db, 'stores', store.id, 'broadcasts'), record);
-      const histSnap = await getDocs(query(collection(db, 'stores', store.id, 'broadcasts'), orderBy('sentAt', 'desc'), limit(20)));
-      setBroadcastHistory(histSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       setSentCount(recipientUids.length);
       setMsgTitle('');
       setMsgBody('');
@@ -13269,25 +13276,46 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
                   <div className="pt-2">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75 mb-3">Previously Sent</p>
                     <div className="space-y-3">
-                      {broadcastHistory.map((b: any) => (
-                        <div key={b.id} className="bg-white rounded-2xl p-4 border border-black/5 shadow-sm">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                              <p className="font-bold text-sm text-brand-navy truncate">{b.title}</p>
-                              <p className="text-xs text-brand-navy/75 line-clamp-2 mt-0.5">{b.message}</p>
+                      {broadcastHistory.map((b: any) => {
+                        const sent = b.recipientCount || 0;
+                        const views = (b.viewers || []).length;
+                        const replies = (b.repliers || []).length;
+                        const viewRate = sent > 0 ? Math.round((views / sent) * 100) : 0;
+                        const replyRate = sent > 0 ? Math.round((replies / sent) * 100) : 0;
+                        return (
+                          <div key={b.id} className="bg-white rounded-2xl p-4 border border-black/5 shadow-sm space-y-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <p className="font-bold text-sm text-brand-navy truncate">{b.title}</p>
+                                <p className="text-xs text-brand-navy/75 line-clamp-2 mt-0.5">{b.message}</p>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <p className="text-[10px] font-bold text-brand-navy">{sent} sent</p>
+                                <p className="text-[10px] text-brand-navy/50 mt-0.5">
+                                  {b.sentAt?.toDate ? format(b.sentAt.toDate(), 'MMM d, h:mm a') : ''}
+                                </p>
+                              </div>
                             </div>
-                            <div className="text-right shrink-0">
-                              <p className="text-[10px] font-bold text-brand-navy">{b.recipientCount} sent</p>
-                              <p className="text-[10px] text-brand-navy/72 mt-0.5">
-                                {b.sentAt?.toDate ? format(b.sentAt.toDate(), 'MMM d, h:mm a') : ''}
-                              </p>
+                            {/* Stats row */}
+                            <div className="grid grid-cols-3 divide-x divide-brand-navy/8 bg-brand-navy/3 rounded-xl overflow-hidden">
+                              {[
+                                { label: 'Sent', val: sent, pct: null, icon: <Send size={10} /> },
+                                { label: 'Views', val: views, pct: viewRate, icon: <Eye size={10} /> },
+                                { label: 'Replies', val: replies, pct: replyRate, icon: <MessageCircle size={10} /> },
+                              ].map(s => (
+                                <div key={s.label} className="flex flex-col items-center py-2 gap-0.5">
+                                  <div className="flex items-center gap-1 text-brand-navy/40">{s.icon}<span className="text-[9px] font-bold uppercase tracking-wide">{s.label}</span></div>
+                                  <p className="font-black text-sm text-brand-navy leading-none">{s.val}</p>
+                                  {s.pct !== null && <p className="text-[9px] text-brand-navy/40 font-bold">{s.pct}%</p>}
+                                </div>
+                              ))}
                             </div>
+                            <span className="inline-block text-[9px] font-bold uppercase tracking-widest bg-brand-navy/5 text-brand-navy/75 px-2 py-0.5 rounded-full">
+                              {b.filter === 'cardholders' ? 'Card Holders' : b.filter === 'followers' ? 'Followers' : b.filter === 'topX' ? `Top ${b.topXCount ?? ''} Users` : 'Both'}
+                            </span>
                           </div>
-                          <span className="inline-block mt-2 text-[9px] font-bold uppercase tracking-widest bg-brand-navy/5 text-brand-navy/75 px-2 py-0.5 rounded-full">
-                            {b.filter === 'cardholders' ? 'Card Holders' : b.filter === 'followers' ? 'Followers' : b.filter === 'topX' ? `Top ${b.topXCount ?? ''} Users` : 'Both'}
-                          </span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -25750,7 +25778,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
   const [newMessage, setNewMessage] = useState('');
   const [chatPartner, setChatPartner] = useState<UserProfile | null>(null);
   const [activeChatBusinessInfo, setActiveChatBusinessInfo] = useState<{ businessName: string; businessLogoUrl: string } | null>(null);
-  const [activeBroadcastChat, setActiveBroadcastChat] = useState<{ storeName: string; storeLogoUrl: string } | null>(null);
+  const [activeBroadcastChat, setActiveBroadcastChat] = useState<{ storeName: string; storeLogoUrl: string; storeId?: string; broadcastId?: string } | null>(null);
   const [selectedMsgId, setSelectedMsgId] = useState<string | null>(null);
   const [showCustomerPicker, setShowCustomerPicker] = useState(false);
   const [storeCustomers, setStoreCustomers] = useState<UserProfile[]>([]);
@@ -25801,7 +25829,19 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
           updateDoc(doc(db, 'chats', activeChatId), { [`unreadCount.${currentUser.uid}`]: 0 }).catch(() => {});
         }
         if (chatData.isBroadcast) {
-          setActiveBroadcastChat({ storeName: chatData.storeName || 'Business', storeLogoUrl: chatData.storeLogoUrl || '' });
+          setActiveBroadcastChat({
+            storeName: chatData.storeName || 'Business',
+            storeLogoUrl: chatData.storeLogoUrl || '',
+            storeId: chatData.storeId,
+            broadcastId: chatData.broadcastId,
+          });
+          // Record view on the broadcast doc
+          if (chatData.storeId && chatData.broadcastId) {
+            updateDoc(
+              doc(db, 'stores', chatData.storeId, 'broadcasts', chatData.broadcastId),
+              { viewers: arrayUnion(currentUser.uid) }
+            ).catch(() => {});
+          }
           return;
         }
         if (chatData.businessName) {
@@ -25955,13 +25995,21 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
       };
       
       await addDoc(collection(db, 'chats', activeChatId, 'messages'), messageData);
-      
+
       const partnerUid = chatPartner?.uid;
       await updateDoc(doc(db, 'chats', activeChatId), {
         lastMessage: text,
         lastActivity: serverTimestamp(),
         ...(partnerUid ? { [`unreadCount.${partnerUid}`]: increment(1) } : {})
       });
+
+      // Track reply on the broadcast doc (only for consumer replies, not vendor's own messages)
+      if (activeBroadcastChat?.storeId && activeBroadcastChat?.broadcastId) {
+        updateDoc(
+          doc(db, 'stores', activeBroadcastChat.storeId, 'broadcasts', activeBroadcastChat.broadcastId),
+          { repliers: arrayUnion(currentUser.uid) }
+        ).catch(() => {});
+      }
 
       // Send notification to partner
       if (partnerUid) {
