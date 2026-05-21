@@ -13492,6 +13492,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   const [vendorIssueMode, setVendorIssueMode] = useState<null | 'card' | 'offer' | 'scan-user'>(null);
   const [issueStatus, setIssueStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
+  const [activityVisible, setActivityVisible] = useState(5);
+  const activitySentinelRef = useRef<HTMLDivElement>(null);
   const [cardStampsInput, setCardStampsInput] = useState('');
   const [cardRewardInput, setCardRewardInput] = useState('');
   const [isSavingCard, setIsSavingCard] = useState(false);
@@ -13592,12 +13594,25 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
       collection(db, 'transactions'),
       where('store_id', '==', store.id),
       orderBy('completed_at', 'desc'),
-      limit(10)
+      limit(50)
     );
     return onSnapshot(q, (snap) => {
       setRecentTransactions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setActivityVisible(5);
     });
   }, [store]);
+
+  useEffect(() => {
+    const el = activitySentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setActivityVisible(v => Math.min(v + 5, recentTransactions.length));
+      }
+    }, { threshold: 0.1 });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [recentTransactions.length]);
 
   useEffect(() => {
     if (!store) return;
@@ -14714,7 +14729,6 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                             <div className="h-full bg-brand-gold rounded-full" style={{ width: `${Math.round((stamps / (top10[0].stamps || 1)) * 100)}%` }} />
                           </div>
                         </div>
-                        <span className="text-xs font-bold text-brand-navy/80 shrink-0">{stamps}</span>
                       </div>
                     ))}
                   </div>
@@ -14977,7 +14991,6 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                                 <div className="h-full bg-emerald-400 rounded-full" style={{ width: `${Math.round((pts / (top10[0].pts || 1)) * 100)}%` }} />
                               </div>
                             </div>
-                            <span className="text-xs font-bold text-brand-navy/80 shrink-0">{pts} pts</span>
                           </div>
                         ))}
                       </div>
@@ -15160,7 +15173,6 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                                 <div className="h-full bg-teal-400 rounded-full" style={{ width: `${Math.round((visits / (top10[0].visits || 1)) * 100)}%` }} />
                               </div>
                             </div>
-                            <span className="text-xs font-bold text-brand-navy/80 shrink-0">{visits} visits</span>
                           </div>
                         ))}
                       </div>
@@ -15172,108 +15184,9 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
           )}
 
 
-          <div className="bg-brand-navy p-8 rounded-[2.5rem] text-white text-center">
-            <h3 className="font-display text-xl font-bold mb-4">{store?.subCardEnabled ? 'Issue Points' : 'Issue a Stamp'}</h3>
-            <p className="text-white/60 text-sm mb-8">{store?.subCardEnabled
-              ? store.pointsEarnMode === 'visit' ? 'Issue a fixed points bonus for this visit.'
-              : store.pointsEarnMode === 'both' ? 'Enter transaction value — points are awarded for spend and visit.'
-              : 'Enter the transaction value to calculate and issue points.'
-              : "Show your QR code or scan a customer's QR code — or enter their handle manually."}</p>
-
-            <div className="space-y-4">
-              {!store?.subCardEnabled && store && storeCardActive(store) && (
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setShowQRScanner(true)}
-                    className="flex-1 bg-brand-gold text-brand-navy font-bold py-4 rounded-2xl flex items-center justify-center gap-2"
-                  >
-                    <QrCode className="w-5 h-5" />
-                    Show QR
-                  </button>
-                  <button
-                    onClick={() => setIsScanning(true)}
-                    className="flex-1 bg-teal-500 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2"
-                  >
-                    <Wifi className="w-5 h-5 -rotate-90" />
-                    Scan NFC
-                  </button>
-                </div>
-              )}
-
-              <div className="flex gap-4">
-                <div className="relative flex-1">
-                  <span className="absolute inset-y-0 left-4 flex items-center text-white/30 font-bold text-sm pointer-events-none">@</span>
-                  <input
-                    type="text"
-                    value={customerHandle}
-                    onChange={(e) => setCustomerHandle(e.target.value.toLowerCase().replace(/\s/g, '').replace(/^@/, ''))}
-                    placeholder="customerhandle"
-                    className="w-full bg-white/10 border border-white/10 rounded-2xl py-4 pl-8 pr-4 text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
-                  />
-                </div>
-                {store?.subCardEnabled ? (
-                  store.pointsEarnMode === 'visit' ? (
-                    <div className="w-32 flex items-center justify-center rounded-2xl bg-teal-500/30 border border-indigo-400/30 px-4 py-4">
-                      <div className="text-center">
-                        <p className="text-white font-black text-lg">{store.pointsPerVisit ?? 0}</p>
-                        <p className="text-[10px] text-indigo-200/70 font-bold uppercase">pts/visit</p>
-                      </div>
-                    </div>
-                  ) : (
-                  <div className="w-32">
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={transactionValue}
-                      onChange={(e) => setTransactionValue(e.target.value)}
-                      placeholder="0.00"
-                      className="w-full px-4 py-4 rounded-2xl bg-white/10 border border-white/10 text-white text-center focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
-                    />
-                    <p className="text-[10px] text-white/40 mt-1 font-bold uppercase">
-                      {transactionValue
-                        ? `${Math.round(Number(transactionValue) * (store.pointsPerDollar || 1)) + (store.pointsEarnMode === 'both' ? (store.pointsPerVisit || 0) : 0)} pts`
-                        : store.pointsEarnMode === 'both' ? `+${store.pointsPerVisit ?? 0} visit` : '$ Value'}
-                    </p>
-                  </div>
-                  )
-                ) : (
-                  <div className="w-24">
-                    <input
-                      type="number"
-                      min="1"
-                      max="10"
-                      value={stampQuantity}
-                      onChange={(e) => setStampQuantity(parseInt(e.target.value) || 1)}
-                      className="w-full px-4 py-4 rounded-2xl bg-white/10 border border-white/10 text-white text-center focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
-                    />
-                    <p className="text-[10px] text-white/40 mt-1 font-bold uppercase">Qty</p>
-                  </div>
-                )}
-              </div>
-
-              <button
-                onClick={handleIssueStamp}
-                disabled={isIssuing || !customerHandle || (store?.subCardEnabled && store.pointsEarnMode !== 'visit' ? !transactionValue : false)}
-                className="w-full bg-white text-brand-navy font-bold py-4 rounded-2xl disabled:opacity-50 transition-all"
-              >
-                {isIssuing ? 'Issuing...' : store?.subCardEnabled ? 'Issue Points' : 'Issue Manually'}
-              </button>
-
-              {issueStatus && (
-                <p className={cn(
-                  "text-sm font-bold",
-                  issueStatus.type === 'success' ? "text-brand-gold" : "text-red-400"
-                )}>
-                  {issueStatus.message}
-                </p>
-              )}
-            </div>
-          </div>
-
           <div className="space-y-3">
             <h3 className="font-display text-xl font-bold">Recent Activity</h3>
-            {recentTransactions.map(tx => {
+            {recentTransactions.slice(0, activityVisible).map(tx => {
               const isCompletion = !!tx.stamps_at_completion;
               const ts = tx.completed_at || tx.issued_at;
               const name = tx.userName || memberProfiles.get(tx.user_id)?.name || 'Customer';
@@ -15308,6 +15221,11 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                 </div>
               );
             })}
+            {activityVisible < recentTransactions.length && (
+              <div ref={activitySentinelRef} className="py-3 flex justify-center">
+                <div className="w-5 h-5 rounded-full border-2 border-brand-navy/20 border-t-brand-gold animate-spin" />
+              </div>
+            )}
             {recentTransactions.length === 0 && (
               <div className="py-8 text-center text-brand-navy/32">
                 <Clock size={40} className="mx-auto mb-2 opacity-10" />
