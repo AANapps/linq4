@@ -1657,15 +1657,15 @@ export default function App() {
     <div className="min-h-screen bg-white md:flex md:justify-center">
     <div className="w-full md:max-w-sm relative pb-24">
       {/* Header */}
-      <header className="glass-panel sticky top-0 z-50 px-5 py-3.5 flex items-center justify-between">
+      <header className="glass-panel sticky top-0 z-50 px-5 py-3.5 flex items-center justify-between relative">
         <button
           onClick={() => setShowCreatePost(true)}
           className="w-9 h-9 gradient-red rounded-xl flex items-center justify-center shadow-md shadow-teal-500/20 active:scale-95 transition-transform"
         >
           <Plus className="w-5 h-5 text-white" />
         </button>
-        <button onClick={() => setShowSettings(true)} className="hover:opacity-80 transition-opacity">
-          <h1 className="font-display font-bold text-xl tracking-tight"><span className="text-brand-gold">Li</span>nq</h1>
+        <button onClick={() => setShowSettings(true)} className="absolute left-1/2 -translate-x-1/2 hover:opacity-80 transition-opacity">
+          <h1 className="font-display font-bold text-2xl tracking-tight"><span className="text-brand-gold">Li</span>nq</h1>
         </button>
         <div className="flex items-center gap-0.5">
           {['consumer','admin'].includes(profile?.role ?? '') && (
