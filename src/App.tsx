@@ -21851,6 +21851,9 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                 </div>
               </div>
             </div>
+            {vendorStore?.description && (
+              <p className="mt-4 text-white/80 text-sm leading-relaxed">{vendorStore.description}</p>
+            )}
           </div>
         </div>
 
@@ -21868,6 +21871,78 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
             </button>
           </div>
         )}
+
+        {/* Business stats */}
+        <div className="grid grid-cols-2 gap-3">
+          {(vis?.members !== false) && (
+            <div className="glass-card rounded-2xl px-4 py-3 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-teal-50 flex items-center justify-center shrink-0">
+                <Users size={18} className="text-teal-500" />
+              </div>
+              <div>
+                <p className="text-xl font-bold leading-tight">{totalMembers}</p>
+                <p className="text-[10px] text-brand-navy/50 font-bold uppercase tracking-wide">Members</p>
+              </div>
+            </div>
+          )}
+          {(vis?.stamps !== false) && (
+            <div className="glass-card rounded-2xl px-4 py-3 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
+                <Star size={18} className="text-amber-500" />
+              </div>
+              <div>
+                <p className="text-xl font-bold leading-tight">{totalStampsGiven}</p>
+                <p className="text-[10px] text-brand-navy/50 font-bold uppercase tracking-wide">Stamps Issued</p>
+              </div>
+            </div>
+          )}
+          <div className="glass-card rounded-2xl px-4 py-3 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-rose-50 flex items-center justify-center shrink-0">
+              <Gift size={18} className="text-rose-400" />
+            </div>
+            <div>
+              <p className="text-xl font-bold leading-tight">{profileRewardsGiven}</p>
+              <p className="text-[10px] text-brand-navy/50 font-bold uppercase tracking-wide">Rewards Given</p>
+            </div>
+          </div>
+          {(vis?.returnRate !== false) && (
+            <div className="glass-card rounded-2xl px-4 py-3 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
+                <RefreshCw size={18} className="text-indigo-400" />
+              </div>
+              <div>
+                <p className="text-xl font-bold leading-tight">{returnRate}%</p>
+                <p className="text-[10px] text-brand-navy/50 font-bold uppercase tracking-wide">Return Rate</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Recent members */}
+        {storeCards.length > 0 && (() => {
+          const recent = [...storeCards]
+            .sort((a, b) => {
+              const ta = a.last_tap_timestamp?.toMillis?.() ?? 0;
+              const tb = b.last_tap_timestamp?.toMillis?.() ?? 0;
+              return tb - ta;
+            })
+            .slice(0, 6);
+          return (
+            <div className="glass-card rounded-2xl px-4 py-3">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-3">Recent Members</p>
+              <div className="flex gap-2 flex-wrap">
+                {recent.map(c => (
+                  <div key={c.id} className="flex items-center gap-1.5 bg-brand-bg rounded-full pl-1 pr-3 py-1">
+                    <div className="w-6 h-6 rounded-full overflow-hidden bg-teal-50 shrink-0 flex items-center justify-center">
+                      <PixelAvatar uid={c.user_id} size={24} view="head" />
+                    </div>
+                    <span className="text-xs font-bold truncate max-w-[80px]">{c.userName || 'Member'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Posts */}
         <div className="flex p-1 glass-card rounded-2xl">
