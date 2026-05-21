@@ -9739,7 +9739,10 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           onViewChallenges={() => { setActiveTab('home'); setWalletSubTab('challenges'); }}
           onOpenLinqle={() => setViewingLinqle(true)}
           onPackReady={(stickers) => { setPendingPack(stickers); setPendingPackCardId(null); }}
-          onNavigate={(tab) => setActiveTab(tab)}
+          onNavigate={(tab) => {
+            if (tab === 'challenges') { setActiveTab('home'); setWalletSubTab('challenges'); }
+            else setActiveTab(tab);
+          }}
           currentUser={user}
           currentProfile={profile}
           userCards={initialCards}
