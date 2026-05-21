@@ -131,6 +131,7 @@ import {
   Ticket,
   ChevronUp,
   MoveHorizontal,
+  SlidersHorizontal,
   Check,
   LayoutList,
   History,
@@ -591,6 +592,7 @@ interface Card {
   userName?: string;
   userPhoto?: string;
   profileColor?: string;
+  isHidden?: boolean;
 }
 
 interface Notification {
@@ -9103,6 +9105,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const [stores, setStores] = useState<StoreProfile[]>([]);
   const [walletSubTab, setWalletSubTab] = useState<'stamps' | 'challenges'>('stamps');
   const [walletLayout, setWalletLayout] = useState<'carousel' | 'list'>('carousel');
+  const [walletManaging, setWalletManaging] = useState(false);
   const [redeemingChallenge, setRedeemingChallenge] = useState<{ challenge: Challenge; entry: any; userName: string } | null>(null);
   const [myStickerCards, setMyStickerCards] = useState<StickerCardDoc[]>([]);
   const [openStickerCardId, setOpenStickerCardId] = useState<string | null>(null);
@@ -9727,9 +9730,9 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   };
 
 
-  // Show every non-archived card the user holds — vendor's cardEnabled toggle should not
-  // hide cards already collected; it only gates new stamp collection.
-  const activeCards = initialCards.filter(c => !c.isArchived);
+  // Show every non-archived, non-hidden card the user holds.
+  const activeCards = initialCards.filter(c => !c.isArchived && !c.isHidden);
+  const allNonArchivedCards = initialCards.filter(c => !c.isArchived);
 
   return (
     <motion.div
@@ -9850,32 +9853,89 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
               <div className="flex items-center justify-between gap-2">
                 <p className="text-brand-navy/75 text-sm shrink-0">{activeCards.length} card{activeCards.length !== 1 ? 's' : ''}</p>
                 <div className="flex items-center gap-2 ml-auto">
+                  {/* Manage toggle */}
+                  <button
+                    onClick={() => setWalletManaging(m => !m)}
+                    className={cn(
+                      'flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all',
+                      walletManaging ? 'bg-brand-gold text-white' : 'bg-brand-navy/[0.07] text-brand-navy/75'
+                    )}
+                  >
+                    <SlidersHorizontal size={12} />
+                    Manage
+                  </button>
                   {/* Layout toggle */}
-                  <div className="flex items-center bg-brand-navy/[0.07] rounded-xl p-0.5">
-                    <button
-                      onClick={() => setWalletLayout('carousel')}
-                      className={cn(
-                        'flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all',
-                        walletLayout === 'carousel' ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/75'
-                      )}
-                    >
-                      <MoveHorizontal size={12} />
-                      Swipe
-                    </button>
-                    <button
-                      onClick={() => setWalletLayout('list')}
-                      className={cn(
-                        'flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all',
-                        walletLayout === 'list' ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/75'
-                      )}
-                    >
-                      <LayoutList size={12} />
-                      List
-                    </button>
-                  </div>
+                  {!walletManaging && (
+                    <div className="flex items-center bg-brand-navy/[0.07] rounded-xl p-0.5">
+                      <button
+                        onClick={() => setWalletLayout('carousel')}
+                        className={cn(
+                          'flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all',
+                          walletLayout === 'carousel' ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/75'
+                        )}
+                      >
+                        <MoveHorizontal size={12} />
+                        Swipe
+                      </button>
+                      <button
+                        onClick={() => setWalletLayout('list')}
+                        className={cn(
+                          'flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all',
+                          walletLayout === 'list' ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/75'
+                        )}
+                      >
+                        <LayoutList size={12} />
+                        List
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
-              {activeCards.length > 0 ? (
+
+              {/* Manage mode — list all non-archived cards with visibility toggle */}
+              {walletManaging && (
+                <div className="space-y-2">
+                  {allNonArchivedCards.length === 0 ? (
+                    <p className="text-sm text-brand-navy/50 text-center py-4">No cards yet.</p>
+                  ) : allNonArchivedCards.map(card => {
+                    const store = stores.find(s => s.id === card.store_id);
+                    const visible = !card.isHidden;
+                    return (
+                      <div key={card.id} className="flex items-center gap-3 bg-white rounded-2xl px-4 py-3 border border-brand-navy/6 shadow-sm">
+                        <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-brand-navy/5">
+                          {store?.logoUrl
+                            ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
+                            : <div className="w-full h-full flex items-center justify-center"><Store size={16} className="text-brand-navy/40" /></div>}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-sm truncate">{store?.name || 'Store'}</p>
+                          <p className="text-[11px] text-brand-navy/50">
+                            {card.card_type === 'membership'
+                              ? (card.membership_type === 'visit' ? 'Visit card' : 'Spend card')
+                              : `${card.current_stamps ?? 0} stamps`}
+                          </p>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            await updateDoc(doc(db, 'cards', card.id), { isHidden: visible });
+                          }}
+                          className={cn(
+                            'relative w-11 h-6 rounded-full transition-colors shrink-0',
+                            visible ? 'bg-brand-gold' : 'bg-brand-navy/20'
+                          )}
+                        >
+                          <span className={cn(
+                            'absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-all',
+                            visible ? 'left-[calc(100%-1.375rem)]' : 'left-0.5'
+                          )} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {!walletManaging && (activeCards.length > 0 ? (
                 walletLayout === 'carousel' ? (
                   <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-3 -mx-4 px-4 scrollbar-hide">
                     {activeCards.map(card => {
@@ -9920,7 +9980,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                     Find Stores
                   </button>
                 </div>
-              )}
+              ))}
             </div>
           )}
 
