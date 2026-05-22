@@ -27441,7 +27441,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
       </div>
 
       {/* Stats — shown to consumers only */}
-      {isOwnStore ? (
+      {isOwnStore || isVendorUser ? (
         <div className="pt-10" />
       ) : (
         <div className="pt-10">
