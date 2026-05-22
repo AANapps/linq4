@@ -23227,6 +23227,27 @@ function ProfileLink({ icon, label, onClick }: { icon: React.ReactNode, label: s
 
 // --- Social & Community Components ---
 
+function LazyImg({ src, alt, className, style, ...props }: React.ImgHTMLAttributes<HTMLImageElement>) {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <div className="relative w-full h-full">
+      {!loaded && (
+        <div className="absolute inset-0 flex items-center justify-center bg-brand-navy/5">
+          <div className="w-5 h-5 rounded-full border border-brand-navy/10 border-t-brand-navy/50 animate-spin" />
+        </div>
+      )}
+      <img
+        src={src}
+        alt={alt}
+        className={cn(className, 'transition-[filter,opacity] duration-500', loaded ? 'opacity-100 blur-0' : 'opacity-40 blur-sm')}
+        style={style}
+        onLoad={() => setLoaded(true)}
+        {...props}
+      />
+    </div>
+  );
+}
+
 function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewStore, onLike, onVote, onDelete, showPinnedTag, hideDivider }: {
   key?: React.Key;
   post: GlobalPost;
@@ -23483,7 +23504,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
             {/* GIF */}
             {post.adminGifUrl && (
               <div className="w-full rounded-2xl overflow-hidden">
-                <img src={post.adminGifUrl} alt={post.adminGifLabel || ''} className="w-full object-cover max-h-48" />
+                <LazyImg src={post.adminGifUrl} alt={post.adminGifLabel || ''} className="w-full object-cover max-h-48" />
               </div>
             )}
 
@@ -23681,7 +23702,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
       </div>
       {showImage && (
         <div className="overflow-hidden max-h-72 mb-3">
-          <img
+          <LazyImg
             src={post.postImageUrl}
             alt=""
             className="w-full object-cover"
@@ -23799,7 +23820,9 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                     </div>
                     {comment.content && <p className="text-xs text-brand-navy/70 leading-relaxed">{comment.content}</p>}
                     {comment.gifUrl && (
-                      <img src={comment.gifUrl} alt="" className="mt-1.5 rounded-xl max-h-36 object-cover" style={{ maxWidth: '100%' }} />
+                      <div className="mt-1.5 rounded-xl overflow-hidden max-h-36">
+                        <LazyImg src={comment.gifUrl} alt="" className="rounded-xl max-h-36 object-cover" style={{ maxWidth: '100%' }} />
+                      </div>
                     )}
                   </div>
                   <div className="flex items-center gap-3 mt-1 px-1">
