@@ -27533,47 +27533,6 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
         )}
       </div>
 
-      {/* Reward tiers — only shown when store has an active stamp card and user hasn't joined yet */}
-      {storeCardActive(store) && tiers.length > 0 && !card && (
-        <div className="glass-card p-5 rounded-[2rem] space-y-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75">
-            {tiers.length > 1 ? `Reward ${tierSlideIdx + 1} of ${tiers.length}` : 'Reward'}
-          </p>
-          <div className="overflow-hidden">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={tierSlideIdx}
-                initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }}
-                transition={{ duration: 0.2 }}
-                className="flex items-center gap-4"
-              >
-                <div className="w-12 h-12 rounded-2xl bg-brand-gold/15 flex items-center justify-center shrink-0">
-                  <Gift size={22} className="text-brand-gold" />
-                </div>
-                <div className="min-w-0">
-                  <p className="font-bold text-brand-navy text-base leading-tight">{tiers[tierSlideIdx].reward}</p>
-                  <p className="text-xs text-brand-navy/75 mt-0.5">after {tiers[tierSlideIdx].stamps} stamps</p>
-                </div>
-              </motion.div>
-            </AnimatePresence>
-          </div>
-          {tiers.length > 1 && (
-            <div className="flex items-center justify-between pt-1">
-              <button onClick={() => setTierSlideIdx(i => Math.max(0, i - 1))} disabled={tierSlideIdx === 0} className="p-1.5 rounded-xl bg-brand-navy/8 disabled:opacity-20 active:scale-90 transition-all">
-                <ChevronLeft size={16} className="text-brand-navy" />
-              </button>
-              <div className="flex gap-1.5">
-                {tiers.map((_, i) => (
-                  <button key={i} onClick={() => setTierSlideIdx(i)} className={cn('h-1.5 rounded-full transition-all', i === tierSlideIdx ? 'w-4 bg-brand-navy' : 'w-1.5 bg-brand-navy/20')} />
-                ))}
-              </div>
-              <button onClick={() => setTierSlideIdx(i => Math.min(tiers.length - 1, i + 1))} disabled={tierSlideIdx === tiers.length - 1} className="p-1.5 rounded-xl bg-brand-navy/8 disabled:opacity-20 active:scale-90 transition-all">
-                <ChevronRight size={16} className="text-brand-navy" />
-              </button>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Join / joined buttons */}
       {store.ownerUid !== user.uid && (storeCardActive(store) || store.membershipEnabled) && (
