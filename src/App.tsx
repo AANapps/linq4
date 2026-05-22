@@ -14636,6 +14636,30 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                 <StatSquare icon={<Gift className="text-rose-500" />} label="Rewards Given" value={String(vendorRewardsGiven)} />
               </div>
 
+              {/* Advanced stamp metrics row */}
+              {(() => {
+                const now = Date.now();
+                const ms21 = 21 * 86400000;
+                const uniqueUids = [...new Set<string>(stampCards.map(c => c.user_id))];
+                const atRisk = uniqueUids.filter(uid => {
+                  const userCards = stampCards.filter(c => c.user_id === uid && !c.isArchived);
+                  if (userCards.length === 0) return false;
+                  const lastMs = Math.max(...userCards.map(c => c.last_tap_timestamp?.toMillis?.() ?? (c.last_tap_timestamp?.seconds ?? 0) * 1000), 0);
+                  return lastMs > 0 && (now - lastMs) > ms21;
+                }).length;
+                const totalTxStamps = stampTxns.reduce((s, tx) => s + (tx.stamp_count || 1), 0);
+                const avgVisit = stampTxns.length > 0 ? (totalTxStamps / stampTxns.length).toFixed(1) : '—';
+                const completedCount = uniqueUids.filter(uid => stampCards.filter(c => c.user_id === uid).some(c => (c.total_completed_cycles || 0) > 0)).length;
+                const completionPct = uniqueUids.length > 0 ? Math.round((completedCount / uniqueUids.length) * 100) : 0;
+                return (
+                  <div className="grid grid-cols-3 gap-3">
+                    <StatSquare icon={<AlertTriangle className="text-rose-500" />} label="Churn Risk" value={String(atRisk)} sub="21d+ no stamp" />
+                    <StatSquare icon={<Zap className="text-amber-500" />} label="Avg/Visit" value={avgVisit} sub="stamps per scan" />
+                    <StatSquare icon={<CheckCircle2 className="text-teal-500" />} label="Completion" value={`${completionPct}%`} sub="completed ≥1 card" />
+                  </div>
+                );
+              })()}
+
               {/* Stamps chart */}
               {(() => {
                 const periodCount = chartMode === 'weeks' ? 8 : 14;
@@ -14893,6 +14917,142 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                 );
               })()}
 
+              {/* Busiest Days of Week */}
+              {(() => {
+                const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                const counts = [0, 0, 0, 0, 0, 0, 0];
+                stampTxns.forEach(tx => {
+                  const ms = tx.completed_at?.toMillis?.() ?? (tx.completed_at?.seconds ?? 0) * 1000;
+                  if (ms > 0) {
+                    const dow = (new Date(ms).getDay() + 6) % 7; // Mon=0
+                    counts[dow] += tx.stamp_count || 1;
+                  }
+                });
+                const maxVal = Math.max(...counts, 1);
+                if (stampTxns.length === 0) return null;
+                return (
+                  <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                    <div>
+                      <p className="font-bold text-brand-navy">Busiest Days</p>
+                      <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Stamps by day of week</p>
+                    </div>
+                    {days.map((day, i) => (
+                      <div key={day} className="flex items-center gap-3">
+                        <p className="text-[11px] font-bold text-brand-navy/60 w-7 shrink-0">{day}</p>
+                        <div className="flex-1 h-4 bg-brand-navy/5 rounded-full overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }} animate={{ width: `${Math.round((counts[i] / maxVal) * 100)}%` }}
+                            transition={{ duration: 0.5, delay: i * 0.05 }}
+                            className="h-full bg-brand-gold rounded-full"
+                          />
+                        </div>
+                        <p className="text-[11px] font-bold text-brand-navy w-6 text-right shrink-0">{counts[i]}</p>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+
+              {/* Weekly Comparison */}
+              {(() => {
+                const now = new Date(); now.setHours(0, 0, 0, 0);
+                const todayMs = now.getTime();
+                const dowNow = (now.getDay() + 6) % 7; // Mon=0
+                const thisWeekStart = todayMs - dowNow * 86400000;
+                const lastWeekStart = thisWeekStart - 7 * 86400000;
+                const thisWeek = stampTxns.filter(tx => {
+                  const ms = tx.completed_at?.toMillis?.() ?? (tx.completed_at?.seconds ?? 0) * 1000;
+                  return ms >= thisWeekStart;
+                }).reduce((s, tx) => s + (tx.stamp_count || 1), 0);
+                const lastWeek = stampTxns.filter(tx => {
+                  const ms = tx.completed_at?.toMillis?.() ?? (tx.completed_at?.seconds ?? 0) * 1000;
+                  return ms >= lastWeekStart && ms < thisWeekStart;
+                }).reduce((s, tx) => s + (tx.stamp_count || 1), 0);
+                if (thisWeek === 0 && lastWeek === 0) return null;
+                const maxVal = Math.max(thisWeek, lastWeek, 1);
+                const pct = lastWeek > 0 ? Math.round(((thisWeek - lastWeek) / lastWeek) * 100) : null;
+                return (
+                  <div className="glass-card p-5 rounded-[2rem] space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-brand-navy">Weekly Comparison</p>
+                        <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">This week vs last week</p>
+                      </div>
+                      {pct !== null && (
+                        <span className={cn('text-[11px] font-bold px-2 py-0.5 rounded-full', pct >= 0 ? 'bg-teal-50 text-teal-600' : 'bg-rose-50 text-rose-500')}>
+                          {pct >= 0 ? '+' : ''}{pct}%
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex gap-6 items-end h-24">
+                      {[{ label: 'Last week', val: lastWeek, color: 'bg-brand-navy/15' }, { label: 'This week', val: thisWeek, color: 'bg-brand-gold' }].map(({ label, val, color }) => (
+                        <div key={label} className="flex-1 flex flex-col items-center gap-2">
+                          <p className="text-sm font-bold text-brand-navy">{val}</p>
+                          <div className="w-full flex items-end justify-center" style={{ height: '60px' }}>
+                            <motion.div
+                              initial={{ height: 0 }} animate={{ height: `${Math.round((val / maxVal) * 60)}px` }}
+                              transition={{ duration: 0.5 }}
+                              className={cn('w-full rounded-t-xl', color)}
+                              style={{ minHeight: val > 0 ? '4px' : '0' }}
+                            />
+                          </div>
+                          <p className="text-[10px] font-bold text-brand-navy/60 text-center">{label}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Retention Funnel */}
+              {(() => {
+                const uniqueUids = [...new Set<string>(stampCards.map(c => c.user_id))];
+                const total = uniqueUids.length;
+                if (total === 0) return null;
+                const now = Date.now();
+                const active = uniqueUids.filter(uid => {
+                  const userCards = stampCards.filter(c => c.user_id === uid);
+                  const lastMs = Math.max(...userCards.map(c => c.last_tap_timestamp?.toMillis?.() ?? (c.last_tap_timestamp?.seconds ?? 0) * 1000), 0);
+                  return lastMs > 0 && (now - lastMs) < 30 * 86400000;
+                }).length;
+                const halfway = uniqueUids.filter(uid => {
+                  const userCards = stampCards.filter(c => c.user_id === uid);
+                  return userCards.some(c => c.current_stamps >= Math.floor(stampsPerReward / 2));
+                }).length;
+                const completed = uniqueUids.filter(uid =>
+                  stampCards.filter(c => c.user_id === uid).some(c => (c.total_completed_cycles || 0) > 0)
+                ).length;
+                const steps = [
+                  { label: 'Total Members', count: total, color: 'bg-blue-400' },
+                  { label: 'Active (30d)', count: active, color: 'bg-brand-gold' },
+                  { label: 'Halfway+', count: halfway, color: 'bg-purple-400' },
+                  { label: 'Completed Card', count: completed, color: 'bg-teal-400' },
+                ];
+                return (
+                  <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                    <div>
+                      <p className="font-bold text-brand-navy">Retention Funnel</p>
+                      <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Member journey stages</p>
+                    </div>
+                    {steps.map(({ label, count, color }) => (
+                      <div key={label} className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <p className="text-[11px] font-bold text-brand-navy/70">{label}</p>
+                          <p className="text-[11px] font-bold text-brand-navy">{count} <span className="text-brand-navy/40">({total > 0 ? Math.round((count / total) * 100) : 0}%)</span></p>
+                        </div>
+                        <div className="h-3 bg-brand-navy/5 rounded-full overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }} animate={{ width: `${total > 0 ? Math.round((count / total) * 100) : 0}%` }}
+                            transition={{ duration: 0.6 }}
+                            className={cn('h-full rounded-full', color)}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+
               <AnimatePresence>
                 {statModal && (() => {
                   const titles: Record<string, string> = { members: 'Members', stamps: 'Stamps Breakdown', activeCards: 'Active Cards' };
@@ -14996,6 +15156,30 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                     <StatSquare icon={<DollarSign className="text-green-500" />} label="Total Spend" value={totalSpend > 0 ? `$${totalSpend.toFixed(0)}` : '—'} />
                     <StatSquare icon={<Gift className="text-rose-500" />} label="Rewards" value={String(spendRewardsGiven)} />
                   </div>
+
+                  {/* Advanced spend metrics row */}
+                  {(() => {
+                    const totalTx = spendTxns.length;
+                    const avgTx = totalTx > 0 && totalSpend > 0 ? `£${(totalSpend / totalTx).toFixed(2)}` : '—';
+                    const redeemedPts = spendCards.reduce((s, c) => s + (c.total_points_redeemed || 0), 0);
+                    const issuedPts = totalPointsIssued || 1;
+                    const redeemedPct = issuedPts > 0 ? Math.round((redeemedPts / issuedPts) * 100) : 0;
+                    const now = new Date();
+                    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+                    const thisMonth = spendTxns
+                      .filter(tx => {
+                        const ms = (tx.issued_at ?? tx.completed_at)?.toMillis?.() ?? ((tx.issued_at ?? tx.completed_at)?.seconds ?? 0) * 1000;
+                        return ms >= monthStart;
+                      })
+                      .reduce((s, tx) => s + (tx.transaction_amount || 0), 0);
+                    return (
+                      <div className="grid grid-cols-3 gap-3">
+                        <StatSquare icon={<DollarSign className="text-emerald-500" />} label="Avg Tx" value={avgTx} sub="per transaction" />
+                        <StatSquare icon={<RefreshCw className="text-purple-500" />} label="Redeemed" value={`${redeemedPct}%`} sub="pts used" />
+                        <StatSquare icon={<TrendingUp className="text-blue-500" />} label="This Month" value={thisMonth > 0 ? `£${thisMonth.toFixed(0)}` : '—'} sub="spend tracked" />
+                      </div>
+                    );
+                  })()}
 
                   {/* Points issued chart */}
                   {(() => {
@@ -15153,6 +15337,89 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                       </div>
                     );
                   })()}
+
+                  {/* Points Economy */}
+                  {(() => {
+                    const issued = spendCards.reduce((s, c) => s + (c.total_points_earned || 0), 0);
+                    const redeemed = spendCards.reduce((s, c) => s + (c.total_points_redeemed || 0), 0);
+                    const outstanding = Math.max(0, issued - redeemed);
+                    if (issued === 0) return null;
+                    const items = [
+                      { label: 'Issued', val: issued, color: 'bg-emerald-400' },
+                      { label: 'Redeemed', val: redeemed, color: 'bg-purple-400' },
+                      { label: 'Outstanding', val: outstanding, color: 'bg-amber-400' },
+                    ];
+                    return (
+                      <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                        <div>
+                          <p className="font-bold text-brand-navy">Points Economy</p>
+                          <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Lifetime point flow</p>
+                        </div>
+                        {items.map(({ label, val, color }) => (
+                          <div key={label} className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <p className="text-[11px] font-bold text-brand-navy/70">{label}</p>
+                              <p className="text-[11px] font-bold text-brand-navy">{val.toLocaleString()}</p>
+                            </div>
+                            <div className="h-3 bg-brand-navy/5 rounded-full overflow-hidden">
+                              <motion.div
+                                initial={{ width: 0 }} animate={{ width: `${Math.round((val / issued) * 100)}%` }}
+                                transition={{ duration: 0.6 }}
+                                className={cn('h-full rounded-full', color)}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Customer Segments */}
+                  {(() => {
+                    const uids = [...new Set<string>(spendCards.map(c => c.user_id))];
+                    if (uids.length === 0) return null;
+                    const userPts = uids.map(uid => ({
+                      uid,
+                      pts: spendCards.filter(c => c.user_id === uid).reduce((s, c) => s + (c.total_points_earned || 0), 0),
+                    })).sort((a, b) => b.pts - a.pts);
+                    const highCut = Math.ceil(uids.length * 0.2);
+                    const midCut = Math.ceil(uids.length * 0.7);
+                    const highPts = userPts.slice(0, highCut).reduce((s, u) => s + u.pts, 0);
+                    const midPts = userPts.slice(highCut, midCut).reduce((s, u) => s + u.pts, 0);
+                    const lowPts = userPts.slice(midCut).reduce((s, u) => s + u.pts, 0);
+                    const totalPts = highPts + midPts + lowPts || 1;
+                    const segments = [
+                      { label: 'High Value', sub: `Top 20% · ${highCut} customers`, pts: highPts, color: 'bg-emerald-400' },
+                      { label: 'Mid Value', sub: `Next 50% · ${midCut - highCut} customers`, pts: midPts, color: 'bg-blue-400' },
+                      { label: 'New / Low', sub: `Bottom 30% · ${uids.length - midCut} customers`, pts: lowPts, color: 'bg-brand-navy/20' },
+                    ];
+                    return (
+                      <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                        <div>
+                          <p className="font-bold text-brand-navy">Customer Segments</p>
+                          <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Points contribution by tier</p>
+                        </div>
+                        {segments.map(({ label, sub, pts, color }) => (
+                          <div key={label} className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-[11px] font-bold text-brand-navy">{label}</p>
+                                <p className="text-[9px] text-brand-navy/50 font-bold uppercase tracking-wider">{sub}</p>
+                              </div>
+                              <p className="text-[11px] font-bold text-brand-navy">{Math.round((pts / totalPts) * 100)}%</p>
+                            </div>
+                            <div className="h-3 bg-brand-navy/5 rounded-full overflow-hidden">
+                              <motion.div
+                                initial={{ width: 0 }} animate={{ width: `${Math.round((pts / totalPts) * 100)}%` }}
+                                transition={{ duration: 0.6 }}
+                                className={cn('h-full rounded-full', color)}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </>
               )}
             </>
@@ -15177,6 +15444,39 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                     <StatSquare icon={<MapPin className="text-blue-500" />} label="Total Visits" value={String(totalVisits)} />
                     <StatSquare icon={<Gift className="text-rose-500" />} label="Pts Redeemed" value={String(visitPointsRedeemed)} />
                   </div>
+
+                  {/* Advanced visit metrics row */}
+                  {(() => {
+                    const now = Date.now();
+                    const ms14 = 14 * 86400000;
+                    const uniqueUids = [...new Set<string>(visitCards.map(c => c.user_id))];
+                    const atRisk = uniqueUids.filter(uid => {
+                      const userCards = visitCards.filter(c => c.user_id === uid && !c.isArchived);
+                      if (userCards.length === 0) return false;
+                      const lastMs = Math.max(...userCards.map(c => (c.last_transaction_at ?? c.last_tap_timestamp)?.toMillis?.() ?? ((c.last_transaction_at ?? c.last_tap_timestamp)?.seconds ?? 0) * 1000), 0);
+                      return lastMs > 0 && (now - lastMs) > ms14;
+                    }).length;
+                    const intervals: number[] = [];
+                    uniqueUids.forEach(uid => {
+                      const txs = visitTxns
+                        .filter(tx => tx.user_id === uid)
+                        .map(tx => (tx.issued_at ?? tx.completed_at)?.toMillis?.() ?? ((tx.issued_at ?? tx.completed_at)?.seconds ?? 0) * 1000)
+                        .filter(ms => ms > 0)
+                        .sort((a, b) => a - b);
+                      for (let i = 1; i < txs.length; i++) intervals.push((txs[i] - txs[i - 1]) / 86400000);
+                    });
+                    const avgInterval = intervals.length > 0 ? (intervals.reduce((s, v) => s + v, 0) / intervals.length).toFixed(1) : '—';
+                    const issued = visitCards.reduce((s, c) => s + (c.total_points_earned || 0), 0);
+                    const redeemed = visitCards.reduce((s, c) => s + (c.total_points_redeemed || 0), 0);
+                    const redPct = issued > 0 ? Math.round((redeemed / issued) * 100) : 0;
+                    return (
+                      <div className="grid grid-cols-3 gap-3">
+                        <StatSquare icon={<AlertTriangle className="text-rose-500" />} label="At-Risk" value={String(atRisk)} sub="14d+ no visit" />
+                        <StatSquare icon={<RefreshCw className="text-blue-500" />} label="Avg Interval" value={avgInterval === '—' ? '—' : `${avgInterval}d`} sub="days between visits" />
+                        <StatSquare icon={<Gift className="text-purple-500" />} label="Redeemed" value={`${redPct}%`} sub="pts used" />
+                      </div>
+                    );
+                  })()}
 
                   {/* Visits chart */}
                   {(() => {
@@ -15328,6 +15628,121 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                               <div className="h-1 bg-brand-navy/8 rounded-full mt-1 overflow-hidden">
                                 <div className="h-full bg-blue-400 rounded-full" style={{ width: `${Math.round((visits / (top10[0].visits || 1)) * 100)}%` }} />
                               </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Visit Loyalty Tiers */}
+                  {(() => {
+                    const uids = [...new Set<string>(visitCards.map(c => c.user_id))];
+                    if (uids.length === 0) return null;
+                    const buckets = [
+                      { label: '1 visit', min: 1, max: 1 },
+                      { label: '2–4', min: 2, max: 4 },
+                      { label: '5–9', min: 5, max: 9 },
+                      { label: '10–19', min: 10, max: 19 },
+                      { label: '20+', min: 20, max: Infinity },
+                    ];
+                    const counts = buckets.map(({ min, max }) => ({
+                      ...{ min, max },
+                      label: buckets[buckets.findIndex(b => b.min === min)].label,
+                      count: uids.filter(uid => {
+                        const v = visitCards.filter(c => c.user_id === uid).reduce((s, c) => s + (c.total_visits || 0) + (c.membership_visits || 0), 0);
+                        return v >= min && v <= max;
+                      }).length,
+                    }));
+                    const maxCount = Math.max(...counts.map(b => b.count), 1);
+                    return (
+                      <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                        <div>
+                          <p className="font-bold text-brand-navy">Visit Loyalty Tiers</p>
+                          <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Members by visit frequency</p>
+                        </div>
+                        {counts.map(({ label, count }) => (
+                          <div key={label} className="flex items-center gap-3">
+                            <p className="text-[11px] font-bold text-brand-navy/60 w-10 shrink-0">{label}</p>
+                            <div className="flex-1 h-4 bg-brand-navy/5 rounded-full overflow-hidden">
+                              <motion.div
+                                initial={{ width: 0 }} animate={{ width: `${Math.round((count / maxCount) * 100)}%` }}
+                                transition={{ duration: 0.5 }}
+                                className="h-full bg-blue-400 rounded-full"
+                              />
+                            </div>
+                            <p className="text-[11px] font-bold text-brand-navy w-6 text-right shrink-0">{count}</p>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Busiest Days (visits) */}
+                  {(() => {
+                    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                    const counts = [0, 0, 0, 0, 0, 0, 0];
+                    visitTxns.forEach(tx => {
+                      const ms = (tx.issued_at ?? tx.completed_at)?.toMillis?.() ?? ((tx.issued_at ?? tx.completed_at)?.seconds ?? 0) * 1000;
+                      if (ms > 0) {
+                        const dow = (new Date(ms).getDay() + 6) % 7;
+                        counts[dow]++;
+                      }
+                    });
+                    const maxVal = Math.max(...counts, 1);
+                    if (visitTxns.length === 0) return null;
+                    return (
+                      <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                        <div>
+                          <p className="font-bold text-brand-navy">Busiest Days</p>
+                          <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Visits by day of week</p>
+                        </div>
+                        {days.map((day, i) => (
+                          <div key={day} className="flex items-center gap-3">
+                            <p className="text-[11px] font-bold text-brand-navy/60 w-7 shrink-0">{day}</p>
+                            <div className="flex-1 h-4 bg-brand-navy/5 rounded-full overflow-hidden">
+                              <motion.div
+                                initial={{ width: 0 }} animate={{ width: `${Math.round((counts[i] / maxVal) * 100)}%` }}
+                                transition={{ duration: 0.5, delay: i * 0.05 }}
+                                className="h-full bg-blue-400 rounded-full"
+                              />
+                            </div>
+                            <p className="text-[11px] font-bold text-brand-navy w-6 text-right shrink-0">{counts[i]}</p>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Visit Points Economy */}
+                  {(() => {
+                    const issued = visitCards.reduce((s, c) => s + (c.total_points_earned || 0), 0);
+                    const redeemed = visitCards.reduce((s, c) => s + (c.total_points_redeemed || 0), 0);
+                    const outstanding = Math.max(0, issued - redeemed);
+                    if (issued === 0) return null;
+                    const items = [
+                      { label: 'Issued', val: issued, color: 'bg-blue-400' },
+                      { label: 'Redeemed', val: redeemed, color: 'bg-purple-400' },
+                      { label: 'Outstanding', val: outstanding, color: 'bg-amber-400' },
+                    ];
+                    return (
+                      <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                        <div>
+                          <p className="font-bold text-brand-navy">Points Economy</p>
+                          <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Lifetime visit point flow</p>
+                        </div>
+                        {items.map(({ label, val, color }) => (
+                          <div key={label} className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <p className="text-[11px] font-bold text-brand-navy/70">{label}</p>
+                              <p className="text-[11px] font-bold text-brand-navy">{val.toLocaleString()}</p>
+                            </div>
+                            <div className="h-3 bg-brand-navy/5 rounded-full overflow-hidden">
+                              <motion.div
+                                initial={{ width: 0 }} animate={{ width: `${Math.round((val / issued) * 100)}%` }}
+                                transition={{ duration: 0.6 }}
+                                className={cn('h-full rounded-full', color)}
+                              />
                             </div>
                           </div>
                         ))}
@@ -18869,7 +19284,7 @@ function WallPostItem({ post, currentUser, wallOwnerUid, onViewUser }: { post: a
   );
 }
 
-function StatSquare({ icon, label, value }: { icon: React.ReactNode, label: string, value: string }) {
+function StatSquare({ icon, label, value, sub }: { icon: React.ReactNode, label: string, value: string, sub?: string }) {
   return (
     <div className="glass-card aspect-square rounded-[1.5rem] flex flex-col items-center justify-center p-3 hover:shadow-md transition-all">
       <div className="w-7 h-7 bg-brand-bg rounded-xl flex items-center justify-center mb-1.5">
@@ -18877,6 +19292,7 @@ function StatSquare({ icon, label, value }: { icon: React.ReactNode, label: stri
       </div>
       <p className="font-display text-base font-bold text-brand-navy leading-none mb-0.5">{value}</p>
       <p className="text-[8px] text-brand-navy/75 font-bold uppercase tracking-wider text-center">{label}</p>
+      {sub && <p className="text-[7px] text-brand-navy/40 font-bold uppercase tracking-wider text-center mt-0.5 leading-tight">{sub}</p>}
     </div>
   );
 }
