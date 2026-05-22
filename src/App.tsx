@@ -1607,13 +1607,13 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-between bg-white py-16 px-6">
+      <div className="min-h-screen flex flex-col items-center justify-between gradient-logo-blue py-16 px-6">
         <div className="flex-1 flex items-center justify-center">
           <div className="relative overflow-hidden px-3 py-1 rounded-xl">
-            <span className="font-display text-6xl font-black tracking-tight select-none" style={{ color: 'var(--color-brand-gold)' }}>linq</span>
+            <span className="font-display text-6xl font-black tracking-tight select-none text-white">linq</span>
             <motion.div
               className="absolute inset-0 pointer-events-none"
-              style={{ background: 'linear-gradient(100deg, transparent 15%, rgba(255,255,255,0.6) 50%, transparent 85%)' }}
+              style={{ background: 'linear-gradient(100deg, transparent 15%, rgba(255,255,255,0.35) 50%, transparent 85%)' }}
               animate={{ x: ['-160%', '220%'] }}
               transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut', repeatDelay: 0.9 }}
             />
@@ -1621,8 +1621,8 @@ export default function App() {
         </div>
         <div className="flex flex-col items-center gap-2">
           <img src="/app-logo.png" alt="Ket House" className="w-8 h-8 rounded-xl object-contain" />
-          <p className="text-[10px] text-brand-navy/40 font-medium">from</p>
-          <p className="text-xs font-bold text-brand-navy/60 tracking-wide">Ad Astra Network</p>
+          <p className="text-[10px] text-white/40 font-medium">from</p>
+          <p className="text-xs font-bold text-white/60 tracking-wide">Ad Astra Network</p>
         </div>
       </div>
     );
@@ -1642,13 +1642,13 @@ export default function App() {
 
   if (!profile) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-between bg-white py-16 px-6">
+      <div className="min-h-screen flex flex-col items-center justify-between gradient-logo-blue py-16 px-6">
         <div className="flex-1 flex items-center justify-center">
           <div className="relative overflow-hidden px-3 py-1 rounded-xl">
-            <span className="font-display text-6xl font-black tracking-tight select-none" style={{ color: 'var(--color-brand-gold)' }}>linq</span>
+            <span className="font-display text-6xl font-black tracking-tight select-none text-white">linq</span>
             <motion.div
               className="absolute inset-0 pointer-events-none"
-              style={{ background: 'linear-gradient(100deg, transparent 15%, rgba(255,255,255,0.6) 50%, transparent 85%)' }}
+              style={{ background: 'linear-gradient(100deg, transparent 15%, rgba(255,255,255,0.35) 50%, transparent 85%)' }}
               animate={{ x: ['-160%', '220%'] }}
               transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut', repeatDelay: 0.9 }}
             />
@@ -1656,8 +1656,8 @@ export default function App() {
         </div>
         <div className="flex flex-col items-center gap-2">
           <img src="/app-logo.png" alt="Ket House" className="w-8 h-8 rounded-xl object-contain" />
-          <p className="text-[10px] text-brand-navy/40 font-medium">from</p>
-          <p className="text-xs font-bold text-brand-navy/60 tracking-wide">Ad Astra Network</p>
+          <p className="text-[10px] text-white/40 font-medium">from</p>
+          <p className="text-xs font-bold text-white/60 tracking-wide">Ad Astra Network</p>
         </div>
       </div>
     );
