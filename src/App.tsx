@@ -143,7 +143,9 @@ import {
   Megaphone,
   Link,
   ZoomIn,
-  ZoomOut
+  ZoomOut,
+  ImageIcon,
+  Upload
 } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
@@ -1098,6 +1100,21 @@ export default function App() {
   useEffect(() => { if (user) logEvent('screen_view', user.uid, { screen: activeTab }); }, [activeTab]);
   useEffect(() => { if (viewingStore || viewingUser) window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior }); }, [viewingStore, viewingUser]);
 
+  // Ad Astra Network logo (cached in localStorage for instant display)
+  const [adastraLogoUrl, setAdastraLogoUrl] = useState<string>(() => {
+    try { return localStorage.getItem('linq_adastra_logo_url') || ''; } catch { return ''; }
+  });
+  useEffect(() => {
+    getDoc(doc(db, 'app_config', 'branding')).then(snap => {
+      if (!snap.exists()) return;
+      const url = snap.data().adastraLogoUrl || '';
+      if (url) {
+        setAdastraLogoUrl(url);
+        try { localStorage.setItem('linq_adastra_logo_url', url); } catch {}
+      }
+    }).catch(() => {});
+  }, []);
+
   // Load saved brand theme
   useEffect(() => {
     getDoc(doc(db, 'app_config', 'theme')).then(snap => {
@@ -1619,18 +1636,10 @@ export default function App() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-between gradient-logo-blue py-16 px-6">
         <div className="flex-1 flex items-center justify-center">
-          <div className="relative overflow-hidden px-3 py-1 rounded-xl">
-            <span className="font-display text-6xl font-black tracking-tight select-none text-white">linq</span>
-            <motion.div
-              className="absolute inset-0 pointer-events-none"
-              style={{ background: 'linear-gradient(100deg, transparent 15%, rgba(255,255,255,0.35) 50%, transparent 85%)' }}
-              animate={{ x: ['-160%', '220%'] }}
-              transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut', repeatDelay: 0.9 }}
-            />
-          </div>
+          <span className="font-display text-6xl font-black tracking-tight select-none text-white">linq</span>
         </div>
         <div className="flex flex-col items-center gap-2">
-          <img src="/app-logo.png" alt="Ket House" className="w-8 h-8 rounded-xl object-contain" />
+          <img src={adastraLogoUrl || '/app-logo.png'} alt="Ad Astra Network" className="w-8 h-8 rounded-xl object-contain" />
           <p className="text-[10px] text-white/40 font-medium">from</p>
           <p className="text-xs font-bold text-white/60 tracking-wide">Ad Astra Network</p>
         </div>
@@ -1654,18 +1663,10 @@ export default function App() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-between gradient-logo-blue py-16 px-6">
         <div className="flex-1 flex items-center justify-center">
-          <div className="relative overflow-hidden px-3 py-1 rounded-xl">
-            <span className="font-display text-6xl font-black tracking-tight select-none text-white">linq</span>
-            <motion.div
-              className="absolute inset-0 pointer-events-none"
-              style={{ background: 'linear-gradient(100deg, transparent 15%, rgba(255,255,255,0.35) 50%, transparent 85%)' }}
-              animate={{ x: ['-160%', '220%'] }}
-              transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut', repeatDelay: 0.9 }}
-            />
-          </div>
+          <span className="font-display text-6xl font-black tracking-tight select-none text-white">linq</span>
         </div>
         <div className="flex flex-col items-center gap-2">
-          <img src="/app-logo.png" alt="Ket House" className="w-8 h-8 rounded-xl object-contain" />
+          <img src={adastraLogoUrl || '/app-logo.png'} alt="Ad Astra Network" className="w-8 h-8 rounded-xl object-contain" />
           <p className="text-[10px] text-white/40 font-medium">from</p>
           <p className="text-xs font-bold text-white/60 tracking-wide">Ad Astra Network</p>
         </div>
@@ -1822,6 +1823,7 @@ export default function App() {
             onOpenCards={() => setAdminView('cards')}
             onOpenBanners={() => setAdminView('banners')}
             onOpenUiColors={() => setAdminView('ui-colors')}
+            onOpenAppEdit={() => setAdminView('app-edit')}
           />
         )}
         {adminView === 'challenges' && (
@@ -1860,6 +1862,9 @@ export default function App() {
             onColorsChange={setUiColors}
             onClose={() => setAdminView('menu')}
           />
+        )}
+        {adminView === 'app-edit' && (
+          <AppEditPanel onClose={() => setAdminView('menu')} onLogoChange={setAdastraLogoUrl} />
         )}
       </AnimatePresence>
 
@@ -5568,7 +5573,108 @@ async function purgeSeedData(): Promise<string> {
   return `Deleted: ${results.join(', ')}`;
 }
 
-function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts, onOpenOffers, onOpenLinqle, onOpenDailyVote, onOpenCards, onOpenBanners, onOpenUiColors }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void; onOpenOffers: () => void; onOpenLinqle: () => void; onOpenDailyVote: () => void; onOpenCards: () => void; onOpenBanners: () => void; onOpenUiColors: () => void }) {
+function AppEditPanel({ onClose, onLogoChange }: { onClose: () => void; onLogoChange: (url: string) => void }) {
+  const [logoUrl, setLogoUrl] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    getDoc(doc(db, 'app_config', 'branding')).then(snap => {
+      if (snap.exists()) setLogoUrl(snap.data().adastraLogoUrl || '');
+    }).catch(() => {});
+  }, []);
+
+  const handleUpload = async (file: File) => {
+    setUploading(true);
+    try {
+      const blob = await new Promise<Blob>((res, rej) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+          canvas.getContext('2d')!.drawImage(img, 0, 0);
+          canvas.toBlob(b => b ? res(b) : rej(), 'image/webp', 0.92);
+          URL.revokeObjectURL(url);
+        };
+        img.onerror = rej;
+        img.src = url;
+      });
+      const snap = await uploadBytes(storageRef(storage, 'app_config/adastra_logo.webp'), blob, { contentType: 'image/webp' });
+      const url = await getDownloadURL(snap.ref);
+      setLogoUrl(url);
+      await setDoc(doc(db, 'app_config', 'branding'), { adastraLogoUrl: url }, { merge: true });
+      try { localStorage.setItem('linq_adastra_logo_url', url); } catch {}
+      onLogoChange(url);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch { } finally { setUploading(false); }
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex flex-col max-w-md mx-auto">
+      <div className="flex-1 overflow-y-auto bg-brand-bg">
+        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm px-5 pt-5 pb-4 border-b border-black/5 z-10 flex items-center gap-3">
+          <button onClick={onClose} className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm active:scale-95 transition-all">
+            <ArrowLeft size={18} className="text-brand-navy/75" />
+          </button>
+          <div>
+            <h2 className="font-display text-xl font-bold text-brand-navy">App Edit</h2>
+            <p className="text-xs text-brand-navy/60">Startup screen branding</p>
+          </div>
+        </div>
+
+        <div className="p-5 space-y-6">
+          <div className="bg-white rounded-3xl border border-black/5 shadow-sm p-5 space-y-4">
+            <p className="font-bold text-sm text-brand-navy">Ad Astra Network Logo</p>
+            <p className="text-xs text-brand-navy/60">Shown at the bottom of the startup screen below "linq".</p>
+
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-2xl overflow-hidden bg-brand-navy/5 border border-black/8 shrink-0 flex items-center justify-center">
+                {logoUrl
+                  ? <img src={logoUrl} alt="" className="w-full h-full object-contain" />
+                  : <ImageIcon size={24} className="text-brand-navy/25" />}
+              </div>
+              <label className={cn(
+                'flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-2xl border-2 border-dashed text-sm font-semibold cursor-pointer transition-all',
+                uploading ? 'opacity-50 pointer-events-none border-brand-navy/20 text-brand-navy/40' : 'border-brand-gold/50 text-brand-navy/70 hover:border-brand-gold hover:text-brand-navy active:scale-[0.98]'
+              )}>
+                {uploading ? <><RefreshCw size={15} className="animate-spin" /> Uploading…</> : <><Upload size={15} /> {logoUrl ? 'Replace image' : 'Upload image'}</>}
+                <input type="file" accept="image/*" className="sr-only" onChange={e => e.target.files?.[0] && handleUpload(e.target.files[0])} disabled={uploading} />
+              </label>
+            </div>
+
+            {saved && (
+              <p className="text-xs text-green-600 font-semibold flex items-center gap-1">
+                <CheckCircle2 size={13} /> Saved — visible on next startup
+              </p>
+            )}
+          </div>
+
+          {/* Preview */}
+          <div className="rounded-3xl overflow-hidden">
+            <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest mb-2 px-1">Preview</p>
+            <div className="gradient-logo-blue rounded-3xl py-12 flex flex-col items-center justify-between gap-8">
+              <span className="font-display text-5xl font-black text-white">linq</span>
+              <div className="flex flex-col items-center gap-1.5">
+                <div className="w-8 h-8 rounded-xl overflow-hidden bg-white/10 flex items-center justify-center">
+                  {logoUrl
+                    ? <img src={logoUrl} alt="" className="w-full h-full object-contain" />
+                    : <ImageIcon size={16} className="text-white/40" />}
+                </div>
+                <p className="text-[10px] text-white/40 font-medium">from</p>
+                <p className="text-xs font-bold text-white/60">Ad Astra Network</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts, onOpenOffers, onOpenLinqle, onOpenDailyVote, onOpenCards, onOpenBanners, onOpenUiColors, onOpenAppEdit }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void; onOpenOffers: () => void; onOpenLinqle: () => void; onOpenDailyVote: () => void; onOpenCards: () => void; onOpenBanners: () => void; onOpenUiColors: () => void; onOpenAppEdit: () => void }) {
   const [purging, setPurging] = useState(false);
   const [purgeResult, setPurgeResult] = useState<string | null>(null);
   const [confirmPurge, setConfirmPurge] = useState(false);
@@ -5751,6 +5857,20 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores,
             <div>
               <p className="font-bold text-brand-navy text-sm">UI Colours</p>
               <p className="text-[11px] text-brand-navy/75 mt-0.5">Colour each tile & tab component</p>
+            </div>
+          </motion.button>
+
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={onOpenAppEdit}
+            className="rounded-[2rem] bg-white border border-black/5 shadow-sm p-6 flex flex-col items-start gap-3 text-left active:bg-brand-navy/5 transition-colors"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
+              <Smartphone size={22} className="text-slate-500" />
+            </div>
+            <div>
+              <p className="font-bold text-brand-navy text-sm">App Edit</p>
+              <p className="text-[11px] text-brand-navy/75 mt-0.5">Startup screen & branding</p>
             </div>
           </motion.button>
 
