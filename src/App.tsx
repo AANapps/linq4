@@ -276,7 +276,8 @@ function saveBrandVarsCache(vars: { g1: string; g2: string; g3: string; g4: stri
 }
 
 function storeFallbackImg(name?: string | null, color?: string | null): string {
-  const letter = (name || 'S')[0].toUpperCase();
+  if (!name) return '';
+  const letter = name[0].toUpperCase();
   const bg = color || '#2563EB';
   return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="${bg}"/><text x="50" y="67" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="800" font-size="50" fill="rgba(255,255,255,0.9)">${letter}</text></svg>`)}`;
 }
