@@ -19697,9 +19697,6 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
 
   const [pendingType, setPendingType] = useState<'stamp' | 'spend' | 'visit' | null>(null);
   const [switching, setSwitching] = useState(false);
-  const [pendingScanMethod, setPendingScanMethod] = useState<'nfc' | 'qr' | null>(null);
-  const [switchingScanMethod, setSwitchingScanMethod] = useState(false);
-
   const handleTypeClick = (type: 'stamp' | 'spend' | 'visit') => {
     if (type === activeType) return;
     setPendingType(type);
@@ -19718,17 +19715,6 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
       setSwitching(false);
     }
     setPendingType(null);
-  };
-
-  const confirmScanMethodSwitch = async () => {
-    if (!pendingScanMethod || !store?.id) return;
-    setSwitchingScanMethod(true);
-    try {
-      await updateDoc(doc(db, 'stores', store.id), { scanMethod: pendingScanMethod });
-    } finally {
-      setSwitchingScanMethod(false);
-    }
-    setPendingScanMethod(null);
   };
 
   return (
@@ -19799,78 +19785,9 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
         )}
       </AnimatePresence>
 
-      {/* ─── Scan method warning dialog ─── */}
-      <AnimatePresence>
-        {pendingScanMethod && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.15 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm"
-          >
-            <div className="glass-card rounded-[2rem] p-6 w-full max-w-sm space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
-                  <AlertTriangle size={20} className="text-amber-500" />
-                </div>
-                <h3 className="font-display text-lg font-bold text-brand-navy">
-                  Switch to {pendingScanMethod === 'qr' ? 'QR Code' : 'NFC'}?
-                </h3>
-              </div>
-              <p className="text-sm text-brand-navy/75">
-                {pendingScanMethod === 'qr'
-                  ? 'Customers will scan a QR code displayed on your screen instead of tapping an NFC tag.'
-                  : 'Customers will tap your physical NFC tag instead of scanning a QR code. Make sure your NFC tags are programmed and ready.'}
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setPendingScanMethod(null)}
-                  disabled={switchingScanMethod}
-                  className="flex-1 py-3 rounded-2xl border border-brand-navy/10 text-sm font-bold text-brand-navy/75 hover:bg-brand-navy/5 transition-colors disabled:opacity-40"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmScanMethodSwitch}
-                  disabled={switchingScanMethod}
-                  className="flex-1 py-3 rounded-2xl bg-brand-navy text-white text-sm font-bold hover:bg-brand-navy/90 transition-colors disabled:opacity-40"
-                >
-                  {switchingScanMethod ? 'Switching…' : 'Switch'}
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* ─── Stamps content ─── */}
       {activeType === 'stamp' && (
         <div className="space-y-4">
-          <div className="glass-card rounded-[1.5rem] px-5 py-4 space-y-3">
-            <div>
-              <p className="font-bold text-brand-navy">Stamp Method</p>
-              <p className="text-xs text-brand-navy/80 mt-0.5">
-                {store?.scanMethod === 'qr'
-                  ? 'Customers scan a QR code on your screen'
-                  : 'Customers tap your physical NFC tag'}
-              </p>
-            </div>
-            <div className="flex gap-1 p-1 bg-brand-navy/5 rounded-2xl">
-              <button
-                onClick={() => store?.scanMethod !== 'nfc' && setPendingScanMethod('nfc')}
-                className={cn('flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all', store?.scanMethod !== 'qr' ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/50')}
-              >
-                <Wifi size={14} className="-rotate-90" /> NFC Tag
-              </button>
-              <button
-                onClick={() => store?.scanMethod !== 'qr' && setPendingScanMethod('qr')}
-                className={cn('flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all', store?.scanMethod === 'qr' ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/50')}
-              >
-                <QrCode size={14} /> QR Code
-              </button>
-            </div>
-          </div>
           <CardBuilder store={store} />
         </div>
       )}
@@ -20351,22 +20268,6 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
             </div>
           )}
         </div>
-
-        {store && (
-          <div className="bg-brand-navy/5 rounded-2xl p-4 text-left">
-            <p className="text-xs font-bold text-brand-navy mb-1 flex items-center gap-1.5"><Wifi size={12} /> NFC Tag URL</p>
-            <p className="text-[10px] text-brand-navy/80 mb-2 leading-relaxed">Program this URL onto your NFC tags. Customers tap the tag to collect a stamp on any device.</p>
-            <div className="flex items-center gap-2">
-              <code className="flex-1 text-[10px] bg-white rounded-xl px-3 py-2 text-brand-navy/70 truncate border border-brand-navy/10">
-                {`${window.location.origin}/?stamp=${store.id}`}
-              </code>
-              <button
-                onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/?stamp=${store.id}`)}
-                className="shrink-0 px-3 py-2 bg-brand-navy text-white text-[10px] font-bold rounded-xl"
-              >Copy</button>
-            </div>
-          </div>
-        )}
 
         <button onClick={handleSave} disabled={saving}
           className="w-full bg-brand-navy text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 disabled:opacity-50 transition-all">
