@@ -613,6 +613,7 @@ interface Card {
   vendorDisabled?: boolean;
   storeName?: string;
   storeLogoUrl?: string;
+  storeTheme?: string;
 }
 
 interface Notification {
@@ -5536,6 +5537,7 @@ function AppEditPanel({ onClose, onLogoChange }: { onClose: () => void; onLogoCh
   const [logoUrl, setLogoUrl] = useState('');
   const [uploading, setUploading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     getDoc(doc(db, 'app_config', 'branding')).then(snap => {
@@ -5545,29 +5547,26 @@ function AppEditPanel({ onClose, onLogoChange }: { onClose: () => void; onLogoCh
 
   const handleUpload = async (file: File) => {
     setUploading(true);
+    setError(null);
+    setSaved(false);
     try {
-      const blob = await new Promise<Blob>((res, rej) => {
-        const img = new Image();
-        const url = URL.createObjectURL(file);
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
-          canvas.getContext('2d')!.drawImage(img, 0, 0);
-          canvas.toBlob(b => b ? res(b) : rej(), 'image/webp', 0.92);
-          URL.revokeObjectURL(url);
-        };
-        img.onerror = rej;
-        img.src = url;
-      });
-      const snap = await uploadBytes(storageRef(storage, 'app_config/adastra_logo.webp'), blob, { contentType: 'image/webp' });
+      const snap = await uploadBytes(
+        storageRef(storage, 'app_config/adastra_logo.webp'),
+        file,
+        { contentType: file.type || 'image/png' }
+      );
       const url = await getDownloadURL(snap.ref);
-      setLogoUrl(url);
       await setDoc(doc(db, 'app_config', 'branding'), { adastraLogoUrl: url }, { merge: true });
+      setLogoUrl(url);
       try { localStorage.setItem('linq_adastra_logo_url', url); } catch {}
       onLogoChange(url);
       setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
-    } catch { } finally { setUploading(false); }
+      setTimeout(() => setSaved(false), 3000);
+    } catch (e: any) {
+      setError(e?.message || 'Upload failed. Check Storage rules are deployed.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -5604,6 +5603,9 @@ function AppEditPanel({ onClose, onLogoChange }: { onClose: () => void; onLogoCh
               </label>
             </div>
 
+            {error && (
+              <p className="text-xs text-red-500 font-semibold">{error}</p>
+            )}
             {saved && (
               <p className="text-xs text-green-600 font-semibold flex items-center gap-1">
                 <CheckCircle2 size={13} /> Saved — visible on next startup
@@ -10659,7 +10661,7 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
         user_id: user.uid, store_id: store.id, current_stamps: newStamps,
         total_completed_cycles: newCycles, stamps_required: limit,
         last_tap_timestamp: serverTimestamp(), isArchived: false, isRedeemed: false, userName, userPhoto,
-        storeName: store.name, storeLogoUrl: store.logoUrl || '',
+        storeName: store.name, storeLogoUrl: store.logoUrl || '', storeTheme: store.theme || '',
       });
       await updateDoc(doc(db, 'users', user.uid), { total_cards_held: increment(1) });
     } else {
@@ -11126,7 +11128,7 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady, initialQty }: {
   const hasBarcodeDetector = typeof window !== 'undefined' && 'BarcodeDetector' in window;
   const limit = card.stamps_required || store?.stamps_required_for_reward || 10;
   const remaining = Math.max(1, limit - (card.current_stamps || 0));
-  const cardTheme = store?.theme || '#0D9488';
+  const cardTheme = store?.theme || card.storeTheme || '#0D9488';
 
   const stopCamera = () => {
     cancelAnimationFrame(rafRef.current);
@@ -11318,7 +11320,7 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
   const limit = card.stamps_required || store?.stamps_required_for_reward || 10;
   const current = card.current_stamps || 0;
   const remaining = limit - current;
-  const cardTheme = store?.theme || '#0D9488';
+  const cardTheme = store?.theme || card.storeTheme || '#0D9488';
 
   useEffect(() => () => { abortRef.current?.abort(); }, []);
 
@@ -14108,7 +14110,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
           user_id: userId, store_id: store.id, current_stamps: newStamps, total_completed_cycles: newCycles,
           stamps_required: lim, isArchived: false, tiersCompleted: store.rewardTiers?.length || 1,
           userName: customer.name, userPhoto: (customer as any).photoURL || '',
-          storeName: store.name, storeLogoUrl: store.logoUrl || '',
+          storeName: store.name, storeLogoUrl: store.logoUrl || '', storeTheme: store.theme || '',
         });
         await updateDoc(doc(db, 'users', userId), { total_cards_held: increment(1) });
       }
@@ -16541,7 +16543,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
       >
 
         {(() => {
-          const cardTheme = store?.theme || '#0D9488';
+          const cardTheme = store?.theme || card.storeTheme || '#0D9488';
           const rawAccent = store?.stampBorderColor || '#ffffff';
           const accentColor = rawAccent === '#ffffff' ? cardTheme : rawAccent;
           const rewardTiers = store?.rewardTiers?.length ? store.rewardTiers : [{ stamps: limit, reward: store?.reward || '' }];
