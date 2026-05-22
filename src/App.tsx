@@ -25497,7 +25497,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                   setShowLeaderboard(true);
                   confetti({ particleCount: 80, spread: 60, startVelocity: 30, gravity: 0.8, scalar: 0.9, origin: { y: 0.6 }, zIndex: 9999, colors: ['#FFD700', '#FFC200', '#FFE566', '#FFAA00', '#FFF8DC'] });
                 }}
-                className="relative rounded-[1.5rem] overflow-hidden active:scale-[0.97] transition-transform shrink-0"
+                className="relative rounded-[1.5rem] overflow-hidden active:scale-[0.97] transition-transform shrink-0 shadow-lg"
                 style={{ background: uiColors.leaderboardTile.css, width: (visibleFeedChallenges.length > 0 || visibleFeedCompletedChallenges.length > 0) ? '136px' : '100%', minHeight: '148px' }}
               >
                 <div className="absolute top-3 left-3 text-lg leading-none">🥇</div>
