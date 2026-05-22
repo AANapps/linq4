@@ -10088,7 +10088,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                       return (
                         <div key={card.id} className="snap-center shrink-0 w-[83vw] max-w-[340px] flex flex-col rounded-[2rem] shadow-xl">
                           {card.card_type === 'membership'
-                            ? <MembershipCard card={card} store={store} onViewStore={onViewStore} onScan={handleNFCScan} userHandle={profile?.handle} />
+                            ? <MembershipCard card={card} store={store} onViewStore={onViewStore} onScan={handleNFCScan} onPackReady={(s) => { setPendingPack(s); setPendingPackCardId(null); }} userHandle={profile?.handle} />
                             : card.card_type === 'sub'
                             ? <SubLoyaltyCard card={card} store={store} onViewStore={onViewStore} onScan={handleNFCScan} />
                             : <LoyaltyCard card={card} store={store} onViewStore={onViewStore} onScan={handleNFCScan} />}
@@ -10103,7 +10103,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                       return (
                         <div key={card.id} className="rounded-3xl shadow-xl overflow-hidden">
                           {card.card_type === 'membership'
-                            ? <MembershipCard card={card} store={store} onViewStore={onViewStore} compact onScan={handleNFCScan} userHandle={profile?.handle} />
+                            ? <MembershipCard card={card} store={store} onViewStore={onViewStore} compact onScan={handleNFCScan} onPackReady={(s) => { setPendingPack(s); setPendingPackCardId(null); }} userHandle={profile?.handle} />
                             : card.card_type === 'sub'
                             ? <SubLoyaltyCard card={card} store={store} onViewStore={onViewStore} compact onScan={handleNFCScan} />
                             : <LoyaltyCard card={card} store={store} onViewStore={onViewStore} compact onScan={handleNFCScan} />}
@@ -11594,7 +11594,7 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
   );
 }
 
-function VisitScanSheet({ card, store, onClose, initialQty }: { card: Card; store?: StoreProfile; onClose: () => void; initialQty?: number; }) {
+function VisitScanSheet({ card, store, onClose, onPackReady, initialQty }: { card: Card; store?: StoreProfile; onClose: () => void; onPackReady?: (s: CollectibleSticker[]) => void; initialQty?: number; }) {
   type SS = 'idle' | 'scanning' | 'processing' | 'success' | 'error';
   const [scanState, setScanState] = useState<SS>('idle');
   const [scanMode, setScanMode] = useState<'nfc' | 'qr'>('nfc');
@@ -11642,12 +11642,13 @@ function VisitScanSheet({ card, store, onClose, initialQty }: { card: Card; stor
       // Issue stickers, update challenges, bump streak — same as NFC stamp flow
       const uid = auth.currentUser?.uid ?? card.user_id;
       const userName = auth.currentUser?.displayName || 'Customer';
-      issueUserStickers(uid, userName, 3).catch(console.error);
+      const newStickers = await issueUserStickers(uid, userName, 3).catch(() => [] as CollectibleSticker[]);
       updateChallengeProgress(uid, card.store_id, 1).catch(console.error);
       bumpStreak(uid).catch(console.error);
       updateDoc(doc(db, 'users', uid), { totalStamps: increment(1), lastStampAt: serverTimestamp() }).catch(console.error);
       setScanState('success');
       setStatusMsg(`+${qty} point${qty !== 1 ? 's' : ''} added!`);
+      if (newStickers.length > 0) setTimeout(() => onPackReady?.(newStickers), 1000);
     } catch (err: any) {
       setScanState('error'); setStatusMsg(err?.message || 'Something went wrong.');
     }
@@ -15602,7 +15603,7 @@ function SwipeConfirm({ onConfirm }: { onConfirm: () => void }) {
   );
 }
 
-function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, onScan, userHandle }: { card: Card; store?: StoreProfile; onViewStore?: (s: StoreProfile) => void; compact?: boolean; autoOpen?: 'spend' | 'nfc'; onScan?: () => void; userHandle?: string; key?: React.Key }) {
+function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, onScan, onPackReady, userHandle }: { card: Card; store?: StoreProfile; onViewStore?: (s: StoreProfile) => void; compact?: boolean; autoOpen?: 'spend' | 'nfc'; onScan?: () => void; onPackReady?: (s: CollectibleSticker[]) => void; userHandle?: string; key?: React.Key }) {
   const [showRedeemSheet, setShowRedeemSheet] = useState(autoOpen === 'spend' || autoOpen === 'nfc');
   const [showVisitScan, setShowVisitScan] = useState(false);
   const [showVisitScanSheet, setShowVisitScanSheet] = useState(false);
@@ -16021,7 +16022,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
       </AnimatePresence>
       <AnimatePresence>
         {showVisitScan && (
-          <VisitScanSheet card={card} store={store} initialQty={visitScanQty} onClose={() => setShowVisitScan(false)} />
+          <VisitScanSheet card={card} store={store} initialQty={visitScanQty} onClose={() => setShowVisitScan(false)} onPackReady={onPackReady} />
         )}
       </AnimatePresence>
       <AnimatePresence>
@@ -16391,7 +16392,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
       </AnimatePresence>
       <AnimatePresence>
         {showVisitScan && (
-          <VisitScanSheet card={card} store={store} initialQty={visitScanQty} onClose={() => setShowVisitScan(false)} />
+          <VisitScanSheet card={card} store={store} initialQty={visitScanQty} onClose={() => setShowVisitScan(false)} onPackReady={onPackReady} />
         )}
       </AnimatePresence>
       <AnimatePresence>
