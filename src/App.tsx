@@ -266,6 +266,28 @@ function applyCustomThemeHex(hex: string) {
   root.style.setProperty('--color-brand-rose', v.rose);
 }
 
+const THEME_CACHE_KEY = 'linq_brand_theme_cache';
+
+function saveBrandThemeCache(data: { themeId: string; customHex?: string }) {
+  try { localStorage.setItem(THEME_CACHE_KEY, JSON.stringify(data)); } catch {}
+}
+
+function applyBrandThemeCache() {
+  try {
+    const raw = localStorage.getItem(THEME_CACHE_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (data.themeId === 'custom' && /^#[0-9a-fA-F]{6}$/.test(data.customHex || '')) {
+      applyCustomThemeHex(data.customHex);
+    } else {
+      const preset = THEME_PRESETS.find(t => t.id === data.themeId);
+      if (preset) applyBrandTheme(preset);
+    }
+  } catch {}
+}
+
+applyBrandThemeCache();
+
 function storeFallbackImg(name?: string | null, color?: string | null): string {
   const letter = (name || 'S')[0].toUpperCase();
   const bg = color || '#0D9488';
@@ -1093,6 +1115,7 @@ export default function App() {
     getDoc(doc(db, 'app_config', 'theme')).then(snap => {
       if (!snap.exists()) return;
       const data = snap.data();
+      saveBrandThemeCache({ themeId: data.themeId, customHex: data.customHex });
       if (data.themeId === 'custom' && /^#[0-9a-fA-F]{6}$/.test(data.customHex || '')) {
         applyCustomThemeHex(data.customHex);
       } else {
