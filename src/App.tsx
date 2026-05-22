@@ -264,29 +264,14 @@ function applyCustomThemeHex(hex: string) {
   root.style.setProperty('--color-brand-gold', v.gold);
   root.style.setProperty('--color-brand-crimson', v.crimson);
   root.style.setProperty('--color-brand-rose', v.rose);
+  saveBrandVarsCache({ g1: v.g1, g2: v.g2, g3: v.g3, g4: v.g4, gold: v.gold, crimson: v.crimson, rose: v.rose });
 }
 
-const THEME_CACHE_KEY = 'linq_brand_theme_cache';
+const THEME_VARS_KEY = 'linq_brand_vars';
 
-function saveBrandThemeCache(data: { themeId: string; customHex?: string }) {
-  try { localStorage.setItem(THEME_CACHE_KEY, JSON.stringify(data)); } catch {}
+function saveBrandVarsCache(vars: { g1: string; g2: string; g3: string; g4: string; gold: string; crimson: string; rose: string }) {
+  try { localStorage.setItem(THEME_VARS_KEY, JSON.stringify(vars)); } catch {}
 }
-
-function applyBrandThemeCache() {
-  try {
-    const raw = localStorage.getItem(THEME_CACHE_KEY);
-    if (!raw) return;
-    const data = JSON.parse(raw);
-    if (data.themeId === 'custom' && /^#[0-9a-fA-F]{6}$/.test(data.customHex || '')) {
-      applyCustomThemeHex(data.customHex);
-    } else {
-      const preset = THEME_PRESETS.find(t => t.id === data.themeId);
-      if (preset) applyBrandTheme(preset);
-    }
-  } catch {}
-}
-
-applyBrandThemeCache();
 
 function storeFallbackImg(name?: string | null, color?: string | null): string {
   const letter = (name || 'S')[0].toUpperCase();
@@ -303,6 +288,7 @@ export function applyBrandTheme(t: ThemePreset) {
   r.style.setProperty('--brand-g2', t.g2);
   r.style.setProperty('--brand-g3', t.g3);
   r.style.setProperty('--brand-g4', t.g4);
+  saveBrandVarsCache({ g1: t.g1, g2: t.g2, g3: t.g3, g4: t.g4, gold: t.gold, crimson: t.crimson, rose: t.rose });
 }
 
 // ─── UI Color Control ─────────────────────────────────────────────────────────
@@ -1115,7 +1101,6 @@ export default function App() {
     getDoc(doc(db, 'app_config', 'theme')).then(snap => {
       if (!snap.exists()) return;
       const data = snap.data();
-      saveBrandThemeCache({ themeId: data.themeId, customHex: data.customHex });
       if (data.themeId === 'custom' && /^#[0-9a-fA-F]{6}$/.test(data.customHex || '')) {
         applyCustomThemeHex(data.customHex);
       } else {
