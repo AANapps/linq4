@@ -3853,13 +3853,14 @@ const VIBRATE_PATTERNS: Record<StickerTier, number | number[]> = {
 };
 
 const TIER_EMBERS = [
-  { x: '8%',  delay: 0,    dur: 1.3, color: '#f5a623', sz: 2   },
-  { x: '28%', delay: 0.55, dur: 1.1, color: '#ff8c00', sz: 1.5 },
-  { x: '50%', delay: 0.2,  dur: 1.5, color: '#ffd700', sz: 2   },
-  { x: '72%', delay: 0.85, dur: 1.2, color: '#f5a623', sz: 1.5 },
-  { x: '92%', delay: 0.4,  dur: 1.4, color: '#ff6b00', sz: 2   },
-  { x: '18%', delay: 1.1,  dur: 1.0, color: '#ffd700', sz: 1.5 },
-  { x: '62%', delay: 0.7,  dur: 1.6, color: '#ff8c00', sz: 1.5 },
+  { left: '-22%', top: '-22%', delay: 0,    dur: 1.8, color: '#f5a623', sz: 2.5 },
+  { left: '44%',  top: '-28%', delay: 0.45, dur: 1.5, color: '#ffd700', sz: 2   },
+  { left: '114%', top: '-18%', delay: 0.9,  dur: 2.0, color: '#ff8c00', sz: 2.5 },
+  { left: '120%', top: '43%',  delay: 0.2,  dur: 1.6, color: '#f5a623', sz: 2   },
+  { left: '110%', top: '110%', delay: 1.0,  dur: 1.7, color: '#ffd700', sz: 2.5 },
+  { left: '42%',  top: '120%', delay: 0.55, dur: 1.4, color: '#ff8c00', sz: 2   },
+  { left: '-18%', top: '110%', delay: 1.2,  dur: 1.9, color: '#f5a623', sz: 2.5 },
+  { left: '-24%', top: '42%',  delay: 0.7,  dur: 1.5, color: '#ffd700', sz: 2   },
 ];
 
 // Mystery card used inside PackOpeningModal — larger, dramatic reveal
@@ -12614,9 +12615,9 @@ function StampCelebrationModal({
                                         <motion.div
                                           key={pi}
                                           className="absolute pointer-events-none rounded-full"
-                                          style={{ left: p.x, top: '-15%', width: p.sz, height: p.sz, backgroundColor: p.color, zIndex: 20 }}
-                                          animate={{ y: ['0%', '150%'], x: [0, pi % 2 === 0 ? 4 : -4, 0], opacity: [0, 0.75, 0.5, 0], scale: [0.5, 1, 0.6, 0.1] }}
-                                          transition={{ duration: p.dur, repeat: Infinity, delay: p.delay + i * 0.07, ease: 'easeIn' }}
+                                          style={{ left: p.left, top: p.top, width: p.sz, height: p.sz, backgroundColor: p.color, zIndex: 20 }}
+                                          animate={{ y: [0, -5, 1, -3, 0], opacity: [0.35, 1, 0.55, 0.9, 0.35], scale: [0.6, 1.3, 0.8, 1.1, 0.6] }}
+                                          transition={{ duration: p.dur, repeat: Infinity, delay: p.delay + i * 0.07, ease: 'easeInOut' }}
                                         />
                                       ))}
                                     </>
@@ -16543,9 +16544,9 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                             <motion.div
                               key={pi}
                               className="absolute pointer-events-none rounded-full"
-                              style={{ left: p.x, top: '-15%', width: p.sz, height: p.sz, backgroundColor: p.color, zIndex: 20 }}
-                              animate={{ y: ['0%', '150%'], x: [0, pi % 2 === 0 ? 4 : -4, 0], opacity: [0, 0.75, 0.5, 0], scale: [0.5, 1, 0.6, 0.1] }}
-                              transition={{ duration: p.dur, repeat: Infinity, delay: p.delay + i * 0.07, ease: 'easeIn' }}
+                              style={{ left: p.left, top: p.top, width: p.sz, height: p.sz, backgroundColor: p.color, zIndex: 20 }}
+                              animate={{ y: [0, -5, 1, -3, 0], opacity: [0.35, 1, 0.55, 0.9, 0.35], scale: [0.6, 1.3, 0.8, 1.1, 0.6] }}
+                              transition={{ duration: p.dur, repeat: Infinity, delay: p.delay + i * 0.07, ease: 'easeInOut' }}
                             />
                           ))}
                         </>
