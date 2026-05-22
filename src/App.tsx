@@ -7155,6 +7155,11 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
   const [editImgPos, setEditImgPos] = useState({ x: 50, y: 50 });
   const [editImgZoom, setEditImgZoom] = useState(1);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [engagingPostId, setEngagingPostId] = useState<string | null>(null);
+  const [engageLikeCount, setEngageLikeCount] = useState('');
+  const [engageCommentName, setEngageCommentName] = useState('Sarah');
+  const [engageCommentText, setEngageCommentText] = useState('');
+  const [savingEngagement, setSavingEngagement] = useState(false);
 
   // Create form
   const [content, setContent] = useState('');
@@ -7366,6 +7371,30 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
       setUserPickerQuery('');
       setUserPickerResults([]);
     } finally { setPublishingAch(false); }
+  };
+
+  const handleSetLikes = async (post: GlobalPost, newCount: number) => {
+    setSavingEngagement(true);
+    try {
+      await updateDoc(doc(db, 'global_posts', post.id), { likesCount: Math.max(0, newCount) });
+    } finally { setSavingEngagement(false); }
+  };
+
+  const handleAdminComment = async (post: GlobalPost) => {
+    if (!engageCommentName.trim() || !engageCommentText.trim()) return;
+    setSavingEngagement(true);
+    try {
+      await addDoc(collection(db, 'global_posts', post.id, 'comments'), {
+        fromUid: 'linq_admin',
+        fromName: engageCommentName.trim(),
+        fromPhoto: '',
+        content: engageCommentText.trim(),
+        likesCount: 0,
+        likedBy: [],
+        createdAt: serverTimestamp(),
+      });
+      setEngageCommentText('');
+    } finally { setSavingEngagement(false); }
   };
 
   const formatAge = (ts: any) => {
@@ -7955,8 +7984,74 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
                         <button onClick={() => setConfirmDeleteId(post.id)} className="p-1.5 text-red-400 hover:text-red-600 transition-colors">
                           <Trash2 size={13} />
                         </button>
+                        <button
+                          onClick={() => { setEngagingPostId(engagingPostId === post.id ? null : post.id); setEngageLikeCount(''); setEngageCommentText(''); }}
+                          className={cn('p-1.5 rounded-xl transition-all active:scale-90', engagingPostId === post.id ? 'bg-brand-navy text-white' : 'bg-brand-navy/5 text-brand-navy/40 hover:text-brand-navy/60')}
+                          title="Engagement"
+                        >
+                          <BarChart2 size={13} />
+                        </button>
                       </div>
                     </div>
+                    {engagingPostId === post.id && (
+                      <div className="mt-3 border-t border-brand-navy/8 pt-3 space-y-3">
+                        {/* Likes control */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/50 shrink-0">Likes</span>
+                          <button onClick={() => handleSetLikes(post, post.likesCount - 1)} disabled={savingEngagement || post.likesCount <= 0} className="w-7 h-7 rounded-lg bg-brand-navy/8 flex items-center justify-center text-brand-navy/60 font-bold text-base disabled:opacity-40 active:scale-90 transition-all">−</button>
+                          <span className="text-sm font-bold text-brand-navy min-w-[28px] text-center">{post.likesCount}</span>
+                          <button onClick={() => handleSetLikes(post, post.likesCount + 1)} disabled={savingEngagement} className="w-7 h-7 rounded-lg bg-brand-navy/8 flex items-center justify-center text-brand-navy/60 font-bold text-base disabled:opacity-40 active:scale-90 transition-all">+</button>
+                          <input
+                            type="number"
+                            value={engageLikeCount}
+                            onChange={e => setEngageLikeCount(e.target.value)}
+                            placeholder="Set exact…"
+                            className="flex-1 px-2 py-1 rounded-lg bg-brand-bg border border-brand-navy/10 text-xs text-brand-navy outline-none"
+                          />
+                          <button
+                            onClick={() => { const n = parseInt(engageLikeCount); if (!isNaN(n) && n >= 0) { handleSetLikes(post, n); setEngageLikeCount(''); } }}
+                            disabled={savingEngagement || engageLikeCount === ''}
+                            className="px-2.5 py-1 rounded-lg bg-brand-navy text-white text-xs font-bold disabled:opacity-40 active:scale-95 transition-all"
+                          >Set</button>
+                        </div>
+                        {/* Comment control */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-full bg-teal-500 flex items-center justify-center shrink-0">
+                              <span className="text-white text-xs font-bold">{(engageCommentName || 'A').charAt(0).toUpperCase()}</span>
+                            </div>
+                            <input
+                              value={engageCommentName}
+                              onChange={e => setEngageCommentName(e.target.value)}
+                              placeholder="Name…"
+                              className="flex-1 px-2 py-1.5 rounded-lg bg-brand-bg border border-brand-navy/10 text-xs text-brand-navy outline-none"
+                            />
+                            <button onClick={() => setEngageCommentName(RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)])} className="px-2 py-1.5 rounded-lg bg-brand-navy/8 text-brand-navy/60 text-[10px] font-bold active:scale-90 transition-all">Rand</button>
+                          </div>
+                          <div className="flex gap-1.5 flex-wrap">
+                            {RANDOM_NAMES.slice(0, 10).map(n => (
+                              <button key={n} onClick={() => setEngageCommentName(n)} className={cn('px-2 py-0.5 rounded-full text-[10px] font-bold transition-all active:scale-90', engageCommentName === n ? 'bg-teal-500 text-white' : 'bg-brand-bg border border-brand-navy/10 text-brand-navy/60')}>
+                                {n}
+                              </button>
+                            ))}
+                          </div>
+                          <textarea
+                            value={engageCommentText}
+                            onChange={e => setEngageCommentText(e.target.value)}
+                            placeholder="Write a comment…"
+                            rows={2}
+                            className="w-full px-3 py-2 rounded-xl bg-brand-bg border border-brand-navy/10 text-xs text-brand-navy outline-none resize-none"
+                          />
+                          <button
+                            onClick={() => handleAdminComment(post)}
+                            disabled={savingEngagement || !engageCommentName.trim() || !engageCommentText.trim()}
+                            className="w-full py-2 rounded-xl bg-teal-600 text-white text-xs font-bold disabled:opacity-40 active:scale-[0.98] transition-all"
+                          >
+                            {savingEngagement ? 'Saving…' : 'Add Comment'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
