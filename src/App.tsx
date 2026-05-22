@@ -609,6 +609,8 @@ interface Card {
   profileColor?: string;
   isHidden?: boolean;
   vendorDisabled?: boolean;
+  storeName?: string;
+  storeLogoUrl?: string;
 }
 
 interface Notification {
@@ -10619,6 +10621,7 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
         user_id: user.uid, store_id: store.id, current_stamps: newStamps,
         total_completed_cycles: newCycles, stamps_required: limit,
         last_tap_timestamp: serverTimestamp(), isArchived: false, isRedeemed: false, userName, userPhoto,
+        storeName: store.name, storeLogoUrl: store.logoUrl || '',
       });
       await updateDoc(doc(db, 'users', user.uid), { total_cards_held: increment(1) });
     } else {
@@ -11228,7 +11231,7 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady, initialQty }: {
         {/* Store header */}
         <div className="flex items-center gap-3 mb-6">
           <div className="w-12 h-12 rounded-2xl overflow-hidden shrink-0">
-            <img src={store?.logoUrl || storeFallbackImg(store?.name, store?.theme)} alt="" className="w-full h-full object-cover" />
+            <img src={store?.logoUrl || card.storeLogoUrl || storeFallbackImg(store?.name || card.storeName, store?.theme)} alt="" className="w-full h-full object-cover" />
           </div>
           <div className="min-w-0">
             <h3 className="font-display text-lg font-bold text-brand-navy">{store?.name || 'Store'}</h3>
@@ -11339,7 +11342,7 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
         {/* Store header */}
         <div className="flex items-center gap-3 mb-6">
           <div className="w-12 h-12 rounded-2xl overflow-hidden shrink-0">
-            <img src={store?.logoUrl || storeFallbackImg(store?.name, store?.theme)} alt="" className="w-full h-full object-cover" />
+            <img src={store?.logoUrl || card.storeLogoUrl || storeFallbackImg(store?.name || card.storeName, store?.theme)} alt="" className="w-full h-full object-cover" />
           </div>
           <div className="min-w-0">
             <h3 className="font-display text-lg font-bold text-brand-navy">{store?.name || 'Store'}</h3>
@@ -11654,7 +11657,7 @@ function VisitScanSheet({ card, store, onClose, initialQty }: { card: Card; stor
         {/* Store header */}
         <div className="flex items-center gap-3 mb-6">
           <div className="w-12 h-12 rounded-2xl overflow-hidden shrink-0">
-            <img src={store?.logoUrl || storeFallbackImg(store?.name, store?.theme)} alt="" className="w-full h-full object-cover" />
+            <img src={store?.logoUrl || card.storeLogoUrl || storeFallbackImg(store?.name || card.storeName, store?.theme)} alt="" className="w-full h-full object-cover" />
           </div>
           <div className="min-w-0">
             <h3 className="font-display text-lg font-bold text-brand-navy">{store?.name || 'Store'}</h3>
@@ -14067,6 +14070,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
           user_id: userId, store_id: store.id, current_stamps: newStamps, total_completed_cycles: newCycles,
           stamps_required: lim, isArchived: false, tiersCompleted: store.rewardTiers?.length || 1,
           userName: customer.name, userPhoto: (customer as any).photoURL || '',
+          storeName: store.name, storeLogoUrl: store.logoUrl || '',
         });
         await updateDoc(doc(db, 'users', userId), { total_cards_held: increment(1) });
       }
@@ -15662,7 +15666,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
             className="relative z-10 w-10 h-10 rounded-full overflow-hidden border-2 border-white/50 shrink-0 shadow-md"
             onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}
           >
-            <img src={store?.logoUrl || storeFallbackImg(store?.name, store?.theme)} alt="" className="w-full h-full object-cover" />
+            <img src={store?.logoUrl || card.storeLogoUrl || storeFallbackImg(store?.name || card.storeName, store?.theme)} alt="" className="w-full h-full object-cover" />
           </div>
           <div
             className="relative z-10 flex-1 min-w-0"
@@ -15951,7 +15955,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
             className="relative z-10 w-[72px] h-[72px] rounded-full overflow-hidden border-[3px] border-white/60 shadow-xl cursor-pointer"
             onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}
           >
-            <img src={store?.logoUrl || storeFallbackImg(store?.name, store?.theme)} alt="" className="w-full h-full object-cover" />
+            <img src={store?.logoUrl || card.storeLogoUrl || storeFallbackImg(store?.name || card.storeName, store?.theme)} alt="" className="w-full h-full object-cover" />
           </div>
           <div
             className="relative z-10 text-center cursor-pointer"
@@ -16593,7 +16597,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                 {cardPattern !== 'solid' && <div className="absolute inset-0 pointer-events-none" style={getCardPatternStyle(cardPattern)} />}
                 <div className="relative z-10 w-10 h-10 rounded-full overflow-hidden border-2 border-white/50 shrink-0 cursor-pointer shadow-md"
                   onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}>
-                  <img src={store?.logoUrl || storeFallbackImg(store?.name, store?.theme)} alt="" className="w-full h-full object-cover" />
+                  <img src={store?.logoUrl || card.storeLogoUrl || storeFallbackImg(store?.name || card.storeName, store?.theme)} alt="" className="w-full h-full object-cover" />
                 </div>
                 <div className="relative z-10 flex-1 min-w-0 cursor-pointer"
                   onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}>
@@ -16629,7 +16633,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                   )}
                   <div className="relative z-10 w-[72px] h-[72px] rounded-full overflow-hidden border-[3px] border-white/60 shadow-xl cursor-pointer"
                     onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}>
-                    <img src={store?.logoUrl || storeFallbackImg(store?.name, store?.theme)} alt="" className="w-full h-full object-cover" />
+                    <img src={store?.logoUrl || card.storeLogoUrl || storeFallbackImg(store?.name || card.storeName, store?.theme)} alt="" className="w-full h-full object-cover" />
                   </div>
                   <div className="relative z-10 text-center cursor-pointer"
                     onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}>
@@ -16892,7 +16896,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
         >
           <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/30 shrink-0"
             onClick={(e) => { e.stopPropagation(); store && onViewStore && onViewStore(store); }}>
-            <img src={store?.logoUrl || storeFallbackImg(store?.name, store?.theme)} alt="" className="w-full h-full object-cover" />
+            <img src={store?.logoUrl || card.storeLogoUrl || storeFallbackImg(store?.name || card.storeName, store?.theme)} alt="" className="w-full h-full object-cover" />
           </div>
           <div className="flex-1 min-w-0" onClick={(e) => { e.stopPropagation(); store && onViewStore && onViewStore(store); }}>
             <p className="font-bold text-white text-sm truncate">{store?.name || 'Store'}</p>
@@ -16957,7 +16961,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
             className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/30 shrink-0 cursor-pointer"
             onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}
           >
-            <img src={store?.logoUrl || storeFallbackImg(store?.name, store?.theme)} alt="" className="w-full h-full object-cover" />
+            <img src={store?.logoUrl || card.storeLogoUrl || storeFallbackImg(store?.name || card.storeName, store?.theme)} alt="" className="w-full h-full object-cover" />
           </div>
           <div
             className="flex-1 min-w-0 cursor-pointer"
