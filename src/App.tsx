@@ -25531,6 +25531,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
           {/* Leaderboard popup modal */}
           <AnimatePresence>
             {showLeaderboard && (() => {
+              const isVendor = currentProfile?.role === 'vendor';
               const getLbScore = (u: UserProfile) => {
                 switch (lbCategory) {
                   case 'stamps': return u.totalStamps || 0;
@@ -25635,7 +25636,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                                   </div>
                                   <p className="text-[10px] font-bold text-brand-navy text-center leading-tight line-clamp-1 w-full">{u.name}</p>
                                   {u.handle && <p className="text-[9px] text-brand-navy/75 text-center truncate w-full">@{u.handle}</p>}
-                                  <p className={cn('text-[11px] font-black mt-0.5', rank === 0 ? 'text-brand-gold' : 'text-brand-navy/80')}>{getLbScore(u)}</p>
+                                  {!isVendor && <p className={cn('text-[11px] font-black mt-0.5', rank === 0 ? 'text-brand-gold' : 'text-brand-navy/80')}>{getLbScore(u)}</p>}
                                   <div className={cn('w-full rounded-t-xl mt-1', podiumColors[col], podiumHeights[col])} />
                                 </div>
                               );
@@ -25654,7 +25655,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                                   <div className="flex items-center gap-1"><p className="font-bold text-xs truncate">{u.name}</p><StreakBadge streak={u.streak} /></div>
                                   {u.handle && <p className="text-[10px] text-brand-navy/75 truncate">@{u.handle}</p>}
                                 </div>
-                                <p className="font-black text-sm text-brand-navy/70 shrink-0">{getLbScore(u)} <span className="text-[10px] font-medium text-brand-navy/72">{lbCategoryUnit}</span></p>
+                                {!isVendor && <p className="font-black text-sm text-brand-navy/70 shrink-0">{getLbScore(u)} <span className="text-[10px] font-medium text-brand-navy/72">{lbCategoryUnit}</span></p>}
                               </div>
                             ))}
                           </div>
@@ -25671,7 +25672,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                                 <div className="flex items-center gap-1"><p className="font-bold text-xs truncate">{currentProfile.name}</p><StreakBadge streak={currentProfile.streak} /></div>
                                 {currentProfile.handle && <p className="text-[10px] text-brand-navy/75 truncate">@{currentProfile.handle}</p>}
                               </div>
-                              <p className="font-black text-sm text-brand-navy/70 shrink-0">{getLbScore(currentProfile)} <span className="text-[10px] font-medium text-brand-navy/72">{lbCategoryUnit}</span></p>
+                              {!isVendor && <p className="font-black text-sm text-brand-navy/70 shrink-0">{getLbScore(currentProfile)} <span className="text-[10px] font-medium text-brand-navy/72">{lbCategoryUnit}</span></p>}
                             </div>
                           </div>
                         )}
