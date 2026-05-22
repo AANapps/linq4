@@ -26914,65 +26914,13 @@ function ProfileCardRow({ store, card, membershipCard, userId, onJoinLoyalty, on
 
   if (isJoined) {
     return (
-      <>
-        <button
-          onClick={() => setShowSheet(true)}
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-white text-sm font-bold shadow-sm active:scale-[0.98] transition-all"
-          style={{ background: store.theme || '#0D9488' }}
-        >
-          <Check size={15} strokeWidth={3} />
-          Member
-        </button>
-
-        <AnimatePresence>
-          {showSheet && (
-            <div className="fixed inset-0 z-[120] flex items-end justify-center">
-              <motion.div
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-                onClick={() => setShowSheet(false)}
-              />
-              <motion.div
-                initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-                transition={{ type: 'spring', stiffness: 380, damping: 38 }}
-                className="relative z-10 w-full max-w-md bg-white rounded-t-[2rem] p-6 pb-10 space-y-3 shadow-2xl"
-              >
-                <div className="w-10 h-1 bg-brand-navy/15 rounded-full mx-auto mb-4" />
-                <p className="text-xs font-bold text-brand-navy/75 uppercase tracking-widest text-center mb-2">Manage Cards</p>
-
-                {membershipCard && (
-                  <button
-                    onClick={() => removeCard(membershipCard.id)}
-                    disabled={!!removing}
-                    className="w-full flex items-center justify-between px-5 py-4 rounded-2xl bg-red-50 text-red-500 font-bold text-sm active:scale-[0.99] transition-all disabled:opacity-50"
-                  >
-                    <span>Remove {store.membershipName || 'Member'} Card</span>
-                    {removing === membershipCard.id ? <span className="text-xs opacity-60">Removing…</span> : <Trash2 size={15} />}
-                  </button>
-                )}
-
-                {card && (
-                  <button
-                    onClick={() => removeCard(card.id)}
-                    disabled={!!removing}
-                    className="w-full flex items-center justify-between px-5 py-4 rounded-2xl bg-red-50 text-red-500 font-bold text-sm active:scale-[0.99] transition-all disabled:opacity-50"
-                  >
-                    <span>Remove Loyalty Card</span>
-                    {removing === card.id ? <span className="text-xs opacity-60">Removing…</span> : <Trash2 size={15} />}
-                  </button>
-                )}
-
-                <button
-                  onClick={() => setShowSheet(false)}
-                  className="w-full py-3.5 rounded-2xl text-brand-navy/80 font-bold text-sm"
-                >
-                  Cancel
-                </button>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
-      </>
+      <div
+        className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-white text-sm font-bold shadow-sm"
+        style={{ background: store.theme || '#0D9488' }}
+      >
+        <Check size={15} strokeWidth={3} />
+        Member
+      </div>
     );
   }
 
