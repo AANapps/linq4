@@ -12594,12 +12594,11 @@ function StampCelebrationModal({
                                 <div key={i} className="aspect-square relative">
                                   {isTier && (
                                     <motion.div
-                                      animate={{ scale: [1, 1.35, 1], opacity: [0.5, 1, 0.5] }}
-                                      transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut', delay: i * 0.18 }}
-                                      className="absolute -top-1 -right-1 z-10 pointer-events-none"
-                                    >
-                                      <Sparkles size={8} style={{ color: isFilled ? '#f5a623' : cardTheme }} />
-                                    </motion.div>
+                                      animate={{ opacity: [0.15, 0.4, 0.15] }}
+                                      transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: i * 0.18 }}
+                                      className="absolute inset-0 rounded-full pointer-events-none z-0"
+                                      style={{ boxShadow: '0 0 10px 4px rgba(245,166,35,0.45)' }}
+                                    />
                                   )}
                                   {isFilled ? (
                                     <motion.div
@@ -16513,12 +16512,11 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                     <div key={i} className="aspect-square relative">
                       {isTier && (
                         <motion.div
-                          animate={{ scale: [1, 1.35, 1], opacity: [0.5, 1, 0.5] }}
-                          transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut', delay: i * 0.18 }}
-                          className="absolute -top-1 -right-1 z-10 pointer-events-none"
-                        >
-                          <Sparkles size={compact ? 8 : 10} style={{ color: isFilled ? '#f5a623' : accentColor }} />
-                        </motion.div>
+                          animate={{ opacity: [0.15, 0.4, 0.15] }}
+                          transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: i * 0.18 }}
+                          className="absolute inset-0 rounded-full pointer-events-none z-0"
+                          style={{ boxShadow: '0 0 10px 4px rgba(245,166,35,0.45)' }}
+                        />
                       )}
                       {isFilled ? (
                         <motion.div
