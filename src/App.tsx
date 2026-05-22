@@ -27374,6 +27374,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
     : store.reward ? [{ stamps: store.stamps_required_for_reward || 10, reward: store.reward }] : [];
 
   const isOwnStore = store.ownerUid === user.uid;
+  const isVendorUser = profile?.role === 'vendor';
 
   // Type-aware stats bar values
   const statsMembers = lbActiveType === 'loyalty'
@@ -28156,16 +28157,16 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                 className="flex items-center justify-between p-3 rounded-2xl hover:bg-brand-bg transition-colors cursor-pointer group"
               >
                 <div className="flex items-center gap-3">
-                  {!isOwnStore && <div className="w-6 h-6 flex items-center justify-center font-bold text-xs text-brand-navy/75">#{index + 1}</div>}
+                  {!isOwnStore && !isVendorUser && <div className="w-6 h-6 flex items-center justify-center font-bold text-xs text-brand-navy/75">#{index + 1}</div>}
                   <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-navy/5 bg-blue-50 flex items-center justify-center shrink-0">
                     <PixelAvatar config={lbProfile?.avatar} uid={lbProfile?.uid ?? entry.user_id} size={40} view="head" />
                   </div>
                   <div>
                     <p className="font-bold text-sm group-hover:text-brand-gold transition-colors">{displayName}</p>
-                    {!isOwnStore && <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest">{subLabel}</p>}
+                    {!isOwnStore && !isVendorUser && <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest">{subLabel}</p>}
                   </div>
                 </div>
-                {!isOwnStore && (
+                {!isOwnStore && !isVendorUser && (
                   <div className="text-right">
                     <p className="text-sm font-bold text-brand-navy">{scoreLabel}</p>
                   </div>
