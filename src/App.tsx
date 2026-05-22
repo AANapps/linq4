@@ -1640,7 +1640,7 @@ export default function App() {
           <span className="font-display text-6xl font-black tracking-tight select-none text-white">linq</span>
         </div>
         <div className="flex flex-col items-center gap-2">
-          <img src={adastraLogoUrl || '/app-logo.png'} alt="Ad Astra Network" className="w-8 h-8 rounded-xl object-contain" />
+          <img src={adastraLogoUrl || '/app-logo.png'} alt="Ad Astra Network" className="w-14 h-14 rounded-2xl object-contain" />
           <p className="text-[10px] text-white/40 font-medium">from</p>
           <p className="text-xs font-bold text-white/60 tracking-wide">Ad Astra Network</p>
         </div>
@@ -1667,7 +1667,7 @@ export default function App() {
           <span className="font-display text-6xl font-black tracking-tight select-none text-white">linq</span>
         </div>
         <div className="flex flex-col items-center gap-2">
-          <img src={adastraLogoUrl || '/app-logo.png'} alt="Ad Astra Network" className="w-8 h-8 rounded-xl object-contain" />
+          <img src={adastraLogoUrl || '/app-logo.png'} alt="Ad Astra Network" className="w-14 h-14 rounded-2xl object-contain" />
           <p className="text-[10px] text-white/40 font-medium">from</p>
           <p className="text-xs font-bold text-white/60 tracking-wide">Ad Astra Network</p>
         </div>
@@ -5619,10 +5619,10 @@ function AppEditPanel({ onClose, onLogoChange }: { onClose: () => void; onLogoCh
             <div className="gradient-logo-blue rounded-3xl py-12 flex flex-col items-center justify-between gap-8">
               <span className="font-display text-5xl font-black text-white">linq</span>
               <div className="flex flex-col items-center gap-1.5">
-                <div className="w-8 h-8 rounded-xl overflow-hidden bg-white/10 flex items-center justify-center">
+                <div className="w-14 h-14 rounded-2xl overflow-hidden bg-white/10 flex items-center justify-center">
                   {logoUrl
                     ? <img src={logoUrl} alt="" className="w-full h-full object-contain" />
-                    : <ImageIcon size={16} className="text-white/40" />}
+                    : <ImageIcon size={22} className="text-white/40" />}
                 </div>
                 <p className="text-[10px] text-white/40 font-medium">from</p>
                 <p className="text-xs font-bold text-white/60">Ad Astra Network</p>
