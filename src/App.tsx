@@ -3457,7 +3457,8 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
                     const matches = revealed.filter(s => s.cardDefId === def.id);
                     return { key: def.id, imageUrl: def.imageUrl, name: def.name, matches, count: matches.length };
                   } else {
-                    const matches = revealed.filter(s => s.tier === tier && (s.variant ?? 0) === i);
+                    // Exclude stickers that have a cardDefId — those are already shown in their card def's tier row
+                    const matches = revealed.filter(s => s.tier === tier && (s.variant ?? 0) === i && !s.cardDefId);
                     const s = matches[0];
                     return { key: String(i), imageUrl: s?.cardImageUrl, name: s?.cardName, matches, count: matches.length };
                   }
