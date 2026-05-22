@@ -12594,10 +12594,10 @@ function StampCelebrationModal({
                                 <div key={i} className="aspect-square relative">
                                   {isTier && (
                                     <motion.div
-                                      animate={{ opacity: [0.15, 0.4, 0.15] }}
+                                      animate={{ opacity: [0.3, 0.65, 0.3] }}
                                       transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: i * 0.18 }}
                                       className="absolute inset-0 rounded-full pointer-events-none z-0"
-                                      style={{ boxShadow: '0 0 10px 4px rgba(245,166,35,0.45)' }}
+                                      style={{ boxShadow: '0 0 12px 5px rgba(245,166,35,0.6)' }}
                                     />
                                   )}
                                   {isFilled ? (
@@ -16512,10 +16512,10 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                     <div key={i} className="aspect-square relative">
                       {isTier && (
                         <motion.div
-                          animate={{ opacity: [0.15, 0.4, 0.15] }}
+                          animate={{ opacity: [0.3, 0.65, 0.3] }}
                           transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: i * 0.18 }}
                           className="absolute inset-0 rounded-full pointer-events-none z-0"
-                          style={{ boxShadow: '0 0 10px 4px rgba(245,166,35,0.45)' }}
+                          style={{ boxShadow: '0 0 12px 5px rgba(245,166,35,0.6)' }}
                         />
                       )}
                       {isFilled ? (
@@ -17357,6 +17357,7 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
 
   const castVote = async (idx: number) => {
     if (voting || userVote !== null || voteData?.closed || !voteId) return;
+    try { if ('vibrate' in navigator) (navigator as any).vibrate([50, 30, 80]); } catch {}
     setVoting(true);
     try {
       await setDoc(doc(db, 'daily_vote', today, 'votes', currentUser.uid), {
@@ -17881,6 +17882,7 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
             if (next[rowIdx]) next[rowIdx][c] = states[c];
             return next;
           });
+          try { if ('vibrate' in navigator) (navigator as any).vibrate(18); } catch {}
         }, c * 180 + 275);
       }
 
@@ -17893,6 +17895,7 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
           setGameOver(true);
           setWon(didWin);
           setElapsed(startTime ? Date.now() - startTime : 0);
+          try { if ('vibrate' in navigator) (navigator as any).vibrate(didWin ? [60, 40, 60, 40, 180] : [120]); } catch {}
           doSubmit(newGuesses, newStates, didWin);
         }
       }, revealDone);
@@ -23550,7 +23553,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
               return (
                 <button
                   key={i}
-                  onClick={() => onVote(post, i)}
+                  onClick={() => { try { if ('vibrate' in navigator) (navigator as any).vibrate([50, 30, 80]); } catch {} onVote(post, i); }}
                   className={cn(
                     "w-full text-left rounded-xl overflow-hidden border-2 transition-all active:scale-[0.98]",
                     voted ? "border-brand-gold" : "border-black/6 hover:border-brand-gold/40"
