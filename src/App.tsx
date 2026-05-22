@@ -10008,17 +10008,6 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
               <div className="flex items-center justify-between gap-2">
                 <p className="text-brand-navy/75 text-sm shrink-0">{activeCards.length} card{activeCards.length !== 1 ? 's' : ''}</p>
                 <div className="flex items-center gap-2 ml-auto">
-                  {/* Manage toggle */}
-                  <button
-                    onClick={() => setWalletManaging(m => !m)}
-                    className={cn(
-                      'flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all',
-                      walletManaging ? 'bg-brand-gold text-white' : 'bg-brand-navy/[0.07] text-brand-navy/75'
-                    )}
-                  >
-                    <SlidersHorizontal size={12} />
-                    Manage
-                  </button>
                   {/* Layout toggle */}
                   {!walletManaging && (
                     <div className="flex items-center bg-brand-navy/[0.07] rounded-xl p-0.5">
