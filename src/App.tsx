@@ -3852,16 +3852,6 @@ const VIBRATE_PATTERNS: Record<StickerTier, number | number[]> = {
   gold:      [200, 80, 200, 80, 200, 80, 400],
 };
 
-const TIER_EMBERS = [
-  { left: '-22%', top: '-22%', delay: 0,    dur: 1.8, color: '#f5a623', sz: 2.5 },
-  { left: '44%',  top: '-28%', delay: 0.45, dur: 1.5, color: '#ffd700', sz: 2   },
-  { left: '114%', top: '-18%', delay: 0.9,  dur: 2.0, color: '#ff8c00', sz: 2.5 },
-  { left: '120%', top: '43%',  delay: 0.2,  dur: 1.6, color: '#f5a623', sz: 2   },
-  { left: '110%', top: '110%', delay: 1.0,  dur: 1.7, color: '#ffd700', sz: 2.5 },
-  { left: '42%',  top: '120%', delay: 0.55, dur: 1.4, color: '#ff8c00', sz: 2   },
-  { left: '-18%', top: '110%', delay: 1.2,  dur: 1.9, color: '#f5a623', sz: 2.5 },
-  { left: '-24%', top: '42%',  delay: 0.7,  dur: 1.5, color: '#ffd700', sz: 2   },
-];
 
 // Mystery card used inside PackOpeningModal — larger, dramatic reveal
 function MysteryRevealCard({ sticker, isRevealed, onReveal }: {
@@ -12604,23 +12594,12 @@ function StampCelebrationModal({
                               return (
                                 <div key={i} className="aspect-square relative">
                                   {isTier && (
-                                    <>
-                                      <motion.div
-                                        animate={{ opacity: [0.3, 0.65, 0.3] }}
-                                        transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: i * 0.18 }}
-                                        className="absolute inset-0 rounded-full pointer-events-none z-0"
-                                        style={{ boxShadow: '0 0 12px 5px rgba(245,166,35,0.6)' }}
-                                      />
-                                      {TIER_EMBERS.map((p, pi) => (
-                                        <motion.div
-                                          key={pi}
-                                          className="absolute pointer-events-none rounded-full"
-                                          style={{ left: p.left, top: p.top, width: p.sz, height: p.sz, backgroundColor: p.color, zIndex: 20 }}
-                                          animate={{ y: [0, -5, 1, -3, 0], opacity: [0.35, 1, 0.55, 0.9, 0.35], scale: [0.6, 1.3, 0.8, 1.1, 0.6] }}
-                                          transition={{ duration: p.dur, repeat: Infinity, delay: p.delay + i * 0.07, ease: 'easeInOut' }}
-                                        />
-                                      ))}
-                                    </>
+                                    <motion.div
+                                      animate={{ opacity: [0.3, 0.65, 0.3] }}
+                                      transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: i * 0.18 }}
+                                      className="absolute inset-0 rounded-full pointer-events-none z-0"
+                                      style={{ boxShadow: '0 0 12px 5px rgba(245,166,35,0.6)' }}
+                                    />
                                   )}
                                   {isFilled ? (
                                     <motion.div
@@ -16533,23 +16512,12 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                   return (
                     <div key={i} className="aspect-square relative">
                       {isTier && (
-                        <>
-                          <motion.div
-                            animate={{ opacity: [0.3, 0.65, 0.3] }}
-                            transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: i * 0.18 }}
-                            className="absolute inset-0 rounded-full pointer-events-none z-0"
-                            style={{ boxShadow: '0 0 12px 5px rgba(245,166,35,0.6)' }}
-                          />
-                          {TIER_EMBERS.map((p, pi) => (
-                            <motion.div
-                              key={pi}
-                              className="absolute pointer-events-none rounded-full"
-                              style={{ left: p.left, top: p.top, width: p.sz, height: p.sz, backgroundColor: p.color, zIndex: 20 }}
-                              animate={{ y: [0, -5, 1, -3, 0], opacity: [0.35, 1, 0.55, 0.9, 0.35], scale: [0.6, 1.3, 0.8, 1.1, 0.6] }}
-                              transition={{ duration: p.dur, repeat: Infinity, delay: p.delay + i * 0.07, ease: 'easeInOut' }}
-                            />
-                          ))}
-                        </>
+                        <motion.div
+                          animate={{ opacity: [0.3, 0.65, 0.3] }}
+                          transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: i * 0.18 }}
+                          className="absolute inset-0 rounded-full pointer-events-none z-0"
+                          style={{ boxShadow: '0 0 12px 5px rgba(245,166,35,0.6)' }}
+                        />
                       )}
                       {isFilled ? (
                         <motion.div
