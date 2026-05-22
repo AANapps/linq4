@@ -3852,6 +3852,16 @@ const VIBRATE_PATTERNS: Record<StickerTier, number | number[]> = {
   gold:      [200, 80, 200, 80, 200, 80, 400],
 };
 
+const TIER_EMBERS = [
+  { x: '8%',  delay: 0,    dur: 1.3, color: '#f5a623', sz: 2   },
+  { x: '28%', delay: 0.55, dur: 1.1, color: '#ff8c00', sz: 1.5 },
+  { x: '50%', delay: 0.2,  dur: 1.5, color: '#ffd700', sz: 2   },
+  { x: '72%', delay: 0.85, dur: 1.2, color: '#f5a623', sz: 1.5 },
+  { x: '92%', delay: 0.4,  dur: 1.4, color: '#ff6b00', sz: 2   },
+  { x: '18%', delay: 1.1,  dur: 1.0, color: '#ffd700', sz: 1.5 },
+  { x: '62%', delay: 0.7,  dur: 1.6, color: '#ff8c00', sz: 1.5 },
+];
+
 // Mystery card used inside PackOpeningModal — larger, dramatic reveal
 function MysteryRevealCard({ sticker, isRevealed, onReveal }: {
   sticker: CollectibleSticker; isRevealed: boolean; onReveal?: () => void;
@@ -12593,12 +12603,23 @@ function StampCelebrationModal({
                               return (
                                 <div key={i} className="aspect-square relative">
                                   {isTier && (
-                                    <motion.div
-                                      animate={{ opacity: [0.3, 0.65, 0.3] }}
-                                      transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: i * 0.18 }}
-                                      className="absolute inset-0 rounded-full pointer-events-none z-0"
-                                      style={{ boxShadow: '0 0 12px 5px rgba(245,166,35,0.6)' }}
-                                    />
+                                    <>
+                                      <motion.div
+                                        animate={{ opacity: [0.3, 0.65, 0.3] }}
+                                        transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: i * 0.18 }}
+                                        className="absolute inset-0 rounded-full pointer-events-none z-0"
+                                        style={{ boxShadow: '0 0 12px 5px rgba(245,166,35,0.6)' }}
+                                      />
+                                      {TIER_EMBERS.map((p, pi) => (
+                                        <motion.div
+                                          key={pi}
+                                          className="absolute pointer-events-none rounded-full"
+                                          style={{ left: p.x, top: '-15%', width: p.sz, height: p.sz, backgroundColor: p.color, zIndex: 20 }}
+                                          animate={{ y: ['0%', '150%'], x: [0, pi % 2 === 0 ? 4 : -4, 0], opacity: [0, 0.75, 0.5, 0], scale: [0.5, 1, 0.6, 0.1] }}
+                                          transition={{ duration: p.dur, repeat: Infinity, delay: p.delay + i * 0.07, ease: 'easeIn' }}
+                                        />
+                                      ))}
+                                    </>
                                   )}
                                   {isFilled ? (
                                     <motion.div
@@ -16511,12 +16532,23 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                   return (
                     <div key={i} className="aspect-square relative">
                       {isTier && (
-                        <motion.div
-                          animate={{ opacity: [0.3, 0.65, 0.3] }}
-                          transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: i * 0.18 }}
-                          className="absolute inset-0 rounded-full pointer-events-none z-0"
-                          style={{ boxShadow: '0 0 12px 5px rgba(245,166,35,0.6)' }}
-                        />
+                        <>
+                          <motion.div
+                            animate={{ opacity: [0.3, 0.65, 0.3] }}
+                            transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: i * 0.18 }}
+                            className="absolute inset-0 rounded-full pointer-events-none z-0"
+                            style={{ boxShadow: '0 0 12px 5px rgba(245,166,35,0.6)' }}
+                          />
+                          {TIER_EMBERS.map((p, pi) => (
+                            <motion.div
+                              key={pi}
+                              className="absolute pointer-events-none rounded-full"
+                              style={{ left: p.x, top: '-15%', width: p.sz, height: p.sz, backgroundColor: p.color, zIndex: 20 }}
+                              animate={{ y: ['0%', '150%'], x: [0, pi % 2 === 0 ? 4 : -4, 0], opacity: [0, 0.75, 0.5, 0], scale: [0.5, 1, 0.6, 0.1] }}
+                              transition={{ duration: p.dur, repeat: Infinity, delay: p.delay + i * 0.07, ease: 'easeIn' }}
+                            />
+                          ))}
+                        </>
                       )}
                       {isFilled ? (
                         <motion.div
