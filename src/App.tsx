@@ -277,7 +277,7 @@ function saveBrandVarsCache(vars: { g1: string; g2: string; g3: string; g4: stri
 
 function storeFallbackImg(name?: string | null, color?: string | null): string {
   const letter = (name || 'S')[0].toUpperCase();
-  const bg = color || '#0D9488';
+  const bg = color || '#2563EB';
   return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="${bg}"/><text x="50" y="67" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="800" font-size="50" fill="rgba(255,255,255,0.9)">${letter}</text></svg>`)}`;
 }
 
@@ -1682,7 +1682,7 @@ export default function App() {
       <header className="glass-panel sticky top-0 z-50 px-5 py-3.5 flex items-center justify-between relative">
         <button
           onClick={() => setShowCreatePost(true)}
-          className="w-9 h-9 gradient-red rounded-xl flex items-center justify-center shadow-md shadow-teal-500/20 active:scale-95 transition-transform"
+          className="w-9 h-9 gradient-red rounded-xl flex items-center justify-center shadow-md shadow-blue-500/20 active:scale-95 transition-transform"
         >
           <Plus className="w-5 h-5 text-white" />
         </button>
@@ -1929,7 +1929,7 @@ export default function App() {
             onClick={() => { setActiveTab('home'); setViewingStore(null); setViewingUser(null); }}
             className="flex-1 flex flex-col items-center gap-1 -mb-1 -mt-7 transition-all"
           >
-            <div className="relative overflow-hidden w-[58px] h-[58px] rounded-full gradient-logo-blue shadow-lg shadow-teal-500/30 flex items-center justify-center active:scale-95 transition-transform">
+            <div className="relative overflow-hidden w-[58px] h-[58px] rounded-full gradient-logo-blue shadow-lg shadow-blue-500/30 flex items-center justify-center active:scale-95 transition-transform">
               <span className="card-shine-ray" aria-hidden="true" />
               <Wallet size={26} className="text-white relative z-10" />
             </div>
@@ -1940,7 +1940,7 @@ export default function App() {
             onClick={() => setShowVendorQR(true)}
             className="flex-1 flex flex-col items-center gap-1 -mb-1 -mt-7 transition-all"
           >
-            <div className="relative overflow-hidden w-[58px] h-[58px] rounded-full gradient-logo-blue shadow-lg shadow-teal-500/30 flex items-center justify-center active:scale-95 transition-transform">
+            <div className="relative overflow-hidden w-[58px] h-[58px] rounded-full gradient-logo-blue shadow-lg shadow-blue-500/30 flex items-center justify-center active:scale-95 transition-transform">
               <span className="card-shine-ray" aria-hidden="true" />
               <QrCode size={26} className="text-white relative z-10" />
             </div>
@@ -2928,7 +2928,7 @@ function OnboardingScreen({ user, onComplete }: {
 
   const roleStep = (
     <>
-      <div className="w-14 h-14 gradient-red rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-teal-500/20">
+      <div className="w-14 h-14 gradient-red rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-500/20">
         <Sparkles className="w-7 h-7 text-white" />
       </div>
       <h2 className="font-display font-bold text-2xl text-brand-navy mb-1">Welcome to <span className="text-brand-gold">Li</span>nq</h2>
@@ -3092,7 +3092,7 @@ function NavButton({ active, onClick, icon, label, badgeCount }: { active: boole
     >
       <div className={cn(
         "p-2 rounded-xl transition-all",
-        active ? "gradient-red shadow-md shadow-teal-500/20" : ""
+        active ? "gradient-red shadow-md shadow-blue-500/20" : ""
       )}>
         {React.cloneElement(icon as React.ReactElement, { size: 24 })}
       </div>
@@ -5091,7 +5091,7 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
                           disabled={busy}
                           className={cn(
                             'relative w-12 h-6 rounded-full transition-colors duration-200 disabled:opacity-50',
-                            store.scanMethod === 'qr' ? 'bg-teal-400' : 'bg-brand-navy/15'
+                            store.scanMethod === 'qr' ? 'bg-blue-400' : 'bg-brand-navy/15'
                           )}
                         >
                           <motion.div
@@ -5758,8 +5758,8 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores,
             onClick={onOpenDailyVote}
             className="rounded-[2rem] bg-white border border-black/5 shadow-sm p-6 flex flex-col items-start gap-3 text-left active:bg-brand-navy/5 transition-colors"
           >
-            <div className="w-12 h-12 rounded-2xl bg-teal-100 flex items-center justify-center">
-              <BarChart2 size={22} className="text-teal-600" />
+            <div className="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center">
+              <BarChart2 size={22} className="text-blue-600" />
             </div>
             <div>
               <p className="font-bold text-brand-navy text-sm">Daily Vote</p>
@@ -5904,7 +5904,7 @@ function isDarkColor(hex: string): boolean {
 function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColors; onColorsChange: (c: UiColors) => void; onClose: () => void }) {
   const [colors, setColors] = useState<UiColors>(uiColors);
   const [saving, setSaving] = useState(false);
-  const [activeThemeId, setActiveThemeId] = useState<string>('teal');
+  const [activeThemeId, setActiveThemeId] = useState<string>('blue');
   const [themeCustomHex, setThemeCustomHex] = useState<string>('#0D9488');
   const [pendingThemeData, setPendingThemeData] = useState<{ themeId: string; customHex?: string } | null>(null);
   const [isDirty, setIsDirty] = useState(false);
@@ -5918,7 +5918,7 @@ function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColo
         setActiveThemeId('custom');
         setThemeCustomHex(data.customHex);
       } else {
-        setActiveThemeId(data.themeId || 'teal');
+        setActiveThemeId(data.themeId || 'blue');
       }
     }).catch(() => {});
   }, []);
@@ -6537,13 +6537,13 @@ function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
                 const isToday = daysUntil === 0;
                 const isSelected = playsStr === selectedDate;
                 return (
-                  <div key={i} className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl border ${isToday ? 'bg-green-50 border-green-200' : isSelected ? 'bg-teal-50 border-teal-200' : 'bg-white border-brand-navy/8'}`}>
+                  <div key={i} className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl border ${isToday ? 'bg-green-50 border-green-200' : isSelected ? 'bg-blue-50 border-blue-200' : 'bg-white border-brand-navy/8'}`}>
                     <span className="text-xs font-bold text-brand-navy/72 w-5 text-right shrink-0">{i + 1}</span>
-                    <span className={`flex-1 font-black tracking-[0.2em] text-sm ${isToday ? 'text-green-700' : isSelected ? 'text-teal-700' : 'text-brand-navy'}`}>{w}</span>
+                    <span className={`flex-1 font-black tracking-[0.2em] text-sm ${isToday ? 'text-green-700' : isSelected ? 'text-blue-700' : 'text-brand-navy'}`}>{w}</span>
                     {isToday
                       ? <span className="text-[10px] font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded-full shrink-0">Today</span>
                       : isSelected
-                        ? <span className="text-[10px] font-bold text-teal-600 bg-teal-100 px-2 py-0.5 rounded-full shrink-0">Selected</span>
+                        ? <span className="text-[10px] font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full shrink-0">Selected</span>
                         : <span className="text-[10px] text-brand-navy/72 shrink-0">{playsOn.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
                     }
                     <button onClick={() => handleRemove(i)} disabled={saving}
@@ -6770,7 +6770,7 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
               </>
             ) : (
               <>
-                <div className="bg-teal-50 rounded-2xl p-4 border border-teal-100">
+                <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100">
                   <p className="font-black text-brand-navy">{voteData.question}</p>
                   <p className="text-xs text-brand-navy/80 mt-1">{liveTotal} votes · {voteData.closed ? `Closed — winner: ${voteData.winner !== null ? voteData.options[voteData.winner] : '?'}` : 'Open'}</p>
                 </div>
@@ -6783,7 +6783,7 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
                 {!voteData.closed && (
                   <div className="flex gap-2">
                     <button onClick={startEdit}
-                      className="flex-1 py-3 rounded-2xl bg-teal-50 text-teal-700 font-bold text-sm border border-teal-200 active:scale-95 transition-all">
+                      className="flex-1 py-3 rounded-2xl bg-blue-50 text-blue-700 font-bold text-sm border border-blue-200 active:scale-95 transition-all">
                       Edit Vote
                     </button>
                     <button onClick={closeVote} disabled={saving}
@@ -7819,7 +7819,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
                           setUserPickerQuery('');
                           setUserPickerResults([]);
                         }} className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-brand-bg transition-colors text-left">
-                          <div className="w-7 h-7 rounded-full overflow-hidden bg-teal-50 shrink-0 flex items-center justify-center">
+                          <div className="w-7 h-7 rounded-full overflow-hidden bg-blue-50 shrink-0 flex items-center justify-center">
                             {u.photoURL
                               ? <img src={u.photoURL} alt="" className="w-full h-full object-cover" />
                               : <LivePixelAvatar uid={u.uid} size={28} view="head" />}
@@ -7845,19 +7845,19 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
               <input value={achPrefix} onChange={e => setAchPrefix(e.target.value)} placeholder="just collected a…"
                 className="w-full px-3 py-2 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm text-brand-navy outline-none" />
               <input value={achReward} onChange={e => setAchReward(e.target.value)} placeholder="legendary sticker / FREE burger…"
-                className="w-full px-3 py-2 rounded-xl bg-teal-50 border border-teal-200 text-sm font-bold text-teal-700 outline-none" />
+                className="w-full px-3 py-2 rounded-xl bg-blue-50 border border-blue-200 text-sm font-bold text-blue-700 outline-none" />
 
               {/* Preview */}
               {(achName || achReward) && (
                 <div className="px-3 py-2 bg-brand-bg rounded-xl text-sm text-brand-navy/80">
                   <span className="font-bold text-brand-navy">{achName || 'Name'}</span>
                   {' '}{achPrefix || 'just got a'}{' '}
-                  <span className="bg-teal-600 text-white font-bold px-2 py-0.5 rounded-lg text-[12px]">{achReward || 'reward'}</span>
+                  <span className="bg-blue-600 text-white font-bold px-2 py-0.5 rounded-lg text-[12px]">{achReward || 'reward'}</span>
                 </div>
               )}
 
               <button onClick={handlePublishActivity} disabled={publishingAch || !achName.trim() || !achReward.trim()}
-                className="w-full py-2.5 rounded-2xl bg-teal-600 text-white font-bold text-sm disabled:opacity-40 active:scale-[0.98] transition-all">
+                className="w-full py-2.5 rounded-2xl bg-blue-600 text-white font-bold text-sm disabled:opacity-40 active:scale-[0.98] transition-all">
                 {publishingAch ? 'Posting…' : 'Post Activity'}
               </button>
             </div>
@@ -7893,7 +7893,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
                         <input value={editAchPrefix} onChange={e => setEditAchPrefix(e.target.value)} placeholder="just collected a…"
                           className="w-full px-3 py-2 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm text-brand-navy outline-none" />
                         <input value={editAchReward} onChange={e => setEditAchReward(e.target.value)} placeholder="legendary sticker…"
-                          className="w-full px-3 py-2 rounded-xl bg-teal-50 border border-teal-200 text-sm font-bold text-teal-700 outline-none" />
+                          className="w-full px-3 py-2 rounded-xl bg-blue-50 border border-blue-200 text-sm font-bold text-blue-700 outline-none" />
                       </>
                     ) : (
                       <>
@@ -7956,7 +7956,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="font-bold text-xs text-brand-navy">{post.authorName || 'Unknown'}</span>
-                          {post.isPinned && <span className="text-[9px] font-bold text-teal-500 bg-teal-50 px-1.5 py-0.5 rounded-full">📌 Pinned</span>}
+                          {post.isPinned && <span className="text-[9px] font-bold text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded-full">📌 Pinned</span>}
                           {reportedPostIds.has(post.id) && <span className="text-[9px] font-bold text-rose-500 bg-rose-50 px-1.5 py-0.5 rounded-full">Flagged</span>}
                           {post.adminBadgeIcon && <span className="text-[9px]">{post.adminBadgeIcon}</span>}
                           <span className="text-[10px] text-brand-navy/45 ml-auto">{formatAge(post.createdAt)}</span>
@@ -7976,7 +7976,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
                         <button
                           onClick={() => handlePin(post)}
                           disabled={pinning}
-                          className={cn('p-1.5 rounded-xl transition-all active:scale-90 disabled:opacity-50', post.isPinned ? 'bg-teal-100 text-teal-600' : 'bg-brand-navy/5 text-brand-navy/40 hover:text-brand-navy/60')}
+                          className={cn('p-1.5 rounded-xl transition-all active:scale-90 disabled:opacity-50', post.isPinned ? 'bg-blue-100 text-blue-600' : 'bg-brand-navy/5 text-brand-navy/40 hover:text-brand-navy/60')}
                           title={post.isPinned ? 'Unpin' : 'Pin to top'}
                         >
                           <Pin size={13} />
@@ -8017,7 +8017,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
                         {/* Comment control */}
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-full bg-teal-500 flex items-center justify-center shrink-0">
+                            <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center shrink-0">
                               <span className="text-white text-xs font-bold">{(engageCommentName || 'A').charAt(0).toUpperCase()}</span>
                             </div>
                             <input
@@ -8030,7 +8030,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
                           </div>
                           <div className="flex gap-1.5 flex-wrap">
                             {RANDOM_NAMES.slice(0, 10).map(n => (
-                              <button key={n} onClick={() => setEngageCommentName(n)} className={cn('px-2 py-0.5 rounded-full text-[10px] font-bold transition-all active:scale-90', engageCommentName === n ? 'bg-teal-500 text-white' : 'bg-brand-bg border border-brand-navy/10 text-brand-navy/60')}>
+                              <button key={n} onClick={() => setEngageCommentName(n)} className={cn('px-2 py-0.5 rounded-full text-[10px] font-bold transition-all active:scale-90', engageCommentName === n ? 'bg-blue-500 text-white' : 'bg-brand-bg border border-brand-navy/10 text-brand-navy/60')}>
                                 {n}
                               </button>
                             ))}
@@ -8045,7 +8045,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
                           <button
                             onClick={() => handleAdminComment(post)}
                             disabled={savingEngagement || !engageCommentName.trim() || !engageCommentText.trim()}
-                            className="w-full py-2 rounded-xl bg-teal-600 text-white text-xs font-bold disabled:opacity-40 active:scale-[0.98] transition-all"
+                            className="w-full py-2 rounded-xl bg-blue-600 text-white text-xs font-bold disabled:opacity-40 active:scale-[0.98] transition-all"
                           >
                             {savingEngagement ? 'Saving…' : 'Add Comment'}
                           </button>
@@ -8325,7 +8325,7 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
                   🎁 {c.reward}
                 </span>
                 {c.city && (
-                  <span className="bg-teal-50 text-teal-700 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                  <span className="bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
                     <MapPin size={9} /> {c.city}
                   </span>
                 )}
@@ -13549,11 +13549,11 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
                       <div className="flex items-center gap-2.5 flex-1 min-w-0">
                         <div className={cn(
                           'w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0',
-                          a.type === 'birthday' ? 'bg-pink-50' : 'bg-teal-50'
+                          a.type === 'birthday' ? 'bg-pink-50' : 'bg-blue-50'
                         )}>
                           {a.type === 'birthday'
                             ? <Gift size={16} className="text-pink-500" />
-                            : <Calendar size={16} className="text-teal-500" />}
+                            : <Calendar size={16} className="text-blue-500" />}
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-bold text-brand-navy truncate">{a.title}</p>
@@ -14374,20 +14374,20 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                   { channel: 'Email', open: '21%', ctr: '2.5%', cost: '~$30/mo', highlight: false },
                   { channel: 'SMS', open: '45%', ctr: '7%', cost: '~$60/mo', highlight: false },
                 ].map(({ channel, open, ctr, cost, highlight }) => (
-                  <div key={channel} className={cn('rounded-2xl px-4 py-3 flex items-center gap-3', highlight ? 'bg-teal-50 border border-teal-200' : 'bg-brand-bg border border-brand-navy/8')}>
+                  <div key={channel} className={cn('rounded-2xl px-4 py-3 flex items-center gap-3', highlight ? 'bg-blue-50 border border-blue-200' : 'bg-brand-bg border border-brand-navy/8')}>
                     <div className="flex-1 min-w-0">
-                      <p className={cn('text-sm font-bold', highlight ? 'text-teal-700' : 'text-brand-navy/60')}>{channel}</p>
+                      <p className={cn('text-sm font-bold', highlight ? 'text-blue-700' : 'text-brand-navy/60')}>{channel}</p>
                     </div>
                     <div className="text-center">
-                      <p className={cn('text-xs font-black', highlight ? 'text-teal-600' : 'text-brand-navy/50')}>{open}</p>
+                      <p className={cn('text-xs font-black', highlight ? 'text-blue-600' : 'text-brand-navy/50')}>{open}</p>
                       <p className="text-[9px] text-brand-navy/40 font-bold uppercase tracking-wide">open rate</p>
                     </div>
                     <div className="text-center">
-                      <p className={cn('text-xs font-black', highlight ? 'text-teal-600' : 'text-brand-navy/50')}>{ctr}</p>
+                      <p className={cn('text-xs font-black', highlight ? 'text-blue-600' : 'text-brand-navy/50')}>{ctr}</p>
                       <p className="text-[9px] text-brand-navy/40 font-bold uppercase tracking-wide">click rate</p>
                     </div>
                     <div className="text-center">
-                      <p className={cn('text-xs font-black', highlight ? 'text-teal-600' : 'text-brand-navy/50')}>{cost}</p>
+                      <p className={cn('text-xs font-black', highlight ? 'text-blue-600' : 'text-brand-navy/50')}>{cost}</p>
                       <p className="text-[9px] text-brand-navy/40 font-bold uppercase tracking-wide">cost</p>
                     </div>
                   </div>
@@ -14399,13 +14399,13 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
             <div className="px-6 py-5 bg-white space-y-3">
               <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">What you get</p>
               {[
-                { icon: <Bell size={15} className="text-teal-600" />, text: 'Push notifications delivered instantly to all your customers' },
-                { icon: <MessageSquare size={15} className="text-teal-600" />, text: 'Direct 1-to-1 chat with individual members' },
-                { icon: <Users size={15} className="text-teal-600" />, text: 'Broadcast deals, events & rewards to everyone at once' },
-                { icon: <Zap size={15} className="text-teal-600" />, text: 'Average 4× higher engagement than email campaigns' },
+                { icon: <Bell size={15} className="text-blue-600" />, text: 'Push notifications delivered instantly to all your customers' },
+                { icon: <MessageSquare size={15} className="text-blue-600" />, text: 'Direct 1-to-1 chat with individual members' },
+                { icon: <Users size={15} className="text-blue-600" />, text: 'Broadcast deals, events & rewards to everyone at once' },
+                { icon: <Zap size={15} className="text-blue-600" />, text: 'Average 4× higher engagement than email campaigns' },
               ].map(({ icon, text }) => (
                 <div key={text} className="flex items-start gap-3">
-                  <div className="w-7 h-7 rounded-xl bg-teal-50 flex items-center justify-center shrink-0 mt-0.5">{icon}</div>
+                  <div className="w-7 h-7 rounded-xl bg-blue-50 flex items-center justify-center shrink-0 mt-0.5">{icon}</div>
                   <p className="text-sm text-brand-navy/80 leading-snug">{text}</p>
                 </div>
               ))}
@@ -14464,7 +14464,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
               <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-4">What's included</p>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { icon: <TrendingUp size={18} className="text-teal-500" />, label: 'Live Analytics', desc: 'Stamps, visits & spend trends at a glance' },
+                  { icon: <TrendingUp size={18} className="text-blue-500" />, label: 'Live Analytics', desc: 'Stamps, visits & spend trends at a glance' },
                   { icon: <Users size={18} className="text-purple-500" />, label: 'Customer Insights', desc: "Who's visiting, how often, what they earn" },
                   { icon: <BarChart2 size={18} className="text-emerald-500" />, label: 'Weekly Reports', desc: 'Charts to track growth week over week' },
                   { icon: <Gift size={18} className="text-rose-500" />, label: 'Reward Tracking', desc: 'Every reward given and redeemed' },
@@ -14519,7 +14519,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
               {/* Stat tiles — label + icon visible, value blurred */}
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  { icon: <Users className="text-teal-500" />, label: 'Members', value: '247' },
+                  { icon: <Users className="text-blue-500" />, label: 'Members', value: '247' },
                   { icon: <Stamp className="text-brand-gold" />, label: 'Stamps Given', value: '1,432' },
                   { icon: <Wallet className="text-purple-500" />, label: 'Active Cards', value: '89' },
                   { icon: <RefreshCw className="text-orange-500" />, label: 'Return Rate', value: '68%' },
@@ -14612,7 +14612,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
             {([
               { key: 'stamps' as const, label: 'Stamps', icon: <Stamp size={13} />, active: 'text-brand-gold' },
               { key: 'spend' as const, label: 'Spend Pts', icon: <DollarSign size={13} />, active: 'text-emerald-500' },
-              { key: 'visit' as const, label: 'Visit Pts', icon: <MapPin size={13} />, active: 'text-teal-500' },
+              { key: 'visit' as const, label: 'Visit Pts', icon: <MapPin size={13} />, active: 'text-blue-500' },
             ] as const).filter(({ key }) => availableDashTabs.includes(key)).map(({ key, label, icon, active }) => (
               <button
                 key={key}
@@ -14631,7 +14631,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
             <>
               <div className="grid grid-cols-3 gap-3">
                 <div onClick={() => openStatModal('members')} className="cursor-pointer active:scale-95 transition-transform">
-                  <StatSquare icon={<Users className="text-teal-500" />} label="Members" value={String(totalMembers)} />
+                  <StatSquare icon={<Users className="text-blue-500" />} label="Members" value={String(totalMembers)} />
                 </div>
                 <div onClick={() => openStatModal('stamps')} className="cursor-pointer active:scale-95 transition-transform">
                   <StatSquare icon={<Stamp className="text-brand-gold" />} label="Stamps Given" value={String(totalStampsGiven)} />
@@ -14778,7 +14778,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                               <motion.div
                                 initial={{ height: 0 }} animate={{ height: `${Math.round((p.cumulative / maxVal) * 80)}px` }}
                                 transition={{ duration: 0.4, delay: i * 0.03 }}
-                                className="w-full rounded-t-lg bg-teal-400"
+                                className="w-full rounded-t-lg bg-blue-400"
                                 style={{ minHeight: p.cumulative > 0 ? '4px' : '0' }}
                               />
                             </div>
@@ -14886,7 +14886,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                     </div>
                     {top10.map(({ uid, stamps, prof }) => (
                       <div key={uid} className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full overflow-hidden bg-teal-50 shrink-0 flex items-center justify-center">
+                        <div className="w-8 h-8 rounded-full overflow-hidden bg-blue-50 shrink-0 flex items-center justify-center">
                           <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={32} view="head" />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -14934,7 +14934,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                       <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
                         {statModal === 'members' && memberRows.slice(0, statModalVisible).map(({ uid, prof, totalStamps, cycles }) => (
                           <div key={uid} className="flex items-center gap-3 p-3 rounded-2xl bg-brand-bg">
-                            <div className="w-9 h-9 rounded-full overflow-hidden bg-teal-50 shrink-0 flex items-center justify-center"><PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={36} view="head" /></div>
+                            <div className="w-9 h-9 rounded-full overflow-hidden bg-blue-50 shrink-0 flex items-center justify-center"><PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={36} view="head" /></div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1"><p className="font-bold text-sm truncate">{prof?.name || 'Unknown'}</p><StreakBadge streak={prof?.streak} /></div>
                               <p className="text-[11px] text-brand-navy/75">@{prof?.handle || uid.slice(0, 8)}</p>
@@ -14947,7 +14947,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                         ))}
                         {statModal === 'stamps' && stampRows.slice(0, statModalVisible).map(({ uid, prof, totalStamps }) => (
                           <div key={uid} className="flex items-center gap-3 p-3 rounded-2xl bg-brand-bg">
-                            <div className="w-9 h-9 rounded-full overflow-hidden bg-teal-50 shrink-0 flex items-center justify-center"><PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={36} view="head" /></div>
+                            <div className="w-9 h-9 rounded-full overflow-hidden bg-blue-50 shrink-0 flex items-center justify-center"><PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={36} view="head" /></div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1"><p className="font-bold text-sm truncate">{prof?.name || 'Unknown'}</p><StreakBadge streak={prof?.streak} /></div>
                               <p className="text-[11px] text-brand-navy/75">@{prof?.handle || uid.slice(0, 8)}</p>
@@ -14959,7 +14959,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                           const prof = memberProfiles.get(card.user_id);
                           return (
                             <div key={card.id} className="flex items-center gap-3 p-3 rounded-2xl bg-brand-bg">
-                              <div className="w-9 h-9 rounded-full overflow-hidden bg-teal-50 shrink-0 flex items-center justify-center"><PixelAvatar config={prof?.avatar} uid={prof?.uid ?? card.user_id} size={36} view="head" /></div>
+                              <div className="w-9 h-9 rounded-full overflow-hidden bg-blue-50 shrink-0 flex items-center justify-center"><PixelAvatar config={prof?.avatar} uid={prof?.uid ?? card.user_id} size={36} view="head" /></div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-1"><p className="font-bold text-sm truncate">{prof?.name || card.userName || 'Unknown'}</p><StreakBadge streak={prof?.streak} /></div>
                                 <p className="text-[11px] text-brand-navy/75">@{prof?.handle || card.user_id.slice(0, 8)}</p>
@@ -14997,7 +14997,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
               ) : (
                 <>
                   <div className="grid grid-cols-3 gap-3">
-                    <StatSquare icon={<Users className="text-teal-500" />} label="Members" value={String(spendMembers)} />
+                    <StatSquare icon={<Users className="text-blue-500" />} label="Members" value={String(spendMembers)} />
                     <StatSquare icon={<TrendingUp className="text-emerald-500" />} label="Pts Issued" value={String(totalPointsIssued)} />
                     <StatSquare icon={<Wallet className="text-purple-500" />} label="Active Cards" value={String(spendActiveCards)} />
                     <StatSquare icon={<RefreshCw className="text-orange-500" />} label="Pts Balance" value={String(totalPointsBalance)} />
@@ -15147,7 +15147,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                         </div>
                         {top10.map(({ uid, pts, prof }) => (
                           <div key={uid} className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full overflow-hidden bg-teal-50 shrink-0 flex items-center justify-center">
+                            <div className="w-8 h-8 rounded-full overflow-hidden bg-blue-50 shrink-0 flex items-center justify-center">
                               <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={32} view="head" />
                             </div>
                             <div className="flex-1 min-w-0">
@@ -15171,18 +15171,18 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
             <>
               {visitCards.length === 0 ? (
                 <div className="glass-card p-8 rounded-[2rem] text-center space-y-3">
-                  <MapPin size={32} className="text-teal-300 mx-auto" />
+                  <MapPin size={32} className="text-blue-300 mx-auto" />
                   <p className="font-bold text-brand-navy">No visit points data</p>
                   <p className="text-sm text-brand-navy/60">Enable a visit points or visit membership card to see analytics here.</p>
                 </div>
               ) : (
                 <>
                   <div className="grid grid-cols-3 gap-3">
-                    <StatSquare icon={<Users className="text-teal-500" />} label="Members" value={String(visitMembers)} />
-                    <StatSquare icon={<TrendingUp className="text-teal-500" />} label="Total Points" value={String(visitPointsGiven)} />
+                    <StatSquare icon={<Users className="text-blue-500" />} label="Members" value={String(visitMembers)} />
+                    <StatSquare icon={<TrendingUp className="text-blue-500" />} label="Total Points" value={String(visitPointsGiven)} />
                     <StatSquare icon={<Wallet className="text-purple-500" />} label="Active Cards" value={String(visitActiveCards)} />
                     <StatSquare icon={<RefreshCw className="text-orange-500" />} label="Return Rate" value={`${visitReturnRate}%`} />
-                    <StatSquare icon={<MapPin className="text-teal-500" />} label="Total Visits" value={String(totalVisits)} />
+                    <StatSquare icon={<MapPin className="text-blue-500" />} label="Total Visits" value={String(totalVisits)} />
                     <StatSquare icon={<Gift className="text-rose-500" />} label="Pts Redeemed" value={String(visitPointsRedeemed)} />
                   </div>
 
@@ -15235,7 +15235,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                             {periods.map((p, i) => (
                               <div key={i} className="flex-1 flex flex-col items-center gap-1">
                                 <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
-                                  <motion.div initial={{ height: 0 }} animate={{ height: `${Math.round((p.count / maxVal) * 80)}px` }} transition={{ duration: 0.4, delay: i * 0.03 }} className="w-full rounded-t-lg bg-teal-400" style={{ minHeight: p.count > 0 ? '4px' : '0' }} />
+                                  <motion.div initial={{ height: 0 }} animate={{ height: `${Math.round((p.count / maxVal) * 80)}px` }} transition={{ duration: 0.4, delay: i * 0.03 }} className="w-full rounded-t-lg bg-blue-400" style={{ minHeight: p.count > 0 ? '4px' : '0' }} />
                                 </div>
                                 <p className="text-[8px] text-brand-navy/72 font-bold leading-none">{p.label}</p>
                               </div>
@@ -15298,7 +15298,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                             {pts.map((p, i) => (
                               <div key={i} className="flex-1 flex flex-col items-center gap-1">
                                 <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
-                                  <motion.div initial={{ height: 0 }} animate={{ height: `${Math.round((p.cumulative / maxVal) * 80)}px` }} transition={{ duration: 0.4, delay: i * 0.03 }} className="w-full rounded-t-lg bg-teal-400" style={{ minHeight: p.cumulative > 0 ? '4px' : '0' }} />
+                                  <motion.div initial={{ height: 0 }} animate={{ height: `${Math.round((p.cumulative / maxVal) * 80)}px` }} transition={{ duration: 0.4, delay: i * 0.03 }} className="w-full rounded-t-lg bg-blue-400" style={{ minHeight: p.cumulative > 0 ? '4px' : '0' }} />
                                 </div>
                                 <p className="text-[8px] text-brand-navy/72 font-bold leading-none">{p.label}</p>
                               </div>
@@ -15324,17 +15324,17 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                       <div className="glass-card p-5 rounded-[2rem] space-y-3">
                         <div className="flex items-center justify-between">
                           <p className="font-bold text-brand-navy">Top 10 by Visits</p>
-                          <Trophy size={16} className="text-teal-400" />
+                          <Trophy size={16} className="text-blue-400" />
                         </div>
                         {top10.map(({ uid, visits, prof }) => (
                           <div key={uid} className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full overflow-hidden bg-teal-50 shrink-0 flex items-center justify-center">
+                            <div className="w-8 h-8 rounded-full overflow-hidden bg-blue-50 shrink-0 flex items-center justify-center">
                               <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={32} view="head" />
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="font-bold text-sm truncate">{prof?.name || 'Customer'}</p>
                               <div className="h-1 bg-brand-navy/8 rounded-full mt-1 overflow-hidden">
-                                <div className="h-full bg-teal-400 rounded-full" style={{ width: `${Math.round((visits / (top10[0].visits || 1)) * 100)}%` }} />
+                                <div className="h-full bg-blue-400 rounded-full" style={{ width: `${Math.round((visits / (top10[0].visits || 1)) * 100)}%` }} />
                               </div>
                             </div>
                           </div>
@@ -16222,8 +16222,8 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                   <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-3">How it works</p>
                   {pointsRate > 0 && (
                     <div className="flex items-center gap-3">
-                      <div className="w-7 h-7 rounded-full bg-teal-100 flex items-center justify-center shrink-0">
-                        <DollarSign size={13} className="text-teal-600" />
+                      <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                        <DollarSign size={13} className="text-blue-600" />
                       </div>
                       <p className="text-sm text-brand-navy">Earn <span className="font-bold">{pointsRate} points</span> for every $1 spent</p>
                     </div>
@@ -17161,7 +17161,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
           {unlockedRewards.length === 0 && (
             <button
               onClick={(e) => { e.stopPropagation(); setShowRedeemSheet(true); }}
-              className="flex items-center gap-1.5 bg-white text-teal-700 px-4 py-2 rounded-xl font-bold text-xs active:scale-95 transition-transform"
+              className="flex items-center gap-1.5 bg-white text-blue-700 px-4 py-2 rounded-xl font-bold text-xs active:scale-95 transition-transform"
             >
               <Gift size={13} />
               Redeem
@@ -17187,7 +17187,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="font-display text-xl font-bold text-brand-navy">Redeem Points</h3>
-                  <p className="text-xs text-brand-navy/60 mt-0.5">Balance: <span className="font-bold text-teal-600">{points.toLocaleString()} pts</span></p>
+                  <p className="text-xs text-brand-navy/60 mt-0.5">Balance: <span className="font-bold text-blue-600">{points.toLocaleString()} pts</span></p>
                 </div>
                 <button onClick={() => { setShowRedeemSheet(false); setSelectedReward(null); }} className="p-2 text-brand-navy/75">
                   <X size={20} />
@@ -17218,19 +17218,19 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
                             disabled={!affordable}
                             className={cn(
                               'w-full flex items-center justify-between px-4 py-3 rounded-2xl border-2 transition-all text-left',
-                              isSelected ? 'border-indigo-500 bg-teal-50' : affordable ? 'border-brand-navy/10 bg-white hover:border-indigo-300' : 'border-brand-navy/5 bg-brand-navy/3 opacity-50'
+                              isSelected ? 'border-indigo-500 bg-blue-50' : affordable ? 'border-brand-navy/10 bg-white hover:border-indigo-300' : 'border-brand-navy/5 bg-brand-navy/3 opacity-50'
                             )}
                           >
                             <div className="flex items-center gap-2.5">
-                              <Gift size={16} className={isSelected ? 'text-teal-600' : affordable ? 'text-indigo-400' : 'text-brand-navy/30'} />
+                              <Gift size={16} className={isSelected ? 'text-blue-600' : affordable ? 'text-indigo-400' : 'text-brand-navy/30'} />
                               <div>
-                                <p className={cn('font-bold text-sm', isSelected ? 'text-teal-700' : 'text-brand-navy')}>{r.reward}</p>
+                                <p className={cn('font-bold text-sm', isSelected ? 'text-blue-700' : 'text-brand-navy')}>{r.reward}</p>
                                 <p className="text-[10px] text-brand-navy/50">{r.points.toLocaleString()} pts</p>
                               </div>
                             </div>
                             <div className="flex items-center gap-1.5 shrink-0">
                               {!affordable && <span className="text-[10px] text-brand-navy/40">{(r.points - points).toLocaleString()} more</span>}
-                              {isSelected && <CheckCircle2 size={18} className="text-teal-600" />}
+                              {isSelected && <CheckCircle2 size={18} className="text-blue-600" />}
                             </div>
                           </button>
                         );
@@ -17352,7 +17352,7 @@ function StoreCard({ store, card, onJoin, onClick, distance, town }: { store: St
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1 mb-0.5">
           <h4 className="font-bold text-sm truncate">{store.name}</h4>
-          {store.isVerified && <CheckCircle2 size={13} className="text-teal-500 fill-blue-500/10 shrink-0" />}
+          {store.isVerified && <CheckCircle2 size={13} className="text-blue-500 fill-blue-500/10 shrink-0" />}
         </div>
         <p className="text-xs text-brand-navy/60 flex items-center gap-1 mb-1">
           <StoreCategoryIcon category={store.category} size={10} />
@@ -17435,7 +17435,7 @@ function scoreTileStates(guess: string, answer: string): TileState[] {
 }
 
 const TILE_COLORS: Record<TileState, string> = {
-  correct: 'bg-teal-400 border-teal-400 text-white',
+  correct: 'bg-blue-400 border-blue-400 text-white',
   present: 'bg-amber-400 border-amber-400 text-white',
   absent: 'bg-slate-700 border-slate-700 text-white',
   empty: 'bg-transparent border-white/20 text-white',
@@ -17547,7 +17547,7 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
     'linear-gradient(to top, #991b1b, #fca5a5)',
   ];
   const btnColors = [
-    { border: 'border-teal-300', selBg: 'bg-teal-50', selText: 'text-teal-700' },
+    { border: 'border-blue-300', selBg: 'bg-blue-50', selText: 'text-blue-700' },
     { border: 'border-red-300', selBg: 'bg-red-50', selText: 'text-red-700' },
   ];
 
@@ -17672,7 +17672,7 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
               const ts = c.createdAt?.toDate?.();
               return (
                 <div key={c.id} className="flex gap-3 py-3.5">
-                  <div className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center shrink-0 text-xs font-black text-teal-600">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0 text-xs font-black text-blue-600">
                     {c.name?.[0]?.toUpperCase() ?? '?'}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -17733,18 +17733,18 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor 
   const hasVoted = userVote !== null;
   const tc = tileColor ?? UI_COLOR_DEFAULTS.dailyVoteTile;
   const dvDark = tc.dark;
-  const labelCls = dvDark ? 'text-white/60' : 'text-teal-700/70';
-  const titleCls = dvDark ? 'text-white' : 'text-teal-900';
-  const voteCls = dvDark ? 'text-white/60' : 'text-teal-700/60';
-  const barBg = dvDark ? 'bg-white/15' : 'bg-teal-700/15';
-  const barFill = dvDark ? 'bg-white' : 'bg-teal-700';
-  const barFillDim = dvDark ? 'bg-white/40' : 'bg-teal-700/40';
+  const labelCls = dvDark ? 'text-white/60' : 'text-blue-700/70';
+  const titleCls = dvDark ? 'text-white' : 'text-blue-900';
+  const voteCls = dvDark ? 'text-white/60' : 'text-blue-700/60';
+  const barBg = dvDark ? 'bg-white/15' : 'bg-blue-700/15';
+  const barFill = dvDark ? 'bg-white' : 'bg-blue-700';
+  const barFillDim = dvDark ? 'bg-white/40' : 'bg-blue-700/40';
   const dvTextStyle = (alpha = 1) => tileTextStyle(tc, alpha);
 
   return (
     <>
       <motion.button whileTap={{ scale: 0.97 }} onClick={() => setOpen(true)}
-        className="flex-1 rounded-[1.5rem] overflow-hidden shadow-lg shadow-teal-900/10 text-left">
+        className="flex-1 rounded-[1.5rem] overflow-hidden shadow-lg shadow-blue-900/10 text-left">
         <div className="relative h-full px-4 py-4 flex flex-col gap-3"
           style={{ background: tc.css }}>
           {[
@@ -17845,8 +17845,8 @@ function LinqleMatrixBanner({ onClose, dateStr }: { onClose: () => void; dateStr
     <div className="relative flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/8 shrink-0 overflow-hidden bg-[#0F172A]">
       <MatrixRainCanvas />
       <div className="relative z-10">
-        <h2 className="font-black text-xl tracking-wide"><span className="text-teal-400">Li</span><span className="text-white">nqle</span></h2>
-        <p className="text-xs text-teal-400/70">{dateStr}</p>
+        <h2 className="font-black text-xl tracking-wide"><span className="text-blue-400">Li</span><span className="text-white">nqle</span></h2>
+        <p className="text-xs text-blue-400/70">{dateStr}</p>
       </div>
       <button onClick={onClose} className="relative z-10 w-9 h-9 rounded-full bg-white/10 flex items-center justify-center active:scale-90 transition-all">
         <X size={18} className="text-white" />
@@ -18105,7 +18105,7 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
             <p className="text-xs text-white/60 font-semibold mb-2">{displayWon ? 'You got it!' : 'The answer was'}</p>
             <div className="flex gap-1.5 justify-center">
               {answer.split('').map((ch, i) => (
-                <div key={i} className="w-12 h-12 rounded-xl bg-teal-400 flex items-center justify-center font-black text-xl text-white">
+                <div key={i} className="w-12 h-12 rounded-xl bg-blue-400 flex items-center justify-center font-black text-xl text-white">
                   {ch}
                 </div>
               ))}
@@ -18119,14 +18119,14 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
               🔥 {userStreak} day streak
             </span>
           </div>
-          {submitting && <p className="text-xs text-teal-400/80 animate-pulse">Saving…</p>}
+          {submitting && <p className="text-xs text-blue-400/80 animate-pulse">Saving…</p>}
         </motion.div>
 
         {/* Leaderboard tabs */}
         <div className="flex gap-1 mx-5 mb-3 shrink-0">
           {(['today', 'alltime'] as const).map(tab => (
             <button key={tab} onClick={() => setLbTab(tab)}
-              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${lbTab === tab ? 'bg-teal-400 text-white' : 'bg-white/10 text-white/70'}`}>
+              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${lbTab === tab ? 'bg-blue-400 text-white' : 'bg-white/10 text-white/70'}`}>
               {tab === 'today' ? "Today" : "All Time"}
             </button>
           ))}
@@ -18138,7 +18138,7 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
             scores.length === 0
               ? <p className="text-xs text-white/50 text-center py-8">No completions today yet</p>
               : scores.map((s, idx) => (
-                <div key={s.id} className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl ${s.uid === currentUser.uid ? 'bg-teal-400/15 border border-teal-400/30' : 'bg-white/8 border border-white/10'}`}>
+                <div key={s.id} className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl ${s.uid === currentUser.uid ? 'bg-blue-400/15 border border-blue-400/30' : 'bg-white/8 border border-white/10'}`}>
                   <span className="w-5 text-center font-bold text-xs text-white/60 shrink-0">{idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}</span>
                   <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-white/15 bg-slate-700 flex items-center justify-center">
                     <PixelAvatar config={s.avatar} uid={s.uid} size={36} view="head" />
@@ -18156,7 +18156,7 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
               {top20.length === 0
                 ? <p className="text-xs text-white/50 text-center py-8">No all-time scores yet</p>
                 : top20.map((s, idx) => (
-                  <div key={s.id} className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl ${s.uid === currentUser.uid ? 'bg-teal-400/15 border border-teal-400/30' : 'bg-white/8 border border-white/10'}`}>
+                  <div key={s.id} className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl ${s.uid === currentUser.uid ? 'bg-blue-400/15 border border-blue-400/30' : 'bg-white/8 border border-white/10'}`}>
                     <span className="w-5 text-center font-bold text-xs text-white/60 shrink-0">{idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}</span>
                     <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-white/15 bg-slate-700 flex items-center justify-center">
                       <PixelAvatar config={(s as any).avatar} uid={s.uid} size={36} view="head" />
@@ -18165,7 +18165,7 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
                       <p className="font-bold text-sm truncate text-white">{s.name}</p>
                       {(s as any).handle && <p className="text-[10px] text-white/50 truncate">@{(s as any).handle}</p>}
                     </div>
-                    <span className="text-xs font-bold text-teal-400 shrink-0">{s.totalWins}W</span>
+                    <span className="text-xs font-bold text-blue-400 shrink-0">{s.totalWins}W</span>
                     <span className="text-xs text-white/50 shrink-0">best {s.bestGuesses}/6</span>
                     {(s as any).streak > 1 && <span className="text-xs shrink-0">🔥{(s as any).streak}</span>}
                   </div>
@@ -18174,7 +18174,7 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
               {!userInTop20 && userAtEntry && (
                 <>
                   <div className="text-center text-xs text-white/20 py-1">· · ·</div>
-                  <div className="flex items-center gap-3 px-3 py-2.5 rounded-2xl bg-teal-400/15 border border-teal-400/30">
+                  <div className="flex items-center gap-3 px-3 py-2.5 rounded-2xl bg-blue-400/15 border border-blue-400/30">
                     <span className="w-5 text-center font-bold text-xs text-white/60 shrink-0">#{userAtIdx + 1}</span>
                     <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-white/15 bg-slate-700 flex items-center justify-center">
                       <PixelAvatar config={(userAtEntry as any).avatar} uid={userAtEntry.uid} size={36} view="head" />
@@ -18183,7 +18183,7 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
                       <p className="font-bold text-sm truncate text-white">{userAtEntry.name}</p>
                       {(userAtEntry as any).handle && <p className="text-[10px] text-white/50 truncate">@{(userAtEntry as any).handle}</p>}
                     </div>
-                    <span className="text-xs font-bold text-teal-400 shrink-0">{userAtEntry.totalWins}W</span>
+                    <span className="text-xs font-bold text-blue-400 shrink-0">{userAtEntry.totalWins}W</span>
                     <span className="text-xs text-white/50 shrink-0">best {userAtEntry.bestGuesses}/6</span>
                     {(userAtEntry as any).streak > 1 && <span className="text-xs shrink-0">🔥{(userAtEntry as any).streak}</span>}
                   </div>
@@ -18197,7 +18197,7 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
         <div className="px-5 py-4 shrink-0">
           <button
             onClick={onClose}
-            className="w-full py-3.5 rounded-2xl bg-teal-400 text-white font-bold text-sm active:scale-[0.98] transition-all"
+            className="w-full py-3.5 rounded-2xl bg-blue-400 text-white font-bold text-sm active:scale-[0.98] transition-all"
           >
             Done
           </button>
@@ -18237,7 +18237,7 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
       {/* Keyboard */}
       <div className="pb-4 px-1 space-y-1.5">
         <button onClick={() => handleKey('ENTER')}
-          className="w-full h-11 rounded-xl bg-teal-400 text-white text-sm font-black tracking-widest uppercase flex items-center justify-center shadow-sm active:scale-95 transition-transform">
+          className="w-full h-11 rounded-xl bg-blue-400 text-white text-sm font-black tracking-widest uppercase flex items-center justify-center shadow-sm active:scale-95 transition-transform">
           Enter
         </button>
         {KEYBOARD_ROWS.map((row, ri) => (
@@ -18646,7 +18646,7 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
                   onClick={() => onViewUser(u)}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full overflow-hidden border border-brand-navy/5 bg-teal-50 flex items-center justify-center">
+                    <div className="w-12 h-12 rounded-full overflow-hidden border border-brand-navy/5 bg-blue-50 flex items-center justify-center">
                       <PixelAvatar config={u.avatar} uid={u.uid} size={48} view="head" />
                     </div>
                     <div>
@@ -18788,7 +18788,7 @@ function WallPostItem({ post, currentUser, wallOwnerUid, onViewUser }: { post: a
           onClick={() => handleViewProfile(post.fromUid)}
           className="flex items-center gap-3 hover:opacity-80 transition-opacity text-left"
         >
-          <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-navy/5 bg-teal-50 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-navy/5 bg-blue-50 flex items-center justify-center">
             <LivePixelAvatar uid={post.fromUid} size={40} view="head" />
           </div>
           <div>
@@ -18838,7 +18838,7 @@ function WallPostItem({ post, currentUser, wallOwnerUid, onViewUser }: { post: a
           {replies.map(reply => (
             <div key={reply.id} className="flex gap-3">
               <button onClick={() => handleViewProfile(reply.fromUid)} className="shrink-0 hover:opacity-80 transition-opacity">
-                <div className="w-6 h-6 rounded-full overflow-hidden bg-teal-50 flex items-center justify-center">
+                <div className="w-6 h-6 rounded-full overflow-hidden bg-blue-50 flex items-center justify-center">
                   <LivePixelAvatar uid={reply.fromUid} size={24} view="head" />
                 </div>
               </button>
@@ -19422,14 +19422,14 @@ function OfferDetailSheet({ offer, currentUser, onClose }: { offer: StoreOffer; 
           )}
 
           {/* Redemption info */}
-          <div className="rounded-2xl bg-teal-50 border border-teal-100 px-4 py-3 space-y-1">
-            <p className="font-bold text-teal-800 text-sm">How to redeem</p>
+          <div className="rounded-2xl bg-blue-50 border border-blue-100 px-4 py-3 space-y-1">
+            <p className="font-bold text-blue-800 text-sm">How to redeem</p>
             {redemptionsLeft !== null && redemptionsLeft > 0 && (
-              <p className="text-teal-700 font-semibold text-sm">
+              <p className="text-blue-700 font-semibold text-sm">
                 You have <span className="font-black">{redemptionsLeft} use{redemptionsLeft !== 1 ? 's' : ''}</span> remaining on this offer.
               </p>
             )}
-            <p className="text-teal-600/80 text-sm">Show this screen to a staff member at {offer.storeName} — they need to slide the button below to confirm your redemption.</p>
+            <p className="text-blue-600/80 text-sm">Show this screen to a staff member at {offer.storeName} — they need to slide the button below to confirm your redemption.</p>
           </div>
 
           {/* Slide to redeem */}
@@ -19538,7 +19538,7 @@ function OffersModal({ offers, currentUser, onClose }: { offers: StoreOffer[]; c
                     <p className="text-xs text-brand-navy/80 mt-0.5">{offer.storeName}</p>
                     <p className="text-xs text-brand-navy/75 mt-1 line-clamp-1">{offer.description}</p>
                   </div>
-                  <span className="text-[10px] font-bold text-teal-600 bg-teal-50 px-2.5 py-1 rounded-full shrink-0">{offer.category}</span>
+                  <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full shrink-0">{offer.category}</span>
                 </div>
               </button>
             ))}
@@ -20899,7 +20899,7 @@ function SubCardBuilder({ store }: { store: StoreProfile | null }) {
             )}
           </div>
         ))}
-        <button onClick={addReward} className="w-full py-2.5 rounded-xl border-2 border-dashed border-brand-navy/15 text-xs font-bold text-brand-navy/50 flex items-center justify-center gap-1.5 hover:border-teal-400/40 hover:text-brand-navy/70 active:scale-[0.98] transition-all">
+        <button onClick={addReward} className="w-full py-2.5 rounded-xl border-2 border-dashed border-brand-navy/15 text-xs font-bold text-brand-navy/50 flex items-center justify-center gap-1.5 hover:border-blue-400/40 hover:text-brand-navy/70 active:scale-[0.98] transition-all">
           <Plus size={13} /> Add Tier
         </button>
       </div>
@@ -21184,7 +21184,7 @@ function StoreLeaderboard({ storeId, storeName, logoUrl, type, userId }: {
       </div>
       <div className="space-y-1.5">
         {entries.map((e, i) => (
-          <div key={e.id} className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl ${e.userId === userId ? 'bg-teal-50 border border-teal-100' : 'bg-brand-bg'}`}>
+          <div key={e.id} className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl ${e.userId === userId ? 'bg-blue-50 border border-blue-100' : 'bg-brand-bg'}`}>
             <span className="text-[10px] font-black text-brand-navy/72 w-4 text-center shrink-0">
               {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`}
             </span>
@@ -21621,7 +21621,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                   const metricLabel = isVisit ? 'pts' : isSpend ? 'pts' : 'stamps';
                   return (
                     <div key={c.id} className="flex items-center gap-3 px-4 py-2.5">
-                      <div className="w-9 h-9 rounded-full overflow-hidden bg-teal-50 shrink-0 flex items-center justify-center">
+                      <div className="w-9 h-9 rounded-full overflow-hidden bg-blue-50 shrink-0 flex items-center justify-center">
                         <PixelAvatar uid={c.user_id} size={36} view="head" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -21709,7 +21709,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                   ) : (
                     <div className="px-6 py-4 space-y-2.5">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full overflow-hidden border border-black/5 bg-teal-50 shrink-0 flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-full overflow-hidden border border-black/5 bg-blue-50 shrink-0 flex items-center justify-center">
                           <PixelAvatar uid={item.data.authorUid} size={40} view="head" />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -21775,7 +21775,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                 <div className="space-y-2">
                   {(followModalTab === 'following' ? following : followers).map(u => (
                     <div key={u.uid} className="flex items-center gap-3 p-3 rounded-2xl bg-brand-bg cursor-pointer" onClick={() => { onViewUser(u); setShowFollowModal(false); }}>
-                      <div className="w-10 h-10 rounded-2xl overflow-hidden border border-brand-navy/5 shrink-0 bg-teal-50 flex items-center justify-center"><PixelAvatar config={u.avatar} uid={u.uid} size={40} view="head" /></div>
+                      <div className="w-10 h-10 rounded-2xl overflow-hidden border border-brand-navy/5 shrink-0 bg-blue-50 flex items-center justify-center"><PixelAvatar config={u.avatar} uid={u.uid} size={40} view="head" /></div>
                       <div>
                         <div className="flex items-center gap-1"><p className="font-bold text-sm">{u.name}</p><StreakBadge streak={u.streak} /></div>
                         <p className="text-[10px] text-brand-navy/75 font-bold uppercase">@{u.email?.split('@')[0]}</p>
@@ -22262,7 +22262,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           {/* Post composer */}
           <div className="glass-card p-5 rounded-[2rem] space-y-3">
             <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-brand-navy/10 bg-teal-50 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-brand-navy/10 bg-blue-50 flex items-center justify-center">
                 <PixelAvatar config={profile?.avatar} uid={profile?.uid} size={36} view="head" />
               </div>
               <textarea
@@ -22437,7 +22437,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                       className="flex items-center gap-3 flex-1 cursor-pointer"
                       onClick={() => { onViewUser(u); setShowFollowModal(false); }}
                     >
-                      <div className="w-10 h-10 rounded-2xl overflow-hidden border border-brand-navy/5 shrink-0 bg-teal-50 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-2xl overflow-hidden border border-brand-navy/5 shrink-0 bg-blue-50 flex items-center justify-center">
                         <PixelAvatar config={u.avatar} uid={u.uid} size={40} view="head" />
                       </div>
                       <div>
@@ -23374,7 +23374,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="py-4 px-4">
         <div className="space-y-2.5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full overflow-hidden border border-black/5 shrink-0 bg-teal-50 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full overflow-hidden border border-black/5 shrink-0 bg-blue-50 flex items-center justify-center">
               <PixelAvatar config={authorProfile?.avatar} uid={post.authorUid} size={40} view="head" />
             </div>
             <div className="flex-1 min-w-0">
@@ -23508,7 +23508,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
       <div className="space-y-2.5 mb-3">
         <div className="flex items-center gap-3">
           {!isAnonAdmin && (
-          <div className="w-10 h-10 rounded-full overflow-hidden border border-black/5 cursor-pointer shrink-0 bg-teal-50 flex items-center justify-center" onClick={handleAvatarClick}>
+          <div className="w-10 h-10 rounded-full overflow-hidden border border-black/5 cursor-pointer shrink-0 bg-blue-50 flex items-center justify-center" onClick={handleAvatarClick}>
             {post.authorRole === 'admin'
               ? <div className="w-full h-full gradient-logo-blue flex items-center justify-center">
                     {post.adminIcon
@@ -23771,7 +23771,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
             return (
               <div key={comment.id} className="flex gap-2.5">
                 <button onClick={() => handleViewCommentAuthor(comment.fromUid)} className="shrink-0 mt-0.5 hover:opacity-80 transition-opacity">
-                  <div className="w-7 h-7 rounded-full overflow-hidden border border-black/5 bg-teal-50 flex items-center justify-center">
+                  <div className="w-7 h-7 rounded-full overflow-hidden border border-black/5 bg-blue-50 flex items-center justify-center">
                     <LivePixelAvatar uid={comment.fromUid} size={28} view="head" />
                   </div>
                 </button>
@@ -23815,7 +23815,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
       {/* Comment input — hidden for anonymous admin posts */}
       {!isAnonAdmin && currentUser && (
         <div className="pt-3 flex gap-2">
-          <div className="w-7 h-7 rounded-full overflow-hidden border border-black/5 shrink-0 bg-teal-50 flex items-center justify-center">
+          <div className="w-7 h-7 rounded-full overflow-hidden border border-black/5 shrink-0 bg-blue-50 flex items-center justify-center">
             <LivePixelAvatar uid={currentUser.uid} size={28} view="head" />
           </div>
           <div className="flex-1 flex gap-2">
@@ -23938,7 +23938,7 @@ function CreatePostModal({ onClose, user, profile }: { onClose: () => void, user
         </div>
 
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-brand-navy/10 bg-teal-50 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-brand-navy/10 bg-blue-50 flex items-center justify-center">
             <PixelAvatar config={profile?.avatar} uid={profile?.uid} size={40} view="head" />
           </div>
           <div className="flex-1">
@@ -23997,7 +23997,7 @@ function CreatePostModal({ onClose, user, profile }: { onClose: () => void, user
           <button
             onClick={handleSubmit}
             disabled={isPosting || (!content.trim() && !isPoll) || (isPoll && pollOptions.filter(o => o.trim()).length < 2)}
-            className="px-6 py-2.5 gradient-red text-white rounded-xl font-bold text-sm disabled:opacity-40 transition-all active:scale-95 shadow-md shadow-teal-500/20"
+            className="px-6 py-2.5 gradient-red text-white rounded-xl font-bold text-sm disabled:opacity-40 transition-all active:scale-95 shadow-md shadow-blue-500/20"
           >
             {isPosting ? 'Posting...' : 'Post'}
           </button>
@@ -24067,7 +24067,7 @@ function NotificationsPanel({ notifications, onClose }: { notifications: Notific
                 ) : (
                   <Sparkles size={18} className="text-brand-gold" />
                 )}
-                <div className={cn("absolute -bottom-1 -right-1 p-1 rounded-md border-2 border-white", notif.type === 'like' ? "bg-red-400" : notif.type === 'comment' ? "bg-teal-400" : notif.type === 'message' ? "bg-brand-navy" : notif.type === 'broadcast' ? "bg-brand-navy" : "bg-brand-gold")}>
+                <div className={cn("absolute -bottom-1 -right-1 p-1 rounded-md border-2 border-white", notif.type === 'like' ? "bg-red-400" : notif.type === 'comment' ? "bg-blue-400" : notif.type === 'message' ? "bg-brand-navy" : notif.type === 'broadcast' ? "bg-brand-navy" : "bg-brand-gold")}>
                   {notif.type === 'follow' ? <UserPlus size={9} className="text-white" /> : notif.type === 'like' ? <Heart size={9} className="text-white fill-white" /> : notif.type === 'comment' || notif.type === 'message' ? <MessageCircle size={9} className="text-white" /> : notif.type === 'broadcast' ? <Send size={9} className="text-white" /> : <Bell size={9} className="text-white" />}
                 </div>
               </div>
@@ -25218,7 +25218,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                     style={uiColors.linqleTile.textColor ? { color: uiColors.linqleTile.textColor } : undefined}>
                     {uiColors.linqleTile.textColor
                       ? 'LINQLE'
-                      : <><span className="text-teal-400">LI</span><span className="text-white">NQLE</span></>
+                      : <><span className="text-blue-400">LI</span><span className="text-white">NQLE</span></>
                     }
                   </p>
                   <p className="relative z-10 text-[11px] font-semibold tracking-wide"
@@ -25411,7 +25411,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                   />
                 ))}
                 <div className="relative z-10 h-full flex flex-col items-center justify-center gap-1.5 px-2 py-4" style={{ minHeight: '148px' }}>
-                  <div className={`w-12 h-12 rounded-xl overflow-hidden border-2 ${uiColors.leaderboardTile.dark ? 'border-white/30' : 'border-gray-300'} bg-teal-50 flex items-center justify-center`}>
+                  <div className={`w-12 h-12 rounded-xl overflow-hidden border-2 ${uiColors.leaderboardTile.dark ? 'border-white/30' : 'border-gray-300'} bg-blue-50 flex items-center justify-center`}>
                     <PixelAvatar config={currentProfile?.avatar} uid={currentProfile?.uid || ''} size={48} view="head" />
                   </div>
                   <p className={`${uiColors.leaderboardTile.dark ? 'text-white' : 'text-gray-700'} font-bold text-[10px] text-center leading-tight line-clamp-2 w-full px-1`}
@@ -25527,7 +25527,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                               return (
                                 <div key={u.uid} className="flex flex-col items-center w-[30%]" onClick={() => { setShowLeaderboard(false); onViewUser(u); }} style={{ cursor: 'pointer' }}>
                                   <span className="text-lg mb-0.5">{podiumMedals[col]}</span>
-                                  <div className={cn('w-12 h-12 rounded-2xl overflow-hidden border-2 mb-1 bg-teal-50', rank === 0 ? 'border-brand-gold shadow-lg shadow-brand-gold/30' : 'border-brand-navy/10')}>
+                                  <div className={cn('w-12 h-12 rounded-2xl overflow-hidden border-2 mb-1 bg-blue-50', rank === 0 ? 'border-brand-gold shadow-lg shadow-brand-gold/30' : 'border-brand-navy/10')}>
                                     <PixelAvatar config={u.avatar} uid={u.uid} size={48} view="head" />
                                   </div>
                                   <p className="text-[10px] font-bold text-brand-navy text-center leading-tight line-clamp-1 w-full">{u.name}</p>
@@ -25544,7 +25544,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                             {sorted.slice(3).map((u, i) => (
                               <div key={u.uid} onClick={() => { setShowLeaderboard(false); onViewUser(u); }} className="glass-card p-3 rounded-2xl flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-transform">
                                 <div className="w-6 font-display font-bold text-brand-navy/72 text-sm text-center shrink-0">#{i + 4}</div>
-                                <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-brand-navy/10 bg-teal-50 flex items-center justify-center">
+                                <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-brand-navy/10 bg-blue-50 flex items-center justify-center">
                                   <PixelAvatar config={u.avatar} uid={u.uid} size={36} view="head" />
                                 </div>
                                 <div className="flex-1 min-w-0">
@@ -25562,7 +25562,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                             <div className="glass-card p-3 rounded-2xl flex items-center gap-3 border border-brand-gold/20 bg-brand-gold/5">
                               <div className="w-6 font-display font-bold text-brand-gold text-sm text-center shrink-0">#{myRank}</div>
                               <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-brand-gold/30">
-                                {currentProfile.photoURL ? <img src={currentProfile.photoURL} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full bg-teal-100 flex items-center justify-center text-xs font-bold text-teal-600">{(currentProfile.name || '?')[0].toUpperCase()}</div>}
+                                {currentProfile.photoURL ? <img src={currentProfile.photoURL} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-600">{(currentProfile.name || '?')[0].toUpperCase()}</div>}
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-1"><p className="font-bold text-xs truncate">{currentProfile.name}</p><StreakBadge streak={currentProfile.streak} /></div>
@@ -26136,7 +26136,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
                   : <Store size={18} className="text-brand-navy/80" />}
               </div>
             ) : (
-              <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-sm cursor-pointer bg-teal-50 flex items-center justify-center" onClick={() => chatPartner && onViewUser(chatPartner)}>
+              <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-sm cursor-pointer bg-blue-50 flex items-center justify-center" onClick={() => chatPartner && onViewUser(chatPartner)}>
                 <PixelAvatar config={chatPartner?.avatar} uid={chatPartner?.uid} size={40} view="head" />
               </div>
             )}
@@ -26180,7 +26180,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
                     <div className="w-7 shrink-0 flex flex-col items-center justify-end pb-0.5">
                       {isMe ? (
                         showReadReceipt && (
-                          <div className="w-5 h-5 rounded-full overflow-hidden border border-white/30 bg-teal-50">
+                          <div className="w-5 h-5 rounded-full overflow-hidden border border-white/30 bg-blue-50">
                             <PixelAvatar uid={currentUser.uid} size={20} view="head" />
                           </div>
                         )
@@ -26193,7 +26193,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
                                 : <Store size={11} className="text-brand-navy/60" />}
                             </div>
                           ) : (
-                            <div className="w-6 h-6 rounded-full overflow-hidden border border-white/30 bg-teal-50">
+                            <div className="w-6 h-6 rounded-full overflow-hidden border border-white/30 bg-blue-50">
                               <PixelAvatar uid={msg.senderUid} size={24} view="head" />
                             </div>
                           )
@@ -26247,7 +26247,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
             <button 
               onClick={handleSendMessage}
               disabled={!newMessage.trim()}
-              className="p-4 gradient-red text-white rounded-2xl shadow-lg shadow-teal-500/20 active:scale-95 transition-all disabled:opacity-50"
+              className="p-4 gradient-red text-white rounded-2xl shadow-lg shadow-blue-500/20 active:scale-95 transition-all disabled:opacity-50"
             >
               <Send size={20} />
             </button>
@@ -26282,7 +26282,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
               onClick={() => handleStartCustomerChat(customer)}
               className="w-full bg-white p-4 rounded-2xl flex items-center gap-4 border border-brand-navy/5 hover:border-brand-gold/20 transition-all text-left"
             >
-              <div className="w-14 h-14 rounded-2xl overflow-hidden border border-brand-navy/5 bg-teal-50 flex items-center justify-center">
+              <div className="w-14 h-14 rounded-2xl overflow-hidden border border-brand-navy/5 bg-blue-50 flex items-center justify-center">
                 <PixelAvatar config={customer.avatar} uid={customer.uid} size={56} view="head" />
               </div>
               <div className="flex-1 min-w-0">
@@ -26529,7 +26529,7 @@ function CommunityScreen({ onViewUser, currentUser }: { onViewUser: (u: UserProf
             <div className="space-y-4">
               <div className="bg-brand-navy p-6 rounded-[2.5rem] text-white flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-brand-gold shrink-0 bg-teal-100 flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-brand-gold shrink-0 bg-blue-100 flex items-center justify-center">
                     {users[0]
                       ? <PixelAvatar config={users[0].avatar} uid={users[0].uid} size={48} view="head" />
                       : <div className="w-full h-full bg-brand-gold flex items-center justify-center"><Trophy className="w-6 h-6 text-brand-navy" /></div>}
@@ -26553,7 +26553,7 @@ function CommunityScreen({ onViewUser, currentUser }: { onViewUser: (u: UserProf
                     className="glass-card p-4 rounded-2xl flex items-center gap-4 hover:shadow-md transition-all cursor-pointer"
                   >
                     <div className="w-8 font-display font-bold text-brand-navy/32">#{i + 1}</div>
-                    <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-navy/5 bg-teal-50 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-navy/5 bg-blue-50 flex items-center justify-center">
                       <PixelAvatar config={u.avatar} uid={u.uid} size={40} view="head" />
                     </div>
                     <div className="flex-1">
@@ -26589,7 +26589,7 @@ function CommunityScreen({ onViewUser, currentUser }: { onViewUser: (u: UserProf
                   const isFollowing = followingUids.has(u.uid);
                   return (
                     <div key={u.uid} className="glass-card p-4 rounded-2xl flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-navy/5 cursor-pointer bg-teal-50 flex items-center justify-center" onClick={() => onViewUser(u)}>
+                      <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-navy/5 cursor-pointer bg-blue-50 flex items-center justify-center" onClick={() => onViewUser(u)}>
                         <PixelAvatar config={u.avatar} uid={u.uid} size={40} view="head" />
                       </div>
                       <div className="flex-1 cursor-pointer" onClick={() => onViewUser(u)}>
@@ -27398,7 +27398,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <h2 className="font-display text-2xl font-bold text-brand-navy">{store.name}</h2>
-            {store.isVerified && <CheckCircle2 size={18} className="text-teal-400" />}
+            {store.isVerified && <CheckCircle2 size={18} className="text-blue-400" />}
           </div>
           <p className="text-sm text-brand-navy/80 mt-0.5">{store.category}</p>
           {(() => {
@@ -28132,7 +28132,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
               >
                 <div className="flex items-center gap-3">
                   {!isOwnStore && <div className="w-6 h-6 flex items-center justify-center font-bold text-xs text-brand-navy/75">#{index + 1}</div>}
-                  <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-navy/5 bg-teal-50 flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-navy/5 bg-blue-50 flex items-center justify-center shrink-0">
                     <PixelAvatar config={lbProfile?.avatar} uid={lbProfile?.uid ?? entry.user_id} size={40} view="head" />
                   </div>
                   <div>
@@ -28213,7 +28213,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                 return (
                   <div key={item.data.id} className="glass-card p-5 rounded-[2rem] space-y-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full overflow-hidden border border-brand-navy/5 shrink-0 bg-teal-50 flex items-center justify-center">
+                      <div className="w-9 h-9 rounded-full overflow-hidden border border-brand-navy/5 shrink-0 bg-blue-50 flex items-center justify-center">
                         {isOwnerPost
                           ? <img src={store.logoUrl || ''} alt="" className="w-full h-full object-cover" />
                           : <PixelAvatar uid={item.data.authorUid} size={36} view="head" />}
@@ -28295,7 +28295,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
           {visibleReviews.map(review => (
             <div key={review.id} className="glass-card p-5 rounded-[2rem] space-y-2">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full overflow-hidden border border-brand-navy/5 shrink-0 bg-teal-50 flex items-center justify-center">
+                <div className="w-9 h-9 rounded-full overflow-hidden border border-brand-navy/5 shrink-0 bg-blue-50 flex items-center justify-center">
                   <PixelAvatar uid={review.authorUid || review.id} size={36} view="head" />
                 </div>
                 <div className="flex-1 min-w-0">
