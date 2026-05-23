@@ -6171,47 +6171,53 @@ function AnnouncementsAdminPanel({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="p-5 space-y-5">
-          {/* Create form */}
-          <div className="bg-white rounded-3xl border border-black/5 shadow-sm p-5 space-y-4">
-            <p className="font-bold text-brand-navy text-sm">New Announcement</p>
-            <input
-              className="w-full border border-black/10 rounded-2xl px-4 py-3 text-sm outline-none focus:border-brand-navy/40 bg-brand-bg"
-              placeholder="Title"
-              value={form.title}
-              onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-            />
-            <textarea
-              className="w-full border border-black/10 rounded-2xl px-4 py-3 text-sm outline-none focus:border-brand-navy/40 bg-brand-bg resize-none"
-              placeholder="Body text"
-              rows={3}
-              value={form.body}
-              onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
-            />
-            {/* Image picker */}
-            <div
-              className="border-2 border-dashed border-brand-navy/15 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 cursor-pointer active:bg-brand-navy/3 transition-colors"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              {imagePreview ? (
-                <img src={imagePreview} alt="Preview" className="w-full h-40 object-cover rounded-xl" />
-              ) : (
-                <>
-                  <ImageIcon size={22} className="text-brand-navy/30" />
-                  <p className="text-xs text-brand-navy/40 font-medium">Tap to add image (optional)</p>
-                </>
-              )}
+          {/* Create form — only shown when no announcement exists */}
+          {announcements.length === 0 ? (
+            <div className="bg-white rounded-3xl border border-black/5 shadow-sm p-5 space-y-4">
+              <p className="font-bold text-brand-navy text-sm">New Announcement</p>
+              <input
+                className="w-full border border-black/10 rounded-2xl px-4 py-3 text-sm outline-none focus:border-brand-navy/40 bg-brand-bg"
+                placeholder="Title"
+                value={form.title}
+                onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+              />
+              <textarea
+                className="w-full border border-black/10 rounded-2xl px-4 py-3 text-sm outline-none focus:border-brand-navy/40 bg-brand-bg resize-none"
+                placeholder="Body text"
+                rows={3}
+                value={form.body}
+                onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
+              />
+              {/* Image picker */}
+              <div
+                className="border-2 border-dashed border-brand-navy/15 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 cursor-pointer active:bg-brand-navy/5 transition-colors"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {imagePreview ? (
+                  <img src={imagePreview} alt="Preview" className="w-full h-40 object-cover rounded-xl" />
+                ) : (
+                  <>
+                    <ImageIcon size={22} className="text-brand-navy/30" />
+                    <p className="text-xs text-brand-navy/40 font-medium">Tap to add image (optional)</p>
+                  </>
+                )}
+              </div>
+              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+              <button
+                onClick={handleCreate}
+                disabled={saving || !form.title.trim() || !form.body.trim()}
+                className="w-full py-3.5 rounded-2xl bg-brand-navy text-white font-black text-sm disabled:opacity-40 active:scale-[0.98] transition-all"
+              >
+                {saving ? 'Saving…' : 'Create Announcement'}
+              </button>
             </div>
-            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-            <button
-              onClick={handleCreate}
-              disabled={saving || !form.title.trim() || !form.body.trim()}
-              className="w-full py-3.5 rounded-2xl bg-brand-navy text-white font-black text-sm disabled:opacity-40 active:scale-[0.98] transition-all"
-            >
-              {saving ? 'Saving…' : 'Create Announcement'}
-            </button>
-          </div>
+          ) : (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
+              <p className="text-xs text-amber-700 font-medium">Only one announcement can be active at a time. Delete the existing one to create a new one.</p>
+            </div>
+          )}
 
-          {/* Existing announcements */}
+          {/* Existing announcement */}
           {announcements.length > 0 && (
             <div className="space-y-3">
               {announcements.map(ann => (
@@ -11155,7 +11161,7 @@ const WELCOME_SLIDES: Array<{ title: string; body: React.ReactNode }> = [
   },
   {
     title: 'Collect Stamps',
-    body: <>'Tap <b className="font-bold text-blue-600">Scan</b> on your card and hold your phone near the store\'s <b className="font-bold text-blue-600">NFC tag</b> — or scan their <b className="font-bold text-blue-600">QR code</b>. Fill your card to unlock <b className="font-bold text-blue-600">rewards</b>.</>,
+    body: <>Tap <b className="font-bold text-blue-600">Scan</b> on your card and hold your phone near the store's <b className="font-bold text-blue-600">NFC tag</b> — or scan their <b className="font-bold text-blue-600">QR code</b>. Fill your card to unlock <b className="font-bold text-blue-600">rewards</b>.</>,
   },
   {
     title: 'Earn Points',
@@ -11163,7 +11169,7 @@ const WELCOME_SLIDES: Array<{ title: string; body: React.ReactNode }> = [
   },
   {
     title: 'Win Challenges',
-    body: <>Join live <b className="font-bold text-blue-600">challenges</b> from businesses near you. Collect stamps and you\'ll be in to win <b className="font-bold text-blue-600">prizes</b>. Check the <b className="font-bold text-blue-600">For You</b> feed so you never miss one.</>,
+    body: <>Join live <b className="font-bold text-blue-600">challenges</b> from businesses near you. Collect stamps and you'll be in to win <b className="font-bold text-blue-600">prizes</b>. Check the <b className="font-bold text-blue-600">For You</b> feed so you never miss one.</>,
   },
 ];
 
@@ -11196,12 +11202,12 @@ function WelcomeSlideVisual({ step }: { step: number }) {
     return (
       <div className="flex flex-col items-center gap-1 py-2">
         <div className="flex items-baseline leading-none">
-          <span className="font-display text-5xl font-black text-brand-navy tracking-tight">lin</span>
-          <span className="font-display text-5xl font-black text-blue-500 tracking-tight">q</span>
+          <span className="font-display text-5xl font-black text-black tracking-tight">lin</span>
+          <span className="font-display text-5xl font-black text-blue-600 tracking-tight">q</span>
         </div>
         <div className="flex gap-1.5 mt-1">
-          <div className="w-2 h-2 rounded-full bg-brand-navy" />
-          <div className="w-2 h-2 rounded-full bg-blue-500" />
+          <div className="w-2 h-2 rounded-full bg-black" />
+          <div className="w-2 h-2 rounded-full bg-blue-600" />
         </div>
       </div>
     );
@@ -11228,7 +11234,7 @@ function WelcomeSlideVisual({ step }: { step: number }) {
                   className="absolute inset-0 bg-brand-navy rounded-full"
                   initial={{ scale: 0 }}
                   animate={{ scale: stampFilling ? 1 : 0 }}
-                  transition={{ type: 'spring', stiffness: 260, damping: 22, delay: 0.05 }}
+                  transition={{ type: 'spring', stiffness: 80, damping: 18, delay: 0.05 }}
                 />
               )}
               {active && <Check size={18} className="text-white relative z-10" strokeWidth={3} />}
