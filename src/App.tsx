@@ -480,6 +480,7 @@ interface UserProfile {
   roleConfirmed?: boolean;
   onboardingComplete?: boolean;
   introComplete?: boolean;
+  vendorIntroComplete?: boolean;
   gender?: string;
   birthday?: string;
   location?: { lat: number; lng: number; city?: string };
@@ -559,6 +560,7 @@ interface StoreProfile {
   subscriptionId?: string;
   subscriptionEnd?: { toMillis: () => number; seconds: number } | null;
   subCardEnabled?: boolean;
+  nfcOrdered?: boolean;
   pointsEarnMode?: 'spend' | 'visit' | 'both';
   pointsPerDollar?: number;
   pointsPerVisit?: number;
@@ -7133,6 +7135,15 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
     }
   };
 
+  const toggleVendorIntro = async (u: UserProfile) => {
+    setTogglingIntroUid(u.uid);
+    try {
+      await updateDoc(doc(db, 'users', u.uid), { vendorIntroComplete: !u.vendorIntroComplete });
+    } finally {
+      setTogglingIntroUid(null);
+    }
+  };
+
   const roleColor: Record<string, string> = {
     admin: 'bg-brand-gold/20 text-brand-gold',
     vendor: 'bg-emerald-100 text-emerald-600',
@@ -7212,8 +7223,25 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
                   )}
                 >
                   <CheckCircle2 size={10} />
-                  {u.introComplete ? 'Intro' : 'Intro'}
+                  Intro
                 </button>
+                {u.role === 'vendor' && (
+                  <button
+                    onClick={() => toggleVendorIntro(u)}
+                    disabled={togglingIntroUid === u.uid}
+                    title={u.vendorIntroComplete ? 'Reset vendor intro' : 'Mark vendor intro done'}
+                    className={cn(
+                      'px-2 py-1 rounded-lg text-[10px] font-bold transition-all shrink-0 flex items-center gap-1',
+                      u.vendorIntroComplete
+                        ? 'bg-blue-100 text-blue-600'
+                        : 'bg-brand-navy/8 text-brand-navy/40 hover:bg-blue-100 hover:text-blue-600',
+                      togglingIntroUid === u.uid && 'opacity-50'
+                    )}
+                  >
+                    <Store size={10} />
+                    V.Intro
+                  </button>
+                )}
                 <button
                   onClick={() => toggleAdmin(u)}
                   disabled={togglingUid === u.uid}
@@ -11110,6 +11138,302 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
   }
 }
 
+// --- NFC Order Modal ---
+
+function NFCOrderModal({ onClose, onOrder }: { onClose: () => void; onOrder: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[200] flex items-end justify-center bg-black/60 backdrop-blur-sm px-4 pb-8"
+    >
+      <motion.div
+        initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
+        transition={{ type: 'spring', stiffness: 380, damping: 34 }}
+        className="w-full max-w-md bg-white rounded-[2.5rem] overflow-hidden shadow-2xl"
+      >
+        <div className="px-7 pt-8 pb-7 space-y-5">
+          <div className="w-16 h-16 rounded-[1.5rem] bg-blue-50 flex items-center justify-center mx-auto">
+            <Wifi size={32} className="text-blue-600" />
+          </div>
+          <div className="text-center space-y-2">
+            <h2 className="font-display text-2xl font-bold text-brand-navy">Order NFC Tags</h2>
+            <p className="text-sm text-brand-navy/65 leading-relaxed">Let customers collect stamps with a single tap. We'll ship you a pre-programmed NFC sticker ready to stick anywhere in your store.</p>
+          </div>
+          <div className="bg-brand-bg rounded-2xl p-4 space-y-2.5">
+            {[
+              'Pre-programmed for your store',
+              'Customers tap to stamp — no app needed',
+              'Works on any NFC-enabled phone',
+              'Weatherproof sticker, easy to mount',
+            ].map(f => (
+              <div key={f} className="flex items-center gap-2.5">
+                <CheckCircle2 size={15} className="text-emerald-500 shrink-0" />
+                <p className="text-sm text-brand-navy/80">{f}</p>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center justify-between px-1">
+            <p className="text-brand-navy/50 text-sm">One-time cost</p>
+            <p className="font-display text-2xl font-black text-brand-navy">$50</p>
+          </div>
+          <button
+            onClick={onOrder}
+            className="w-full py-4 rounded-2xl bg-brand-navy text-white font-black text-sm active:scale-[0.97] transition-transform"
+          >
+            Order Now — $50
+          </button>
+          <button onClick={onClose} className="w-full py-2 text-xs text-brand-navy/35 font-medium">
+            Maybe later
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// --- Vendor Welcome Slides ---
+
+const VENDOR_WELCOME_SLIDES: Array<{ title: string; body: React.ReactNode }> = [
+  {
+    title: 'Welcome to Linq',
+    body: 'Your free loyalty platform. Get set up in minutes and start building a customer base that keeps coming back.',
+  },
+  {
+    title: 'FREE Loyalty Cards for Life',
+    body: <>Choose from <b className="font-bold text-blue-600">stamp cards</b>, <b className="font-bold text-blue-600">visit points</b>, or <b className="font-bold text-blue-600">spend points</b>. All card types are free, forever.</>,
+  },
+  {
+    title: 'Track Every Interaction',
+    body: <>See <b className="font-bold text-blue-600">stamps collected</b>, <b className="font-bold text-blue-600">visits made</b>, and <b className="font-bold text-blue-600">points earned</b> — all in real time on your dashboard.</>,
+  },
+  {
+    title: 'Make It Yours',
+    body: <>Set your <b className="font-bold text-blue-600">stamp goal</b>, define your <b className="font-bold text-blue-600">reward</b>, pick a theme colour, and upload your logo. Your brand, your rules.</>,
+  },
+  {
+    title: 'Upgrade for Full Analytics',
+    body: <>Unlock <b className="font-bold text-blue-600">customer insights</b>, growth charts, <b className="font-bold text-blue-600">broadcast messages</b>, and more with a Linq subscription.</>,
+  },
+];
+
+function VendorWelcomeSlideVisual({ step }: { step: number }) {
+  const [visitsCount, setVisitsCount] = useState(0);
+  const [themeIdx, setThemeIdx] = useState(0);
+
+  const THEMES = ['#0F172A', '#0D9488', '#7C3AED', '#DC2626', '#D97706'];
+
+  useEffect(() => {
+    if (step === 2) {
+      let frame: number;
+      const start = Date.now();
+      const duration = 1600;
+      const tick = () => {
+        const elapsed = Date.now() - start;
+        const t = Math.min(elapsed / duration, 1);
+        const eased = 1 - (1 - t) ** 3;
+        setVisitsCount(Math.round(eased * 284));
+        if (t < 1) frame = requestAnimationFrame(tick);
+      };
+      frame = requestAnimationFrame(tick);
+      return () => cancelAnimationFrame(frame);
+    }
+    if (step === 3) {
+      let i = 0;
+      const iv = setInterval(() => { i = (i + 1) % THEMES.length; setThemeIdx(i); }, 700);
+      return () => clearInterval(iv);
+    }
+  }, []);
+
+  // Slide 0 — Linq logo
+  if (step === 0) {
+    return (
+      <div className="flex flex-col items-center gap-1 py-2">
+        <div className="flex items-baseline leading-none">
+          <span className="font-display text-5xl font-black text-black tracking-tight">lin</span>
+          <span className="font-display text-5xl font-black text-blue-600 tracking-tight">q</span>
+        </div>
+        <div className="flex gap-1.5 mt-1">
+          <div className="w-2 h-2 rounded-full bg-black" />
+          <div className="w-2 h-2 rounded-full bg-blue-600" />
+        </div>
+      </div>
+    );
+  }
+
+  // Slide 1 — 3 card types
+  if (step === 1) {
+    const cards = [
+      { label: 'Stamp Card', color: '#0F172A', icon: <Stamp size={14} className="text-white" />, sub: '10 stamps → free coffee' },
+      { label: 'Visit Points', color: '#0D9488', icon: <MapPin size={14} className="text-white" />, sub: '1 visit = 50 pts' },
+      { label: 'Spend Points', color: '#7C3AED', icon: <DollarSign size={14} className="text-white" />, sub: '$1 = 10 pts' },
+    ];
+    return (
+      <div className="flex flex-col gap-2 w-full">
+        {cards.map((c, i) => (
+          <motion.div
+            key={c.label}
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: i * 0.18, type: 'spring', stiffness: 200, damping: 22 }}
+            className="flex items-center gap-3 rounded-2xl px-4 py-3 text-white"
+            style={{ background: c.color }}
+          >
+            <div className="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+              {c.icon}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-black leading-none">{c.label}</p>
+              <p className="text-[10px] text-white/60 mt-0.5">{c.sub}</p>
+            </div>
+            <span className="text-[10px] font-bold text-white/40 bg-white/10 px-2 py-0.5 rounded-full">FREE</span>
+          </motion.div>
+        ))}
+      </div>
+    );
+  }
+
+  // Slide 2 — visits counter + stamps
+  if (step === 2) {
+    return (
+      <div className="space-y-3 w-full">
+        <div className="flex gap-3">
+          <div className="flex-1 bg-brand-bg rounded-2xl p-3 text-center border border-brand-navy/6">
+            <p className="font-display text-3xl font-black text-blue-600">{visitsCount}</p>
+            <p className="text-[10px] text-brand-navy/40 font-semibold">visits</p>
+          </div>
+          <div className="flex-1 bg-brand-bg rounded-2xl p-3 text-center border border-brand-navy/6">
+            <p className="font-display text-3xl font-black text-brand-navy">{Math.round(visitsCount * 4.7)}</p>
+            <p className="text-[10px] text-brand-navy/40 font-semibold">stamps</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 justify-center">
+          {[0,1,2,3,4].map(i => (
+            <div
+              key={i}
+              className={cn('w-9 h-9 rounded-full border-2 flex items-center justify-center',
+                i < 3 ? 'border-brand-navy bg-brand-navy' : 'border-brand-navy/20')}
+            >
+              {i < 3 && <Check size={14} className="text-white" strokeWidth={3} />}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Slide 3 — card customisation
+  if (step === 3) {
+    const color = THEMES[themeIdx];
+    return (
+      <div className="w-full space-y-3">
+        <motion.div
+          animate={{ backgroundColor: color }}
+          transition={{ duration: 0.4 }}
+          className="rounded-2xl p-4 flex items-center gap-3"
+        >
+          <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+            <Store size={18} className="text-white" />
+          </div>
+          <div>
+            <p className="text-white font-black text-sm leading-none">Your Store</p>
+            <p className="text-white/60 text-[10px] mt-0.5">Loyalty Card</p>
+          </div>
+        </motion.div>
+        <div className="flex gap-2 justify-center">
+          {THEMES.map((t, i) => (
+            <div
+              key={t}
+              className={cn('w-7 h-7 rounded-full transition-all duration-300', themeIdx === i ? 'scale-125 ring-2 ring-offset-1 ring-brand-navy/30' : '')}
+              style={{ background: t }}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Slide 4 — upgrade / blurred stats
+  return (
+    <div className="w-full grid grid-cols-2 gap-2 relative">
+      {[
+        { label: 'Members', value: '247', color: 'text-blue-500' },
+        { label: 'Stamps', value: '1.4k', color: 'text-brand-gold' },
+        { label: 'Return Rate', value: '68%', color: 'text-emerald-500' },
+        { label: 'Revenue', value: '$3.2k', color: 'text-purple-500' },
+      ].map(({ label, value, color }) => (
+        <div key={label} className="bg-brand-bg rounded-2xl p-3 flex flex-col items-center border border-brand-navy/6">
+          <p className={cn('font-display text-xl font-black blur-sm', color)}>{value}</p>
+          <p className="text-[9px] text-brand-navy/40 font-bold uppercase tracking-wide mt-0.5">{label}</p>
+        </div>
+      ))}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="bg-white/90 rounded-2xl px-4 py-2.5 flex items-center gap-2 shadow-sm border border-brand-navy/8">
+          <Lock size={14} className="text-brand-navy/60" />
+          <p className="text-xs font-bold text-brand-navy/70">Upgrade to unlock</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function VendorWelcomeModal({ step, onNext, onDone }: { step: number; onNext: () => void; onDone: () => void }) {
+  const slide = VENDOR_WELCOME_SLIDES[step];
+  const isLast = step === VENDOR_WELCOME_SLIDES.length - 1;
+  if (!slide) return null;
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[200] flex items-end justify-center bg-black/60 backdrop-blur-sm px-4 pb-8"
+    >
+      <motion.div
+        initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
+        transition={{ type: 'spring', stiffness: 380, damping: 34 }}
+        className="w-full max-w-md bg-white rounded-[2.5rem] overflow-hidden shadow-2xl"
+      >
+        <div className="flex gap-1 px-6 pt-5">
+          {VENDOR_WELCOME_SLIDES.map((_, i) => (
+            <div key={i} className="flex-1 h-1 rounded-full overflow-hidden bg-brand-navy/10">
+              <motion.div
+                className="h-full rounded-full bg-brand-navy"
+                initial={{ width: i < step ? '100%' : '0%' }}
+                animate={{ width: i <= step ? '100%' : '0%' }}
+                transition={{ duration: 0.35 }}
+              />
+            </div>
+          ))}
+        </div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={step}
+            initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }}
+            transition={{ duration: 0.28 }}
+            className="px-8 pt-7 pb-6 text-center space-y-4"
+          >
+            <VendorWelcomeSlideVisual step={step} />
+            <div className="space-y-2">
+              <h2 className="font-display text-2xl font-bold text-brand-navy">{slide.title}</h2>
+              <p className="text-sm text-brand-navy/70 leading-relaxed">{slide.body}</p>
+            </div>
+          </motion.div>
+        </AnimatePresence>
+        <div className="px-8 pb-8 space-y-3">
+          <button
+            onClick={isLast ? onDone : onNext}
+            className="w-full py-4 rounded-2xl bg-brand-navy text-white font-black text-sm active:scale-[0.97] transition-transform"
+          >
+            {isLast ? "Let's go!" : 'Next'}
+          </button>
+          {!isLast && (
+            <button onClick={onDone} className="w-full py-2 text-xs text-brand-navy/35 font-medium">
+              Skip
+            </button>
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 // --- Announcement Modal ---
 
 function AnnouncementModal({ announcement, onDismiss }: { announcement: Announcement; onDismiss: () => void }) {
@@ -14176,6 +14500,9 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   const [chartTransactions, setChartTransactions] = useState<any[]>([]);
   const [isLoadingCheckout, setIsLoadingCheckout] = useState(false);
   const [tickNow, setTickNow] = useState(Date.now());
+  const [showVendorWelcome, setShowVendorWelcome] = useState(false);
+  const [vendorWelcomeStep, setVendorWelcomeStep] = useState(0);
+  const [showNFCOrder, setShowNFCOrder] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [togglingCard, setTogglingCard] = useState(false);
 
@@ -14244,6 +14571,18 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
 
 
   const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/aFa5kF5JZh193yT6OEd7q00';
+  const NFC_ORDER_STRIPE_LINK = 'https://buy.stripe.com/PLACEHOLDER_NFC_LINK';
+
+  // Show vendor onboarding once per vendor
+  useEffect(() => {
+    if (!profile) return;
+    if (!profile.vendorIntroComplete) {
+      setVendorWelcomeStep(0);
+      setShowVendorWelcome(true);
+    } else {
+      setShowVendorWelcome(false);
+    }
+  }, [profile?.uid, profile?.vendorIntroComplete]);
 
   const handleSubscribe = () => {
     if (!store?.id) return;
@@ -15111,6 +15450,35 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
               <CheckCircle2 size={18} className="text-green-500 shrink-0" />
               <p className="text-green-700 text-sm font-bold flex-1">Subscription active</p>
               <button onClick={handleManageBilling} disabled={isLoadingCheckout} className="text-green-600 text-xs font-bold underline underline-offset-2 disabled:opacity-50">Manage</button>
+            </div>
+          )}
+
+          {/* NFC order card — show when store exists and NFC not yet ordered */}
+          {store && !store.nfcOrdered && (
+            <button
+              onClick={() => setShowNFCOrder(true)}
+              className="w-full rounded-3xl border border-brand-navy/8 bg-white p-4 flex items-center gap-3 text-left active:bg-brand-navy/3 transition-colors shadow-sm"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0">
+                <Wifi size={22} className="text-blue-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-brand-navy text-sm">Add NFC to your store</p>
+                <p className="text-xs text-brand-navy/50 mt-0.5">Let customers tap to collect stamps — $50 one-time</p>
+              </div>
+              <ChevronRight size={16} className="text-brand-navy/30 shrink-0" />
+            </button>
+          )}
+          {store?.nfcOrdered && (
+            <div className="w-full rounded-3xl border border-blue-200 bg-blue-50 p-4 flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center shrink-0">
+                <Wifi size={22} className="text-blue-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-blue-800 text-sm">NFC tag ordered</p>
+                <p className="text-xs text-blue-600/70 mt-0.5">We'll ship your pre-programmed tag shortly</p>
+              </div>
+              <CheckCircle2 size={18} className="text-blue-500 shrink-0" />
             </div>
           )}
 
@@ -16454,6 +16822,37 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
       <AnimatePresence>
         {showQRScanner && store && (
           <VendorQRDisplay store={store} onClose={() => setShowQRScanner(false)} />
+        )}
+      </AnimatePresence>
+
+      {/* Vendor onboarding welcome */}
+      <AnimatePresence>
+        {showVendorWelcome && (
+          <VendorWelcomeModal
+            step={vendorWelcomeStep}
+            onNext={() => {
+              if ('vibrate' in navigator) navigator.vibrate([30]);
+              confetti({ particleCount: 50, spread: 65, startVelocity: 25, gravity: 0.9, scalar: 0.85, origin: { y: 0.7 }, zIndex: 9999, colors: ['#FFD700','#0F172A','#60A5FA','#4ADE80'] });
+              setVendorWelcomeStep(s => s + 1);
+            }}
+            onDone={() => {
+              updateDoc(doc(db, 'users', user.uid), { vendorIntroComplete: true }).catch(console.error);
+              setShowVendorWelcome(false);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* NFC order modal */}
+      <AnimatePresence>
+        {showNFCOrder && (
+          <NFCOrderModal
+            onClose={() => setShowNFCOrder(false)}
+            onOrder={() => {
+              if (!store?.id) return;
+              window.location.href = `${NFC_ORDER_STRIPE_LINK}?client_reference_id=${store.id}`;
+            }}
+          />
         )}
       </AnimatePresence>
     </motion.div>
