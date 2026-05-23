@@ -201,31 +201,43 @@
   animation: holo-border-anim 3s linear infinite;
 }
 
+/* Card tilt — rotateY so the angle changes which face catches the light */
+@keyframes holo-card-tilt {
+  0%   { transform: perspective(500px) rotateY(-5deg); }
+  100% { transform: perspective(500px) rotateY(5deg); }
+}
+
+.holo-card-tilt {
+  animation: holo-card-tilt 2.8s ease-in-out infinite alternate;
+  transform-origin: center center;
+}
+
+/* Holographic shine sweeps back-and-forth in sync with the tilt */
 @keyframes holo-card-shine {
-  0%   { transform: translateX(-160%) skewX(-15deg); opacity: 0; }
-  8%   { opacity: 1; }
-  38%  { transform: translateX(260%) skewX(-15deg); opacity: 0.85; }
-  39%  { opacity: 0; }
-  100% { transform: translateX(260%) skewX(-15deg); opacity: 0; }
+  0%   { transform: translateX(-100%) skewX(-10deg); }
+  100% { transform: translateX(110%) skewX(-10deg); }
 }
 
 .holo-card-shine {
   position: absolute;
   top: -15%;
   left: 0;
-  width: 55%;
+  width: 60%;
   height: 130%;
   background: linear-gradient(
     105deg,
     transparent 0%,
-    rgba(255, 0, 100, 0.45) 18%,
-    rgba(255, 200, 0, 0.45) 32%,
-    rgba(0, 255, 140, 0.45) 50%,
-    rgba(0, 140, 255, 0.45) 66%,
-    rgba(180, 0, 255, 0.45) 82%,
+    rgba(255, 255, 255, 0.65) 8%,
+    rgba(255, 30, 100, 0.55) 20%,
+    rgba(255, 200, 0, 0.55) 32%,
+    rgba(255, 255, 255, 0.70) 42%,
+    rgba(0, 255, 140, 0.55) 52%,
+    rgba(0, 140, 255, 0.55) 64%,
+    rgba(180, 0, 255, 0.55) 76%,
+    rgba(255, 255, 255, 0.65) 86%,
     transparent 100%
   );
-  animation: holo-card-shine 3.2s ease-in-out infinite;
+  animation: holo-card-shine 2.8s ease-in-out infinite alternate;
   pointer-events: none;
   z-index: 6;
 }

@@ -3310,6 +3310,7 @@ function StickerCard({ sticker, isRevealed, onReveal, onExpand, size = 'md' }: {
   return (
     <div
       onClick={handleTap}
+      className={size === 'lg' ? 'holo-card-tilt' : undefined}
       style={{ width: dims.w, height: dims.h, flexShrink: 0, cursor: (!localRevealed || onExpand) ? 'pointer' : 'default', position: 'relative' }}
     >
       {/* Border: expanded = holo outer + thick tier inner; regular = thin tier only */}
