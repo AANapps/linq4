@@ -26665,7 +26665,7 @@ function AdminBannerCarousel({ banners, cycleMs = 4500, onNavigate }: { banners:
         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10">
           {active.map((_, i) => (
             <button key={i} onClick={() => { setIdx(i); resetTimer(); }}
-              className={cn('rounded-full transition-all', i === curIdx ? 'w-4 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/40')} />
+              className={cn('rounded-full transition-all appearance-none p-0 border-0', i === curIdx ? 'w-4 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/40')} />
           ))}
         </div>
       )}
