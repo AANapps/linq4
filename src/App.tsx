@@ -26622,7 +26622,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
   const [challengeView, setChallengeView] = useState<'active' | 'completed'>('active');
   const [completedIdx, setCompletedIdx] = useState(0);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [lbPeriod, setLbPeriod] = useState<'alltime' | 'weekly'>('weekly');
+  const [lbPeriod, setLbPeriod] = useState<'alltime' | 'weekly'>('alltime');
   const [lbCategory, setLbCategory] = useState<'stamps' | 'rewards' | 'streak' | 'points'>('stamps');
   const [lbUsers, setLbUsers] = useState<UserProfile[]>([]);
   const [lbPins, setLbPins] = useState<UserProfile[]>([]);
