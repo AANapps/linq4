@@ -9631,9 +9631,13 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   // Show welcome modal once per user — driven by Firestore so it works across devices and can be reset by admin
   useEffect(() => {
     if (!profile) return;
-    if (!profile.introComplete) setShowWelcome(true);
-    else setShowWelcome(false);
-  }, [profile?.introComplete]);
+    if (!profile.introComplete) {
+      setWelcomeStep(0);
+      setShowWelcome(true);
+    } else {
+      setShowWelcome(false);
+    }
+  }, [profile?.uid, profile?.introComplete]);
 
   // Auto-process URL-based stamp (iOS NFC banner opens the app with ?stamp=ID)
   useEffect(() => {
@@ -10906,6 +10910,7 @@ const WELCOME_SLIDES = [
 function WelcomeModal({ uid, step, onNext, onDone }: { uid: string; step: number; onNext: () => void; onDone: () => void }) {
   const slide = WELCOME_SLIDES[step];
   const isLast = step === WELCOME_SLIDES.length - 1;
+  if (!slide) return null;
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -22239,8 +22244,8 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                         <p className="text-sm font-bold truncate">{c.userName || 'Member'}</p>
                       </div>
                       <div className="shrink-0 flex items-center gap-1 text-brand-navy/40">
-                        {(isVisit || isSpend) && (vendorStore?.subscriptionStatus !== 'active' && vendorStore?.subscriptionStatus !== 'trialing')
-                          ? <><Lock size={10} /><span className="text-[11px] font-bold">pts</span></>
+                        {(vendorStore?.subscriptionStatus !== 'active' && vendorStore?.subscriptionStatus !== 'trialing')
+                          ? <><Lock size={10} /><span className="text-[11px] font-bold">{metricLabel}</span></>
                           : <span className="text-[11px] font-bold text-brand-gold">{fmtK(metricVal)} <span className="text-brand-navy/40 font-normal">{metricLabel}</span></span>
                         }
                       </div>
