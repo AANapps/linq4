@@ -22086,17 +22086,6 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-bold truncate">{c.userName || 'Member'}</p>
                       </div>
-                      <div className="text-right shrink-0 flex items-center gap-1">
-                        {(vendorStore?.subscriptionStatus !== 'active' && vendorStore?.subscriptionStatus !== 'trialing') && (isVisit || isSpend) && (
-                          <Lock size={10} className="text-brand-navy/30 shrink-0" />
-                        )}
-                        <div>
-                          <p className="text-xs font-bold text-brand-gold">{fmtK(metricVal)} <span className="text-brand-navy/40 font-normal">{metricLabel}</span></p>
-                          {!isVisit && !isSpend && (c.total_completed_cycles ?? 0) > 0 && (
-                            <p className="text-[10px] text-brand-navy/40">{c.total_completed_cycles} reward{c.total_completed_cycles !== 1 ? 's' : ''}</p>
-                          )}
-                        </div>
-                      </div>
                     </div>
                   );
                 })}
@@ -25858,107 +25847,58 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
           {(visibleFeedChallenges.length > 0 || visibleFeedCompletedChallenges.length > 0 || true) && (
             <div className="flex gap-3 items-stretch">
 
-              {/* Cycling challenges card with toggle */}
-              {(visibleFeedChallenges.length > 0 || visibleFeedCompletedChallenges.length > 0) && (() => {
-                const isCompleted = challengeView === 'completed';
-                const list = isCompleted ? visibleFeedCompletedChallenges : visibleFeedChallenges;
-                const idx = isCompleted ? completedIdx : challengeIdx;
+              {/* Cycling challenges card */}
+              {visibleFeedChallenges.length > 0 && (() => {
+                const list = visibleFeedChallenges;
+                const idx = challengeIdx;
                 const current = list[idx % Math.max(list.length, 1)];
-                const cDark = isCompleted || uiColors.challengesFypTile.dark;
-                const cBg = isCompleted ? 'linear-gradient(135deg, #374151 0%, #4B5563 55%, #6B7280 100%)' : uiColors.challengesFypTile.css;
-                const cText = cDark ? 'text-white' : 'text-brand-navy';
-                const cTextMid = cDark ? 'text-white/70' : 'text-brand-navy/70';
-                const cTextDim = cDark ? 'text-white/50' : 'text-brand-navy/50';
-                const cToggleInactive = cDark ? 'bg-white/20 text-white/70' : 'bg-brand-navy/10 text-brand-navy/60';
-                const cDot = cDark ? 'bg-white' : 'bg-brand-navy';
-                const cDotDim = cDark ? 'bg-white/30' : 'bg-brand-navy/25';
-                const chTextStyle = (alpha = 1) => !isCompleted ? tileTextStyle(uiColors.challengesFypTile, alpha) : {};
                 return (
                   <div
-                    className="flex-1 relative rounded-[1.5rem] overflow-hidden cursor-pointer active:scale-[0.97] transition-transform"
-                    style={{ background: cBg, minHeight: '148px' }}
+                    className="flex-1 relative rounded-[1.5rem] overflow-hidden cursor-pointer active:scale-[0.97] transition-transform bg-brand-navy/10"
+                    style={{ minHeight: '148px' }}
                     onClick={() => onViewChallenges?.()}
                   >
-                    {/* Toggle buttons */}
-                    <div className="absolute top-2.5 left-2.5 z-20 flex gap-1.5" onClick={e => e.stopPropagation()}>
-                      <button
-                        onClick={() => setChallengeView('active')}
-                        className={cn('px-2 py-0.5 rounded-full text-[9px] font-bold transition-all', !isCompleted ? 'bg-white text-purple-700' : cToggleInactive)}
-                      >Challenges</button>
-                      <button
-                        onClick={() => setChallengeView('completed')}
-                        className={cn('px-2 py-0.5 rounded-full text-[9px] font-bold transition-all', isCompleted ? 'bg-white text-gray-700' : cToggleInactive)}
-                      >Completed</button>
-                    </div>
-
-                    {/* Challenge image background */}
+                    {/* Full-bleed image */}
                     <AnimatePresence mode="wait">
-                      {current?.imageUrl && (
-                        <motion.div
-                          key={`img-${challengeView}-${idx}`}
-                          className="absolute inset-0"
+                      {current?.imageUrl ? (
+                        <motion.img
+                          key={`img-${idx}`}
+                          src={current.imageUrl}
+                          alt=""
+                          className="absolute inset-0 w-full h-full object-cover"
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
                           exit={{ opacity: 0 }}
                           transition={{ duration: 0.4 }}
-                        >
-                          <img src={current.imageUrl} alt="" className="w-full h-full object-cover" style={{ opacity: cDark ? 0.45 : 0.25 }} />
-                        </motion.div>
+                        />
+                      ) : (
+                        <div className="absolute inset-0 bg-gradient-to-br from-purple-600 to-indigo-700" />
                       )}
                     </AnimatePresence>
 
-                    {/* Confetti particles */}
-                    {!isCompleted && [
-                      { x: 8,  y: 18, color: '#FFD700', size: 6, delay: 0,   dur: 2.2 },
-                      { x: 28, y: 72, color: '#FF6B6B', size: 4, delay: 0.4, dur: 1.8 },
-                      { x: 50, y: 35, color: '#4ADE80', size: 5, delay: 0.8, dur: 2.5 },
-                      { x: 72, y: 62, color: '#60A5FA', size: 4, delay: 0.2, dur: 2.0 },
-                      { x: 88, y: 22, color: '#F9A8D4', size: 6, delay: 0.6, dur: 1.9 },
-                      { x: 62, y: 82, color: '#FFD700', size: 3, delay: 1.0, dur: 2.3 },
-                      { x: 18, y: 55, color: '#4ADE80', size: 4, delay: 1.2, dur: 2.1 },
-                      { x: 92, y: 48, color: '#FF6B6B', size: 5, delay: 0.5, dur: 1.7 },
-                      { x: 40, y: 88, color: '#60A5FA', size: 3, delay: 0.9, dur: 2.4 },
-                      { x: 78, y: 10, color: '#F9A8D4', size: 4, delay: 0.3, dur: 2.0 },
-                    ].map((p, i) => (
-                      <motion.div
-                        key={i}
-                        className="absolute rounded-sm pointer-events-none"
-                        style={{ left: `${p.x}%`, top: `${p.y}%`, width: p.size, height: p.size, background: p.color }}
-                        animate={{ y: [-4, -14, -4], rotate: [0, 180, 360], opacity: [0.5, 1, 0.5] }}
-                        transition={{ duration: p.dur, repeat: Infinity, delay: p.delay, ease: 'easeInOut' }}
-                      />
-                    ))}
+                    {/* Bottom shadow fading up — only over text area */}
+                    <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />
 
-                    {/* Content */}
-                    <div className="relative z-10 p-4 h-full flex flex-col justify-between" style={{ minHeight: '148px', paddingTop: '2.25rem' }}>
-                      {list.length === 0 ? (
-                        <p className={`${cTextDim} text-xs font-bold text-center mt-6`} style={chTextStyle(0.5)}>No {isCompleted ? 'completed' : 'active'} challenges</p>
-                      ) : (
-                        <>
-                          <div>
-                            <p className={`${cTextMid} text-[9px] font-black uppercase tracking-widest mb-1.5`} style={chTextStyle(0.7)}>{isCompleted ? 'Ended' : 'Win'}</p>
-                            <AnimatePresence mode="wait">
-                              <motion.div
-                                key={`${challengeView}-${idx}`}
-                                initial={{ opacity: 0, y: 8 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -8 }}
-                                transition={{ duration: 0.35 }}
-                              >
-                                <p className={`${cText} font-black text-base leading-snug line-clamp-2`} style={chTextStyle()}>{current?.reward}</p>
-                                <p className={`${cTextDim} text-[10px] mt-1 line-clamp-1`} style={chTextStyle(0.5)}>{current?.title}</p>
-                              </motion.div>
-                            </AnimatePresence>
-                          </div>
-                          <div className="flex items-center justify-between mt-2">
-                            <p className={`${cTextDim} text-[9px] font-bold`} style={chTextStyle(0.5)}>{list.length} {isCompleted ? 'ended' : 'prizes'}</p>
-                            <div className="flex gap-1 items-center">
-                              {list.slice(0, Math.min(list.length, 5)).map((_, i) => (
-                                <div key={i} className={cn('rounded-full transition-all duration-300', i === (idx % list.length) ? `w-3 h-1.5 ${cDot}` : `w-1.5 h-1.5 ${cDotDim}`)} />
-                              ))}
-                            </div>
-                          </div>
-                        </>
+                    {/* Text pinned to bottom */}
+                    <div className="absolute inset-x-0 bottom-0 z-10 px-3.5 pb-3">
+                      <AnimatePresence mode="wait">
+                        <motion.div
+                          key={idx}
+                          initial={{ opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -6 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <p className="text-white font-black text-sm leading-snug line-clamp-1">{current?.title}</p>
+                          <p className="text-white/70 text-[10px] font-semibold mt-0.5 line-clamp-1">{current?.reward}</p>
+                        </motion.div>
+                      </AnimatePresence>
+                      {list.length > 1 && (
+                        <div className="flex gap-1 items-center mt-2">
+                          {list.slice(0, Math.min(list.length, 5)).map((_, i) => (
+                            <div key={i} className={cn('rounded-full transition-all duration-300', i === (idx % list.length) ? 'w-3 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/35')} />
+                          ))}
+                        </div>
                       )}
                     </div>
                   </div>
