@@ -3329,7 +3329,7 @@ function StickerCard({ sticker, isRevealed, onReveal, onExpand, size = 'md' }: {
             animate={{ scale: 1, opacity: 1, rotate: 0 }}
             transition={wasJustRevealed ? { type: 'spring', damping: 13, stiffness: 200 } : { duration: 0 }}
             className="holo-border"
-            style={{ position: 'absolute', inset: 0, padding: 3, borderRadius: 7, boxShadow: `0 4px 24px ${cfg.color}55` }}
+            style={{ position: 'absolute', inset: 0, padding: 5, borderRadius: 9, boxShadow: `0 4px 24px ${cfg.color}55` }}
           >
             {cardInner}
           </motion.div>
@@ -3532,7 +3532,7 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
                         return (
                           <div key={sl.key} className="relative flex-1" style={{ maxWidth: 72, aspectRatio: '3/4', minWidth: 0 }}>
                               {filled ? (
-                              <div className="holo-border" style={{ width: '100%', height: '100%', borderRadius: 7, padding: 3, boxShadow: `0 2px 12px ${cfg.color}55` }}>
+                              <div className="holo-border" style={{ width: '100%', height: '100%', borderRadius: 9, padding: 5, boxShadow: `0 2px 12px ${cfg.color}55` }}>
                                 <div style={{ width: '100%', height: '100%', borderRadius: 4, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: '#fff', position: 'relative' }}>
                                   <div style={{ flex: 1, overflow: 'hidden', position: 'relative', borderBottom: `2px solid ${cfg.border}` }}>
                                     {sl.imageUrl
