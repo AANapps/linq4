@@ -52,13 +52,22 @@ import {
   runTransaction,
   writeBatch
 } from 'firebase/firestore';
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { auth, db } from './firebase';
 import { scanNFCTag } from './nfc';
 import { Capacitor } from '@capacitor/core';
 const functions = getFunctions();
 const storage = getStorage();
+
+function deleteStorageImage(url?: string | null) {
+  if (!url || !url.includes('firebasestorage.googleapis.com')) return Promise.resolve();
+  try {
+    const path = decodeURIComponent(url.split('/o/')[1].split('?')[0]);
+    return deleteObject(storageRef(storage, path)).catch(() => {});
+  } catch { return Promise.resolve(); }
+}
+
 import { cn } from './lib/utils';
 import {
   Sparkles,
@@ -6150,6 +6159,8 @@ function AnnouncementsAdminPanel({ onClose }: { onClose: () => void }) {
 
   const deleteAnnouncement = async (id: string) => {
     setDeletingId(id);
+    const ann = announcements.find(a => a.id === id);
+    await deleteStorageImage(ann?.imageUrl);
     await deleteDoc(doc(db, 'announcements', id)).catch(() => {});
     setDeletingId(null);
   };
@@ -7504,6 +7515,8 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
   const handleDelete = async (postId: string) => {
     setDeleting(true);
     try {
+      const postDoc = [...posts, ...flaggedPosts].find(p => p.id === postId);
+      await deleteStorageImage(postDoc?.postImageUrl);
       await deleteDoc(doc(db, 'global_posts', postId));
       setFlaggedPosts(prev => prev.filter(p => p.id !== postId));
       setConfirmDeleteId(null);
@@ -26410,8 +26423,8 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
   const [challengeView, setChallengeView] = useState<'active' | 'completed'>('active');
   const [completedIdx, setCompletedIdx] = useState(0);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [lbPeriod, setLbPeriod] = useState<'alltime' | 'weekly'>('alltime');
-  const [lbCategory, setLbCategory] = useState<'stamps' | 'rewards' | 'challenges' | 'streak' | 'monopoly'>('stamps');
+  const [lbPeriod, setLbPeriod] = useState<'alltime' | 'weekly'>('weekly');
+  const [lbCategory, setLbCategory] = useState<'stamps' | 'rewards' | 'streak'>('stamps');
   const [lbUsers, setLbUsers] = useState<UserProfile[]>([]);
   const [challengeCounts, setChallengeCounts] = useState<Map<string, number>>(new Map());
   const [lbLoading, setLbLoading] = useState(false);
@@ -26768,7 +26781,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
           <div className="divide-y-[3px] divide-gray-200 bg-white -mx-6 border-t border-gray-100">
             {followingFeed.map((item) =>
               !item._type
-                ? <FeedPostCard key={`gp-${item.id}`} post={item as GlobalPost} currentUser={currentUser} currentProfile={currentProfile} onViewUser={onViewUser} onViewStore={onViewStore} onLike={handleLike} onVote={handleVote} onDelete={async (p) => { await deleteDoc(doc(db, 'global_posts', p.id)); }} />
+                ? <FeedPostCard key={`gp-${item.id}`} post={item as GlobalPost} currentUser={currentUser} currentProfile={currentProfile} onViewUser={onViewUser} onViewStore={onViewStore} onLike={handleLike} onVote={handleVote} onDelete={async (p) => { await deleteStorageImage(p.postImageUrl); await deleteDoc(doc(db, 'global_posts', p.id)); }} />
                 : <React.Fragment key={`vp-${item.id}`}><FeedVendorPostCard item={item} /></React.Fragment>
             )}
             {followingFeed.length === 0 && (
@@ -26962,13 +26975,11 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                 switch (lbCategory) {
                   case 'stamps': return u.totalStamps || 0;
                   case 'rewards': return u.totalRedeemed || 0;
-                  case 'challenges': return challengeCounts.get(u.uid) || 0;
                   case 'streak': return u.streak || 0;
-                  case 'monopoly': return u.total_cards_held || 0;
                 }
               };
-              const lbCategoryLabel = { stamps: 'Stamps', rewards: 'Rewards', challenges: 'Challenges', streak: 'Streak', monopoly: 'Monopoly' }[lbCategory];
-              const lbCategoryUnit = { stamps: 'stamps', rewards: 'redeemed', challenges: 'entries', streak: 'day streak', monopoly: 'stores' }[lbCategory];
+              const lbCategoryLabel = { stamps: 'Stamps', rewards: 'Rewards', streak: 'Streak' }[lbCategory];
+              const lbCategoryUnit = { stamps: 'stamps', rewards: 'redeemed', streak: 'day streak' }[lbCategory];
               const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
               const periodUsers = lbPeriod === 'weekly'
                 ? lbUsers.filter(u => u.lastStreakDate && u.lastStreakDate >= sevenDaysAgo)
@@ -27024,9 +27035,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                       {([
                         { key: 'stamps', label: 'Stamps', icon: '🏷️' },
                         { key: 'rewards', label: 'Rewards', icon: '🎁' },
-                        { key: 'challenges', label: 'Challenges', icon: '🏆' },
                         { key: 'streak', label: 'Streak', icon: '🔥' },
-                        { key: 'monopoly', label: 'Monopoly', icon: '🎯' },
                       ] as const).map(({ key, label, icon }) => (
                         <button key={key} onClick={() => setLbCategory(key)}
                           className={cn('shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold transition-all', lbCategory === key ? 'gradient-red text-white shadow' : 'bg-white border border-brand-navy/10 text-brand-navy/80')}>
@@ -27115,7 +27124,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
             <div className="divide-y-[3px] divide-gray-200 bg-white -mx-6 border-t border-gray-100">
               {displayFeed.map((item) =>
                 !item._type
-                  ? <FeedPostCard key={`gp-${item.id}`} post={item as GlobalPost} currentUser={currentUser} currentProfile={currentProfile} onViewUser={onViewUser} onViewStore={onViewStore} onLike={handleLike} onVote={handleVote} onDelete={async (p) => { await deleteDoc(doc(db, 'global_posts', p.id)); }} showPinnedTag />
+                  ? <FeedPostCard key={`gp-${item.id}`} post={item as GlobalPost} currentUser={currentUser} currentProfile={currentProfile} onViewUser={onViewUser} onViewStore={onViewStore} onLike={handleLike} onVote={handleVote} onDelete={async (p) => { await deleteStorageImage(p.postImageUrl); await deleteDoc(doc(db, 'global_posts', p.id)); }} showPinnedTag />
                   : <React.Fragment key={`vp-${item.id}`}><FeedVendorPostCard item={item} /></React.Fragment>
               )}
               {displayFeed.length === 0 && (
