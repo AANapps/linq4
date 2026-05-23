@@ -13,8 +13,23 @@
         --color-brand-rose: #CCFBF1;
       }
     </style>
-    <script type="module" crossorigin src="/assets/index-CAYZMG8x.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-D-3Bgttl.css">
+    <script>
+      try {
+        var v = JSON.parse(localStorage.getItem('linq_brand_vars') || 'null');
+        if (v) {
+          var r = document.documentElement;
+          r.style.setProperty('--brand-g1', v.g1);
+          r.style.setProperty('--brand-g2', v.g2);
+          r.style.setProperty('--brand-g3', v.g3);
+          r.style.setProperty('--brand-g4', v.g4);
+          r.style.setProperty('--color-brand-gold', v.gold);
+          r.style.setProperty('--color-brand-crimson', v.crimson);
+          r.style.setProperty('--color-brand-rose', v.rose);
+        }
+      } catch(e) {}
+    </script>
+    <script type="module" crossorigin src="/assets/index-q1gClMhr.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-CU_dma4U.css">
   </head>
   <body>
     <div id="root"></div>

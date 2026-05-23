@@ -18822,6 +18822,55 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
 
       {searchType === 'stores' && (
         <>
+          {/* Nearby businesses logo slider */}
+          {filteredStores.length > 0 && (
+            <div className="-mx-1">
+              <div
+                className="flex gap-4 overflow-x-auto pb-2 px-1"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              >
+                {filteredStores.map((store, i) => {
+                  const dist = distancesMap.get(store.id);
+                  const distLabel = dist != null
+                    ? dist < 1 ? `${Math.round(dist * 1000)}m` : `${dist.toFixed(1)}km`
+                    : null;
+                  const initials = store.name.split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase();
+                  return (
+                    <motion.button
+                      key={store.id}
+                      initial={{ opacity: 0, scale: 0.85 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: i * 0.03 }}
+                      onClick={() => onViewStore(store)}
+                      className="shrink-0 flex flex-col items-center gap-1.5 active:scale-[0.94] transition-transform"
+                      style={{ width: '68px' }}
+                    >
+                      <div className="relative w-14 h-14 rounded-full overflow-hidden border-2 border-white shadow-md bg-brand-navy/5">
+                        {store.logoUrl
+                          ? <img src={store.logoUrl} alt={store.name} className="w-full h-full object-cover" />
+                          : store.coverUrl
+                            ? <img src={store.coverUrl} alt={store.name} className="w-full h-full object-cover" />
+                            : <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-brand-navy/10 to-brand-navy/20">
+                                <span className="text-brand-navy font-black text-base">{initials}</span>
+                              </div>
+                        }
+                        {store.isVerified && (
+                          <div className="absolute bottom-0 right-0 w-4 h-4 bg-white rounded-full flex items-center justify-center shadow-sm">
+                            <Sparkles size={8} className="text-brand-gold" />
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-[10px] font-semibold text-brand-navy leading-tight text-center line-clamp-1 w-full">{store.name}</p>
+                      {distLabel && (
+                        <p className="text-[9px] text-brand-gold font-bold -mt-1">{distLabel}</p>
+                      )}
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Category filter pills */}
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
             {(['All', 'Food', 'Beauty', 'Barber', 'Gym', 'Parking', 'Retail'] as const).map(cat => (
