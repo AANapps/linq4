@@ -221,7 +221,7 @@
     rgba(255, 255, 255, 0.85) 50%,
     transparent 90%
   );
-  animation: holo-card-shine 3.2s ease-in-out infinite;
+  animation: holo-card-shine 1.6s ease-in-out infinite;
   pointer-events: none;
   z-index: 6;
 }

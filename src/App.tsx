@@ -3971,10 +3971,12 @@ function MysteryRevealCard({ sticker, isRevealed, onReveal }: {
           overflow: 'hidden',
           boxShadow: `0 0 18px ${cfg.color}55, inset 0 0 12px rgba(0,0,0,0.4)`,
         }}>
-          {/* Tier label hint top */}
-          <div style={{ position: 'absolute', top: 8, left: 0, right: 0, textAlign: 'center', zIndex: 3 }}>
-            <span style={{ fontSize: 8, fontWeight: 900, letterSpacing: '0.18em', color: cfg.border, textTransform: 'uppercase' }}>{cfg.label}</span>
-          </div>
+          {/* Tier label hint top — hidden on tap */}
+          {!flipping && !localRevealed && (
+            <div style={{ position: 'absolute', top: 8, left: 0, right: 0, textAlign: 'center', zIndex: 3 }}>
+              <span style={{ fontSize: 8, fontWeight: 900, letterSpacing: '0.18em', color: cfg.border, textTransform: 'uppercase' }}>{cfg.label}</span>
+            </div>
+          )}
           {/* Shimmer sweep */}
           <motion.div style={{
             position: 'absolute', inset: 0, borderRadius: 18,
@@ -4014,28 +4016,40 @@ function MysteryRevealCard({ sticker, isRevealed, onReveal }: {
           </>)}
         </div>
 
-        {/* Back — card reveal */}
+        {/* Back — card reveal, matches expanded card format */}
         <div style={{
           position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
-          transform: 'rotateY(180deg)',
-          border: `3px solid ${cfg.border}`, borderRadius: 20,
-          boxShadow: `0 12px 40px ${cfg.color}55, 0 0 0 1px ${cfg.border}44`,
-          overflow: 'hidden',
+          transform: 'rotateY(180deg)', borderRadius: 20,
         }}>
           {showFlash && (
-            <motion.div style={{ position: 'absolute', inset: 0, background: 'white', borderRadius: 18, zIndex: 10 }}
+            <motion.div style={{ position: 'absolute', inset: 0, background: 'white', borderRadius: 18, zIndex: 20 }}
               initial={{ opacity: 0.9 }} animate={{ opacity: 0 }} transition={{ duration: 0.38 }}
             />
           )}
-          {sticker.cardImageUrl
-            ? <img src={sticker.cardImageUrl} alt={sticker.cardName} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-            : <div style={{ width: '100%', height: '100%', background: cfg.solid }} />
-          }
-          {sticker.cardName && (
-            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.45)', padding: '3px 6px', textAlign: 'center' }}>
-              <span style={{ fontSize: 10, fontWeight: 900, color: '#fff' }}>{sticker.cardName}</span>
+          {/* Holo outer border */}
+          <div className="holo-border" style={{ position: 'absolute', inset: 0, padding: 3, borderRadius: 18, boxShadow: `0 8px 36px ${cfg.color}66` }}>
+            {/* Thick tier-colour inner border */}
+            <div style={{ width: '100%', height: '100%', padding: 10, borderRadius: 15, background: cfg.border }}>
+              {/* Card content */}
+              <div style={{ width: '100%', height: '100%', borderRadius: 5, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: '#fff', position: 'relative' }}>
+                <div style={{ flex: 1, overflow: 'hidden', borderBottom: `2px solid ${cfg.border}` }}>
+                  {sticker.cardImageUrl
+                    ? <img src={sticker.cardImageUrl} alt={sticker.cardName} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    : <div style={{ width: '100%', height: '100%', background: cfg.solid, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: 40 }}>{STICKER_CONFIG[sticker.tier].variants[sticker.variant ?? 0]?.emoji}</span>
+                      </div>
+                  }
+                </div>
+                {/* Bottom panel */}
+                <div style={{ height: 30, background: cfg.bg, padding: '3px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4, flexShrink: 0 }}>
+                  <span style={{ fontSize: 10, fontWeight: 900, color: cfg.color, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{sticker.cardName || cfg.label}</span>
+                  <span style={{ fontSize: 8, fontWeight: 900, color: cfg.color, opacity: 0.75, flexShrink: 0 }}>{cfg.label}</span>
+                </div>
+                {/* White shine sweep */}
+                <div className="holo-card-shine" />
+              </div>
             </div>
-          )}
+          </div>
         </div>
       </motion.div>
       </motion.div>{/* end slow-rotation wrapper */}
