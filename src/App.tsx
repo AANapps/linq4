@@ -26632,14 +26632,14 @@ function AdminBannerCarousel({ banners, cycleMs = 4500, onNavigate }: { banners:
             exit={{ opacity: 0 }}
             transition={{ duration: 0.4, ease: 'easeInOut' }}
             onClick={() => onNavigate(b.destination)}
-            className="absolute inset-0 w-full flex items-center px-5 py-4 gap-4 active:opacity-90 overflow-hidden cursor-pointer"
-            style={b.imageUrl ? {} : { background: `linear-gradient(135deg, ${b.bgFrom} 0%, ${b.bgTo} 100%)` }}
+            className="absolute inset-0 active:opacity-90 cursor-pointer"
+            style={b.imageUrl ? undefined : { background: `linear-gradient(135deg, ${b.bgFrom} 0%, ${b.bgTo} 100%)` }}
           >
             {b.imageUrl && (
               <img
                 src={b.imageUrl}
                 alt=""
-                className="absolute inset-0 w-full h-full object-cover"
+                className="block w-full h-full object-cover"
                 style={{
                   objectPosition: `${b.imgX ?? 50}% ${b.imgY ?? 50}%`,
                   transform: `scale(${b.imgZoom ?? 1})`,
@@ -26647,16 +26647,16 @@ function AdminBannerCarousel({ banners, cycleMs = 4500, onNavigate }: { banners:
                 }}
               />
             )}
-            {b.imageUrl && (b.title || b.subtitle) && <div className="absolute inset-0 bg-black/30" />}
             {(b.title || b.subtitle) && (
-              <>
+              <div className="absolute inset-0 flex items-center px-5 py-4 gap-4">
+                {b.imageUrl && <div className="absolute inset-0 bg-black/30" />}
                 <Megaphone size={22} className={cn('relative z-10', b.textLight ? 'text-white/80 shrink-0' : 'text-black/60 shrink-0')} />
                 <div className="relative z-10 flex-1 min-w-0 text-left">
                   <p className={cn('text-sm font-black leading-tight', b.textLight ? 'text-white' : 'text-black')}>{b.title}</p>
                   {b.subtitle && <p className={cn('text-[11px] font-semibold mt-0.5 leading-tight', b.textLight ? 'text-white/75' : 'text-black/60')}>{b.subtitle}</p>}
                 </div>
                 <ChevronRight size={16} className={cn('relative z-10', b.textLight ? 'text-white/50 shrink-0' : 'text-black/30 shrink-0')} />
-              </>
+              </div>
             )}
           </motion.div>
         ))}
