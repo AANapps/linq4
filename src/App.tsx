@@ -26858,7 +26858,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
       const realUsers: UserProfile[] = (usersSnap?.docs ?? [])
         .map(d => ({ uid: d.id, ...d.data() } as UserProfile))
         .filter(u => !pinnedUids.has(u.uid));
-      const merged = [...pins, ...realUsers].sort((a, b) => (b.totalSaved ?? 0) - (a.totalSaved ?? 0)).slice(0, 10);
+      const merged = [...pins, ...realUsers].sort((a, b) => (b.totalSaved ?? 0) - (a.totalSaved ?? 0));
       setSavingsLbUsers(merged);
       setSavingsLbLoading(false);
     })();
@@ -27583,31 +27583,47 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                   <p className="font-bold">No savers yet</p>
                   <p className="text-sm mt-1">Redeem your first reward to appear here!</p>
                 </div>
-              ) : savingsLbUsers.map((u, i) => {
-                const isMe = u.uid === currentUser?.uid;
-                const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : null;
+              ) : (() => {
+                const top10 = savingsLbUsers.slice(0, 10);
+                const myIdx = savingsLbUsers.findIndex(u => u.uid === currentUser?.uid);
+                const myEntry = myIdx >= 10 ? savingsLbUsers[myIdx] : null;
+                const renderRow = (u: UserProfile, rank: number) => {
+                  const isMe = u.uid === currentUser?.uid;
+                  const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : null;
+                  return (
+                    <div key={u.uid} className="gradient-logo-blue relative overflow-hidden rounded-[1.25rem] px-4 py-3 flex items-center gap-3 shadow-md shadow-blue-900/15">
+                      <div className="shine-ray opacity-50" />
+                      <span className="text-sm font-black text-white/60 w-6 text-center shrink-0">
+                        {medal ?? rank}
+                      </span>
+                      <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-white/20 border border-white/20">
+                        <PixelAvatar config={u.avatar} uid={u.uid} size={40} view="head" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-white truncate">
+                          {isMe ? 'You' : (u.name || 'User')}
+                          {isMe && <span className="ml-1.5 text-[10px] font-black bg-white/20 px-1.5 py-0.5 rounded-full align-middle">you</span>}
+                        </p>
+                        {!isMe && u.handle && <p className="text-[10px] text-white/50 truncate">@{u.handle}</p>}
+                      </div>
+                      <span className="text-base font-black text-white shrink-0">
+                        {currencySymbol('AUD')}{(u.totalSaved ?? 0).toFixed(2)}
+                      </span>
+                    </div>
+                  );
+                };
                 return (
-                  <div key={u.uid} className="gradient-logo-blue relative overflow-hidden rounded-[1.25rem] px-4 py-3 flex items-center gap-3 shadow-md shadow-blue-900/15">
-                    <div className="shine-ray opacity-50" />
-                    <span className="text-sm font-black text-white/60 w-6 text-center shrink-0">
-                      {medal ?? `${i + 1}`}
-                    </span>
-                    <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-white/20 border border-white/20">
-                      <PixelAvatar config={u.avatar} uid={u.uid} size={40} view="head" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-white truncate">
-                        {isMe ? 'You' : (u.name || 'User')}
-                        {isMe && <span className="ml-1.5 text-[10px] font-black bg-white/20 px-1.5 py-0.5 rounded-full align-middle">you</span>}
-                      </p>
-                      {!isMe && u.handle && <p className="text-[10px] text-white/50 truncate">@{u.handle}</p>}
-                    </div>
-                    <span className="text-base font-black text-white shrink-0">
-                      {currencySymbol('AUD')}{(u.totalSaved ?? 0).toFixed(2)}
-                    </span>
-                  </div>
+                  <>
+                    {top10.map((u, i) => renderRow(u, i + 1))}
+                    {myEntry && (
+                      <>
+                        <p className="text-center text-xs text-brand-navy/30 py-1">· · ·</p>
+                        {renderRow(myEntry, myIdx + 1)}
+                      </>
+                    )}
+                  </>
                 );
-              })}
+              })()}
             </div>
           </motion.div>
         </motion.div>
