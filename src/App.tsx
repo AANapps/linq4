@@ -6302,6 +6302,8 @@ function BannersAdminPanel({ onClose }: { onClose: () => void }) {
   const [imagePreview, setImagePreview] = useState('');
   const [uploadError, setUploadError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [cycleSecs, setCycleSecs] = useState(4.5);
+  const [cycleSaving, setCycleSaving] = useState(false);
 
   const blank = (): Omit<AdminBanner, 'id'> => ({
     title: '', subtitle: '', bgFrom: '#6366f1', bgTo: '#8b5cf6',
@@ -6316,8 +6318,18 @@ function BannersAdminPanel({ onClose }: { onClose: () => void }) {
       query(collection(db, 'banners'), orderBy('order', 'asc')),
       snap => { setBanners(snap.docs.map(d => ({ id: d.id, ...d.data() } as AdminBanner))); setLoading(false); }
     );
+    getDoc(doc(db, 'app_config', 'banners')).then(s => {
+      if (s.exists() && s.data().cycleMs) setCycleSecs(s.data().cycleMs / 1000);
+    }).catch(() => {});
     return unsub;
   }, []);
+
+  const saveCycle = async () => {
+    const ms = Math.round(Math.max(1, cycleSecs) * 1000);
+    setCycleSaving(true);
+    try { await setDoc(doc(db, 'app_config', 'banners'), { cycleMs: ms }, { merge: true }); }
+    finally { setCycleSaving(false); }
+  };
 
   const startEdit = (b: AdminBanner) => {
     setEditId(b.id);
@@ -6420,6 +6432,30 @@ function BannersAdminPanel({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+          {/* Cycle speed */}
+          <div className="bg-white rounded-[1.5rem] border border-black/5 shadow-sm px-4 py-3 flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-brand-navy">Cycle speed</p>
+              <p className="text-[10px] text-brand-navy/50">Seconds between banners</p>
+            </div>
+            <input
+              type="number"
+              min="1"
+              max="30"
+              step="0.5"
+              value={cycleSecs}
+              onChange={e => setCycleSecs(parseFloat(e.target.value) || 4.5)}
+              className="w-20 px-3 py-1.5 rounded-xl border border-brand-navy/10 text-sm text-brand-navy text-center outline-none bg-brand-bg"
+            />
+            <button
+              onClick={saveCycle}
+              disabled={cycleSaving}
+              className="px-3 py-1.5 bg-brand-navy text-white text-xs font-bold rounded-xl active:scale-95 transition-all disabled:opacity-50"
+            >
+              {cycleSaving ? '…' : 'Save'}
+            </button>
+          </div>
+
           {/* Add / Edit form */}
           <div className="bg-white rounded-[1.5rem] border border-black/5 shadow-sm p-4 space-y-3">
             <p className="text-xs font-bold uppercase tracking-widest text-brand-navy/50">{editId ? 'Edit Banner' : 'New Banner'}</p>
@@ -26564,14 +26600,14 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
   );
 }
 
-function AdminBannerCarousel({ banners, onNavigate }: { banners: AdminBanner[]; onNavigate: (dest: string) => void }) {
+function AdminBannerCarousel({ banners, cycleMs = 4500, onNavigate }: { banners: AdminBanner[]; cycleMs?: number; onNavigate: (dest: string) => void }) {
   const active = banners.filter(b => b.active).sort((a, b) => a.order - b.order);
   const [idx, setIdx] = useState(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const resetTimer = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => setIdx(i => (i + 1) % active.length), 4500);
+    timerRef.current = setTimeout(() => setIdx(i => (i + 1) % active.length), cycleMs);
   };
 
   useEffect(() => {
@@ -26667,6 +26703,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
   const [savingsLbLoading, setSavingsLbLoading] = useState(false);
   const [challengeIdx, setChallengeIdx] = useState(0);
   const [adminBanners, setAdminBanners] = useState<AdminBanner[]>([]);
+  const [bannerCycleMs, setBannerCycleMs] = useState(4500);
   const lastDocRef = useRef<any>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -26705,10 +26742,14 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
   useEffect(() => { return loadInitial(); }, []);
 
   useEffect(() => {
-    return onSnapshot(
+    const unsub = onSnapshot(
       query(collection(db, 'banners'), orderBy('order', 'asc')),
       snap => setAdminBanners(snap.docs.map(d => ({ id: d.id, ...d.data() } as AdminBanner)))
     );
+    getDoc(doc(db, 'app_config', 'banners')).then(s => {
+      if (s.exists() && s.data().cycleMs) setBannerCycleMs(s.data().cycleMs);
+    }).catch(() => {});
+    return unsub;
   }, []);
 
   // Re-observe whenever posts change so sentinel is re-checked after each page loads
@@ -27095,6 +27136,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
           {adminBanners.some(b => b.active) && (
             <AdminBannerCarousel
               banners={adminBanners}
+              cycleMs={bannerCycleMs}
               onNavigate={dest => {
                 if (dest.startsWith('http')) { window.open(dest, '_blank'); return; }
                 onNavigate?.(dest);
