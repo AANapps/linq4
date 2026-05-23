@@ -155,7 +155,8 @@ import {
   ZoomOut,
   ImageIcon,
   Upload,
-  ScanLine
+  ScanLine,
+  BookOpen
 } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
@@ -3721,34 +3722,19 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
             className="absolute inset-0 bg-black/70 backdrop-blur-sm z-20 flex items-center justify-center p-6"
             onClick={() => setSelected(null)}>
             <motion.div initial={{ scale: 0.85, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.85, opacity: 0 }}
-              className="bg-white rounded-3xl p-6 flex flex-col items-center gap-4 shadow-2xl w-full max-w-xs"
+              className="flex flex-col items-center gap-5"
               onClick={e => e.stopPropagation()}>
-              {/* Card large view */}
-              <div style={{ width: 120, height: 162, borderRadius: 20, border: `2.5px solid ${cfg.border}`, overflow: 'hidden', boxShadow: `0 8px 32px ${cfg.color}33`, position: 'relative' }}>
-                {selected.sticker.cardImageUrl
-                  ? <img src={selected.sticker.cardImageUrl} alt={selected.sticker.cardName} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                  : <div style={{ width: '100%', height: '100%', background: cfg.solid }} />
-                }
-                {selected.sticker.cardName && (
-                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.45)', padding: '4px 6px', textAlign: 'center' }}>
-                    <span style={{ fontSize: 11, fontWeight: 900, color: '#fff', lineHeight: 1.2 }}>{selected.sticker.cardName}</span>
-                  </div>
-                )}
-              </div>
-
+              {/* Tier glow */}
+              <div style={{ position: 'absolute', inset: -32, borderRadius: 48, background: cfg.solid, filter: 'blur(48px)', opacity: 0.35, pointerEvents: 'none' }} />
+              <StickerCard sticker={selected.sticker} isRevealed={true} size="lg" />
               {selected.count > 1 && (
-                <p className="text-xs font-bold text-brand-navy/60">You own <span className="text-brand-navy">x{selected.count}</span></p>
+                <p className="text-sm font-bold text-white/70">You own <span className="text-white">x{selected.count}</span></p>
               )}
-
-              <div className="flex gap-3 w-full">
-                <button disabled className="flex-1 py-2.5 rounded-2xl bg-brand-navy/10 text-brand-navy/30 font-bold text-sm cursor-not-allowed">
-                  Trade
-                </button>
-                <button onClick={() => setSelected(null)}
-                  className="flex-1 py-2.5 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-95 transition-all">
-                  Close
-                </button>
-              </div>
+              <button onClick={() => setSelected(null)}
+                className="px-8 py-3 rounded-2xl font-bold text-sm text-white/80"
+                style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)' }}>
+                Close
+              </button>
             </motion.div>
           </motion.div>
         )}
@@ -3865,10 +3851,6 @@ function UserStickerPanel({ uid, isOwnProfile = false, onOpenPack }: {
                   transition={{ duration: 2, repeat: Infinity }}
                 />
                 <StickerCard sticker={expandedSticker} isRevealed={true} size="lg" />
-                <div className="relative z-10 text-center space-y-1">
-                  <p className="font-bold text-base text-white">{expandedSticker.cardName || ecfg.theme}</p>
-                  <p className="text-xs font-bold uppercase tracking-widest" style={{ color: ecfg.border }}>{ecfg.label}</p>
-                </div>
                 <button
                   className="relative z-10 px-8 py-3 rounded-2xl font-bold text-sm text-white/80"
                   style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)' }}
@@ -15719,6 +15701,29 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
             <h2 className="font-display text-3xl font-bold mb-1">Dashboard</h2>
             <p className="text-brand-navy/75">{store?.name || 'Your Store'}</p>
           </header>
+
+          {/* Welcome tutorial banner — one-time, dismissed by clicking Viewed */}
+          {!profile.vendorIntroComplete && (
+            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
+                <BookOpen size={18} className="text-blue-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-blue-900 text-sm">Getting started guide</p>
+                <p className="text-blue-600 text-xs mt-0.5">See how to set up your loyalty programme.</p>
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <button
+                  onClick={() => { setVendorWelcomeStep(0); setShowVendorWelcome(true); }}
+                  className="text-blue-600 text-xs font-bold px-3 py-1.5 rounded-xl bg-blue-100 active:scale-95 transition-transform"
+                >View</button>
+                <button
+                  onClick={() => updateDoc(doc(db, 'users', user.uid), { vendorIntroComplete: true }).catch(console.error)}
+                  className="text-blue-400 text-xs font-bold px-3 py-1.5 rounded-xl bg-blue-100/60 active:scale-95 transition-transform"
+                >Viewed ✓</button>
+              </div>
+            </div>
+          )}
 
           {/* Trial / subscription banner */}
           {isInTrial && (
