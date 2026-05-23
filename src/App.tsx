@@ -3262,6 +3262,11 @@ function StickerCard({ sticker, isRevealed, onReveal, onExpand, size = 'md' }: {
   useEffect(() => { if (isRevealed) setLocalRevealed(true); }, [isRevealed]);
 
   const dims = size === 'sm' ? { w: 62, h: 88 } : size === 'lg' ? { w: 210, h: 298 } : { w: 82, h: 116 };
+  const holoPad = size === 'lg' ? 3 : 2;
+  const tierPad = size === 'lg' ? 7 : size === 'sm' ? 5 : 6;
+  const outerR  = size === 'lg' ? 14 : size === 'sm' ? 9 : 10;
+  const midR    = outerR - holoPad;
+  const innerR  = midR - tierPad;
   const bottomH = size === 'sm' ? 26 : size === 'lg' ? 58 : 32;
   const fName = size === 'sm' ? 6 : size === 'lg' ? 12 : 7.5;
   const fRank = size === 'sm' ? 5 : size === 'lg' ? 10 : 6;
@@ -3278,7 +3283,7 @@ function StickerCard({ sticker, isRevealed, onReveal, onExpand, size = 'md' }: {
   };
 
   const cardInner = (
-    <div style={{ width: '100%', height: '100%', borderRadius: 4, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: '#fff' }}>
+    <div style={{ width: '100%', height: '100%', borderRadius: innerR, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: '#fff' }}>
       {/* Image area */}
       <div style={{ flex: 1, overflow: 'hidden', position: 'relative', borderBottom: `2px solid ${cfg.border}` }}>
         {sticker.cardImageUrl
@@ -3304,18 +3309,12 @@ function StickerCard({ sticker, isRevealed, onReveal, onExpand, size = 'md' }: {
       onClick={handleTap}
       style={{ width: dims.w, height: dims.h, flexShrink: 0, cursor: (!localRevealed || onExpand) ? 'pointer' : 'default', position: 'relative' }}
     >
-      {/* Card always rendered underneath */}
-      {size === 'lg' ? (
-        <div className="holo-border" style={{ position: 'absolute', inset: 0, padding: 3, borderRadius: 12, boxShadow: `0 4px 24px ${cfg.color}55` }}>
-          <div style={{ width: '100%', height: '100%', padding: 3, borderRadius: 9, background: cfg.border }}>
-            {cardInner}
-          </div>
-        </div>
-      ) : (
-        <div style={{ position: 'absolute', inset: 0, padding: 4, borderRadius: 8, background: cfg.border }}>
+      {/* Card always rendered underneath — holo outer + thick tier-color inner (Pokémon-style) */}
+      <div className="holo-border" style={{ position: 'absolute', inset: 0, padding: holoPad, borderRadius: outerR, boxShadow: `0 4px 24px ${cfg.color}55` }}>
+        <div style={{ width: '100%', height: '100%', padding: tierPad, borderRadius: midR, background: cfg.border }}>
           {cardInner}
         </div>
-      )}
+      </div>
       {/* Mystery overlay sits on top until revealed — removed instantly on tap */}
       {!localRevealed && (
         <div style={{
@@ -3525,8 +3524,9 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
                         return (
                           <div key={sl.key} className="relative flex-1" style={{ maxWidth: 72, aspectRatio: '3/4', minWidth: 0 }}>
                               {filled ? (
-                              <div style={{ width: '100%', height: '100%', borderRadius: 8, padding: 4, background: cfg.border }}>
-                                <div style={{ width: '100%', height: '100%', borderRadius: 4, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: '#fff', position: 'relative' }}>
+                              <div className="holo-border" style={{ width: '100%', height: '100%', borderRadius: 10, padding: 2 }}>
+                                <div style={{ width: '100%', height: '100%', padding: 5, borderRadius: 8, background: cfg.border }}>
+                                <div style={{ width: '100%', height: '100%', borderRadius: 3, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: '#fff', position: 'relative' }}>
                                   <div style={{ flex: 1, overflow: 'hidden', position: 'relative', borderBottom: `2px solid ${cfg.border}` }}>
                                     {sl.imageUrl
                                       ? <img src={sl.imageUrl} alt={sl.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -3540,6 +3540,7 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
                                     </div>
                                     <span style={{ fontSize: 4, fontWeight: 700, color: cfg.color, opacity: 0.45, textTransform: 'uppercase' as const, letterSpacing: '0.3px', lineHeight: 1 }}>◆ Collectible</span>
                                   </div>
+                                </div>
                                 </div>
                               </div>
                             ) : (
