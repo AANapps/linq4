@@ -7311,7 +7311,12 @@ function AdminLeaderboardPanel({ onClose }: { onClose: () => void }) {
   const [nameStr, setNameStr] = useState('');
   const [valueStr, setValueStr] = useState('');
   const [saving, setSaving] = useState(false);
+  const [addError, setAddError] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editValue, setEditValue] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'leaderboard_pins'), snap =>
@@ -7327,6 +7332,7 @@ function AdminLeaderboardPanel({ onClose }: { onClose: () => void }) {
     const n = parseFloat(valueStr);
     if (!n || n <= 0) return;
     setSaving(true);
+    setAddError('');
     try {
       await addDoc(collection(db, 'leaderboard_pins'), {
         uid: `custom_${Date.now()}`,
@@ -7339,6 +7345,8 @@ function AdminLeaderboardPanel({ onClose }: { onClose: () => void }) {
       });
       setNameStr('');
       setValueStr('');
+    } catch (e: any) {
+      setAddError(e?.message || 'Failed to add entry');
     } finally {
       setSaving(false);
     }
@@ -7347,7 +7355,29 @@ function AdminLeaderboardPanel({ onClose }: { onClose: () => void }) {
   const removeEntry = async (id: string) => {
     setDeletingId(id);
     try { await deleteDoc(doc(db, 'leaderboard_pins', id)); }
+    catch (e) { console.error(e); }
     finally { setDeletingId(null); }
+  };
+
+  const startEdit = (p: LbPin) => {
+    setEditingId(p.id);
+    setEditName(p.name);
+    setEditValue(String(p.value));
+  };
+
+  const saveEdit = async (id: string) => {
+    const n = parseFloat(editValue);
+    if (!editName.trim() || !n || n <= 0) return;
+    setEditSaving(true);
+    try {
+      await updateDoc(doc(db, 'leaderboard_pins', id), {
+        name: editName.trim(),
+        value: n,
+        updatedAt: serverTimestamp(),
+      });
+      setEditingId(null);
+    } catch (e) { console.error(e); }
+    finally { setEditSaving(false); }
   };
 
   const valueLabel = tab === 'stamps' ? 'Stamps' : 'Savings ($)';
@@ -7411,6 +7441,7 @@ function AdminLeaderboardPanel({ onClose }: { onClose: () => void }) {
               {saving ? '…' : `Add ${valueLabel}`}
             </button>
           </div>
+          {addError && <p className="text-xs text-red-500 font-semibold">{addError}</p>}
         </div>
 
         {/* Current entries */}
@@ -7420,22 +7451,64 @@ function AdminLeaderboardPanel({ onClose }: { onClose: () => void }) {
             <p className="text-center text-sm text-brand-navy/40 py-6">No entries yet</p>
           )}
           {tabPins.map((p, i) => (
-            <div key={p.id} className="bg-white rounded-2xl border border-brand-navy/5 px-4 py-3 flex items-center gap-3">
-              <span className="text-sm font-black text-brand-navy/30 w-6 text-center shrink-0">#{i + 1}</span>
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-sm text-brand-navy truncate">{p.name}</p>
-                {p.handle && <p className="text-[10px] text-brand-navy/50 truncate">@{p.handle}</p>}
-              </div>
-              <span className="text-sm font-black text-brand-gold shrink-0">
-                {tab === 'stamps' ? `${p.value} stamps` : `$${p.value.toFixed(2)}`}
-              </span>
-              <button
-                onClick={() => removeEntry(p.id)}
-                disabled={deletingId === p.id}
-                className="p-2 text-red-400 hover:text-red-600 transition-colors disabled:opacity-40"
-              >
-                <Trash2 size={14} />
-              </button>
+            <div key={p.id} className="bg-white rounded-2xl border border-brand-navy/5 overflow-hidden">
+              {editingId === p.id ? (
+                <div className="px-4 py-3 space-y-2">
+                  <input
+                    value={editName}
+                    onChange={e => setEditName(e.target.value)}
+                    placeholder="Name"
+                    className="w-full px-3 py-2 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm text-brand-navy outline-none"
+                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      step={tab === 'savings' ? '0.01' : '1'}
+                      value={editValue}
+                      onChange={e => setEditValue(e.target.value)}
+                      placeholder={valuePlaceholder}
+                      className="flex-1 px-3 py-2 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm text-brand-navy outline-none"
+                    />
+                    <button
+                      onClick={() => saveEdit(p.id)}
+                      disabled={editSaving}
+                      className="px-3 py-2 bg-brand-gold text-white text-xs font-bold rounded-xl active:scale-95 transition-all disabled:opacity-50"
+                    >
+                      {editSaving ? '…' : 'Save'}
+                    </button>
+                    <button
+                      onClick={() => setEditingId(null)}
+                      className="px-3 py-2 bg-brand-navy/10 text-brand-navy text-xs font-bold rounded-xl active:scale-95 transition-all"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="px-4 py-3 flex items-center gap-3">
+                  <span className="text-sm font-black text-brand-navy/30 w-6 text-center shrink-0">#{i + 1}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-sm text-brand-navy truncate">{p.name}</p>
+                  </div>
+                  <span className="text-sm font-black text-brand-gold shrink-0">
+                    {tab === 'stamps' ? `${p.value} stamps` : `$${p.value.toFixed(2)}`}
+                  </span>
+                  <button
+                    onClick={() => startEdit(p)}
+                    className="p-2 text-brand-navy/40 hover:text-brand-navy transition-colors"
+                  >
+                    <Pencil size={13} />
+                  </button>
+                  <button
+                    onClick={() => removeEntry(p.id)}
+                    disabled={deletingId === p.id}
+                    className="p-2 text-red-400 hover:text-red-600 transition-colors disabled:opacity-40"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
