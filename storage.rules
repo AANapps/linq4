@@ -77,5 +77,12 @@ service firebase.storage {
                    && request.resource.size < 5 * 1024 * 1024
                    && request.resource.contentType.matches('image/.*');
     }
+
+    // Announcement images — admin only
+    match /announcements/{fileName} {
+      allow write: if request.auth != null
+                   && request.resource.size < 10 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
   }
 }
