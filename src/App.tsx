@@ -1188,7 +1188,7 @@ export default function App() {
   const [pendingNFCStoreId, setPendingNFCStoreId] = useState<string | null>(null);
   const [userCards, setUserCards] = useState<Card[]>([]);
   const [showSettings, setShowSettings] = useState(false);
-  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges' | 'stores' | 'users' | 'posts' | 'offers' | 'linqle' | 'daily-vote' | 'cards' | 'banners' | 'ui-colors' | 'announcements'>(null);
+  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges' | 'stores' | 'users' | 'posts' | 'offers' | 'linqle' | 'daily-vote' | 'cards' | 'banners' | 'ui-colors' | 'announcements' | 'leaderboard'>(null);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -1850,6 +1850,7 @@ export default function App() {
             onOpenUiColors={() => setAdminView('ui-colors')}
             onOpenAppEdit={() => setAdminView('app-edit')}
             onOpenAnnouncements={() => setAdminView('announcements')}
+            onOpenLeaderboard={() => setAdminView('leaderboard')}
           />
         )}
         {adminView === 'challenges' && (
@@ -1894,6 +1895,9 @@ export default function App() {
         )}
         {adminView === 'announcements' && (
           <AnnouncementsAdminPanel onClose={() => setAdminView('menu')} />
+        )}
+        {adminView === 'leaderboard' && (
+          <AdminLeaderboardPanel onClose={() => setAdminView('menu')} />
         )}
       </AnimatePresence>
 
@@ -5664,7 +5668,7 @@ function AppEditPanel({ onClose, onLogoChange }: { onClose: () => void; onLogoCh
   );
 }
 
-function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts, onOpenOffers, onOpenLinqle, onOpenDailyVote, onOpenCards, onOpenBanners, onOpenUiColors, onOpenAppEdit, onOpenAnnouncements }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void; onOpenOffers: () => void; onOpenLinqle: () => void; onOpenDailyVote: () => void; onOpenCards: () => void; onOpenBanners: () => void; onOpenUiColors: () => void; onOpenAppEdit: () => void; onOpenAnnouncements: () => void }) {
+function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts, onOpenOffers, onOpenLinqle, onOpenDailyVote, onOpenCards, onOpenBanners, onOpenUiColors, onOpenAppEdit, onOpenAnnouncements, onOpenLeaderboard }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void; onOpenOffers: () => void; onOpenLinqle: () => void; onOpenDailyVote: () => void; onOpenCards: () => void; onOpenBanners: () => void; onOpenUiColors: () => void; onOpenAppEdit: () => void; onOpenAnnouncements: () => void; onOpenLeaderboard: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -5863,6 +5867,20 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores,
             <div>
               <p className="font-bold text-brand-navy text-sm">Announcements</p>
               <p className="text-[11px] text-brand-navy/75 mt-0.5">Push popups to all users</p>
+            </div>
+          </motion.button>
+
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={onOpenLeaderboard}
+            className="rounded-[2rem] bg-white border border-black/5 shadow-sm p-6 flex flex-col items-start gap-3 text-left active:bg-brand-navy/5 transition-colors"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-brand-gold/15 flex items-center justify-center">
+              <Trophy size={22} className="text-brand-gold" />
+            </div>
+            <div>
+              <p className="font-bold text-brand-navy text-sm">Leaderboard</p>
+              <p className="text-[11px] text-brand-navy/75 mt-0.5">Populate stamps & savings rankings</p>
             </div>
           </motion.button>
 
@@ -7097,9 +7115,6 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
   const [deleting, setDeleting] = useState(false);
   const [togglingUid, setTogglingUid] = useState<string | null>(null);
   const [togglingIntroUid, setTogglingIntroUid] = useState<string | null>(null);
-  const [stampUid, setStampUid] = useState<string | null>(null);
-  const [stampAmount, setStampAmount] = useState('1');
-  const [addingStamps, setAddingStamps] = useState(false);
 
   useEffect(() => {
     return onSnapshot(collection(db, 'users'), snap =>
@@ -7158,19 +7173,6 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
     }
   };
 
-  const addStamps = async (uid: string) => {
-    const n = parseInt(stampAmount, 10);
-    if (!n || n < 1) return;
-    setAddingStamps(true);
-    try {
-      await updateDoc(doc(db, 'users', uid), { totalStamps: increment(n) });
-      setStampUid(null);
-      setStampAmount('1');
-    } finally {
-      setAddingStamps(false);
-    }
-  };
-
   const roleColor: Record<string, string> = {
     admin: 'bg-brand-gold/20 text-brand-gold',
     vendor: 'bg-emerald-100 text-emerald-600',
@@ -7218,32 +7220,6 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
                 </button>
                 <button
                   onClick={() => setConfirmDeleteUid(null)}
-                  className="px-3 py-1.5 bg-brand-navy/10 text-brand-navy text-xs font-bold rounded-xl active:scale-95 transition-all"
-                >
-                  Cancel
-                </button>
-              </div>
-            ) : stampUid === u.uid ? (
-              <div className="px-4 py-3 flex items-center gap-2">
-                <Stamp size={14} className="text-brand-gold shrink-0" />
-                <p className="text-xs font-bold text-brand-navy shrink-0">Add stamps to {u.name?.split(' ')[0]}:</p>
-                <input
-                  type="number"
-                  min="1"
-                  max="999"
-                  value={stampAmount}
-                  onChange={e => setStampAmount(e.target.value)}
-                  className="w-16 px-2 py-1 rounded-lg border border-brand-navy/15 text-sm text-brand-navy text-center outline-none"
-                />
-                <button
-                  onClick={() => addStamps(u.uid)}
-                  disabled={addingStamps}
-                  className="px-3 py-1.5 bg-brand-gold text-white text-xs font-bold rounded-xl active:scale-95 transition-all disabled:opacity-50"
-                >
-                  {addingStamps ? '…' : 'Add'}
-                </button>
-                <button
-                  onClick={() => { setStampUid(null); setStampAmount('1'); }}
                   className="px-3 py-1.5 bg-brand-navy/10 text-brand-navy text-xs font-bold rounded-xl active:scale-95 transition-all"
                 >
                   Cancel
@@ -7310,13 +7286,6 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
                   {u.role === 'admin' ? '★ Admin' : '☆ Admin'}
                 </button>
                 <button
-                  onClick={() => { setStampUid(u.uid); setStampAmount('1'); setConfirmDeleteUid(null); }}
-                  title="Add stamps"
-                  className="p-2 text-brand-gold/80 hover:text-brand-gold transition-colors"
-                >
-                  <Stamp size={14} />
-                </button>
-                <button
                   onClick={() => setConfirmDeleteUid(u.uid)}
                   className="p-2 text-red-400 hover:text-red-600 transition-colors"
                 >
@@ -7329,6 +7298,187 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
         {filtered.length === 0 && (
           <p className="text-center text-brand-navy/72 text-sm py-10">No users found</p>
         )}
+      </div>
+    </motion.div>
+  );
+}
+
+interface LbPin { id: string; uid: string; name: string; handle?: string; avatar?: any; value: number; category: 'stamps' | 'savings'; }
+
+function AdminLeaderboardPanel({ onClose }: { onClose: () => void }) {
+  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
+  const [pins, setPins] = useState<LbPin[]>([]);
+  const [tab, setTab] = useState<'stamps' | 'savings'>('stamps');
+  const [search, setSearch] = useState('');
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+  const [valueStr, setValueStr] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsub1 = onSnapshot(collection(db, 'users'), snap =>
+      setAllUsers(snap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile)).sort((a, b) => (a.name || '').localeCompare(b.name || '')))
+    , () => {});
+    const unsub2 = onSnapshot(collection(db, 'leaderboard_pins'), snap =>
+      setPins(snap.docs.map(d => ({ id: d.id, ...d.data() } as LbPin)))
+    , () => {});
+    return () => { unsub1(); unsub2(); };
+  }, []);
+
+  const tabPins = pins.filter(p => p.category === tab).sort((a, b) => b.value - a.value);
+
+  const searchResults = search.trim().length > 0
+    ? allUsers.filter(u => {
+        const q = search.toLowerCase();
+        return u.name?.toLowerCase().includes(q) || u.handle?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q);
+      }).slice(0, 8)
+    : [];
+
+  const addEntry = async () => {
+    if (!selectedUser || !valueStr) return;
+    const n = parseFloat(valueStr);
+    if (!n || n <= 0) return;
+    setSaving(true);
+    try {
+      const pinId = `${selectedUser.uid}_${tab}`;
+      await setDoc(doc(db, 'leaderboard_pins', pinId), {
+        uid: selectedUser.uid,
+        name: selectedUser.name || 'User',
+        handle: selectedUser.handle || null,
+        avatar: selectedUser.avatar || null,
+        value: n,
+        category: tab,
+        updatedAt: serverTimestamp(),
+      });
+      setSelectedUser(null);
+      setSearch('');
+      setValueStr('');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const removeEntry = async (id: string) => {
+    setDeletingId(id);
+    try { await deleteDoc(doc(db, 'leaderboard_pins', id)); }
+    finally { setDeletingId(null); }
+  };
+
+  const valueLabel = tab === 'stamps' ? 'Stamps' : 'Savings ($)';
+  const valuePlaceholder = tab === 'stamps' ? 'e.g. 250' : 'e.g. 49.50';
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: '100%' }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: '100%' }}
+      transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+      className="fixed inset-0 bg-brand-bg z-[200] flex flex-col max-w-md mx-auto"
+    >
+      <header className="glass-panel px-5 py-4 flex items-center gap-3">
+        <button onClick={onClose} className="p-2 -ml-2 text-brand-navy/75"><ArrowLeft size={22} /></button>
+        <div className="flex-1">
+          <p className="text-[10px] font-bold text-brand-navy/75 uppercase tracking-widest">Admin</p>
+          <h2 className="font-bold text-brand-navy text-base">Leaderboard Data</h2>
+        </div>
+      </header>
+
+      {/* Sub-tabs */}
+      <div className="flex gap-2 px-5 pt-4 pb-2">
+        {(['stamps', 'savings'] as const).map(t => (
+          <button key={t} onClick={() => setTab(t)}
+            className={cn('flex-1 py-2 rounded-2xl text-xs font-bold transition-all', tab === t ? 'gradient-red text-white shadow' : 'bg-white border border-brand-navy/10 text-brand-navy/75')}>
+            {t === 'stamps' ? '🏷️ Stamps' : '💰 Saved with Linq'}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-5 pb-10 space-y-4">
+        {/* Add entry form */}
+        <div className="bg-white rounded-2xl border border-brand-navy/5 p-4 space-y-3">
+          <p className="text-xs font-bold text-brand-navy/75 uppercase tracking-widest">Add Data</p>
+
+          {/* User search */}
+          <div className="relative">
+            <input
+              value={selectedUser ? `${selectedUser.name}${selectedUser.handle ? ` @${selectedUser.handle}` : ''}` : search}
+              onChange={e => { setSearch(e.target.value); setSelectedUser(null); }}
+              placeholder="Search user by name or handle…"
+              className="w-full px-4 py-2.5 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm text-brand-navy outline-none"
+            />
+            {selectedUser && (
+              <button onClick={() => { setSelectedUser(null); setSearch(''); }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-navy/40 hover:text-brand-navy">
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          {/* Search results dropdown */}
+          {searchResults.length > 0 && !selectedUser && (
+            <div className="border border-brand-navy/10 rounded-xl overflow-hidden">
+              {searchResults.map(u => (
+                <button key={u.uid} onClick={() => { setSelectedUser(u); setSearch(''); }}
+                  className="w-full px-3 py-2.5 flex items-center gap-2 hover:bg-brand-navy/5 text-left border-b border-brand-navy/5 last:border-0">
+                  <div className="w-8 h-8 rounded-xl overflow-hidden bg-brand-navy/5 shrink-0">
+                    {u.photoURL ? <img src={u.photoURL} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs font-bold text-brand-navy/40">{(u.name || '?')[0].toUpperCase()}</div>}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-brand-navy truncate">{u.name}</p>
+                    {u.handle && <p className="text-[10px] text-brand-navy/50 truncate">@{u.handle}</p>}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Value input */}
+          <div className="flex gap-2">
+            <input
+              type="number"
+              min="0"
+              step={tab === 'savings' ? '0.01' : '1'}
+              value={valueStr}
+              onChange={e => setValueStr(e.target.value)}
+              placeholder={valuePlaceholder}
+              className="flex-1 px-4 py-2.5 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm text-brand-navy outline-none"
+            />
+            <button
+              onClick={addEntry}
+              disabled={saving || !selectedUser || !valueStr}
+              className="px-4 py-2.5 bg-brand-gold text-white text-xs font-bold rounded-xl active:scale-95 transition-all disabled:opacity-40"
+            >
+              {saving ? '…' : `Add ${valueLabel}`}
+            </button>
+          </div>
+        </div>
+
+        {/* Current entries */}
+        <div className="space-y-2">
+          <p className="text-[10px] font-bold text-brand-navy/75 uppercase tracking-widest">Current Entries ({tabPins.length})</p>
+          {tabPins.length === 0 && (
+            <p className="text-center text-sm text-brand-navy/40 py-6">No entries yet</p>
+          )}
+          {tabPins.map((p, i) => (
+            <div key={p.id} className="bg-white rounded-2xl border border-brand-navy/5 px-4 py-3 flex items-center gap-3">
+              <span className="text-sm font-black text-brand-navy/30 w-6 text-center shrink-0">#{i + 1}</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-sm text-brand-navy truncate">{p.name}</p>
+                {p.handle && <p className="text-[10px] text-brand-navy/50 truncate">@{p.handle}</p>}
+              </div>
+              <span className="text-sm font-black text-brand-gold shrink-0">
+                {tab === 'stamps' ? `${p.value} stamps` : `$${p.value.toFixed(2)}`}
+              </span>
+              <button
+                onClick={() => removeEntry(p.id)}
+                disabled={deletingId === p.id}
+                className="p-2 text-red-400 hover:text-red-600 transition-colors disabled:opacity-40"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
       </div>
     </motion.div>
   );
@@ -26473,8 +26623,10 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
   const [completedIdx, setCompletedIdx] = useState(0);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [lbPeriod, setLbPeriod] = useState<'alltime' | 'weekly'>('weekly');
-  const [lbCategory, setLbCategory] = useState<'stamps' | 'rewards' | 'streak'>('stamps');
+  const [lbCategory, setLbCategory] = useState<'stamps' | 'rewards' | 'streak' | 'points'>('stamps');
   const [lbUsers, setLbUsers] = useState<UserProfile[]>([]);
+  const [lbPins, setLbPins] = useState<UserProfile[]>([]);
+  const [savingsLbPins, setSavingsLbPins] = useState<UserProfile[]>([]);
   const [challengeCounts, setChallengeCounts] = useState<Map<string, number>>(new Map());
   const [lbLoading, setLbLoading] = useState(false);
   const [showSavingsLb, setShowSavingsLb] = useState(false);
@@ -26619,13 +26771,15 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
   }, [feedCompletedChallenges.length]);
 
   useEffect(() => {
-    if (!showLeaderboard || lbUsers.length > 0) return;
+    if (!showLeaderboard) return;
     setLbLoading(true);
     (async () => {
       try {
-        const [usersSnap, entriesSnap] = await Promise.all([
+        const [usersSnap, entriesSnap, pinsSnap, savingsPinsSnap] = await Promise.all([
           getDocs(collection(db, 'users')),
           getDocs(collection(db, 'challenge_entries')),
+          getDocs(query(collection(db, 'leaderboard_pins'), where('category', '==', 'stamps'))),
+          getDocs(query(collection(db, 'leaderboard_pins'), where('category', '==', 'savings'))),
         ]);
         const counts = new Map<string, number>();
         for (const d of entriesSnap.docs) {
@@ -26634,22 +26788,30 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
         }
         setChallengeCounts(counts);
         setLbUsers(usersSnap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile)));
+        setLbPins(pinsSnap.docs.map(d => {
+          const p = d.data();
+          return { uid: p.uid, name: p.name, handle: p.handle, avatar: p.avatar, totalStamps: p.value, totalRedeemed: 0, streak: 0 } as UserProfile;
+        }));
+        setSavingsLbPins(savingsPinsSnap.docs.map(d => {
+          const p = d.data();
+          return { uid: p.uid, name: p.name, handle: p.handle, avatar: p.avatar, totalSaved: p.value, totalStamps: 0, totalRedeemed: 0, streak: 0 } as UserProfile;
+        }));
       } catch (e) { console.error(e); }
       setLbLoading(false);
     })();
   }, [showLeaderboard]);
 
   useEffect(() => {
-    if (!showSavingsLb || savingsLbUsers.length > 0) return;
+    if (!showSavingsLb) return;
     setSavingsLbLoading(true);
-    getDocs(collection(db, 'users')).then(snap => {
-      const users = snap.docs
-        .map(d => ({ uid: d.id, ...d.data() } as UserProfile))
-        .filter(u => (u.totalSaved ?? 0) > 0)
-        .sort((a, b) => (b.totalSaved ?? 0) - (a.totalSaved ?? 0))
-        .slice(0, 20);
-      setSavingsLbUsers(users);
-    }).catch(console.error).finally(() => setSavingsLbLoading(false));
+    getDocs(query(collection(db, 'leaderboard_pins'), where('category', '==', 'savings')))
+      .then(snap => {
+        const pins = snap.docs.map(d => {
+          const p = d.data();
+          return { uid: p.uid, name: p.name, handle: p.handle, avatar: p.avatar, totalSaved: p.value, totalStamps: 0, totalRedeemed: 0, streak: 0 } as UserProfile;
+        }).sort((a, b) => (b.totalSaved ?? 0) - (a.totalSaved ?? 0));
+        setSavingsLbUsers(pins);
+      }).catch(console.error).finally(() => setSavingsLbLoading(false));
   }, [showSavingsLb]);
 
   useEffect(() => {
@@ -27025,15 +27187,16 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                   case 'stamps': return u.totalStamps || 0;
                   case 'rewards': return u.totalRedeemed || 0;
                   case 'streak': return u.streak || 0;
+                  case 'points': return 0;
                 }
               };
-              const lbCategoryLabel = { stamps: 'Stamps', rewards: 'Rewards', streak: 'Streak' }[lbCategory];
-              const lbCategoryUnit = { stamps: 'stamps', rewards: 'redeemed', streak: 'day streak' }[lbCategory];
+              const lbCategoryLabel = ({ stamps: 'Stamps', rewards: 'Rewards', streak: 'Streak', points: 'Points' } as Record<string, string>)[lbCategory] ?? '';
+              const lbCategoryUnit = ({ stamps: 'stamps', rewards: 'redeemed', streak: 'day streak', points: '' } as Record<string, string>)[lbCategory] ?? '';
               const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
-              const periodUsers = lbPeriod === 'weekly'
+              const baseUsers = lbCategory === 'stamps' ? lbPins : (lbPeriod === 'weekly'
                 ? lbUsers.filter(u => u.lastStreakDate && u.lastStreakDate >= sevenDaysAgo)
-                : lbUsers;
-              const allSorted = [...periodUsers].sort((a, b) => getLbScore(b) - getLbScore(a)).filter(u => getLbScore(u) > 0);
+                : lbUsers);
+              const allSorted = lbCategory === 'points' ? [] : [...baseUsers].sort((a, b) => getLbScore(b) - getLbScore(a)).filter(u => getLbScore(u) > 0);
               const sorted = allSorted.slice(0, 10);
               const myRankIdx = allSorted.findIndex(u => u.uid === currentProfile?.uid);
               const myRank = myRankIdx >= 0 ? myRankIdx + 1 : null;
@@ -27085,6 +27248,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                         { key: 'stamps', label: 'Stamps', icon: '🏷️' },
                         { key: 'rewards', label: 'Rewards', icon: '🎁' },
                         { key: 'streak', label: 'Streak', icon: '🔥' },
+                        { key: 'points', label: 'Points', icon: '⭐' },
                       ] as const).map(({ key, label, icon }) => (
                         <button key={key} onClick={() => setLbCategory(key)}
                           className={cn('shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold transition-all', lbCategory === key ? 'gradient-red text-white shadow' : 'bg-white border border-brand-navy/10 text-brand-navy/80')}>
@@ -27093,7 +27257,13 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                       ))}
                     </div>
 
-                    {lbLoading ? (
+                    {lbCategory === 'points' ? (
+                      <div className="py-16 text-center text-brand-navy/72">
+                        <span className="text-4xl mb-3 block">⭐</span>
+                        <p className="text-base font-bold text-brand-navy">Coming Soon</p>
+                        <p className="text-xs mt-1 text-brand-navy/50">Points leaderboard is on its way</p>
+                      </div>
+                    ) : lbLoading ? (
                       <div className="flex justify-center py-8">
                         <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}>
                           <Sparkles className="w-6 h-6 text-brand-gold/60" />

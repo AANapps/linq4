@@ -1,0 +1,2 @@
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/web-BJ09dJta.js","assets/index-BljAi6u6.js","assets/index-D6vy5iQb.css"])))=>i.map(i=>d[i]);
+import{r as t,_ as e}from"./index-BljAi6u6.js";const a=t("CapacitorNfc",{web:()=>e(()=>import("./web-BJ09dJta.js"),__vite__mapDeps([0,1,2])).then(r=>new r.CapacitorNfcWeb)});export{a as CapacitorNfc};
