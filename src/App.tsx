@@ -22086,6 +22086,12 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-bold truncate">{c.userName || 'Member'}</p>
                       </div>
+                      <div className="shrink-0 flex items-center gap-1 text-brand-navy/40">
+                        {(isVisit || isSpend) && (vendorStore?.subscriptionStatus !== 'active' && vendorStore?.subscriptionStatus !== 'trialing')
+                          ? <><Lock size={10} /><span className="text-[11px] font-bold">pts</span></>
+                          : <span className="text-[11px] font-bold text-brand-gold">{fmtK(metricVal)} <span className="text-brand-navy/40 font-normal">{metricLabel}</span></span>
+                        }
+                      </div>
                     </div>
                   );
                 })}
