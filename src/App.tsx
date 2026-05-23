@@ -817,7 +817,7 @@ const STICKER_CONFIG: Record<StickerTier, { color: string; solid: string; bg: st
     { emoji: '🐛', name: 'Caterpillar' },
     { emoji: '🪲', name: 'Beetle' },
   ]},
-  lightblue:{ color: '#0369A1', solid: '#4AACDA', bg: '#E0F2FE', border: '#7DD3FC', label: 'Uncommon',  chance: '28%', theme: 'Beach', variants: [
+  lightblue:{ color: '#0284C7', solid: '#38BDF8', bg: '#F0F9FF', border: '#7DD3FC', label: 'Uncommon',  chance: '28%', theme: 'Beach', variants: [
     { emoji: '🦀', name: 'Crab' },
     { emoji: '🐢', name: 'Sea Turtle' },
     { emoji: '🦭', name: 'Seal' },
@@ -827,7 +827,7 @@ const STICKER_CONFIG: Record<StickerTier, { color: string; solid: string; bg: st
     { emoji: '🐊', name: 'Crocodile' },
     { emoji: '🐍', name: 'Snake' },
   ]},
-  blue:     { color: '#1D4ED8', solid: '#0072BB', bg: '#DBEAFE', border: '#93C5FD', label: 'Epic',      chance: '7%',  theme: 'Ocean Life', variants: [
+  blue:     { color: '#1E3A8A', solid: '#1E3A8A', bg: '#EFF6FF', border: '#3B82F6', label: 'Epic',      chance: '7%',  theme: 'Ocean Life', variants: [
     { emoji: '🐙', name: 'Octopus' },
     { emoji: '🦈', name: 'Shark' },
     { emoji: '🐠', name: 'Clownfish' },
@@ -3255,7 +3255,7 @@ function StickerCard({ sticker, isRevealed, onReveal, onExpand, size = 'md' }: {
   key?: React.Key;
 }) {
   const [localRevealed, setLocalRevealed] = useState(isRevealed);
-  const [animating, setAnimating] = useState(false);
+  const [wasJustRevealed, setWasJustRevealed] = useState(false);
   const cfg = STICKER_CONFIG[sticker.tier];
 
   useEffect(() => { if (isRevealed) setLocalRevealed(true); }, [isRevealed]);
@@ -3270,19 +3270,14 @@ function StickerCard({ sticker, isRevealed, onReveal, onExpand, size = 'md' }: {
 
   const handleTap = () => {
     if (localRevealed) { onExpand?.(); return; }
-    if (!onReveal || animating) return;
-    setAnimating(true);
+    if (!onReveal) return;
+    setLocalRevealed(true);
+    setWasJustRevealed(true);
+    onReveal();
   };
 
-  const revealedCard = (
-    <div style={{
-      position: 'absolute', inset: 0,
-      backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
-      transform: 'rotateY(180deg)',
-      borderRadius: 4, border: `3px solid ${cfg.border}`,
-      boxShadow: `0 0 0 1px ${cfg.color}30, 0 4px 20px ${cfg.color}44`,
-      overflow: 'hidden', display: 'flex', flexDirection: 'column', background: '#fff',
-    }}>
+  const cardInner = (
+    <div style={{ width: '100%', height: '100%', borderRadius: 4, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: '#fff' }}>
       {/* Image area */}
       <div style={{ flex: 1, overflow: 'hidden', position: 'relative', borderBottom: `2px solid ${cfg.border}` }}>
         {sticker.cardImageUrl
@@ -3291,7 +3286,6 @@ function StickerCard({ sticker, isRevealed, onReveal, onExpand, size = 'md' }: {
               <span style={{ fontSize: emojiSize }}>{STICKER_CONFIG[sticker.tier].variants[sticker.variant ?? 0]?.emoji}</span>
             </div>
         }
-        {/* Collectible badge top-right */}
         <div style={{ position: 'absolute', top: 2, right: 2, background: `${cfg.color}cc`, borderRadius: 2, padding: '1px 3px' }}>
           <span style={{ fontSize: fColl - 1, fontWeight: 900, color: '#fff', letterSpacing: '0.4px', textTransform: 'uppercase' as const }}>Collectible</span>
         </div>
@@ -3308,39 +3302,40 @@ function StickerCard({ sticker, isRevealed, onReveal, onExpand, size = 'md' }: {
   );
 
   return (
-    <motion.div
+    <div
       onClick={handleTap}
-      animate={animating ? { scale: [1, 1.22, 0.83, 1.1, 1] } : { scale: 1 }}
-      transition={{ duration: 0.4 }}
-      onAnimationComplete={() => {
-        if (animating) { setAnimating(false); setLocalRevealed(true); onReveal?.(); }
-      }}
-      style={{ width: dims.w, height: dims.h, perspective: '800px', flexShrink: 0, cursor: (localRevealed && onExpand) || !localRevealed ? 'pointer' : 'default' }}
-      className="relative"
+      style={{ width: dims.w, height: dims.h, flexShrink: 0, cursor: (!localRevealed || onExpand) ? 'pointer' : 'default', position: 'relative' }}
     >
-      <motion.div
-        initial={{ rotateY: isRevealed ? 180 : 0 }}
-        animate={{ rotateY: localRevealed ? 180 : 0 }}
-        transition={{ duration: 0.55, ease: [0.23, 1, 0.32, 1] }}
-        style={{ transformStyle: 'preserve-3d', WebkitTransformStyle: 'preserve-3d', width: '100%', height: '100%', position: 'relative' }}
-      >
-        {/* Front — mystery card back */}
-        {!localRevealed && (
-          <div style={{
-            position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
-            borderRadius: 4, border: '3px solid #CBD5E1',
-            background: 'linear-gradient(135deg, #F8FAFC, #E2E8F0)',
-            boxShadow: '0 0 0 1px #94A3B830, 0 4px 12px rgba(0,0,0,0.1)',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
-            overflow: 'hidden',
-          }}>
+      <AnimatePresence mode="wait">
+        {!localRevealed ? (
+          <motion.div
+            key="mystery"
+            exit={{ scale: 0.7, opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            style={{
+              position: 'absolute', inset: 0, borderRadius: 4, border: '3px solid #CBD5E1',
+              background: 'linear-gradient(135deg, #F8FAFC, #E2E8F0)',
+              boxShadow: '0 0 0 1px #94A3B830, 0 4px 12px rgba(0,0,0,0.1)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, overflow: 'hidden',
+            }}
+          >
             <span style={{ fontSize: 30, fontWeight: 900, color: '#94A3B8' }}>?</span>
             <span style={{ fontSize: 8, color: '#94A3B8', fontWeight: 600 }}>Tap to reveal</span>
-          </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="card"
+            initial={wasJustRevealed ? { scale: 0.55, opacity: 0, rotate: -8 } : false}
+            animate={{ scale: 1, opacity: 1, rotate: 0 }}
+            transition={wasJustRevealed ? { type: 'spring', damping: 13, stiffness: 200 } : { duration: 0 }}
+            className="holo-border"
+            style={{ position: 'absolute', inset: 0, padding: 3, borderRadius: 7, boxShadow: `0 4px 24px ${cfg.color}55` }}
+          >
+            {cardInner}
+          </motion.div>
         )}
-        {revealedCard}
-      </motion.div>
-    </motion.div>
+      </AnimatePresence>
+    </div>
   );
 }
 
@@ -3536,16 +3531,9 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
                         const filled = sl.count > 0;
                         return (
                           <div key={sl.key} className="relative flex-1" style={{ maxWidth: 72, aspectRatio: '3/4', minWidth: 0 }}>
-                            <div style={{
-                              width: '100%', height: '100%', borderRadius: 4, overflow: 'hidden',
-                              border: `3px solid ${filled ? cfg.border : 'rgba(255,255,255,0.25)'}`,
-                              background: filled ? '#fff' : 'rgba(0,0,0,0.22)',
-                              boxShadow: filled ? `0 0 0 1px ${cfg.color}30, 0 2px 10px rgba(0,0,0,0.25)` : 'none',
-                              display: 'flex', flexDirection: 'column', position: 'relative',
-                            }}>
                               {filled ? (
-                                <>
-                                  {/* Image area */}
+                              <div className="holo-border" style={{ width: '100%', height: '100%', borderRadius: 7, padding: 3, boxShadow: `0 2px 12px ${cfg.color}55` }}>
+                                <div style={{ width: '100%', height: '100%', borderRadius: 4, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: '#fff', position: 'relative' }}>
                                   <div style={{ flex: 1, overflow: 'hidden', position: 'relative', borderBottom: `2px solid ${cfg.border}` }}>
                                     {sl.imageUrl
                                       ? <img src={sl.imageUrl} alt={sl.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -3555,7 +3543,6 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
                                       <span style={{ fontSize: 3.5, fontWeight: 900, color: '#fff', textTransform: 'uppercase' as const, letterSpacing: '0.3px' }}>Collectible</span>
                                     </div>
                                   </div>
-                                  {/* Bottom panel */}
                                   <div style={{ height: 20, background: cfg.bg, padding: '2px 3px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 0.5 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
                                       <span style={{ fontSize: 5.5, fontWeight: 900, color: cfg.color, lineHeight: 1.1, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{sl.name || cfg.label}</span>
@@ -3563,11 +3550,13 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
                                     </div>
                                     <span style={{ fontSize: 4, fontWeight: 700, color: cfg.color, opacity: 0.45, textTransform: 'uppercase' as const, letterSpacing: '0.3px', lineHeight: 1 }}>◆ Collectible</span>
                                   </div>
-                                </>
-                              ) : (
-                                <span style={{ fontSize: 18, opacity: 0.25, userSelect: 'none' as const, color: '#fff', position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>?</span>
-                              )}
-                            </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div style={{ width: '100%', height: '100%', borderRadius: 4, border: '3px solid rgba(255,255,255,0.25)', background: 'rgba(0,0,0,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                                <span style={{ fontSize: 18, opacity: 0.25, userSelect: 'none' as const, color: '#fff' }}>?</span>
+                              </div>
+                            )}
                             {sl.count > 1 && (
                               <span style={{ position: 'absolute', top: -4, right: -4, background: '#1e293b', color: '#fff', fontSize: 7, fontWeight: 900, width: 14, height: 14, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
                                 x{sl.count}
