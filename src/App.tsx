@@ -6477,7 +6477,7 @@ function BannersAdminPanel({ onClose }: { onClose: () => void }) {
               <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-1">Background photo (optional)</p>
               {previewImage ? (
                 <div className="space-y-2">
-                  <div className="relative rounded-xl overflow-hidden h-24">
+                  <div className="relative rounded-xl overflow-hidden h-24 bg-black">
                     <img src={previewImage} alt="" className="absolute inset-0 w-full h-full object-cover"
                       style={{
                         objectPosition: `${form.imgX ?? 50}% ${form.imgY ?? 50}%`,
@@ -6574,7 +6574,7 @@ function BannersAdminPanel({ onClose }: { onClose: () => void }) {
               )}
             </div>
             {/* Preview */}
-            <div className="rounded-[1rem] overflow-hidden h-16 flex items-center px-4 gap-3 relative"
+            <div className={cn('rounded-[1rem] overflow-hidden h-16 flex items-center px-4 gap-3 relative', previewImage && 'bg-black')}
               style={previewImage ? {} : { background: `linear-gradient(135deg, ${form.bgFrom} 0%, ${form.bgTo} 100%)` }}>
               {previewImage && <img src={previewImage} alt="" className="absolute inset-0 w-full h-full object-cover" />}
               {previewImage && <div className="absolute inset-0 bg-black/30" />}
@@ -6600,7 +6600,7 @@ function BannersAdminPanel({ onClose }: { onClose: () => void }) {
             <div className="py-8 text-center text-brand-navy/40 text-sm">No banners yet</div>
           ) : banners.map((b, i) => (
             <div key={b.id} className="bg-white rounded-[1.5rem] border border-black/5 shadow-sm overflow-hidden">
-              <div className="h-14 flex items-center px-4 gap-3 relative"
+              <div className={cn('h-14 flex items-center px-4 gap-3 relative', b.imageUrl && 'bg-black')}
                 style={b.imageUrl ? {} : { background: `linear-gradient(135deg, ${b.bgFrom} 0%, ${b.bgTo} 100%)` }}>
                 {b.imageUrl && <img src={b.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />}
                 {b.imageUrl && <div className="absolute inset-0 bg-black/30" />}
@@ -26622,7 +26622,7 @@ function AdminBannerCarousel({ banners, cycleMs = 4500, onNavigate }: { banners:
   const curIdx = idx % active.length;
 
   return (
-    <div className="relative rounded-[1.5rem] overflow-hidden shadow-lg" style={{ height: '130px' }}>
+    <div className="relative rounded-[1.5rem] overflow-hidden shadow-lg bg-black" style={{ height: '130px' }}>
       <AnimatePresence initial={false}>
         {active.map((b, i) => i !== curIdx ? null : (
           <motion.button
