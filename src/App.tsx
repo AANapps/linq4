@@ -26626,7 +26626,6 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
   const [lbCategory, setLbCategory] = useState<'stamps' | 'rewards' | 'streak' | 'points'>('stamps');
   const [lbUsers, setLbUsers] = useState<UserProfile[]>([]);
   const [lbPins, setLbPins] = useState<UserProfile[]>([]);
-  const [challengeCounts, setChallengeCounts] = useState<Map<string, number>>(new Map());
   const [lbLoading, setLbLoading] = useState(false);
   const [showSavingsLb, setShowSavingsLb] = useState(false);
   const [savingsLbUsers, setSavingsLbUsers] = useState<UserProfile[]>([]);
@@ -26773,24 +26772,19 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
     if (!showLeaderboard) return;
     setLbLoading(true);
     (async () => {
-      try {
-        const [usersSnap, entriesSnap, pinsSnap] = await Promise.all([
-          getDocs(collection(db, 'users')),
-          getDocs(collection(db, 'challenge_entries')),
-          getDocs(query(collection(db, 'leaderboard_pins'), where('category', '==', 'stamps'))),
-        ]);
-        const counts = new Map<string, number>();
-        for (const d of entriesSnap.docs) {
-          const uid = d.data().uid;
-          if (uid) counts.set(uid, (counts.get(uid) || 0) + 1);
-        }
-        setChallengeCounts(counts);
-        setLbUsers(usersSnap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile)));
-        setLbPins(pinsSnap.docs.map(d => {
+      const [usersResult, pinsResult] = await Promise.allSettled([
+        getDocs(collection(db, 'users')),
+        getDocs(query(collection(db, 'leaderboard_pins'), where('category', '==', 'stamps'))),
+      ]);
+      if (usersResult.status === 'fulfilled') {
+        setLbUsers(usersResult.value.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile)));
+      } else { console.error('lb users fetch failed', usersResult.reason); }
+      if (pinsResult.status === 'fulfilled') {
+        setLbPins(pinsResult.value.docs.map(d => {
           const p = d.data();
           return { uid: p.uid, name: p.name, handle: p.handle, avatar: p.avatar, totalStamps: p.value, totalRedeemed: 0, streak: 0 } as UserProfile;
         }));
-      } catch (e) { console.error(e); }
+      } else { console.error('lb pins fetch failed', pinsResult.reason); }
       setLbLoading(false);
     })();
   }, [showLeaderboard]);
@@ -26810,7 +26804,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
       const realUsers: UserProfile[] = usersSnap.docs
         .map(d => ({ uid: d.id, ...d.data() } as UserProfile))
         .filter(u => !pinnedUids.has(u.uid));
-      const merged = [...pins, ...realUsers].sort((a, b) => (b.totalSaved ?? 0) - (a.totalSaved ?? 0));
+      const merged = [...pins, ...realUsers].sort((a, b) => (b.totalSaved ?? 0) - (a.totalSaved ?? 0)).slice(0, 10);
       setSavingsLbUsers(merged);
     }).catch(console.error).finally(() => setSavingsLbLoading(false));
   }, [showSavingsLb]);
@@ -27203,7 +27197,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                 return [...lbPins, ...periodReal.filter(u => !pinnedUids.has(u.uid))];
               })() : periodReal;
               const allSorted = lbCategory === 'points' ? [] : [...baseUsers].sort((a, b) => getLbScore(b) - getLbScore(a));
-              const sorted = allSorted;
+              const sorted = allSorted.slice(0, 10);
               const myRankIdx = allSorted.findIndex(u => u.uid === currentProfile?.uid);
               const myRank = myRankIdx >= 0 ? myRankIdx + 1 : null;
               const myRankInTopTen = myRank !== null && myRank <= 3;
