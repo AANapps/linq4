@@ -7306,52 +7306,38 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
 interface LbPin { id: string; uid: string; name: string; handle?: string; avatar?: any; value: number; category: 'stamps' | 'savings'; }
 
 function AdminLeaderboardPanel({ onClose }: { onClose: () => void }) {
-  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
   const [pins, setPins] = useState<LbPin[]>([]);
   const [tab, setTab] = useState<'stamps' | 'savings'>('stamps');
-  const [search, setSearch] = useState('');
-  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+  const [nameStr, setNameStr] = useState('');
   const [valueStr, setValueStr] = useState('');
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsub1 = onSnapshot(collection(db, 'users'), snap =>
-      setAllUsers(snap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile)).sort((a, b) => (a.name || '').localeCompare(b.name || '')))
-    , () => {});
-    const unsub2 = onSnapshot(collection(db, 'leaderboard_pins'), snap =>
+    const unsub = onSnapshot(collection(db, 'leaderboard_pins'), snap =>
       setPins(snap.docs.map(d => ({ id: d.id, ...d.data() } as LbPin)))
     , () => {});
-    return () => { unsub1(); unsub2(); };
+    return unsub;
   }, []);
 
   const tabPins = pins.filter(p => p.category === tab).sort((a, b) => b.value - a.value);
 
-  const searchResults = search.trim().length > 0
-    ? allUsers.filter(u => {
-        const q = search.toLowerCase();
-        return u.name?.toLowerCase().includes(q) || u.handle?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q);
-      }).slice(0, 8)
-    : [];
-
   const addEntry = async () => {
-    if (!selectedUser || !valueStr) return;
+    if (!nameStr.trim() || !valueStr) return;
     const n = parseFloat(valueStr);
     if (!n || n <= 0) return;
     setSaving(true);
     try {
-      const pinId = `${selectedUser.uid}_${tab}`;
-      await setDoc(doc(db, 'leaderboard_pins', pinId), {
-        uid: selectedUser.uid,
-        name: selectedUser.name || 'User',
-        handle: selectedUser.handle || null,
-        avatar: selectedUser.avatar || null,
+      await addDoc(collection(db, 'leaderboard_pins'), {
+        uid: `custom_${Date.now()}`,
+        name: nameStr.trim(),
+        handle: null,
+        avatar: null,
         value: n,
         category: tab,
         updatedAt: serverTimestamp(),
       });
-      setSelectedUser(null);
-      setSearch('');
+      setNameStr('');
       setValueStr('');
     } finally {
       setSaving(false);
@@ -7398,39 +7384,13 @@ function AdminLeaderboardPanel({ onClose }: { onClose: () => void }) {
         <div className="bg-white rounded-2xl border border-brand-navy/5 p-4 space-y-3">
           <p className="text-xs font-bold text-brand-navy/75 uppercase tracking-widest">Add Data</p>
 
-          {/* User search */}
-          <div className="relative">
-            <input
-              value={selectedUser ? `${selectedUser.name}${selectedUser.handle ? ` @${selectedUser.handle}` : ''}` : search}
-              onChange={e => { setSearch(e.target.value); setSelectedUser(null); }}
-              placeholder="Search user by name or handle…"
-              className="w-full px-4 py-2.5 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm text-brand-navy outline-none"
-            />
-            {selectedUser && (
-              <button onClick={() => { setSelectedUser(null); setSearch(''); }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-navy/40 hover:text-brand-navy">
-                <X size={14} />
-              </button>
-            )}
-          </div>
-
-          {/* Search results dropdown */}
-          {searchResults.length > 0 && !selectedUser && (
-            <div className="border border-brand-navy/10 rounded-xl overflow-hidden">
-              {searchResults.map(u => (
-                <button key={u.uid} onClick={() => { setSelectedUser(u); setSearch(''); }}
-                  className="w-full px-3 py-2.5 flex items-center gap-2 hover:bg-brand-navy/5 text-left border-b border-brand-navy/5 last:border-0">
-                  <div className="w-8 h-8 rounded-xl overflow-hidden bg-brand-navy/5 shrink-0">
-                    {u.photoURL ? <img src={u.photoURL} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs font-bold text-brand-navy/40">{(u.name || '?')[0].toUpperCase()}</div>}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-brand-navy truncate">{u.name}</p>
-                    {u.handle && <p className="text-[10px] text-brand-navy/50 truncate">@{u.handle}</p>}
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
+          {/* Name input */}
+          <input
+            value={nameStr}
+            onChange={e => setNameStr(e.target.value)}
+            placeholder="Enter any name…"
+            className="w-full px-4 py-2.5 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm text-brand-navy outline-none"
+          />
 
           {/* Value input */}
           <div className="flex gap-2">
@@ -7445,7 +7405,7 @@ function AdminLeaderboardPanel({ onClose }: { onClose: () => void }) {
             />
             <button
               onClick={addEntry}
-              disabled={saving || !selectedUser || !valueStr}
+              disabled={saving || !nameStr.trim() || !valueStr}
               className="px-4 py-2.5 bg-brand-gold text-white text-xs font-bold rounded-xl active:scale-95 transition-all disabled:opacity-40"
             >
               {saving ? '…' : `Add ${valueLabel}`}
