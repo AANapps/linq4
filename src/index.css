@@ -217,13 +217,9 @@
   height: 130%;
   background: linear-gradient(
     105deg,
-    transparent 0%,
-    rgba(255, 0, 100, 0.45) 18%,
-    rgba(255, 200, 0, 0.45) 32%,
-    rgba(0, 255, 140, 0.45) 50%,
-    rgba(0, 140, 255, 0.45) 66%,
-    rgba(180, 0, 255, 0.45) 82%,
-    transparent 100%
+    transparent 10%,
+    rgba(255, 255, 255, 0.85) 50%,
+    transparent 90%
   );
   animation: holo-card-shine 3.2s ease-in-out infinite;
   pointer-events: none;
