@@ -7097,6 +7097,9 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
   const [deleting, setDeleting] = useState(false);
   const [togglingUid, setTogglingUid] = useState<string | null>(null);
   const [togglingIntroUid, setTogglingIntroUid] = useState<string | null>(null);
+  const [stampUid, setStampUid] = useState<string | null>(null);
+  const [stampAmount, setStampAmount] = useState('1');
+  const [addingStamps, setAddingStamps] = useState(false);
 
   useEffect(() => {
     return onSnapshot(collection(db, 'users'), snap =>
@@ -7155,6 +7158,19 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
     }
   };
 
+  const addStamps = async (uid: string) => {
+    const n = parseInt(stampAmount, 10);
+    if (!n || n < 1) return;
+    setAddingStamps(true);
+    try {
+      await updateDoc(doc(db, 'users', uid), { totalStamps: increment(n) });
+      setStampUid(null);
+      setStampAmount('1');
+    } finally {
+      setAddingStamps(false);
+    }
+  };
+
   const roleColor: Record<string, string> = {
     admin: 'bg-brand-gold/20 text-brand-gold',
     vendor: 'bg-emerald-100 text-emerald-600',
@@ -7202,6 +7218,32 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
                 </button>
                 <button
                   onClick={() => setConfirmDeleteUid(null)}
+                  className="px-3 py-1.5 bg-brand-navy/10 text-brand-navy text-xs font-bold rounded-xl active:scale-95 transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : stampUid === u.uid ? (
+              <div className="px-4 py-3 flex items-center gap-2">
+                <Stamp size={14} className="text-brand-gold shrink-0" />
+                <p className="text-xs font-bold text-brand-navy shrink-0">Add stamps to {u.name?.split(' ')[0]}:</p>
+                <input
+                  type="number"
+                  min="1"
+                  max="999"
+                  value={stampAmount}
+                  onChange={e => setStampAmount(e.target.value)}
+                  className="w-16 px-2 py-1 rounded-lg border border-brand-navy/15 text-sm text-brand-navy text-center outline-none"
+                />
+                <button
+                  onClick={() => addStamps(u.uid)}
+                  disabled={addingStamps}
+                  className="px-3 py-1.5 bg-brand-gold text-white text-xs font-bold rounded-xl active:scale-95 transition-all disabled:opacity-50"
+                >
+                  {addingStamps ? '…' : 'Add'}
+                </button>
+                <button
+                  onClick={() => { setStampUid(null); setStampAmount('1'); }}
                   className="px-3 py-1.5 bg-brand-navy/10 text-brand-navy text-xs font-bold rounded-xl active:scale-95 transition-all"
                 >
                   Cancel
@@ -7266,6 +7308,13 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
                   )}
                 >
                   {u.role === 'admin' ? '★ Admin' : '☆ Admin'}
+                </button>
+                <button
+                  onClick={() => { setStampUid(u.uid); setStampAmount('1'); setConfirmDeleteUid(null); }}
+                  title="Add stamps"
+                  className="p-2 text-brand-gold/80 hover:text-brand-gold transition-colors"
+                >
+                  <Stamp size={14} />
                 </button>
                 <button
                   onClick={() => setConfirmDeleteUid(u.uid)}
@@ -27064,7 +27113,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                               const rank = podiumIndexes[col];
                               if (!u) return <div key={col} className="w-[30%]" />;
                               return (
-                                <div key={u.uid} className="flex flex-col items-center w-[30%]" onClick={() => { setShowLeaderboard(false); onViewUser(u); }} style={{ cursor: 'pointer' }}>
+                                <div key={u.uid} className="flex flex-col items-center w-[30%]">
                                   <span className="text-lg mb-0.5">{podiumMedals[col]}</span>
                                   <div className={cn('w-12 h-12 rounded-2xl overflow-hidden border-2 mb-1 bg-blue-50', rank === 0 ? 'border-brand-gold shadow-lg shadow-brand-gold/30' : 'border-brand-navy/10')}>
                                     <PixelAvatar config={u.avatar} uid={u.uid} size={48} view="head" />
@@ -27081,7 +27130,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                         {sorted.length > 3 && (
                           <div className="space-y-2">
                             {sorted.slice(3).map((u, i) => (
-                              <div key={u.uid} onClick={() => { setShowLeaderboard(false); onViewUser(u); }} className="glass-card p-3 rounded-2xl flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-transform">
+                              <div key={u.uid} className="glass-card p-3 rounded-2xl flex items-center gap-3">
                                 <div className="w-6 font-display font-bold text-brand-navy/72 text-sm text-center shrink-0">#{i + 4}</div>
                                 <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-brand-navy/10 bg-blue-50 flex items-center justify-center">
                                   <PixelAvatar config={u.avatar} uid={u.uid} size={36} view="head" />
