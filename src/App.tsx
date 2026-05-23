@@ -24799,46 +24799,49 @@ function StoreDealsSection({ stores, onViewStore, storeDistances, onNavigate }: 
           </button>
         )}
       </div>
-      <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+      <div className="flex gap-4 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         {stores.map((store, i) => {
-          const finalReward = store.rewardTiers?.length
-            ? [...store.rewardTiers].sort((a, b) => b.stamps - a.stamps)[0]?.reward
-            : store.reward;
+          const stampsNeeded = store.stamps_required_for_reward ?? 8;
+          const dotCount = Math.min(stampsNeeded, 8);
           const dist = storeDistances?.get(store.id);
           const distLabel = dist != null
-            ? dist < 1 ? `${Math.round(dist * 1000)}m away` : `${dist.toFixed(1)}km away`
+            ? dist < 1 ? `${Math.round(dist * 1000)}m` : `${dist.toFixed(1)}km`
             : null;
+          const initials = store.name.split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase();
           return (
-            <motion.div
+            <motion.button
               key={store.id}
-              initial={{ opacity: 0, scale: 0.95 }}
+              initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.04 }}
-              className="shrink-0 w-28 rounded-[1.5rem] overflow-hidden relative cursor-pointer active:scale-[0.97] transition-transform shadow-md shadow-black/10"
-              style={{ height: '140px' }}
+              className="shrink-0 flex flex-col items-center gap-1.5 active:scale-[0.94] transition-transform"
+              style={{ width: '72px' }}
               onClick={() => onViewStore && onViewStore(store)}
             >
-              {/* Full-bleed background image */}
-              {store.logoUrl
-                ? <img src={store.logoUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                : <div className="absolute inset-0 bg-brand-navy/10 flex items-center justify-center"><Building2 size={28} className="text-brand-navy/30" /></div>}
-
-              {/* Dark gradient overlay at bottom */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-
-              {/* Reward label top-left */}
-              <div className="absolute top-2.5 left-2.5 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-sm max-w-[80%] truncate" style={{ background: 'var(--color-brand-gold)' }}>
-                {finalReward || `${store.stamps_required_for_reward} stamp reward`}
+              {/* Round logo */}
+              <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white shadow-md bg-brand-navy/5 shrink-0">
+                {store.logoUrl
+                  ? <img src={store.logoUrl} alt={store.name} className="w-full h-full object-cover" />
+                  : store.coverUrl
+                    ? <img src={store.coverUrl} alt={store.name} className="w-full h-full object-cover" />
+                    : <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-brand-navy/10 to-brand-navy/20">
+                        <span className="text-brand-navy font-black text-base">{initials}</span>
+                      </div>
+                }
               </div>
-
-              {/* Bottom text — shop name + distance only */}
-              <div className="absolute bottom-0 left-0 right-0 px-3 pb-3 pt-6">
-                <p className="font-bold text-white text-[11px] leading-tight">{store.name}</p>
-                {distLabel && (
-                  <p className="text-white/60 text-[9px] font-medium mt-0.5">{distLabel}</p>
-                )}
+              {/* Blue sticker dots */}
+              <div className="flex flex-wrap justify-center gap-[3px] px-1" style={{ maxWidth: '64px' }}>
+                {Array.from({ length: dotCount }).map((_, j) => (
+                  <span key={j} className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                ))}
               </div>
-            </motion.div>
+              {/* Name */}
+              <p className="text-[10px] font-semibold text-brand-navy leading-tight text-center line-clamp-1 w-full">{store.name}</p>
+              {/* Distance */}
+              {distLabel && (
+                <p className="text-[9px] text-brand-gold font-bold -mt-1">{distLabel}</p>
+              )}
+            </motion.button>
           );
         })}
       </div>
