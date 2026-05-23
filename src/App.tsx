@@ -579,7 +579,7 @@ function fmtK(n: number): string {
     const k = n / 1000;
     return (k % 1 === 0 ? k.toFixed(0) : k.toFixed(1).replace(/\.0$/, '')) + 'k';
   }
-  return n.toLocaleString();
+  return String(n);
 }
 
 interface Card {
@@ -15359,7 +15359,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                           <div key={label} className="space-y-1">
                             <div className="flex items-center justify-between">
                               <p className="text-[11px] font-bold text-brand-navy/70">{label}</p>
-                              <p className="text-[11px] font-bold text-brand-navy">{val.toLocaleString()}</p>
+                              <p className="text-[11px] font-bold text-brand-navy">{fmtK(val)}</p>
                             </div>
                             <div className="h-3 bg-brand-navy/5 rounded-full overflow-hidden">
                               <motion.div
@@ -15735,7 +15735,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                           <div key={label} className="space-y-1">
                             <div className="flex items-center justify-between">
                               <p className="text-[11px] font-bold text-brand-navy/70">{label}</p>
-                              <p className="text-[11px] font-bold text-brand-navy">{val.toLocaleString()}</p>
+                              <p className="text-[11px] font-bold text-brand-navy">{fmtK(val)}</p>
                             </div>
                             <div className="h-3 bg-brand-navy/5 rounded-full overflow-hidden">
                               <motion.div
@@ -16118,7 +16118,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h3 className="font-display text-2xl font-bold">Redeem Points</h3>
-                    <p className="text-brand-navy/75 text-xs mt-0.5">{netAvailablePoints.toLocaleString()} pts available · up to ${maxRedeemDollars.toFixed(2)} off</p>
+                    <p className="text-brand-navy/75 text-xs mt-0.5">{fmtK(netAvailablePoints)} pts available · up to ${maxRedeemDollars.toFixed(2)} off</p>
                   </div>
                   <button onClick={closeRedeemFlow} className="p-2 text-brand-navy/75 hover:text-brand-navy"><X size={20} /></button>
                 </div>
@@ -16227,7 +16227,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
         <div className="bg-white px-4 py-5 flex flex-col items-center text-center">
           {membershipType === 'spend' ? (
             <>
-              <p className="text-brand-navy font-black text-4xl leading-none">{netAvailablePoints.toLocaleString()}</p>
+              <p className="text-brand-navy font-black text-4xl leading-none">{fmtK(netAvailablePoints)}</p>
               <p className="text-brand-navy/75 text-[9px] font-bold uppercase tracking-widest mt-1">points available</p>
               {redeemableValue > 0 && (
                 <p className="text-brand-navy/75 font-bold text-xs mt-1.5">≈ ${redeemableValue.toFixed(2)} redeemable</p>
@@ -16268,7 +16268,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               <div className="grid grid-cols-2 gap-3 mb-6">
                 <div className="glass-card p-5 rounded-2xl">
                   <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-1">Available</p>
-                  <p className="text-3xl font-black text-brand-navy">{netAvailablePoints.toLocaleString()}</p>
+                  <p className="text-3xl font-black text-brand-navy">{fmtK(netAvailablePoints)}</p>
                   {pointsRate > 0 && <p className="text-[10px] text-brand-navy/75 mt-1">{pointsRate} pts per $1</p>}
                 </div>
                 <div className="glass-card p-5 rounded-2xl">
@@ -16284,12 +16284,12 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-brand-navy/80 text-xs font-bold uppercase tracking-widest">Points Earned</span>
-                  <span className="text-brand-navy font-black">{membershipPoints.toLocaleString()}</span>
+                  <span className="text-brand-navy font-black">{fmtK(membershipPoints)}</span>
                 </div>
                 {pointsAlreadyRedeemed > 0 && (
                   <div className="flex items-center justify-between">
                     <span className="text-brand-navy/80 text-xs font-bold uppercase tracking-widest">Points Redeemed</span>
-                    <span className="text-red-500 font-black">−{pointsAlreadyRedeemed.toLocaleString()}</span>
+                    <span className="text-red-500 font-black">−{fmtK(pointsAlreadyRedeemed)}</span>
                   </div>
                 )}
                 {earnedRewards > 0 && (
@@ -16514,7 +16514,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
           {membershipType === 'spend' ? (
             <>
               <div className="text-center mb-4">
-                <p className="text-brand-navy font-black text-5xl leading-none tracking-tight">{netAvailablePoints.toLocaleString()}</p>
+                <p className="text-brand-navy font-black text-5xl leading-none tracking-tight">{fmtK(netAvailablePoints)}</p>
                 <p className="text-brand-navy/75 text-xs font-bold uppercase tracking-widest mt-1.5">points available</p>
                 {redeemableValue > 0 && (
                   <p className="text-brand-navy text-2xl font-black mt-2 leading-none">≈ ${redeemableValue.toFixed(2)} off</p>
@@ -16590,7 +16590,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               <div className="grid grid-cols-2 gap-3 mb-6">
                 <div className="glass-card p-5 rounded-2xl">
                   <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-1">Available</p>
-                  <p className="text-3xl font-black text-brand-navy">{netAvailablePoints.toLocaleString()}</p>
+                  <p className="text-3xl font-black text-brand-navy">{fmtK(netAvailablePoints)}</p>
                   {pointsRate > 0 && <p className="text-[10px] text-brand-navy/75 mt-1">{pointsRate} pts per $1</p>}
                 </div>
                 <div className="glass-card p-5 rounded-2xl">
@@ -16608,12 +16608,12 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 </div>
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Points Earned</p>
-                  <p className="font-black text-brand-navy">{membershipPoints.toLocaleString()}</p>
+                  <p className="font-black text-brand-navy">{fmtK(membershipPoints)}</p>
                 </div>
                 {pointsAlreadyRedeemed > 0 && (
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Points Redeemed</p>
-                    <p className="font-black text-red-500">−{pointsAlreadyRedeemed.toLocaleString()}</p>
+                    <p className="font-black text-red-500">−{fmtK(pointsAlreadyRedeemed)}</p>
                   </div>
                 )}
                 {earnedRewards > 0 && (
@@ -17462,7 +17462,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
               >
                 <div className="bg-brand-navy/20 rounded-full mx-auto mb-5" style={{ width: 40, height: 4 }} />
                 <h3 className="font-display text-xl font-bold text-center mb-1">{store?.name}</h3>
-                <p className="text-brand-navy/60 text-xs text-center mb-6">{points.toLocaleString()} pts · {visits} visits</p>
+                <p className="text-brand-navy/60 text-xs text-center mb-6">{fmtK(points)} pts · {visits} visits</p>
                 <div className="grid grid-cols-2 gap-3 mb-5">
                   <button onClick={() => { setShowScanSheet(false); setShowQRScan(true); }}
                     className="flex flex-col items-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform gradient-logo-blue text-white shadow-lg relative overflow-hidden">
@@ -17520,7 +17520,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
         {/* Center stats */}
         <div className="flex items-center justify-center gap-10 py-6">
           <div className="text-center">
-            <p className="text-white font-black text-4xl leading-none">{points.toLocaleString()}</p>
+            <p className="text-white font-black text-4xl leading-none">{fmtK(points)}</p>
             <p className="text-indigo-200 text-xs font-bold uppercase tracking-widest mt-1">pts</p>
           </div>
           <div className="w-px h-10 bg-white/20" />
@@ -17595,7 +17595,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="font-display text-xl font-bold text-brand-navy">Redeem Points</h3>
-                  <p className="text-xs text-brand-navy/60 mt-0.5">Balance: <span className="font-bold text-blue-600">{points.toLocaleString()} pts</span></p>
+                  <p className="text-xs text-brand-navy/60 mt-0.5">Balance: <span className="font-bold text-blue-600">{fmtK(points)} pts</span></p>
                 </div>
                 <button onClick={() => { setShowRedeemSheet(false); setSelectedReward(null); }} className="p-2 text-brand-navy/75">
                   <X size={20} />
@@ -17633,11 +17633,11 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
                               <Gift size={16} className={isSelected ? 'text-blue-600' : affordable ? 'text-indigo-400' : 'text-brand-navy/30'} />
                               <div>
                                 <p className={cn('font-bold text-sm', isSelected ? 'text-blue-700' : 'text-brand-navy')}>{r.reward}</p>
-                                <p className="text-[10px] text-brand-navy/50">{r.points.toLocaleString()} pts</p>
+                                <p className="text-[10px] text-brand-navy/50">{fmtK(r.points)} pts</p>
                               </div>
                             </div>
                             <div className="flex items-center gap-1.5 shrink-0">
-                              {!affordable && <span className="text-[10px] text-brand-navy/40">{(r.points - points).toLocaleString()} more</span>}
+                              {!affordable && <span className="text-[10px] text-brand-navy/40">{fmtK(r.points - points)} more</span>}
                               {isSelected && <CheckCircle2 size={18} className="text-blue-600" />}
                             </div>
                           </button>
@@ -17665,7 +17665,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
                               <Wallet size={16} className={isSelected ? 'text-emerald-600' : 'text-emerald-400'} />
                               <div>
                                 <p className={cn('font-bold text-sm', isSelected ? 'text-emerald-700' : 'text-brand-navy')}>${moneyValue} off</p>
-                                <p className="text-[10px] text-brand-navy/50">{moneyPts.toLocaleString()} pts · {rate} pts = $1</p>
+                                <p className="text-[10px] text-brand-navy/50">{fmtK(moneyPts)} pts · {rate} pts = $1</p>
                               </div>
                             </div>
                             {isSelected && <CheckCircle2 size={18} className="text-emerald-500" />}
@@ -17680,7 +17680,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
                   )}
 
                   {unlockedRewards.length === 0 && moneyValue === 0 && sortedRewards.length > 0 && (
-                    <p className="text-center text-brand-navy/50 text-sm py-4">Keep collecting — {(sortedRewards[0].points - points).toLocaleString()} more pts until your first reward.</p>
+                    <p className="text-center text-brand-navy/50 text-sm py-4">Keep collecting — {fmtK(sortedRewards[0].points - points)} more pts until your first reward.</p>
                   )}
 
                   {redeemError && <p className="text-red-500 text-sm font-bold text-center">{redeemError}</p>}
@@ -17691,7 +17691,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
                     className="w-full bg-indigo-600 text-white py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 disabled:opacity-40 active:scale-[0.98] transition-all mt-2"
                   >
                     <Gift size={16} />
-                    {isRedeeming ? 'Processing…' : selectedReward ? `Redeem — ${selectedReward.points.toLocaleString()} pts` : 'Select a reward'}
+                    {isRedeeming ? 'Processing…' : selectedReward ? `Redeem — ${fmtK(selectedReward.points)} pts` : 'Select a reward'}
                   </button>
                 </div>
               )}
@@ -17713,7 +17713,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
             >
               <div className="bg-brand-navy/20 rounded-full mx-auto mb-5" style={{ width: 40, height: 4 }} />
               <h3 className="font-display text-xl font-bold text-center mb-1">{store?.name}</h3>
-              <p className="text-brand-navy/60 text-xs text-center mb-6">{points.toLocaleString()} pts · {visits} visits</p>
+              <p className="text-brand-navy/60 text-xs text-center mb-6">{fmtK(points)} pts · {visits} visits</p>
               <div className="grid grid-cols-2 gap-3 mb-5">
                 <button onClick={() => { setShowScanSheet(false); setShowQRScan(true); }}
                   className="flex flex-col items-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform gradient-logo-blue text-white shadow-lg relative overflow-hidden">
@@ -21054,7 +21054,7 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
                     const val = parseFloat(redemptionRate) > 0 ? pts / parseFloat(redemptionRate) : 0;
                     return (
                       <div className="flex items-center justify-between pt-1 border-t border-brand-navy/10">
-                        <span className="text-sm font-bold text-brand-navy">= {pts.toLocaleString()} pts</span>
+                        <span className="text-sm font-bold text-brand-navy">= {fmtK(pts)} pts</span>
                         <span className="text-sm font-bold text-emerald-600">≈ ${val.toFixed(2)} off</span>
                       </div>
                     );
@@ -21650,7 +21650,7 @@ function StoreLeaderboard({ storeId, storeName, logoUrl, type, userId }: {
               <LivePixelAvatar uid={e.userId} size={28} view="head" />
             </div>
             <p className="text-xs font-bold text-brand-navy flex-1 truncate">{e.userId === userId ? 'You' : e.userName}</p>
-            <span className="font-black text-sm text-brand-navy shrink-0">{e.score.toLocaleString()}</span>
+            <span className="font-black text-sm text-brand-navy shrink-0">{fmtK(e.score)}</span>
           </div>
         ))}
       </div>
@@ -22523,7 +22523,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                           </>
                         ) : (
                           <>
-                            <span className="text-[10px] font-bold" style={{ color: primary }}>{(card.membership_points ?? 0).toLocaleString()} pts</span>
+                            <span className="text-[10px] font-bold" style={{ color: primary }}>{fmtK(card.membership_points ?? 0)} pts</span>
                             {(card.total_spent ?? 0) > 0 && <span className="text-[10px] font-bold text-brand-navy/50">£{(card.total_spent ?? 0).toFixed(2)}</span>}
                           </>
                         )}
@@ -28110,7 +28110,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                   <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">Collect Points</p>
                 </div>
                 <div className="relative z-10 text-right shrink-0">
-                  <p className="text-white font-black text-2xl leading-none">{spvNetAvailable.toLocaleString()}</p>
+                  <p className="text-white font-black text-2xl leading-none">{fmtK(spvNetAvailable)}</p>
                   <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">pts available</p>
                 </div>
               </div>
@@ -28156,7 +28156,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                     <div className="grid grid-cols-2 gap-3 mb-4">
                       <div className="glass-card p-5 rounded-2xl">
                         <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-1">Available</p>
-                        <p className="text-3xl font-black text-brand-navy">{spvNetAvailable.toLocaleString()}</p>
+                        <p className="text-3xl font-black text-brand-navy">{fmtK(spvNetAvailable)}</p>
                         {pointsRate > 0 && <p className="text-[10px] text-brand-navy/75 mt-1">{pointsRate} pts per £1</p>}
                       </div>
                       <div className="glass-card p-5 rounded-2xl">
@@ -28174,12 +28174,12 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                       </div>
                       <div className="flex items-center justify-between">
                         <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Points Earned</p>
-                        <p className="font-black text-brand-navy">{pts.toLocaleString()}</p>
+                        <p className="font-black text-brand-navy">{fmtK(pts)}</p>
                       </div>
                       {spvPointsAlreadyRedeemed > 0 && (
                         <div className="flex items-center justify-between">
                           <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Points Redeemed</p>
-                          <p className="font-black text-red-500">−{spvPointsAlreadyRedeemed.toLocaleString()}</p>
+                          <p className="font-black text-red-500">−{fmtK(spvPointsAlreadyRedeemed)}</p>
                         </div>
                       )}
                       {rewards > 0 && (
@@ -28250,7 +28250,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                         <div className="flex items-center justify-between mb-6">
                           <div>
                             <h3 className="font-display text-2xl font-bold">Redeem Points</h3>
-                            <p className="text-brand-navy/75 text-xs mt-0.5">{pts.toLocaleString()} pts · up to £{maxRedeemDollars.toFixed(2)} off</p>
+                            <p className="text-brand-navy/75 text-xs mt-0.5">{fmtK(pts)} pts · up to £{maxRedeemDollars.toFixed(2)} off</p>
                           </div>
                           <button onClick={closeRedeem} className="p-2 text-brand-navy/75"><X size={20} /></button>
                         </div>
@@ -29414,7 +29414,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
                         </>
                       ) : (
                         <>
-                          <span className="text-[10px] font-bold" style={{ color: primary }}>{(card.membership_points ?? 0).toLocaleString()} pts</span>
+                          <span className="text-[10px] font-bold" style={{ color: primary }}>{fmtK(card.membership_points ?? 0)} pts</span>
                           {(card.total_spent ?? 0) > 0 && <span className="text-[10px] font-bold text-brand-navy/50">£{(card.total_spent ?? 0).toFixed(2)}</span>}
                         </>
                       )}
