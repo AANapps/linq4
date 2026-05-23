@@ -26625,14 +26625,14 @@ function AdminBannerCarousel({ banners, cycleMs = 4500, onNavigate }: { banners:
     <div className="relative rounded-[1.5rem] overflow-hidden shadow-lg" style={{ height: '130px' }}>
       <AnimatePresence initial={false}>
         {active.map((b, i) => i !== curIdx ? null : (
-          <motion.button
+          <motion.div
             key={b.id}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.4, ease: 'easeInOut' }}
             onClick={() => onNavigate(b.destination)}
-            className="absolute inset-0 w-full flex items-center px-5 py-4 gap-4 active:opacity-90 overflow-hidden appearance-none bg-transparent"
+            className="absolute inset-0 w-full flex items-center px-5 py-4 gap-4 active:opacity-90 overflow-hidden cursor-pointer"
             style={b.imageUrl ? {} : { background: `linear-gradient(135deg, ${b.bgFrom} 0%, ${b.bgTo} 100%)` }}
           >
             {b.imageUrl && (
@@ -26658,7 +26658,7 @@ function AdminBannerCarousel({ banners, cycleMs = 4500, onNavigate }: { banners:
                 <ChevronRight size={16} className={cn('relative z-10', b.textLight ? 'text-white/50 shrink-0' : 'text-black/30 shrink-0')} />
               </>
             )}
-          </motion.button>
+          </motion.div>
         ))}
       </AnimatePresence>
       {active.length > 1 && (
