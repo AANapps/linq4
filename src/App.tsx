@@ -145,7 +145,8 @@ import {
   ZoomIn,
   ZoomOut,
   ImageIcon,
-  Upload
+  Upload,
+  ScanLine
 } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
@@ -11504,7 +11505,7 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
               className="w-full flex items-center justify-center gap-2.5 text-white py-4 rounded-2xl font-black text-base mb-4 active:scale-[0.98] transition-transform"
               style={{ backgroundColor: cardTheme }}
             >
-              <Wifi size={18} className="-rotate-90" /> Scan NFC Tag
+              <ScanLine size={18} /> Tap to scan
             </button>
             {/* Test input */}
             <div className="flex gap-2 mb-2">
@@ -11825,7 +11826,7 @@ function VisitScanSheet({ card, store, onClose, onPackReady, initialQty }: { car
                 <button onClick={() => { setScanMode('nfc'); startScan(); }}
                   className="flex flex-col items-center gap-2 py-4 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform text-white"
                   style={{ backgroundColor: color }}>
-                  <Wifi size={20} className="-rotate-90" />
+                  <ScanLine size={20} />
                   NFC Tag
                 </button>
               )}
@@ -15851,7 +15852,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                   </div>
                   <div>
                     <p className="font-bold text-brand-navy">{store.membershipType === 'visit' ? 'Issue Points' : 'Scan User'}</p>
-                    <p className="text-xs text-brand-navy/80 mt-0.5">{store.membershipType === 'visit' ? 'Scan NFC to issue visit points' : 'Issue spend to membership card'}</p>
+                    <p className="text-xs text-brand-navy/80 mt-0.5">{store.membershipType === 'visit' ? 'Tap to scan to issue visit points' : 'Issue spend to membership card'}</p>
                   </div>
                 </button>
               )}
@@ -16397,8 +16398,8 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-white/90 text-xs active:scale-95 transition-all"
                   style={{ background: `linear-gradient(135deg, ${color}99 0%, ${color}66 100%)` }}
                 >
-                  <Wifi size={14} className="-rotate-90" />
-                  Scan to Earn Points
+                  <ScanLine size={14} />
+                  Tap to scan
                 </button>
               </div>
             </motion.div>
@@ -16468,8 +16469,8 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 </button>
                 <button onClick={() => { setShowVisitScanSheet(false); onScan?.(); }}
                   className="flex flex-col items-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform bg-brand-navy/8 text-brand-navy">
-                  <Wifi size={28} className="-rotate-90" />
-                  Scan NFC
+                  <ScanLine size={28} />
+                  Tap to scan
                 </button>
               </div>
               <button onClick={() => setShowVisitScanSheet(false)} className="w-full text-brand-navy/75 font-bold text-sm py-2">Close</button>
@@ -16552,7 +16553,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               )}
               <div className="flex items-center justify-between">
                 <span className="text-brand-navy/35 text-[11px] font-bold">{lastVisitReward ? `Last: ${lastVisitReward.reward}` : 'Tap card to scan'}</span>
-                <span className="text-brand-navy/75 text-[10px] font-bold flex items-center gap-1"><Wifi size={11} className="-rotate-90" /> Scan</span>
+                <span className="text-brand-navy/75 text-[10px] font-bold flex items-center gap-1"><ScanLine size={11} /> Tap to scan</span>
               </div>
             </>
           )}
@@ -16766,8 +16767,8 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-white/90 text-xs active:scale-95 transition-all"
                   style={{ background: `linear-gradient(135deg, ${color}99 0%, ${color}66 100%)` }}
                 >
-                  <Wifi size={14} className="-rotate-90" />
-                  Scan to Earn Points
+                  <ScanLine size={14} />
+                  Tap to scan
                 </button>
               </div>
             </motion.div>
@@ -16838,8 +16839,8 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 </button>
                 <button onClick={() => { setShowVisitScanSheet(false); onScan?.(); }}
                   className="flex flex-col items-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform bg-brand-navy/8 text-brand-navy">
-                  <Wifi size={28} className="-rotate-90" />
-                  Scan NFC
+                  <ScanLine size={28} />
+                  Tap to scan
                 </button>
               </div>
               <button onClick={() => setShowVisitScanSheet(false)} className="w-full text-brand-navy/75 font-bold text-sm py-2">Close</button>
@@ -17200,7 +17201,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
         <p className="text-center text-brand-navy/40 text-[11px] font-bold mt-2 flex items-center justify-center gap-1">
           {store?.scanMethod === 'qr'
             ? <><QrCode size={11} /> Tap card to scan store QR</>
-            : <><Wifi size={11} className="-rotate-90" /> Tap card to scan NFC tag</>}
+            : <><ScanLine size={11} /> Tap to scan</>}
         </p>
       )}
 
@@ -17312,8 +17313,8 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                   onClick={() => { setShowQR(false); onScan?.(); }}
                   className="flex flex-col items-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform bg-brand-navy/8 text-brand-navy"
                 >
-                  <Wifi size={28} className="-rotate-90" />
-                  Scan NFC
+                  <ScanLine size={28} />
+                  Tap to scan
                 </button>
               </div>
 
@@ -17472,8 +17473,8 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
                   </button>
                   <button onClick={() => { setShowScanSheet(false); onScan?.(); }}
                     className="flex flex-col items-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform bg-brand-navy/8 text-brand-navy">
-                    <Wifi size={28} className="-rotate-90" />
-                    Scan NFC
+                    <ScanLine size={28} />
+                    Tap to scan
                   </button>
                 </div>
                 <button onClick={() => setShowScanSheet(false)} className="w-full text-brand-navy/75 font-bold text-sm py-2">Close</button>
@@ -17723,8 +17724,8 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
                 </button>
                 <button onClick={() => { setShowScanSheet(false); onScan?.(); }}
                   className="flex flex-col items-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform bg-brand-navy/8 text-brand-navy">
-                  <Wifi size={28} className="-rotate-90" />
-                  Scan NFC
+                  <ScanLine size={28} />
+                  Tap to scan
                 </button>
               </div>
               <button onClick={() => setShowScanSheet(false)} className="w-full text-brand-navy/75 font-bold text-sm py-2">Close</button>
@@ -20139,7 +20140,7 @@ function ScanUserPanel({ store, onIssue }: {
               ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full" /> Scanning…</>
               : visitScanMode === 'qr'
                 ? <><QrCode size={16} /> Scan QR Code</>
-                : <><Wifi size={16} className="-rotate-90" /> Scan NFC</>}
+                : <><ScanLine size={16} /> Tap to scan</>}
           </button>
         </div>
       )}
@@ -22083,12 +22084,10 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                         <PixelAvatar uid={c.user_id} size={36} view="head" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold truncate">
-                          {(() => { const h = memberProfiles.get(c.user_id)?.handle; return h ? `@${h}` : (c.userName || 'Member'); })()}
-                        </p>
+                        <p className="text-sm font-bold truncate">{c.userName || 'Member'}</p>
                       </div>
                       <div className="text-right shrink-0 flex items-center gap-1">
-                        {!isSubscribed && (isVisit || isSpend) && (
+                        {(vendorStore?.subscriptionStatus !== 'active' && vendorStore?.subscriptionStatus !== 'trialing') && (isVisit || isSpend) && (
                           <Lock size={10} className="text-brand-navy/30 shrink-0" />
                         )}
                         <div>
