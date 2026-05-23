@@ -7115,9 +7115,6 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
   const [deleting, setDeleting] = useState(false);
   const [togglingUid, setTogglingUid] = useState<string | null>(null);
   const [togglingIntroUid, setTogglingIntroUid] = useState<string | null>(null);
-  const [stampUid, setStampUid] = useState<string | null>(null);
-  const [stampAmount, setStampAmount] = useState('1');
-  const [addingStamps, setAddingStamps] = useState(false);
 
   useEffect(() => {
     return onSnapshot(collection(db, 'users'), snap =>
@@ -7164,19 +7161,6 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
       await updateDoc(doc(db, 'users', u.uid), { introComplete: !u.introComplete });
     } finally {
       setTogglingIntroUid(null);
-    }
-  };
-
-  const addStamps = async (uid: string) => {
-    const n = parseInt(stampAmount, 10);
-    if (!n || n < 1) return;
-    setAddingStamps(true);
-    try {
-      await updateDoc(doc(db, 'users', uid), { totalStamps: increment(n) });
-      setStampUid(null);
-      setStampAmount('1');
-    } finally {
-      setAddingStamps(false);
     }
   };
 
@@ -7241,32 +7225,6 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
                   Cancel
                 </button>
               </div>
-            ) : stampUid === u.uid ? (
-              <div className="px-4 py-3 flex items-center gap-2">
-                <Stamp size={14} className="text-brand-gold shrink-0" />
-                <p className="text-xs font-bold text-brand-navy shrink-0">Add stamps to {u.name?.split(' ')[0]}:</p>
-                <input
-                  type="number"
-                  min="1"
-                  max="999"
-                  value={stampAmount}
-                  onChange={e => setStampAmount(e.target.value)}
-                  className="w-16 px-2 py-1 rounded-lg border border-brand-navy/15 text-sm text-brand-navy text-center outline-none"
-                />
-                <button
-                  onClick={() => addStamps(u.uid)}
-                  disabled={addingStamps}
-                  className="px-3 py-1.5 bg-brand-gold text-white text-xs font-bold rounded-xl active:scale-95 transition-all disabled:opacity-50"
-                >
-                  {addingStamps ? '…' : 'Add'}
-                </button>
-                <button
-                  onClick={() => { setStampUid(null); setStampAmount('1'); }}
-                  className="px-3 py-1.5 bg-brand-navy/10 text-brand-navy text-xs font-bold rounded-xl active:scale-95 transition-all"
-                >
-                  Cancel
-                </button>
-              </div>
             ) : (
               <div className="flex items-center gap-3 px-4 py-3">
                 <div className="w-9 h-9 rounded-xl overflow-hidden bg-brand-navy/5 shrink-0">
@@ -7326,13 +7284,6 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
                   )}
                 >
                   {u.role === 'admin' ? '★ Admin' : '☆ Admin'}
-                </button>
-                <button
-                  onClick={() => { setStampUid(u.uid); setStampAmount('1'); setConfirmDeleteUid(null); }}
-                  title="Add stamps"
-                  className="p-2 text-brand-gold/80 hover:text-brand-gold transition-colors"
-                >
-                  <Stamp size={14} />
                 </button>
                 <button
                   onClick={() => setConfirmDeleteUid(u.uid)}
