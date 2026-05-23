@@ -26792,21 +26792,27 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
   useEffect(() => {
     if (!showSavingsLb) return;
     setSavingsLbLoading(true);
-    Promise.all([
-      getDocs(collection(db, 'users')),
-      getDocs(query(collection(db, 'leaderboard_pins'), where('category', '==', 'savings'))),
-    ]).then(([usersSnap, pinsSnap]) => {
-      const pinnedUids = new Set(pinsSnap.docs.map(d => d.data().uid));
-      const pins: UserProfile[] = pinsSnap.docs.map(d => {
+    (async () => {
+      const [usersResult, pinsResult] = await Promise.allSettled([
+        getDocs(collection(db, 'users')),
+        getDocs(query(collection(db, 'leaderboard_pins'), where('category', '==', 'savings'))),
+      ]);
+      const usersSnap = usersResult.status === 'fulfilled' ? usersResult.value : null;
+      if (!usersSnap) { console.error('savings lb users fetch failed', (usersResult as PromiseRejectedResult).reason); }
+      const pinsSnap = pinsResult.status === 'fulfilled' ? pinsResult.value : null;
+      if (!pinsSnap) { console.error('savings lb pins fetch failed', (pinsResult as PromiseRejectedResult).reason); }
+      const pins: UserProfile[] = (pinsSnap?.docs ?? []).map(d => {
         const p = d.data();
         return { uid: p.uid, name: p.name, handle: p.handle, avatar: p.avatar, totalSaved: p.value, totalStamps: 0, totalRedeemed: 0, streak: 0 } as UserProfile;
       });
-      const realUsers: UserProfile[] = usersSnap.docs
+      const pinnedUids = new Set(pins.map(p => p.uid));
+      const realUsers: UserProfile[] = (usersSnap?.docs ?? [])
         .map(d => ({ uid: d.id, ...d.data() } as UserProfile))
         .filter(u => !pinnedUids.has(u.uid));
       const merged = [...pins, ...realUsers].sort((a, b) => (b.totalSaved ?? 0) - (a.totalSaved ?? 0)).slice(0, 10);
       setSavingsLbUsers(merged);
-    }).catch(console.error).finally(() => setSavingsLbLoading(false));
+      setSavingsLbLoading(false);
+    })();
   }, [showSavingsLb]);
 
   useEffect(() => {
