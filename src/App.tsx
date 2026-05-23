@@ -3970,6 +3970,7 @@ function MysteryRevealCard({ sticker, isRevealed, onReveal }: {
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8,
           overflow: 'hidden',
           boxShadow: `0 0 18px ${cfg.color}55, inset 0 0 12px rgba(0,0,0,0.4)`,
+          opacity: flipping || localRevealed ? 0 : 1,
         }}>
           {/* Tier label hint top */}
           <div style={{ position: 'absolute', top: 8, left: 0, right: 0, textAlign: 'center', zIndex: 3 }}>
