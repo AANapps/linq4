@@ -886,6 +886,7 @@ interface CollectibleCardDef {
   probability: number; // relative weight within tier
   setId?: string; // which CollectibleCardSet this belongs to
   createdAt?: any;
+  description?: string;
 }
 
 interface CollectibleSticker {
@@ -3260,7 +3261,7 @@ function StickerCard({ sticker, isRevealed, onReveal, onExpand, size = 'md' }: {
 
   useEffect(() => { if (isRevealed) setLocalRevealed(true); }, [isRevealed]);
 
-  const dims = size === 'sm' ? { w: 62, h: 88 } : size === 'lg' ? { w: 160, h: 228 } : { w: 82, h: 116 };
+  const dims = size === 'sm' ? { w: 62, h: 88 } : size === 'lg' ? { w: 210, h: 298 } : { w: 82, h: 116 };
   const bottomH = size === 'sm' ? 26 : size === 'lg' ? 58 : 32;
   const fName = size === 'sm' ? 6 : size === 'lg' ? 12 : 7.5;
   const fRank = size === 'sm' ? 5 : size === 'lg' ? 10 : 6;
@@ -3286,9 +3287,6 @@ function StickerCard({ sticker, isRevealed, onReveal, onExpand, size = 'md' }: {
               <span style={{ fontSize: emojiSize }}>{STICKER_CONFIG[sticker.tier].variants[sticker.variant ?? 0]?.emoji}</span>
             </div>
         }
-        <div style={{ position: 'absolute', top: 2, right: 2, background: `${cfg.color}cc`, borderRadius: 2, padding: '1px 3px' }}>
-          <span style={{ fontSize: fColl - 1, fontWeight: 900, color: '#fff', letterSpacing: '0.4px', textTransform: 'uppercase' as const }}>Collectible</span>
-        </div>
       </div>
       {/* Bottom panel */}
       <div style={{ height: bottomH, background: cfg.bg, padding: size === 'sm' ? '2px 4px' : size === 'lg' ? '5px 8px' : '3px 6px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 1 }}>
@@ -3307,9 +3305,15 @@ function StickerCard({ sticker, isRevealed, onReveal, onExpand, size = 'md' }: {
       style={{ width: dims.w, height: dims.h, flexShrink: 0, cursor: (!localRevealed || onExpand) ? 'pointer' : 'default', position: 'relative' }}
     >
       {/* Card always rendered underneath */}
-      <div className="holo-border" style={{ position: 'absolute', inset: 0, padding: 5, borderRadius: 9, boxShadow: `0 4px 24px ${cfg.color}55` }}>
-        {cardInner}
-      </div>
+      {size === 'lg' ? (
+        <div className="holo-border" style={{ position: 'absolute', inset: 0, padding: 5, borderRadius: 9, boxShadow: `0 4px 24px ${cfg.color}55` }}>
+          {cardInner}
+        </div>
+      ) : (
+        <div style={{ position: 'absolute', inset: 0, padding: 2, borderRadius: 6, background: cfg.border }}>
+          {cardInner}
+        </div>
+      )}
       {/* Mystery overlay sits on top until revealed — removed instantly on tap */}
       {!localRevealed && (
         <div style={{
@@ -3519,16 +3523,13 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
                         return (
                           <div key={sl.key} className="relative flex-1" style={{ maxWidth: 72, aspectRatio: '3/4', minWidth: 0 }}>
                               {filled ? (
-                              <div className="holo-border" style={{ width: '100%', height: '100%', borderRadius: 9, padding: 5, boxShadow: `0 2px 12px ${cfg.color}55` }}>
+                              <div style={{ width: '100%', height: '100%', borderRadius: 6, padding: 2, background: cfg.border }}>
                                 <div style={{ width: '100%', height: '100%', borderRadius: 4, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: '#fff', position: 'relative' }}>
                                   <div style={{ flex: 1, overflow: 'hidden', position: 'relative', borderBottom: `2px solid ${cfg.border}` }}>
                                     {sl.imageUrl
                                       ? <img src={sl.imageUrl} alt={sl.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                                       : <div style={{ width: '100%', height: '100%', background: cfg.solid }} />
                                     }
-                                    <div style={{ position: 'absolute', top: 1, right: 1, background: `${cfg.color}cc`, borderRadius: 2, padding: '1px 2px' }}>
-                                      <span style={{ fontSize: 3.5, fontWeight: 900, color: '#fff', textTransform: 'uppercase' as const, letterSpacing: '0.3px' }}>Collectible</span>
-                                    </div>
                                   </div>
                                   <div style={{ height: 20, background: cfg.bg, padding: '2px 3px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 0.5 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
@@ -3693,27 +3694,33 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
 
       {/* Card detail overlay */}
       <AnimatePresence>
-        {selected && cfg && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm z-20 flex items-center justify-center p-6"
-            onClick={() => setSelected(null)}>
-            <motion.div initial={{ scale: 0.85, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.85, opacity: 0 }}
-              className="flex flex-col items-center gap-5"
-              onClick={e => e.stopPropagation()}>
-              {/* Tier glow */}
-              <div style={{ position: 'absolute', inset: -32, borderRadius: 48, background: cfg.solid, filter: 'blur(48px)', opacity: 0.35, pointerEvents: 'none' }} />
-              <StickerCard sticker={selected.sticker} isRevealed={true} size="lg" />
-              {selected.count > 1 && (
-                <p className="text-sm font-bold text-white/70">You own <span className="text-white">x{selected.count}</span></p>
-              )}
-              <button onClick={() => setSelected(null)}
-                className="px-8 py-3 rounded-2xl font-bold text-sm text-white/80"
-                style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)' }}>
-                Close
-              </button>
+        {selected && cfg && (() => {
+          const selDef = selected.sticker.cardDefId ? cardDefs.find(d => d.id === selected.sticker.cardDefId) : null;
+          return (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm z-20 flex items-center justify-center p-6"
+              onClick={() => setSelected(null)}>
+              <motion.div initial={{ scale: 0.85, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.85, opacity: 0 }}
+                className="flex flex-col items-center gap-5"
+                onClick={e => e.stopPropagation()}>
+                {/* Tier glow */}
+                <div style={{ position: 'absolute', inset: -32, borderRadius: 48, background: cfg.solid, filter: 'blur(48px)', opacity: 0.35, pointerEvents: 'none' }} />
+                <StickerCard sticker={selected.sticker} isRevealed={true} size="lg" />
+                {selDef?.description && (
+                  <p className="text-center text-sm text-white/80 max-w-[200px] leading-snug">{selDef.description}</p>
+                )}
+                {selected.count > 1 && (
+                  <p className="text-sm font-bold text-white/70">You own <span className="text-white">x{selected.count}</span></p>
+                )}
+                <button onClick={() => setSelected(null)}
+                  className="px-8 py-3 rounded-2xl font-bold text-sm text-white/80"
+                  style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)' }}>
+                  Close
+                </button>
+              </motion.div>
             </motion.div>
-          </motion.div>
-        )}
+          );
+        })()}
       </AnimatePresence>
     </motion.div>
   );
@@ -3727,6 +3734,13 @@ function UserStickerPanel({ uid, isOwnProfile = false, onOpenPack }: {
   const [col, setCol] = useState<{ stickers: CollectibleSticker[]; revealedIds: string[]; uniqueTiers: StickerTier[] } | null>(null);
   const [showCollection, setShowCollection] = useState(false);
   const [expandedSticker, setExpandedSticker] = useState<CollectibleSticker | null>(null);
+  const [cardDefs, setCardDefs] = useState<CollectibleCardDef[]>([]);
+
+  useEffect(() => {
+    getDocs(collection(db, 'collectible_cards')).then(snap => {
+      setCardDefs(snap.docs.map(d => ({ id: d.id, ...d.data() } as CollectibleCardDef)));
+    }).catch(console.error);
+  }, []);
 
   useEffect(() => {
     return onSnapshot(doc(db, 'user_stickers', uid), snap => {
@@ -3803,6 +3817,7 @@ function UserStickerPanel({ uid, isOwnProfile = false, onOpenPack }: {
       <AnimatePresence>
         {expandedSticker && (() => {
           const ecfg = STICKER_CONFIG[expandedSticker.tier];
+          const eDef = expandedSticker.cardDefId ? cardDefs.find(d => d.id === expandedSticker.cardDefId) : null;
           return (
             <motion.div
               className="fixed inset-0 z-[400] flex items-center justify-center"
@@ -3827,6 +3842,9 @@ function UserStickerPanel({ uid, isOwnProfile = false, onOpenPack }: {
                   transition={{ duration: 2, repeat: Infinity }}
                 />
                 <StickerCard sticker={expandedSticker} isRevealed={true} size="lg" />
+                {eDef?.description && (
+                  <p className="relative z-10 text-center text-sm text-white/80 max-w-[200px] leading-snug">{eDef.description}</p>
+                )}
                 <button
                   className="relative z-10 px-8 py-3 rounded-2xl font-bold text-sm text-white/80"
                   style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)' }}
@@ -5179,6 +5197,7 @@ function CardSetsAdminPanel({ onClose }: { onClose: () => void }) {
   const [tierChances, setTierChances] = useState<Record<StickerTier, number>>({ ...DEFAULT_TIER_CHANCES });
   // add card form
   const [addName, setAddName] = useState('');
+  const [addDescription, setAddDescription] = useState('');
   const [addProb, setAddProb] = useState(10);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState('');
@@ -5187,6 +5206,7 @@ function CardSetsAdminPanel({ onClose }: { onClose: () => void }) {
   // edit card
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
+  const [editDescription, setEditDescription] = useState('');
   const [editProb, setEditProb] = useState(10);
   const [editSaving, setEditSaving] = useState(false);
   // misc
@@ -5264,9 +5284,9 @@ function CardSetsAdminPanel({ onClose }: { onClose: () => void }) {
       const snap2 = await uploadBytes(storageRef(storage, path), blob, { contentType: isGif ? 'image/gif' : 'image/webp' });
       const imageUrl = await getDownloadURL(snap2.ref);
       await addDoc(collection(db, 'collectible_cards'), {
-        name: addName.trim(), imageUrl, tier: activeTier, probability: addProb, setId: selectedSetId, createdAt: serverTimestamp(),
+        name: addName.trim(), description: addDescription.trim(), imageUrl, tier: activeTier, probability: addProb, setId: selectedSetId, createdAt: serverTimestamp(),
       });
-      setAddName(''); setAddProb(10); setImageFile(null); setImagePreview('');
+      setAddName(''); setAddDescription(''); setAddProb(10); setImageFile(null); setImagePreview('');
       if (fileRef.current) fileRef.current.value = '';
     } catch (e: any) {
       console.error(e);
@@ -5278,6 +5298,7 @@ function CardSetsAdminPanel({ onClose }: { onClose: () => void }) {
   const handleStartEdit = (card: CollectibleCardDef) => {
     setEditingCardId(card.id);
     setEditName(card.name);
+    setEditDescription(card.description ?? '');
     setEditProb(card.probability ?? 10);
     setDeleteConfirm(null);
   };
@@ -5285,7 +5306,7 @@ function CardSetsAdminPanel({ onClose }: { onClose: () => void }) {
   const handleSaveEdit = async () => {
     if (!editingCardId || !editName.trim()) return;
     setEditSaving(true);
-    await updateDoc(doc(db, 'collectible_cards', editingCardId), { name: editName.trim(), probability: editProb }).catch(console.error);
+    await updateDoc(doc(db, 'collectible_cards', editingCardId), { name: editName.trim(), description: editDescription.trim(), probability: editProb }).catch(console.error);
     setEditSaving(false);
     setEditingCardId(null);
   };
@@ -5463,6 +5484,11 @@ function CardSetsAdminPanel({ onClose }: { onClose: () => void }) {
                             className="w-full px-3 py-2 rounded-xl bg-brand-bg border border-black/8 text-sm font-medium text-brand-navy outline-none" />
                         </div>
                         <div>
+                          <label className="text-[10px] font-bold text-brand-navy/50 uppercase tracking-widest mb-1 block">Description</label>
+                          <textarea value={editDescription} onChange={e => setEditDescription(e.target.value)} rows={2}
+                            className="w-full px-3 py-2 rounded-xl bg-brand-bg border border-black/8 text-sm font-medium text-brand-navy outline-none resize-none" />
+                        </div>
+                        <div>
                           <label className="text-[10px] font-bold text-brand-navy/50 uppercase tracking-widest mb-2 block">Win probability within tier</label>
                           <ProbCounter value={editProb} onChange={setEditProb} min={1} max={100} />
                         </div>
@@ -5500,6 +5526,11 @@ function CardSetsAdminPanel({ onClose }: { onClose: () => void }) {
                     <label className="text-[10px] font-bold text-brand-navy/60 uppercase tracking-widest mb-1 block">Card Name</label>
                     <input value={addName} onChange={e => setAddName(e.target.value)} placeholder="e.g. Golden Phoenix"
                       className="w-full px-4 py-3 rounded-2xl bg-brand-bg border border-black/8 text-sm font-medium text-brand-navy placeholder:text-brand-navy/35 outline-none" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-brand-navy/60 uppercase tracking-widest mb-1 block">Description</label>
+                    <textarea value={addDescription} onChange={e => setAddDescription(e.target.value)} placeholder="e.g. A rare card found only in the northern sky…" rows={2}
+                      className="w-full px-4 py-3 rounded-2xl bg-brand-bg border border-black/8 text-sm font-medium text-brand-navy placeholder:text-brand-navy/35 outline-none resize-none" />
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-brand-navy/60 uppercase tracking-widest mb-2 block">Win probability within tier</label>
