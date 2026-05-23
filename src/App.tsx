@@ -24801,8 +24801,9 @@ function StoreDealsSection({ stores, onViewStore, storeDistances, onNavigate }: 
       </div>
       <div className="flex gap-4 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         {stores.map((store, i) => {
-          const stampsNeeded = store.stamps_required_for_reward ?? 8;
-          const dotCount = Math.min(stampsNeeded, 8);
+          const finalReward = store.rewardTiers?.length
+            ? [...store.rewardTiers].sort((a, b) => b.stamps - a.stamps)[0]?.reward
+            : store.reward;
           const dist = storeDistances?.get(store.id);
           const distLabel = dist != null
             ? dist < 1 ? `${Math.round(dist * 1000)}m` : `${dist.toFixed(1)}km`
@@ -24815,7 +24816,7 @@ function StoreDealsSection({ stores, onViewStore, storeDistances, onNavigate }: 
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.04 }}
               className="shrink-0 flex flex-col items-center gap-1.5 active:scale-[0.94] transition-transform"
-              style={{ width: '72px' }}
+              style={{ width: '76px' }}
               onClick={() => onViewStore && onViewStore(store)}
             >
               {/* Round logo */}
@@ -24829,12 +24830,12 @@ function StoreDealsSection({ stores, onViewStore, storeDistances, onNavigate }: 
                       </div>
                 }
               </div>
-              {/* Blue sticker dots */}
-              <div className="flex flex-wrap justify-center gap-[3px] px-1" style={{ maxWidth: '64px' }}>
-                {Array.from({ length: dotCount }).map((_, j) => (
-                  <span key={j} className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
-                ))}
-              </div>
+              {/* Blue offer sticker */}
+              {finalReward && (
+                <span className="bg-blue-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full text-center line-clamp-1 max-w-full leading-tight">
+                  {finalReward}
+                </span>
+              )}
               {/* Name */}
               <p className="text-[10px] font-semibold text-brand-navy leading-tight text-center line-clamp-1 w-full">{store.name}</p>
               {/* Distance */}
