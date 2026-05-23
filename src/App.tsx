@@ -26809,7 +26809,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
       });
       const realUsers: UserProfile[] = usersSnap.docs
         .map(d => ({ uid: d.id, ...d.data() } as UserProfile))
-        .filter(u => !pinnedUids.has(u.uid) && (u.totalSaved ?? 0) > 0);
+        .filter(u => !pinnedUids.has(u.uid));
       const merged = [...pins, ...realUsers].sort((a, b) => (b.totalSaved ?? 0) - (a.totalSaved ?? 0));
       setSavingsLbUsers(merged);
     }).catch(console.error).finally(() => setSavingsLbLoading(false));
@@ -27202,7 +27202,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                 const pinnedUids = new Set(lbPins.map(p => p.uid));
                 return [...lbPins, ...periodReal.filter(u => !pinnedUids.has(u.uid))];
               })() : periodReal;
-              const allSorted = lbCategory === 'points' ? [] : [...baseUsers].sort((a, b) => getLbScore(b) - getLbScore(a)).filter(u => getLbScore(u) > 0);
+              const allSorted = lbCategory === 'points' ? [] : [...baseUsers].sort((a, b) => getLbScore(b) - getLbScore(a));
               const sorted = allSorted;
               const myRankIdx = allSorted.findIndex(u => u.uid === currentProfile?.uid);
               const myRank = myRankIdx >= 0 ? myRankIdx + 1 : null;
