@@ -6359,9 +6359,11 @@ function BannersAdminPanel({ onClose }: { onClose: () => void }) {
     try {
       let imageUrl = form.imageUrl || '';
       if (imageFile) {
-        const blob = await compressImage(imageFile, 1200);
-        const path = `banner_images/${Date.now()}.webp`;
-        const snap = await uploadBytes(storageRef(storage, path), blob, { contentType: 'image/webp' });
+        const isGif = imageFile.type === 'image/gif';
+        const blob = isGif ? imageFile : await compressImage(imageFile, 1200);
+        const ext = isGif ? 'gif' : 'webp';
+        const path = `banner_images/${Date.now()}.${ext}`;
+        const snap = await uploadBytes(storageRef(storage, path), blob, { contentType: isGif ? 'image/gif' : 'image/webp' });
         imageUrl = await getDownloadURL(snap.ref);
       }
       const payload = { ...form, destination: dest, imageUrl };
