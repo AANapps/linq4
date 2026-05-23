@@ -3970,7 +3970,6 @@ function MysteryRevealCard({ sticker, isRevealed, onReveal }: {
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8,
           overflow: 'hidden',
           boxShadow: `0 0 18px ${cfg.color}55, inset 0 0 12px rgba(0,0,0,0.4)`,
-          opacity: flipping || localRevealed ? 0 : 1,
         }}>
           {/* Tier label hint top */}
           <div style={{ position: 'absolute', top: 8, left: 0, right: 0, textAlign: 'center', zIndex: 3 }}>
@@ -4000,7 +3999,8 @@ function MysteryRevealCard({ sticker, isRevealed, onReveal }: {
             animate={{ rotate: -360 }}
             transition={{ duration: 3.5, repeat: Infinity, ease: 'linear' }}
           />
-          {/* Question mark */}
+          {/* Question mark — hidden instantly on tap */}
+          {!flipping && !localRevealed && (<>
           <motion.div style={{ fontSize: 64, lineHeight: 1, color: cfg.border, fontWeight: 900,
             filter: `drop-shadow(0 0 20px ${cfg.color}cc)`, zIndex: 2 }}
             animate={{ scale: [1, 1.12, 1], opacity: [0.75, 1, 0.75] }}
@@ -4011,6 +4011,7 @@ function MysteryRevealCard({ sticker, isRevealed, onReveal }: {
             animate={{ opacity: [0.35, 1, 0.35] }}
             transition={{ duration: 1.1, repeat: Infinity, delay: 0.4 }}
           >TAP TO REVEAL</motion.div>
+          </>)}
         </div>
 
         {/* Back — card reveal */}
