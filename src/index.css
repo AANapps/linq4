@@ -203,9 +203,9 @@
 
 @keyframes holo-card-shine {
   0%   { transform: translateX(-160%) skewX(-15deg); opacity: 0; }
-  8%   { opacity: 1; }
-  38%  { transform: translateX(260%) skewX(-15deg); opacity: 0.85; }
-  39%  { opacity: 0; }
+  4%   { opacity: 1; }
+  18%  { transform: translateX(260%) skewX(-15deg); opacity: 0.85; }
+  20%  { transform: translateX(260%) skewX(-15deg); opacity: 0; }
   100% { transform: translateX(260%) skewX(-15deg); opacity: 0; }
 }
 
@@ -221,7 +221,7 @@
     rgba(255, 255, 255, 0.85) 50%,
     transparent 90%
   );
-  animation: holo-card-shine 1.6s ease-in-out infinite;
+  animation: holo-card-shine 5s ease-in-out infinite;
   pointer-events: none;
   z-index: 6;
 }
