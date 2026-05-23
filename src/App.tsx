@@ -16089,6 +16089,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
     setRedeeming(true);
     try {
       await updateDoc(doc(db, 'cards', card.id), {
+        membership_points: increment(-pointsToDeduct),
         total_value_redeemed: increment(redeemDollarNum),
         last_redeemed_at: serverTimestamp(),
       });
@@ -28084,6 +28085,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
           setRedeeming(true);
           try {
             await updateDoc(doc(db, 'cards', mc.id), {
+              membership_points: increment(-pointsToDeduct),
               total_value_redeemed: increment(redeemDollarNum),
               last_redeemed_at: serverTimestamp(),
             });
