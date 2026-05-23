@@ -3261,7 +3261,7 @@ function StickerCard({ sticker, isRevealed, onReveal, onExpand, size = 'md' }: {
 
   useEffect(() => { if (isRevealed) setLocalRevealed(true); }, [isRevealed]);
 
-  const dims = size === 'sm' ? { w: 62, h: 88 } : size === 'lg' ? { w: 210, h: 298 } : { w: 82, h: 116 };
+  const dims = size === 'sm' ? { w: 62, h: 88 } : size === 'lg' ? { w: 248, h: 352 } : { w: 82, h: 116 };
   // expanded only: thick double border; regular: thin tier-color border
   const holoPad = 4;
   const tierPad = size === 'lg' ? 14 : 0;
@@ -3717,14 +3717,25 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
                 <div style={{ position: 'absolute', inset: -32, borderRadius: 48, background: cfg.solid, filter: 'blur(48px)', opacity: 0.35, pointerEvents: 'none' }} />
                 <StickerCard sticker={selected.sticker} isRevealed={true} size="lg" />
                 {selDef?.description && (
-                  <p className="text-center text-sm text-white/80 max-w-[200px] leading-snug">{selDef.description}</p>
+                  <p className="text-center text-sm text-white/80 max-w-[220px] leading-snug">{selDef.description}</p>
                 )}
                 {selected.count > 1 && (
                   <p className="text-sm font-bold text-white/70">You own <span className="text-white">x{selected.count}</span></p>
                 )}
+                <div className="flex gap-3">
+                  {['View', 'Trade'].map(label => (
+                    <div key={label} className="flex flex-col items-center gap-1">
+                      <button disabled className="px-7 py-2.5 rounded-2xl font-bold text-sm text-white/50 cursor-not-allowed"
+                        style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.14)' }}>
+                        {label}
+                      </button>
+                      <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest">Coming soon</span>
+                    </div>
+                  ))}
+                </div>
                 <button onClick={() => setSelected(null)}
-                  className="px-8 py-3 rounded-2xl font-bold text-sm text-white/80"
-                  style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)' }}>
+                  className="px-8 py-3 rounded-2xl font-bold text-sm text-white/70"
+                  style={{ background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.16)' }}>
                   Close
                 </button>
               </motion.div>
@@ -3853,11 +3864,22 @@ function UserStickerPanel({ uid, isOwnProfile = false, onOpenPack }: {
                 />
                 <StickerCard sticker={expandedSticker} isRevealed={true} size="lg" />
                 {eDef?.description && (
-                  <p className="relative z-10 text-center text-sm text-white/80 max-w-[200px] leading-snug">{eDef.description}</p>
+                  <p className="relative z-10 text-center text-sm text-white/80 max-w-[220px] leading-snug">{eDef.description}</p>
                 )}
+                <div className="relative z-10 flex gap-3">
+                  {['View', 'Trade'].map(label => (
+                    <div key={label} className="flex flex-col items-center gap-1">
+                      <button disabled className="px-7 py-2.5 rounded-2xl font-bold text-sm text-white/50 cursor-not-allowed"
+                        style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.14)' }}>
+                        {label}
+                      </button>
+                      <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest">Coming soon</span>
+                    </div>
+                  ))}
+                </div>
                 <button
-                  className="relative z-10 px-8 py-3 rounded-2xl font-bold text-sm text-white/80"
-                  style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)' }}
+                  className="relative z-10 px-8 py-3 rounded-2xl font-bold text-sm text-white/70"
+                  style={{ background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.16)' }}
                   onClick={() => setExpandedSticker(null)}
                 >Close</button>
               </motion.div>
