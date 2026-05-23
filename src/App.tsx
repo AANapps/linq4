@@ -507,6 +507,16 @@ interface UserProfile {
   foodCount?: number;
   waterCount?: number;
   totalSaved?: number;
+  seenAnnouncementIds?: string[];
+}
+
+interface Announcement {
+  id: string;
+  title: string;
+  body: string;
+  imageUrl?: string;
+  active: boolean;
+  createdAt?: any;
 }
 
 interface StoreProfile {
@@ -1167,7 +1177,7 @@ export default function App() {
   const [pendingNFCStoreId, setPendingNFCStoreId] = useState<string | null>(null);
   const [userCards, setUserCards] = useState<Card[]>([]);
   const [showSettings, setShowSettings] = useState(false);
-  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges' | 'stores' | 'users' | 'posts' | 'offers' | 'linqle' | 'daily-vote' | 'cards' | 'banners' | 'ui-colors'>(null);
+  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges' | 'stores' | 'users' | 'posts' | 'offers' | 'linqle' | 'daily-vote' | 'cards' | 'banners' | 'ui-colors' | 'announcements'>(null);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -1828,6 +1838,7 @@ export default function App() {
             onOpenBanners={() => setAdminView('banners')}
             onOpenUiColors={() => setAdminView('ui-colors')}
             onOpenAppEdit={() => setAdminView('app-edit')}
+            onOpenAnnouncements={() => setAdminView('announcements')}
           />
         )}
         {adminView === 'challenges' && (
@@ -1869,6 +1880,9 @@ export default function App() {
         )}
         {adminView === 'app-edit' && (
           <AppEditPanel onClose={() => setAdminView('menu')} onLogoChange={setAdastraLogoUrl} />
+        )}
+        {adminView === 'announcements' && (
+          <AnnouncementsAdminPanel onClose={() => setAdminView('menu')} />
         )}
       </AnimatePresence>
 
@@ -5639,7 +5653,7 @@ function AppEditPanel({ onClose, onLogoChange }: { onClose: () => void; onLogoCh
   );
 }
 
-function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts, onOpenOffers, onOpenLinqle, onOpenDailyVote, onOpenCards, onOpenBanners, onOpenUiColors, onOpenAppEdit }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void; onOpenOffers: () => void; onOpenLinqle: () => void; onOpenDailyVote: () => void; onOpenCards: () => void; onOpenBanners: () => void; onOpenUiColors: () => void; onOpenAppEdit: () => void }) {
+function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts, onOpenOffers, onOpenLinqle, onOpenDailyVote, onOpenCards, onOpenBanners, onOpenUiColors, onOpenAppEdit, onOpenAnnouncements }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void; onOpenOffers: () => void; onOpenLinqle: () => void; onOpenDailyVote: () => void; onOpenCards: () => void; onOpenBanners: () => void; onOpenUiColors: () => void; onOpenAppEdit: () => void; onOpenAnnouncements: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -5824,6 +5838,20 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores,
             <div>
               <p className="font-bold text-brand-navy text-sm">App Edit</p>
               <p className="text-[11px] text-brand-navy/75 mt-0.5">Startup screen & branding</p>
+            </div>
+          </motion.button>
+
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={onOpenAnnouncements}
+            className="rounded-[2rem] bg-white border border-black/5 shadow-sm p-6 flex flex-col items-start gap-3 text-left active:bg-brand-navy/5 transition-colors"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-orange-100 flex items-center justify-center">
+              <Bell size={22} className="text-orange-500" />
+            </div>
+            <div>
+              <p className="font-bold text-brand-navy text-sm">Announcements</p>
+              <p className="text-[11px] text-brand-navy/75 mt-0.5">Push popups to all users</p>
             </div>
           </motion.button>
 
@@ -6058,6 +6086,171 @@ function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColo
         >
           {saving ? 'Saving…' : isDirty ? 'Save Changes' : 'Saved'}
         </button>
+      </div>
+    </motion.div>
+  );
+}
+
+function AnnouncementsAdminPanel({ onClose }: { onClose: () => void }) {
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [form, setForm] = useState({ title: '', body: '' });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const q = query(collection(db, 'announcements'), orderBy('createdAt', 'desc'));
+    return onSnapshot(q, snap => {
+      setAnnouncements(snap.docs.map(d => ({ id: d.id, ...d.data() } as Announcement)));
+    });
+  }, []);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  const handleCreate = async () => {
+    if (!form.title.trim() || !form.body.trim()) return;
+    setSaving(true);
+    try {
+      let imageUrl = '';
+      if (imageFile) {
+        const ref = storageRef(storage, `announcements/${Date.now()}_${imageFile.name}`);
+        await uploadBytes(ref, imageFile);
+        imageUrl = await getDownloadURL(ref);
+      }
+      await addDoc(collection(db, 'announcements'), {
+        title: form.title.trim(),
+        body: form.body.trim(),
+        imageUrl,
+        active: true,
+        createdAt: serverTimestamp(),
+      });
+      setForm({ title: '', body: '' });
+      setImageFile(null);
+      setImagePreview(null);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleActive = async (ann: Announcement) => {
+    setTogglingId(ann.id);
+    await updateDoc(doc(db, 'announcements', ann.id), { active: !ann.active }).catch(() => {});
+    setTogglingId(null);
+  };
+
+  const deleteAnnouncement = async (id: string) => {
+    setDeletingId(id);
+    await deleteDoc(doc(db, 'announcements', id)).catch(() => {});
+    setDeletingId(null);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex flex-col max-w-md mx-auto"
+    >
+      <div className="flex-1 overflow-y-auto bg-brand-bg">
+        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm px-5 pt-5 pb-4 border-b border-black/5 z-10">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-display text-2xl font-bold text-brand-navy">Announcements</h2>
+              <p className="text-xs text-brand-navy/80 mt-0.5">Popup once per user when active</p>
+            </div>
+            <button onClick={onClose} className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm active:scale-95 transition-all">
+              <X size={18} className="text-brand-navy/75" />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-5 space-y-5">
+          {/* Create form */}
+          <div className="bg-white rounded-3xl border border-black/5 shadow-sm p-5 space-y-4">
+            <p className="font-bold text-brand-navy text-sm">New Announcement</p>
+            <input
+              className="w-full border border-black/10 rounded-2xl px-4 py-3 text-sm outline-none focus:border-brand-navy/40 bg-brand-bg"
+              placeholder="Title"
+              value={form.title}
+              onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+            />
+            <textarea
+              className="w-full border border-black/10 rounded-2xl px-4 py-3 text-sm outline-none focus:border-brand-navy/40 bg-brand-bg resize-none"
+              placeholder="Body text"
+              rows={3}
+              value={form.body}
+              onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
+            />
+            {/* Image picker */}
+            <div
+              className="border-2 border-dashed border-brand-navy/15 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 cursor-pointer active:bg-brand-navy/3 transition-colors"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {imagePreview ? (
+                <img src={imagePreview} alt="Preview" className="w-full h-40 object-cover rounded-xl" />
+              ) : (
+                <>
+                  <ImageIcon size={22} className="text-brand-navy/30" />
+                  <p className="text-xs text-brand-navy/40 font-medium">Tap to add image (optional)</p>
+                </>
+              )}
+            </div>
+            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+            <button
+              onClick={handleCreate}
+              disabled={saving || !form.title.trim() || !form.body.trim()}
+              className="w-full py-3.5 rounded-2xl bg-brand-navy text-white font-black text-sm disabled:opacity-40 active:scale-[0.98] transition-all"
+            >
+              {saving ? 'Saving…' : 'Create Announcement'}
+            </button>
+          </div>
+
+          {/* Existing announcements */}
+          {announcements.length > 0 && (
+            <div className="space-y-3">
+              {announcements.map(ann => (
+                <div key={ann.id} className="bg-white rounded-3xl border border-black/5 shadow-sm overflow-hidden">
+                  {ann.imageUrl && (
+                    <img src={ann.imageUrl} alt="" className="w-full h-36 object-cover" />
+                  )}
+                  <div className="p-4 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-brand-navy text-sm">{ann.title}</p>
+                        <p className="text-xs text-brand-navy/60 mt-0.5 line-clamp-2">{ann.body}</p>
+                      </div>
+                      <button
+                        onClick={() => deleteAnnouncement(ann.id)}
+                        disabled={deletingId === ann.id}
+                        className="p-1.5 rounded-xl text-brand-navy/30 hover:text-rose-500 transition-colors shrink-0"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                    <button
+                      onClick={() => toggleActive(ann)}
+                      disabled={togglingId === ann.id}
+                      className={cn(
+                        'w-full py-2 rounded-xl text-xs font-bold transition-colors',
+                        ann.active
+                          ? 'bg-emerald-50 text-emerald-600'
+                          : 'bg-brand-navy/5 text-brand-navy/40',
+                      )}
+                    >
+                      {togglingId === ann.id ? '…' : ann.active ? 'Active — tap to deactivate' : 'Inactive — tap to activate'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </motion.div>
   );
@@ -9305,6 +9498,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const [nfcMsg, setNfcMsg] = useState('');
   const [showWelcome, setShowWelcome] = useState(false);
   const [welcomeStep, setWelcomeStep] = useState(0);
+  const [pendingAnnouncement, setPendingAnnouncement] = useState<Announcement | null>(null);
   const nfcAbortRef = useRef<AbortController | null>(null);
   const [pendingPack, setPendingPack] = useState<CollectibleSticker[] | null>(null);
   const [pendingPackCardId, setPendingPackCardId] = useState<string | null>(null);
@@ -9638,6 +9832,19 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       setShowWelcome(false);
     }
   }, [profile?.uid, profile?.introComplete]);
+
+  // Show unseen active announcements once per user
+  useEffect(() => {
+    if (!profile) return;
+    const q = query(collection(db, 'announcements'), where('active', '==', true));
+    return onSnapshot(q, snap => {
+      const seen = new Set(profile.seenAnnouncementIds ?? []);
+      const unseen = snap.docs
+        .map(d => ({ id: d.id, ...d.data() } as Announcement))
+        .find(a => !seen.has(a.id));
+      setPendingAnnouncement(unseen ?? null);
+    });
+  }, [profile?.uid]);
 
   // Auto-process URL-based stamp (iOS NFC banner opens the app with ?stamp=ID)
   useEffect(() => {
@@ -10616,6 +10823,21 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         )}
       </AnimatePresence>
 
+      {/* Announcement popup — shown once per user per active announcement */}
+      <AnimatePresence>
+        {pendingAnnouncement && !showWelcome && (
+          <AnnouncementModal
+            announcement={pendingAnnouncement}
+            onDismiss={() => {
+              updateDoc(doc(db, 'users', user.uid), {
+                seenAnnouncementIds: arrayUnion(pendingAnnouncement.id),
+              }).catch(console.error);
+              setPendingAnnouncement(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
       {/* NFC Scan Overlay — slim toast, no blocking popup */}
       <AnimatePresence>
         {nfcPhase !== 'idle' && (
@@ -10882,30 +11104,164 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
   }
 }
 
+// --- Announcement Modal ---
+
+function AnnouncementModal({ announcement, onDismiss }: { announcement: Announcement; onDismiss: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[200] flex items-end justify-center bg-black/60 backdrop-blur-sm px-4 pb-8"
+    >
+      <motion.div
+        initial={{ y: 80, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 80, opacity: 0 }}
+        transition={{ type: 'spring', stiffness: 380, damping: 34 }}
+        className="w-full max-w-md bg-white rounded-[2.5rem] overflow-hidden shadow-2xl"
+      >
+        {announcement.imageUrl && (
+          <img
+            src={announcement.imageUrl}
+            alt=""
+            className="w-full h-52 object-cover"
+          />
+        )}
+        <div className="px-7 pt-6 pb-7 space-y-3">
+          <div className="space-y-1.5">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/35">Announcement</p>
+            <h2 className="font-display text-2xl font-bold text-brand-navy leading-tight">{announcement.title}</h2>
+            <p className="text-sm text-brand-navy/70 leading-relaxed">{announcement.body}</p>
+          </div>
+          <button
+            onClick={onDismiss}
+            className="w-full py-4 rounded-2xl bg-brand-navy text-white font-black text-sm active:scale-[0.97] transition-transform mt-2"
+          >
+            Got it
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 // --- Welcome Modal ---
 
-const WELCOME_SLIDES = [
+const WELCOME_SLIDES: Array<{ title: string; body: React.ReactNode }> = [
   {
-    icon: <Sparkles size={40} className="text-brand-gold" />,
     title: 'Welcome to Linq',
     body: 'Your loyalty wallet, all in one place. Collect stamps, earn points, and win prizes at your favourite local businesses.',
   },
   {
-    icon: <Stamp size={40} className="text-brand-navy" />,
     title: 'Collect Stamps',
-    body: 'Visit a participating store and tap the Scan button on your card. Hold your phone near the store\'s NFC tag — or scan their QR code — to add a stamp. Fill your card to unlock rewards.',
+    body: <>'Tap <b className="font-bold text-blue-600">Scan</b> on your card and hold your phone near the store\'s <b className="font-bold text-blue-600">NFC tag</b> — or scan their <b className="font-bold text-blue-600">QR code</b>. Fill your card to unlock <b className="font-bold text-blue-600">rewards</b>.</>,
   },
   {
-    icon: <Wallet size={40} className="text-emerald-500" />,
     title: 'Earn Points',
-    body: 'At stores with a points membership, every visit or purchase earns you points. Rack them up and redeem them for discounts, freebies, and exclusive perks.',
+    body: <>Every visit or purchase earns you <b className="font-bold text-blue-600">points</b>. Rack them up and redeem for <b className="font-bold text-blue-600">discounts</b>, freebies, and exclusive perks.</>,
   },
   {
-    icon: <Trophy size={40} className="text-brand-rose" />,
     title: 'Win Challenges',
-    body: 'Join live challenges from businesses near you. Collect the required stamps at participating stores and you\'ll be in to win prizes. Check the For You feed so you never miss one.',
+    body: <>Join live <b className="font-bold text-blue-600">challenges</b> from businesses near you. Collect stamps and you\'ll be in to win <b className="font-bold text-blue-600">prizes</b>. Check the <b className="font-bold text-blue-600">For You</b> feed so you never miss one.</>,
   },
 ];
+
+function WelcomeSlideVisual({ step }: { step: number }) {
+  const [stampFilling, setStampFilling] = useState(false);
+  const [pts, setPts] = useState(0);
+
+  useEffect(() => {
+    if (step === 1) {
+      const t = setTimeout(() => setStampFilling(true), 350);
+      return () => clearTimeout(t);
+    }
+    if (step === 2) {
+      let frame: number;
+      const start = Date.now();
+      const duration = 1700;
+      const tick = () => {
+        const elapsed = Date.now() - start;
+        const t = Math.min(elapsed / duration, 1);
+        const eased = 1 - (1 - t) ** 3;
+        setPts(Math.round(eased * 5000));
+        if (t < 1) frame = requestAnimationFrame(tick);
+      };
+      frame = requestAnimationFrame(tick);
+      return () => cancelAnimationFrame(frame);
+    }
+  }, []);
+
+  if (step === 0) {
+    return (
+      <div className="flex flex-col items-center gap-1 py-2">
+        <div className="flex items-baseline leading-none">
+          <span className="font-display text-5xl font-black text-brand-navy tracking-tight">lin</span>
+          <span className="font-display text-5xl font-black text-blue-500 tracking-tight">q</span>
+        </div>
+        <div className="flex gap-1.5 mt-1">
+          <div className="w-2 h-2 rounded-full bg-brand-navy" />
+          <div className="w-2 h-2 rounded-full bg-blue-500" />
+        </div>
+      </div>
+    );
+  }
+
+  if (step === 1) {
+    return (
+      <div className="flex items-center gap-2 justify-center py-1">
+        {[0, 1, 2, 3, 4].map(i => {
+          const filled = i < 2;
+          const animating = i === 2;
+          const isPresent = i === 4;
+          const active = filled || (animating && stampFilling);
+          return (
+            <div
+              key={i}
+              className={cn(
+                'w-12 h-12 rounded-full border-2 flex items-center justify-center relative overflow-hidden transition-colors duration-300',
+                active ? 'border-brand-navy bg-brand-navy' : 'border-brand-navy/20 bg-transparent',
+              )}
+            >
+              {animating && (
+                <motion.div
+                  className="absolute inset-0 bg-brand-navy rounded-full"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: stampFilling ? 1 : 0 }}
+                  transition={{ type: 'spring', stiffness: 260, damping: 22, delay: 0.05 }}
+                />
+              )}
+              {active && <Check size={18} className="text-white relative z-10" strokeWidth={3} />}
+              {isPresent && !active && <Gift size={18} className="text-brand-navy/30" />}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  if (step === 2) {
+    return (
+      <div className="space-y-3 w-full">
+        <div className="text-center">
+          <p className="font-display text-5xl font-black text-blue-600">{pts.toLocaleString()}</p>
+          <p className="text-xs text-brand-navy/40 font-semibold mt-0.5">points</p>
+        </div>
+        <div className="bg-brand-bg rounded-2xl px-4 py-3 flex items-center justify-between border border-brand-navy/6">
+          <p className="text-sm text-brand-navy/70">Free coffee</p>
+          <p className="text-sm font-black text-blue-600">1,000 pts</p>
+        </div>
+      </div>
+    );
+  }
+
+  // step 3 — Win Challenges: golden bin chicken
+  return (
+    <div className="w-20 h-20 rounded-[1.5rem] bg-amber-50 flex items-center justify-center mx-auto shadow-sm border border-amber-100">
+      <span style={{ fontSize: 42, lineHeight: 1 }}>🦤</span>
+    </div>
+  );
+}
 
 function WelcomeModal({ uid, step, onNext, onDone }: { uid: string; step: number; onNext: () => void; onDone: () => void }) {
   const slide = WELCOME_SLIDES[step];
@@ -10949,9 +11305,7 @@ function WelcomeModal({ uid, step, onNext, onDone }: { uid: string; step: number
             transition={{ duration: 0.28 }}
             className="px-8 pt-8 pb-6 text-center space-y-4"
           >
-            <div className="w-20 h-20 rounded-[1.5rem] bg-brand-bg flex items-center justify-center mx-auto shadow-sm">
-              {slide.icon}
-            </div>
+            <WelcomeSlideVisual step={step} />
             <div className="space-y-2">
               <h2 className="font-display text-2xl font-bold text-brand-navy">{slide.title}</h2>
               <p className="text-sm text-brand-navy/70 leading-relaxed">{slide.body}</p>
