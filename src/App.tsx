@@ -22083,16 +22083,20 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                         <PixelAvatar uid={c.user_id} size={36} view="head" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold truncate">{c.userName || 'Member'}</p>
-                        {lastSeen && (
-                          <p className="text-[11px] text-brand-navy/40">{format(lastSeen, 'MMM d, h:mm a')}</p>
-                        )}
+                        <p className="text-sm font-bold truncate">
+                          {(() => { const h = memberProfiles.get(c.user_id)?.handle; return h ? `@${h}` : (c.userName || 'Member'); })()}
+                        </p>
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-xs font-bold text-brand-gold">{metricVal} <span className="text-brand-navy/40 font-normal">{metricLabel}</span></p>
-                        {!isVisit && !isSpend && (c.total_completed_cycles ?? 0) > 0 && (
-                          <p className="text-[10px] text-brand-navy/40">{c.total_completed_cycles} reward{c.total_completed_cycles !== 1 ? 's' : ''}</p>
+                      <div className="text-right shrink-0 flex items-center gap-1">
+                        {!isSubscribed && (isVisit || isSpend) && (
+                          <Lock size={10} className="text-brand-navy/30 shrink-0" />
                         )}
+                        <div>
+                          <p className="text-xs font-bold text-brand-gold">{fmtK(metricVal)} <span className="text-brand-navy/40 font-normal">{metricLabel}</span></p>
+                          {!isVisit && !isSpend && (c.total_completed_cycles ?? 0) > 0 && (
+                            <p className="text-[10px] text-brand-navy/40">{c.total_completed_cycles} reward{c.total_completed_cycles !== 1 ? 's' : ''}</p>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
