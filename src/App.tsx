@@ -9277,6 +9277,8 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const [openProgrammeId, setOpenProgrammeId] = useState<string | null>(null);
   const [nfcPhase, setNfcPhase] = useState<'idle' | 'scanning' | 'processing' | 'success' | 'error'>('idle');
   const [nfcMsg, setNfcMsg] = useState('');
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [welcomeStep, setWelcomeStep] = useState(0);
   const nfcAbortRef = useRef<AbortController | null>(null);
   const [pendingPack, setPendingPack] = useState<CollectibleSticker[] | null>(null);
   const [pendingPackCardId, setPendingPackCardId] = useState<string | null>(null);
@@ -9599,6 +9601,15 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const seenBadgeIdsRef = useRef<Set<string>>(new Set(JSON.parse(localStorage.getItem(`seenBadges_${user.uid}`) || '[]')));
   // Delay detection until initial data has loaded to avoid false positives
   const [badgeDetectionReady, setBadgeDetectionReady] = useState(false);
+
+  // Show welcome modal once per user
+  useEffect(() => {
+    if (!user?.uid) return;
+    const key = `welcomeSeen_${user.uid}`;
+    if (!localStorage.getItem(key)) {
+      setShowWelcome(true);
+    }
+  }, [user?.uid]);
 
   // Auto-process URL-based stamp (iOS NFC banner opens the app with ?stamp=ID)
   useEffect(() => {
@@ -10558,6 +10569,25 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         })()}
       </AnimatePresence>
 
+      {/* Welcome onboarding modal */}
+      <AnimatePresence>
+        {showWelcome && (
+          <WelcomeModal
+            uid={user.uid}
+            step={welcomeStep}
+            onNext={() => {
+              if ('vibrate' in navigator) navigator.vibrate([30]);
+              confetti({ particleCount: 60, spread: 70, startVelocity: 28, gravity: 0.9, scalar: 0.85, origin: { y: 0.7 }, zIndex: 9999, colors: ['#FFD700','#FF6B6B','#4ADE80','#60A5FA','#F9A8D4'] });
+              setWelcomeStep(s => s + 1);
+            }}
+            onDone={() => {
+              localStorage.setItem(`welcomeSeen_${user.uid}`, '1');
+              setShowWelcome(false);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
       {/* NFC Scan Overlay — slim toast, no blocking popup */}
       <AnimatePresence>
         {nfcPhase !== 'idle' && (
@@ -10822,6 +10852,104 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
     onStatus('error', err?.message || 'Something went wrong. Please try again.');
     return [];
   }
+}
+
+// --- Welcome Modal ---
+
+const WELCOME_SLIDES = [
+  {
+    icon: <Sparkles size={40} className="text-brand-gold" />,
+    title: 'Welcome to Linq',
+    body: 'Your loyalty wallet, all in one place. Collect stamps, earn points, and win prizes at your favourite local businesses.',
+  },
+  {
+    icon: <Stamp size={40} className="text-brand-navy" />,
+    title: 'Collect Stamps',
+    body: 'Visit a participating store and tap the Scan button on your card. Hold your phone near the store\'s NFC tag — or scan their QR code — to add a stamp. Fill your card to unlock rewards.',
+  },
+  {
+    icon: <Wallet size={40} className="text-emerald-500" />,
+    title: 'Earn Points',
+    body: 'At stores with a points membership, every visit or purchase earns you points. Rack them up and redeem them for discounts, freebies, and exclusive perks.',
+  },
+  {
+    icon: <Trophy size={40} className="text-brand-rose" />,
+    title: 'Win Challenges',
+    body: 'Join live challenges from businesses near you. Collect the required stamps at participating stores and you\'ll be in to win prizes. Check the For You feed so you never miss one.',
+  },
+];
+
+function WelcomeModal({ uid, step, onNext, onDone }: { uid: string; step: number; onNext: () => void; onDone: () => void }) {
+  const slide = WELCOME_SLIDES[step];
+  const isLast = step === WELCOME_SLIDES.length - 1;
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[200] flex items-end justify-center bg-black/60 backdrop-blur-sm px-4 pb-8"
+    >
+      <motion.div
+        initial={{ y: 80, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 80, opacity: 0 }}
+        transition={{ type: 'spring', stiffness: 380, damping: 34 }}
+        className="w-full max-w-md bg-white rounded-[2.5rem] overflow-hidden shadow-2xl"
+      >
+        {/* Progress bar */}
+        <div className="flex gap-1 px-6 pt-5">
+          {WELCOME_SLIDES.map((_, i) => (
+            <div key={i} className="flex-1 h-1 rounded-full overflow-hidden bg-brand-navy/10">
+              <motion.div
+                className="h-full rounded-full bg-brand-navy"
+                initial={{ width: i < step ? '100%' : '0%' }}
+                animate={{ width: i < step ? '100%' : i === step ? '100%' : '0%' }}
+                transition={{ duration: 0.35 }}
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Slide content */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={step}
+            initial={{ opacity: 0, x: 40 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -40 }}
+            transition={{ duration: 0.28 }}
+            className="px-8 pt-8 pb-6 text-center space-y-4"
+          >
+            <div className="w-20 h-20 rounded-[1.5rem] bg-brand-bg flex items-center justify-center mx-auto shadow-sm">
+              {slide.icon}
+            </div>
+            <div className="space-y-2">
+              <h2 className="font-display text-2xl font-bold text-brand-navy">{slide.title}</h2>
+              <p className="text-sm text-brand-navy/70 leading-relaxed">{slide.body}</p>
+            </div>
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Actions */}
+        <div className="px-8 pb-8 space-y-3">
+          <button
+            onClick={isLast ? onDone : onNext}
+            className="w-full py-4 rounded-2xl bg-brand-navy text-white font-black text-sm active:scale-[0.97] transition-transform"
+          >
+            {isLast ? "Let's go!" : 'Next'}
+          </button>
+          {!isLast && (
+            <button
+              onClick={onDone}
+              className="w-full py-2 text-xs text-brand-navy/35 font-medium"
+            >
+              Skip
+            </button>
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
+  );
 }
 
 // Slim floating banner — replaces the old full-screen NFCStampModal popup.
@@ -22974,6 +23102,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
   const [saved, setSaved] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [legalModal, setLegalModal] = useState<'privacy' | 'terms' | null>(null);
 
   useEffect(() => {
     if (profile.role !== 'vendor') return;
@@ -23382,6 +23511,24 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
           </motion.div>
         )}
 
+        {/* Legal links */}
+        <div className="pt-2 space-y-1">
+          <button
+            onClick={() => setLegalModal('privacy')}
+            className="w-full py-3 px-5 rounded-2xl text-brand-navy/60 text-sm flex items-center gap-3 hover:bg-brand-navy/5 transition-colors"
+          >
+            <FileText size={16} className="text-brand-navy/40" />
+            Privacy Policy
+          </button>
+          <button
+            onClick={() => setLegalModal('terms')}
+            className="w-full py-3 px-5 rounded-2xl text-brand-navy/60 text-sm flex items-center gap-3 hover:bg-brand-navy/5 transition-colors"
+          >
+            <FileText size={16} className="text-brand-navy/40" />
+            Terms &amp; Conditions
+          </button>
+        </div>
+
         {/* Account Actions */}
         <div className="pt-4 border-t border-brand-navy/10 space-y-3">
           <button
@@ -23402,6 +23549,53 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
         </div>
 
       </div>
+
+      {/* Legal modal */}
+      <AnimatePresence>
+        {legalModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-10 bg-white flex flex-col"
+          >
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-brand-navy/8">
+              <button onClick={() => setLegalModal(null)} className="w-9 h-9 rounded-full bg-brand-navy/8 flex items-center justify-center active:scale-95 transition-transform">
+                <ArrowLeft size={16} className="text-brand-navy" />
+              </button>
+              <h2 className="font-display font-bold text-brand-navy text-lg">
+                {legalModal === 'privacy' ? 'Privacy Policy' : 'Terms & Conditions'}
+              </h2>
+            </div>
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4 text-sm text-brand-navy/75 leading-relaxed">
+              {legalModal === 'privacy' ? (
+                <>
+                  <p className="font-bold text-brand-navy">Last updated: May 2026</p>
+                  <p>Linq ("we", "us", "our") is committed to protecting your personal information. This policy explains what data we collect, how we use it, and your rights.</p>
+                  <p><span className="font-bold text-brand-navy">What we collect:</span> Your name, email address, profile handle, location (when you grant permission), and loyalty activity (stamps, points, challenge entries).</p>
+                  <p><span className="font-bold text-brand-navy">How we use it:</span> To operate your loyalty cards, personalise your experience, show nearby stores and challenges, and send you notifications you opt into.</p>
+                  <p><span className="font-bold text-brand-navy">Who we share it with:</span> Participating businesses can see aggregate activity on their own loyalty cards. We do not sell your data to third parties.</p>
+                  <p><span className="font-bold text-brand-navy">Your rights:</span> You can update or delete your account at any time from Settings. To request a full data export, contact us at info@adastranetwork.co.uk.</p>
+                  <p><span className="font-bold text-brand-navy">Cookies & analytics:</span> We use Firebase Analytics (Google) to understand app usage. No personally identifiable data is shared with advertisers.</p>
+                  <p>Questions? Email <span className="text-brand-gold font-semibold">info@adastranetwork.co.uk</span></p>
+                </>
+              ) : (
+                <>
+                  <p className="font-bold text-brand-navy">Last updated: May 2026</p>
+                  <p>By using Linq you agree to these terms. Please read them carefully.</p>
+                  <p><span className="font-bold text-brand-navy">1. Use of the app:</span> Linq is provided for personal, non-commercial use. You must not misuse the app or attempt to gain stamps, points, or rewards fraudulently.</p>
+                  <p><span className="font-bold text-brand-navy">2. Accounts:</span> You are responsible for keeping your login secure. You must be 13 years or older to create an account.</p>
+                  <p><span className="font-bold text-brand-navy">3. Loyalty rewards:</span> Rewards, points, and prizes are issued at the sole discretion of participating businesses. Linq is not responsible for a business's failure to honour a reward.</p>
+                  <p><span className="font-bold text-brand-navy">4. Challenges:</span> Challenge prizes are subject to availability. Winners may be required to provide proof of identity. Linq and participating businesses reserve the right to disqualify entries that violate these terms.</p>
+                  <p><span className="font-bold text-brand-navy">5. Termination:</span> We may suspend or delete accounts that violate these terms, engage in fraud, or abuse the platform.</p>
+                  <p><span className="font-bold text-brand-navy">6. Changes:</span> We may update these terms at any time. Continued use of Linq after changes constitutes acceptance.</p>
+                  <p>Questions? Email <span className="text-brand-gold font-semibold">info@adastranetwork.co.uk</span></p>
+                </>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Delete confirmation overlay */}
       <AnimatePresence>
