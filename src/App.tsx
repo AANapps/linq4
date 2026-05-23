@@ -27584,13 +27584,14 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
             </div>
 
             {/* Header card */}
-            <div className="bg-[#0F172A] relative overflow-hidden mx-5 mt-2 mb-5 rounded-[1.5rem] px-5 py-5 shrink-0">
+            <div className="gradient-logo-blue relative overflow-hidden mx-5 mt-2 mb-5 rounded-[1.5rem] px-5 py-5 shrink-0">
+              <span className="shine-ray" aria-hidden="true" />
               <div className="flex items-center gap-4">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">Total Saved with Linq</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/50 relative z-10">Total Saved with Linq</p>
                   {(currentProfile?.totalSaved ?? 0) > 0
-                    ? <CountUpValue value={currentProfile!.totalSaved!} prefix={currencySymbol('AUD')} className="font-display text-3xl font-black text-white" />
-                    : <p className="text-base font-bold text-white/40">Collect stamps to start saving</p>
+                    ? <CountUpValue value={currentProfile!.totalSaved!} prefix={currencySymbol('AUD')} className="font-display text-3xl font-black text-white relative z-10" />
+                    : <p className="text-base font-bold text-white/50 relative z-10">Collect stamps to start saving</p>
                   }
                 </div>
               </div>
@@ -27619,22 +27620,21 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                   const isMe = u.uid === currentUser?.uid;
                   const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : null;
                   return (
-                    <div key={u.uid} className="gradient-logo-blue relative overflow-hidden rounded-[1.25rem] px-4 py-3 flex items-center gap-3 shadow-md shadow-blue-900/15">
-                      <div className="shine-ray opacity-50" />
-                      <span className="text-sm font-black text-white/60 w-6 text-center shrink-0">
+                    <div key={u.uid} className="bg-white rounded-[1.25rem] px-4 py-3 flex items-center gap-3 shadow-sm border border-green-100">
+                      <span className="text-sm font-black text-green-600/60 w-6 text-center shrink-0">
                         {medal ?? rank}
                       </span>
-                      <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-white/20 border border-white/20">
+                      <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-green-50 border border-green-100">
                         <PixelAvatar config={u.avatar} uid={u.uid} size={40} view="head" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-white truncate">
+                        <p className="text-sm font-bold text-green-800 truncate">
                           {isMe ? 'You' : (u.name || 'User')}
-                          {isMe && <span className="ml-1.5 text-[10px] font-black bg-white/20 px-1.5 py-0.5 rounded-full align-middle">you</span>}
+                          {isMe && <span className="ml-1.5 text-[10px] font-black bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full align-middle">you</span>}
                         </p>
-                        {!isMe && u.handle && <p className="text-[10px] text-white/50 truncate">@{u.handle}</p>}
+                        {!isMe && u.handle && <p className="text-[10px] text-green-600/60 truncate">@{u.handle}</p>}
                       </div>
-                      <span className="text-base font-black text-white shrink-0">
+                      <span className="text-base font-black text-green-700 shrink-0">
                         {currencySymbol('AUD')}{(u.totalSaved ?? 0).toFixed(2)}
                       </span>
                     </div>

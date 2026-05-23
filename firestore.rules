@@ -24,10 +24,11 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isAuthenticated() && 
-             (request.auth.token.email == "info@adastranetwork.co.uk" || 
-              (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
+      return isAuthenticated() &&
+             (request.auth.token.email == "info@adastranetwork.co.uk" ||
+              (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+               (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+                get(/databases/$(database)/documents/users/$(request.auth.uid)).data.email == "info@adastranetwork.co.uk")));
     }
 
     // ===============================================================
