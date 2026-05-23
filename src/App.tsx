@@ -479,6 +479,7 @@ interface UserProfile {
   role: UserRole;
   roleConfirmed?: boolean;
   onboardingComplete?: boolean;
+  introComplete?: boolean;
   gender?: string;
   birthday?: string;
   location?: { lat: number; lng: number; city?: string };
@@ -6883,6 +6884,7 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
   const [confirmDeleteUid, setConfirmDeleteUid] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [togglingUid, setTogglingUid] = useState<string | null>(null);
+  const [togglingIntroUid, setTogglingIntroUid] = useState<string | null>(null);
 
   useEffect(() => {
     return onSnapshot(collection(db, 'users'), snap =>
@@ -6920,6 +6922,15 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
       await updateDoc(doc(db, 'users', u.uid), { role: newRole });
     } finally {
       setTogglingUid(null);
+    }
+  };
+
+  const toggleIntro = async (u: UserProfile) => {
+    setTogglingIntroUid(u.uid);
+    try {
+      await updateDoc(doc(db, 'users', u.uid), { introComplete: !u.introComplete });
+    } finally {
+      setTogglingIntroUid(null);
     }
   };
 
@@ -6989,6 +7000,21 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
                   </div>
                   <p className="text-[10px] text-brand-navy/75 truncate">{u.handle ? `@${u.handle}` : u.email}</p>
                 </div>
+                <button
+                  onClick={() => toggleIntro(u)}
+                  disabled={togglingIntroUid === u.uid}
+                  title={u.introComplete ? 'Reset intro' : 'Mark intro done'}
+                  className={cn(
+                    'px-2 py-1 rounded-lg text-[10px] font-bold transition-all shrink-0 flex items-center gap-1',
+                    u.introComplete
+                      ? 'bg-emerald-100 text-emerald-600'
+                      : 'bg-brand-navy/8 text-brand-navy/40 hover:bg-emerald-100 hover:text-emerald-600',
+                    togglingIntroUid === u.uid && 'opacity-50'
+                  )}
+                >
+                  <CheckCircle2 size={10} />
+                  {u.introComplete ? 'Intro' : 'Intro'}
+                </button>
                 <button
                   onClick={() => toggleAdmin(u)}
                   disabled={togglingUid === u.uid}
@@ -9602,14 +9628,12 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   // Delay detection until initial data has loaded to avoid false positives
   const [badgeDetectionReady, setBadgeDetectionReady] = useState(false);
 
-  // Show welcome modal once per user
+  // Show welcome modal once per user — driven by Firestore so it works across devices and can be reset by admin
   useEffect(() => {
-    if (!user?.uid) return;
-    const key = `welcomeSeen_${user.uid}`;
-    if (!localStorage.getItem(key)) {
-      setShowWelcome(true);
-    }
-  }, [user?.uid]);
+    if (!profile) return;
+    if (!profile.introComplete) setShowWelcome(true);
+    else setShowWelcome(false);
+  }, [profile?.introComplete]);
 
   // Auto-process URL-based stamp (iOS NFC banner opens the app with ?stamp=ID)
   useEffect(() => {
@@ -10581,7 +10605,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
               setWelcomeStep(s => s + 1);
             }}
             onDone={() => {
-              localStorage.setItem(`welcomeSeen_${user.uid}`, '1');
+              updateDoc(doc(db, 'users', user.uid), { introComplete: true }).catch(console.error);
               setShowWelcome(false);
             }}
           />
@@ -23510,6 +23534,17 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
 
           </motion.div>
         )}
+
+        {/* Intro status */}
+        <div className="flex items-center justify-between px-5 py-3 rounded-2xl bg-brand-navy/4">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={15} className={profile.introComplete ? 'text-emerald-500' : 'text-brand-navy/25'} />
+            <span className="text-sm font-semibold text-brand-navy">Intro</span>
+          </div>
+          <span className={cn('text-xs font-bold px-2.5 py-1 rounded-full', profile.introComplete ? 'bg-emerald-100 text-emerald-600' : 'bg-brand-navy/8 text-brand-navy/40')}>
+            {profile.introComplete ? 'Done' : 'Not seen'}
+          </span>
+        </div>
 
         {/* Legal links */}
         <div className="pt-2 space-y-1">
