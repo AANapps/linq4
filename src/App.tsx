@@ -3259,7 +3259,13 @@ function StickerCard({ sticker, isRevealed, onReveal, onExpand, size = 'md' }: {
 
   useEffect(() => { if (isRevealed) setLocalRevealed(true); }, [isRevealed]);
 
-  const dims = size === 'sm' ? { w: 60, h: 80 } : size === 'lg' ? { w: 160, h: 220 } : { w: 80, h: 108 };
+  const dims = size === 'sm' ? { w: 62, h: 88 } : size === 'lg' ? { w: 160, h: 228 } : { w: 82, h: 116 };
+  const bottomH = size === 'sm' ? 26 : size === 'lg' ? 58 : 32;
+  const fName = size === 'sm' ? 6 : size === 'lg' ? 12 : 7.5;
+  const fRank = size === 'sm' ? 5 : size === 'lg' ? 10 : 6;
+  const fColl = size === 'sm' ? 4 : size === 'lg' ? 8 : 5;
+  const emojiSize = size === 'sm' ? 22 : size === 'lg' ? 72 : 34;
+  const cardName = sticker.cardName || STICKER_CONFIG[sticker.tier].variants[sticker.variant ?? 0]?.name || 'Card';
 
   const handleTap = () => {
     if (localRevealed) { onExpand?.(); return; }
@@ -3267,17 +3273,46 @@ function StickerCard({ sticker, isRevealed, onReveal, onExpand, size = 'md' }: {
     setAnimating(true);
   };
 
+  const revealedCard = (
+    <div style={{
+      position: 'absolute', inset: 0,
+      backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
+      transform: 'rotateY(180deg)',
+      borderRadius: 4, border: `3px solid ${cfg.border}`,
+      boxShadow: `0 0 0 1px ${cfg.color}30, 0 4px 20px ${cfg.color}44`,
+      overflow: 'hidden', display: 'flex', flexDirection: 'column', background: '#fff',
+    }}>
+      {/* Image area */}
+      <div style={{ flex: 1, overflow: 'hidden', position: 'relative', borderBottom: `2px solid ${cfg.border}` }}>
+        {sticker.cardImageUrl
+          ? <img src={sticker.cardImageUrl} alt={cardName} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          : <div style={{ width: '100%', height: '100%', background: cfg.solid, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: emojiSize }}>{STICKER_CONFIG[sticker.tier].variants[sticker.variant ?? 0]?.emoji}</span>
+            </div>
+        }
+        {/* Collectible badge top-right */}
+        <div style={{ position: 'absolute', top: 2, right: 2, background: `${cfg.color}cc`, borderRadius: 2, padding: '1px 3px' }}>
+          <span style={{ fontSize: fColl - 1, fontWeight: 900, color: '#fff', letterSpacing: '0.4px', textTransform: 'uppercase' as const }}>Collectible</span>
+        </div>
+      </div>
+      {/* Bottom panel */}
+      <div style={{ height: bottomH, background: cfg.bg, padding: size === 'sm' ? '2px 4px' : size === 'lg' ? '5px 8px' : '3px 6px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+          <span style={{ fontSize: fName, fontWeight: 900, color: cfg.color, lineHeight: 1.1, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{cardName}</span>
+          <span style={{ fontSize: fRank, fontWeight: 900, color: cfg.color, opacity: 0.75, lineHeight: 1.1, flexShrink: 0 }}>{cfg.label}</span>
+        </div>
+        <span style={{ fontSize: fColl, fontWeight: 700, color: cfg.color, opacity: 0.45, letterSpacing: '0.4px', lineHeight: 1, textTransform: 'uppercase' as const }}>◆ Collectible</span>
+      </div>
+    </div>
+  );
+
   return (
     <motion.div
       onClick={handleTap}
       animate={animating ? { scale: [1, 1.22, 0.83, 1.1, 1] } : { scale: 1 }}
       transition={{ duration: 0.4 }}
       onAnimationComplete={() => {
-        if (animating) {
-          setAnimating(false);
-          setLocalRevealed(true);
-          onReveal?.();
-        }
+        if (animating) { setAnimating(false); setLocalRevealed(true); onReveal?.(); }
       }}
       style={{ width: dims.w, height: dims.h, perspective: '800px', flexShrink: 0, cursor: (localRevealed && onExpand) || !localRevealed ? 'pointer' : 'default' }}
       className="relative"
@@ -3288,36 +3323,21 @@ function StickerCard({ sticker, isRevealed, onReveal, onExpand, size = 'md' }: {
         transition={{ duration: 0.55, ease: [0.23, 1, 0.32, 1] }}
         style={{ transformStyle: 'preserve-3d', WebkitTransformStyle: 'preserve-3d', width: '100%', height: '100%', position: 'relative' }}
       >
-        {/* Front — grey mystery (removed from DOM once revealed so it can't bleed through) */}
+        {/* Front — mystery card back */}
         {!localRevealed && (
           <div style={{
             position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
+            borderRadius: 4, border: '3px solid #CBD5E1',
             background: 'linear-gradient(135deg, #F8FAFC, #E2E8F0)',
-            border: '2px solid #CBD5E1', borderRadius: 16,
+            boxShadow: '0 0 0 1px #94A3B830, 0 4px 12px rgba(0,0,0,0.1)',
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+            overflow: 'hidden',
           }}>
             <span style={{ fontSize: 30, fontWeight: 900, color: '#94A3B8' }}>?</span>
             <span style={{ fontSize: 8, color: '#94A3B8', fontWeight: 600 }}>Tap to reveal</span>
           </div>
         )}
-        {/* Back — card reveal */}
-        <div style={{
-          position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
-          transform: 'rotateY(180deg)',
-          border: `2px solid ${cfg.border}`, borderRadius: 16,
-          boxShadow: `0 4px 20px ${cfg.color}33`,
-          overflow: 'hidden',
-        }}>
-          {sticker.cardImageUrl
-            ? <img src={sticker.cardImageUrl} alt={sticker.cardName} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-            : <div style={{ width: '100%', height: '100%', background: cfg.solid }} />
-          }
-          {sticker.cardName && (
-            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.45)', padding: '2px 3px', textAlign: 'center' }}>
-              <span style={{ fontSize: size === 'sm' ? 6 : 7, fontWeight: 900, color: '#fff', lineHeight: 1.2 }}>{sticker.cardName}</span>
-            </div>
-          )}
-        </div>
+        {revealedCard}
       </motion.div>
     </motion.div>
   );
@@ -3516,26 +3536,35 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
                         return (
                           <div key={sl.key} className="relative flex-1" style={{ maxWidth: 72, aspectRatio: '3/4', minWidth: 0 }}>
                             <div style={{
-                              width: '100%', height: '100%', borderRadius: 12, overflow: 'hidden', border: '2px solid',
-                              borderColor: filled ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.2)',
-                              background: filled ? undefined : 'rgba(0,0,0,0.22)',
-                              boxShadow: filled ? '0 2px 10px rgba(0,0,0,0.2)' : 'none',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative',
+                              width: '100%', height: '100%', borderRadius: 4, overflow: 'hidden',
+                              border: `3px solid ${filled ? cfg.border : 'rgba(255,255,255,0.25)'}`,
+                              background: filled ? '#fff' : 'rgba(0,0,0,0.22)',
+                              boxShadow: filled ? `0 0 0 1px ${cfg.color}30, 0 2px 10px rgba(0,0,0,0.25)` : 'none',
+                              display: 'flex', flexDirection: 'column', position: 'relative',
                             }}>
                               {filled ? (
                                 <>
-                                  {sl.imageUrl
-                                    ? <img src={sl.imageUrl} alt={sl.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                                    : <div style={{ width: '100%', height: '100%', background: cfg.solid }} />
-                                  }
-                                  {sl.name && (
-                                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.45)', padding: '2px 3px', textAlign: 'center' }}>
-                                      <span style={{ fontSize: 6, fontWeight: 900, color: '#fff', lineHeight: 1.2 }}>{sl.name}</span>
+                                  {/* Image area */}
+                                  <div style={{ flex: 1, overflow: 'hidden', position: 'relative', borderBottom: `2px solid ${cfg.border}` }}>
+                                    {sl.imageUrl
+                                      ? <img src={sl.imageUrl} alt={sl.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                                      : <div style={{ width: '100%', height: '100%', background: cfg.solid }} />
+                                    }
+                                    <div style={{ position: 'absolute', top: 1, right: 1, background: `${cfg.color}cc`, borderRadius: 2, padding: '1px 2px' }}>
+                                      <span style={{ fontSize: 3.5, fontWeight: 900, color: '#fff', textTransform: 'uppercase' as const, letterSpacing: '0.3px' }}>Collectible</span>
                                     </div>
-                                  )}
+                                  </div>
+                                  {/* Bottom panel */}
+                                  <div style={{ height: 20, background: cfg.bg, padding: '2px 3px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 0.5 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                                      <span style={{ fontSize: 5.5, fontWeight: 900, color: cfg.color, lineHeight: 1.1, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{sl.name || cfg.label}</span>
+                                      <span style={{ fontSize: 4.5, fontWeight: 900, color: cfg.color, opacity: 0.7, lineHeight: 1.1, flexShrink: 0 }}>{cfg.label}</span>
+                                    </div>
+                                    <span style={{ fontSize: 4, fontWeight: 700, color: cfg.color, opacity: 0.45, textTransform: 'uppercase' as const, letterSpacing: '0.3px', lineHeight: 1 }}>◆ Collectible</span>
+                                  </div>
                                 </>
                               ) : (
-                                <span style={{ fontSize: 18, opacity: 0.25, userSelect: 'none', color: '#fff' }}>?</span>
+                                <span style={{ fontSize: 18, opacity: 0.25, userSelect: 'none' as const, color: '#fff', position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>?</span>
                               )}
                             </div>
                             {sl.count > 1 && (
