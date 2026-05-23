@@ -812,27 +812,27 @@ const STICKER_ORDER: StickerTier[] = ['brown', 'lightblue', 'red', 'blue', 'gold
 interface StickerVariant { emoji: string; name: string; }
 
 const STICKER_CONFIG: Record<StickerTier, { color: string; solid: string; bg: string; border: string; label: string; chance: string; theme: string; variants: StickerVariant[] }> = {
-  brown:    { color: '#6B3A2A', solid: '#955436', bg: '#F5E6D3', border: '#C4845C', label: 'Common',    chance: '50%', theme: 'Creepy Crawlies', variants: [
+  brown:    { color: '#6B3A2A', solid: '#955436', bg: '#F5E6D3', border: '#7D3F1A', label: 'Common',    chance: '50%', theme: 'Creepy Crawlies', variants: [
     { emoji: '🕷️', name: 'Spider' },
     { emoji: '🐛', name: 'Caterpillar' },
     { emoji: '🪲', name: 'Beetle' },
   ]},
-  lightblue:{ color: '#0284C7', solid: '#38BDF8', bg: '#F0F9FF', border: '#7DD3FC', label: 'Uncommon',  chance: '28%', theme: 'Beach', variants: [
+  lightblue:{ color: '#0284C7', solid: '#38BDF8', bg: '#F0F9FF', border: '#0369A1', label: 'Uncommon',  chance: '28%', theme: 'Beach', variants: [
     { emoji: '🦀', name: 'Crab' },
     { emoji: '🐢', name: 'Sea Turtle' },
     { emoji: '🦭', name: 'Seal' },
   ]},
-  red:      { color: '#B91C1C', solid: '#D21B17', bg: '#FEE2E2', border: '#FCA5A5', label: 'Rare',      chance: '14%', theme: 'Land Animals', variants: [
+  red:      { color: '#B91C1C', solid: '#D21B17', bg: '#FEE2E2', border: '#991B1B', label: 'Rare',      chance: '14%', theme: 'Land Animals', variants: [
     { emoji: '🦎', name: 'Gecko' },
     { emoji: '🐊', name: 'Crocodile' },
     { emoji: '🐍', name: 'Snake' },
   ]},
-  blue:     { color: '#1E3A8A', solid: '#1E3A8A', bg: '#EFF6FF', border: '#3B82F6', label: 'Epic',      chance: '7%',  theme: 'Ocean Life', variants: [
+  blue:     { color: '#1E3A8A', solid: '#1E3A8A', bg: '#EFF6FF', border: '#1E3A8A', label: 'Epic',      chance: '7%',  theme: 'Ocean Life', variants: [
     { emoji: '🐙', name: 'Octopus' },
     { emoji: '🦈', name: 'Shark' },
     { emoji: '🐠', name: 'Clownfish' },
   ]},
-  gold:     { color: '#92400E', solid: '#F5C518', bg: '#FFFBEB', border: '#FDE68A', label: 'Legendary', chance: '1%',  theme: 'Legendary', variants: [
+  gold:     { color: '#92400E', solid: '#F5C518', bg: '#FFFBEB', border: '#B45309', label: 'Legendary', chance: '1%',  theme: 'Legendary', variants: [
     { emoji: '🐉', name: 'Golden Dragon' },
     { emoji: '🦘', name: 'Kangaroo' },
   ]},
@@ -3263,8 +3263,8 @@ function StickerCard({ sticker, isRevealed, onReveal, onExpand, size = 'md' }: {
 
   const dims = size === 'sm' ? { w: 62, h: 88 } : size === 'lg' ? { w: 210, h: 298 } : { w: 82, h: 116 };
   const holoPad = size === 'lg' ? 3 : 2;
-  const tierPad = size === 'lg' ? 7 : size === 'sm' ? 5 : 6;
-  const outerR  = size === 'lg' ? 14 : size === 'sm' ? 9 : 10;
+  const tierPad = size === 'lg' ? 10 : size === 'sm' ? 7 : 8;
+  const outerR  = size === 'lg' ? 16 : size === 'sm' ? 11 : 12;
   const midR    = outerR - holoPad;
   const innerR  = midR - tierPad;
   const bottomH = size === 'sm' ? 26 : size === 'lg' ? 58 : 32;
