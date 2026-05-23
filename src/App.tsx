@@ -3306,35 +3306,22 @@ function StickerCard({ sticker, isRevealed, onReveal, onExpand, size = 'md' }: {
       onClick={handleTap}
       style={{ width: dims.w, height: dims.h, flexShrink: 0, cursor: (!localRevealed || onExpand) ? 'pointer' : 'default', position: 'relative' }}
     >
-      <AnimatePresence mode="wait">
-        {!localRevealed ? (
-          <motion.div
-            key="mystery"
-            exit={{ scale: 0.7, opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            style={{
-              position: 'absolute', inset: 0, borderRadius: 4, border: '3px solid #CBD5E1',
-              background: 'linear-gradient(135deg, #F8FAFC, #E2E8F0)',
-              boxShadow: '0 0 0 1px #94A3B830, 0 4px 12px rgba(0,0,0,0.1)',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, overflow: 'hidden',
-            }}
-          >
-            <span style={{ fontSize: 30, fontWeight: 900, color: '#94A3B8' }}>?</span>
-            <span style={{ fontSize: 8, color: '#94A3B8', fontWeight: 600 }}>Tap to reveal</span>
-          </motion.div>
-        ) : (
-          <motion.div
-            key="card"
-            initial={wasJustRevealed ? { scale: 0.55, opacity: 0, rotate: -8 } : false}
-            animate={{ scale: 1, opacity: 1, rotate: 0 }}
-            transition={wasJustRevealed ? { type: 'spring', damping: 13, stiffness: 200 } : { duration: 0 }}
-            className="holo-border"
-            style={{ position: 'absolute', inset: 0, padding: 5, borderRadius: 9, boxShadow: `0 4px 24px ${cfg.color}55` }}
-          >
-            {cardInner}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Card always rendered underneath */}
+      <div className="holo-border" style={{ position: 'absolute', inset: 0, padding: 5, borderRadius: 9, boxShadow: `0 4px 24px ${cfg.color}55` }}>
+        {cardInner}
+      </div>
+      {/* Mystery overlay sits on top until revealed — removed instantly on tap */}
+      {!localRevealed && (
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 10, borderRadius: 4, border: '3px solid #CBD5E1',
+          background: 'linear-gradient(135deg, #F8FAFC, #E2E8F0)',
+          boxShadow: '0 0 0 1px #94A3B830, 0 4px 12px rgba(0,0,0,0.1)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, overflow: 'hidden',
+        }}>
+          <span style={{ fontSize: 30, fontWeight: 900, color: '#94A3B8' }}>?</span>
+          <span style={{ fontSize: 8, color: '#94A3B8', fontWeight: 600 }}>Tap to reveal</span>
+        </div>
+      )}
     </div>
   );
 }
