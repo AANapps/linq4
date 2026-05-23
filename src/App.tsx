@@ -26626,7 +26626,6 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
   const [lbCategory, setLbCategory] = useState<'stamps' | 'rewards' | 'streak' | 'points'>('stamps');
   const [lbUsers, setLbUsers] = useState<UserProfile[]>([]);
   const [lbPins, setLbPins] = useState<UserProfile[]>([]);
-  const [savingsLbPins, setSavingsLbPins] = useState<UserProfile[]>([]);
   const [challengeCounts, setChallengeCounts] = useState<Map<string, number>>(new Map());
   const [lbLoading, setLbLoading] = useState(false);
   const [showSavingsLb, setShowSavingsLb] = useState(false);
@@ -26775,11 +26774,10 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
     setLbLoading(true);
     (async () => {
       try {
-        const [usersSnap, entriesSnap, pinsSnap, savingsPinsSnap] = await Promise.all([
+        const [usersSnap, entriesSnap, pinsSnap] = await Promise.all([
           getDocs(collection(db, 'users')),
           getDocs(collection(db, 'challenge_entries')),
           getDocs(query(collection(db, 'leaderboard_pins'), where('category', '==', 'stamps'))),
-          getDocs(query(collection(db, 'leaderboard_pins'), where('category', '==', 'savings'))),
         ]);
         const counts = new Map<string, number>();
         for (const d of entriesSnap.docs) {
@@ -26792,10 +26790,6 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
           const p = d.data();
           return { uid: p.uid, name: p.name, handle: p.handle, avatar: p.avatar, totalStamps: p.value, totalRedeemed: 0, streak: 0 } as UserProfile;
         }));
-        setSavingsLbPins(savingsPinsSnap.docs.map(d => {
-          const p = d.data();
-          return { uid: p.uid, name: p.name, handle: p.handle, avatar: p.avatar, totalSaved: p.value, totalStamps: 0, totalRedeemed: 0, streak: 0 } as UserProfile;
-        }));
       } catch (e) { console.error(e); }
       setLbLoading(false);
     })();
@@ -26804,14 +26798,21 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
   useEffect(() => {
     if (!showSavingsLb) return;
     setSavingsLbLoading(true);
-    getDocs(query(collection(db, 'leaderboard_pins'), where('category', '==', 'savings')))
-      .then(snap => {
-        const pins = snap.docs.map(d => {
-          const p = d.data();
-          return { uid: p.uid, name: p.name, handle: p.handle, avatar: p.avatar, totalSaved: p.value, totalStamps: 0, totalRedeemed: 0, streak: 0 } as UserProfile;
-        }).sort((a, b) => (b.totalSaved ?? 0) - (a.totalSaved ?? 0));
-        setSavingsLbUsers(pins);
-      }).catch(console.error).finally(() => setSavingsLbLoading(false));
+    Promise.all([
+      getDocs(collection(db, 'users')),
+      getDocs(query(collection(db, 'leaderboard_pins'), where('category', '==', 'savings'))),
+    ]).then(([usersSnap, pinsSnap]) => {
+      const pinnedUids = new Set(pinsSnap.docs.map(d => d.data().uid));
+      const pins: UserProfile[] = pinsSnap.docs.map(d => {
+        const p = d.data();
+        return { uid: p.uid, name: p.name, handle: p.handle, avatar: p.avatar, totalSaved: p.value, totalStamps: 0, totalRedeemed: 0, streak: 0 } as UserProfile;
+      });
+      const realUsers: UserProfile[] = usersSnap.docs
+        .map(d => ({ uid: d.id, ...d.data() } as UserProfile))
+        .filter(u => !pinnedUids.has(u.uid) && (u.totalSaved ?? 0) > 0);
+      const merged = [...pins, ...realUsers].sort((a, b) => (b.totalSaved ?? 0) - (a.totalSaved ?? 0)).slice(0, 20);
+      setSavingsLbUsers(merged);
+    }).catch(console.error).finally(() => setSavingsLbLoading(false));
   }, [showSavingsLb]);
 
   useEffect(() => {
@@ -27193,9 +27194,14 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
               const lbCategoryLabel = ({ stamps: 'Stamps', rewards: 'Rewards', streak: 'Streak', points: 'Points' } as Record<string, string>)[lbCategory] ?? '';
               const lbCategoryUnit = ({ stamps: 'stamps', rewards: 'redeemed', streak: 'day streak', points: '' } as Record<string, string>)[lbCategory] ?? '';
               const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
-              const baseUsers = lbCategory === 'stamps' ? lbPins : (lbPeriod === 'weekly'
+              const periodReal = lbPeriod === 'weekly'
                 ? lbUsers.filter(u => u.lastStreakDate && u.lastStreakDate >= sevenDaysAgo)
-                : lbUsers);
+                : lbUsers;
+              // For stamps: merge admin pins (which override) with real users not in pins
+              const baseUsers = lbCategory === 'stamps' ? (() => {
+                const pinnedUids = new Set(lbPins.map(p => p.uid));
+                return [...lbPins, ...periodReal.filter(u => !pinnedUids.has(u.uid))];
+              })() : periodReal;
               const allSorted = lbCategory === 'points' ? [] : [...baseUsers].sort((a, b) => getLbScore(b) - getLbScore(a)).filter(u => getLbScore(u) > 0);
               const sorted = allSorted.slice(0, 10);
               const myRankIdx = allSorted.findIndex(u => u.uid === currentProfile?.uid);
@@ -27547,7 +27553,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                       </p>
                       {!isMe && u.handle && <p className="text-[10px] text-white/50 truncate">@{u.handle}</p>}
                     </div>
-                    <span className="text-base font-black text-emerald-300 shrink-0">
+                    <span className="text-base font-black text-white shrink-0">
                       {currencySymbol('AUD')}{(u.totalSaved ?? 0).toFixed(2)}
                     </span>
                   </div>
