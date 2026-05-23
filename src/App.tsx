@@ -3306,11 +3306,13 @@ function StickerCard({ sticker, isRevealed, onReveal, onExpand, size = 'md' }: {
     >
       {/* Card always rendered underneath */}
       {size === 'lg' ? (
-        <div className="holo-border" style={{ position: 'absolute', inset: 0, padding: 5, borderRadius: 9, boxShadow: `0 4px 24px ${cfg.color}55` }}>
-          {cardInner}
+        <div className="holo-border" style={{ position: 'absolute', inset: 0, padding: 3, borderRadius: 12, boxShadow: `0 4px 24px ${cfg.color}55` }}>
+          <div style={{ width: '100%', height: '100%', padding: 3, borderRadius: 9, background: cfg.border }}>
+            {cardInner}
+          </div>
         </div>
       ) : (
-        <div style={{ position: 'absolute', inset: 0, padding: 2, borderRadius: 6, background: cfg.border }}>
+        <div style={{ position: 'absolute', inset: 0, padding: 4, borderRadius: 8, background: cfg.border }}>
           {cardInner}
         </div>
       )}
@@ -3523,7 +3525,7 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
                         return (
                           <div key={sl.key} className="relative flex-1" style={{ maxWidth: 72, aspectRatio: '3/4', minWidth: 0 }}>
                               {filled ? (
-                              <div style={{ width: '100%', height: '100%', borderRadius: 6, padding: 2, background: cfg.border }}>
+                              <div style={{ width: '100%', height: '100%', borderRadius: 8, padding: 4, background: cfg.border }}>
                                 <div style={{ width: '100%', height: '100%', borderRadius: 4, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: '#fff', position: 'relative' }}>
                                   <div style={{ flex: 1, overflow: 'hidden', position: 'relative', borderBottom: `2px solid ${cfg.border}` }}>
                                     {sl.imageUrl
