@@ -3288,16 +3288,18 @@ function StickerCard({ sticker, isRevealed, onReveal, onExpand, size = 'md' }: {
         transition={{ duration: 0.55, ease: [0.23, 1, 0.32, 1] }}
         style={{ transformStyle: 'preserve-3d', WebkitTransformStyle: 'preserve-3d', width: '100%', height: '100%', position: 'relative' }}
       >
-        {/* Front — grey mystery */}
-        <div style={{
-          position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
-          background: 'linear-gradient(135deg, #F8FAFC, #E2E8F0)',
-          border: '2px solid #CBD5E1', borderRadius: 16,
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
-        }}>
-          <span style={{ fontSize: 30, fontWeight: 900, color: '#94A3B8' }}>?</span>
-          {!localRevealed && <span style={{ fontSize: 8, color: '#94A3B8', fontWeight: 600 }}>Tap to reveal</span>}
-        </div>
+        {/* Front — grey mystery (removed from DOM once revealed so it can't bleed through) */}
+        {!localRevealed && (
+          <div style={{
+            position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
+            background: 'linear-gradient(135deg, #F8FAFC, #E2E8F0)',
+            border: '2px solid #CBD5E1', borderRadius: 16,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+          }}>
+            <span style={{ fontSize: 30, fontWeight: 900, color: '#94A3B8' }}>?</span>
+            <span style={{ fontSize: 8, color: '#94A3B8', fontWeight: 600 }}>Tap to reveal</span>
+          </div>
+        )}
         {/* Back — card reveal */}
         <div style={{
           position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
@@ -3474,10 +3476,11 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
             {/* Card collection — all 5 tier rows always visible, slots from admin defs or fixed count */}
             <div className="space-y-4">
               <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75">
-                Card Collection ({revealed.length} collected)
+                Card Collection ({stickerCard.stickers.length} collected)
               </p>
               {STICKER_ORDER.map(tier => {
                 const cfg = STICKER_CONFIG[tier];
+                const allStickers = stickerCard.stickers;
                 // Use admin card defs for this tier if available, otherwise fall back to MAX_CARDS_PER_TIER slots
                 const tierDefs = cardDefs.filter(d => d.tier === tier);
                 const slotCount = tierDefs.length > 0 ? tierDefs.length : MAX_CARDS_PER_TIER[tier];
@@ -3486,11 +3489,11 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
                 const slots = Array.from({ length: slotCount }, (_, i) => {
                   if (tierDefs.length > 0) {
                     const def = tierDefs[i];
-                    const matches = revealed.filter(s => s.cardDefId === def.id);
+                    const matches = allStickers.filter(s => s.cardDefId === def.id);
                     return { key: def.id, imageUrl: def.imageUrl, name: def.name, matches, count: matches.length };
                   } else {
                     // Exclude stickers that have a cardDefId — those are already shown in their card def's tier row
-                    const matches = revealed.filter(s => s.tier === tier && (s.variant ?? 0) === i && !s.cardDefId);
+                    const matches = allStickers.filter(s => s.tier === tier && (s.variant ?? 0) === i && !s.cardDefId);
                     const s = matches[0];
                     return { key: String(i), imageUrl: s?.cardImageUrl, name: s?.cardName, matches, count: matches.length };
                   }
@@ -3549,18 +3552,6 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
               })}
             </div>
 
-            {unrevealed.length > 0 && (
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75 mb-3">
-                  Unrevealed ({unrevealed.length})
-                </p>
-                <div className="flex flex-wrap gap-3">
-                  {unrevealed.map(s => (
-                    <StickerCard key={s.id} sticker={s} isRevealed={false} onReveal={() => handleReveal(s.id)} size="md" />
-                  ))}
-                </div>
-              </div>
-            )}
 
 
             {stickerCard.stickers.length === 0 && (
@@ -3608,14 +3599,13 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
   }, []);
 
   const unrevealed = stickers.filter(s => !revealedIds.includes(s.id));
-  const revealed = stickers.filter(s => revealedIds.includes(s.id));
 
   // Build cardDefId → setId lookup
   const defSetMap = new Map<string, string>(cardDefs.map(d => [d.id, d.setId ?? '']));
 
-  // Group revealed stickers by their card set id ('__none__' for no set)
+  // Group all stickers by their card set id ('__none__' for no set)
   const bySet = new Map<string, CollectibleSticker[]>();
-  revealed.forEach(s => {
+  stickers.forEach(s => {
     const setId = s.cardDefId ? (defSetMap.get(s.cardDefId) || '__none__') : '__none__';
     if (!bySet.has(setId)) bySet.set(setId, []);
     bySet.get(setId)!.push(s);
@@ -3684,8 +3674,8 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
             </motion.button>
           )}
 
-          {revealed.length === 0 && (
-            <p className="text-center text-sm text-brand-navy/50 py-8">No revealed cards yet</p>
+          {stickers.length === 0 && (
+            <p className="text-center text-sm text-brand-navy/50 py-8">No cards yet</p>
           )}
 
           {/* Sets in order */}
@@ -3797,21 +3787,7 @@ function UserStickerPanel({ uid, isOwnProfile = false, onOpenPack }: {
 
         {/* Slider */}
         <div className="flex gap-2 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-2 scrollbar-hide">
-          {isOwnProfile && unrevealed.map(s => (
-            <div key={s.id} className="snap-start shrink-0 relative">
-              <motion.div
-                animate={{ rotate: [0, -4, 4, -3, 3, -2, 2, 0] }}
-                transition={{ duration: 0.55, repeat: Infinity, repeatDelay: 2.6 }}
-              >
-                <StickerCard sticker={s} isRevealed={false} onReveal={() => handleReveal(s.id)} size="sm" />
-              </motion.div>
-              <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center z-10 pointer-events-none"
-                style={{ boxShadow: '0 0 6px rgba(239,68,68,0.7)' }}>
-                <span className="text-white font-black leading-none" style={{ fontSize: 8 }}>!</span>
-              </div>
-            </div>
-          ))}
-          {revealed.map(s => (
+          {col.stickers.map(s => (
             <div key={s.id} className="snap-start shrink-0">
               <StickerCard sticker={s} isRevealed={true} size="sm" onExpand={() => setExpandedSticker(s)} />
             </div>
