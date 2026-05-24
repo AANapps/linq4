@@ -23732,13 +23732,13 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
               className="text-[10px] font-bold text-brand-gold active:opacity-70">See All</button>
           </div>
           {(() => {
-            const revealed = (stickerData?.stickers ?? []).filter(s => (stickerData?.revealedIds ?? []).includes(s.id));
-            if (revealed.length === 0) return (
-              <p className="text-[10px] text-brand-navy/35 py-1">No stickers yet</p>
+            const universal = (stickerData?.stickers ?? []).filter(s => !!s.cardDefId && (stickerData?.revealedIds ?? []).includes(s.id));
+            if (universal.length === 0) return (
+              <p className="text-[10px] text-brand-navy/35 py-1">No cards yet</p>
             );
             return (
               <div className="flex gap-1.5 overflow-x-auto scrollbar-hide -mx-0.5 px-0.5">
-                {revealed.slice(0, 5).map(s => {
+                {universal.slice(0, 5).map(s => {
                   const cfg = STICKER_CONFIG[s.tier];
                   return (
                     <div key={s.id} onClick={() => setShowStickerModal(true)}
@@ -30550,47 +30550,81 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
         ))}
       </div>
 
-      {/* Challenges · Stickers · Badges row */}
+      {/* Challenges · Stickers · Badges */}
       {(() => {
         const theirChallenges = publicChallenges.filter(c => (c.participantUids || []).includes(initialTargetUser.uid));
         const activePub = theirChallenges.filter(c => !publicEntries.get(c.id)?.redeemed);
-        const donePub = theirChallenges.filter(c => publicEntries.get(c.id)?.redeemed);
         return (
-          <div className="flex gap-2">
+          <>
+            {/* Challenges tile */}
             <motion.button whileTap={{ scale: 0.97 }} onClick={() => setPubChallengeOpen(true)}
-              className="flex-1 rounded-2xl overflow-hidden shadow-sm">
-              <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3.5 overflow-hidden"
+              className="w-full rounded-2xl overflow-hidden shadow-sm">
+              <div className="relative flex items-center justify-center gap-2 px-4 py-3 overflow-hidden"
                 style={{ background: uiColors.challengesTile.css }}>
                 <span className="shine-ray" aria-hidden="true" />
                 <p className="relative z-10 text-xl font-black leading-none text-white"
                   style={tileTextStyle(uiColors.challengesTile)}>{activePub.length}</p>
-                <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-white/70"
+                <span className="relative z-10 text-[10px] font-bold uppercase tracking-widest text-white/70"
                   style={tileTextStyle(uiColors.challengesTile, 0.7)}>Challenges</span>
               </div>
             </motion.button>
-            <motion.button whileTap={{ scale: 0.97 }} onClick={() => setPubStickerOpen(true)}
-              className="flex-1 rounded-2xl overflow-hidden shadow-sm">
-              <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3.5 overflow-hidden"
-                style={{ background: uiColors.stickersTile.css }}>
-                <span className="shine-ray" aria-hidden="true" />
-                <p className="relative z-10 text-xl font-black leading-none text-white"
-                  style={tileTextStyle(uiColors.stickersTile)}>{pubStickerCount}</p>
-                <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-white/70"
-                  style={tileTextStyle(uiColors.stickersTile, 0.7)}>Stickers</span>
+
+            {/* Sticker + Badge sliders in one row */}
+            <div className="flex gap-2">
+              {/* Sticker slider */}
+              <div className="flex-1 bg-white/70 rounded-2xl px-3 pt-2.5 pb-3 shadow-sm min-w-0">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/50">Stickers</span>
+                  <button onClick={() => setPubStickerOpen(true)}
+                    className="text-[10px] font-bold text-brand-gold active:opacity-70">See All</button>
+                </div>
+                {(() => {
+                  const universal = pubStickers.filter(s => !!s.cardDefId && pubRevealedIds.includes(s.id));
+                  if (universal.length === 0) return <p className="text-[10px] text-brand-navy/35 py-1">No cards yet</p>;
+                  return (
+                    <div className="flex gap-1.5 overflow-x-auto scrollbar-hide -mx-0.5 px-0.5">
+                      {universal.slice(0, 5).map(s => {
+                        const cfg = STICKER_CONFIG[s.tier];
+                        return (
+                          <div key={s.id} onClick={() => setPubStickerOpen(true)}
+                            style={{ width: 42, height: 42, borderRadius: 9, overflow: 'hidden', border: `2px solid ${cfg.border}`, background: cfg.solid, flexShrink: 0, cursor: 'pointer' }}>
+                            {s.cardImageUrl
+                              ? <img src={s.cardImageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
+                                  {cfg.variants[s.variant ?? 0]?.emoji}
+                                </div>
+                            }
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </div>
-            </motion.button>
-            <motion.button whileTap={{ scale: 0.97 }} onClick={() => setPubBadgesOpen(true)}
-              className="flex-1 rounded-2xl overflow-hidden shadow-sm">
-              <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3.5 overflow-hidden"
-                style={{ background: uiColors.badgesTile.css }}>
-                <span className={uiColors.badgesTile.dark ? 'shine-ray' : 'badge-shine-ray'} aria-hidden="true" />
-                <p className="relative z-10 text-xl font-black leading-none"
-                  style={{ color: uiColors.badgesTile.textColor ?? (uiColors.badgesTile.dark ? '#fff' : '#451a03') }}>{earnedBadges.length}</p>
-                <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest"
-                  style={{ color: uiColors.badgesTile.textColor ? `${uiColors.badgesTile.textColor}b3` : (uiColors.badgesTile.dark ? 'rgba(255,255,255,0.7)' : '#78350f') }}>Badges</span>
+
+              {/* Badge slider */}
+              <div className="flex-1 bg-white/70 rounded-2xl px-3 pt-2.5 pb-3 shadow-sm min-w-0">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/50">Badges</span>
+                  <button onClick={() => setPubBadgesOpen(true)}
+                    className="text-[10px] font-bold text-brand-gold active:opacity-70">See All</button>
+                </div>
+                {earnedBadges.length === 0
+                  ? <p className="text-[10px] text-brand-navy/35 py-1">No badges yet</p>
+                  : (
+                    <div className="flex gap-1.5 overflow-x-auto scrollbar-hide -mx-0.5 px-0.5">
+                      {earnedBadges.slice(0, 5).map(b => (
+                        <button key={b.id} onClick={() => { setPubBadgesOpen(false); setSelectedBadge(b); }}
+                          className="shrink-0 active:scale-90 transition-transform">
+                          <HexBadge badge={b} size={42} />
+                        </button>
+                      ))}
+                    </div>
+                  )
+                }
               </div>
-            </motion.button>
-          </div>
+            </div>
+          </>
         );
       })()}
 
@@ -30755,7 +30789,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
         <h3 className="font-display text-xl font-bold px-2">Active Cards</h3>
         {cards.length === 0 ? (
           <div className="py-8 text-center text-brand-navy/60 bg-white/50 rounded-2xl border border-dashed border-brand-navy/5">
-            <p className="text-xs font-bold uppercase tracking-widest italic">No active loyalty cards</p>
+            <p className="text-xs font-bold italic">this user doesn't want to save money</p>
           </div>
         ) : (
           <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-2 scrollbar-hide">
@@ -30851,7 +30885,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
           </React.Fragment>
         ))}
         {userPosts.length === 0 && (
-          <p className="text-center py-12 text-xs text-brand-navy/60 font-bold uppercase tracking-widest italic">No posts yet</p>
+          <p className="text-center py-12 text-xs text-brand-navy/60 italic">this person is too shy to speak</p>
         )}
       </div>
     </motion.div>
