@@ -5686,11 +5686,38 @@ function AppEditPanel({ onClose, onLogoChange }: { onClose: () => void; onLogoCh
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [subLink, setSubLink] = useState('');
+  const [nfcLink, setNfcLink] = useState('');
+  const [linksSaved, setLinksSaved] = useState(false);
+  const [linksSaving, setLinksSaving] = useState(false);
+
   useEffect(() => {
     getDoc(doc(db, 'app_config', 'branding')).then(snap => {
       if (snap.exists()) setLogoUrl(snap.data().adastraLogoUrl || '');
     }).catch(() => {});
+    getDoc(doc(db, 'app_config', 'stripe_links')).then(snap => {
+      if (snap.exists()) {
+        setSubLink(snap.data().subscriptionLink || '');
+        setNfcLink(snap.data().nfcOrderLink || '');
+      }
+    }).catch(() => {});
   }, []);
+
+  const handleSaveLinks = async () => {
+    setLinksSaving(true);
+    try {
+      await setDoc(doc(db, 'app_config', 'stripe_links'), {
+        subscriptionLink: subLink.trim(),
+        nfcOrderLink: nfcLink.trim(),
+      });
+      setLinksSaved(true);
+      setTimeout(() => setLinksSaved(false), 3000);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to save links.');
+    } finally {
+      setLinksSaving(false);
+    }
+  };
 
   const handleUpload = async (file: File) => {
     setUploading(true);
@@ -5758,6 +5785,41 @@ function AppEditPanel({ onClose, onLogoChange }: { onClose: () => void; onLogoCh
                 <CheckCircle2 size={13} /> Saved — visible on next startup
               </p>
             )}
+          </div>
+
+          {/* Stripe payment links */}
+          <div className="bg-white rounded-3xl border border-black/5 shadow-sm p-5 space-y-4">
+            <div>
+              <p className="font-bold text-sm text-brand-navy">Stripe Payment Links</p>
+              <p className="text-xs text-brand-navy/60 mt-0.5">Paste your Stripe payment links here. Vendors are redirected to these when subscribing or ordering NFC tags.</p>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-[11px] font-bold uppercase tracking-widest text-brand-navy/50 mb-1 block">Subscription link</label>
+                <input
+                  value={subLink}
+                  onChange={e => setSubLink(e.target.value)}
+                  placeholder="https://buy.stripe.com/..."
+                  className="w-full px-4 py-3 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-bold uppercase tracking-widest text-brand-navy/50 mb-1 block">NFC tag order link</label>
+                <input
+                  value={nfcLink}
+                  onChange={e => setNfcLink(e.target.value)}
+                  placeholder="https://buy.stripe.com/..."
+                  className="w-full px-4 py-3 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+                />
+              </div>
+            </div>
+            <button
+              onClick={handleSaveLinks}
+              disabled={linksSaving}
+              className="w-full py-3 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-[0.97] transition-transform disabled:opacity-50"
+            >
+              {linksSaving ? 'Saving…' : linksSaved ? '✓ Saved' : 'Save links'}
+            </button>
           </div>
 
           {/* Preview */}
@@ -15216,8 +15278,16 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
   const needsPayment = store !== null && !isInTrial && !isSubscribed;
 
 
-  const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/aFa5kF5JZh193yT6OEd7q00';
-  const NFC_ORDER_STRIPE_LINK = 'https://buy.stripe.com/PLACEHOLDER_NFC_LINK';
+  const [STRIPE_PAYMENT_LINK, setStripePaymentLink] = useState('https://buy.stripe.com/aFa5kF5JZh193yT6OEd7q00');
+  const [NFC_ORDER_STRIPE_LINK, setNfcOrderStripeLink] = useState('https://buy.stripe.com/PLACEHOLDER_NFC_LINK');
+  useEffect(() => {
+    getDoc(doc(db, 'app_config', 'stripe_links')).then(snap => {
+      if (!snap.exists()) return;
+      const d = snap.data();
+      if (d.subscriptionLink) setStripePaymentLink(d.subscriptionLink);
+      if (d.nfcOrderLink) setNfcOrderStripeLink(d.nfcOrderLink);
+    }).catch(() => {});
+  }, []);
 
   // Show vendor onboarding exactly once — mark complete immediately on open so closing the
   // browser mid-guide still prevents it showing again. vendorIntroComplete is NOT in deps
