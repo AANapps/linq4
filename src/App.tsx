@@ -3617,13 +3617,16 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
 
   const unrevealed = stickers.filter(s => !revealedIds.includes(s.id));
 
+  // Only show cards that have actual artwork — skip emoji-only and broken-image stickers
+  const validStickers = stickers.filter(s => !!s.cardDefId && !!s.cardImageUrl);
+
   // Build cardDefId → setId lookup
   const defSetMap = new Map<string, string>(cardDefs.map(d => [d.id, d.setId ?? '']));
 
-  // Group all stickers by their card set id ('__none__' for no set)
+  // Group valid stickers by their card set id
   const bySet = new Map<string, CollectibleSticker[]>();
-  stickers.forEach(s => {
-    const setId = s.cardDefId ? (defSetMap.get(s.cardDefId) || '__none__') : '__none__';
+  validStickers.forEach(s => {
+    const setId = defSetMap.get(s.cardDefId!) || '__none__';
     if (!bySet.has(setId)) bySet.set(setId, []);
     bySet.get(setId)!.push(s);
   });
@@ -3691,13 +3694,13 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
             </motion.button>
           )}
 
-          {stickers.length === 0 && (
+          {validStickers.length === 0 && (
             <p className="text-center text-sm text-brand-navy/50 py-8">No cards yet</p>
           )}
 
           {/* Sets in order */}
           {setOrder.map(set => renderSet(set.id, set.name, bySet.get(set.id)!))}
-          {/* Cards with no set */}
+          {/* Cards with no named set */}
           {bySet.has('__none__') && renderSet('__none__', 'Other', bySet.get('__none__')!)}
         </div>
       </div>
@@ -3779,10 +3782,13 @@ function UserStickerPanel({ uid, isOwnProfile = false, onOpenPack }: {
     await updateDoc(doc(db, 'user_stickers', uid), { revealedIds: arrayUnion(stickerId) });
   };
 
-  if (!col || col.stickers.length === 0) return null;
+  // Only show cards with actual artwork — skip emoji-only and broken-image stickers
+  const validStickers = col ? col.stickers.filter(s => !!s.cardDefId && !!s.cardImageUrl) : [];
+
+  if (!col || validStickers.length === 0) return null;
 
   const unrevealed = col.stickers.filter(s => !col.revealedIds.includes(s.id));
-  const revealed = [...col.stickers.filter(s => col.revealedIds.includes(s.id))].reverse();
+  const revealed = validStickers.filter(s => col.revealedIds.includes(s.id)).reverse();
 
   return (
     <>
@@ -3790,7 +3796,7 @@ function UserStickerPanel({ uid, isOwnProfile = false, onOpenPack }: {
         {/* Header */}
         <div className="flex items-center justify-between px-1">
           <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75">
-            Cards <span className="text-brand-navy/40 normal-case tracking-normal font-bold">{col.stickers.length}</span>
+            Cards <span className="text-brand-navy/40 normal-case tracking-normal font-bold">{validStickers.length}</span>
           </p>
           <button onClick={() => setShowCollection(true)} className="text-[10px] font-bold text-brand-navy/50 active:opacity-60">
             See all
@@ -3813,7 +3819,7 @@ function UserStickerPanel({ uid, isOwnProfile = false, onOpenPack }: {
 
         {/* Slider */}
         <div className="flex gap-2 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-2 scrollbar-hide">
-          {col.stickers.map(s => (
+          {revealed.map(s => (
             <div key={s.id} className="snap-start shrink-0">
               <StickerCard sticker={s} isRevealed={true} size="sm" onExpand={() => setExpandedSticker(s)} />
             </div>
@@ -23751,7 +23757,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
               className="text-[10px] font-bold text-brand-gold active:opacity-70">See All</button>
           </div>
           {(() => {
-            const universal = (stickerData?.stickers ?? []).filter(s => !!s.cardDefId && (stickerData?.revealedIds ?? []).includes(s.id));
+            const universal = (stickerData?.stickers ?? []).filter(s => !!s.cardDefId && !!s.cardImageUrl && (stickerData?.revealedIds ?? []).includes(s.id));
             if (universal.length === 0) return (
               <p className="text-[10px] text-brand-navy/35 py-1">No cards yet</p>
             );
@@ -30598,7 +30604,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
                     className="text-[10px] font-bold text-brand-gold active:opacity-70">See All</button>
                 </div>
                 {(() => {
-                  const universal = pubStickers.filter(s => !!s.cardDefId && pubRevealedIds.includes(s.id));
+                  const universal = pubStickers.filter(s => !!s.cardDefId && !!s.cardImageUrl && pubRevealedIds.includes(s.id));
                   if (universal.length === 0) return <p className="text-[10px] text-brand-navy/35 py-1">No cards yet</p>;
                   return (
                     <div className="flex gap-1.5 overflow-x-auto scrollbar-hide -mx-0.5 px-0.5">
