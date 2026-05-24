@@ -3,17 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Linq — Loyalty That Works</title>
-  <meta name="description" content="Collect stamps, unlock rewards, and support your favourite local businesses. Linq makes loyalty simple for everyone." />
-
-  <!-- Open Graph -->
-  <meta property="og:title" content="Linq — Loyalty That Works" />
-  <meta property="og:description" content="Collect stamps, unlock rewards, and support your favourite local businesses." />
+  <title>Linq — Collect. Compete. Win.</title>
+  <meta name="description" content="Collect stamps, win prizes, and compete with friends at your favourite local spots. Download Linq free." />
+  <meta property="og:title" content="Linq — Collect. Compete. Win." />
+  <meta property="og:description" content="Earn rewards at local businesses, compete with friends, and win thousands in prizes." />
   <meta property="og:type" content="website" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -24,9 +22,12 @@
       --blue2: #2563EB;
       --blue3: #3B82F6;
       --blue4: #60A5FA;
-      --light: #DBEAFE;
+      --light: #EFF6FF;
+      --light2: #DBEAFE;
       --white: #FFFFFF;
     }
+
+    html { scroll-behavior: smooth; }
 
     body {
       font-family: 'Inter', sans-serif;
@@ -35,16 +36,84 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* ── HERO ── */
-    .hero {
-      min-height: 100svh;
-      background: linear-gradient(160deg, var(--blue1) 0%, var(--blue2) 40%, var(--blue3) 70%, var(--blue4) 100%);
+    /* ── NAV ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(15,23,42,0.07);
+      padding: 0 1.5rem;
       display: flex;
-      flex-direction: column;
       align-items: center;
-      justify-content: center;
+      justify-content: space-between;
+      height: 60px;
+    }
+
+    .nav-logo {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 900;
+      font-size: 1.6rem;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, var(--blue1), var(--blue3));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .tab-pills {
+      display: flex;
+      background: var(--light);
+      border-radius: 100px;
+      padding: 4px;
+      gap: 2px;
+    }
+
+    .tab-pill {
+      padding: 0.4rem 1.1rem;
+      border-radius: 100px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: rgba(15,23,42,0.5);
+      transition: all 0.2s;
+    }
+
+    .tab-pill.active {
+      background: var(--white);
+      color: var(--navy);
+      box-shadow: 0 1px 4px rgba(15,23,42,0.12);
+    }
+
+    .store-nav-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: var(--navy);
+      color: var(--white);
+      text-decoration: none;
+      padding: 0.45rem 1rem;
+      border-radius: 100px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      transition: opacity 0.2s;
+    }
+
+    .store-nav-btn:hover { opacity: 0.85; }
+
+    /* ── TABS ── */
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── HERO (CUSTOMER) ── */
+    .hero {
+      background: linear-gradient(160deg, var(--blue1) 0%, var(--blue2) 45%, var(--blue3) 75%, var(--blue4) 100%);
+      padding: 5rem 1.5rem 6rem;
       text-align: center;
-      padding: 2rem 1.5rem 4rem;
       position: relative;
       overflow: hidden;
     }
@@ -53,41 +122,106 @@
       content: '';
       position: absolute;
       inset: 0;
-      background: radial-gradient(ellipse at 60% 20%, rgba(255,255,255,0.08) 0%, transparent 60%);
+      background: radial-gradient(ellipse at 65% 15%, rgba(255,255,255,0.1) 0%, transparent 55%);
       pointer-events: none;
     }
 
-    .logo-wrap {
-      width: 88px;
-      height: 88px;
-      border-radius: 22px;
-      overflow: hidden;
-      margin-bottom: 1.5rem;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    /* ── LEGENDARY STICKER ── */
+    .sticker-wrap {
+      display: inline-block;
+      position: relative;
+      margin-bottom: 2rem;
     }
 
-    .logo-wrap img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
+    .sticker {
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      background: conic-gradient(
+        #ff0040, #ff8c00, #ffe600, #00ff59, #00b3ff, #9000ff, #ff0040
+      );
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: sticker-spin 4s linear infinite;
+      position: relative;
+    }
+
+    @keyframes sticker-spin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+
+    .sticker-inner {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #1e3a8a, #1D4ED8, #3B82F6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      animation: sticker-spin 4s linear infinite reverse;
+      position: relative;
+      z-index: 2;
+    }
+
+    .sticker-glow {
+      position: absolute;
+      inset: -8px;
+      border-radius: 50%;
+      background: conic-gradient(
+        #ff0040, #ff8c00, #ffe600, #00ff59, #00b3ff, #9000ff, #ff0040
+      );
+      filter: blur(10px);
+      opacity: 0.5;
+      animation: sticker-spin 4s linear infinite;
+      z-index: 0;
+    }
+
+    .sticker-badge {
+      position: absolute;
+      top: -4px;
+      right: -8px;
+      background: #FFD700;
+      color: #7A4F00;
+      font-size: 0.6rem;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 100px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      z-index: 3;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      animation: badge-pop 1s ease infinite alternate;
+    }
+
+    @keyframes badge-pop {
+      from { transform: scale(1); }
+      to   { transform: scale(1.08); }
     }
 
     .hero h1 {
       font-family: 'Outfit', sans-serif;
-      font-size: clamp(2.8rem, 8vw, 5rem);
-      font-weight: 800;
+      font-size: clamp(2.4rem, 8vw, 4.5rem);
+      font-weight: 900;
       color: var(--white);
-      letter-spacing: -0.02em;
+      letter-spacing: -0.03em;
       line-height: 1.05;
-      margin-bottom: 1rem;
+      margin-bottom: 1.25rem;
     }
 
-    .hero p {
-      font-size: clamp(1rem, 3vw, 1.25rem);
+    .hero h1 em {
+      font-style: normal;
+      color: #FFD700;
+    }
+
+    .hero-sub {
+      font-size: clamp(1rem, 3vw, 1.2rem);
       color: rgba(255,255,255,0.75);
-      max-width: 420px;
-      line-height: 1.6;
-      margin-bottom: 2.5rem;
+      max-width: 460px;
+      margin: 0 auto 2.5rem;
+      line-height: 1.65;
     }
 
     .store-badges {
@@ -95,43 +229,33 @@
       gap: 0.875rem;
       flex-wrap: wrap;
       justify-content: center;
-      margin-bottom: 1rem;
     }
 
     .store-badge {
       display: flex;
       align-items: center;
       gap: 0.625rem;
-      background: rgba(255,255,255,0.12);
-      border: 1.5px solid rgba(255,255,255,0.25);
+      background: rgba(255,255,255,0.15);
+      border: 1.5px solid rgba(255,255,255,0.3);
       color: var(--white);
       text-decoration: none;
-      padding: 0.75rem 1.25rem;
+      padding: 0.75rem 1.375rem;
       border-radius: 14px;
       backdrop-filter: blur(8px);
       transition: background 0.2s, transform 0.15s;
-      cursor: default;
     }
 
-    .store-badge.live {
-      cursor: pointer;
-    }
-
-    .store-badge.live:hover {
-      background: rgba(255,255,255,0.22);
+    .store-badge:hover {
+      background: rgba(255,255,255,0.25);
       transform: translateY(-2px);
     }
 
-    .store-badge svg {
-      width: 22px;
-      height: 22px;
-      flex-shrink: 0;
-    }
+    .store-badge svg { width: 22px; height: 22px; flex-shrink: 0; }
 
     .badge-text small {
       display: block;
-      font-size: 0.65rem;
-      opacity: 0.7;
+      font-size: 0.63rem;
+      opacity: 0.75;
       letter-spacing: 0.04em;
       text-transform: uppercase;
     }
@@ -139,295 +263,804 @@
     .badge-text strong {
       display: block;
       font-size: 1rem;
-      font-weight: 600;
+      font-weight: 700;
     }
 
-    .coming-soon-note {
-      font-size: 0.8rem;
-      color: rgba(255,255,255,0.5);
-      margin-top: 0.5rem;
-    }
-
-    /* ── SECTIONS ── */
-    section {
+    /* ── SHARED SECTION ── */
+    .section {
       padding: 5rem 1.5rem;
       max-width: 960px;
       margin: 0 auto;
     }
 
     .section-label {
-      font-size: 0.75rem;
-      font-weight: 600;
-      letter-spacing: 0.12em;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.13em;
       text-transform: uppercase;
       color: var(--blue2);
-      margin-bottom: 0.75rem;
+      margin-bottom: 0.6rem;
     }
 
-    section h2 {
+    .section h2 {
       font-family: 'Outfit', sans-serif;
-      font-size: clamp(1.75rem, 5vw, 2.5rem);
-      font-weight: 700;
+      font-size: clamp(1.75rem, 5vw, 2.6rem);
+      font-weight: 800;
       color: var(--navy);
-      line-height: 1.15;
-      margin-bottom: 1rem;
+      line-height: 1.1;
+      margin-bottom: 0.875rem;
     }
 
-    section > p {
+    .section h2 em {
+      font-style: normal;
+      color: var(--blue2);
+    }
+
+    .section > p, .section-lead {
       font-size: 1.05rem;
-      color: rgba(15,23,42,0.65);
+      color: rgba(15,23,42,0.6);
       line-height: 1.7;
-      max-width: 540px;
+      max-width: 520px;
       margin-bottom: 2.5rem;
     }
 
-    .features {
+    .grid-3 {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 1.25rem;
     }
 
-    .feature-card {
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .card {
       background: var(--light);
-      border-radius: 18px;
-      padding: 1.5rem;
+      border-radius: 20px;
+      padding: 1.625rem;
     }
 
-    .feature-card .icon {
-      font-size: 1.75rem;
-      margin-bottom: 0.75rem;
-    }
+    .card .icon { font-size: 2rem; margin-bottom: 0.875rem; display: block; }
 
-    .feature-card h3 {
+    .card h3 {
       font-family: 'Outfit', sans-serif;
-      font-size: 1.05rem;
+      font-size: 1.1rem;
       font-weight: 700;
       color: var(--navy);
       margin-bottom: 0.4rem;
     }
 
-    .feature-card p {
+    .card p {
       font-size: 0.9rem;
       color: rgba(15,23,42,0.6);
-      line-height: 1.55;
+      line-height: 1.6;
     }
 
-    /* ── VENDOR SECTION ── */
-    .vendor-section {
-      background: var(--navy);
+    .card.blue {
+      background: linear-gradient(135deg, var(--blue1), var(--blue2));
+      color: white;
+    }
+
+    .card.blue h3 { color: white; }
+    .card.blue p  { color: rgba(255,255,255,0.7); }
+
+    hr.divider {
+      border: none;
+      border-top: 1px solid rgba(15,23,42,0.07);
+      margin: 0 1.5rem;
+    }
+
+    /* ── PRIZE BANNER ── */
+    .prize-banner {
+      background: linear-gradient(135deg, #0F172A 0%, #1e3a8a 60%, #1D4ED8 100%);
       border-radius: 28px;
       padding: 3.5rem 2rem;
-      margin: 0 1.5rem 5rem;
-      max-width: 960px;
-      margin-left: auto;
-      margin-right: auto;
+      margin: 0 1.5rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .prize-banner::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% -20%, rgba(96,165,250,0.25) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .prize-amount {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(3.5rem, 12vw, 6rem);
+      font-weight: 900;
+      color: #FFD700;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 0 40px rgba(255,215,0,0.4);
+    }
+
+    .prize-banner h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(1.4rem, 4vw, 2rem);
+      font-weight: 800;
+      color: white;
+      margin-bottom: 0.75rem;
+    }
+
+    .prize-banner p {
+      font-size: 1rem;
+      color: rgba(255,255,255,0.6);
+      max-width: 400px;
+      margin: 0 auto 2rem;
+      line-height: 1.6;
+    }
+
+    .prize-pills {
+      display: flex;
+      gap: 0.625rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .prize-pill {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: white;
+      padding: 0.45rem 1rem;
+      border-radius: 100px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    /* ── VENDORS STRIP ── */
+    .vendor-strip {
+      background: var(--light);
+      padding: 3.5rem 1.5rem;
       text-align: center;
     }
 
-    .vendor-section .section-label {
-      color: var(--blue4);
+    .vendor-strip p.section-label { text-align: center; }
+
+    .vendor-strip h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(1.5rem, 4vw, 2rem);
+      font-weight: 800;
+      color: var(--navy);
+      margin-bottom: 0.75rem;
     }
 
-    .vendor-section h2 {
-      color: var(--white);
-      margin-bottom: 1rem;
+    .vendor-strip > p {
+      font-size: 0.975rem;
+      color: rgba(15,23,42,0.55);
+      margin-bottom: 2rem;
+      max-width: 480px;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.65;
     }
 
-    .vendor-section > p {
-      color: rgba(255,255,255,0.6);
+    .vendor-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.625rem;
+      justify-content: center;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    .vendor-tag {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: white;
+      border: 1px solid rgba(15,23,42,0.09);
+      border-radius: 100px;
+      padding: 0.45rem 1rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--navy);
+      box-shadow: 0 1px 4px rgba(15,23,42,0.06);
+    }
+
+    /* ── FRIENDS SECTION ── */
+    .friends-section {
+      background: var(--navy);
+      padding: 5rem 1.5rem;
+      text-align: center;
+    }
+
+    .friends-section .section-label { color: var(--blue4); }
+
+    .friends-section h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(1.75rem, 5vw, 2.6rem);
+      font-weight: 800;
+      color: white;
+      margin-bottom: 0.875rem;
+    }
+
+    .friends-section > p {
+      font-size: 1rem;
+      color: rgba(255,255,255,0.55);
+      max-width: 440px;
       margin: 0 auto 2.5rem;
+      line-height: 1.65;
     }
 
-    .vendor-features {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 1rem;
+    .leaderboard {
+      max-width: 400px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.625rem;
+    }
+
+    .lb-row {
+      display: flex;
+      align-items: center;
+      gap: 0.875rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 14px;
+      padding: 0.875rem 1rem;
+    }
+
+    .lb-row.you {
+      background: rgba(37,99,235,0.25);
+      border-color: rgba(96,165,250,0.3);
+    }
+
+    .lb-rank {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 800;
+      width: 28px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .lb-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+
+    .lb-name {
+      flex: 1;
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: white;
       text-align: left;
     }
 
-    .vendor-feature {
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.08);
+    .lb-name small {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 400;
+      color: rgba(255,255,255,0.45);
+    }
+
+    .lb-stamps {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      font-size: 0.95rem;
+      color: var(--blue4);
+    }
+
+    /* ── BUSINESS HERO ── */
+    .biz-hero {
+      background: var(--navy);
+      padding: 5rem 1.5rem 4rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .biz-hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% 0%, rgba(37,99,235,0.3) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .free-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: rgba(255,215,0,0.12);
+      border: 1.5px solid rgba(255,215,0,0.4);
+      color: #FFD700;
+      padding: 0.4rem 1rem;
+      border-radius: 100px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+    }
+
+    .biz-hero h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(2rem, 7vw, 4rem);
+      font-weight: 900;
+      color: white;
+      letter-spacing: -0.03em;
+      line-height: 1.05;
+      margin-bottom: 1.25rem;
+      max-width: 700px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .biz-hero h1 em {
+      font-style: normal;
+      color: #FFD700;
+    }
+
+    .biz-hero p {
+      font-size: 1.05rem;
+      color: rgba(255,255,255,0.6);
+      max-width: 480px;
+      margin: 0 auto 1rem;
+      line-height: 1.65;
+    }
+
+    .biz-hero .no-cc {
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.35);
+      margin-bottom: 2.5rem;
+    }
+
+    .cta-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--blue2);
+      color: white;
+      text-decoration: none;
+      padding: 0.875rem 2rem;
       border-radius: 14px;
+      font-size: 1rem;
+      font-weight: 700;
+      transition: background 0.2s, transform 0.15s;
+    }
+
+    .cta-btn:hover {
+      background: var(--blue1);
+      transform: translateY(-2px);
+    }
+
+    /* ── WHAT'S FREE / ADDONS ── */
+    .whats-free {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 5rem 1.5rem 2.5rem;
+    }
+
+    .free-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+
+    .free-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      background: var(--light);
+      border-radius: 16px;
       padding: 1.25rem;
     }
 
-    .vendor-feature .icon {
-      font-size: 1.4rem;
-      margin-bottom: 0.5rem;
+    .free-item .check {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--blue2);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      flex-shrink: 0;
+      margin-top: 2px;
     }
 
-    .vendor-feature h3 {
+    .free-item h4 {
       font-family: 'Outfit', sans-serif;
       font-size: 0.95rem;
       font-weight: 700;
-      color: var(--white);
-      margin-bottom: 0.3rem;
+      color: var(--navy);
+      margin-bottom: 0.2rem;
     }
 
-    .vendor-feature p {
+    .free-item p {
       font-size: 0.82rem;
-      color: rgba(255,255,255,0.5);
+      color: rgba(15,23,42,0.55);
       line-height: 1.5;
     }
 
-    /* ── DIVIDER ── */
-    .divider {
-      border: none;
-      border-top: 1px solid rgba(15,23,42,0.08);
-      margin: 0 1.5rem;
+    .addons-section {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem 5rem;
+    }
+
+    .addons-section h3 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--navy);
+      margin-bottom: 0.5rem;
+    }
+
+    .addons-section > p {
+      font-size: 0.95rem;
+      color: rgba(15,23,42,0.55);
+      margin-bottom: 1.5rem;
+      line-height: 1.6;
+    }
+
+    .addon-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+
+    .addon-card {
+      border: 1.5px solid rgba(15,23,42,0.09);
+      border-radius: 18px;
+      padding: 1.375rem;
+    }
+
+    .addon-card .icon { font-size: 1.5rem; margin-bottom: 0.625rem; display: block; }
+
+    .addon-card h4 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 0.3rem;
+    }
+
+    .addon-card p {
+      font-size: 0.82rem;
+      color: rgba(15,23,42,0.55);
+      line-height: 1.5;
     }
 
     /* ── FOOTER ── */
     footer {
       text-align: center;
       padding: 2.5rem 1.5rem;
-      font-size: 0.85rem;
-      color: rgba(15,23,42,0.4);
-    }
-
-    footer a {
-      color: var(--blue2);
-      text-decoration: none;
+      font-size: 0.82rem;
+      color: rgba(15,23,42,0.35);
+      border-top: 1px solid rgba(15,23,42,0.07);
     }
 
     @media (max-width: 480px) {
-      .vendor-section {
-        border-radius: 20px;
-        padding: 2.5rem 1.25rem;
-        margin: 0 1rem 3.5rem;
-      }
+      .prize-banner { margin: 0 0.75rem; padding: 2.5rem 1.25rem; }
+      .store-nav-btn span { display: none; }
     }
   </style>
 </head>
 <body>
 
-  <!-- HERO -->
-  <header class="hero">
-    <div class="logo-wrap">
-      <img src="../public/app-logo.png" alt="Linq logo" />
+  <!-- NAV -->
+  <nav>
+    <div class="nav-logo">Linq</div>
+    <div class="tab-pills">
+      <button class="tab-pill active" onclick="switchTab('customer')">Customers</button>
+      <button class="tab-pill" onclick="switchTab('business')">Businesses</button>
     </div>
-    <h1>Linq</h1>
-    <p>Collect stamps, unlock rewards, and support your favourite local businesses.</p>
+    <a href="#download" class="store-nav-btn">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+      <span>Download</span>
+    </a>
+  </nav>
 
-    <div class="store-badges">
-      <!-- iOS -->
-      <a class="store-badge" id="ios-badge" href="#" aria-label="Download on the App Store">
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
-        </svg>
-        <div class="badge-text">
-          <small>Coming soon to</small>
-          <strong>App Store</strong>
+  <!-- ══════════════ CUSTOMER TAB ══════════════ -->
+  <div id="tab-customer" class="tab-panel active">
+
+    <!-- HERO -->
+    <header class="hero" id="download">
+      <div class="sticker-wrap">
+        <div class="sticker-glow"></div>
+        <div class="sticker">
+          <div class="sticker-inner">☕</div>
         </div>
-      </a>
+        <div class="sticker-badge">Legendary</div>
+      </div>
 
-      <!-- Android -->
-      <a class="store-badge" id="android-badge" href="#" aria-label="Get it on Google Play">
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M3.18 23.76c.3.17.64.24.99.2l.11-.06 9.5-9.5-2.1-2.1-8.5 11.46zM20.36 10.4l-2.6-1.46-2.35 2.35 2.35 2.35 2.63-1.48c.75-.42.75-1.34-.03-1.76zM2.42 1.04C2.16 1.31 2 1.74 2 2.28v19.44c0 .54.16.97.43 1.24l.07.06 10.88-10.88v-.25L2.49.98l-.07.06zM13.53 8.53l-2.1-2.1L2.42 1.04l10.01 9.64 1.1-2.15z"/>
-        </svg>
-        <div class="badge-text">
-          <small>Coming soon to</small>
-          <strong>Google Play</strong>
+      <h1>Loyalty<br/>like never<br/>before. <em>Free.</em></h1>
+      <p class="hero-sub">Collect stamps at your local favourites, win prizes, and compete with your friends — all in one app.</p>
+
+      <div class="store-badges">
+        <a class="store-badge" href="#" id="ios-badge">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+          <div class="badge-text"><small>Download on the</small><strong>App Store</strong></div>
+        </a>
+        <a class="store-badge" href="#" id="android-badge">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.18 23.76c.3.17.64.24.99.2l.11-.06 9.5-9.5-2.1-2.1-8.5 11.46zM20.36 10.4l-2.6-1.46-2.35 2.35 2.35 2.35 2.63-1.48c.75-.42.75-1.34-.03-1.76zM2.42 1.04C2.16 1.31 2 1.74 2 2.28v19.44c0 .54.16.97.43 1.24l.07.06 10.88-10.88v-.25L2.49.98l-.07.06zM13.53 8.53l-2.1-2.1L2.42 1.04l10.01 9.64 1.1-2.15z"/></svg>
+          <div class="badge-text"><small>Get it on</small><strong>Google Play</strong></div>
+        </a>
+      </div>
+    </header>
+
+    <!-- STAMP CARDS / FREE COFFEE -->
+    <section class="section">
+      <p class="section-label">Stamp cards</p>
+      <h2>Your free coffee<br/>is <em>closer than you think.</em></h2>
+      <p class="section-lead">Every visit earns you a stamp. Fill the card, claim the reward. No paper, no faff — just tap and go.</p>
+
+      <div class="grid-3">
+        <div class="card">
+          <span class="icon">☕</span>
+          <h3>Free coffee, on us</h3>
+          <p>Collect 10 stamps at your local café and your next coffee is free. Every time.</p>
         </div>
-      </a>
+        <div class="card">
+          <span class="icon">💈</span>
+          <h3>Free haircuts</h3>
+          <p>Your barber's on Linq too. Rack up visits and get rewarded for being a regular.</p>
+        </div>
+        <div class="card">
+          <span class="icon">🛍️</span>
+          <h3>Discounts everywhere</h3>
+          <p>Restaurants, gyms, boutiques — hundreds of local businesses, one loyalty app.</p>
+        </div>
+        <div class="card">
+          <span class="icon">📱</span>
+          <h3>Tap or scan</h3>
+          <p>Stamp via NFC tap or QR code. Done in a second. No app needed at the counter.</p>
+        </div>
+        <div class="card blue">
+          <span class="icon">🎁</span>
+          <h3>Reward tiers</h3>
+          <p>Some businesses unlock bigger rewards the more stamps you collect. Keep going.</p>
+        </div>
+        <div class="card">
+          <span class="icon">🎂</span>
+          <h3>Birthday perks</h3>
+          <p>Your favourite spots send you exclusive rewards on your birthday. You're welcome.</p>
+        </div>
+      </div>
+    </section>
+
+    <hr class="divider" />
+
+    <!-- PRIZES -->
+    <section class="section">
+      <div class="prize-banner">
+        <div class="prize-amount">£1,000s</div>
+        <h2>in prizes. Every month.</h2>
+        <p>Complete challenges across local businesses for your shot at cash, vouchers, and experiences worth thousands.</p>
+        <div class="prize-pills">
+          <div class="prize-pill">🏆 Monthly leagues</div>
+          <div class="prize-pill">⚡ Flash challenges</div>
+          <div class="prize-pill">🎟️ Exclusive prizes</div>
+          <div class="prize-pill">🔥 Bonus stamp events</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CHALLENGES -->
+    <section class="section">
+      <p class="section-label">Challenges</p>
+      <h2>Not just stamps.<br/><em>Epic challenges.</em></h2>
+      <p class="section-lead">Linq runs cross-business challenges that push you to explore your city and win big. New challenges drop every month.</p>
+
+      <div class="grid-2">
+        <div class="card">
+          <span class="icon">🗺️</span>
+          <h3>City Explorer</h3>
+          <p>Visit 5 different local businesses this month and unlock a bonus prize drop.</p>
+        </div>
+        <div class="card">
+          <span class="icon">🔥</span>
+          <h3>Streak Master</h3>
+          <p>7 days in a row. Keep your streak alive and climb the weekly leaderboard.</p>
+        </div>
+        <div class="card">
+          <span class="icon">☕</span>
+          <h3>Coffee Connoisseur</h3>
+          <p>Hit 3 different coffee shops this week. Bragging rights and a sticker included.</p>
+        </div>
+        <div class="card blue">
+          <span class="icon">🧩</span>
+          <h3>Collector sets</h3>
+          <p>Complete a full sticker set from challenge rewards to unlock the grand prize.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- VENDORS -->
+    <div class="vendor-strip">
+      <p class="section-label">On Linq</p>
+      <h2>Your whole high street, in one app.</h2>
+      <p>From your morning coffee to your Friday night takeaway — the businesses you already love are waiting for you on Linq.</p>
+      <div class="vendor-tags">
+        <div class="vendor-tag">☕ Coffee shops</div>
+        <div class="vendor-tag">💈 Barbers</div>
+        <div class="vendor-tag">🍕 Restaurants</div>
+        <div class="vendor-tag">🥐 Bakeries</div>
+        <div class="vendor-tag">💪 Gyms</div>
+        <div class="vendor-tag">🛍️ Boutiques</div>
+        <div class="vendor-tag">🍺 Bars & pubs</div>
+        <div class="vendor-tag">💅 Salons & spas</div>
+        <div class="vendor-tag">🥗 Healthy eats</div>
+        <div class="vendor-tag">🎮 Entertainment</div>
+        <div class="vendor-tag">🌮 Street food</div>
+        <div class="vendor-tag">📚 Bookshops</div>
+      </div>
     </div>
 
-    <p class="coming-soon-note">Launching soon &mdash; stay tuned.</p>
-  </header>
+    <!-- COMPETE WITH FRIENDS -->
+    <div class="friends-section">
+      <p class="section-label">Leaderboards</p>
+      <h2>Who's got more stamps?<br/>Prove it.</h2>
+      <p>Challenge your friends, compete on weekly leaderboards, and hold the top spot at your favourite spot.</p>
 
-  <!-- CONSUMER FEATURES -->
-  <section aria-labelledby="consumer-heading">
-    <p class="section-label">For customers</p>
-    <h2 id="consumer-heading">Your loyalty, rewarded.</h2>
-    <p>One app for all your favourite local spots. No paper cards, no apps per shop — just Linq.</p>
-
-    <div class="features">
-      <div class="feature-card">
-        <div class="icon">🎟️</div>
-        <h3>Digital stamp cards</h3>
-        <p>Collect stamps at every visit. Your cards are always in your pocket.</p>
-      </div>
-      <div class="feature-card">
-        <div class="icon">🎁</div>
-        <h3>Unlock rewards</h3>
-        <p>Fill your card, claim your reward. Free coffees, discounts, and more.</p>
-      </div>
-      <div class="feature-card">
-        <div class="icon">📍</div>
-        <h3>Discover local</h3>
-        <p>Find independent businesses near you and start earning straight away.</p>
-      </div>
-      <div class="feature-card">
-        <div class="icon">🏆</div>
-        <h3>Challenges &amp; streaks</h3>
-        <p>Earn bonus stamps from cross-business challenges and keep your streak alive.</p>
+      <div class="leaderboard">
+        <div class="lb-row">
+          <div class="lb-rank" style="color:#FFD700">🥇</div>
+          <div class="lb-avatar">😎</div>
+          <div class="lb-name">Jordan K. <small>The Usual at Brew &amp; Co.</small></div>
+          <div class="lb-stamps">142 ⭐</div>
+        </div>
+        <div class="lb-row">
+          <div class="lb-rank" style="color:#C0C0C0">🥈</div>
+          <div class="lb-avatar">🤩</div>
+          <div class="lb-name">Priya M. <small>3 challenges completed</small></div>
+          <div class="lb-stamps">119 ⭐</div>
+        </div>
+        <div class="lb-row you">
+          <div class="lb-rank" style="color:var(--blue4)">3</div>
+          <div class="lb-avatar">🫵</div>
+          <div class="lb-name">You <small>Keep going — you're close</small></div>
+          <div class="lb-stamps">98 ⭐</div>
+        </div>
+        <div class="lb-row">
+          <div class="lb-rank" style="color:rgba(255,255,255,0.3)">4</div>
+          <div class="lb-avatar">😤</div>
+          <div class="lb-name">Sam T. <small>On a 5-day streak</small></div>
+          <div class="lb-stamps">87 ⭐</div>
+        </div>
       </div>
     </div>
-  </section>
 
-  <hr class="divider" />
+  </div><!-- /customer tab -->
 
-  <!-- VENDOR SECTION -->
-  <div class="vendor-section" role="region" aria-labelledby="vendor-heading">
-    <p class="section-label">For businesses</p>
-    <h2 id="vendor-heading">Run a loyalty programme your customers will love.</h2>
-    <p>Set up in minutes. No hardware, no paper, no fuss. Just scan and stamp.</p>
+  <!-- ══════════════ BUSINESS TAB ══════════════ -->
+  <div id="tab-business" class="tab-panel">
 
-    <div class="vendor-features">
-      <div class="vendor-feature">
-        <div class="icon">⚡</div>
-        <h3>Quick setup</h3>
-        <p>Create your loyalty card and go live the same day.</p>
-      </div>
-      <div class="vendor-feature">
-        <div class="icon">📱</div>
-        <h3>Tap or scan</h3>
-        <p>Issue stamps via NFC tap or QR code — works on any phone.</p>
-      </div>
-      <div class="vendor-feature">
-        <div class="icon">📊</div>
-        <h3>Real insights</h3>
-        <p>See visits, regulars, and redemptions at a glance.</p>
-      </div>
-      <div class="vendor-feature">
-        <div class="icon">📣</div>
-        <h3>Offers &amp; promos</h3>
-        <p>Send offers directly to your loyal customers.</p>
+    <!-- HERO -->
+    <header class="biz-hero">
+      <div class="free-badge">★ Free for life</div>
+      <h1>The loyalty app your<br/>customers will <em>actually use.</em></h1>
+      <p>Loyalty cards and membership cards — completely free, forever. Set up in minutes. No hardware needed.</p>
+      <p class="no-cc">No credit card required &nbsp;·&nbsp; No contracts &nbsp;·&nbsp; Cancel anytime</p>
+      <a href="#" class="cta-btn">Get started free &rarr;</a>
+    </header>
+
+    <!-- WHAT'S FREE -->
+    <div class="whats-free">
+      <p class="section-label">Always free</p>
+      <h2 style="font-family:'Outfit',sans-serif;font-size:clamp(1.5rem,4vw,2rem);font-weight:800;color:var(--navy);margin-bottom:0.5rem;">Everything you need to get started.</h2>
+      <p style="font-size:0.975rem;color:rgba(15,23,42,0.55);margin-bottom:1.75rem;line-height:1.65;">Loyalty cards and membership cards are free for life. Not a trial. Not a limited plan. Free.</p>
+
+      <div class="free-grid">
+        <div class="free-item">
+          <div class="check">✓</div>
+          <div>
+            <h4>Digital loyalty cards</h4>
+            <p>Create unlimited stamp card programmes for your customers.</p>
+          </div>
+        </div>
+        <div class="free-item">
+          <div class="check">✓</div>
+          <div>
+            <h4>Membership cards</h4>
+            <p>Run recurring memberships with visit-based rewards and perks.</p>
+          </div>
+        </div>
+        <div class="free-item">
+          <div class="check">✓</div>
+          <div>
+            <h4>NFC &amp; QR stamping</h4>
+            <p>Issue stamps via a tap or QR scan — works on any phone, no extra hardware.</p>
+          </div>
+        </div>
+        <div class="free-item">
+          <div class="check">✓</div>
+          <div>
+            <h4>Customer dashboard</h4>
+            <p>See your regulars, total visits, and rewards redeemed at a glance.</p>
+          </div>
+        </div>
+        <div class="free-item">
+          <div class="check">✓</div>
+          <div>
+            <h4>Custom branding</h4>
+            <p>Your logo, your colours, your card. Looks like it was made just for you.</p>
+          </div>
+        </div>
+        <div class="free-item">
+          <div class="check">✓</div>
+          <div>
+            <h4>Listed on Linq</h4>
+            <p>Your business appears in the Linq discovery feed for customers near you.</p>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
+
+    <hr class="divider" />
+
+    <!-- ADD-ONS -->
+    <div class="addons-section">
+      <h3>Supercharge with add-ons</h3>
+      <p>When you're ready to go further, unlock powerful tools to grow your customer base.</p>
+
+      <div class="addon-cards">
+        <div class="addon-card">
+          <span class="icon">📣</span>
+          <h4>Offers &amp; promotions</h4>
+          <p>Push exclusive deals directly to your loyal customers' phones.</p>
+        </div>
+        <div class="addon-card">
+          <span class="icon">🏆</span>
+          <h4>Challenges</h4>
+          <p>Join city-wide challenges and get featured to thousands of Linq users.</p>
+        </div>
+        <div class="addon-card">
+          <span class="icon">📊</span>
+          <h4>Advanced analytics</h4>
+          <p>Deep visit trends, peak times, and customer retention insights.</p>
+        </div>
+        <div class="addon-card">
+          <span class="icon">🎟️</span>
+          <h4>Subscription cards</h4>
+          <p>Sell recurring monthly subscriptions with perks — coffees, discounts, and more.</p>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /business tab -->
 
   <footer>
     <p>&copy; 2026 Linq. All rights reserved.</p>
   </footer>
 
   <script>
-    // Smart store link detection — swap "Coming soon" for live links once published.
-    // Set these to real URLs when the app is approved:
-    const APP_STORE_URL = '';    // e.g. 'https://apps.apple.com/app/linq/id...'
-    const PLAY_STORE_URL = '';   // e.g. 'https://play.google.com/store/apps/details?id=...'
+    const APP_STORE_URL = '';
+    const PLAY_STORE_URL = '';
 
-    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-    const isAndroid = /android/i.test(navigator.userAgent);
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-pill').forEach(b => b.classList.remove('active'));
+      document.getElementById('tab-' + tab).classList.add('active');
+      event.target.classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 
     function activateBadge(id, url) {
       if (!url) return;
       const el = document.getElementById(id);
-      el.href = url;
-      el.classList.add('live');
-      el.querySelector('small').textContent = 'Download on the';
-      // Hide coming-soon note if at least one store is live
-      document.querySelector('.coming-soon-note').style.display = 'none';
+      if (el) el.href = url;
     }
 
     activateBadge('ios-badge', APP_STORE_URL);
     activateBadge('android-badge', PLAY_STORE_URL);
-
-    // On mobile, scroll to the relevant badge
-    if (isIOS && APP_STORE_URL) document.getElementById('ios-badge').scrollIntoView({ block: 'nearest' });
-    if (isAndroid && PLAY_STORE_URL) document.getElementById('android-badge').scrollIntoView({ block: 'nearest' });
   </script>
 </body>
 </html>
