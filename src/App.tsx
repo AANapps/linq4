@@ -23799,7 +23799,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
               <div className="flex-1 flex items-center justify-center">
                 <button onClick={() => { setBadgesOpen(false); setSelectedBadge(earnedBadges[0]); }}
                   className="active:scale-90 transition-transform"
-                  style={{ filter: 'drop-shadow(0 6px 18px rgba(0,0,0,0.55))' }}>
+                  style={{ filter: 'drop-shadow(0 8px 6px rgba(0,0,0,0.55))' }}>
                   <HexBadge badge={earnedBadges[0]} size={56} />
                 </button>
               </div>
@@ -30688,7 +30688,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
                     <div className="flex-1 flex items-center justify-center">
                       <button onClick={() => { setPubBadgesOpen(false); setSelectedBadge(earnedBadges[0]); }}
                         className="active:scale-90 transition-transform"
-                        style={{ filter: 'drop-shadow(0 6px 18px rgba(0,0,0,0.55))' }}>
+                        style={{ filter: 'drop-shadow(0 8px 6px rgba(0,0,0,0.55))' }}>
                         <HexBadge badge={earnedBadges[0]} size={56} />
                       </button>
                     </div>
