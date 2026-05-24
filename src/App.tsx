@@ -23709,43 +23709,75 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         ))}
       </div>
 
-      {/* One row: Challenges · Stickers · Badges */}
+      {/* Challenges tile */}
+      <motion.button whileTap={{ scale: 0.97 }} onClick={() => setChallengeOpen(true)}
+        className="w-full rounded-2xl overflow-hidden shadow-sm">
+        <div className="relative flex items-center justify-center gap-2 px-4 py-3 overflow-hidden"
+          style={{ background: uiColors.challengesTile.css }}>
+          <span className="shine-ray" aria-hidden="true" />
+          <p className="relative z-10 text-xl font-black leading-none text-white"
+            style={tileTextStyle(uiColors.challengesTile)}>{activeChallenges.length}</p>
+          <span className="relative z-10 text-[10px] font-bold uppercase tracking-widest text-white/70"
+            style={tileTextStyle(uiColors.challengesTile, 0.7)}>Challenges</span>
+        </div>
+      </motion.button>
+
+      {/* Sticker slider + Badge slider in one row */}
       <div className="flex gap-2">
-        <motion.button whileTap={{ scale: 0.97 }} onClick={() => setChallengeOpen(true)}
-          className="flex-1 rounded-2xl overflow-hidden shadow-sm">
-          <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3.5 overflow-hidden"
-            style={{ background: uiColors.challengesTile.css }}>
-            <span className="shine-ray" aria-hidden="true" />
-            <p className="relative z-10 text-xl font-black leading-none text-white"
-              style={tileTextStyle(uiColors.challengesTile)}>{activeChallenges.length}</p>
-            <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-white/70"
-              style={tileTextStyle(uiColors.challengesTile, 0.7)}>Challenges</span>
+        {/* Sticker slider */}
+        <div className="flex-1 bg-white/70 rounded-2xl px-3 pt-2.5 pb-3 shadow-sm min-w-0">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/50">Stickers</span>
+            <button onClick={() => stickerData && setShowStickerModal(true)}
+              className="text-[10px] font-bold text-brand-gold active:opacity-70">See All</button>
           </div>
-        </motion.button>
+          {(() => {
+            const revealed = (stickerData?.stickers ?? []).filter(s => (stickerData?.revealedIds ?? []).includes(s.id));
+            if (revealed.length === 0) return (
+              <p className="text-[10px] text-brand-navy/35 py-1">No stickers yet</p>
+            );
+            return (
+              <div className="flex gap-1.5 overflow-x-auto scrollbar-hide -mx-0.5 px-0.5">
+                {revealed.slice(0, 5).map(s => {
+                  const cfg = STICKER_CONFIG[s.tier];
+                  return (
+                    <div key={s.id} onClick={() => setShowStickerModal(true)}
+                      style={{ width: 42, height: 42, borderRadius: 9, overflow: 'hidden', border: `2px solid ${cfg.border}`, background: cfg.solid, flexShrink: 0, cursor: 'pointer' }}>
+                      {s.cardImageUrl
+                        ? <img src={s.cardImageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
+                            {cfg.variants[s.variant ?? 0]?.emoji}
+                          </div>
+                      }
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </div>
 
-        <motion.button whileTap={{ scale: 0.97 }} onClick={() => setShowStickerModal(true)}
-          className="flex-1 rounded-2xl overflow-hidden shadow-sm">
-          <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3.5 overflow-hidden"
-            style={{ background: uiColors.stickersTile.css }}>
-            <span className="shine-ray" aria-hidden="true" />
-            <p className="relative z-10 text-xl font-black leading-none text-white"
-              style={tileTextStyle(uiColors.stickersTile)}>{stickerData?.stickers.length ?? 0}</p>
-            <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-white/70"
-              style={tileTextStyle(uiColors.stickersTile, 0.7)}>Stickers</span>
+        {/* Badge slider */}
+        <div className="flex-1 bg-white/70 rounded-2xl px-3 pt-2.5 pb-3 shadow-sm min-w-0">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/50">Badges</span>
+            <button onClick={() => setBadgesOpen(true)}
+              className="text-[10px] font-bold text-brand-gold active:opacity-70">See All</button>
           </div>
-        </motion.button>
-
-        <motion.button whileTap={{ scale: 0.97 }} onClick={() => setBadgesOpen(true)}
-          className="flex-1 rounded-2xl overflow-hidden shadow-sm">
-          <div className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-3.5 overflow-hidden"
-            style={{ background: uiColors.badgesTile.css }}>
-            <span className={uiColors.badgesTile.dark ? 'shine-ray' : 'badge-shine-ray'} aria-hidden="true" />
-            <p className="relative z-10 text-xl font-black leading-none"
-              style={{ color: uiColors.badgesTile.textColor ?? (uiColors.badgesTile.dark ? '#fff' : '#451a03') }}>{earnedBadges.length}</p>
-            <span className="relative z-10 text-[9px] font-bold uppercase tracking-widest"
-              style={{ color: uiColors.badgesTile.textColor ? `${uiColors.badgesTile.textColor}b3` : (uiColors.badgesTile.dark ? 'rgba(255,255,255,0.7)' : '#78350f') }}>Badges</span>
-          </div>
-        </motion.button>
+          {earnedBadges.length === 0
+            ? <p className="text-[10px] text-brand-navy/35 py-1">No badges yet</p>
+            : (
+              <div className="flex gap-1.5 overflow-x-auto scrollbar-hide -mx-0.5 px-0.5">
+                {earnedBadges.slice(0, 5).map(b => (
+                  <button key={b.id} onClick={() => { setBadgesOpen(false); setSelectedBadge(b); }}
+                    className="shrink-0 active:scale-90 transition-transform">
+                    <HexBadge badge={b} size={42} />
+                  </button>
+                ))}
+              </div>
+            )
+          }
+        </div>
       </div>
 
       {/* Active cards — slider */}
