@@ -738,6 +738,104 @@
       line-height: 1.5;
     }
 
+    /* ── STATISTICS ── */
+    .stats-section {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 5rem 1.5rem;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .stat-card {
+      background: var(--navy);
+      border-radius: 20px;
+      padding: 2rem 1.5rem;
+      text-align: center;
+    }
+
+    .stat-number {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2.75rem;
+      font-weight: 900;
+      color: #FFD700;
+      letter-spacing: -0.03em;
+      line-height: 1;
+      margin-bottom: 0.75rem;
+    }
+
+    .stat-label {
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.55);
+      line-height: 1.55;
+    }
+
+    /* ── POS INTEGRATION ── */
+    .pos-section {
+      padding: 5rem 1.5rem;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    .pos-inner {
+      background: linear-gradient(135deg, var(--light) 0%, var(--light2) 100%);
+      border-radius: 24px;
+      padding: 3rem 2rem;
+      text-align: center;
+      border: 1.5px solid rgba(37,99,235,0.12);
+    }
+
+    .coming-soon-chip {
+      display: inline-block;
+      background: var(--blue2);
+      color: white;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 0.3rem 0.875rem;
+      border-radius: 100px;
+      margin-bottom: 1.25rem;
+    }
+
+    .pos-inner h3 {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(1.5rem, 4vw, 2rem);
+      font-weight: 800;
+      color: var(--navy);
+      margin-bottom: 0.875rem;
+    }
+
+    .pos-inner p {
+      font-size: 0.975rem;
+      color: rgba(15,23,42,0.6);
+      max-width: 480px;
+      margin: 0 auto 2rem;
+      line-height: 1.65;
+    }
+
+    .pos-logos {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.625rem;
+      justify-content: center;
+    }
+
+    .pos-logo {
+      background: white;
+      border: 1.5px solid rgba(15,23,42,0.09);
+      border-radius: 10px;
+      padding: 0.5rem 1.125rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--navy);
+      box-shadow: 0 1px 4px rgba(15,23,42,0.06);
+    }
+
     /* ── FOOTER ── */
     footer {
       text-align: center;
@@ -1000,6 +1098,50 @@
             <h4>Listed on Linq</h4>
             <p>Your business appears in the Linq discovery feed for customers near you.</p>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <!-- STATISTICS -->
+    <div class="stats-section">
+      <p class="section-label" style="text-align:center;">By the numbers</p>
+      <h2 style="font-family:'Outfit',sans-serif;font-size:clamp(1.5rem,4vw,2rem);font-weight:800;color:var(--navy);text-align:center;margin-bottom:2.5rem;">Real results for real businesses.</h2>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-number">68%</div>
+          <div class="stat-label">of customers return more often after joining a loyalty programme</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">3×</div>
+          <div class="stat-label">more spend from loyalty members vs. non-members on average</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">£0</div>
+          <div class="stat-label">to get started — no setup fees, no monthly costs for core features</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">2 min</div>
+          <div class="stat-label">average setup time from download to your first loyalty card live</div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <!-- POS INTEGRATION -->
+    <div class="pos-section">
+      <div class="pos-inner">
+        <div class="coming-soon-chip">Coming soon</div>
+        <h3>POS Integration</h3>
+        <p>Connect Linq directly to your point-of-sale system. Stamps issued automatically at checkout — no staff action needed. Works with the tools you already use.</p>
+        <div class="pos-logos">
+          <div class="pos-logo">Square</div>
+          <div class="pos-logo">Lightspeed</div>
+          <div class="pos-logo">Shopify</div>
+          <div class="pos-logo">Epos Now</div>
+          <div class="pos-logo">+ more</div>
         </div>
       </div>
     </div>
