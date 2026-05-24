@@ -3726,15 +3726,15 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
                   <p className="text-sm font-bold text-white/70">You own <span className="text-white">x{selected.count}</span></p>
                 )}
                 <div className="flex gap-3">
-                  {['View', 'Trade'].map(label => (
-                    <div key={label} className="flex flex-col items-center gap-1">
-                      <button disabled className="px-7 py-2.5 rounded-2xl font-bold text-sm text-white/50 cursor-not-allowed"
-                        style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.14)' }}>
-                        {label}
-                      </button>
-                      <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest">Coming soon</span>
-                    </div>
-                  ))}
+                  <div className="relative inline-flex flex-col items-center">
+                    <button disabled className="px-8 py-2.5 rounded-2xl font-bold text-sm text-white cursor-not-allowed"
+                      style={{ background: '#3b82f6' }}>
+                      Trade
+                    </button>
+                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full leading-none">
+                      Coming soon
+                    </span>
+                  </div>
                 </div>
                 <button onClick={() => setSelected(null)}
                   className="px-8 py-3 rounded-2xl font-bold text-sm text-white/70"
@@ -3873,15 +3873,15 @@ function UserStickerPanel({ uid, isOwnProfile = false, onOpenPack }: {
                   <p className="relative z-10 text-center text-sm text-white/80 max-w-[220px] leading-snug">{eDef.description}</p>
                 )}
                 <div className="relative z-10 flex gap-3">
-                  {['View', 'Trade'].map(label => (
-                    <div key={label} className="flex flex-col items-center gap-1">
-                      <button disabled className="px-7 py-2.5 rounded-2xl font-bold text-sm text-white/50 cursor-not-allowed"
-                        style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.14)' }}>
-                        {label}
-                      </button>
-                      <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest">Coming soon</span>
-                    </div>
-                  ))}
+                  <div className="relative inline-flex flex-col items-center">
+                    <button disabled className="px-8 py-2.5 rounded-2xl font-bold text-sm text-white cursor-not-allowed"
+                      style={{ background: '#3b82f6' }}>
+                      Trade
+                    </button>
+                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full leading-none">
+                      Coming soon
+                    </span>
+                  </div>
                 </div>
                 <button
                   className="relative z-10 px-8 py-3 rounded-2xl font-bold text-sm text-white/70"
@@ -24008,13 +24008,15 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                   <p className="relative z-10 text-center text-sm text-white/80 max-w-[220px] leading-snug">{eDef.description}</p>
                 )}
                 <div className="relative z-10 flex gap-3">
-                  {['View', 'Trade'].map(label => (
-                    <div key={label} className="flex flex-col items-center gap-1">
-                      <button disabled className="px-7 py-2.5 rounded-2xl font-bold text-sm text-white/50 cursor-not-allowed"
-                        style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.14)' }}>{label}</button>
-                      <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest">Coming soon</span>
-                    </div>
-                  ))}
+                  <div className="relative inline-flex flex-col items-center">
+                    <button disabled className="px-8 py-2.5 rounded-2xl font-bold text-sm text-white cursor-not-allowed"
+                      style={{ background: '#3b82f6' }}>
+                      Trade
+                    </button>
+                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full leading-none">
+                      Coming soon
+                    </span>
+                  </div>
                 </div>
                 <button onClick={() => setExpandedSticker(null)}
                   className="relative z-10 px-8 py-3 rounded-2xl font-bold text-sm text-white/70"
