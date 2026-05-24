@@ -2186,7 +2186,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
           </button>
           <button
             onClick={() => reset('signup')}
-            className="w-full bg-brand-navy text-white font-bold py-4 rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg"
+            className="w-full bg-white/15 backdrop-blur-sm text-white font-bold py-4 rounded-2xl hover:bg-white/25 transition-all border border-white/20"
           >
             Create Account
           </button>
