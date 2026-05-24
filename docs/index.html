@@ -918,6 +918,117 @@
       margin-bottom: var(--space-lg);
     }
 
+    /* ── STAMP CARD PREVIEW ── */
+    .stamp-card-preview {
+      background: rgba(255,255,255,0.15);
+      border: 1.5px solid rgba(255,255,255,0.25);
+      border-radius: var(--radius-md);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 2rem;
+      backdrop-filter: blur(8px);
+      max-width: 340px;
+      width: 100%;
+      text-align: left;
+    }
+
+    .stamp-card-dark {
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.1);
+    }
+
+    .scp-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: rgba(255,255,255,0.9);
+      margin-bottom: 1rem;
+      letter-spacing: 0.01em;
+    }
+
+    .scp-stamps {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.875rem;
+    }
+
+    .stamp-dot {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.4);
+      background: transparent;
+      transition: background 0.3s, border-color 0.3s, transform 0.2s;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+    }
+
+    .stamp-dot.filled {
+      background: rgba(255,255,255,0.9);
+      border-color: rgba(255,255,255,0.9);
+    }
+
+    .stamp-dot.filled::after {
+      content: '✓';
+      color: var(--blue2);
+      font-weight: 800;
+      font-size: 0.7rem;
+    }
+
+    .stamp-dot.pop {
+      transform: scale(1.3);
+    }
+
+    .scp-label {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.5);
+    }
+
+    /* ── ALWAYS FREE STAMP ── */
+    .always-free-stamp {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(3rem, 10vw, 6rem);
+      font-weight: 900;
+      color: var(--navy);
+      letter-spacing: -0.04em;
+      line-height: 1;
+      margin-bottom: 1.25rem;
+    }
+
+    /* ── BOTTOM DOWNLOAD CTA ── */
+    .bottom-cta {
+      background: var(--light);
+      padding: var(--space-xl) var(--space-md);
+      text-align: center;
+    }
+
+    .bottom-cta h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(1.75rem, 5vw, 2.5rem);
+      font-weight: 800;
+      color: var(--navy);
+      letter-spacing: -0.02em;
+      margin-bottom: 0.75rem;
+    }
+
+    .bottom-cta p {
+      font-size: 1rem;
+      color: rgba(15,23,42,0.55);
+      margin-bottom: 2rem;
+      line-height: 1.65;
+    }
+
+    .store-badge-dark {
+      background: var(--navy);
+      border-color: var(--navy);
+    }
+
+    .store-badge-dark:hover {
+      background: #1e293b;
+    }
+
     /* ════════════════════════════════════
        FOOTER
     ════════════════════════════════════ */
@@ -951,7 +1062,6 @@
       <button class="tab-pill" onclick="switchTab('business', this)">Businesses</button>
     </div>
     <a href="#download" class="nav-cta">
-      <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
       <span>Download</span>
     </a>
   </nav>
@@ -973,7 +1083,14 @@
       <h1 class="hero-headline reveal reveal-delay-2">Loyalty like never before.</h1>
       <p class="hero-sub reveal reveal-delay-3">Collect stamps at your local favourites, win prizes, and compete with your friends — all in one app.</p>
 
-      <div class="store-badges reveal reveal-delay-4">
+      <!-- Animated stamp card -->
+      <div class="stamp-card-preview reveal reveal-delay-4">
+        <div class="scp-title">☕ Brew &amp; Co. — Loyalty Card</div>
+        <div class="scp-stamps" id="stamp-dots"></div>
+        <div class="scp-label">Collect 10 stamps for a free coffee</div>
+      </div>
+
+      <div class="store-badges reveal" style="transition-delay:0.5s">
         <a class="store-badge" href="#" id="ios-badge">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
           <div class="badge-text"><small>Download on the</small><strong>App Store</strong></div>
@@ -1164,6 +1281,22 @@
       </div>
     </div>
 
+    <!-- BOTTOM DOWNLOAD CTA -->
+    <div class="bottom-cta">
+      <h2 class="reveal">Ready to start collecting?</h2>
+      <p class="reveal">Download Linq free and find your first stamp card today.</p>
+      <div class="store-badges reveal">
+        <a class="store-badge store-badge-dark" href="#" id="ios-badge-bottom-c">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+          <div class="badge-text"><small>Download on the</small><strong>App Store</strong></div>
+        </a>
+        <a class="store-badge store-badge-dark" href="#" id="android-badge-bottom-c">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.18 23.76c.3.17.64.24.99.2l.11-.06 9.5-9.5-2.1-2.1-8.5 11.46zM20.36 10.4l-2.6-1.46-2.35 2.35 2.35 2.35 2.63-1.48c.75-.42.75-1.34-.03-1.76zM2.42 1.04C2.16 1.31 2 1.74 2 2.28v19.44c0 .54.16.97.43 1.24l.07.06 10.88-10.88v-.25L2.49.98l-.07.06zM13.53 8.53l-2.1-2.1L2.42 1.04l10.01 9.64 1.1-2.15z"/></svg>
+          <div class="badge-text"><small>Get it on</small><strong>Google Play</strong></div>
+        </a>
+      </div>
+    </div>
+
   </div><!-- /customer tab -->
 
   <!-- ══════════════════════════════════
@@ -1173,16 +1306,33 @@
 
     <!-- HERO -->
     <header class="biz-hero">
+      <!-- Animated stamp card -->
+      <div class="stamp-card-preview stamp-card-dark reveal">
+        <div class="scp-title">💈 The Barber Club — Loyalty Card</div>
+        <div class="scp-stamps" id="stamp-dots-biz"></div>
+        <div class="scp-label">Collect 8 stamps for a free cut</div>
+      </div>
+
       <div class="free-badge reveal">★ Free for life</div>
       <h1 class="reveal">The loyalty app your<br/>customers will <em>actually use.</em></h1>
       <p class="reveal">Loyalty cards and membership cards — completely free, forever. Set up in minutes. No hardware needed.</p>
       <p class="no-cc reveal">No credit card required &nbsp;·&nbsp; No contracts &nbsp;·&nbsp; Cancel anytime</p>
-      <a href="#" class="cta-btn reveal">Get started free &rarr;</a>
+      <div class="store-badges reveal">
+        <a class="store-badge" href="#" id="ios-badge-biz">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+          <div class="badge-text"><small>Download on the</small><strong>App Store</strong></div>
+        </a>
+        <a class="store-badge" href="#" id="android-badge-biz">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.18 23.76c.3.17.64.24.99.2l.11-.06 9.5-9.5-2.1-2.1-8.5 11.46zM20.36 10.4l-2.6-1.46-2.35 2.35 2.35 2.35 2.63-1.48c.75-.42.75-1.34-.03-1.76zM2.42 1.04C2.16 1.31 2 1.74 2 2.28v19.44c0 .54.16.97.43 1.24l.07.06 10.88-10.88v-.25L2.49.98l-.07.06zM13.53 8.53l-2.1-2.1L2.42 1.04l10.01 9.64 1.1-2.15z"/></svg>
+          <div class="badge-text"><small>Get it on</small><strong>Google Play</strong></div>
+        </a>
+      </div>
     </header>
 
     <!-- WHAT'S FREE -->
     <section class="section-wrap">
-      <p class="eyebrow reveal">Always free</p>
+      <div class="always-free-stamp reveal">Always Free.</div>
+      <p class="eyebrow reveal">Core features</p>
       <h2 class="section-title reveal">Everything you need<br/>to get started.</h2>
       <p class="section-body reveal">Loyalty cards and membership cards are free for life. Not a trial. Not a limited plan. Free.</p>
 
@@ -1324,6 +1474,22 @@
       </div>
     </div>
 
+    <!-- BOTTOM DOWNLOAD CTA -->
+    <div class="bottom-cta">
+      <h2 class="reveal">Ready to grow your regulars?</h2>
+      <p class="reveal">Download Linq and launch your loyalty programme in minutes — free, forever.</p>
+      <div class="store-badges reveal">
+        <a class="store-badge store-badge-dark" href="#" id="ios-badge-bottom-b">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+          <div class="badge-text"><small>Download on the</small><strong>App Store</strong></div>
+        </a>
+        <a class="store-badge store-badge-dark" href="#" id="android-badge-bottom-b">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.18 23.76c.3.17.64.24.99.2l.11-.06 9.5-9.5-2.1-2.1-8.5 11.46zM20.36 10.4l-2.6-1.46-2.35 2.35 2.35 2.35 2.63-1.48c.75-.42.75-1.34-.03-1.76zM2.42 1.04C2.16 1.31 2 1.74 2 2.28v19.44c0 .54.16.97.43 1.24l.07.06 10.88-10.88v-.25L2.49.98l-.07.06zM13.53 8.53l-2.1-2.1L2.42 1.04l10.01 9.64 1.1-2.15z"/></svg>
+          <div class="badge-text"><small>Get it on</small><strong>Google Play</strong></div>
+        </a>
+      </div>
+    </div>
+
   </div><!-- /business tab -->
 
   <footer>
@@ -1368,6 +1534,38 @@
 
     observeReveals();
 
+    /* ── STAMP CARD ANIMATION ── */
+    function initStampCard(containerId, total) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      const dots = [];
+      for (let i = 0; i < total; i++) {
+        const d = document.createElement('div');
+        d.className = 'stamp-dot';
+        container.appendChild(d);
+        dots.push(d);
+      }
+      let filled = 0;
+      function fillNext() {
+        if (filled >= total) {
+          setTimeout(() => {
+            dots.forEach(d => { d.classList.remove('filled', 'pop'); });
+            filled = 0;
+            setTimeout(fillNext, 800);
+          }, 1800);
+          return;
+        }
+        dots[filled].classList.add('filled', 'pop');
+        setTimeout(() => dots[filled - 1 >= 0 ? filled : 0].classList.remove('pop'), 300);
+        filled++;
+        setTimeout(fillNext, 480);
+      }
+      setTimeout(fillNext, 1200);
+    }
+
+    initStampCard('stamp-dots', 10);
+    initStampCard('stamp-dots-biz', 8);
+
     /* ── STORE LINKS ── */
     function activateBadge(id, url) {
       if (!url) return;
@@ -1375,8 +1573,8 @@
       if (el) el.href = url;
     }
 
-    activateBadge('ios-badge', APP_STORE_URL);
-    activateBadge('android-badge', PLAY_STORE_URL);
+    ['ios-badge','ios-badge-biz','ios-badge-bottom-c','ios-badge-bottom-b'].forEach(id => activateBadge(id, APP_STORE_URL));
+    ['android-badge','android-badge-biz','android-badge-bottom-c','android-badge-bottom-b'].forEach(id => activateBadge(id, PLAY_STORE_URL));
   </script>
 </body>
 </html>
