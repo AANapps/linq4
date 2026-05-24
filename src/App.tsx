@@ -5686,7 +5686,7 @@ function AppEditPanel({ onClose, onLogoChange }: { onClose: () => void; onLogoCh
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [subLink, setSubLink] = useState('');
+  const [subLink, setSubLink] = useState('https://buy.stripe.com/aFa5kF5JZh193yT6OEd7q00');
   const [nfcLink, setNfcLink] = useState('');
   const [linksSaved, setLinksSaved] = useState(false);
   const [linksSaving, setLinksSaving] = useState(false);
@@ -5697,7 +5697,7 @@ function AppEditPanel({ onClose, onLogoChange }: { onClose: () => void; onLogoCh
     }).catch(() => {});
     getDoc(doc(db, 'app_config', 'stripe_links')).then(snap => {
       if (snap.exists()) {
-        setSubLink(snap.data().subscriptionLink || '');
+        setSubLink(snap.data().subscriptionLink || 'https://buy.stripe.com/aFa5kF5JZh193yT6OEd7q00');
         setNfcLink(snap.data().nfcOrderLink || '');
       }
     }).catch(() => {});
