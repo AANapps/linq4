@@ -11740,12 +11740,22 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
     }
 
     // Record scan location for fraud detection (fire-and-forget)
-    getScanLocation().then(userCoords => {
-      const storeLat = (store as any).lat ?? null;
-      const storeLng = (store as any).lng ?? null;
-      const hasStoreCoords = storeLat !== null && storeLng !== null;
-      const distanceKm = (userCoords && hasStoreCoords)
-        ? haversineKm(userCoords.lat, userCoords.lng, storeLat, storeLng)
+    Promise.all([
+      getScanLocation(),
+      (async (): Promise<{ lat: number; lng: number } | null> => {
+        // 1. top-level lat/lng
+        if (store.lat && store.lng) return { lat: store.lat, lng: store.lng };
+        // 2. first location entry
+        const loc = store.locations?.find(l => l.lat && l.lng);
+        if (loc?.lat && loc?.lng) return { lat: loc.lat, lng: loc.lng };
+        // 3. geocode the address as last resort
+        const addr = store.address || store.location || '';
+        if (addr) return geocodeAddressGlobal(addr);
+        return null;
+      })(),
+    ]).then(([userCoords, storeCoords]) => {
+      const distanceKm = (userCoords && storeCoords)
+        ? haversineKm(userCoords.lat, userCoords.lng, storeCoords.lat, storeCoords.lng)
         : null;
       addDoc(collection(db, 'scan_logs'), {
         userId: user.uid,
@@ -11755,10 +11765,9 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
         scannedAt: serverTimestamp(),
         userLat: userCoords?.lat ?? null,
         userLng: userCoords?.lng ?? null,
-        storeLat,
-        storeLng,
+        storeLat: storeCoords?.lat ?? null,
+        storeLng: storeCoords?.lng ?? null,
         distanceKm,
-        hasStoreCoords,
       }).catch(console.error);
     }).catch(console.error);
 
