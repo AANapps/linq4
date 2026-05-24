@@ -2160,10 +2160,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-8 text-center" style={bg}>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-12">
-          <div className="w-24 h-24 bg-white/20 backdrop-blur-sm rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-black/20 border border-white/30">
-            <Sparkles className="w-12 h-12 text-white" />
-          </div>
-          <h1 className="font-display text-4xl font-bold text-white mb-4">Linq</h1>
+          <h1 className="font-display text-4xl font-bold text-white mb-4">linq</h1>
           <p className="text-white/60 text-lg max-w-xs mx-auto">Collect stamps, unlock rewards, and support your favourite local businesses.</p>
         </motion.div>
         <div className="w-full max-w-xs space-y-3">
@@ -2174,30 +2171,30 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
             </div>
           )}
           <button
-            onClick={() => reset('phone')}
-            className="w-full bg-white text-brand-navy font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg"
-          >
-            <Phone size={18} /> Continue with Phone
-          </button>
-          <button
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="w-full bg-white/15 backdrop-blur-sm text-white font-bold py-4 rounded-2xl hover:bg-white/25 transition-all border border-white/20 flex items-center justify-center gap-3 disabled:opacity-60"
+            className="w-full bg-white text-brand-navy font-bold py-4 rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg flex items-center justify-center gap-3 disabled:opacity-60"
           >
             <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="" />
             Continue with Google
           </button>
           <button
+            onClick={() => reset('phone')}
+            className="w-full bg-white/15 backdrop-blur-sm text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-white/25 transition-all border border-white/20"
+          >
+            <Phone size={18} /> Continue with Phone
+          </button>
+          <button
             onClick={() => reset('signup')}
-            className="w-full bg-white/15 backdrop-blur-sm text-white font-bold py-4 rounded-2xl hover:bg-white/25 transition-all border border-white/20"
+            className="w-full bg-white text-brand-navy font-bold py-4 rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg"
           >
             Create Account
           </button>
           <button
             onClick={() => reset('signin')}
-            className="w-full text-white/60 text-sm py-2 hover:text-white transition-colors"
+            className="w-full bg-white text-brand-navy font-bold py-4 rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg"
           >
-            Already have an account? Sign in
+            Sign In with Email
           </button>
         </div>
       </div>
