@@ -747,6 +747,111 @@
       line-height: 1.5;
     }
 
+    /* ── ECOSYSTEM FLOW ── */
+    .ecosystem-flow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .eco-step {
+      background: var(--light);
+      border-radius: 16px;
+      padding: 1.25rem 1.5rem;
+      text-align: center;
+      min-width: 110px;
+    }
+
+    .eco-icon { font-size: 2rem; margin-bottom: 0.4rem; }
+
+    .eco-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--navy);
+    }
+
+    .eco-arrow {
+      font-size: 1.4rem;
+      color: var(--blue3);
+      font-weight: 700;
+    }
+
+    .eco-note {
+      font-size: 0.95rem;
+      color: rgba(15,23,42,0.55);
+      line-height: 1.7;
+      max-width: 560px;
+      background: var(--light);
+      border-left: 3px solid var(--blue2);
+      padding: 1rem 1.25rem;
+      border-radius: 0 12px 12px 0;
+    }
+
+    /* ── RETENTION ── */
+    .retention-section {
+      background: var(--navy);
+      padding: 5rem 1.5rem;
+    }
+
+    .retention-inner {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    .retention-inner h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(1.75rem, 5vw, 2.6rem);
+      font-weight: 800;
+      color: white;
+      line-height: 1.1;
+      margin-bottom: 1rem;
+    }
+
+    .retention-inner h2 em {
+      font-style: normal;
+      color: #FFD700;
+    }
+
+    .retention-inner > p {
+      font-size: 1rem;
+      color: rgba(255,255,255,0.55);
+      max-width: 560px;
+      line-height: 1.7;
+      margin-bottom: 2.5rem;
+    }
+
+    .retention-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 1.125rem;
+    }
+
+    .ret-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 18px;
+      padding: 1.5rem;
+    }
+
+    .ret-icon { font-size: 1.75rem; margin-bottom: 0.75rem; display: block; }
+
+    .ret-card h4 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 0.4rem;
+    }
+
+    .ret-card p {
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.5);
+      line-height: 1.6;
+    }
+
     /* ── STATISTICS ── */
     .stats-section {
       max-width: 960px;
@@ -960,13 +1065,56 @@
       </div>
     </section>
 
+    <!-- ECOSYSTEM -->
+    <section class="section">
+      <p class="section-label">The Linq ecosystem</p>
+      <h2>Every stamp is<br/><em>more than a stamp.</em></h2>
+      <p class="section-lead">Each stamp and challenge you complete drops a collectible sticker into your collection. Fill sets, open packs, and win prizes — without ever leaving your local high street.</p>
+
+      <div class="ecosystem-flow">
+        <div class="eco-step">
+          <div class="eco-icon">☕</div>
+          <div class="eco-label">Visit a business</div>
+        </div>
+        <div class="eco-arrow">→</div>
+        <div class="eco-step">
+          <div class="eco-icon">🎟️</div>
+          <div class="eco-label">Earn a stamp</div>
+        </div>
+        <div class="eco-arrow">→</div>
+        <div class="eco-step">
+          <div class="eco-icon">✨</div>
+          <div class="eco-label">Get a sticker</div>
+        </div>
+        <div class="eco-arrow">→</div>
+        <div class="eco-step">
+          <div class="eco-icon">🏆</div>
+          <div class="eco-label">Win prizes</div>
+        </div>
+      </div>
+
+      <p class="eco-note">Stickers drop from stamps, challenges, and daily activities. Collect rare and legendary stickers to complete sets — complete a set and you're in the draw for that month's prize pool.</p>
+    </section>
+
+    <hr class="divider" />
+
     <!-- CHALLENGES -->
     <section class="section">
       <p class="section-label">Challenges</p>
       <h2>Not just stamps.<br/><em>Epic challenges.</em></h2>
-      <p class="section-lead">Linq runs cross-business challenges that push you to explore your city and win big. New challenges drop every month.</p>
+      <p class="section-lead">Linq runs daily and monthly challenges that reward you with sticker packs, bonus stamps, and prize entries. The more you play, the more you win.</p>
 
       <div class="grid-2">
+        <div class="card blue">
+          <span class="icon">🟦</span>
+          <h3>Linqle</h3>
+          <p>Linq's daily word game. Solve it, earn a sticker pack. Come back tomorrow — the streak bonuses are real.</p>
+        </div>
+        <div class="card">
+          <span class="icon">🗳️</span>
+          <h3>Daily Vote</h3>
+          <p>One question. One vote. Win a sticker pack just for having an opinion. Opens every day at midnight.</p>
+        </div>
         <div class="card">
           <span class="icon">🗺️</span>
           <h3>City Explorer</h3>
@@ -976,16 +1124,6 @@
           <span class="icon">🔥</span>
           <h3>Streak Master</h3>
           <p>7 days in a row. Keep your streak alive and climb the weekly leaderboard.</p>
-        </div>
-        <div class="card">
-          <span class="icon">☕</span>
-          <h3>Coffee Connoisseur</h3>
-          <p>Hit 3 different coffee shops this week. Bragging rights and a sticker included.</p>
-        </div>
-        <div class="card blue">
-          <span class="icon">🧩</span>
-          <h3>Collector sets</h3>
-          <p>Complete a full sticker set from challenge rewards to unlock the grand prize.</p>
         </div>
       </div>
     </section>
@@ -1106,6 +1244,40 @@
           <div>
             <h4>Listed on Linq</h4>
             <p>Your business appears in the Linq discovery feed for customers near you.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <!-- RETENTION -->
+    <div class="retention-section">
+      <div class="retention-inner">
+        <p class="section-label" style="color:var(--blue4);">Customer retention</p>
+        <h2>We keep your customers<br/><em>coming back.</em></h2>
+        <p>Linq isn't just a stamp card. It's a behaviour engine. We use proven retention techniques — daily challenges, streak rewards, and collectible sticker ecosystems — that make customers feel pulled back to your store, not pushed.</p>
+
+        <div class="retention-grid">
+          <div class="ret-card">
+            <div class="ret-icon">🔥</div>
+            <h4>Streaks &amp; habits</h4>
+            <p>Daily challenges build visiting habits. Customers don't want to break their streak — so they come back.</p>
+          </div>
+          <div class="ret-card">
+            <div class="ret-icon">🎁</div>
+            <h4>Sticker drops</h4>
+            <p>Every stamp at your store drops a collectible sticker. Customers need more stickers to complete sets — which means more visits to you.</p>
+          </div>
+          <div class="ret-card">
+            <div class="ret-icon">🏆</div>
+            <h4>Prize-driven urgency</h4>
+            <p>Monthly prize pools create real urgency. Customers who are close to completing a set will prioritise your store over a competitor's.</p>
+          </div>
+          <div class="ret-card">
+            <div class="ret-icon">🧩</div>
+            <h4>Cross-business challenges</h4>
+            <p>Linq challenges send new customers through your door who've never visited before — discovering you because of a challenge.</p>
           </div>
         </div>
       </div>
