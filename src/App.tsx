@@ -7667,13 +7667,16 @@ function FraudDetectionPanel({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<'distance' | 'rapid'>('distance');
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [distanceInput, setDistanceInput] = useState('1');
+  const [appliedKm, setAppliedKm] = useState(1);
 
-  const MILES_THRESHOLD = 15;
-  const KM_THRESHOLD = MILES_THRESHOLD * 1.60934; // 15 miles in km
+  const doSearch = () => {
+    const km = parseFloat(distanceInput);
+    if (!isNaN(km) && km >= 0) setAppliedKm(km);
+  };
 
   useEffect(() => {
     setLoading(true);
-    const since = new Date(Date.now() - 24 * 60 * 60 * 1000 * 7); // last 7 days
     getDocs(
       query(collection(db, 'scan_logs'),
         orderBy('scannedAt', 'desc'),
@@ -7683,8 +7686,8 @@ function FraudDetectionPanel({ onClose }: { onClose: () => void }) {
     }).catch(console.error).finally(() => setLoading(false));
   }, []);
 
-  // Tab 1: scans > 15 miles from store
-  const farScans = logs.filter(l => l.distanceKm != null && l.distanceKm > KM_THRESHOLD);
+  // Tab 1: scans beyond the applied km threshold
+  const farScans = logs.filter(l => l.distanceKm != null && l.distanceKm > appliedKm);
 
   // Tab 2: users with 5+ scans within any 5-min window
   const rapidUsers: { userId: string; userName: string; scans: any[] }[] = [];
@@ -7743,6 +7746,29 @@ function FraudDetectionPanel({ onClose }: { onClose: () => void }) {
               </button>
             ))}
           </div>
+          {tab === 'distance' && (
+            <div className="flex items-center gap-2 mt-3">
+              <div className="flex-1 flex items-center bg-white border border-black/10 rounded-xl overflow-hidden">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={distanceInput}
+                  onChange={e => setDistanceInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && doSearch()}
+                  className="flex-1 px-3 py-2 text-sm text-brand-navy outline-none min-w-0"
+                  placeholder="Distance"
+                />
+                <span className="pr-3 text-xs text-brand-navy/40 font-bold">km</span>
+              </div>
+              <button
+                onClick={doSearch}
+                className="px-4 py-2 rounded-xl bg-brand-navy text-white text-xs font-bold active:scale-95 transition-transform shrink-0"
+              >
+                Search
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="flex-1 p-4">
@@ -7754,12 +7780,12 @@ function FraudDetectionPanel({ onClose }: { onClose: () => void }) {
             farScans.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 gap-3">
                 <ShieldAlert size={32} className="text-brand-navy/20" />
-                <p className="text-sm text-brand-navy/40 text-center">No scans flagged beyond {MILES_THRESHOLD} miles</p>
+                <p className="text-sm text-brand-navy/40 text-center">No scans beyond {appliedKm}km from store</p>
               </div>
             ) : (
               <div className="flex flex-col gap-3">
                 <p className="text-[10px] text-brand-navy/40 uppercase tracking-widest font-bold px-1">
-                  Scanned &gt;{MILES_THRESHOLD} miles from store · {farScans.length} flag{farScans.length !== 1 ? 's' : ''}
+                  Scanned &gt;{appliedKm}km from store · {farScans.length} flag{farScans.length !== 1 ? 's' : ''}
                 </p>
                 {farScans.map((log, i) => (
                   <div key={log.id ?? i} className="bg-white rounded-2xl p-4 border border-red-100 shadow-sm">
@@ -7769,7 +7795,7 @@ function FraudDetectionPanel({ onClose }: { onClose: () => void }) {
                         <p className="text-xs text-brand-navy/60 truncate">{log.storeName}</p>
                       </div>
                       <span className="shrink-0 bg-red-50 text-red-600 text-[11px] font-black px-2 py-1 rounded-xl">
-                        {(log.distanceKm / 1.60934).toFixed(1)} mi
+                        {log.distanceKm.toFixed(1)} km
                       </span>
                     </div>
                     <div className="flex items-center gap-1 mt-2">
