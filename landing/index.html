@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Linq — Loyalty That Works</title>
+  <meta name="description" content="Collect stamps, unlock rewards, and support your favourite local businesses. Linq makes loyalty simple for everyone." />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Linq — Loyalty That Works" />
+  <meta property="og:description" content="Collect stamps, unlock rewards, and support your favourite local businesses." />
+  <meta property="og:type" content="website" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:  #0F172A;
+      --blue1: #1D4ED8;
+      --blue2: #2563EB;
+      --blue3: #3B82F6;
+      --blue4: #60A5FA;
+      --light: #DBEAFE;
+      --white: #FFFFFF;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--white);
+      color: var(--navy);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100svh;
+      background: linear-gradient(160deg, var(--blue1) 0%, var(--blue2) 40%, var(--blue3) 70%, var(--blue4) 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 2rem 1.5rem 4rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 60% 20%, rgba(255,255,255,0.08) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .logo-wrap {
+      width: 88px;
+      height: 88px;
+      border-radius: 22px;
+      overflow: hidden;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    }
+
+    .logo-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .hero h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(2.8rem, 8vw, 5rem);
+      font-weight: 800;
+      color: var(--white);
+      letter-spacing: -0.02em;
+      line-height: 1.05;
+      margin-bottom: 1rem;
+    }
+
+    .hero p {
+      font-size: clamp(1rem, 3vw, 1.25rem);
+      color: rgba(255,255,255,0.75);
+      max-width: 420px;
+      line-height: 1.6;
+      margin-bottom: 2.5rem;
+    }
+
+    .store-badges {
+      display: flex;
+      gap: 0.875rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+
+    .store-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      background: rgba(255,255,255,0.12);
+      border: 1.5px solid rgba(255,255,255,0.25);
+      color: var(--white);
+      text-decoration: none;
+      padding: 0.75rem 1.25rem;
+      border-radius: 14px;
+      backdrop-filter: blur(8px);
+      transition: background 0.2s, transform 0.15s;
+      cursor: default;
+    }
+
+    .store-badge.live {
+      cursor: pointer;
+    }
+
+    .store-badge.live:hover {
+      background: rgba(255,255,255,0.22);
+      transform: translateY(-2px);
+    }
+
+    .store-badge svg {
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+
+    .badge-text small {
+      display: block;
+      font-size: 0.65rem;
+      opacity: 0.7;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .badge-text strong {
+      display: block;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .coming-soon-note {
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.5);
+      margin-top: 0.5rem;
+    }
+
+    /* ── SECTIONS ── */
+    section {
+      padding: 5rem 1.5rem;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--blue2);
+      margin-bottom: 0.75rem;
+    }
+
+    section h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(1.75rem, 5vw, 2.5rem);
+      font-weight: 700;
+      color: var(--navy);
+      line-height: 1.15;
+      margin-bottom: 1rem;
+    }
+
+    section > p {
+      font-size: 1.05rem;
+      color: rgba(15,23,42,0.65);
+      line-height: 1.7;
+      max-width: 540px;
+      margin-bottom: 2.5rem;
+    }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .feature-card {
+      background: var(--light);
+      border-radius: 18px;
+      padding: 1.5rem;
+    }
+
+    .feature-card .icon {
+      font-size: 1.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .feature-card h3 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 0.4rem;
+    }
+
+    .feature-card p {
+      font-size: 0.9rem;
+      color: rgba(15,23,42,0.6);
+      line-height: 1.55;
+    }
+
+    /* ── VENDOR SECTION ── */
+    .vendor-section {
+      background: var(--navy);
+      border-radius: 28px;
+      padding: 3.5rem 2rem;
+      margin: 0 1.5rem 5rem;
+      max-width: 960px;
+      margin-left: auto;
+      margin-right: auto;
+      text-align: center;
+    }
+
+    .vendor-section .section-label {
+      color: var(--blue4);
+    }
+
+    .vendor-section h2 {
+      color: var(--white);
+      margin-bottom: 1rem;
+    }
+
+    .vendor-section > p {
+      color: rgba(255,255,255,0.6);
+      margin: 0 auto 2.5rem;
+    }
+
+    .vendor-features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      text-align: left;
+    }
+
+    .vendor-feature {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 1.25rem;
+    }
+
+    .vendor-feature .icon {
+      font-size: 1.4rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .vendor-feature h3 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--white);
+      margin-bottom: 0.3rem;
+    }
+
+    .vendor-feature p {
+      font-size: 0.82rem;
+      color: rgba(255,255,255,0.5);
+      line-height: 1.5;
+    }
+
+    /* ── DIVIDER ── */
+    .divider {
+      border: none;
+      border-top: 1px solid rgba(15,23,42,0.08);
+      margin: 0 1.5rem;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center;
+      padding: 2.5rem 1.5rem;
+      font-size: 0.85rem;
+      color: rgba(15,23,42,0.4);
+    }
+
+    footer a {
+      color: var(--blue2);
+      text-decoration: none;
+    }
+
+    @media (max-width: 480px) {
+      .vendor-section {
+        border-radius: 20px;
+        padding: 2.5rem 1.25rem;
+        margin: 0 1rem 3.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="logo-wrap">
+      <img src="../public/app-logo.png" alt="Linq logo" />
+    </div>
+    <h1>Linq</h1>
+    <p>Collect stamps, unlock rewards, and support your favourite local businesses.</p>
+
+    <div class="store-badges">
+      <!-- iOS -->
+      <a class="store-badge" id="ios-badge" href="#" aria-label="Download on the App Store">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+        </svg>
+        <div class="badge-text">
+          <small>Coming soon to</small>
+          <strong>App Store</strong>
+        </div>
+      </a>
+
+      <!-- Android -->
+      <a class="store-badge" id="android-badge" href="#" aria-label="Get it on Google Play">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M3.18 23.76c.3.17.64.24.99.2l.11-.06 9.5-9.5-2.1-2.1-8.5 11.46zM20.36 10.4l-2.6-1.46-2.35 2.35 2.35 2.35 2.63-1.48c.75-.42.75-1.34-.03-1.76zM2.42 1.04C2.16 1.31 2 1.74 2 2.28v19.44c0 .54.16.97.43 1.24l.07.06 10.88-10.88v-.25L2.49.98l-.07.06zM13.53 8.53l-2.1-2.1L2.42 1.04l10.01 9.64 1.1-2.15z"/>
+        </svg>
+        <div class="badge-text">
+          <small>Coming soon to</small>
+          <strong>Google Play</strong>
+        </div>
+      </a>
+    </div>
+
+    <p class="coming-soon-note">Launching soon &mdash; stay tuned.</p>
+  </header>
+
+  <!-- CONSUMER FEATURES -->
+  <section aria-labelledby="consumer-heading">
+    <p class="section-label">For customers</p>
+    <h2 id="consumer-heading">Your loyalty, rewarded.</h2>
+    <p>One app for all your favourite local spots. No paper cards, no apps per shop — just Linq.</p>
+
+    <div class="features">
+      <div class="feature-card">
+        <div class="icon">🎟️</div>
+        <h3>Digital stamp cards</h3>
+        <p>Collect stamps at every visit. Your cards are always in your pocket.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🎁</div>
+        <h3>Unlock rewards</h3>
+        <p>Fill your card, claim your reward. Free coffees, discounts, and more.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">📍</div>
+        <h3>Discover local</h3>
+        <p>Find independent businesses near you and start earning straight away.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🏆</div>
+        <h3>Challenges &amp; streaks</h3>
+        <p>Earn bonus stamps from cross-business challenges and keep your streak alive.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- VENDOR SECTION -->
+  <div class="vendor-section" role="region" aria-labelledby="vendor-heading">
+    <p class="section-label">For businesses</p>
+    <h2 id="vendor-heading">Run a loyalty programme your customers will love.</h2>
+    <p>Set up in minutes. No hardware, no paper, no fuss. Just scan and stamp.</p>
+
+    <div class="vendor-features">
+      <div class="vendor-feature">
+        <div class="icon">⚡</div>
+        <h3>Quick setup</h3>
+        <p>Create your loyalty card and go live the same day.</p>
+      </div>
+      <div class="vendor-feature">
+        <div class="icon">📱</div>
+        <h3>Tap or scan</h3>
+        <p>Issue stamps via NFC tap or QR code — works on any phone.</p>
+      </div>
+      <div class="vendor-feature">
+        <div class="icon">📊</div>
+        <h3>Real insights</h3>
+        <p>See visits, regulars, and redemptions at a glance.</p>
+      </div>
+      <div class="vendor-feature">
+        <div class="icon">📣</div>
+        <h3>Offers &amp; promos</h3>
+        <p>Send offers directly to your loyal customers.</p>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>&copy; 2026 Linq. All rights reserved.</p>
+  </footer>
+
+  <script>
+    // Smart store link detection — swap "Coming soon" for live links once published.
+    // Set these to real URLs when the app is approved:
+    const APP_STORE_URL = '';    // e.g. 'https://apps.apple.com/app/linq/id...'
+    const PLAY_STORE_URL = '';   // e.g. 'https://play.google.com/store/apps/details?id=...'
+
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isAndroid = /android/i.test(navigator.userAgent);
+
+    function activateBadge(id, url) {
+      if (!url) return;
+      const el = document.getElementById(id);
+      el.href = url;
+      el.classList.add('live');
+      el.querySelector('small').textContent = 'Download on the';
+      // Hide coming-soon note if at least one store is live
+      document.querySelector('.coming-soon-note').style.display = 'none';
+    }
+
+    activateBadge('ios-badge', APP_STORE_URL);
+    activateBadge('android-badge', PLAY_STORE_URL);
+
+    // On mobile, scroll to the relevant badge
+    if (isIOS && APP_STORE_URL) document.getElementById('ios-badge').scrollIntoView({ block: 'nearest' });
+    if (isAndroid && PLAY_STORE_URL) document.getElementById('android-badge').scrollIntoView({ block: 'nearest' });
+  </script>
+</body>
+</html>
