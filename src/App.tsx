@@ -23755,51 +23755,50 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         </div>
       </motion.button>
 
-      {/* Sticker slider + Badge slider in one row */}
+      {/* Sticker slider (75%) + Badge slider (25%) in one row */}
       <div className="flex gap-2">
-        {/* Sticker slider */}
-        <div className="flex-1 bg-white/70 rounded-2xl px-3 pt-2.5 pb-3 shadow-sm min-w-0">
+        {/* Sticker slider — 75% */}
+        <div className="bg-white/70 rounded-2xl px-3 pt-2.5 pb-3 shadow-sm min-w-0" style={{ flex: '3 1 0%' }}>
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/50">Stickers</span>
             <button onClick={() => stickerData && setShowStickerModal(true)}
               className="text-[10px] font-bold text-brand-gold active:opacity-70">See All</button>
           </div>
           {(() => {
-            const universal = (stickerData?.stickers ?? []).filter(s => !!s.cardDefId && !!s.cardImageUrl && !s.challengeId && (stickerData?.revealedIds ?? []).includes(s.id));
+            const universal = (stickerData?.stickers ?? [])
+              .filter(s => !!s.cardDefId && !!s.cardImageUrl && !s.challengeId && (stickerData?.revealedIds ?? []).includes(s.id))
+              .sort((a, b) => new Date(b.earnedAt).getTime() - new Date(a.earnedAt).getTime());
             if (universal.length === 0) return (
               <p className="text-[10px] text-brand-navy/35 py-1">No cards yet</p>
             );
             return (
-              <div className="flex gap-1.5 overflow-x-auto scrollbar-hide -mx-0.5 px-0.5">
-                {universal.slice(0, 5).map(s => {
-                  const cfg = STICKER_CONFIG[s.tier];
-                  return (
-                    <div key={s.id} onClick={() => setExpandedSticker(s)}
-                      style={{ width: 42, height: 42, borderRadius: 9, overflow: 'hidden', border: `2px solid ${cfg.border}`, background: cfg.solid, flexShrink: 0, cursor: 'pointer' }}>
-                      <img src={s.cardImageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    </div>
-                  );
-                })}
+              <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+                {universal.slice(0, 5).map(s => (
+                  <div key={s.id} className="shrink-0 active:scale-95 transition-transform cursor-pointer"
+                    onClick={() => setExpandedSticker(s)}>
+                    <StickerCard sticker={s} isRevealed={true} size="sm" />
+                  </div>
+                ))}
               </div>
             );
           })()}
         </div>
 
-        {/* Badge slider */}
-        <div className="flex-1 bg-white/70 rounded-2xl px-3 pt-2.5 pb-3 shadow-sm min-w-0">
+        {/* Badge slider — 25% */}
+        <div className="bg-white/70 rounded-2xl px-3 pt-2.5 pb-3 shadow-sm min-w-0" style={{ flex: '1 1 0%' }}>
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/50">Badges</span>
             <button onClick={() => setBadgesOpen(true)}
               className="text-[10px] font-bold text-brand-gold active:opacity-70">See All</button>
           </div>
           {earnedBadges.length === 0
-            ? <p className="text-[10px] text-brand-navy/35 py-1">No badges yet</p>
+            ? <p className="text-[10px] text-brand-navy/35 py-1">No badges</p>
             : (
-              <div className="flex gap-1.5 overflow-x-auto scrollbar-hide -mx-0.5 px-0.5">
+              <div className="flex flex-col gap-2 overflow-y-auto scrollbar-hide" style={{ maxHeight: 120 }}>
                 {earnedBadges.slice(0, 5).map(b => (
                   <button key={b.id} onClick={() => { setBadgesOpen(false); setSelectedBadge(b); }}
-                    className="shrink-0 active:scale-90 transition-transform">
-                    <HexBadge badge={b} size={42} />
+                    className="shrink-0 active:scale-90 transition-transform mx-auto">
+                    <HexBadge badge={b} size={38} />
                   </button>
                 ))}
               </div>
@@ -30646,47 +30645,46 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
 
             {/* Sticker + Badge sliders in one row */}
             <div className="flex gap-2">
-              {/* Sticker slider */}
-              <div className="flex-1 bg-white/70 rounded-2xl px-3 pt-2.5 pb-3 shadow-sm min-w-0">
+              {/* Sticker slider — 75% */}
+              <div className="bg-white/70 rounded-2xl px-3 pt-2.5 pb-3 shadow-sm min-w-0" style={{ flex: '3 1 0%' }}>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/50">Stickers</span>
                   <button onClick={() => setPubStickerOpen(true)}
                     className="text-[10px] font-bold text-brand-gold active:opacity-70">See All</button>
                 </div>
                 {(() => {
-                  const universal = pubStickers.filter(s => !!s.cardDefId && !!s.cardImageUrl && !s.challengeId && pubRevealedIds.includes(s.id));
+                  const universal = pubStickers
+                    .filter(s => !!s.cardDefId && !!s.cardImageUrl && !s.challengeId && pubRevealedIds.includes(s.id))
+                    .sort((a, b) => new Date(b.earnedAt).getTime() - new Date(a.earnedAt).getTime());
                   if (universal.length === 0) return <p className="text-[10px] text-brand-navy/35 py-1">No cards yet</p>;
                   return (
-                    <div className="flex gap-1.5 overflow-x-auto scrollbar-hide -mx-0.5 px-0.5">
-                      {universal.slice(0, 5).map(s => {
-                        const cfg = STICKER_CONFIG[s.tier];
-                        return (
-                          <div key={s.id} onClick={() => setPubExpandedSticker(s)}
-                            style={{ width: 42, height: 42, borderRadius: 9, overflow: 'hidden', border: `2px solid ${cfg.border}`, background: cfg.solid, flexShrink: 0, cursor: 'pointer' }}>
-                            <img src={s.cardImageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          </div>
-                        );
-                      })}
+                    <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+                      {universal.slice(0, 5).map(s => (
+                        <div key={s.id} className="shrink-0 active:scale-95 transition-transform cursor-pointer"
+                          onClick={() => setPubExpandedSticker(s)}>
+                          <StickerCard sticker={s} isRevealed={true} size="sm" />
+                        </div>
+                      ))}
                     </div>
                   );
                 })()}
               </div>
 
-              {/* Badge slider */}
-              <div className="flex-1 bg-white/70 rounded-2xl px-3 pt-2.5 pb-3 shadow-sm min-w-0">
+              {/* Badge slider — 25% */}
+              <div className="bg-white/70 rounded-2xl px-3 pt-2.5 pb-3 shadow-sm min-w-0" style={{ flex: '1 1 0%' }}>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/50">Badges</span>
                   <button onClick={() => setPubBadgesOpen(true)}
                     className="text-[10px] font-bold text-brand-gold active:opacity-70">See All</button>
                 </div>
                 {earnedBadges.length === 0
-                  ? <p className="text-[10px] text-brand-navy/35 py-1">No badges yet</p>
+                  ? <p className="text-[10px] text-brand-navy/35 py-1">No badges</p>
                   : (
-                    <div className="flex gap-1.5 overflow-x-auto scrollbar-hide -mx-0.5 px-0.5">
+                    <div className="flex flex-col gap-2 overflow-y-auto scrollbar-hide" style={{ maxHeight: 120 }}>
                       {earnedBadges.slice(0, 5).map(b => (
                         <button key={b.id} onClick={() => { setPubBadgesOpen(false); setSelectedBadge(b); }}
-                          className="shrink-0 active:scale-90 transition-transform">
-                          <HexBadge badge={b} size={42} />
+                          className="shrink-0 active:scale-90 transition-transform mx-auto">
+                          <HexBadge badge={b} size={38} />
                         </button>
                       ))}
                     </div>
