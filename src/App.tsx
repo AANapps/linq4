@@ -21167,7 +21167,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
   };
 
   const handleCreate = async () => {
-    if (!store || !title.trim() || !description.trim() || offers.length >= 3) return;
+    if (!store || !title.trim() || !description.trim() || offers.length >= offerLimit) return;
     setCreateError('');
     setSaving(true);
     try {
@@ -21209,14 +21209,28 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
 
   const inputCls = 'w-full px-4 py-3 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30';
 
-  const atLimit = offers.length >= 3;
+  const trialEndsMs = store?.trialEndsAt
+    ? ((store.trialEndsAt as any).toMillis?.() ?? (store.trialEndsAt as any).seconds * 1000)
+    : null;
+  const isInTrial = trialEndsMs !== null && trialEndsMs > Date.now();
+  const isSubscribed = store?.subscriptionStatus === 'active' || store?.subscriptionStatus === 'trialing' || isInTrial;
+  const offerLimit = isSubscribed ? 3 : 1;
+  const atLimit = offers.length >= offerLimit;
 
   return (
     <div className="space-y-6 pb-20">
       <header className="flex items-center justify-between">
         <div>
           <h2 className="font-display text-3xl font-bold mb-0.5">Offers</h2>
-          <p className="text-brand-navy/80 text-sm">{atLimit ? '3/3 offers used — delete one to add more.' : 'Create deals shown in the Deals section.'}</p>
+          <p className="text-brand-navy/80 text-sm">
+            {atLimit
+              ? isSubscribed
+                ? `${offerLimit}/${offerLimit} offers used — delete one to add more.`
+                : '1/1 offer used — subscribe to create up to 3 offers.'
+              : isSubscribed
+                ? 'Create deals shown in the Deals section.'
+                : 'Free plan: 1 offer allowed. Subscribe for up to 3.'}
+          </p>
         </div>
         {!atLimit && (
           <button
