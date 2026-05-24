@@ -2180,21 +2180,21 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
           </button>
           <button
             onClick={() => reset('phone')}
-            className="w-full bg-white/15 backdrop-blur-sm text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-white/25 transition-all border border-white/20"
+            className="w-full bg-white text-brand-navy font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg"
           >
             <Phone size={18} /> Continue with Phone
           </button>
           <button
             onClick={() => reset('signup')}
-            className="w-full bg-white text-brand-navy font-bold py-4 rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg"
+            className="w-full bg-brand-navy text-white font-bold py-4 rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg"
           >
             Create Account
           </button>
           <button
             onClick={() => reset('signin')}
-            className="w-full bg-white text-brand-navy font-bold py-4 rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg"
+            className="w-full text-white/70 text-sm py-2 hover:text-white transition-colors"
           >
-            Sign In with Email
+            Already a member? Sign in
           </button>
         </div>
       </div>
