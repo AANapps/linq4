@@ -920,34 +920,29 @@
 
     /* ── STAMP CARD PREVIEW ── */
     .stamp-card-preview {
-      background: rgba(255,255,255,0.15);
-      border: 1.5px solid rgba(255,255,255,0.25);
+      background: var(--white);
       border-radius: var(--radius-md);
       padding: 1.25rem 1.5rem;
       margin-bottom: 2rem;
-      backdrop-filter: blur(8px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
       max-width: 340px;
       width: 100%;
       text-align: left;
     }
 
-    .stamp-card-dark {
-      background: rgba(255,255,255,0.06);
-      border-color: rgba(255,255,255,0.1);
-    }
+    .stamp-card-dark { /* same white card on dark bg — shadow handles contrast */ }
 
     .scp-title {
-      font-size: 0.82rem;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.85rem;
       font-weight: 700;
-      color: rgba(255,255,255,0.9);
+      color: var(--navy);
       margin-bottom: 1rem;
-      letter-spacing: 0.01em;
     }
 
     .scp-stamps {
       display: flex;
-      gap: 0.5rem;
-      flex-wrap: wrap;
+      justify-content: space-between;
       margin-bottom: 0.875rem;
     }
 
@@ -955,35 +950,34 @@
       width: 28px;
       height: 28px;
       border-radius: 50%;
-      border: 2px solid rgba(255,255,255,0.4);
+      border: 2px solid rgba(15,23,42,0.18);
       background: transparent;
       transition: background 0.3s, border-color 0.3s, transform 0.2s;
-      position: relative;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.75rem;
+      font-size: 0.7rem;
+      flex-shrink: 0;
     }
 
     .stamp-dot.filled {
-      background: rgba(255,255,255,0.9);
-      border-color: rgba(255,255,255,0.9);
-    }
-
-    .stamp-dot.filled::after {
-      content: '✓';
-      color: var(--blue2);
+      background: var(--blue2);
+      border-color: var(--blue2);
+      color: white;
+      font-size: 0.65rem;
       font-weight: 800;
-      font-size: 0.7rem;
     }
 
-    .stamp-dot.pop {
-      transform: scale(1.3);
+    .stamp-dot.gift {
+      background: var(--gold);
+      border-color: var(--gold);
     }
+
+    .stamp-dot.pop { transform: scale(1.35); }
 
     .scp-label {
       font-size: 0.75rem;
-      color: rgba(255,255,255,0.5);
+      color: rgba(15,23,42,0.45);
     }
 
     /* ── ALWAYS FREE STAMP ── */
@@ -1542,6 +1536,7 @@
       for (let i = 0; i < total; i++) {
         const d = document.createElement('div');
         d.className = 'stamp-dot';
+        if (i === total - 1) d.textContent = '🎁';
         container.appendChild(d);
         dots.push(d);
       }
@@ -1549,14 +1544,22 @@
       function fillNext() {
         if (filled >= total) {
           setTimeout(() => {
-            dots.forEach(d => { d.classList.remove('filled', 'pop'); });
+            dots.forEach((d, i) => {
+              d.classList.remove('filled', 'gift', 'pop');
+              if (i === total - 1) d.textContent = '🎁';
+              else d.textContent = '';
+            });
             filled = 0;
             setTimeout(fillNext, 800);
-          }, 1800);
+          }, 2000);
           return;
         }
-        dots[filled].classList.add('filled', 'pop');
-        setTimeout(() => dots[filled - 1 >= 0 ? filled : 0].classList.remove('pop'), 300);
+        const dot = dots[filled];
+        const isLast = filled === total - 1;
+        dot.classList.add('filled', 'pop');
+        if (isLast) { dot.classList.add('gift'); dot.textContent = '🎁'; }
+        else dot.textContent = '✓';
+        setTimeout(() => dot.classList.remove('pop'), 300);
         filled++;
         setTimeout(fillNext, 480);
       }
