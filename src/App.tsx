@@ -22973,6 +22973,8 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
   const [badgesOpen, setBadgesOpen] = useState(false);
   const [showStickerModal, setShowStickerModal] = useState(false);
   const [stickerData, setStickerData] = useState<{ stickers: CollectibleSticker[]; revealedIds: string[] } | null>(null);
+  const [expandedSticker, setExpandedSticker] = useState<CollectibleSticker | null>(null);
+  const [stickerCardDefs, setStickerCardDefs] = useState<CollectibleCardDef[]>([]);
   const [editingCardColorId, setEditingCardColorId] = useState<string | null>(null);
 
   const saveCardColor = async (cardId: string, color: string) => {
@@ -23189,6 +23191,12 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
     return onSnapshot(collection(db, 'badges'), snap =>
       setAllBadges(snap.docs.map(d => ({ id: d.id, ...d.data() } as AppBadge)))
     );
+  }, []);
+
+  useEffect(() => {
+    getDocs(collection(db, 'collectible_cards')).then(snap =>
+      setStickerCardDefs(snap.docs.map(d => ({ id: d.id, ...d.data() } as CollectibleCardDef)))
+    ).catch(console.error);
   }, []);
 
   useEffect(() => {
@@ -23757,7 +23765,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
               className="text-[10px] font-bold text-brand-gold active:opacity-70">See All</button>
           </div>
           {(() => {
-            const universal = (stickerData?.stickers ?? []).filter(s => !!s.cardDefId && !!s.cardImageUrl && (stickerData?.revealedIds ?? []).includes(s.id));
+            const universal = (stickerData?.stickers ?? []).filter(s => !!s.cardDefId && !!s.cardImageUrl && !s.challengeId && (stickerData?.revealedIds ?? []).includes(s.id));
             if (universal.length === 0) return (
               <p className="text-[10px] text-brand-navy/35 py-1">No cards yet</p>
             );
@@ -23766,14 +23774,9 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                 {universal.slice(0, 5).map(s => {
                   const cfg = STICKER_CONFIG[s.tier];
                   return (
-                    <div key={s.id} onClick={() => setShowStickerModal(true)}
+                    <div key={s.id} onClick={() => setExpandedSticker(s)}
                       style={{ width: 42, height: 42, borderRadius: 9, overflow: 'hidden', border: `2px solid ${cfg.border}`, background: cfg.solid, flexShrink: 0, cursor: 'pointer' }}>
-                      {s.cardImageUrl
-                        ? <img src={s.cardImageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
-                            {cfg.variants[s.variant ?? 0]?.emoji}
-                          </div>
-                      }
+                      <img src={s.cardImageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
                   );
                 })}
@@ -23981,6 +23984,45 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
               </div>
           </motion.div>
         )}
+      </AnimatePresence>
+
+      {/* Expanded sticker card overlay */}
+      <AnimatePresence>
+        {expandedSticker && (() => {
+          const ecfg = STICKER_CONFIG[expandedSticker.tier];
+          const eDef = stickerCardDefs.find(d => d.id === expandedSticker.cardDefId);
+          return (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/75 backdrop-blur-md z-[9999] flex items-center justify-center p-6"
+              onClick={() => setExpandedSticker(null)}>
+              <motion.div initial={{ scale: 0.4, y: 60, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }}
+                exit={{ scale: 0.4, y: 60, opacity: 0 }}
+                transition={{ type: 'spring', damping: 18, stiffness: 220 }}
+                className="flex flex-col items-center gap-5 relative"
+                onClick={e => e.stopPropagation()}>
+                <motion.div style={{ position: 'absolute', inset: -32, borderRadius: 48, background: ecfg.solid, filter: 'blur(48px)', zIndex: 0, opacity: 0.45 }}
+                  animate={{ opacity: [0.3, 0.6, 0.3], scale: [0.9, 1.1, 0.9] }}
+                  transition={{ duration: 2, repeat: Infinity }} />
+                <StickerCard sticker={expandedSticker} isRevealed={true} size="lg" />
+                {eDef?.description && (
+                  <p className="relative z-10 text-center text-sm text-white/80 max-w-[220px] leading-snug">{eDef.description}</p>
+                )}
+                <div className="relative z-10 flex gap-3">
+                  {['View', 'Trade'].map(label => (
+                    <div key={label} className="flex flex-col items-center gap-1">
+                      <button disabled className="px-7 py-2.5 rounded-2xl font-bold text-sm text-white/50 cursor-not-allowed"
+                        style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.14)' }}>{label}</button>
+                      <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest">Coming soon</span>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => setExpandedSticker(null)}
+                  className="relative z-10 px-8 py-3 rounded-2xl font-bold text-sm text-white/70"
+                  style={{ background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.16)' }}>Close</button>
+              </motion.div>
+            </motion.div>
+          );
+        })()}
       </AnimatePresence>
 
       {/* Sticker collection popup */}
@@ -30245,11 +30287,19 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
   const [pubStickerCount, setPubStickerCount] = useState(0);
   const [pubStickers, setPubStickers] = useState<CollectibleSticker[]>([]);
   const [pubRevealedIds, setPubRevealedIds] = useState<string[]>([]);
+  const [pubExpandedSticker, setPubExpandedSticker] = useState<CollectibleSticker | null>(null);
+  const [pubCardDefs, setPubCardDefs] = useState<CollectibleCardDef[]>([]);
 
   useEffect(() => {
     return onSnapshot(collection(db, 'badges'), snap =>
       setAllBadges(snap.docs.map(d => ({ id: d.id, ...d.data() } as AppBadge)))
     );
+  }, []);
+
+  useEffect(() => {
+    getDocs(collection(db, 'collectible_cards')).then(snap =>
+      setPubCardDefs(snap.docs.map(d => ({ id: d.id, ...d.data() } as CollectibleCardDef)))
+    ).catch(console.error);
   }, []);
 
   useEffect(() => {
@@ -30604,21 +30654,16 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
                     className="text-[10px] font-bold text-brand-gold active:opacity-70">See All</button>
                 </div>
                 {(() => {
-                  const universal = pubStickers.filter(s => !!s.cardDefId && !!s.cardImageUrl && pubRevealedIds.includes(s.id));
+                  const universal = pubStickers.filter(s => !!s.cardDefId && !!s.cardImageUrl && !s.challengeId && pubRevealedIds.includes(s.id));
                   if (universal.length === 0) return <p className="text-[10px] text-brand-navy/35 py-1">No cards yet</p>;
                   return (
                     <div className="flex gap-1.5 overflow-x-auto scrollbar-hide -mx-0.5 px-0.5">
                       {universal.slice(0, 5).map(s => {
                         const cfg = STICKER_CONFIG[s.tier];
                         return (
-                          <div key={s.id} onClick={() => setPubStickerOpen(true)}
+                          <div key={s.id} onClick={() => setPubExpandedSticker(s)}
                             style={{ width: 42, height: 42, borderRadius: 9, overflow: 'hidden', border: `2px solid ${cfg.border}`, background: cfg.solid, flexShrink: 0, cursor: 'pointer' }}>
-                            {s.cardImageUrl
-                              ? <img src={s.cardImageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                              : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
-                                  {cfg.variants[s.variant ?? 0]?.emoji}
-                                </div>
-                            }
+                            <img src={s.cardImageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           </div>
                         );
                       })}
@@ -30740,6 +30785,36 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
             </div>
           </motion.div>
         )}
+      </AnimatePresence>
+
+      {/* Expanded sticker card overlay */}
+      <AnimatePresence>
+        {pubExpandedSticker && (() => {
+          const ecfg = STICKER_CONFIG[pubExpandedSticker.tier];
+          const eDef = pubCardDefs.find(d => d.id === pubExpandedSticker.cardDefId);
+          return (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/75 backdrop-blur-md z-[9999] flex items-center justify-center p-6"
+              onClick={() => setPubExpandedSticker(null)}>
+              <motion.div initial={{ scale: 0.4, y: 60, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }}
+                exit={{ scale: 0.4, y: 60, opacity: 0 }}
+                transition={{ type: 'spring', damping: 18, stiffness: 220 }}
+                className="flex flex-col items-center gap-5 relative"
+                onClick={e => e.stopPropagation()}>
+                <motion.div style={{ position: 'absolute', inset: -32, borderRadius: 48, background: ecfg.solid, filter: 'blur(48px)', zIndex: 0, opacity: 0.45 }}
+                  animate={{ opacity: [0.3, 0.6, 0.3], scale: [0.9, 1.1, 0.9] }}
+                  transition={{ duration: 2, repeat: Infinity }} />
+                <StickerCard sticker={pubExpandedSticker} isRevealed={true} size="lg" />
+                {eDef?.description && (
+                  <p className="relative z-10 text-center text-sm text-white/80 max-w-[220px] leading-snug">{eDef.description}</p>
+                )}
+                <button onClick={() => setPubExpandedSticker(null)}
+                  className="relative z-10 px-8 py-3 rounded-2xl font-bold text-sm text-white/70"
+                  style={{ background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.16)' }}>Close</button>
+              </motion.div>
+            </motion.div>
+          );
+        })()}
       </AnimatePresence>
 
       {/* Stickers popup */}
