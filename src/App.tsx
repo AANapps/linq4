@@ -15174,17 +15174,14 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/aFa5kF5JZh193yT6OEd7q00';
   const NFC_ORDER_STRIPE_LINK = 'https://buy.stripe.com/PLACEHOLDER_NFC_LINK';
 
-  // Show vendor onboarding once per vendor — mark complete the moment it opens
+  // Show vendor onboarding once per session — only checks on first load, not on every profile update
   useEffect(() => {
     if (!profile) return;
     if (!profile.vendorIntroComplete) {
       setVendorWelcomeStep(0);
       setShowVendorWelcome(true);
-      updateDoc(doc(db, 'users', user.uid), { vendorIntroComplete: true }).catch(console.error);
-    } else {
-      setShowVendorWelcome(false);
     }
-  }, [profile?.uid, profile?.vendorIntroComplete]);
+  }, [profile?.uid]); // intentionally NOT watching vendorIntroComplete — avoids closing the modal mid-view
 
   // Show active vendor-targeted announcements once per vendor
   useEffect(() => {
@@ -17472,7 +17469,10 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
               confetti({ particleCount: 50, spread: 65, startVelocity: 25, gravity: 0.9, scalar: 0.85, origin: { y: 0.7 }, zIndex: 9999, colors: ['#FFD700','#0F172A','#60A5FA','#4ADE80'] });
               setVendorWelcomeStep(s => s + 1);
             }}
-            onDone={() => setShowVendorWelcome(false)}
+            onDone={() => {
+              updateDoc(doc(db, 'users', user.uid), { vendorIntroComplete: true }).catch(console.error);
+              setShowVendorWelcome(false);
+            }}
           />
         )}
       </AnimatePresence>
