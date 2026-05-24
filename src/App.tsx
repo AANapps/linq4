@@ -156,7 +156,9 @@ import {
   ImageIcon,
   Upload,
   ScanLine,
-  BookOpen
+  BookOpen,
+  ShieldAlert,
+  MapPin
 } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
@@ -1190,7 +1192,7 @@ export default function App() {
   const [pendingNFCStoreId, setPendingNFCStoreId] = useState<string | null>(null);
   const [userCards, setUserCards] = useState<Card[]>([]);
   const [showSettings, setShowSettings] = useState(false);
-  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges' | 'stores' | 'users' | 'posts' | 'offers' | 'linqle' | 'daily-vote' | 'cards' | 'banners' | 'ui-colors' | 'announcements' | 'leaderboard'>(null);
+  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges' | 'stores' | 'users' | 'posts' | 'offers' | 'linqle' | 'daily-vote' | 'cards' | 'banners' | 'ui-colors' | 'announcements' | 'leaderboard' | 'fraud'>(null);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -1853,7 +1855,11 @@ export default function App() {
             onOpenAppEdit={() => setAdminView('app-edit')}
             onOpenAnnouncements={() => setAdminView('announcements')}
             onOpenLeaderboard={() => setAdminView('leaderboard')}
+            onOpenFraud={() => setAdminView('fraud')}
           />
+        )}
+        {adminView === 'fraud' && (
+          <FraudDetectionPanel onClose={() => setAdminView('menu')} />
         )}
         {adminView === 'challenges' && (
           <ChallengesAdminPanel onClose={() => setAdminView('menu')} />
@@ -5716,7 +5722,7 @@ function AppEditPanel({ onClose, onLogoChange }: { onClose: () => void; onLogoCh
   );
 }
 
-function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts, onOpenOffers, onOpenLinqle, onOpenDailyVote, onOpenCards, onOpenBanners, onOpenUiColors, onOpenAppEdit, onOpenAnnouncements, onOpenLeaderboard }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void; onOpenOffers: () => void; onOpenLinqle: () => void; onOpenDailyVote: () => void; onOpenCards: () => void; onOpenBanners: () => void; onOpenUiColors: () => void; onOpenAppEdit: () => void; onOpenAnnouncements: () => void; onOpenLeaderboard: () => void }) {
+function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts, onOpenOffers, onOpenLinqle, onOpenDailyVote, onOpenCards, onOpenBanners, onOpenUiColors, onOpenAppEdit, onOpenAnnouncements, onOpenLeaderboard, onOpenFraud }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void; onOpenOffers: () => void; onOpenLinqle: () => void; onOpenDailyVote: () => void; onOpenCards: () => void; onOpenBanners: () => void; onOpenUiColors: () => void; onOpenAppEdit: () => void; onOpenAnnouncements: () => void; onOpenLeaderboard: () => void; onOpenFraud: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -5929,6 +5935,20 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores,
             <div>
               <p className="font-bold text-brand-navy text-sm">Leaderboard</p>
               <p className="text-[11px] text-brand-navy/75 mt-0.5">Populate stamps & savings rankings</p>
+            </div>
+          </motion.button>
+
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={onOpenFraud}
+            className="rounded-[2rem] bg-white border border-black/5 shadow-sm p-6 flex flex-col items-start gap-3 text-left active:bg-brand-navy/5 transition-colors"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center">
+              <ShieldAlert size={22} className="text-red-500" />
+            </div>
+            <div>
+              <p className="font-bold text-brand-navy text-sm">Fraud Signals</p>
+              <p className="text-[11px] text-brand-navy/75 mt-0.5">Far-away & rapid scan alerts</p>
             </div>
           </motion.button>
 
@@ -7597,6 +7617,166 @@ function AdminLeaderboardPanel({ onClose }: { onClose: () => void }) {
               )}
             </div>
           ))}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function FraudDetectionPanel({ onClose }: { onClose: () => void }) {
+  const [tab, setTab] = useState<'distance' | 'rapid'>('distance');
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const MILES_THRESHOLD = 15;
+  const KM_THRESHOLD = MILES_THRESHOLD * 1.60934; // 15 miles in km
+
+  useEffect(() => {
+    setLoading(true);
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000 * 7); // last 7 days
+    getDocs(
+      query(collection(db, 'scan_logs'),
+        orderBy('scannedAt', 'desc'),
+        limit(500))
+    ).then(snap => {
+      setLogs(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }).catch(console.error).finally(() => setLoading(false));
+  }, []);
+
+  // Tab 1: scans > 15 miles from store
+  const farScans = logs.filter(l => l.distanceKm != null && l.distanceKm > KM_THRESHOLD);
+
+  // Tab 2: users with 5+ scans within any 5-min window
+  const rapidUsers: { userId: string; userName: string; scans: any[] }[] = [];
+  const byUser = new Map<string, any[]>();
+  for (const l of logs) {
+    if (!byUser.has(l.userId)) byUser.set(l.userId, []);
+    byUser.get(l.userId)!.push(l);
+  }
+  byUser.forEach((userLogs, userId) => {
+    const sorted = [...userLogs].sort((a, b) => {
+      const tA = a.scannedAt?.toMillis?.() ?? 0;
+      const tB = b.scannedAt?.toMillis?.() ?? 0;
+      return tA - tB;
+    });
+    for (let i = 0; i <= sorted.length - 5; i++) {
+      const window = sorted.slice(i, i + 5);
+      const t0 = window[0].scannedAt?.toMillis?.() ?? 0;
+      const t4 = window[4].scannedAt?.toMillis?.() ?? 0;
+      if (t4 - t0 < 5 * 60 * 1000) {
+        rapidUsers.push({ userId, userName: sorted[0].userName || userId, scans: window });
+        break;
+      }
+    }
+  });
+
+  const fmt = (ts: any) => {
+    if (!ts) return '—';
+    const d = ts.toDate?.() ?? new Date(ts);
+    return d.toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex flex-col max-w-md mx-auto"
+    >
+      <div className="flex-1 overflow-y-auto bg-brand-bg flex flex-col">
+        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm px-5 pt-5 pb-4 border-b border-black/5 z-10">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-display text-2xl font-bold text-brand-navy">Fraud Signals</h2>
+              <p className="text-xs text-brand-navy/60 mt-0.5">Last 7 days of scan activity</p>
+            </div>
+            <button onClick={onClose} className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm active:scale-95 transition-all">
+              <X size={18} className="text-brand-navy/75" />
+            </button>
+          </div>
+          <div className="flex gap-2 mt-4">
+            {([
+              { id: 'distance', label: `Far Away (${farScans.length})` },
+              { id: 'rapid', label: `Rapid Scans (${rapidUsers.length})` },
+            ] as const).map(t => (
+              <button key={t.id} onClick={() => setTab(t.id)}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${tab === t.id ? 'bg-brand-navy text-white' : 'bg-white text-brand-navy/60 border border-black/10'}`}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex-1 p-4">
+          {loading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 size={24} className="animate-spin text-brand-navy/40" />
+            </div>
+          ) : tab === 'distance' ? (
+            farScans.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-3">
+                <ShieldAlert size={32} className="text-brand-navy/20" />
+                <p className="text-sm text-brand-navy/40 text-center">No scans flagged beyond {MILES_THRESHOLD} miles</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                <p className="text-[10px] text-brand-navy/40 uppercase tracking-widest font-bold px-1">
+                  Scanned &gt;{MILES_THRESHOLD} miles from store · {farScans.length} flag{farScans.length !== 1 ? 's' : ''}
+                </p>
+                {farScans.map((log, i) => (
+                  <div key={log.id ?? i} className="bg-white rounded-2xl p-4 border border-red-100 shadow-sm">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-brand-navy truncate">{log.userName || 'Unknown user'}</p>
+                        <p className="text-xs text-brand-navy/60 truncate">{log.storeName}</p>
+                      </div>
+                      <span className="shrink-0 bg-red-50 text-red-600 text-[11px] font-black px-2 py-1 rounded-xl">
+                        {(log.distanceKm / 1.60934).toFixed(1)} mi
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 mt-2">
+                      <MapPin size={11} className="text-brand-navy/30 shrink-0" />
+                      <p className="text-[10px] text-brand-navy/40">{fmt(log.scannedAt)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          ) : (
+            rapidUsers.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-3">
+                <ShieldAlert size={32} className="text-brand-navy/20" />
+                <p className="text-sm text-brand-navy/40 text-center">No users flagged for rapid scanning</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                <p className="text-[10px] text-brand-navy/40 uppercase tracking-widest font-bold px-1">
+                  5+ scans in under 5 minutes · {rapidUsers.length} user{rapidUsers.length !== 1 ? 's' : ''}
+                </p>
+                {rapidUsers.map((u, i) => {
+                  const t0 = u.scans[0].scannedAt?.toMillis?.() ?? 0;
+                  const t4 = u.scans[u.scans.length - 1].scannedAt?.toMillis?.() ?? 0;
+                  const spanSec = Math.round((t4 - t0) / 1000);
+                  return (
+                    <div key={u.userId} className="bg-white rounded-2xl p-4 border border-orange-100 shadow-sm">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-brand-navy truncate">{u.userName}</p>
+                          <p className="text-xs text-brand-navy/60">{u.scans.length} scans · {spanSec}s window</p>
+                        </div>
+                        <span className="shrink-0 bg-orange-50 text-orange-600 text-[11px] font-black px-2 py-1 rounded-xl">
+                          Rapid
+                        </span>
+                      </div>
+                      <div className="mt-2 flex flex-col gap-0.5">
+                        {u.scans.map((s: any, j: number) => (
+                          <p key={j} className="text-[10px] text-brand-navy/40">{fmt(s.scannedAt)} · {s.storeName}</p>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )
+          )}
         </div>
       </div>
     </motion.div>
@@ -11459,6 +11639,29 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
         });
       }
     }
+
+    // Record scan location for fraud detection (fire-and-forget)
+    getScanLocation().then(userCoords => {
+      const storeLat = (store as any).lat ?? null;
+      const storeLng = (store as any).lng ?? null;
+      const hasStoreCoords = storeLat !== null && storeLng !== null;
+      const distanceKm = (userCoords && hasStoreCoords)
+        ? haversineKm(userCoords.lat, userCoords.lng, storeLat, storeLng)
+        : null;
+      addDoc(collection(db, 'scan_logs'), {
+        userId: user.uid,
+        userName,
+        storeId: store.id,
+        storeName: store.name,
+        scannedAt: serverTimestamp(),
+        userLat: userCoords?.lat ?? null,
+        userLng: userCoords?.lng ?? null,
+        storeLat,
+        storeLng,
+        distanceKm,
+        hasStoreCoords,
+      }).catch(console.error);
+    }).catch(console.error);
 
     onStatus('success', `Stamp added at ${store.name}!`);
     return newStickers;
@@ -19072,6 +19275,17 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
   const dLng = (lng2 - lng1) * Math.PI / 180;
   const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function getScanLocation(): Promise<{ lat: number; lng: number } | null> {
+  return new Promise(resolve => {
+    if (!navigator.geolocation) { resolve(null); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => resolve(null),
+      { timeout: 5000, maximumAge: 60000 }
+    );
+  });
 }
 
 const _geocodeCache = new Map<string, { lat: number; lng: number } | null>();
