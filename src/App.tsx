@@ -2051,7 +2051,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
 
   // Initialise + render invisible reCAPTCHA as soon as the phone screen mounts
   React.useEffect(() => {
-    if (mode !== 'phone' && mode !== 'forgot') return;
+    if (mode !== 'home' && mode !== 'phone' && mode !== 'forgot') return;
     const timer = setTimeout(() => {
       if (recaptchaVerifier.current) return;
       try {
@@ -2170,6 +2170,42 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
               <p className="text-white/80 text-xs">{error}</p>
             </div>
           )}
+          <div className="flex gap-2">
+            <select
+              value={dialCode}
+              onChange={e => setDialCode(e.target.value)}
+              className="shrink-0 rounded-2xl bg-white/15 border border-white/20 text-white text-sm px-3 py-4 focus:outline-none focus:border-white/50 appearance-none"
+            >
+              {DIAL_CODES.map(c => (
+                <option key={c.code} value={c.dial} className="text-black">{c.flag} {c.dial}</option>
+              ))}
+            </select>
+            <input
+              type="tel"
+              value={phone}
+              onChange={e => setPhone(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSendOTP()}
+              placeholder="0420 448 995"
+              autoComplete="tel-national"
+              inputMode="numeric"
+              className="flex-1 min-w-0 px-5 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm focus:outline-none focus:border-white/50 focus:bg-white/20"
+            />
+          </div>
+          <div id="phone-recaptcha" />
+          <button
+            onClick={handleSendOTP}
+            disabled={loading}
+            className="w-full bg-white text-brand-navy font-bold py-4 rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg disabled:opacity-60 flex items-center justify-center gap-2"
+          >
+            {loading
+              ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}><Sparkles size={16} /></motion.div> Please wait…</>
+              : 'Continue'}
+          </button>
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-white/20" />
+            <span className="text-white/40 text-xs font-medium">OR</span>
+            <div className="flex-1 h-px bg-white/20" />
+          </div>
           <button
             onClick={handleGoogleLogin}
             disabled={loading}
@@ -2177,12 +2213,6 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
           >
             <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="" />
             Continue with Google
-          </button>
-          <button
-            onClick={() => reset('phone')}
-            className="w-full bg-white text-brand-navy font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg"
-          >
-            <Phone size={18} /> Continue with Phone
           </button>
         </div>
       </div>
