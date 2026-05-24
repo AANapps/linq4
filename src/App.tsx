@@ -23761,8 +23761,9 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         <div className="bg-white/70 rounded-2xl px-3 pt-2.5 pb-3 shadow-sm min-w-0" style={{ flex: '3 1 0%' }}>
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/50">Stickers</span>
-            <button onClick={() => stickerData && setShowStickerModal(true)}
-              className="text-[10px] font-bold text-brand-gold active:opacity-70">See All</button>
+            <button onClick={() => stickerData && setShowStickerModal(true)} className="text-blue-500 active:opacity-70">
+              <Eye size={14} />
+            </button>
           </div>
           {(() => {
             const universal = (stickerData?.stickers ?? [])
@@ -23788,7 +23789,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         <div className="bg-white/70 rounded-2xl px-3 pt-2.5 pb-3 shadow-sm min-w-0 flex flex-col" style={{ flex: '1 1 0%' }}>
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/50">Badges</span>
-            <button onClick={() => setBadgesOpen(true)} className="text-brand-navy/40 active:opacity-70">
+            <button onClick={() => setBadgesOpen(true)} className="text-blue-500 active:opacity-70">
               <Eye size={14} />
             </button>
           </div>
@@ -23798,7 +23799,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
               <div className="flex-1 flex items-center justify-center">
                 <button onClick={() => { setBadgesOpen(false); setSelectedBadge(earnedBadges[0]); }}
                   className="active:scale-90 transition-transform"
-                  style={{ filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.25))' }}>
+                  style={{ filter: 'drop-shadow(0 6px 18px rgba(0,0,0,0.55))' }}>
                   <HexBadge badge={earnedBadges[0]} size={56} />
                 </button>
               </div>
@@ -30649,8 +30650,9 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
               <div className="bg-white/70 rounded-2xl px-3 pt-2.5 pb-3 shadow-sm min-w-0" style={{ flex: '3 1 0%' }}>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/50">Stickers</span>
-                  <button onClick={() => setPubStickerOpen(true)}
-                    className="text-[10px] font-bold text-brand-gold active:opacity-70">See All</button>
+                  <button onClick={() => setPubStickerOpen(true)} className="text-blue-500 active:opacity-70">
+                    <Eye size={14} />
+                  </button>
                 </div>
                 {(() => {
                   const universal = pubStickers
@@ -30674,7 +30676,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
               <div className="bg-white/70 rounded-2xl px-3 pt-2.5 pb-3 shadow-sm min-w-0 flex flex-col" style={{ flex: '1 1 0%' }}>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/50">Badges</span>
-                  <button onClick={() => setPubBadgesOpen(true)} className="text-brand-navy/40 active:opacity-70">
+                  <button onClick={() => setPubBadgesOpen(true)} className="text-blue-500 active:opacity-70">
                     <Eye size={14} />
                   </button>
                 </div>
@@ -30684,7 +30686,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
                     <div className="flex-1 flex items-center justify-center">
                       <button onClick={() => { setPubBadgesOpen(false); setSelectedBadge(earnedBadges[0]); }}
                         className="active:scale-90 transition-transform"
-                        style={{ filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.25))' }}>
+                        style={{ filter: 'drop-shadow(0 6px 18px rgba(0,0,0,0.55))' }}>
                         <HexBadge badge={earnedBadges[0]} size={56} />
                       </button>
                     </div>
