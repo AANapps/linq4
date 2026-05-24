@@ -1807,6 +1807,7 @@ export default function App() {
               setActiveTab={setActiveTab}
               profile={profile}
               user={user}
+              profileCollection={profileCollection ?? 'vendors'}
               onViewUser={handleViewUser}
               notifications={notifications}
               activeChatId={activeChatId}
@@ -4992,7 +4993,9 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     const ownerUids = [...new Set(stores.map(s => (s as any).ownerUid).filter(Boolean))];
     if (ownerUids.length === 0) return;
-    Promise.all(ownerUids.map(uid => getDoc(doc(db, 'users', uid)))).then(snaps => {
+    Promise.all(ownerUids.map(uid =>
+      getDoc(doc(db, 'users', uid)).then(s => s.exists() ? s : getDoc(doc(db, 'vendors', uid)))
+    )).then(snaps => {
       const map: Record<string, boolean> = {};
       snaps.forEach(s => { if (s.exists()) map[s.id] = !!s.data()?.vendorIntroComplete; });
       setVendorIntroMap(map);
@@ -10483,6 +10486,8 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const seenBadgeIdsRef = useRef<Set<string>>(new Set(JSON.parse(localStorage.getItem(`seenBadges_${user.uid}`) || '[]')));
   // Delay detection until initial data has loaded to avoid false positives
   const [badgeDetectionReady, setBadgeDetectionReady] = useState(false);
+  const seenAnnouncementIdsRef = useRef<string[]>([]);
+  useEffect(() => { seenAnnouncementIdsRef.current = profile?.seenAnnouncementIds ?? []; }, [profile?.seenAnnouncementIds]);
 
   // Show welcome modal once per user — driven by Firestore so it works across devices and can be reset by admin
   useEffect(() => {
@@ -10500,7 +10505,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
     if (!profile) return;
     const q = query(collection(db, 'announcements'), where('active', '==', true));
     return onSnapshot(q, snap => {
-      const seen = new Set(profile.seenAnnouncementIds ?? []);
+      const seen = new Set(seenAnnouncementIdsRef.current);
       const unseen = snap.docs
         .map(d => ({ id: d.id, ...d.data() } as Announcement))
         .find(a => !seen.has(a.id) && a.target !== 'vendors');
@@ -11494,6 +11499,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
               updateDoc(doc(db, 'users', user.uid), {
                 seenAnnouncementIds: arrayUnion(pendingAnnouncement.id),
               }).catch(console.error);
+              seenAnnouncementIdsRef.current = [...seenAnnouncementIdsRef.current, pendingAnnouncement.id];
               setPendingAnnouncement(null);
             }}
           />
@@ -15063,7 +15069,7 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
 
 // --- Vendor App ---
 
-function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notifications, activeChatId, setActiveChatId, onLogout, onDeleteAccount, showVendorQR, setShowVendorQR, onVendorQRStatus }: { activeTab: string, setActiveTab: (tab: string) => void, profile: UserProfile | null, user: FirebaseUser, onViewUser: (u: UserProfile) => void, notifications: Notification[], activeChatId: string | null, setActiveChatId: (id: string | null) => void, onLogout: () => void, onDeleteAccount: () => Promise<void>, showVendorQR?: boolean, setShowVendorQR?: (v: boolean) => void, onVendorQRStatus?: (enabled: boolean) => void, key?: React.Key }) {
+function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, onViewUser, notifications, activeChatId, setActiveChatId, onLogout, onDeleteAccount, showVendorQR, setShowVendorQR, onVendorQRStatus }: { activeTab: string, setActiveTab: (tab: string) => void, profile: UserProfile | null, user: FirebaseUser, profileCollection: 'users' | 'vendors', onViewUser: (u: UserProfile) => void, notifications: Notification[], activeChatId: string | null, setActiveChatId: (id: string | null) => void, onLogout: () => void, onDeleteAccount: () => Promise<void>, showVendorQR?: boolean, setShowVendorQR?: (v: boolean) => void, onVendorQRStatus?: (enabled: boolean) => void, key?: React.Key }) {
   const [store, setStore] = useState<StoreProfile | null>(null);
   const [userCards, setUserCards] = useState<Card[]>([]);
 
@@ -15121,6 +15127,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   const [showVendorWelcome, setShowVendorWelcome] = useState(false);
   const [vendorWelcomeStep, setVendorWelcomeStep] = useState(0);
   const [pendingVendorAnnouncement, setPendingVendorAnnouncement] = useState<Announcement | null>(null);
+  const vendorSeenAnnouncementIdsRef = useRef<string[]>([]);
+  useEffect(() => { vendorSeenAnnouncementIdsRef.current = profile?.seenAnnouncementIds ?? []; }, [profile?.seenAnnouncementIds]);
   const [showNFCOrder, setShowNFCOrder] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [togglingCard, setTogglingCard] = useState(false);
@@ -15200,7 +15208,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
     if (!profile.vendorIntroComplete) {
       setVendorWelcomeStep(0);
       setShowVendorWelcome(true);
-      updateDoc(doc(db, 'users', user.uid), { vendorIntroComplete: true }).catch(console.error);
+      updateDoc(doc(db, profileCollection, user.uid), { vendorIntroComplete: true }).catch(console.error);
     }
   }, [profile?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -15209,7 +15217,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
     if (!profile) return;
     const q = query(collection(db, 'announcements'), where('active', '==', true));
     return onSnapshot(q, snap => {
-      const seen = new Set(profile.seenAnnouncementIds ?? []);
+      const seen = new Set(vendorSeenAnnouncementIdsRef.current);
       const unseen = snap.docs
         .map(d => ({ id: d.id, ...d.data() } as Announcement))
         .find(a => !seen.has(a.id) && (a.target === 'vendors' || a.target === 'all'));
@@ -16079,7 +16087,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
                 <button
                   onClick={() => {
                     setVendorWelcomeStep(0); setShowVendorWelcome(true);
-                    updateDoc(doc(db, 'users', user.uid), { vendorIntroComplete: true }).catch(console.error);
+                    updateDoc(doc(db, profileCollection, user.uid), { vendorIntroComplete: true }).catch(console.error);
                   }}
                   className="text-blue-600 text-xs font-bold px-3 py-1.5 rounded-xl bg-blue-100 active:scale-95 transition-transform"
                 >View</button>
@@ -17503,9 +17511,10 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
           <AnnouncementModal
             announcement={pendingVendorAnnouncement}
             onDismiss={() => {
-              updateDoc(doc(db, 'users', user.uid), {
+              updateDoc(doc(db, profileCollection, user.uid), {
                 seenAnnouncementIds: arrayUnion(pendingVendorAnnouncement.id),
               }).catch(console.error);
+              vendorSeenAnnouncementIdsRef.current = [...vendorSeenAnnouncementIdsRef.current, pendingVendorAnnouncement.id];
               setPendingVendorAnnouncement(null);
             }}
           />
