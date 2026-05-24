@@ -4913,6 +4913,7 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
   const [extendDays, setExtendDays] = useState('30');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [vendorIntroMap, setVendorIntroMap] = useState<Record<string, boolean>>({});
+  const [vendorCollectionMap, setVendorCollectionMap] = useState<Record<string, 'users' | 'vendors'>>({});
 
   const handleToggleSub = async (store: StoreProfile) => {
     setTogglingId(store.id);
@@ -4993,12 +4994,22 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     const ownerUids = [...new Set(stores.map(s => (s as any).ownerUid).filter(Boolean))];
     if (ownerUids.length === 0) return;
-    Promise.all(ownerUids.map(uid =>
-      getDoc(doc(db, 'users', uid)).then(s => s.exists() ? s : getDoc(doc(db, 'vendors', uid)))
-    )).then(snaps => {
-      const map: Record<string, boolean> = {};
-      snaps.forEach(s => { if (s.exists()) map[s.id] = !!s.data()?.vendorIntroComplete; });
-      setVendorIntroMap(map);
+    Promise.all(ownerUids.map(async uid => {
+      const userSnap = await getDoc(doc(db, 'users', uid));
+      if (userSnap.exists()) return { snap: userSnap, col: 'users' as const };
+      const vendorSnap = await getDoc(doc(db, 'vendors', uid));
+      return { snap: vendorSnap, col: 'vendors' as const };
+    })).then(results => {
+      const introMap: Record<string, boolean> = {};
+      const colMap: Record<string, 'users' | 'vendors'> = {};
+      results.forEach(({ snap, col }) => {
+        if (snap.exists()) {
+          introMap[snap.id] = !!snap.data()?.vendorIntroComplete;
+          colMap[snap.id] = col;
+        }
+      });
+      setVendorIntroMap(introMap);
+      setVendorCollectionMap(colMap);
     }).catch(console.error);
   }, [stores.map(s => (s as any).ownerUid).join(',')]);
 
@@ -5199,7 +5210,7 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
                         </button>
                       </div>
 
-                      {/* Guide read indicator */}
+                      {/* Guide read indicator + toggle */}
                       {(store as any).ownerUid && vendorIntroMap[(store as any).ownerUid] !== undefined && (
                         <div className="flex items-center justify-between">
                           <div>
@@ -5208,12 +5219,20 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
                               {vendorIntroMap[(store as any).ownerUid] ? 'Viewed by vendor' : 'Not yet viewed'}
                             </p>
                           </div>
-                          <span className={cn('text-[9px] font-bold px-2 py-1 rounded-full',
-                            vendorIntroMap[(store as any).ownerUid]
-                              ? 'bg-emerald-50 text-emerald-600'
-                              : 'bg-amber-50 text-amber-600')}>
-                            {vendorIntroMap[(store as any).ownerUid] ? '✓ Read' : 'Pending'}
-                          </span>
+                          <button
+                            onClick={async () => {
+                              const uid = (store as any).ownerUid;
+                              const col = vendorCollectionMap[uid] ?? 'vendors';
+                              const next = !vendorIntroMap[uid];
+                              await updateDoc(doc(db, col, uid), { vendorIntroComplete: next }).catch(console.error);
+                              setVendorIntroMap(m => ({ ...m, [uid]: next }));
+                            }}
+                            className={cn('text-[9px] font-bold px-2 py-1 rounded-full active:scale-95 transition-transform',
+                              vendorIntroMap[(store as any).ownerUid]
+                                ? 'bg-emerald-50 text-emerald-600'
+                                : 'bg-amber-50 text-amber-600')}>
+                            {vendorIntroMap[(store as any).ownerUid] ? '✓ Read — tap to reset' : 'Pending — tap to mark read'}
+                          </button>
                         </div>
                       )}
 
