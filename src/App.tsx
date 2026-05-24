@@ -26515,17 +26515,25 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
 
       {/* Store Offers section */}
       {storeOffers.length > 0 && (() => {
+        const STORE_CAT_COLOR: Record<string, string> = {
+          Food:    '#ef4444',
+          Barber:  '#3b82f6',
+          Gym:     '#22c55e',
+          Beauty:  '#ec4899',
+          Retail:  '#111827',
+        };
         const STORE_CAT_ICON: Record<string, React.ReactNode> = {
-          Food:    <Utensils  size={13} className="text-orange-500" />,
-          Beauty:  <Sparkles  size={13} className="text-pink-500"   />,
-          Barber:  <Scissors  size={13} className="text-blue-500"   />,
-          Gym:     <Dumbbell  size={13} className="text-red-500"    />,
-          Retail:  <ShoppingBag size={13} className="text-emerald-500" />,
+          Food:    <Utensils  size={13} className="text-white" />,
+          Beauty:  <Sparkles  size={13} className="text-white" />,
+          Barber:  <Scissors  size={13} className="text-white" />,
+          Gym:     <Dumbbell  size={13} className="text-white" />,
+          Retail:  <ShoppingBag size={13} className="text-white" />,
         };
         const allCats = [...new Set(offersByDist.map(o => o.storeCategory || o.category || 'Other'))].sort();
         const cats = allCats.map(label => ({
           label,
-          icon: STORE_CAT_ICON[label] ?? <Ticket size={13} className="text-violet-500" />,
+          icon: STORE_CAT_ICON[label] ?? <Ticket size={13} className="text-white" />,
+          color: STORE_CAT_COLOR[label] ?? '#7c3aed',
           offers: offersByDist.filter(o => (o.storeCategory || o.category || 'Other') === label),
         })).filter(c => c.offers.length > 0);
         return (
@@ -26537,8 +26545,10 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
             {cats.map(cat => (
               <div key={cat.label}>
                 <div className="flex items-center gap-1.5 px-1 mb-2">
-                  {cat.icon}
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/50">{cat.label}</p>
+                  <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest text-white"
+                    style={{ background: cat.color }}>
+                    {cat.icon}{cat.label}
+                  </span>
                 </div>
                 <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                   {cat.offers.map((offer, i) => (
