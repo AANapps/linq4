@@ -15216,14 +15216,17 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/aFa5kF5JZh193yT6OEd7q00';
   const NFC_ORDER_STRIPE_LINK = 'https://buy.stripe.com/PLACEHOLDER_NFC_LINK';
 
-  // Show vendor onboarding once per session — only checks on first load, not on every profile update
+  // Show vendor onboarding exactly once — mark complete immediately on open so closing the
+  // browser mid-guide still prevents it showing again. vendorIntroComplete is NOT in deps
+  // to avoid the Firestore update triggering a re-run that would close the modal.
   useEffect(() => {
     if (!profile) return;
     if (!profile.vendorIntroComplete) {
       setVendorWelcomeStep(0);
       setShowVendorWelcome(true);
+      updateDoc(doc(db, 'users', user.uid), { vendorIntroComplete: true }).catch(console.error);
     }
-  }, [profile?.uid]); // intentionally NOT watching vendorIntroComplete — avoids closing the modal mid-view
+  }, [profile?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Show active vendor-targeted announcements once per vendor
   useEffect(() => {
@@ -17512,7 +17515,6 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
               setVendorWelcomeStep(s => s + 1);
             }}
             onDone={() => {
-              updateDoc(doc(db, 'users', user.uid), { vendorIntroComplete: true }).catch(console.error);
               setShowVendorWelcome(false);
             }}
           />
