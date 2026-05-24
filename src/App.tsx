@@ -529,6 +529,7 @@ interface Announcement {
   body: string;
   imageUrl?: string;
   active: boolean;
+  target?: 'all' | 'users' | 'vendors';
   createdAt?: any;
 }
 
@@ -4910,6 +4911,7 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
   const [extendingId, setExtendingId] = useState<string | null>(null);
   const [extendDays, setExtendDays] = useState('30');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [vendorIntroMap, setVendorIntroMap] = useState<Record<string, boolean>>({});
 
   const handleToggleSub = async (store: StoreProfile) => {
     setTogglingId(store.id);
@@ -4987,6 +4989,16 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
     , () => {});
   }, []);
 
+  useEffect(() => {
+    const ownerUids = [...new Set(stores.map(s => (s as any).ownerUid).filter(Boolean))];
+    if (ownerUids.length === 0) return;
+    Promise.all(ownerUids.map(uid => getDoc(doc(db, 'users', uid)))).then(snaps => {
+      const map: Record<string, boolean> = {};
+      snaps.forEach(s => { if (s.exists()) map[s.id] = !!s.data()?.vendorIntroComplete; });
+      setVendorIntroMap(map);
+    }).catch(console.error);
+  }, [stores.map(s => (s as any).ownerUid).join(',')]);
+
   const filtered = search.trim()
     ? stores.filter(s => s.name?.toLowerCase().includes(search.toLowerCase()))
     : stores;
@@ -5059,6 +5071,14 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
                     )}
                     <span className="text-[10px] text-brand-navy/50">{store.category}</span>
                     <span className="text-[9px] font-bold text-brand-navy/40 uppercase tracking-wide">{store.scanMethod === 'qr' ? 'QR' : 'NFC'}</span>
+                    {(store as any).ownerUid && vendorIntroMap[(store as any).ownerUid] !== undefined && (
+                      <span className={cn('text-[9px] font-bold px-1.5 py-0.5 rounded-full',
+                        vendorIntroMap[(store as any).ownerUid]
+                          ? 'bg-emerald-50 text-emerald-600'
+                          : 'bg-brand-navy/6 text-brand-navy/35')}>
+                        {vendorIntroMap[(store as any).ownerUid] ? 'Guide ✓' : 'Guide pending'}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <ChevronDown
@@ -6190,7 +6210,7 @@ function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColo
 
 function AnnouncementsAdminPanel({ onClose }: { onClose: () => void }) {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [form, setForm] = useState({ title: '', body: '' });
+  const [form, setForm] = useState({ title: '', body: '', target: 'all' as 'all' | 'users' | 'vendors' });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -6227,9 +6247,10 @@ function AnnouncementsAdminPanel({ onClose }: { onClose: () => void }) {
         body: form.body.trim(),
         imageUrl,
         active: true,
+        target: form.target,
         createdAt: serverTimestamp(),
       });
-      setForm({ title: '', body: '' });
+      setForm({ title: '', body: '', target: 'all' });
       setImageFile(null);
       setImagePreview(null);
     } finally {
@@ -6287,6 +6308,20 @@ function AnnouncementsAdminPanel({ onClose }: { onClose: () => void }) {
                 value={form.body}
                 onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
               />
+              {/* Target audience */}
+              <div>
+                <p className="text-xs font-bold text-brand-navy mb-2">Show to</p>
+                <div className="flex gap-2">
+                  {(['all', 'users', 'vendors'] as const).map(t => (
+                    <button key={t} onClick={() => setForm(f => ({ ...f, target: t }))}
+                      className={cn('flex-1 py-2 rounded-xl text-xs font-bold capitalize transition-all border',
+                        form.target === t ? 'bg-brand-navy text-white border-brand-navy' : 'bg-brand-bg text-brand-navy/50 border-brand-navy/15')}>
+                      {t === 'all' ? 'Everyone' : t === 'users' ? 'Users' : 'Vendors'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Image picker */}
               <div
                 className="border-2 border-dashed border-brand-navy/15 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 cursor-pointer active:bg-brand-navy/5 transition-colors"
@@ -6327,8 +6362,13 @@ function AnnouncementsAdminPanel({ onClose }: { onClose: () => void }) {
                   <div className="p-4 space-y-2">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-brand-navy text-sm">{ann.title}</p>
-                        <p className="text-xs text-brand-navy/60 mt-0.5 line-clamp-2">{ann.body}</p>
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <p className="font-bold text-brand-navy text-sm">{ann.title}</p>
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-brand-navy/8 text-brand-navy/50 capitalize">
+                            {ann.target === 'vendors' ? 'Vendors only' : ann.target === 'users' ? 'Users only' : 'Everyone'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-brand-navy/60 line-clamp-2">{ann.body}</p>
                       </div>
                       <button
                         onClick={() => deleteAnnouncement(ann.id)}
@@ -10386,7 +10426,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       const seen = new Set(profile.seenAnnouncementIds ?? []);
       const unseen = snap.docs
         .map(d => ({ id: d.id, ...d.data() } as Announcement))
-        .find(a => !seen.has(a.id));
+        .find(a => !seen.has(a.id) && a.target !== 'vendors');
       setPendingAnnouncement(unseen ?? null);
     });
   }, [profile?.uid]);
@@ -15036,6 +15076,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   const [tickNow, setTickNow] = useState(Date.now());
   const [showVendorWelcome, setShowVendorWelcome] = useState(false);
   const [vendorWelcomeStep, setVendorWelcomeStep] = useState(0);
+  const [pendingVendorAnnouncement, setPendingVendorAnnouncement] = useState<Announcement | null>(null);
   const [showNFCOrder, setShowNFCOrder] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [togglingCard, setTogglingCard] = useState(false);
@@ -15107,16 +15148,30 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
   const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/aFa5kF5JZh193yT6OEd7q00';
   const NFC_ORDER_STRIPE_LINK = 'https://buy.stripe.com/PLACEHOLDER_NFC_LINK';
 
-  // Show vendor onboarding once per vendor
+  // Show vendor onboarding once per vendor — mark complete the moment it opens
   useEffect(() => {
     if (!profile) return;
     if (!profile.vendorIntroComplete) {
       setVendorWelcomeStep(0);
       setShowVendorWelcome(true);
+      updateDoc(doc(db, 'users', user.uid), { vendorIntroComplete: true }).catch(console.error);
     } else {
       setShowVendorWelcome(false);
     }
   }, [profile?.uid, profile?.vendorIntroComplete]);
+
+  // Show active vendor-targeted announcements once per vendor
+  useEffect(() => {
+    if (!profile) return;
+    const q = query(collection(db, 'announcements'), where('active', '==', true));
+    return onSnapshot(q, snap => {
+      const seen = new Set(profile.seenAnnouncementIds ?? []);
+      const unseen = snap.docs
+        .map(d => ({ id: d.id, ...d.data() } as Announcement))
+        .find(a => !seen.has(a.id) && (a.target === 'vendors' || a.target === 'all'));
+      setPendingVendorAnnouncement(unseen ?? null);
+    });
+  }, [profile?.uid]);
 
   const handleSubscribe = () => {
     if (!store?.id) return;
@@ -15978,13 +16033,12 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
               </div>
               <div className="flex gap-2 shrink-0">
                 <button
-                  onClick={() => { setVendorWelcomeStep(0); setShowVendorWelcome(true); }}
+                  onClick={() => {
+                    setVendorWelcomeStep(0); setShowVendorWelcome(true);
+                    updateDoc(doc(db, 'users', user.uid), { vendorIntroComplete: true }).catch(console.error);
+                  }}
                   className="text-blue-600 text-xs font-bold px-3 py-1.5 rounded-xl bg-blue-100 active:scale-95 transition-transform"
                 >View</button>
-                <button
-                  onClick={() => updateDoc(doc(db, 'users', user.uid), { vendorIntroComplete: true }).catch(console.error)}
-                  className="text-blue-400 text-xs font-bold px-3 py-1.5 rounded-xl bg-blue-100/60 active:scale-95 transition-transform"
-                >Viewed ✓</button>
               </div>
             </div>
           )}
@@ -17392,9 +17446,21 @@ function VendorApp({ activeTab, setActiveTab, profile, user, onViewUser, notific
               confetti({ particleCount: 50, spread: 65, startVelocity: 25, gravity: 0.9, scalar: 0.85, origin: { y: 0.7 }, zIndex: 9999, colors: ['#FFD700','#0F172A','#60A5FA','#4ADE80'] });
               setVendorWelcomeStep(s => s + 1);
             }}
-            onDone={() => {
-              updateDoc(doc(db, 'users', user.uid), { vendorIntroComplete: true }).catch(console.error);
-              setShowVendorWelcome(false);
+            onDone={() => setShowVendorWelcome(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Vendor-targeted announcement popup */}
+      <AnimatePresence>
+        {pendingVendorAnnouncement && !showVendorWelcome && (
+          <AnnouncementModal
+            announcement={pendingVendorAnnouncement}
+            onDismiss={() => {
+              updateDoc(doc(db, 'users', user.uid), {
+                seenAnnouncementIds: arrayUnion(pendingVendorAnnouncement.id),
+              }).catch(console.error);
+              setPendingVendorAnnouncement(null);
             }}
           />
         )}
@@ -23982,7 +24048,11 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           {(() => {
             const universal = (stickerData?.stickers ?? [])
               .filter(s => !!s.cardDefId && !!s.cardImageUrl && !s.challengeId && (stickerData?.revealedIds ?? []).includes(s.id))
-              .sort((a, b) => new Date(b.earnedAt).getTime() - new Date(a.earnedAt).getTime());
+              .sort((a, b) => {
+                const tierDiff = STICKER_ORDER.indexOf(b.tier) - STICKER_ORDER.indexOf(a.tier);
+                if (tierDiff !== 0) return tierDiff;
+                return new Date(b.earnedAt).getTime() - new Date(a.earnedAt).getTime();
+              });
             if (universal.length === 0) return (
               <p className="text-[10px] text-brand-navy/35 py-1">No cards yet</p>
             );
@@ -30873,7 +30943,11 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
                 {(() => {
                   const universal = pubStickers
                     .filter(s => !!s.cardDefId && !!s.cardImageUrl && !s.challengeId && pubRevealedIds.includes(s.id))
-                    .sort((a, b) => new Date(b.earnedAt).getTime() - new Date(a.earnedAt).getTime());
+                    .sort((a, b) => {
+                      const tierDiff = STICKER_ORDER.indexOf(b.tier) - STICKER_ORDER.indexOf(a.tier);
+                      if (tierDiff !== 0) return tierDiff;
+                      return new Date(b.earnedAt).getTime() - new Date(a.earnedAt).getTime();
+                    });
                   if (universal.length === 0) return <p className="text-[10px] text-brand-navy/35 py-1">No cards yet</p>;
                   return (
                     <div className="flex gap-2 overflow-x-auto scrollbar-hide">
