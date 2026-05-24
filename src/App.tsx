@@ -7667,27 +7667,35 @@ function FraudDetectionPanel({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<'distance' | 'rapid'>('distance');
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [distanceInput, setDistanceInput] = useState('1');
-  const [appliedKm, setAppliedKm] = useState(1);
+  const [distanceInput, setDistanceInput] = useState('');
+  const [unit, setUnit] = useState<'km' | 'miles'>('km');
+  const [appliedThreshold, setAppliedThreshold] = useState<number | null>(null);
+
+  const toKm = (v: number) => unit === 'miles' ? v * 1.60934 : v;
+  const fromKm = (km: number) => unit === 'miles' ? km / 1.60934 : km;
 
   const doSearch = () => {
-    const km = parseFloat(distanceInput);
-    if (!isNaN(km) && km >= 0) setAppliedKm(km);
+    const val = parseFloat(distanceInput);
+    if (!isNaN(val) && val >= 0) setAppliedThreshold(toKm(val));
+    else setAppliedThreshold(null);
   };
 
   useEffect(() => {
     setLoading(true);
-    getDocs(
-      query(collection(db, 'scan_logs'),
-        orderBy('scannedAt', 'desc'),
-        limit(500))
-    ).then(snap => {
-      setLogs(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    }).catch(console.error).finally(() => setLoading(false));
+    getDocs(query(collection(db, 'scan_logs'), limit(500)))
+      .then(snap => {
+        const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        all.sort((a: any, b: any) => (b.scannedAt?.toMillis?.() ?? 0) - (a.scannedAt?.toMillis?.() ?? 0));
+        setLogs(all);
+      }).catch(console.error).finally(() => setLoading(false));
   }, []);
 
-  // Tab 1: scans beyond the applied km threshold
-  const farScans = logs.filter(l => l.distanceKm != null && l.distanceKm > appliedKm);
+  // Tab 1: all scans with distance data, optionally filtered by threshold
+  const distanceLogs = logs
+    .filter(l => l.distanceKm != null)
+    .filter(l => appliedThreshold === null || l.distanceKm > appliedThreshold)
+    .sort((a: any, b: any) => (b.distanceKm ?? 0) - (a.distanceKm ?? 0));
+  const farScans = distanceLogs; // alias for tab count
 
   // Tab 2: users with 5+ scans within any 5-min window
   const rapidUsers: { userId: string; userName: string; scans: any[] }[] = [];
@@ -7747,26 +7755,37 @@ function FraudDetectionPanel({ onClose }: { onClose: () => void }) {
             ))}
           </div>
           {tab === 'distance' && (
-            <div className="flex items-center gap-2 mt-3">
-              <div className="flex-1 flex items-center bg-white border border-black/10 rounded-xl overflow-hidden">
-                <input
-                  type="number"
-                  min="0"
-                  step="0.1"
-                  value={distanceInput}
-                  onChange={e => setDistanceInput(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && doSearch()}
-                  className="flex-1 px-3 py-2 text-sm text-brand-navy outline-none min-w-0"
-                  placeholder="Distance"
-                />
-                <span className="pr-3 text-xs text-brand-navy/40 font-bold">km</span>
+            <div className="flex flex-col gap-2 mt-3">
+              <div className="flex gap-1 p-1 bg-brand-navy/8 rounded-xl">
+                {(['km', 'miles'] as const).map(u => (
+                  <button key={u} onClick={() => { setUnit(u); setAppliedThreshold(null); setDistanceInput(''); }}
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${unit === u ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/40'}`}>
+                    {u}
+                  </button>
+                ))}
               </div>
-              <button
-                onClick={doSearch}
-                className="px-4 py-2 rounded-xl bg-brand-navy text-white text-xs font-bold active:scale-95 transition-transform shrink-0"
-              >
-                Search
-              </button>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 flex items-center bg-white border border-black/10 rounded-xl overflow-hidden">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={distanceInput}
+                    onChange={e => setDistanceInput(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && doSearch()}
+                    className="flex-1 px-3 py-2 text-sm text-brand-navy outline-none min-w-0"
+                    placeholder={`Filter beyond distance (${unit})`}
+                  />
+                  {appliedThreshold !== null && (
+                    <button onClick={() => { setAppliedThreshold(null); setDistanceInput(''); }}
+                      className="pr-3 text-brand-navy/30 text-xs">✕</button>
+                  )}
+                </div>
+                <button onClick={doSearch}
+                  className="px-4 py-2 rounded-xl bg-brand-navy text-white text-xs font-bold active:scale-95 transition-transform shrink-0">
+                  Search
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -7777,33 +7796,41 @@ function FraudDetectionPanel({ onClose }: { onClose: () => void }) {
               <Loader2 size={24} className="animate-spin text-brand-navy/40" />
             </div>
           ) : tab === 'distance' ? (
-            farScans.length === 0 ? (
+            distanceLogs.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 gap-3">
                 <ShieldAlert size={32} className="text-brand-navy/20" />
-                <p className="text-sm text-brand-navy/40 text-center">No scans beyond {appliedKm}km from store</p>
+                <p className="text-sm text-brand-navy/40 text-center">
+                  {logs.length === 0 ? 'No scan logs yet' : appliedThreshold !== null ? `No scans beyond ${distanceInput} ${unit}` : 'No scans with location data'}
+                </p>
               </div>
             ) : (
               <div className="flex flex-col gap-3">
                 <p className="text-[10px] text-brand-navy/40 uppercase tracking-widest font-bold px-1">
-                  Scanned &gt;{appliedKm}km from store · {farScans.length} flag{farScans.length !== 1 ? 's' : ''}
+                  {appliedThreshold !== null
+                    ? `>${distanceInput} ${unit} from store · ${distanceLogs.length} result${distanceLogs.length !== 1 ? 's' : ''}`
+                    : `All scans with location · ${distanceLogs.length} total`}
                 </p>
-                {farScans.map((log, i) => (
-                  <div key={log.id ?? i} className="bg-white rounded-2xl p-4 border border-red-100 shadow-sm">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold text-brand-navy truncate">{log.userName || 'Unknown user'}</p>
-                        <p className="text-xs text-brand-navy/60 truncate">{log.storeName}</p>
+                {distanceLogs.map((log, i) => {
+                  const distDisplay = fromKm(log.distanceKm).toFixed(2);
+                  const isFlagged = appliedThreshold !== null && log.distanceKm > appliedThreshold;
+                  return (
+                    <div key={log.id ?? i} className={`bg-white rounded-2xl p-4 shadow-sm border ${isFlagged ? 'border-red-100' : 'border-black/5'}`}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-brand-navy truncate">{log.userName || 'Unknown user'}</p>
+                          <p className="text-xs text-brand-navy/60 truncate">{log.storeName}</p>
+                        </div>
+                        <span className={`shrink-0 text-[11px] font-black px-2 py-1 rounded-xl ${isFlagged ? 'bg-red-50 text-red-600' : 'bg-brand-navy/6 text-brand-navy/50'}`}>
+                          {distDisplay} {unit}
+                        </span>
                       </div>
-                      <span className="shrink-0 bg-red-50 text-red-600 text-[11px] font-black px-2 py-1 rounded-xl">
-                        {log.distanceKm.toFixed(1)} km
-                      </span>
+                      <div className="flex items-center gap-1 mt-2">
+                        <MapPin size={11} className="text-brand-navy/30 shrink-0" />
+                        <p className="text-[10px] text-brand-navy/40">{fmt(log.scannedAt)}</p>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1 mt-2">
-                      <MapPin size={11} className="text-brand-navy/30 shrink-0" />
-                      <p className="text-[10px] text-brand-navy/40">{fmt(log.scannedAt)}</p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )
           ) : (
