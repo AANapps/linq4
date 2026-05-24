@@ -5196,6 +5196,24 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
                         </button>
                       </div>
 
+                      {/* Guide read indicator */}
+                      {(store as any).ownerUid && vendorIntroMap[(store as any).ownerUid] !== undefined && (
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-bold text-brand-navy">Starter guide</p>
+                            <p className="text-[10px] text-brand-navy/50">
+                              {vendorIntroMap[(store as any).ownerUid] ? 'Viewed by vendor' : 'Not yet viewed'}
+                            </p>
+                          </div>
+                          <span className={cn('text-[9px] font-bold px-2 py-1 rounded-full',
+                            vendorIntroMap[(store as any).ownerUid]
+                              ? 'bg-emerald-50 text-emerald-600'
+                              : 'bg-amber-50 text-amber-600')}>
+                            {vendorIntroMap[(store as any).ownerUid] ? '✓ Read' : 'Pending'}
+                          </span>
+                        </div>
+                      )}
+
                       {/* Action buttons */}
                       <div className="flex gap-2 pt-1">
                         <button
@@ -12018,9 +12036,15 @@ function VendorWelcomeSlideVisual({ step }: { step: number }) {
   );
 }
 
-function VendorWelcomeModal({ step, onNext, onDone }: { step: number; onNext: () => void; onDone: () => void }) {
-  const slide = VENDOR_WELCOME_SLIDES[step];
-  const isLast = step === VENDOR_WELCOME_SLIDES.length - 1;
+function SlideWelcomeModal({ slides, step, onNext, onDone, renderVisual }: {
+  slides: Array<{ title: string; body: React.ReactNode }>;
+  step: number;
+  onNext: () => void;
+  onDone: () => void;
+  renderVisual: (step: number) => React.ReactNode;
+}) {
+  const slide = slides[step];
+  const isLast = step === slides.length - 1;
   if (!slide) return null;
   return (
     <motion.div
@@ -12033,7 +12057,7 @@ function VendorWelcomeModal({ step, onNext, onDone }: { step: number; onNext: ()
         className="w-full max-w-md bg-white rounded-[2.5rem] overflow-hidden shadow-2xl"
       >
         <div className="flex gap-1 px-6 pt-5">
-          {VENDOR_WELCOME_SLIDES.map((_, i) => (
+          {slides.map((_, i) => (
             <div key={i} className="flex-1 h-1 rounded-full overflow-hidden bg-brand-navy/10">
               <motion.div
                 className="h-full rounded-full bg-brand-navy"
@@ -12049,9 +12073,9 @@ function VendorWelcomeModal({ step, onNext, onDone }: { step: number; onNext: ()
             key={step}
             initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }}
             transition={{ duration: 0.28 }}
-            className="px-8 pt-7 pb-6 text-center space-y-4"
+            className="px-8 pt-8 pb-6 text-center space-y-4"
           >
-            <VendorWelcomeSlideVisual step={step} />
+            {renderVisual(step)}
             <div className="space-y-2">
               <h2 className="font-display text-2xl font-bold text-brand-navy">{slide.title}</h2>
               <p className="text-sm text-brand-navy/70 leading-relaxed">{slide.body}</p>
@@ -12073,6 +12097,18 @@ function VendorWelcomeModal({ step, onNext, onDone }: { step: number; onNext: ()
         </div>
       </motion.div>
     </motion.div>
+  );
+}
+
+function VendorWelcomeModal({ step, onNext, onDone }: { step: number; onNext: () => void; onDone: () => void }) {
+  return (
+    <SlideWelcomeModal
+      slides={VENDOR_WELCOME_SLIDES}
+      step={step}
+      onNext={onNext}
+      onDone={onDone}
+      renderVisual={s => <VendorWelcomeSlideVisual step={s} />}
+    />
   );
 }
 
@@ -12235,75 +12271,15 @@ function WelcomeSlideVisual({ step }: { step: number }) {
   );
 }
 
-function WelcomeModal({ uid, step, onNext, onDone }: { uid: string; step: number; onNext: () => void; onDone: () => void }) {
-  const slide = WELCOME_SLIDES[step];
-  const isLast = step === WELCOME_SLIDES.length - 1;
-  if (!slide) return null;
+function WelcomeModal({ uid: _uid, step, onNext, onDone }: { uid: string; step: number; onNext: () => void; onDone: () => void }) {
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[200] flex items-end justify-center bg-black/60 backdrop-blur-sm px-4 pb-8"
-    >
-      <motion.div
-        initial={{ y: 80, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: 80, opacity: 0 }}
-        transition={{ type: 'spring', stiffness: 380, damping: 34 }}
-        className="w-full max-w-md bg-white rounded-[2.5rem] overflow-hidden shadow-2xl"
-      >
-        {/* Progress bar */}
-        <div className="flex gap-1 px-6 pt-5">
-          {WELCOME_SLIDES.map((_, i) => (
-            <div key={i} className="flex-1 h-1 rounded-full overflow-hidden bg-brand-navy/10">
-              <motion.div
-                className="h-full rounded-full bg-brand-navy"
-                initial={{ width: i < step ? '100%' : '0%' }}
-                animate={{ width: i < step ? '100%' : i === step ? '100%' : '0%' }}
-                transition={{ duration: 0.35 }}
-              />
-            </div>
-          ))}
-        </div>
-
-        {/* Slide content */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={step}
-            initial={{ opacity: 0, x: 40 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -40 }}
-            transition={{ duration: 0.28 }}
-            className="px-8 pt-8 pb-6 text-center space-y-4"
-          >
-            <WelcomeSlideVisual step={step} />
-            <div className="space-y-2">
-              <h2 className="font-display text-2xl font-bold text-brand-navy">{slide.title}</h2>
-              <p className="text-sm text-brand-navy/70 leading-relaxed">{slide.body}</p>
-            </div>
-          </motion.div>
-        </AnimatePresence>
-
-        {/* Actions */}
-        <div className="px-8 pb-8 space-y-3">
-          <button
-            onClick={isLast ? onDone : onNext}
-            className="w-full py-4 rounded-2xl bg-brand-navy text-white font-black text-sm active:scale-[0.97] transition-transform"
-          >
-            {isLast ? "Let's go!" : 'Next'}
-          </button>
-          {!isLast && (
-            <button
-              onClick={onDone}
-              className="w-full py-2 text-xs text-brand-navy/35 font-medium"
-            >
-              Skip
-            </button>
-          )}
-        </div>
-      </motion.div>
-    </motion.div>
+    <SlideWelcomeModal
+      slides={WELCOME_SLIDES}
+      step={step}
+      onNext={onNext}
+      onDone={onDone}
+      renderVisual={s => <WelcomeSlideVisual step={s} />}
+    />
   );
 }
 
@@ -24110,7 +24086,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         {/* Sticker slider — 75% */}
         <div className="bg-white/70 rounded-2xl px-3 pt-2.5 pb-3 shadow-sm min-w-0" style={{ flex: '3 1 0%' }}>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/50">Stickers</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75">Stickers</span>
             <button onClick={() => stickerData && setShowStickerModal(true)} className="text-blue-500 active:opacity-70">
               <Eye size={14} />
             </button>
@@ -24142,7 +24118,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         {/* Badge — 25% */}
         <div className="bg-white/70 rounded-2xl px-3 pt-2.5 pb-3 shadow-sm min-w-0 flex flex-col" style={{ flex: '1 1 0%' }}>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/50">Badges</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75">Badges</span>
             <button onClick={() => setBadgesOpen(true)} className="text-blue-500 active:opacity-70">
               <Eye size={14} />
             </button>
@@ -31005,7 +30981,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
               {/* Sticker slider — 75% */}
               <div className="bg-white/70 rounded-2xl px-3 pt-2.5 pb-3 shadow-sm min-w-0" style={{ flex: '3 1 0%' }}>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/50">Stickers</span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75">Stickers</span>
                   <button onClick={() => setPubStickerOpen(true)} className="text-blue-500 active:opacity-70">
                     <Eye size={14} />
                   </button>
@@ -31035,7 +31011,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
               {/* Badge — 25% */}
               <div className="bg-white/70 rounded-2xl px-3 pt-2.5 pb-3 shadow-sm min-w-0 flex flex-col" style={{ flex: '1 1 0%' }}>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/50">Badges</span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75">Badges</span>
                   <button onClick={() => setPubBadgesOpen(true)} className="text-blue-500 active:opacity-70">
                     <Eye size={14} />
                   </button>
