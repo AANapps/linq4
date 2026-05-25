@@ -92,6 +92,7 @@ import {
   X,
   Archive,
   Clock,
+  Printer,
   TrendingUp,
   Users,
   Calendar,
@@ -1191,9 +1192,11 @@ export default function App() {
   };
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [pendingNFCStoreId, setPendingNFCStoreId] = useState<string | null>(null);
+  const [pendingCardId, setPendingCardId] = useState<string | null>(null);
+  const [scannedPhysicalCard, setScannedPhysicalCard] = useState<{ sticker: CollectibleSticker; alreadyClaimed: boolean } | null>(null);
   const [userCards, setUserCards] = useState<Card[]>([]);
   const [showSettings, setShowSettings] = useState(false);
-  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges' | 'stores' | 'users' | 'posts' | 'offers' | 'linqle' | 'daily-vote' | 'cards' | 'banners' | 'ui-colors' | 'announcements' | 'leaderboard' | 'fraud'>(null);
+  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges' | 'stores' | 'users' | 'posts' | 'offers' | 'linqle' | 'daily-vote' | 'cards' | 'banners' | 'ui-colors' | 'announcements' | 'leaderboard' | 'fraud' | 'physical-cards'>(null);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -1423,6 +1426,31 @@ export default function App() {
       setPendingNFCStoreId(stored);
     }
   }, [user?.uid, profile?.role]);
+
+  // Handle ?card=PHYSICAL_CARD_ID URL (QR code on physical cards)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const cardId = params.get('card');
+    if (!cardId) return;
+    window.history.replaceState({}, document.title, window.location.pathname);
+    sessionStorage.setItem('pendingCardId', cardId);
+    setPendingCardId(cardId);
+  }, []);
+
+  useEffect(() => {
+    if (!user || !profile || !['consumer','admin'].includes(profile.role)) return;
+    const stored = sessionStorage.getItem('pendingCardId');
+    if (stored) { sessionStorage.removeItem('pendingCardId'); setPendingCardId(stored); }
+  }, [user?.uid, profile?.role]);
+
+  useEffect(() => {
+    if (!pendingCardId || !user) return;
+    setPendingCardId(null);
+    processPhysicalCardScan(pendingCardId, user).then(result => {
+      if ('error' in result) return;
+      setScannedPhysicalCard(result);
+    });
+  }, [pendingCardId, user?.uid]);
 
   const handleLogin = async (): Promise<string | null> => {
     const provider = new GoogleAuthProvider();
@@ -1852,6 +1880,7 @@ export default function App() {
             onOpenLinqle={() => setAdminView('linqle')}
             onOpenDailyVote={() => setAdminView('daily-vote')}
             onOpenCards={() => setAdminView('cards')}
+            onOpenPhysicalCards={() => setAdminView('physical-cards')}
             onOpenBanners={() => setAdminView('banners')}
             onOpenUiColors={() => setAdminView('ui-colors')}
             onOpenAppEdit={() => setAdminView('app-edit')}
@@ -1908,6 +1937,20 @@ export default function App() {
         )}
         {adminView === 'leaderboard' && (
           <AdminLeaderboardPanel onClose={() => setAdminView('menu')} />
+        )}
+        {adminView === 'physical-cards' && (
+          <PhysicalCardsAdminPanel onClose={() => setAdminView('menu')} />
+        )}
+      </AnimatePresence>
+
+      {/* Physical Card Reveal */}
+      <AnimatePresence>
+        {scannedPhysicalCard && (
+          <PhysicalCardRevealModal
+            sticker={scannedPhysicalCard.sticker}
+            alreadyClaimed={scannedPhysicalCard.alreadyClaimed}
+            onClose={() => setScannedPhysicalCard(null)}
+          />
         )}
       </AnimatePresence>
 
@@ -4218,6 +4261,51 @@ function ChallengeRedeemModal({ challenge, entry, userName, uid, onClose }: {
   );
 }
 
+function PhysicalCardRevealModal({ sticker, alreadyClaimed, onClose }: { sticker: CollectibleSticker; alreadyClaimed: boolean; onClose: () => void }) {
+  const cfg = STICKER_CONFIG[sticker.tier];
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm px-6"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.8, opacity: 0 }}
+        transition={{ type: 'spring', stiffness: 320, damping: 22 }}
+        className="flex flex-col items-center gap-5"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Glow ring */}
+        <div className="relative flex items-center justify-center">
+          <div className="absolute w-56 h-56 rounded-full opacity-30 blur-2xl" style={{ background: cfg.solid }} />
+          <StickerCard sticker={sticker} isRevealed size="lg" />
+        </div>
+
+        <div className="text-center space-y-1">
+          {alreadyClaimed ? (
+            <>
+              <p className="text-white font-bold text-lg">Already in your collection!</p>
+              <p className="text-white/60 text-sm">{sticker.cardName}</p>
+            </>
+          ) : (
+            <>
+              <p className="text-white font-bold text-xl">Added to your collection!</p>
+              <p className="text-white/60 text-sm">{sticker.cardName} · <span className="capitalize" style={{ color: cfg.solid }}>{sticker.tier}</span></p>
+            </>
+          )}
+        </div>
+
+        <button
+          onClick={onClose}
+          className="px-8 py-3 rounded-2xl bg-white text-brand-navy font-bold text-sm active:scale-95 transition-transform"
+        >
+          {alreadyClaimed ? 'OK' : 'Nice!'}
+        </button>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: CollectibleSticker[]; cardId?: string | null; uid?: string | null; onClose: () => void }) {
   type PackPhase = 'sealed' | 'opening' | 'dealing' | 'reveal' | 'done';
   const [phase, setPhase] = useState<PackPhase>('sealed');
@@ -5859,7 +5947,204 @@ function AppEditPanel({ onClose, onLogoChange }: { onClose: () => void; onLogoCh
   );
 }
 
-function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts, onOpenOffers, onOpenLinqle, onOpenDailyVote, onOpenCards, onOpenBanners, onOpenUiColors, onOpenAppEdit, onOpenAnnouncements, onOpenLeaderboard, onOpenFraud }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void; onOpenOffers: () => void; onOpenLinqle: () => void; onOpenDailyVote: () => void; onOpenCards: () => void; onOpenBanners: () => void; onOpenUiColors: () => void; onOpenAppEdit: () => void; onOpenAnnouncements: () => void; onOpenLeaderboard: () => void; onOpenFraud: () => void }) {
+function PhysicalCardsAdminPanel({ onClose }: { onClose: () => void }) {
+  const [sets, setSets] = useState<CollectibleCardSet[]>([]);
+  const [cardDefs, setCardDefs] = useState<CollectibleCardDef[]>([]);
+  const [physicalCards, setPhysicalCards] = useState<any[]>([]);
+  const [selectedSetId, setSelectedSetId] = useState<string>('');
+  const [selectedDefId, setSelectedDefId] = useState<string>('');
+  const [generating, setGenerating] = useState(false);
+  const [generatedId, setGeneratedId] = useState<string | null>(null);
+  const [showQRFor, setShowQRFor] = useState<string | null>(null);
+
+  useEffect(() => {
+    const u1 = onSnapshot(collection(db, 'collectible_card_sets'), snap =>
+      setSets(snap.docs.map(d => ({ id: d.id, ...d.data() } as CollectibleCardSet))));
+    const u2 = onSnapshot(collection(db, 'collectible_cards'), snap =>
+      setCardDefs(snap.docs.map(d => ({ id: d.id, ...d.data() } as CollectibleCardDef))));
+    const u3 = onSnapshot(query(collection(db, 'physical_cards'), orderBy('createdAt', 'desc')), snap =>
+      setPhysicalCards(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    return () => { u1(); u2(); u3(); };
+  }, []);
+
+  const filteredDefs = selectedSetId ? cardDefs.filter(d => d.setId === selectedSetId) : cardDefs;
+  const selectedDef = cardDefs.find(d => d.id === selectedDefId) ?? null;
+  const selectedSet = sets.find(s => s.id === selectedSetId) ?? null;
+
+  const handleGenerate = async () => {
+    if (!selectedDef || !auth.currentUser) return;
+    setGenerating(true);
+    try {
+      const ref = doc(collection(db, 'physical_cards'));
+      await setDoc(ref, {
+        cardDefId: selectedDef.id,
+        cardDefName: selectedDef.name,
+        cardImageUrl: selectedDef.imageUrl,
+        tier: selectedDef.tier,
+        setId: selectedDef.setId || '',
+        setName: selectedSet?.name || '',
+        createdBy: auth.currentUser.uid,
+        createdAt: serverTimestamp(),
+      });
+      setGeneratedId(ref.id);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const qrValue = (id: string) => `${window.location.origin}/?card=${id}`;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex flex-col max-w-md mx-auto"
+    >
+      <div className="flex-1 overflow-y-auto bg-brand-bg">
+        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm px-5 pt-5 pb-4 border-b border-black/5 z-10">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-display text-2xl font-bold text-brand-navy">Physical Cards</h2>
+              <p className="text-xs text-brand-navy/80 mt-0.5">Generate QR codes for café cards</p>
+            </div>
+            <button onClick={onClose} className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm active:scale-95 transition-all">
+              <X size={18} className="text-brand-navy/75" />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-5 space-y-5">
+          {/* Generator */}
+          <div className="bg-white rounded-3xl border border-black/5 shadow-sm p-5 space-y-4">
+            <p className="font-bold text-sm text-brand-navy">Create a new card QR</p>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-[11px] font-bold uppercase tracking-widest text-brand-navy/50 mb-1 block">Card Set</label>
+                <select
+                  value={selectedSetId}
+                  onChange={e => { setSelectedSetId(e.target.value); setSelectedDefId(''); setGeneratedId(null); }}
+                  className="w-full px-4 py-3 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm font-medium focus:outline-none"
+                >
+                  <option value="">All sets</option>
+                  {sets.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold uppercase tracking-widest text-brand-navy/50 mb-1 block">Animal Card</label>
+                <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
+                  {filteredDefs.map(def => (
+                    <button
+                      key={def.id}
+                      onClick={() => { setSelectedDefId(def.id); setGeneratedId(null); }}
+                      className={cn(
+                        "rounded-2xl overflow-hidden border-2 transition-all aspect-[3/4]",
+                        selectedDefId === def.id ? "border-brand-gold" : "border-transparent"
+                      )}
+                    >
+                      {def.imageUrl
+                        ? <img src={def.imageUrl} alt={def.name} className="w-full h-full object-cover" />
+                        : <div className="w-full h-full flex items-center justify-center text-2xl" style={{ background: STICKER_CONFIG[def.tier].solid }}>
+                            {STICKER_CONFIG[def.tier].variants[0]?.emoji}
+                          </div>
+                      }
+                    </button>
+                  ))}
+                  {filteredDefs.length === 0 && (
+                    <p className="col-span-3 text-xs text-brand-navy/50 text-center py-4">No cards in this set</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {selectedDef && (
+              <div className="bg-brand-bg rounded-2xl p-3 flex items-center gap-3">
+                <div className="w-10 h-14 rounded-xl overflow-hidden shrink-0">
+                  {selectedDef.imageUrl
+                    ? <img src={selectedDef.imageUrl} alt={selectedDef.name} className="w-full h-full object-cover" />
+                    : <div className="w-full h-full flex items-center justify-center text-xl" style={{ background: STICKER_CONFIG[selectedDef.tier].solid }}>
+                        {STICKER_CONFIG[selectedDef.tier].variants[0]?.emoji}
+                      </div>
+                  }
+                </div>
+                <div>
+                  <p className="font-bold text-sm text-brand-navy">{selectedDef.name}</p>
+                  <p className="text-[11px] text-brand-navy/60 capitalize">{selectedDef.tier} · {selectedSet?.name || 'No set'}</p>
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={handleGenerate}
+              disabled={!selectedDefId || generating}
+              className="w-full py-3 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-[0.97] transition-transform disabled:opacity-40"
+            >
+              {generating ? 'Generating…' : 'Generate QR Code'}
+            </button>
+
+            {generatedId && (
+              <div className="flex flex-col items-center gap-3 pt-2">
+                <p className="text-xs text-brand-navy/60 font-medium">Scan or print this QR</p>
+                <div className="bg-white p-4 rounded-2xl shadow-sm border border-black/5">
+                  <QRCodeSVG value={qrValue(generatedId)} size={180} />
+                </div>
+                <p className="text-[10px] text-brand-navy/40 text-center break-all px-2">{qrValue(generatedId)}</p>
+                <button
+                  onClick={() => window.print()}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-brand-navy/8 text-brand-navy font-bold text-sm active:scale-95 transition-transform"
+                >
+                  <Printer size={15} /> Print
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Existing cards list */}
+          {physicalCards.length > 0 && (
+            <div className="bg-white rounded-3xl border border-black/5 shadow-sm p-5 space-y-3">
+              <p className="font-bold text-sm text-brand-navy">Generated cards ({physicalCards.length})</p>
+              <div className="space-y-2">
+                {physicalCards.map(card => (
+                  <div key={card.id} className="flex items-center gap-3 py-2 border-b border-black/5 last:border-0">
+                    <div className="w-8 h-11 rounded-lg overflow-hidden shrink-0">
+                      {card.cardImageUrl
+                        ? <img src={card.cardImageUrl} alt={card.cardDefName} className="w-full h-full object-cover" />
+                        : <div className="w-full h-full flex items-center justify-center text-base" style={{ background: STICKER_CONFIG[card.tier as StickerTier]?.solid || '#ccc' }}>🃏</div>
+                      }
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-xs text-brand-navy truncate">{card.cardDefName}</p>
+                      <p className="text-[10px] text-brand-navy/50 capitalize">{card.tier} · {card.setName || '—'}</p>
+                    </div>
+                    <button
+                      onClick={() => setShowQRFor(showQRFor === card.id ? null : card.id)}
+                      className="p-2 rounded-xl bg-brand-bg active:scale-95 transition-transform"
+                    >
+                      <QrCode size={16} className="text-brand-navy/75" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Inline QR popup */}
+          {showQRFor && (
+            <div className="bg-white rounded-3xl border border-black/5 shadow-sm p-5 flex flex-col items-center gap-3">
+              <QRCodeSVG value={qrValue(showQRFor)} size={180} />
+              <p className="text-[10px] text-brand-navy/40 text-center break-all">{qrValue(showQRFor)}</p>
+              <button onClick={() => window.print()} className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-brand-navy/8 text-brand-navy font-bold text-sm">
+                <Printer size={15} /> Print
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts, onOpenOffers, onOpenLinqle, onOpenDailyVote, onOpenCards, onOpenPhysicalCards, onOpenBanners, onOpenUiColors, onOpenAppEdit, onOpenAnnouncements, onOpenLeaderboard, onOpenFraud }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void; onOpenOffers: () => void; onOpenLinqle: () => void; onOpenDailyVote: () => void; onOpenCards: () => void; onOpenPhysicalCards: () => void; onOpenBanners: () => void; onOpenUiColors: () => void; onOpenAppEdit: () => void; onOpenAnnouncements: () => void; onOpenLeaderboard: () => void; onOpenFraud: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -6002,6 +6287,20 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores,
             <div>
               <p className="font-bold text-brand-navy text-sm">Card Sets</p>
               <p className="text-[11px] text-brand-navy/75 mt-0.5">Design & manage collectible card sets</p>
+            </div>
+          </motion.button>
+
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={onOpenPhysicalCards}
+            className="rounded-[2rem] bg-white border border-black/5 shadow-sm p-6 flex flex-col items-start gap-3 text-left active:bg-brand-navy/5 transition-colors"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-teal-100 flex items-center justify-center">
+              <QrCode size={22} className="text-teal-600" />
+            </div>
+            <div>
+              <p className="font-bold text-brand-navy text-sm">Physical Cards</p>
+              <p className="text-[11px] text-brand-navy/75 mt-0.5">Generate QR codes for café cards</p>
             </div>
           </motion.button>
 
@@ -11765,6 +12064,54 @@ function BadgeNotifCard({ badge, queueCount, onDismiss }: { badge: AppBadge; que
   );
 }
 
+// --- Physical Card QR Scan ---
+
+async function processPhysicalCardScan(
+  physicalCardId: string,
+  user: FirebaseUser,
+): Promise<{ sticker: CollectibleSticker; alreadyClaimed: boolean } | { error: string }> {
+  const cardRef = doc(db, 'physical_cards', physicalCardId);
+  const cardSnap = await getDoc(cardRef).catch(() => null);
+  if (!cardSnap?.exists()) return { error: 'Card not found. Make sure you scanned the right QR code.' };
+  const data = cardSnap.data();
+
+  const userStickersRef = doc(db, 'user_stickers', user.uid);
+  const userStickersSnap = await getDoc(userStickersRef).catch(() => null);
+  const alreadyClaimed = (userStickersSnap?.data()?.claimedPhysicalCardIds || []).includes(physicalCardId);
+
+  const sticker: CollectibleSticker = {
+    id: (crypto as any).randomUUID?.() || Math.random().toString(36).slice(2),
+    tier: data.tier as StickerTier,
+    variant: 0,
+    earnedAt: new Date().toISOString(),
+    cardDefId: data.cardDefId,
+    cardImageUrl: data.cardImageUrl,
+    cardName: data.cardDefName,
+  };
+
+  if (!alreadyClaimed) {
+    if (userStickersSnap?.exists()) {
+      await updateDoc(userStickersRef, {
+        stickers: arrayUnion(sticker),
+        revealedIds: arrayUnion(sticker.id),
+        uniqueTiers: arrayUnion(sticker.tier),
+        claimedPhysicalCardIds: arrayUnion(physicalCardId),
+      });
+    } else {
+      await setDoc(userStickersRef, {
+        user_id: user.uid,
+        stickers: [sticker],
+        revealedIds: [sticker.id],
+        uniqueTiers: [sticker.tier],
+        claimedPhysicalCardIds: [physicalCardId],
+      });
+    }
+    logEvent('physical_card_scanned', user.uid, { physicalCardId, cardDefId: data.cardDefId, tier: data.tier });
+  }
+
+  return { sticker, alreadyClaimed };
+}
+
 // --- NFC Stamp Modal ---
 
 async function processNFCStamp(storeId: string, user: FirebaseUser, profile: UserProfile | null,
@@ -12768,6 +13115,7 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady, initialQty }: {
   const [statusMsg, setStatusMsg] = useState('');
   const [qty, setQty] = useState(initialQty ?? 1);
   const [camError, setCamError] = useState('');
+  const [physicalCardResult, setPhysicalCardResult] = useState<{ sticker: CollectibleSticker; alreadyClaimed: boolean } | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number>(0);
@@ -12795,6 +13143,22 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady, initialQty }: {
   };
 
   const handleRawValue = async (raw: string) => {
+    // Physical card QR — handle before vendor QR check
+    const physCardId = raw.startsWith('linq4:card:')
+      ? raw.slice('linq4:card:'.length)
+      : (() => { try { const u = new URL(raw); return u.searchParams.get('card') || null; } catch { return null; } })();
+    if (physCardId) {
+      stopCamera();
+      setScanState('processing'); setStatusMsg('Loading card…');
+      const user = auth.currentUser;
+      if (!user) { setScanState('error'); setStatusMsg('You need to be signed in.'); return; }
+      const result = await processPhysicalCardScan(physCardId, user);
+      if ('error' in result) { setScanState('error'); setStatusMsg(result.error); return; }
+      setScanState('idle');
+      setPhysicalCardResult(result);
+      return;
+    }
+
     const decoded = decodeVendorQR(raw);
     if (!decoded) { setScanState('error'); setStatusMsg('Invalid QR — ask vendor to refresh.'); stopCamera(); return; }
     if (decoded.storeId !== card.store_id) { setScanState('error'); setStatusMsg('Wrong store QR code.'); stopCamera(); return; }
@@ -13152,6 +13516,15 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
           </div>
         )}
       </motion.div>
+      <AnimatePresence>
+        {physicalCardResult && (
+          <PhysicalCardRevealModal
+            sticker={physicalCardResult.sticker}
+            alreadyClaimed={physicalCardResult.alreadyClaimed}
+            onClose={() => { setPhysicalCardResult(null); onClose(); }}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
