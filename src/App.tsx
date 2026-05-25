@@ -25638,6 +25638,8 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
   const [klipyResults, setKlipyResults] = useState<{ id: string; url: string; preview: string; title: string }[]>([]);
   const [klipyLoading, setKlipyLoading] = useState(false);
   const [commentGif, setCommentGif] = useState<{ url: string; preview: string } | null>(null);
+  const [heartBursts, setHeartBursts] = useState<{ id: number; offsets: number[] }[]>([]);
+  const heartIdRef = useRef(0);
 
   useEffect(() => {
     if (post.authorRole === 'admin') {
@@ -26136,16 +26138,51 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
       {!isAnonAdmin && (
       <div className="pt-2.5">
         <div className="flex items-center gap-4">
-          <button
-            onClick={() => onLike(post)}
-            className={cn(
-              "flex items-center gap-1.5 transition-all active:scale-95 text-sm font-bold",
-              isLiked ? "text-brand-gold" : "text-gray-400 hover:text-brand-gold"
+          {/* Like button with floating hearts overlay */}
+          <div className="relative">
+            {/* Floating hearts — rendered outside button so they aren't clipped */}
+            {heartBursts.map(burst =>
+              burst.offsets.map((xOff, i) => (
+                <span
+                  key={`${burst.id}-${i}`}
+                  className="pointer-events-none select-none text-rose-400"
+                  style={{
+                    position: 'absolute',
+                    bottom: '100%',
+                    left: `calc(50% + ${xOff}px)`,
+                    fontSize: 14,
+                    lineHeight: 1,
+                    zIndex: 50,
+                    animation: `float-heart ${0.9 + i * 0.12}s ease-out forwards`,
+                    animationDelay: `${i * 90}ms`,
+                  }}
+                >
+                  ♥
+                </span>
+              ))
             )}
-          >
-            <Heart size={17} className={cn("transition-all", isLiked ? "fill-brand-gold scale-110" : "")} />
-            <span>{likesCount}</span>
-          </button>
+            <button
+              onClick={() => {
+                if (!isLiked) {
+                  const count = likesCount + 1;
+                  const n = count >= 3 ? 3 : 1;
+                  const spread = [-7, 0, 7];
+                  const offsets = Array.from({ length: n }, (_, i) => spread[i] ?? 0);
+                  const id = ++heartIdRef.current;
+                  setHeartBursts(prev => [...prev, { id, offsets }]);
+                  setTimeout(() => setHeartBursts(prev => prev.filter(b => b.id !== id)), 1400);
+                }
+                onLike(post);
+              }}
+              className={cn(
+                "flex items-center gap-1.5 transition-all active:scale-95 text-sm font-bold",
+                isLiked ? "text-brand-gold" : "text-gray-400 hover:text-brand-gold"
+              )}
+            >
+              <Heart size={17} className={cn("transition-all", isLiked ? "fill-brand-gold scale-110" : "")} />
+              <span>{likesCount}</span>
+            </button>
+          </div>
 
           <button
             onClick={() => setShowAllComments(v => !v)}
