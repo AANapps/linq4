@@ -25613,7 +25613,7 @@ function LazyImg({ src, alt, className, style, ...props }: React.ImgHTMLAttribut
   );
 }
 
-function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewStore, onLike, onVote, onDelete, showPinnedTag, hideDivider }: {
+function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewStore, onLike, onVote, onDelete, showPinnedTag, hideDivider, floatingHearts }: {
   key?: React.Key;
   post: GlobalPost;
   currentUser?: FirebaseUser;
@@ -25625,6 +25625,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
   onDelete?: (post: GlobalPost) => void | Promise<void>;
   showPinnedTag?: boolean;
   hideDivider?: boolean;
+  floatingHearts?: boolean;
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const [comments, setComments] = useState<any[]>([]);
@@ -26140,8 +26141,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
         <div className="flex items-center gap-4">
           {/* Like button with floating hearts overlay */}
           <div className="relative">
-            {/* Floating hearts — rendered outside button so they aren't clipped */}
-            {heartBursts.map(burst =>
+            {floatingHearts && heartBursts.map(burst =>
               burst.offsets.map((xOff, i) => (
                 <span
                   key={`${burst.id}-${i}`}
@@ -26150,20 +26150,19 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                     position: 'absolute',
                     bottom: '100%',
                     left: `calc(50% + ${xOff}px)`,
-                    fontSize: 14,
-                    lineHeight: 1,
                     zIndex: 50,
+                    display: 'flex',
                     animation: `float-heart ${0.9 + i * 0.12}s ease-out forwards`,
                     animationDelay: `${i * 90}ms`,
                   }}
                 >
-                  ♥
+                  <Heart size={15} strokeWidth={1.5} />
                 </span>
               ))
             )}
             <button
               onClick={() => {
-                if (!isLiked) {
+                if (floatingHearts && !isLiked) {
                   const count = likesCount + 1;
                   const n = count >= 3 ? 3 : 1;
                   const spread = [-7, 0, 7];
@@ -27739,7 +27738,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
           <div className="divide-y-[3px] divide-gray-200 bg-white -mx-6 border-t border-gray-100">
             {followingFeed.map((item) =>
               !item._type
-                ? <FeedPostCard key={`gp-${item.id}`} post={item as GlobalPost} currentUser={currentUser} currentProfile={currentProfile} onViewUser={onViewUser} onViewStore={onViewStore} onLike={handleLike} onVote={handleVote} onDelete={async (p) => { await deleteStorageImage(p.postImageUrl); await deleteDoc(doc(db, 'global_posts', p.id)); }} />
+                ? <FeedPostCard key={`gp-${item.id}`} post={item as GlobalPost} currentUser={currentUser} currentProfile={currentProfile} onViewUser={onViewUser} onViewStore={onViewStore} onLike={handleLike} onVote={handleVote} onDelete={async (p) => { await deleteStorageImage(p.postImageUrl); await deleteDoc(doc(db, 'global_posts', p.id)); }} floatingHearts />
                 : <React.Fragment key={`vp-${item.id}`}><FeedVendorPostCard item={item} /></React.Fragment>
             )}
             {followingFeed.length === 0 && (
@@ -28096,7 +28095,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
             <div className="divide-y-[3px] divide-gray-200 bg-white -mx-6 border-t border-gray-100">
               {displayFeed.map((item) =>
                 !item._type
-                  ? <FeedPostCard key={`gp-${item.id}`} post={item as GlobalPost} currentUser={currentUser} currentProfile={currentProfile} onViewUser={onViewUser} onViewStore={onViewStore} onLike={handleLike} onVote={handleVote} onDelete={async (p) => { await deleteStorageImage(p.postImageUrl); await deleteDoc(doc(db, 'global_posts', p.id)); }} showPinnedTag />
+                  ? <FeedPostCard key={`gp-${item.id}`} post={item as GlobalPost} currentUser={currentUser} currentProfile={currentProfile} onViewUser={onViewUser} onViewStore={onViewStore} onLike={handleLike} onVote={handleVote} onDelete={async (p) => { await deleteStorageImage(p.postImageUrl); await deleteDoc(doc(db, 'global_posts', p.id)); }} showPinnedTag floatingHearts />
                   : <React.Fragment key={`vp-${item.id}`}><FeedVendorPostCard item={item} /></React.Fragment>
               )}
               {displayFeed.length === 0 && (
