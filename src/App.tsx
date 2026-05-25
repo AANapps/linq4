@@ -25613,7 +25613,7 @@ function LazyImg({ src, alt, className, style, ...props }: React.ImgHTMLAttribut
   );
 }
 
-function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewStore, onLike, onVote, onDelete, showPinnedTag, hideDivider, floatingHearts }: {
+function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewStore, onLike, onVote, onDelete, showPinnedTag, hideDivider }: {
   key?: React.Key;
   post: GlobalPost;
   currentUser?: FirebaseUser;
@@ -25625,7 +25625,6 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
   onDelete?: (post: GlobalPost) => void | Promise<void>;
   showPinnedTag?: boolean;
   hideDivider?: boolean;
-  floatingHearts?: boolean;
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const [comments, setComments] = useState<any[]>([]);
@@ -25639,8 +25638,13 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
   const [klipyResults, setKlipyResults] = useState<{ id: string; url: string; preview: string; title: string }[]>([]);
   const [klipyLoading, setKlipyLoading] = useState(false);
   const [commentGif, setCommentGif] = useState<{ url: string; preview: string } | null>(null);
-  const [heartBursts, setHeartBursts] = useState<{ id: number; offsets: number[] }[]>([]);
-  const heartIdRef = useRef(0);
+  const [localLiked, setLocalLiked] = useState(() => currentUser ? (post.likedBy || []).includes(currentUser.uid) : false);
+  const [localCount, setLocalCount] = useState(post.likesCount || 0);
+
+  useEffect(() => {
+    setLocalLiked(currentUser ? (post.likedBy || []).includes(currentUser.uid) : false);
+    setLocalCount(post.likesCount || 0);
+  }, [post.likedBy, post.likesCount, currentUser]);
 
   useEffect(() => {
     if (post.authorRole === 'admin') {
@@ -25657,7 +25661,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
     }, () => {});
   }, [post.authorUid, post.storeId, post.authorRole]);
 
-  const isLiked = currentUser ? (post.likedBy || []).includes(currentUser.uid) : false;
+  const isLiked = localLiked;
   const handleViewCommentAuthor = async (uid: string) => {
     if (!onViewUser || !uid) return;
     const snap = await getDoc(doc(db, 'users', uid)).catch(() => null);
@@ -25673,7 +25677,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
   const userVoteKey = currentUser
     ? Object.keys(post.pollVotes || {}).find(k => (post.pollVotes![k] || []).includes(currentUser.uid))
     : undefined;
-  const likesCount = post.likesCount || 0;
+  const likesCount = localCount;
 
   useEffect(() => {
     const q = query(
@@ -26139,38 +26143,12 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
       {!isAnonAdmin && (
       <div className="pt-2.5">
         <div className="flex items-center gap-4">
-          {/* Like button with floating hearts overlay */}
+          {/* Like button */}
           <div className="relative">
-            {floatingHearts && heartBursts.map(burst =>
-              burst.offsets.map((xOff, i) => (
-                <span
-                  key={`${burst.id}-${i}`}
-                  className="pointer-events-none select-none text-rose-400"
-                  style={{
-                    position: 'absolute',
-                    bottom: '100%',
-                    left: `calc(50% + ${xOff}px)`,
-                    zIndex: 50,
-                    display: 'flex',
-                    animation: `float-heart ${0.9 + i * 0.12}s ease-out forwards`,
-                    animationDelay: `${i * 90}ms`,
-                  }}
-                >
-                  <Heart size={15} strokeWidth={1.5} />
-                </span>
-              ))
-            )}
             <button
               onClick={() => {
-                if (floatingHearts && !isLiked) {
-                  const count = likesCount + 1;
-                  const n = count >= 3 ? 3 : 1;
-                  const spread = [-7, 0, 7];
-                  const offsets = Array.from({ length: n }, (_, i) => spread[i] ?? 0);
-                  const id = ++heartIdRef.current;
-                  setHeartBursts(prev => [...prev, { id, offsets }]);
-                  setTimeout(() => setHeartBursts(prev => prev.filter(b => b.id !== id)), 1400);
-                }
+                setLocalLiked(v => !v);
+                setLocalCount(v => localLiked ? Math.max(0, v - 1) : v + 1);
                 onLike(post);
               }}
               className={cn(
@@ -27738,7 +27716,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
           <div className="divide-y-[3px] divide-gray-200 bg-white -mx-6 border-t border-gray-100">
             {followingFeed.map((item) =>
               !item._type
-                ? <FeedPostCard key={`gp-${item.id}`} post={item as GlobalPost} currentUser={currentUser} currentProfile={currentProfile} onViewUser={onViewUser} onViewStore={onViewStore} onLike={handleLike} onVote={handleVote} onDelete={async (p) => { await deleteStorageImage(p.postImageUrl); await deleteDoc(doc(db, 'global_posts', p.id)); }} floatingHearts />
+                ? <FeedPostCard key={`gp-${item.id}`} post={item as GlobalPost} currentUser={currentUser} currentProfile={currentProfile} onViewUser={onViewUser} onViewStore={onViewStore} onLike={handleLike} onVote={handleVote} onDelete={async (p) => { await deleteStorageImage(p.postImageUrl); await deleteDoc(doc(db, 'global_posts', p.id)); }} />
                 : <React.Fragment key={`vp-${item.id}`}><FeedVendorPostCard item={item} /></React.Fragment>
             )}
             {followingFeed.length === 0 && (
@@ -28095,7 +28073,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
             <div className="divide-y-[3px] divide-gray-200 bg-white -mx-6 border-t border-gray-100">
               {displayFeed.map((item) =>
                 !item._type
-                  ? <FeedPostCard key={`gp-${item.id}`} post={item as GlobalPost} currentUser={currentUser} currentProfile={currentProfile} onViewUser={onViewUser} onViewStore={onViewStore} onLike={handleLike} onVote={handleVote} onDelete={async (p) => { await deleteStorageImage(p.postImageUrl); await deleteDoc(doc(db, 'global_posts', p.id)); }} showPinnedTag floatingHearts />
+                  ? <FeedPostCard key={`gp-${item.id}`} post={item as GlobalPost} currentUser={currentUser} currentProfile={currentProfile} onViewUser={onViewUser} onViewStore={onViewStore} onLike={handleLike} onVote={handleVote} onDelete={async (p) => { await deleteStorageImage(p.postImageUrl); await deleteDoc(doc(db, 'global_posts', p.id)); }} showPinnedTag />
                   : <React.Fragment key={`vp-${item.id}`}><FeedVendorPostCard item={item} /></React.Fragment>
               )}
               {displayFeed.length === 0 && (
