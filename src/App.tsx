@@ -159,7 +159,10 @@ import {
   ScanLine,
   BookOpen,
   ShieldAlert,
-  MapPin
+  MapPin,
+  Share2,
+  Globe,
+  Info
 } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
@@ -596,6 +599,17 @@ interface StoreProfile {
   businessRules?: string;
   charityAnimalImageUrl?: string;
   charityTreeImageUrl?: string;
+  website?: string;
+  businessHours?: {
+    mon?: { open: string; close: string } | null;
+    tue?: { open: string; close: string } | null;
+    wed?: { open: string; close: string } | null;
+    thu?: { open: string; close: string } | null;
+    fri?: { open: string; close: string } | null;
+    sat?: { open: string; close: string } | null;
+    sun?: { open: string; close: string } | null;
+  };
+  highlights?: Array<{ url: string; caption?: string }>;
 }
 
 function storeCardActive(store: StoreProfile): boolean {
@@ -29720,7 +29734,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
   const [storeReviews, setStoreReviews] = useState<any[]>([]);
   const [visibleReviewCount, setVisibleReviewCount] = useState(10);
   const reviewSentinelRef = useRef<HTMLDivElement>(null);
-  const [activeStoreTab, setActiveStoreTab] = useState<'posts' | 'reviews'>('posts');
+  const [activeStoreTab, setActiveStoreTab] = useState<'posts' | 'reviews' | 'about'>('posts');
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewText, setReviewText] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
@@ -29746,6 +29760,9 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
   const [storeOffers, setStoreOffers] = useState<StoreOffer[]>([]);
   const [storeChallenges, setStoreChallenges] = useState<Challenge[]>([]);
   const [selectedDealOffer, setSelectedDealOffer] = useState<StoreOffer | null>(null);
+  const [storeFollowerCount, setStoreFollowerCount] = useState(0);
+  const [showFullDesc, setShowFullDesc] = useState(false);
+  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
 
   useEffect(() => {
     if (!navigator.geolocation) return;
@@ -29870,6 +29887,12 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
       });
     }
   };
+
+  useEffect(() => {
+    getDocs(query(collection(db, 'store_follows'), where('storeId', '==', store.id)))
+      .then(snap => setStoreFollowerCount(snap.size))
+      .catch(() => {});
+  }, [store.id, isFollowingStore]);
 
   const handleMessageStore = async () => {
     if (!onMessage || !store.ownerUid || store.ownerUid === user.uid) return;
@@ -30160,37 +30183,42 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
       transition={{ duration: 0.18, ease: 'easeOut' }}
       className="space-y-5"
     >
-      <div className="flex items-center justify-between">
-        <button onClick={onBack} className="flex items-center gap-2 text-brand-navy/75 font-bold text-sm hover:text-brand-navy transition-colors">
-          <ArrowLeft size={18} />
-          Back
-        </button>
-        {isAppAdmin(profile, user.email) && (
-          <button
-            onClick={() => setShowAdminEdit(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl gradient-logo-blue text-white text-xs font-bold active:scale-95 transition-all"
-          >
-            <Edit3 size={12} /> Edit Profile
-          </button>
-        )}
-      </div>
-
       <AnimatePresence>
         {showAdminEdit && (
           <AdminStoreEditModal store={store} onClose={() => setShowAdminEdit(false)} />
         )}
       </AnimatePresence>
 
-      {/* Cover banner + logo */}
+      {/* Cover banner + floating header + logo */}
       <div className="-mx-4 relative">
-        <div className="h-36 overflow-hidden">
+        <div className="h-56 overflow-hidden">
           {store.coverUrl
             ? <img src={store.coverUrl} alt="" className="w-full h-full object-cover" />
-            : <div className="w-full h-full" style={{ background: `linear-gradient(135deg, ${store.theme || '#0D9488'}60 0%, ${store.theme || '#0D9488'}25 100%)` }} />
+            : <div className="w-full h-full" style={{ background: `linear-gradient(135deg, ${store.theme || '#0D9488'}80 0%, ${store.theme || '#0D9488'}30 100%)` }} />
           }
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
         </div>
-        <div className="absolute -bottom-10 left-9">
-          <div className="w-20 h-20 rounded-[1.5rem] overflow-hidden border-4 border-white shadow-xl bg-white">
+        {/* Floating back button */}
+        <button
+          onClick={onBack}
+          className="absolute top-3 left-4 flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-black/30 backdrop-blur-md text-white font-bold text-sm active:scale-95 transition-all"
+        >
+          <ArrowLeft size={16} /> Back
+        </button>
+        {/* Floating right actions */}
+        <div className="absolute top-3 right-4 flex items-center gap-2">
+          {isAppAdmin(profile, user.email) && (
+            <button
+              onClick={() => setShowAdminEdit(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-black/30 backdrop-blur-md text-white text-xs font-bold active:scale-95 transition-all"
+            >
+              <Edit3 size={12} /> Edit
+            </button>
+          )}
+        </div>
+        {/* Logo */}
+        <div className="absolute -bottom-10 left-4">
+          <div className="w-24 h-24 rounded-[1.5rem] overflow-hidden border-4 border-white shadow-xl bg-white">
             {store.logoUrl
               ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
               : <div className="w-full h-full flex items-center justify-center bg-brand-navy/5 text-3xl">{store.name?.[0]}</div>
@@ -30199,14 +30227,13 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
         </div>
       </div>
 
-      {/* Stats — shown to consumers only */}
-      {isOwnStore ? (
-        <div className="pt-10" />
-      ) : (
-        <div className="pt-10">
+      {/* Stats strip */}
+      <div className="pt-10">
+        {!isOwnStore && (
           <div className="flex items-center divide-x divide-brand-navy/10">
             {[
               { val: statsMembers,       label: 'Members'          },
+              { val: fmtK(storeFollowerCount), label: 'Followers'  },
               { val: statsMiddle.val,    label: statsMiddle.label  },
               { val: statsRewards.val,   label: statsRewards.label },
             ].map(s => (
@@ -30216,53 +30243,19 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
               </div>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Name + info row with message/follow on RHS */}
-      <div className="flex items-start gap-3">
-        <div className="min-w-0 flex-1">
+      {/* Name + info */}
+      <div className="space-y-3">
+        <div>
           <div className="flex items-center gap-2 flex-wrap">
             <h2 className="font-display text-2xl font-bold text-brand-navy">{store.name}</h2>
             {store.isVerified && <CheckCircle2 size={18} className="text-blue-400" />}
           </div>
           <p className="text-sm text-brand-navy/80 mt-0.5">{store.category}</p>
-          {(() => {
-            const addrText = store.location || (store as any).address || '';
-            const hasCoords = store.lat != null && store.lng != null;
-            if (!addrText && !hasCoords) return null;
-            const handleMapClick = () => {
-              if (addrText) {
-                const enc = encodeURIComponent(addrText);
-                if (userCoords) {
-                  window.open(`https://www.google.com/maps/dir/?api=1&origin=${userCoords.lat},${userCoords.lng}&destination=${enc}`, '_blank');
-                } else {
-                  window.open(`https://www.google.com/maps/search/?api=1&query=${enc}`, '_blank');
-                }
-              } else if (hasCoords) {
-                if (userCoords) {
-                  window.open(`https://www.google.com/maps/dir/?api=1&origin=${userCoords.lat},${userCoords.lng}&destination=${store.lat},${store.lng}`, '_blank');
-                } else {
-                  window.open(`https://www.google.com/maps/search/?api=1&query=${store.lat},${store.lng}`, '_blank');
-                }
-              }
-            };
-            return (
-              <button onClick={handleMapClick} className="flex items-center gap-1 mt-1.5 active:opacity-70" style={{ color: store.theme || '#0D9488' }}>
-                <MapPin size={13} className="shrink-0" />
-                <span className="text-xs font-medium text-left leading-tight">
-                  Show on map
-                  {distance !== null && (
-                    <span className="text-brand-navy/75 ml-1">
-                      · {distance < 1 ? `${Math.round(distance * 1000)}m` : `${distance.toFixed(1)}km`}
-                    </span>
-                  )}
-                </span>
-              </button>
-            );
-          })()}
           {avgRating !== null && (
-            <div className="flex items-center gap-1.5 mt-1.5">
+            <button onClick={() => setActiveStoreTab('reviews')} className="flex items-center gap-1.5 mt-1.5 active:opacity-70">
               <div className="flex items-center gap-0.5">
                 {[1,2,3,4,5].map(s => (
                   <Star key={s} size={12} className={s <= Math.round(avgRating) ? "text-brand-gold fill-brand-gold" : "text-brand-navy/32"} />
@@ -30270,29 +30263,154 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
               </div>
               <span className="text-brand-navy font-bold text-xs">{avgRating.toFixed(1)}</span>
               <span className="text-brand-navy/75 text-xs">({storeReviews.length})</span>
-            </div>
+            </button>
           )}
         </div>
-        {/* Message + Follow on RHS */}
-        {store.ownerUid !== user.uid && (
-          <div className="flex flex-col gap-2 shrink-0 pt-1">
-            {onMessage && store.ownerUid && (
-              <button onClick={handleMessageStore} className="flex items-center gap-1.5 px-3 py-2 rounded-2xl text-white font-bold text-xs shadow active:scale-95 transition-all" style={{ background: store.theme || '#0D9488' }}>
-                <MessageCircle size={13} /> Message
+
+        {/* Info pills */}
+        {(() => {
+          const addrText = store.location || (store as any).address || '';
+          const hasCoords = store.lat != null && store.lng != null;
+          const handleMapClick = () => {
+            if (addrText) {
+              const enc = encodeURIComponent(addrText);
+              if (userCoords) {
+                window.open(`https://www.google.com/maps/dir/?api=1&origin=${userCoords.lat},${userCoords.lng}&destination=${enc}`, '_blank');
+              } else {
+                window.open(`https://www.google.com/maps/search/?api=1&query=${enc}`, '_blank');
+              }
+            } else if (hasCoords) {
+              if (userCoords) {
+                window.open(`https://www.google.com/maps/dir/?api=1&origin=${userCoords.lat},${userCoords.lng}&destination=${store.lat},${store.lng}`, '_blank');
+              } else {
+                window.open(`https://www.google.com/maps/search/?api=1&query=${store.lat},${store.lng}`, '_blank');
+              }
+            }
+          };
+          const pillClass = "flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-navy/5 text-xs font-bold text-brand-navy/80 shrink-0 active:bg-brand-navy/10 transition-colors whitespace-nowrap";
+          return (
+            <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+              {(addrText || hasCoords) && (
+                <button onClick={handleMapClick} className={pillClass}>
+                  <MapPin size={12} style={{ color: store.theme || '#0D9488' }} />
+                  {distance !== null
+                    ? `${distance < 1 ? `${Math.round(distance * 1000)}m` : `${distance.toFixed(1)}km`} away`
+                    : 'Map'}
+                </button>
+              )}
+              {store.phone && (
+                <a href={`tel:${store.phone}`} className={pillClass}>
+                  <Phone size={12} style={{ color: store.theme || '#0D9488' }} />
+                  {store.phone}
+                </a>
+              )}
+              {(store as any).website && (
+                <a href={(store as any).website} target="_blank" rel="noopener noreferrer" className={pillClass}>
+                  <Globe size={12} style={{ color: store.theme || '#0D9488' }} />
+                  Website
+                </a>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* Description */}
+        {store.description && (
+          <div>
+            <p
+              className="text-sm text-brand-navy/75 leading-relaxed"
+              style={showFullDesc ? {} : { display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as React.CSSProperties}
+            >
+              {store.description}
+            </p>
+            {store.description.length > 120 && (
+              <button
+                onClick={() => setShowFullDesc(v => !v)}
+                className="text-xs font-bold mt-1"
+                style={{ color: store.theme || '#0D9488' }}
+              >
+                {showFullDesc ? 'Show less' : 'Read more'}
               </button>
             )}
+          </div>
+        )}
+
+        {/* Action strip — consumers only */}
+        {store.ownerUid !== user.uid && (
+          <div className="flex gap-2">
             <button
               onClick={handleFollowStore}
-              className={cn("flex items-center gap-1.5 px-3 py-2 rounded-2xl font-bold text-xs transition-all shadow active:scale-95", isFollowingStore ? "bg-brand-navy/8 text-brand-navy border border-brand-navy/15" : "text-white")}
+              className={cn("flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl font-bold text-xs transition-all active:scale-95 shadow", isFollowingStore ? "bg-brand-navy/8 text-brand-navy border border-brand-navy/15" : "text-white")}
               style={isFollowingStore ? {} : { background: store.theme || '#0D9488' }}
             >
               {isFollowingStore ? <UserCheck size={13} /> : <UserPlus size={13} />}
               {isFollowingStore ? 'Following' : 'Follow'}
             </button>
+            {onMessage && store.ownerUid && (
+              <button
+                onClick={handleMessageStore}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-white font-bold text-xs shadow active:scale-95 transition-all"
+                style={{ background: store.theme || '#0D9488' }}
+              >
+                <MessageCircle size={13} /> Message
+              </button>
+            )}
+            <button
+              onClick={() => {
+                if (typeof navigator.share === 'function') {
+                  navigator.share({ title: store.name, text: store.description || store.name }).catch(() => {});
+                } else if (navigator.clipboard) {
+                  navigator.clipboard.writeText(window.location.href).catch(() => {});
+                }
+              }}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl bg-brand-navy/8 text-brand-navy border border-brand-navy/15 font-bold text-xs active:scale-95 transition-all"
+            >
+              <Share2 size={13} /> Share
+            </button>
           </div>
         )}
       </div>
 
+
+      {/* Highlights carousel */}
+      {(store as any).highlights && (store as any).highlights.length > 0 && (
+        <div>
+          <div className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            {((store as any).highlights as Array<{ url: string; caption?: string }>).map((h, i) => (
+              <button
+                key={i}
+                onClick={() => setLightboxIdx(i)}
+                className="shrink-0 w-32 h-32 rounded-[1.5rem] overflow-hidden shadow-md active:scale-[0.97] transition-transform"
+              >
+                <img src={h.url} alt={h.caption || ''} className="w-full h-full object-cover" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Highlights lightbox */}
+      <AnimatePresence>
+        {lightboxIdx !== null && (store as any).highlights && (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/90" onClick={() => setLightboxIdx(null)} />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              className="relative z-10 w-full max-w-md px-4"
+            >
+              <img src={((store as any).highlights as Array<{ url: string; caption?: string }>)[lightboxIdx!].url} alt="" className="w-full rounded-3xl shadow-2xl" />
+              {((store as any).highlights as Array<{ url: string; caption?: string }>)[lightboxIdx!].caption && (
+                <p className="text-white/80 text-sm text-center mt-4 font-medium">
+                  {((store as any).highlights as Array<{ url: string; caption?: string }>)[lightboxIdx!].caption}
+                </p>
+              )}
+              <button onClick={() => setLightboxIdx(null)} className="absolute -top-10 right-4 text-white/80 font-bold">
+                <X size={24} />
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Join / joined buttons */}
       {store.ownerUid !== user.uid && (storeCardActive(store) || store.membershipEnabled) && (
@@ -30944,7 +31062,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
 
       {/* Tab bar */}
       <div className="flex p-1 glass-card rounded-2xl">
-        {(['posts', 'reviews'] as const).map(tab => (
+        {(['posts', 'reviews', 'about'] as const).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveStoreTab(tab)}
@@ -30954,7 +31072,9 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
             )}
             style={activeStoreTab === tab ? { background: store.theme || '#0D9488' } : {}}
           >
-            {tab === 'posts' ? <><MessageSquare size={13} /> Posts</> : <><Star size={13} /> Reviews {storeReviews.length > 0 && `(${storeReviews.length})`}</>}
+            {tab === 'posts' ? <><MessageSquare size={13} /> Posts</>
+             : tab === 'reviews' ? <><Star size={13} /> Reviews {storeReviews.length > 0 && `(${storeReviews.length})`}</>
+             : <><Info size={13} /> About</>}
           </button>
         ))}
       </div>
@@ -31059,20 +31179,31 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
               </div>
             )
           )}
-          {/* Average rating summary */}
+          {/* Average rating summary with breakdown bars */}
           {avgRating !== null && (
             <div className="glass-card p-5 rounded-[2rem] flex items-center gap-4">
-              <div className="text-center">
+              <div className="text-center shrink-0">
                 <p className="text-4xl font-extrabold text-brand-navy">{avgRating.toFixed(1)}</p>
                 <div className="flex items-center gap-0.5 mt-1 justify-center">
                   {[1,2,3,4,5].map(s => (
                     <Star key={s} size={13} className={s <= Math.round(avgRating) ? "text-brand-gold fill-brand-gold" : "text-brand-navy/32"} />
                   ))}
                 </div>
+                <p className="text-[10px] text-brand-navy/75 font-bold mt-0.5">{storeReviews.length} {storeReviews.length === 1 ? 'review' : 'reviews'}</p>
               </div>
-              <div className="text-sm text-brand-navy/80">
-                <p className="font-bold text-brand-navy">{storeReviews.length} {storeReviews.length === 1 ? 'review' : 'reviews'}</p>
-                <p>Based on customer ratings</p>
+              <div className="flex-1 space-y-1.5">
+                {[5,4,3,2,1].map(star => {
+                  const count = storeReviews.filter(r => Math.round(r.rating || 5) === star).length;
+                  const pct = storeReviews.length > 0 ? Math.round((count / storeReviews.length) * 100) : 0;
+                  return (
+                    <div key={star} className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-brand-navy/75 w-3 shrink-0">{star}</span>
+                      <div className="flex-1 h-1.5 bg-brand-navy/10 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: store.theme || '#0D9488' }} />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -31099,6 +31230,119 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
           ))}
           {visibleReviewCount < storeReviews.length && <div ref={reviewSentinelRef} className="py-4 text-center text-xs text-brand-navy/72">Loading more...</div>}
           {storeReviews.length === 0 && <div className="py-12 text-center text-brand-navy/32"><Star size={40} className="mx-auto mb-2 opacity-10" /><p className="font-bold text-sm">No reviews yet</p></div>}
+        </div>
+      )}
+
+      {activeStoreTab === 'about' && (
+        <div className="space-y-4">
+          {store.description && (
+            <div className="glass-card p-5 rounded-[2rem] space-y-2">
+              <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">About</p>
+              <p className="text-sm text-brand-navy/75 leading-relaxed">{store.description}</p>
+            </div>
+          )}
+
+          {(store.phone || store.email || (store as any).website) && (
+            <div className="glass-card p-5 rounded-[2rem] space-y-3">
+              <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Contact</p>
+              {store.phone && (
+                <a href={`tel:${store.phone}`} className="flex items-center gap-3 active:opacity-70">
+                  <div className="w-9 h-9 rounded-xl bg-brand-navy/5 flex items-center justify-center shrink-0">
+                    <Phone size={14} style={{ color: store.theme || '#0D9488' }} />
+                  </div>
+                  <span className="text-sm font-medium text-brand-navy">{store.phone}</span>
+                </a>
+              )}
+              {store.email && (
+                <a href={`mailto:${store.email}`} className="flex items-center gap-3 active:opacity-70">
+                  <div className="w-9 h-9 rounded-xl bg-brand-navy/5 flex items-center justify-center shrink-0">
+                    <Mail size={14} style={{ color: store.theme || '#0D9488' }} />
+                  </div>
+                  <span className="text-sm font-medium text-brand-navy">{store.email}</span>
+                </a>
+              )}
+              {(store as any).website && (
+                <a href={(store as any).website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 active:opacity-70">
+                  <div className="w-9 h-9 rounded-xl bg-brand-navy/5 flex items-center justify-center shrink-0">
+                    <Globe size={14} style={{ color: store.theme || '#0D9488' }} />
+                  </div>
+                  <span className="text-sm font-medium text-brand-navy truncate">{(store as any).website}</span>
+                </a>
+              )}
+            </div>
+          )}
+
+          {(store as any).businessHours && (
+            <div className="glass-card p-5 rounded-[2rem] space-y-3">
+              <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Hours</p>
+              {(['mon','tue','wed','thu','fri','sat','sun'] as const).map(day => {
+                const h = ((store as any).businessHours as any)?.[day] as { open: string; close: string } | null | undefined;
+                const todayKey = (['sun','mon','tue','wed','thu','fri','sat'] as const)[new Date().getDay()];
+                const isToday = day === todayKey;
+                return (
+                  <div key={day} className={cn('flex items-center justify-between', isToday && 'font-bold')}>
+                    <span className={cn('text-sm capitalize', isToday ? 'text-brand-navy' : 'text-brand-navy/75')}>
+                      {day.charAt(0).toUpperCase() + day.slice(1)}
+                      {isToday && <span className="ml-1.5 text-[10px] font-bold uppercase tracking-widest" style={{ color: store.theme || '#0D9488' }}>Today</span>}
+                    </span>
+                    <span className={cn('text-sm', h ? (isToday ? 'text-brand-navy' : 'text-brand-navy/75') : 'text-brand-navy/40')}>
+                      {h ? `${h.open} – ${h.close}` : 'Closed'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {store.locations && store.locations.length > 0 && (
+            <div className="glass-card p-5 rounded-[2rem] space-y-3">
+              <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Locations</p>
+              {store.locations.map(loc => {
+                const addr = [loc.line1, loc.town, loc.postcode].filter(Boolean).join(', ');
+                const handleLocMap = () => {
+                  if (addr) window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`, '_blank');
+                  else if (loc.lat && loc.lng) window.open(`https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}`, '_blank');
+                };
+                return (
+                  <button key={loc.id} onClick={handleLocMap} className="w-full flex items-start gap-3 text-left active:opacity-70">
+                    <div className="w-9 h-9 rounded-xl bg-brand-navy/5 flex items-center justify-center shrink-0 mt-0.5">
+                      <MapPin size={14} style={{ color: store.theme || '#0D9488' }} />
+                    </div>
+                    <div>
+                      {loc.label && <p className="font-bold text-sm text-brand-navy">{loc.label}</p>}
+                      <p className="text-sm text-brand-navy/75">{addr || 'View on map'}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {(!store.locations || store.locations.length === 0) && (store.location || (store as any).address) && (
+            <div className="glass-card p-5 rounded-[2rem]">
+              <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-3">Location</p>
+              <button
+                onClick={() => {
+                  const addr = store.location || (store as any).address || '';
+                  if (addr) window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`, '_blank');
+                  else if (store.lat && store.lng) window.open(`https://www.google.com/maps/search/?api=1&query=${store.lat},${store.lng}`, '_blank');
+                }}
+                className="flex items-start gap-3 text-left active:opacity-70 w-full"
+              >
+                <div className="w-9 h-9 rounded-xl bg-brand-navy/5 flex items-center justify-center shrink-0">
+                  <MapPin size={14} style={{ color: store.theme || '#0D9488' }} />
+                </div>
+                <p className="text-sm text-brand-navy/75 mt-1.5">{store.location || (store as any).address}</p>
+              </button>
+            </div>
+          )}
+
+          {!store.description && !store.phone && !store.email && !(store as any).website && !(store as any).businessHours && !(store.locations?.length) && !store.location && !(store as any).address && (
+            <div className="py-12 text-center text-brand-navy/32">
+              <Info size={40} className="mx-auto mb-2 opacity-10" />
+              <p className="font-bold text-sm">No details added yet</p>
+            </div>
+          )}
         </div>
       )}
     </motion.div>
