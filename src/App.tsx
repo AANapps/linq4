@@ -30177,9 +30177,9 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
       transition={{ duration: 0.18, ease: 'easeOut' }}
       className="space-y-5"
     >
@@ -31642,8 +31642,8 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
       className="space-y-6 pb-20 text-brand-navy"
     >
       <div className="flex items-center justify-between">
