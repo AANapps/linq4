@@ -13001,13 +13001,13 @@ const genToken = () =>
     ? crypto.randomUUID()
     : Math.random().toString(36).slice(2) + Date.now().toString(36);
 
-// Write a fresh one-time token to Firestore and return its ID
+// Write a fresh reusable token to Firestore and return its ID
 async function createQRToken(storeId: string): Promise<string> {
   const tokenId = genToken();
   await setDoc(doc(db, 'qr_tokens', tokenId), {
     storeId,
     createdAt: Date.now(),  // plain number — avoids serverTimestamp pending-state issues
-    used: false,
+    claimedBy: [],          // per-user claim tracking — multiple users can claim, each only once
   });
   return tokenId;
 }
@@ -13178,19 +13178,22 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady, initialQty }: {
     if (decoded.storeId !== card.store_id) { setScanState('error'); setStatusMsg('Wrong store QR code.'); stopCamera(); return; }
     stopCamera();
     setScanState('processing'); setStatusMsg('Verifying…');
+    const currentUid = auth.currentUser?.uid;
+    if (!currentUid) { setScanState('error'); setStatusMsg('You need to be signed in.'); return; }
     try {
       await runTransaction(db, async tx => {
         const tokenRef = doc(db, 'qr_tokens', decoded.tokenId);
         const tokenSnap = await tx.get(tokenRef);
         if (!tokenSnap.exists()) throw new Error('QR code not found — ask vendor to refresh.');
         const data = tokenSnap.data();
-        if (data.used) throw new Error('QR already used — ask vendor to show a new one.');
         if (data.storeId !== card.store_id) throw new Error('Wrong store QR code.');
         const createdMs = typeof data.createdAt === 'number'
           ? data.createdAt
           : (data.createdAt?.toMillis?.() ?? null);
         if (createdMs !== null && Date.now() - createdMs > 300_000) throw new Error('QR expired — ask vendor to refresh.');
-        tx.update(tokenRef, { used: true, usedAt: serverTimestamp() });
+        const claimedBy: string[] = data.claimedBy || [];
+        if (claimedBy.includes(currentUid)) throw new Error("You've already claimed this stamp today.");
+        tx.update(tokenRef, { claimedBy: arrayUnion(currentUid) });
       });
     } catch (err: any) {
       setScanState('error'); setStatusMsg(err?.message || 'QR verification failed.');
