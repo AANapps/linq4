@@ -757,6 +757,7 @@ interface GlobalPost {
   pollWinner?: number | null;
   pollAdminVotes?: Record<string, number>;
   pollClaimedBy?: string[];
+  isAdminPoll?: boolean;
   createdAt: any;
   likesCount: number;
   likedBy?: string[];
@@ -1999,6 +2000,7 @@ export default function App() {
             onClose={() => setShowCreatePost(false)}
             user={user}
             profile={profile}
+            isAdmin={isAppAdmin(profile, user?.email)}
           />
         )}
       </AnimatePresence>
@@ -20658,6 +20660,32 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-5">
+          {/* Closed outcome banner */}
+          {isClosed && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+              className="rounded-2xl px-4 py-3.5 flex items-center gap-3 border"
+              style={isWinner
+                ? { background: 'linear-gradient(135deg,rgba(251,191,36,0.18),rgba(245,158,11,0.1))', borderColor: 'rgba(251,191,36,0.35)' }
+                : { background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.12)' }}
+            >
+              {isWinner
+                ? <Gift size={20} className="text-yellow-400 shrink-0" />
+                : <Lock size={20} className="text-white/40 shrink-0" />}
+              <div className="flex-1 min-w-0">
+                <p className={cn("text-xs font-black uppercase tracking-wider", isWinner ? "text-yellow-400" : "text-white/40")}>
+                  {isWinner ? 'Poll Closed — You Won!' : 'Poll Closed'}
+                </p>
+                <p className="text-sm font-bold text-white/80 mt-0.5">
+                  {isWinner
+                    ? voteData.pollType === 'correct' ? 'You answered correctly! Claim your sticker pack.' : 'You were in the majority! Claim your sticker pack.'
+                    : hasVoted
+                      ? voteData.pollType === 'correct' ? 'That wasn\'t the correct answer this time.' : 'The majority voted differently this time.'
+                      : 'You didn\'t vote in time.'}
+                </p>
+              </div>
+            </motion.div>
+          )}
           {/* Vertical bar graph — only after voting */}
           {(hasVoted || isClosed) && (
             <div className="flex items-end gap-3 px-1 pt-2" style={{ height: 160 }}>
@@ -20740,7 +20768,6 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
                     />
                   )}
                   <div className="relative flex items-center gap-3">
-                    <span className="text-2xl">{pal.emoji}</span>
                     <span className="flex-1 font-bold">{opt}</span>
                     {isMyVote && (
                       <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 400, damping: 15 }}>
@@ -26797,15 +26824,16 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
   const isOwn = currentUser?.uid === post.authorUid;
 
   // Poll timer — must be before any conditional return (Rules of Hooks)
-  const pollEndsAtMs = post.postType === 'poll' ? (post.pollEndsAt?.toMillis?.() ?? null) : null;
+  const isAdminPoll = !!post.isAdminPoll;
+  const pollEndsAtMs = post.postType === 'poll' && isAdminPoll ? (post.pollEndsAt?.toMillis?.() ?? null) : null;
   const { msLeft: pollMsLeft, isExpired: pollTimerExpired } = usePollTimer(pollEndsAtMs, !!post.pollClosed);
   const isClosed = !!post.pollClosed || (pollTimerExpired && pollEndsAtMs !== null);
   const [closingPoll, setClosingPoll] = useState(false);
   const [claimingStickers, setClaimingStickers] = useState(false);
 
-  // Auto-close when timer expires
+  // Auto-close when timer expires (admin polls only)
   useEffect(() => {
-    if (!pollTimerExpired || post.pollClosed || !post.id || post.postType !== 'poll' || closingPoll) return;
+    if (!isAdminPoll || !pollTimerExpired || post.pollClosed || !post.id || post.postType !== 'poll' || closingPoll) return;
     setClosingPoll(true);
     const votes = post.pollVotes || {};
     const adminV = post.pollAdminVotes || {};
@@ -26818,7 +26846,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
       pollClosed: true,
       pollWinner: bestIdx,
     }).catch(() => {}).finally(() => setClosingPoll(false));
-  }, [pollTimerExpired, post.pollClosed, post.id, post.postType]);
+  }, [isAdminPoll, pollTimerExpired, post.pollClosed, post.id, post.postType]);
 
   const totalVotes = post.postType === 'poll'
     ? Object.values(post.pollVotes || {}).reduce((s, arr) => s + (arr?.length || 0), 0)
@@ -26830,7 +26858,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
   const userVoteKey = currentUser
     ? Object.keys(post.pollVotes || {}).find(k => (post.pollVotes![k] || []).includes(currentUser.uid))
     : undefined;
-  const userWon = post.postType === 'poll' && isClosed && post.pollWinner != null && userVoteKey === String(post.pollWinner);
+  const userWon = isAdminPoll && post.postType === 'poll' && isClosed && post.pollWinner != null && userVoteKey === String(post.pollWinner);
   const alreadyClaimed = currentUser ? (post.pollClaimedBy || []).includes(currentUser.uid) : false;
   const likesCount = localCount;
 
@@ -27175,9 +27203,25 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
               </div>
             )}
             {post.postType === 'poll' && (
-              <div className={cn("flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-white text-[10px] font-bold", isClosed ? "poll-closed-bg" : "poll-active-bg")}>
-                <BarChart2 size={12} />
-                {isClosed ? 'Closed' : pollMsLeft !== null ? formatPollTimer(pollMsLeft) : 'Poll'}
+              <div className="flex items-center gap-1.5">
+                {isAdminPoll ? (
+                  <div className={cn("flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-white text-[10px] font-bold", isClosed ? "poll-closed-bg" : "poll-active-bg")}>
+                    <BarChart2 size={12} />
+                    {isClosed ? 'Closed' : pollMsLeft !== null ? formatPollTimer(pollMsLeft) : 'Poll'}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-brand-navy/8 text-brand-navy/70 text-[10px] font-bold">
+                    <BarChart2 size={12} />
+                    Poll
+                  </div>
+                )}
+                {isAdminPoll && !isClosed && (
+                  <div className="relative overflow-hidden flex items-center gap-1 px-2.5 py-1 rounded-xl text-white text-[10px] font-black"
+                    style={{ background: 'linear-gradient(90deg,#7c3aed,#4f46e5,#2563eb)' }}>
+                    <span className="badge-shine-ray" />
+                    🎁 Stickers
+                  </div>
+                )}
               </div>
             )}
             <div className="relative">
@@ -27264,13 +27308,12 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
               const pct = totalDisplayVotes > 0 ? Math.round((voteCount / totalDisplayVotes) * 100) : 0;
               const voted = userVoteKey === String(i);
               const isWinner = isClosed && post.pollWinner === i;
-              // hide counts until the user has voted (or poll is closed)
               const showResults = userVoteKey !== undefined || isClosed;
               return (
                 <button
                   key={i}
                   onClick={() => {
-                    if (userVoteKey !== undefined) return; // one-time vote
+                    if (userVoteKey !== undefined) return;
                     try { if ('vibrate' in navigator) (navigator as any).vibrate([50, 30, 80]); } catch {}
                     onVote(post, i);
                   }}
@@ -27278,12 +27321,11 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                   className={cn(
                     "w-full text-left rounded-xl overflow-hidden border-2 transition-all active:scale-[0.98]",
                     isWinner ? "border-amber-400" : voted ? "border-violet-500" : "border-black/20",
-                    !showResults && !voted ? "hover:border-violet-300 cursor-pointer" : "",
+                    !showResults ? "hover:border-violet-300 cursor-pointer" : "",
                     isClosed && !voted && !isWinner ? "opacity-70" : ""
                   )}
                 >
                   <div className="relative px-4 py-2.5 min-h-[42px] flex items-center">
-                    {/* Fill bar — only shown after voting */}
                     {showResults && (
                       <div
                         className="absolute left-0 top-0 bottom-0 overflow-hidden transition-all duration-500"
@@ -27323,12 +27365,12 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                 </button>
               );
             })}
-            {/* Vote-to-reveal hint */}
-            {userVoteKey === undefined && !isClosed && (
+            {/* Vote-to-reveal hint — admin polls only */}
+            {isAdminPoll && userVoteKey === undefined && !isClosed && (
               <p className="text-[10px] text-brand-navy/40 text-center font-medium pt-0.5">Vote to see results</p>
             )}
-            {/* Winner claim button */}
-            {userWon && !alreadyClaimed && currentUser && (
+            {/* Admin poll: winner claim button */}
+            {isAdminPoll && userWon && !alreadyClaimed && currentUser && (
               <button
                 onClick={async () => {
                   if (claimingStickers || !currentUser) return;
@@ -27346,7 +27388,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                 {claimingStickers ? 'Collecting…' : 'You Won! Collect Stickers 🎉'}
               </button>
             )}
-            {userWon && alreadyClaimed && (
+            {isAdminPoll && userWon && alreadyClaimed && (
               <div className="w-full py-2.5 rounded-xl border border-brand-gold/30 text-center text-sm font-bold text-brand-gold/70">
                 Stickers claimed ✓
               </div>
@@ -27554,7 +27596,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
   );
 }
 
-function CreatePostModal({ onClose, user, profile }: { onClose: () => void, user: FirebaseUser, profile: UserProfile | null }) {
+function CreatePostModal({ onClose, user, profile, isAdmin }: { onClose: () => void, user: FirebaseUser, profile: UserProfile | null, isAdmin?: boolean }) {
   const [content, setContent] = useState('');
   const [isPoll, setIsPoll] = useState(false);
   const [pollOptions, setPollOptions] = useState(['', '']);
@@ -27600,11 +27642,12 @@ function CreatePostModal({ onClose, user, profile }: { onClose: () => void, user
         postType: isPoll ? 'poll' : 'post',
         pollOptions: isPoll ? options : null,
         pollVotes: isPoll ? initialVotes : null,
-        pollEndsAt: isPoll ? Timestamp.fromMillis(Date.now() + pollDurationMins * 60 * 1000) : null,
+        pollEndsAt: isPoll && isAdmin ? Timestamp.fromMillis(Date.now() + pollDurationMins * 60 * 1000) : null,
         pollClosed: false,
         pollWinner: null,
-        pollAdminVotes: isPoll ? {} : null,
-        pollClaimedBy: isPoll ? [] : null,
+        pollAdminVotes: isPoll && isAdmin ? {} : null,
+        pollClaimedBy: isPoll && isAdmin ? [] : null,
+        isAdminPoll: isPoll && isAdmin ? true : null,
         createdAt: serverTimestamp(),
         likesCount: 0,
         likedBy: []
@@ -27709,7 +27752,8 @@ function CreatePostModal({ onClose, user, profile }: { onClose: () => void, user
                 Add option
               </button>
             )}
-            {/* Duration picker */}
+            {/* Duration picker — admin polls only */}
+            {isAdmin && (
             <div className="pt-1">
               <p className="text-[10px] font-bold text-brand-navy/45 uppercase tracking-widest mb-1.5">Poll duration</p>
               <div className="flex flex-wrap gap-1.5">
@@ -27727,6 +27771,7 @@ function CreatePostModal({ onClose, user, profile }: { onClose: () => void, user
                 ))}
               </div>
             </div>
+            )}
           </div>
         )}
 
