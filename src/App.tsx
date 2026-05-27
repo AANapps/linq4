@@ -20690,6 +20690,10 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor 
     });
   }, [today, voteData?.voteId]);
 
+  // usePollTimer must be called before any early return (Rules of Hooks)
+  const endsAtMs = voteData?.endsAt?.toMillis?.() ?? null;
+  const { msLeft, isExpired } = usePollTimer(endsAtMs, !!voteData?.closed);
+
   if (!voteData) return null;
 
   const voteId = voteData.voteId;
@@ -20702,8 +20706,6 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor 
   const displayTotal = Object.values(liveCounts).reduce((a, b) => a + b, 0);
   const total = Math.max(displayTotal, 1);
   const hasVoted = userVote !== null;
-  const endsAtMs = voteData.endsAt?.toMillis?.() ?? null;
-  const { msLeft, isExpired } = usePollTimer(endsAtMs, !!voteData.closed);
   const isClosed = !!voteData.closed || isExpired;
   const isWinner = isClosed && voteData.winner !== null && userVote === voteData.winner;
   const alreadyClaimed = rawUserVote?.rewardClaimed || rewardCollected;
