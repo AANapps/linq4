@@ -7622,6 +7622,8 @@ interface DailyVoteData {
   imageUrl?: string;
   endsAt?: any;
   adminVotes?: Record<string, number>;
+  pollType?: 'popularity' | 'correct';
+  correctAnswer?: number | null;
 }
 interface DailyVoteComment { id: string; uid: string; name: string; photoURL?: string; text: string; createdAt: any; likes: string[]; voteId?: string; }
 
@@ -7654,6 +7656,9 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
   const [deleting, setDeleting] = useState(false);
   const [adminVoteInputs, setAdminVoteInputs] = useState<Record<string, string>>({});
   const [pushingAdmin, setPushingAdmin] = useState<number | null>(null);
+  const [pollType, setPollType] = useState<'popularity' | 'correct'>('popularity');
+  const [correctAnswerIdx, setCorrectAnswerIdx] = useState<number | null>(null);
+  const [settingCorrectAnswer, setSettingCorrectAnswer] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const editFileRef = useRef<HTMLInputElement>(null);
 
@@ -7695,8 +7700,8 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
         imageUrl = await getDownloadURL(snap2.ref);
       }
       const endsAt = Timestamp.fromMillis(Date.now() + durationMins * 60 * 1000);
-      await setDoc(doc(db, 'daily_vote', today), { question: question.trim(), options: cleanOpts, voteCounts: {}, totalVotes: 0, closed: false, winner: null, commentCount: 0, voteId, createdAt: serverTimestamp(), endsAt, adminVotes: {}, ...(imageUrl ? { imageUrl } : {}) });
-      setQuestion(''); setOptions(['', '']); setImageFile(null); setImagePreview('');
+      await setDoc(doc(db, 'daily_vote', today), { question: question.trim(), options: cleanOpts, voteCounts: {}, totalVotes: 0, closed: false, winner: null, commentCount: 0, voteId, createdAt: serverTimestamp(), endsAt, adminVotes: {}, pollType, correctAnswer: pollType === 'correct' ? correctAnswerIdx : null, ...(imageUrl ? { imageUrl } : {}) });
+      setQuestion(''); setOptions(['', '']); setImageFile(null); setImagePreview(''); setPollType('popularity'); setCorrectAnswerIdx(null);
       if (fileRef.current) fileRef.current.value = '';
     } catch (e) { console.error(e); }
     setSaving(false);
@@ -7749,12 +7754,17 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
   const closeVote = async () => {
     if (!voteData || voteData.closed) return;
     setSaving(true);
-    const adminV = voteData.adminVotes || {};
-    const winner = voteData.options.reduce((best, _, i) => {
-      const a = (liveCounts[String(i)] ?? 0) + (adminV[String(i)] ?? 0);
-      const b = (liveCounts[String(best)] ?? 0) + (adminV[String(best)] ?? 0);
-      return a > b ? i : best;
-    }, 0);
+    let winner: number;
+    if (voteData.pollType === 'correct' && voteData.correctAnswer != null) {
+      winner = voteData.correctAnswer;
+    } else {
+      const adminV = voteData.adminVotes || {};
+      winner = voteData.options.reduce((best, _, i) => {
+        const a = (liveCounts[String(i)] ?? 0) + (adminV[String(i)] ?? 0);
+        const b = (liveCounts[String(best)] ?? 0) + (adminV[String(best)] ?? 0);
+        return a > b ? i : best;
+      }, 0);
+    }
     try {
       await updateDoc(doc(db, 'daily_vote', today), { closed: true, winner });
     } catch (e) { console.error(e); }
@@ -7861,7 +7871,43 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
                       {voteData.closed ? '🔒 Closed' : `⏱ Ends ${new Date(endsAtMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
                     </p>
                   )}
+                  <div className="flex items-center gap-2 pt-0.5">
+                    <span className={cn('text-[10px] font-black px-2 py-0.5 rounded-full', voteData.pollType === 'correct' ? 'bg-emerald-100 text-emerald-700' : 'bg-purple-100 text-purple-700')}>
+                      {voteData.pollType === 'correct' ? '✅ Correct Answer' : '📊 Popularity'}
+                    </span>
+                    {voteData.pollType === 'correct' && voteData.correctAnswer != null && (
+                      <span className="text-[10px] font-bold text-emerald-700">→ {voteData.options[voteData.correctAnswer]}</span>
+                    )}
+                  </div>
                 </div>
+
+                {/* Set / change correct answer (correct-type polls only) */}
+                {voteData.pollType === 'correct' && !voteData.closed && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-bold text-brand-navy/60 uppercase tracking-wider">Correct Answer</p>
+                    {settingCorrectAnswer ? (
+                      <div className="space-y-1.5">
+                        {voteData.options.map((opt, i) => (
+                          <button key={i}
+                            onClick={async () => {
+                              await updateDoc(doc(db, 'daily_vote', today), { correctAnswer: i });
+                              setSettingCorrectAnswer(false);
+                            }}
+                            className={cn('w-full text-left px-3 py-2.5 rounded-xl text-sm font-bold transition-all border-2',
+                              voteData.correctAnswer === i ? 'border-emerald-400 bg-emerald-50 text-emerald-700' : 'border-brand-navy/10 bg-white text-brand-navy/70 hover:border-emerald-300')}>
+                            {voteData.correctAnswer === i && '✓ '}{opt}
+                          </button>
+                        ))}
+                        <button onClick={() => setSettingCorrectAnswer(false)} className="text-xs text-brand-navy/50 font-bold px-2 py-1">Cancel</button>
+                      </div>
+                    ) : (
+                      <button onClick={() => setSettingCorrectAnswer(true)}
+                        className="w-full py-2.5 rounded-xl border-2 border-dashed border-emerald-300 text-emerald-700 text-sm font-bold hover:bg-emerald-50 transition-colors">
+                        {voteData.correctAnswer != null ? `✓ ${voteData.options[voteData.correctAnswer]} — tap to change` : 'Tap to set correct answer'}
+                      </button>
+                    )}
+                  </div>
+                )}
 
                 {/* Per-option stats + admin vote push */}
                 <div className="space-y-2">
@@ -7975,6 +8021,34 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
                   ))}
                 </div>
               </div>
+
+              {/* Poll type */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-wider">Poll Type</label>
+                <div className="flex gap-2">
+                  {(['popularity', 'correct'] as const).map(t => (
+                    <button key={t} onClick={() => { setPollType(t); if (t === 'popularity') setCorrectAnswerIdx(null); }}
+                      className={cn('flex-1 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95',
+                        pollType === t ? 'gradient-logo-blue text-white shadow-md' : 'bg-brand-navy/6 text-brand-navy/70')}>
+                      {t === 'popularity' ? '📊 Popularity' : '✅ Correct Answer'}
+                    </button>
+                  ))}
+                </div>
+                {pollType === 'correct' && options.filter(o => o.trim()).length >= 2 && (
+                  <div className="space-y-1.5 pt-1">
+                    <p className="text-[10px] font-bold text-brand-navy/60">Select the correct answer:</p>
+                    {options.map((opt, i) => opt.trim() ? (
+                      <button key={i} onClick={() => setCorrectAnswerIdx(i)}
+                        className={cn('w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-all border-2',
+                          correctAnswerIdx === i ? 'border-emerald-400 bg-emerald-50 text-emerald-700' : 'border-brand-navy/10 bg-brand-navy/4 text-brand-navy/70')}>
+                        {correctAnswerIdx === i && '✓ '}{opt}
+                      </button>
+                    ) : null)}
+                    {correctAnswerIdx === null && <p className="text-[10px] text-rose-500 font-bold">Please select the correct answer</p>}
+                  </div>
+                )}
+              </div>
+
               <div className="space-y-2">
                 <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-wider">Image (optional)</label>
                 {imagePreview && (
@@ -7994,7 +8068,7 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
                   <Image size={13} /> {imagePreview ? 'Change image' : 'Add image'}
                 </label>
               </div>
-              <button onClick={createVote} disabled={saving || !question.trim() || options.filter(o => o.trim()).length < 2}
+              <button onClick={createVote} disabled={saving || !question.trim() || options.filter(o => o.trim()).length < 2 || (pollType === 'correct' && correctAnswerIdx === null)}
                 className="w-full py-3 rounded-2xl gradient-logo-blue text-white font-bold text-sm active:scale-95 transition-all disabled:opacity-50">
                 {saving ? 'Creating…' : "Create Today's Vote"}
               </button>
@@ -20409,11 +20483,16 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
   useEffect(() => {
     if (!isExpired || voteData?.closed || !voteId || autoClosedRef.current) return;
     autoClosedRef.current = true;
-    const winner = (voteData?.options || []).reduce((best, _, i) => {
-      const a = (preCloseCounts[String(i)] ?? 0) + (adminVotes[String(i)] ?? 0);
-      const b = (preCloseCounts[String(best)] ?? 0) + (adminVotes[String(best)] ?? 0);
-      return a > b ? i : best;
-    }, 0);
+    let winner: number;
+    if (voteData?.pollType === 'correct' && voteData?.correctAnswer != null) {
+      winner = voteData.correctAnswer;
+    } else {
+      winner = (voteData?.options || []).reduce((best, _, i) => {
+        const a = (preCloseCounts[String(i)] ?? 0) + (adminVotes[String(i)] ?? 0);
+        const b = (preCloseCounts[String(best)] ?? 0) + (adminVotes[String(best)] ?? 0);
+        return a > b ? i : best;
+      }, 0);
+    }
     updateDoc(doc(db, 'daily_vote', today), { closed: true, winner }).catch(console.error);
   }, [isExpired, voteData?.closed, voteId]);
 
@@ -20543,9 +20622,9 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
               className="relative z-10 mx-5 mb-3 px-4 py-3 rounded-2xl border border-yellow-400/30 flex items-center gap-3"
               style={{ background: 'linear-gradient(135deg,rgba(234,179,8,0.2),rgba(251,191,36,0.1))' }}
             >
-              <Trophy size={18} className="text-yellow-400 shrink-0" />
+              {voteData.pollType === 'correct' ? <CheckCircle2 size={18} className="text-emerald-400 shrink-0" /> : <Trophy size={18} className="text-yellow-400 shrink-0" />}
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-bold text-yellow-300/70 uppercase tracking-wider">Winner</p>
+                <p className="text-[10px] font-bold text-yellow-300/70 uppercase tracking-wider">{voteData.pollType === 'correct' ? 'Correct Answer' : 'Winner'}</p>
                 <p className="text-sm font-black text-white truncate">{voteData.options[voteData.winner]}</p>
               </div>
             </motion.div>
@@ -20562,7 +20641,7 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
             >
               <span className="card-shine-ray" />
               <Gift size={18} />
-              {claiming ? 'Collecting…' : '🎉 You Won! Collect Stickers'}
+              {claiming ? 'Collecting…' : voteData.pollType === 'correct' ? '🎉 Correct! Collect Stickers' : '🎉 You Won! Collect Stickers'}
             </motion.button>
           )}
           {isWinner && alreadyClaimed && (
@@ -20838,7 +20917,7 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor 
             <p className="text-[11px] font-black text-white/70">Tap to vote</p>
           )}
 
-          {/* You Won button */}
+          {/* You Won / Correct button */}
           {isWinner && !alreadyClaimed ? (
             <motion.button
               onClick={collectReward}
@@ -20851,7 +20930,7 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor 
             >
               <span className="card-shine-ray" />
               <Gift size={11} />
-              {claiming ? 'Collecting…' : '🎉 You Won!'}
+              {claiming ? 'Collecting…' : voteData.pollType === 'correct' ? '🎉 Correct! Collect' : '🎉 You Won!'}
             </motion.button>
           ) : isWinner && alreadyClaimed ? (
             <div className="w-full py-1.5 rounded-xl text-center text-[10px] font-bold text-white/60 bg-white/10">
@@ -20861,6 +20940,7 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor 
             <div className="w-full space-y-1">
               {voteData.options.map((_, i) => {
                 const pct = Math.round(((liveCounts[String(i)] ?? 0) / total) * 100);
+                const isCorrectOpt = voteData.pollType === 'correct' && isClosed && voteData.correctAnswer === i;
                 return (
                   <div key={i} className="h-1.5 bg-white/20 rounded-full overflow-hidden">
                     <motion.div
@@ -20868,7 +20948,7 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor 
                       animate={{ width: `${pct}%` }}
                       transition={{ duration: 0.7, delay: i * 0.1, ease: 'easeOut' }}
                       className="h-full rounded-full"
-                      style={{ background: userVote === i ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.35)' }}
+                      style={{ background: isCorrectOpt ? 'rgba(52,211,153,0.9)' : userVote === i ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.35)' }}
                     />
                   </div>
                 );
