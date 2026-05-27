@@ -20276,85 +20276,111 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
   const hasVoted = userVote !== null;
   const isClosed = voteData.closed;
   const BAR_MAX_H = 120;
-  const barColors = [
-    'linear-gradient(to top, #1e40af, #93c5fd)',
-    'linear-gradient(to top, #991b1b, #fca5a5)',
-  ];
-  const btnColors = [
-    { border: 'border-blue-300', selBg: 'bg-blue-50', selText: 'text-blue-700' },
-    { border: 'border-red-300', selBg: 'bg-red-50', selText: 'text-red-700' },
+
+  // Vivid per-option palette: gradient bg, glow colour, emoji
+  const OPTION_PALETTE = [
+    { grad: 'linear-gradient(135deg,#7c3aed,#ec4899)', glow: '#a855f7', dim: 'rgba(124,58,237,0.15)', emoji: '🔥' },
+    { grad: 'linear-gradient(135deg,#0891b2,#34d399)', glow: '#06b6d4', dim: 'rgba(8,145,178,0.15)', emoji: '⚡' },
+    { grad: 'linear-gradient(135deg,#ea580c,#fbbf24)', glow: '#f97316', dim: 'rgba(234,88,12,0.15)', emoji: '💥' },
+    { grad: 'linear-gradient(135deg,#16a34a,#84cc16)', glow: '#22c55e', dim: 'rgba(22,163,74,0.15)', emoji: '🎯' },
   ];
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[160] bg-black/60 backdrop-blur-sm flex flex-col max-w-md mx-auto"
+      className="fixed inset-0 z-[160] bg-black/70 backdrop-blur-sm flex flex-col max-w-md mx-auto"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', stiffness: 380, damping: 36 }}
-        className="bg-brand-bg flex flex-col overflow-hidden flex-1">
+        className="flex flex-col overflow-hidden flex-1"
+        style={{ background: 'linear-gradient(180deg, #0f0c29 0%, #1a0533 40%, #0d1117 100%)' }}>
+
         {/* Header */}
-        <div className="relative overflow-hidden shrink-0" style={{ background: 'linear-gradient(90deg, #1e1b4b 0%, #3730a3 35%, #6366f1 70%, #818cf8 100%)' }}>
-          <MatrixRainCanvas opacity={0.22} fadeColor="rgba(20,17,60,0.2)" />
+        <div className="relative overflow-hidden shrink-0" style={{ background: 'linear-gradient(135deg, #1e0535 0%, #3b0764 40%, #1e1b4b 100%)' }}>
+          <MatrixRainCanvas opacity={0.18} fadeColor="rgba(15,5,40,0.25)" />
           {[
-            { x: 7,  y: 15, size: 26, delay: 0,   dur: 3.4 },
-            { x: 68, y: 50, size: 20, delay: 0.9, dur: 2.9 },
-            { x: 40, y: 68, size: 30, delay: 1.6, dur: 3.6 },
-            { x: 82, y: 10, size: 22, delay: 0.3, dur: 3.0 },
-            { x: 22, y: 60, size: 18, delay: 1.2, dur: 2.7 },
+            { x: 5,  y: 10, size: 28, delay: 0,   dur: 3.0, e: '🔥' },
+            { x: 65, y: 45, size: 22, delay: 0.8, dur: 2.7, e: '⚡' },
+            { x: 38, y: 65, size: 32, delay: 1.4, dur: 3.3, e: '🎯' },
+            { x: 80, y: 8,  size: 20, delay: 0.2, dur: 2.8, e: '💥' },
+            { x: 20, y: 55, size: 18, delay: 1.1, dur: 2.5, e: '🏆' },
           ].map((e, i) => (
             <motion.span key={i} className="absolute pointer-events-none select-none z-0"
-              style={{ left: `${e.x}%`, top: `${e.y}%`, fontSize: e.size, opacity: 0.10 }}
-              animate={{ y: [-6, -18, -6], rotate: [-10, 10, -10] }}
-              transition={{ duration: e.dur, repeat: Infinity, delay: e.delay, ease: 'easeInOut' }}>😂</motion.span>
+              style={{ left: `${e.x}%`, top: `${e.y}%`, fontSize: e.size, opacity: 0.13 }}
+              animate={{ y: [-6, -20, -6], rotate: [-12, 12, -12], scale: [1, 1.15, 1] }}
+              transition={{ duration: e.dur, repeat: Infinity, delay: e.delay, ease: 'easeInOut' }}>
+              {e.e}
+            </motion.span>
           ))}
-          <div className="relative z-10 flex items-start justify-between px-5 pt-5 pb-3">
+          <div className="relative z-10 flex items-start justify-between px-5 pt-5 pb-2">
             <div className="flex-1 pr-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-200/70">Daily Vote</p>
-              <h2 className="font-black text-lg text-white leading-snug mt-0.5">{voteData.question}</h2>
+              <div className="flex items-center gap-1.5 mb-1">
+                <motion.span
+                  className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full"
+                  style={{ background: 'linear-gradient(90deg,#a855f7,#ec4899)', color: 'white' }}
+                  animate={{ opacity: [1, 0.6, 1] }}
+                  transition={{ duration: 1.4, repeat: Infinity }}
+                >● LIVE</motion.span>
+                <span className="text-[9px] font-bold text-purple-300/60 uppercase tracking-widest">Daily Vote</span>
+              </div>
+              <h2 className="font-black text-xl text-white leading-snug">{voteData.question}</h2>
             </div>
-            <button onClick={onClose} className="shrink-0 w-9 h-9 rounded-full bg-white/15 flex items-center justify-center active:scale-90 transition-all">
+            <button onClick={onClose} className="shrink-0 w-9 h-9 rounded-full bg-white/10 border border-white/15 flex items-center justify-center active:scale-90 transition-all">
               <X size={18} className="text-white" />
             </button>
           </div>
           {isClosed && voteData.winner !== null && (
-            <div className="relative z-10 mx-5 mb-3 px-4 py-2.5 bg-white/15 rounded-2xl flex items-center gap-3 border border-white/20">
-              <Trophy size={16} className="text-yellow-300 shrink-0" />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+              className="relative z-10 mx-5 mb-3 px-4 py-3 rounded-2xl border border-yellow-400/30 flex items-center gap-3"
+              style={{ background: 'linear-gradient(135deg,rgba(234,179,8,0.2),rgba(251,191,36,0.1))' }}
+            >
+              <Trophy size={18} className="text-yellow-400 shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-bold text-white/60 uppercase tracking-wider">Winning answer</p>
+                <p className="text-[10px] font-bold text-yellow-300/70 uppercase tracking-wider">Winner</p>
                 <p className="text-sm font-black text-white truncate">{voteData.options[voteData.winner]}</p>
               </div>
               {hasVoted && userVote === voteData.winner && (
-                <span className="text-[10px] font-bold bg-yellow-400/20 text-yellow-300 px-2 py-1 rounded-full whitespace-nowrap">🎁 Pack earned!</span>
+                <motion.span
+                  animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 1, repeat: Infinity }}
+                  className="text-[10px] font-black bg-yellow-400/25 text-yellow-300 px-2.5 py-1.5 rounded-full whitespace-nowrap border border-yellow-400/30"
+                >🎁 Pack earned!</motion.span>
               )}
-            </div>
+            </motion.div>
           )}
-          <div className="relative z-10 px-5 pb-4 flex gap-3 text-xs font-bold text-white/60">
-            <span>{liveTotal} votes</span>
+          <div className="relative z-10 px-5 pb-4 flex gap-3 text-xs font-bold text-purple-300/50">
+            <span>🗳️ {liveTotal} votes</span>
             <span>·</span>
-            <span>{comments.length} comments</span>
+            <span>💬 {comments.length} comments</span>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-4">
-          {/* Vertical bar graph */}
+        <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-5">
+          {/* Vertical bar graph — only after voting */}
           {(hasVoted || isClosed) && (
-            <div className="flex items-end gap-4 px-2" style={{ height: 160 }}>
+            <div className="flex items-end gap-3 px-1 pt-2" style={{ height: 160 }}>
               {voteData.options.map((opt, i) => {
                 const count = liveCounts[String(i)] ?? 0;
                 const pct = Math.round((count / total) * 100);
                 const barH = Math.max((pct / 100) * BAR_MAX_H, 4);
+                const pal = OPTION_PALETTE[i % OPTION_PALETTE.length];
+                const isMe = userVote === i;
                 return (
                   <div key={i} className="flex-1 flex flex-col items-center">
-                    <span className="text-xs font-black text-brand-navy/80 mb-1">{pct}%</span>
-                    <div className="w-full flex items-end" style={{ height: BAR_MAX_H }}>
-                      <motion.div className="w-full rounded-t-2xl"
-                        style={{ background: barColors[i % 2] }}
+                    <motion.span
+                      className="font-black mb-1.5"
+                      style={{ fontSize: isMe ? 18 : 14, color: isMe ? pal.glow : 'rgba(255,255,255,0.5)' }}
+                      initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 + 0.3 }}
+                    >{pct}%</motion.span>
+                    <div className="w-full flex items-end rounded-t-2xl overflow-hidden" style={{ height: BAR_MAX_H, background: 'rgba(255,255,255,0.06)' }}>
+                      <motion.div
+                        className="w-full rounded-t-2xl"
+                        style={{ background: isMe ? pal.grad : 'rgba(255,255,255,0.18)', boxShadow: isMe ? `0 -6px 20px ${pal.glow}66` : 'none' }}
                         initial={{ height: 0 }}
                         animate={{ height: barH }}
-                        transition={{ duration: 0.7, ease: 'easeOut' }}
+                        transition={{ duration: 0.8, delay: i * 0.12, ease: [0.34, 1.56, 0.64, 1] }}
                       />
                     </div>
-                    <p className="text-[11px] font-bold text-brand-navy/75 text-center mt-1.5 leading-tight">{opt}</p>
+                    <p className="text-[10px] font-bold text-white/50 text-center mt-1.5 leading-tight px-1">{opt}</p>
                   </div>
                 );
               })}
@@ -20362,64 +20388,91 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
           )}
 
           {/* Vote buttons */}
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             {voteData.options.map((opt, i) => {
               const isMyVote = userVote === i;
               const isWinner = isClosed && voteData.winner === i;
-              const c = btnColors[i % 2];
+              const pal = OPTION_PALETTE[i % OPTION_PALETTE.length];
               return (
-                <button key={i} onClick={() => castVote(i)} disabled={hasVoted || isClosed || voting}
-                  className={`w-full rounded-2xl border-2 text-left px-4 py-3.5 font-bold text-sm transition-all active:scale-[0.98]
-                    ${isMyVote || isWinner ? `${c.border} ${c.selBg} ${c.selText}` : 'border-brand-navy/10 bg-white text-brand-navy'}
-                    ${!hasVoted && !isClosed ? 'hover:border-brand-navy/20' : ''}`}>
-                  <div className="flex items-center gap-2">
-                    {isMyVote && <Check size={15} className="shrink-0" />}
-                    <span className="flex-1">{opt}</span>
-                    {isWinner && <Trophy size={14} className="text-yellow-500 shrink-0" />}
+                <motion.button
+                  key={i}
+                  onClick={() => castVote(i)}
+                  disabled={hasVoted || isClosed || voting}
+                  whileTap={{ scale: 0.97 }}
+                  animate={isMyVote ? { boxShadow: [`0 0 0px ${pal.glow}00`, `0 0 22px ${pal.glow}88`, `0 0 0px ${pal.glow}00`] } : {}}
+                  transition={{ duration: 1.8, repeat: Infinity }}
+                  className="w-full rounded-[1.25rem] text-left px-5 py-4 font-bold text-sm transition-all relative overflow-hidden"
+                  style={{
+                    background: isMyVote ? pal.grad : hasVoted || isClosed ? pal.dim : 'rgba(255,255,255,0.06)',
+                    border: `1.5px solid ${isMyVote ? pal.glow + '80' : 'rgba(255,255,255,0.10)'}`,
+                    color: isMyVote ? 'white' : 'rgba(255,255,255,0.75)',
+                  }}
+                >
+                  {/* Shimmer on unvoted options */}
+                  {!hasVoted && !isClosed && (
+                    <motion.div
+                      className="absolute inset-0 pointer-events-none"
+                      style={{ background: `linear-gradient(90deg, transparent 0%, ${pal.glow}22 50%, transparent 100%)` }}
+                      animate={{ x: ['-100%', '200%'] }}
+                      transition={{ duration: 2.4, repeat: Infinity, delay: i * 0.6, ease: 'linear' }}
+                    />
+                  )}
+                  <div className="relative flex items-center gap-3">
+                    <span className="text-2xl">{pal.emoji}</span>
+                    <span className="flex-1 font-bold">{opt}</span>
+                    {isMyVote && (
+                      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 400, damping: 15 }}>
+                        <Check size={18} className="text-white shrink-0" strokeWidth={3} />
+                      </motion.div>
+                    )}
+                    {isWinner && <Trophy size={16} className="text-yellow-400 shrink-0" />}
                   </div>
-                </button>
+                </motion.button>
               );
             })}
           </div>
 
-          <p className="text-center text-xs text-brand-navy/72">
-            {isClosed ? 'Voting closed' : hasVoted ? `${liveTotal} votes · updating live` : 'Tap an option to vote'}
+          <p className="text-center text-xs text-white/30 font-bold">
+            {isClosed ? '🔒 Voting closed' : hasVoted ? `✅ ${liveTotal} votes · live` : '👆 Tap to cast your vote'}
           </p>
 
           {/* Comment input */}
-          <div className="border-t border-brand-navy/6 pt-4 flex gap-2 items-center">
+          <div className="flex gap-2 items-center pt-1">
             <input value={commentText} onChange={e => setCommentText(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); postComment(); } }}
               placeholder="Add a comment…"
-              className="flex-1 bg-brand-navy/5 rounded-2xl px-4 py-2.5 text-sm text-brand-navy placeholder:text-brand-navy/72 outline-none" />
+              className="flex-1 rounded-2xl px-4 py-2.5 text-sm text-white placeholder:text-white/30 outline-none border border-white/10"
+              style={{ background: 'rgba(255,255,255,0.07)' }} />
             <button onClick={postComment} disabled={!commentText.trim() || posting}
-              className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center disabled:opacity-40 active:scale-90 transition-all">
+              className="w-9 h-9 rounded-full flex items-center justify-center disabled:opacity-40 active:scale-90 transition-all"
+              style={{ background: 'linear-gradient(135deg,#7c3aed,#ec4899)' }}>
               <Send size={15} className="text-white" />
             </button>
           </div>
 
           {/* Comments */}
-          <div className="divide-y divide-brand-navy/5">
-            {comments.length === 0 && <p className="text-center text-brand-navy/72 text-sm py-6">No comments yet</p>}
+          <div className="divide-y divide-white/5">
+            {comments.length === 0 && <p className="text-center text-white/30 text-sm py-6">No comments yet — be first!</p>}
             {comments.map(c => {
               const liked = c.likes.includes(currentUser.uid);
               const ts = c.createdAt?.toDate?.();
               return (
                 <div key={c.id} className="flex gap-3 py-3.5">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0 text-xs font-black text-blue-600">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-black text-white"
+                    style={{ background: 'linear-gradient(135deg,#7c3aed,#ec4899)' }}>
                     {c.name?.[0]?.toUpperCase() ?? '?'}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-2">
-                      <span className="text-xs font-bold text-brand-navy">{c.name}</span>
-                      {ts && <span className="text-[10px] text-brand-navy/72">{ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
+                      <span className="text-xs font-bold text-white/80">{c.name}</span>
+                      {ts && <span className="text-[10px] text-white/30">{ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
                     </div>
-                    <p className="text-sm text-brand-navy/80 mt-0.5 leading-snug">{c.text}</p>
+                    <p className="text-sm text-white/60 mt-0.5 leading-snug">{c.text}</p>
                   </div>
                   <button onClick={() => updateDoc(doc(db, 'daily_vote', today, 'comments', c.id), { likes: liked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid) })}
                     className="flex flex-col items-center gap-0.5 shrink-0 active:scale-90 transition-all pt-1">
-                    <Heart size={15} className={liked ? 'text-rose-500 fill-rose-500' : 'text-brand-navy/72'} />
-                    {c.likes.length > 0 && <span className="text-[10px] font-bold text-brand-navy/75">{c.likes.length}</span>}
+                    <Heart size={15} className={liked ? 'text-rose-400 fill-rose-400' : 'text-white/30'} />
+                    {c.likes.length > 0 && <span className="text-[10px] font-bold text-white/40">{c.likes.length}</span>}
                   </button>
                 </div>
               );
@@ -20477,45 +20530,78 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor 
 
   return (
     <>
-      <motion.button whileTap={{ scale: 0.97 }} onClick={() => setOpen(true)}
-        className="flex-1 rounded-[1.5rem] overflow-hidden shadow-lg shadow-blue-900/10 text-left">
+      <motion.button
+        whileTap={{ scale: 0.96 }}
+        animate={{ boxShadow: hasVoted
+          ? ['0 0 0px #F5C51800', '0 4px 18px #F5C51855', '0 0 0px #F5C51800']
+          : ['0 0 0px #f472b600', '0 6px 28px #f472b655', '0 0 0px #f472b600'] }}
+        transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+        onClick={() => setOpen(true)}
+        className="flex-1 rounded-[1.5rem] overflow-hidden text-left"
+      >
         <div className="relative h-full px-4 py-4 flex flex-col gap-3"
           style={{ background: tc.css }}>
+          {/* Animated floating emojis */}
           {[
-            { x: 8,  y: 18, size: 18, delay: 0,   dur: 3.2 },
-            { x: 72, y: 55, size: 14, delay: 0.8, dur: 2.8 },
-            { x: 45, y: 70, size: 20, delay: 1.5, dur: 3.5 },
-            { x: 85, y: 12, size: 14, delay: 0.4, dur: 2.9 },
+            { x: 6,  y: 12, size: 20, delay: 0,   dur: 2.8, e: '🔥' },
+            { x: 70, y: 48, size: 16, delay: 0.7, dur: 2.5, e: '⚡' },
+            { x: 40, y: 66, size: 22, delay: 1.3, dur: 3.1, e: '🎯' },
+            { x: 82, y: 8,  size: 14, delay: 0.3, dur: 2.6, e: '💥' },
           ].map((e, i) => (
             <motion.span key={i} className="absolute pointer-events-none select-none z-0"
-              style={{ left: `${e.x}%`, top: `${e.y}%`, fontSize: e.size, opacity: 0.10 }}
-              animate={{ y: [-5, -14, -5], rotate: [-8, 8, -8] }}
-              transition={{ duration: e.dur, repeat: Infinity, delay: e.delay, ease: 'easeInOut' }}>😂</motion.span>
+              style={{ left: `${e.x}%`, top: `${e.y}%`, fontSize: e.size, opacity: 0.18 }}
+              animate={{ y: [-4, -14, -4], rotate: [-12, 12, -12], scale: [1, 1.2, 1] }}
+              transition={{ duration: e.dur, repeat: Infinity, delay: e.delay, ease: 'easeInOut' }}>
+              {e.e}
+            </motion.span>
           ))}
-          <div className="absolute top-2 right-2 z-20 w-7 h-7 bg-red-500 rounded-full flex items-center justify-center shadow-md">
-            <Gift size={14} className="text-white" strokeWidth={2.5} />
-          </div>
+
+          {/* Prize badge */}
+          <motion.div
+            className="absolute top-2 right-2 z-20 px-2 py-1 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center gap-1 shadow-lg"
+            animate={{ scale: [1, 1.08, 1] }}
+            transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            <Gift size={11} className="text-white" strokeWidth={2.5} />
+            <span className="text-white text-[9px] font-black">Prize</span>
+          </motion.div>
+
           <div className="flex-1 min-w-0">
-            <p className={`text-[9px] font-bold uppercase tracking-widest ${labelCls}`} style={dvTextStyle(0.6)}>Daily Vote</p>
-            <p className={`text-sm font-black ${titleCls} leading-tight mt-0.5 line-clamp-2`} style={dvTextStyle()}>{voteData.question}</p>
+            <p className="text-[9px] font-black uppercase tracking-widest text-white/60 mb-0.5">Daily Vote</p>
+            <p className="text-sm font-black text-white leading-tight line-clamp-2" style={dvTextStyle()}>{voteData.question}</p>
           </div>
-          {hasVoted && (
-            <div className="space-y-1">
+
+          {hasVoted ? (
+            <div className="space-y-1.5">
               {voteData.options.map((_, i) => {
                 const pct = Math.round(((liveCounts[String(i)] ?? 0) / total) * 100);
+                const OPTION_GRADS = ['linear-gradient(90deg,#f472b6,#a78bfa)', 'linear-gradient(90deg,#34d399,#60a5fa)'];
                 return (
-                  <div key={i} className={`h-1.5 ${barBg} rounded-full overflow-hidden`}>
-                    <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.5, delay: i * 0.1 }}
-                      className={`h-full rounded-full ${userVote === i ? barFill : barFillDim}`} />
+                  <div key={i} className="space-y-0.5">
+                    <div className="h-2 bg-white/15 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${pct}%` }}
+                        transition={{ duration: 0.7, delay: i * 0.12, ease: 'easeOut' }}
+                        className="h-full rounded-full"
+                        style={{ background: userVote === i ? OPTION_GRADS[i % 2] : 'rgba(255,255,255,0.3)' }}
+                      />
+                    </div>
                   </div>
                 );
               })}
-              <p className={`text-[9px] ${voteCls} pt-0.5`} style={dvTextStyle(0.6)}>{liveTotal} votes</p>
+              <p className="text-[9px] text-white/55 font-bold pt-0.5">{liveTotal} votes · live</p>
             </div>
-          )}
-          {!hasVoted && !voteData.closed && (
-            <p className={`text-[10px] font-bold ${voteCls}`} style={dvTextStyle(0.6)}>Tap to vote →</p>
-          )}
+          ) : !voteData.closed ? (
+            <motion.div
+              className="flex items-center gap-1"
+              animate={{ x: [0, 4, 0] }}
+              transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              <span className="text-[11px] font-black text-white/80">Tap to vote</span>
+              <span className="text-white/80">→</span>
+            </motion.div>
+          ) : null}
         </div>
       </motion.button>
       <AnimatePresence>
