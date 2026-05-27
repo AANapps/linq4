@@ -705,6 +705,8 @@ interface ChatMessage {
   senderName: string;
   text: string;
   title?: string;
+  isBroadcast?: boolean;
+  broadcastId?: string;
   createdAt: any;
 }
 
@@ -15241,15 +15243,12 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
 
       for (let i = 0; i < recipientUids.length; i += 50) {
         await Promise.all(recipientUids.slice(i, i + 50).map(async uid => {
-          const chatId = `broadcast_${store.id}_${uid}`;
+          const chatId = [store.ownerUid, uid].sort().join('_');
           const chatRef = doc(db, 'chats', chatId);
           await setDoc(chatRef, {
             uids: [store.ownerUid, uid],
-            isBroadcast: true,
-            storeId: store.id,
-            storeName: store.name,
-            storeLogoUrl: store.logoUrl || '',
-            broadcastId,
+            businessName: store.name,
+            businessLogoUrl: store.logoUrl || '',
             lastMessage: msgBody.trim(),
             lastActivity: serverTimestamp(),
           }, { merge: true });
@@ -15260,6 +15259,7 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
             senderName: store.name,
             title: msgTitle.trim(),
             text: msgBody.trim(),
+            isBroadcast: true,
             broadcastId,
             createdAt: serverTimestamp(),
           });
@@ -29098,12 +29098,20 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
                       {!isMe && !activeChatBusinessInfo && idx > 0 && allMsgs[idx-1].senderUid !== msg.senderUid && (
                         <span className="text-[10px] font-bold text-brand-navy/75 mb-1 ml-1">{msg.senderName}</span>
                       )}
-                      <div className={cn(
-                        "px-4 py-3 rounded-2xl text-sm shadow-sm",
-                        isMe ? "gradient-red text-white" : "glass-card text-brand-navy"
-                      )}>
-                        {msg.text}
-                      </div>
+                      {msg.isBroadcast ? (
+                        <div className="bg-white border border-brand-navy/10 rounded-2xl p-4 shadow-sm max-w-[260px]">
+                          <span className="text-[9px] font-bold uppercase tracking-widest text-brand-gold mb-1.5 block">Broadcast</span>
+                          {msg.title && <p className="font-bold text-sm text-brand-navy mb-1 leading-snug">{msg.title}</p>}
+                          <p className="text-sm text-brand-navy/80 leading-relaxed">{msg.text}</p>
+                        </div>
+                      ) : (
+                        <div className={cn(
+                          "px-4 py-3 rounded-2xl text-sm shadow-sm",
+                          isMe ? "gradient-red text-white" : "glass-card text-brand-navy"
+                        )}>
+                          {msg.text}
+                        </div>
+                      )}
                     </div>
                     <AnimatePresence>
                       {isSelected && isMe && (
