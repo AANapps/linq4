@@ -4322,6 +4322,171 @@ function PhysicalCardRevealModal({ sticker, alreadyClaimed, onClose }: { sticker
   );
 }
 
+function StickerQRScanModal({ onClose, onSticker }: {
+  onClose: () => void;
+  onSticker: (s: CollectibleSticker, alreadyClaimed: boolean) => void;
+}) {
+  type SS = 'scanning' | 'processing' | 'error';
+  const [scanState, setScanState] = useState<SS>('scanning');
+  const [statusMsg, setStatusMsg] = useState('');
+  const [cameraKey, setCameraKey] = useState(0);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const rafRef = useRef<number>(0);
+  const detectorRef = useRef<any>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const processedRef = useRef(false);
+  const hasBarcodeDetector = typeof window !== 'undefined' && 'BarcodeDetector' in window;
+
+  const stopCamera = useCallback(() => {
+    cancelAnimationFrame(rafRef.current);
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    streamRef.current = null;
+  }, []);
+
+  useEffect(() => {
+    processedRef.current = false;
+    setScanState('scanning');
+
+    const handleRaw = async (raw: string) => {
+      if (processedRef.current) return;
+      const physCardId = raw.startsWith('linq4:card:')
+        ? raw.slice('linq4:card:'.length)
+        : (() => { try { const u = new URL(raw); return u.searchParams.get('card') || null; } catch { return null; } })();
+      if (!physCardId) {
+        processedRef.current = true;
+        stopCamera();
+        setScanState('error');
+        setStatusMsg('Not a sticker QR — try again.');
+        return;
+      }
+      processedRef.current = true;
+      stopCamera();
+      setScanState('processing');
+      setStatusMsg('Checking card…');
+      const user = auth.currentUser;
+      if (!user) { setScanState('error'); setStatusMsg('You need to be signed in.'); return; }
+      const result = await processPhysicalCardScan(physCardId, user);
+      if ('error' in result) { setScanState('error'); setStatusMsg(result.error); return; }
+      onSticker(result.sticker, result.alreadyClaimed);
+    };
+
+    const tick = async () => {
+      const video = videoRef.current;
+      if (!video || video.readyState < 2) { rafRef.current = requestAnimationFrame(tick); return; }
+      try {
+        if (hasBarcodeDetector && detectorRef.current) {
+          const barcodes = await detectorRef.current.detect(video);
+          for (const b of barcodes) { await handleRaw(b.rawValue as string); return; }
+        } else {
+          const canvas = canvasRef.current;
+          if (canvas) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(video, 0, 0);
+              const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+              const jsQR = (await import('jsqr')).default;
+              const result = jsQR(imgData.data, imgData.width, imgData.height);
+              if (result) { await handleRaw(result.data); return; }
+            }
+          }
+        }
+      } catch { /* non-fatal */ }
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
+    const start = async () => {
+      try {
+        if (hasBarcodeDetector) detectorRef.current = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        streamRef.current = stream;
+        if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play().then(tick); }
+      } catch (err: any) {
+        setScanState('error');
+        setStatusMsg(err?.message || 'Camera unavailable');
+      }
+    };
+
+    start();
+    return () => stopCamera();
+  }, [cameraKey, stopCamera]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[300] flex flex-col max-w-md mx-auto bg-black overflow-hidden"
+    >
+      {/* Header */}
+      <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-5 pt-5 pb-4 bg-gradient-to-b from-black/80 to-transparent">
+        <div className="flex items-center gap-3">
+          <button onClick={() => { stopCamera(); onClose(); }} className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center active:scale-90 transition-transform">
+            <X size={18} className="text-white" />
+          </button>
+          <div>
+            <p className="font-bold text-white text-sm leading-tight">Scan Sticker QR</p>
+            <p className="text-white/55 text-[10px]">Point at a sticker card QR code</p>
+          </div>
+        </div>
+        <ScanLine size={20} className="text-white/40" />
+      </div>
+
+      {/* Camera feed */}
+      <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
+      <canvas ref={canvasRef} className="hidden" />
+
+      {/* Animated viewfinder */}
+      {scanState === 'scanning' && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="relative w-64 h-64">
+            {/* Corner brackets */}
+            {[['top-0 left-0', 'top-0', 'left-0'], ['top-0 right-0', 'top-0', 'right-0'], ['bottom-0 left-0', 'bottom-0', 'left-0'], ['bottom-0 right-0', 'bottom-0', 'right-0']].map(([pos], i) => (
+              <div key={i} className={`absolute w-8 h-8 ${pos}`}>
+                <div className={`absolute w-8 h-1 bg-white rounded-full ${i < 2 ? 'top-0' : 'bottom-0'}`} />
+                <div className={`absolute w-1 h-8 bg-white rounded-full ${i % 2 === 0 ? 'left-0' : 'right-0'}`} />
+              </div>
+            ))}
+            {/* Scan line */}
+            <motion.div
+              className="absolute left-2 right-2 h-0.5 rounded-full"
+              style={{ background: 'linear-gradient(90deg, transparent, #F5C518, transparent)' }}
+              animate={{ y: [0, 240] }}
+              transition={{ duration: 1.6, repeat: Infinity, ease: 'linear' }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Processing overlay */}
+      {scanState === 'processing' && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 bg-black/85 backdrop-blur-sm">
+          <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}>
+            <Sparkles size={40} className="text-brand-gold" />
+          </motion.div>
+          <p className="text-white font-bold text-lg">{statusMsg}</p>
+        </div>
+      )}
+
+      {/* Error overlay */}
+      {scanState === 'error' && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 bg-black/85 backdrop-blur-sm px-8">
+          <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center">
+            <X size={28} className="text-red-400" />
+          </div>
+          <p className="text-white font-bold text-center">{statusMsg}</p>
+          <button
+            onClick={() => setCameraKey(k => k + 1)}
+            className="px-8 py-3 rounded-2xl bg-white/15 text-white font-bold text-sm active:scale-95 transition-transform"
+          >Try Again</button>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
 function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: CollectibleSticker[]; cardId?: string | null; uid?: string | null; onClose: () => void }) {
   type PackPhase = 'sealed' | 'opening' | 'dealing' | 'reveal' | 'done';
   const [phase, setPhase] = useState<PackPhase>('sealed');
@@ -12122,6 +12287,25 @@ async function processPhysicalCardScan(
         claimedPhysicalCardIds: [physicalCardId],
       });
     }
+
+    // Also write to any active collectible challenge sticker_cards
+    try {
+      const stickerCardsSnap = await getDocs(query(collection(db, 'sticker_cards'), where('user_id', '==', user.uid)));
+      if (!stickerCardsSnap.empty) {
+        const programmeIds = [...new Set(stickerCardsSnap.docs.map(d => d.data().programme_id as string))];
+        const activePids = new Set<string>();
+        await Promise.all(programmeIds.map(async pid => {
+          const cSnap = await getDoc(doc(db, 'challenges', pid));
+          if (cSnap.exists() && cSnap.data().status === 'active' && cSnap.data().type === 'collectible') activePids.add(pid);
+        }));
+        const activeDocs = stickerCardsSnap.docs.filter(d => activePids.has(d.data().programme_id));
+        if (activeDocs.length > 0) {
+          const userName = user.displayName || '';
+          await Promise.all(activeDocs.map(d => updateDoc(d.ref, { stickers: arrayUnion(sticker), userName })));
+        }
+      }
+    } catch { /* challenge write is non-critical */ }
+
     logEvent('physical_card_scanned', user.uid, { physicalCardId, cardDefId: data.cardDefId, tier: data.tier });
   }
 
@@ -23815,6 +23999,8 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
   const [challengeTab, setChallengeTab] = useState<'current' | 'completed'>('current');
   const [badgesOpen, setBadgesOpen] = useState(false);
   const [showStickerModal, setShowStickerModal] = useState(false);
+  const [showStickerScanner, setShowStickerScanner] = useState(false);
+  const [stickerScanResult, setStickerScanResult] = useState<{ sticker: CollectibleSticker; alreadyClaimed: boolean } | null>(null);
   const [stickerData, setStickerData] = useState<{ stickers: CollectibleSticker[]; revealedIds: string[] } | null>(null);
   const [expandedSticker, setExpandedSticker] = useState<CollectibleSticker | null>(null);
   const [stickerCardDefs, setStickerCardDefs] = useState<CollectibleCardDef[]>([]);
@@ -24604,9 +24790,14 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         <div className="bg-white/70 rounded-2xl px-3 pt-2.5 pb-3 shadow-sm min-w-0" style={{ flex: '3 1 0%' }}>
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75">Stickers</span>
-            <button onClick={() => stickerData && setShowStickerModal(true)} className="text-blue-500 active:opacity-70">
-              <Eye size={14} />
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button onClick={() => setShowStickerScanner(true)} className="text-brand-gold active:opacity-70" title="Scan sticker QR">
+                <QrCode size={14} />
+              </button>
+              <button onClick={() => stickerData && setShowStickerModal(true)} className="text-blue-500 active:opacity-70">
+                <Eye size={14} />
+              </button>
+            </div>
           </div>
           {(() => {
             const universal = (stickerData?.stickers ?? [])
@@ -24922,6 +25113,28 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
       <AnimatePresence>
         {profilePendingPack && (
           <PackOpeningModal stickers={profilePendingPack} uid={user.uid} onClose={() => setProfilePendingPack(null)} />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showStickerScanner && (
+          <StickerQRScanModal
+            onClose={() => setShowStickerScanner(false)}
+            onSticker={(sticker, alreadyClaimed) => {
+              setShowStickerScanner(false);
+              setStickerScanResult({ sticker, alreadyClaimed });
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {stickerScanResult && (
+          <PhysicalCardRevealModal
+            sticker={stickerScanResult.sticker}
+            alreadyClaimed={stickerScanResult.alreadyClaimed}
+            onClose={() => setStickerScanResult(null)}
+          />
         )}
       </AnimatePresence>
 
