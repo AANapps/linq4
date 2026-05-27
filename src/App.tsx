@@ -7603,8 +7603,20 @@ interface DailyVoteData {
   commentCount?: number;
   voteId?: string;
   imageUrl?: string;
+  endsAt?: any;
+  adminVotes?: Record<string, number>;
 }
 interface DailyVoteComment { id: string; uid: string; name: string; photoURL?: string; text: string; createdAt: any; likes: string[]; voteId?: string; }
+
+const POLL_DURATIONS = [
+  { label: '15 min', mins: 15 },
+  { label: '30 min', mins: 30 },
+  { label: '1 hr',   mins: 60 },
+  { label: '2 hr',   mins: 120 },
+  { label: '4 hr',   mins: 240 },
+  { label: '12 hr',  mins: 720 },
+  { label: '24 hr',  mins: 1440 },
+];
 
 function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
   const today = new Date().toISOString().split('T')[0];
@@ -7612,6 +7624,7 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(true);
   const [question, setQuestion] = useState('');
   const [options, setOptions] = useState(['', '']);
+  const [durationMins, setDurationMins] = useState(60);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState('');
   const [saving, setSaving] = useState(false);
@@ -7622,6 +7635,8 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
   const [editImagePreview, setEditImagePreview] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [adminVoteInputs, setAdminVoteInputs] = useState<Record<string, string>>({});
+  const [pushingAdmin, setPushingAdmin] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const editFileRef = useRef<HTMLInputElement>(null);
 
@@ -7662,7 +7677,8 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
         const snap2 = await uploadBytes(storageRef(storage, `daily_vote/${today}_${voteId}.webp`), blob);
         imageUrl = await getDownloadURL(snap2.ref);
       }
-      await setDoc(doc(db, 'daily_vote', today), { question: question.trim(), options: cleanOpts, voteCounts: {}, totalVotes: 0, closed: false, winner: null, commentCount: 0, voteId, createdAt: serverTimestamp(), ...(imageUrl ? { imageUrl } : {}) });
+      const endsAt = Timestamp.fromMillis(Date.now() + durationMins * 60 * 1000);
+      await setDoc(doc(db, 'daily_vote', today), { question: question.trim(), options: cleanOpts, voteCounts: {}, totalVotes: 0, closed: false, winner: null, commentCount: 0, voteId, createdAt: serverTimestamp(), endsAt, adminVotes: {}, ...(imageUrl ? { imageUrl } : {}) });
       setQuestion(''); setOptions(['', '']); setImageFile(null); setImagePreview('');
       if (fileRef.current) fileRef.current.value = '';
     } catch (e) { console.error(e); }
@@ -7716,13 +7732,31 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
   const closeVote = async () => {
     if (!voteData || voteData.closed) return;
     setSaving(true);
-    const winner = voteData.options.reduce((best, _, i) =>
-      (liveCounts[String(i)] ?? 0) > (liveCounts[String(best)] ?? 0) ? i : best, 0);
+    const adminV = voteData.adminVotes || {};
+    const winner = voteData.options.reduce((best, _, i) => {
+      const a = (liveCounts[String(i)] ?? 0) + (adminV[String(i)] ?? 0);
+      const b = (liveCounts[String(best)] ?? 0) + (adminV[String(best)] ?? 0);
+      return a > b ? i : best;
+    }, 0);
     try {
       await updateDoc(doc(db, 'daily_vote', today), { closed: true, winner });
     } catch (e) { console.error(e); }
     setSaving(false);
   };
+
+  const pushAdminVotes = async (optIdx: number) => {
+    const amt = parseInt(adminVoteInputs[String(optIdx)] || '0', 10);
+    if (!amt || amt <= 0) return;
+    setPushingAdmin(optIdx);
+    try {
+      await updateDoc(doc(db, 'daily_vote', today), { [`adminVotes.${optIdx}`]: increment(amt) });
+      setAdminVoteInputs(m => ({ ...m, [String(optIdx)]: '' }));
+    } catch (e) { console.error(e); }
+    setPushingAdmin(null);
+  };
+
+  const adminVotes = voteData?.adminVotes || {};
+  const endsAtMs = voteData?.endsAt?.toMillis?.() ?? null;
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -7802,16 +7836,53 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
               </>
             ) : (
               <>
-                <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100">
+                <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100 space-y-1">
                   <p className="font-black text-brand-navy">{voteData.question}</p>
-                  <p className="text-xs text-brand-navy/80 mt-1">{liveTotal} votes · {voteData.closed ? `Closed — winner: ${voteData.winner !== null ? voteData.options[voteData.winner] : '?'}` : 'Open'}</p>
+                  <p className="text-xs text-brand-navy/80">{liveTotal} real votes · {voteData.closed ? `Closed — winner: ${voteData.winner !== null ? voteData.options[voteData.winner] : '?'}` : 'Open'}</p>
+                  {endsAtMs && (
+                    <p className="text-xs text-purple-600 font-bold">
+                      {voteData.closed ? '🔒 Closed' : `⏱ Ends ${new Date(endsAtMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+                    </p>
+                  )}
                 </div>
-                {voteData.options.map((opt, i) => (
-                  <div key={i} className="bg-white rounded-2xl border border-brand-navy/8 px-4 py-3">
-                    <p className="font-bold text-brand-navy text-sm">{opt}</p>
-                    <p className="text-xs text-brand-navy/75 mt-0.5">{liveCounts[String(i)] ?? 0} votes</p>
-                  </div>
-                ))}
+
+                {/* Per-option stats + admin vote push */}
+                <div className="space-y-2">
+                  <p className="text-xs font-bold text-brand-navy/60 uppercase tracking-wider">Options — Push Votes</p>
+                  {voteData.options.map((opt, i) => {
+                    const real = liveCounts[String(i)] ?? 0;
+                    const adm  = adminVotes[String(i)] ?? 0;
+                    return (
+                      <div key={i} className="bg-white rounded-2xl border border-brand-navy/8 px-4 py-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="font-bold text-brand-navy text-sm">{opt}</p>
+                          <div className="flex items-center gap-2 text-xs text-brand-navy/60">
+                            <span>{real} real</span>
+                            {adm > 0 && <span className="text-purple-600 font-bold">+{adm} admin</span>}
+                          </div>
+                        </div>
+                        <div className="flex gap-2 items-center">
+                          <input
+                            type="number"
+                            min="1"
+                            value={adminVoteInputs[String(i)] ?? ''}
+                            onChange={e => setAdminVoteInputs(m => ({ ...m, [String(i)]: e.target.value }))}
+                            placeholder="# votes"
+                            className="w-20 px-3 py-1.5 rounded-xl border border-purple-200 text-xs font-bold text-purple-700 outline-none text-center"
+                          />
+                          <button
+                            onClick={() => pushAdminVotes(i)}
+                            disabled={pushingAdmin === i || !adminVoteInputs[String(i)]}
+                            className="px-3 py-1.5 rounded-xl bg-purple-50 text-purple-700 text-xs font-bold active:scale-95 transition-all disabled:opacity-40"
+                          >
+                            {pushingAdmin === i ? '…' : 'Push'}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
                 {!voteData.closed && (
                   <div className="flex gap-2">
                     <button onClick={startEdit}
@@ -7820,7 +7891,7 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
                     </button>
                     <button onClick={closeVote} disabled={saving}
                       className="flex-1 py-3 rounded-2xl bg-rose-500 text-white font-bold text-sm active:scale-95 transition-all disabled:opacity-50">
-                      {saving ? 'Closing…' : 'Close & Announce'}
+                      {saving ? 'Closing…' : 'Close Now'}
                     </button>
                   </div>
                 )}
@@ -7874,6 +7945,18 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
                     <Plus size={13} /> Add option
                   </button>
                 )}
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-wider">Duration</label>
+                <div className="flex flex-wrap gap-2">
+                  {POLL_DURATIONS.map(d => (
+                    <button key={d.mins} onClick={() => setDurationMins(d.mins)}
+                      className={cn('px-3 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95',
+                        durationMins === d.mins ? 'gradient-logo-blue text-white' : 'bg-brand-navy/6 text-brand-navy/70')}>
+                      {d.label}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-wider">Image (optional)</label>
@@ -20168,39 +20251,78 @@ const TILE_COLORS: Record<TileState, string> = {
 
 const KEYBOARD_ROWS = [['Q','W','E','R','T','Y','U','I','O','P'],['A','S','D','F','G','H','J','K','L'],['ENTER','Z','X','C','V','B','N','M','⌫']];
 
+function usePollTimer(endsAtMs: number | null, isForcedClosed: boolean) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (isForcedClosed || !endsAtMs) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [isForcedClosed, endsAtMs]);
+  const msLeft = endsAtMs ? Math.max(endsAtMs - now, 0) : null;
+  const isExpired = endsAtMs ? now >= endsAtMs : false;
+  return { msLeft, isExpired };
+}
+
+function formatPollTimer(ms: number): string {
+  const secs = Math.floor(ms / 1000);
+  const mins = Math.floor(secs / 60);
+  const hrs  = Math.floor(mins / 60);
+  if (hrs > 0) return `${hrs}:${String(mins % 60).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}`;
+  return `${mins}:${String(secs % 60).padStart(2, '0')}`;
+}
+
 function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: { currentUser: FirebaseUser; currentProfile: UserProfile | null; onClose: () => void; onPackReady?: (s: CollectibleSticker[]) => void }) {
   const today = new Date().toISOString().split('T')[0];
   const [voteData, setVoteData] = useState<DailyVoteData | null>(null);
-  const [rawUserVote, setRawUserVote] = useState<{ optionIdx: number; voteId?: string } | null>(null);
-  const [liveCounts, setLiveCounts] = useState<Record<string, number>>({});
+  const [rawUserVote, setRawUserVote] = useState<{ optionIdx: number; voteId?: string; rewardClaimed?: boolean } | null>(null);
+  const [preCloseCounts, setPreCloseCounts] = useState<Record<string, number>>({});
+  const [postCloseCounts, setPostCloseCounts] = useState<Record<string, number>>({});
   const [liveTotal, setLiveTotal] = useState(0);
+  const [postCloseTotal, setPostCloseTotal] = useState(0);
   const [comments, setComments] = useState<DailyVoteComment[]>([]);
   const [commentText, setCommentText] = useState('');
   const [voting, setVoting] = useState(false);
   const [posting, setPosting] = useState(false);
+  const [claiming, setClaiming] = useState(false);
+  const [rewardCollected, setRewardCollected] = useState(false);
+  const autoClosedRef = useRef(false);
 
-  // voteId from main doc — only count user's vote and counts if it matches
   const voteId = voteData?.voteId;
   const userVote = rawUserVote && voteId && rawUserVote.voteId === voteId ? rawUserVote.optionIdx : null;
+  const endsAtMs = voteData?.endsAt?.toMillis?.() ?? null;
+  const { msLeft, isExpired } = usePollTimer(endsAtMs, !!voteData?.closed);
+  const isClosed = !!voteData?.closed || isExpired;
+  const adminVotes = voteData?.adminVotes || {};
+  // Combine pre-close + admin votes for display
+  const liveCounts: Record<string, number> = {};
+  voteData?.options.forEach((_, i) => {
+    liveCounts[String(i)] = (preCloseCounts[String(i)] ?? 0) + (adminVotes[String(i)] ?? 0);
+  });
+  const displayTotal = Object.values(liveCounts).reduce((a, b) => a + b, 0);
 
   useEffect(() => onSnapshot(doc(db, 'daily_vote', today), snap => {
     setVoteData(snap.exists() ? snap.data() as DailyVoteData : null);
   }), [today]);
 
   useEffect(() => onSnapshot(doc(db, 'daily_vote', today, 'votes', currentUser.uid), snap => {
-    setRawUserVote(snap.exists() ? { optionIdx: snap.data().optionIdx, voteId: snap.data().voteId } : null);
+    setRawUserVote(snap.exists() ? { optionIdx: snap.data().optionIdx, voteId: snap.data().voteId, rewardClaimed: snap.data().rewardClaimed } : null);
   }), [today, currentUser.uid]);
 
   useEffect(() => {
     if (!voteId) return;
     return onSnapshot(collection(db, 'daily_vote', today, 'votes'), snap => {
-      const counts: Record<string, number> = {};
+      const pre: Record<string, number> = {};
+      const post: Record<string, number> = {};
       snap.docs.forEach(d => {
         if (d.data().voteId !== voteId) return;
-        const k = String(d.data().optionIdx); counts[k] = (counts[k] || 0) + 1;
+        const k = String(d.data().optionIdx);
+        if (d.data().isPostClose) { post[k] = (post[k] || 0) + 1; }
+        else { pre[k] = (pre[k] || 0) + 1; }
       });
-      setLiveCounts(counts);
-      setLiveTotal(Object.values(counts).reduce((a, b) => a + b, 0));
+      setPreCloseCounts(pre);
+      setPostCloseCounts(post);
+      setLiveTotal(Object.values(pre).reduce((a, b) => a + b, 0));
+      setPostCloseTotal(Object.values(post).reduce((a, b) => a + b, 0));
     });
   }, [today, voteId]);
 
@@ -20212,23 +20334,37 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
     });
   }, [today, voteId]);
 
+  // Auto-close in Firestore when timer expires
   useEffect(() => {
-    if (!voteData?.closed || voteData.winner === null || userVote === null || userVote !== voteData.winner) return;
+    if (!isExpired || voteData?.closed || !voteId || autoClosedRef.current) return;
+    autoClosedRef.current = true;
+    const winner = (voteData?.options || []).reduce((best, _, i) => {
+      const a = (preCloseCounts[String(i)] ?? 0) + (adminVotes[String(i)] ?? 0);
+      const b = (preCloseCounts[String(best)] ?? 0) + (adminVotes[String(best)] ?? 0);
+      return a > b ? i : best;
+    }, 0);
+    updateDoc(doc(db, 'daily_vote', today), { closed: true, winner }).catch(console.error);
+  }, [isExpired, voteData?.closed, voteId]);
+
+  const collectReward = async () => {
+    if (claiming || rewardCollected || userVote === null || voteData?.winner !== userVote) return;
     const voteRef = doc(db, 'daily_vote', today, 'votes', currentUser.uid);
-    getDoc(voteRef).then(async snap => {
-      if (!snap.exists() || snap.data().rewardClaimed) return;
-      try {
-        const name = currentProfile?.name || 'Anonymous';
-        const newStickers = await issueUserStickers(currentUser.uid, name, 3).catch(() => [] as CollectibleSticker[]);
-        await updateDoc(voteRef, { rewardClaimed: true });
-        updateDoc(doc(db, 'users', currentUser.uid), { correctPolls: increment(1) }).catch(console.error);
-        if (newStickers.length > 0) onPackReady?.(newStickers);
-      } catch (e) { console.error('vote reward', e); }
-    });
-  }, [voteData?.closed, voteData?.winner, userVote]);
+    const snap = await getDoc(voteRef);
+    if (!snap.exists() || snap.data().rewardClaimed) { setRewardCollected(true); return; }
+    setClaiming(true);
+    try {
+      const name = currentProfile?.name || 'Anonymous';
+      const newStickers = await issueUserStickers(currentUser.uid, name, 3).catch(() => [] as CollectibleSticker[]);
+      await updateDoc(voteRef, { rewardClaimed: true });
+      updateDoc(doc(db, 'users', currentUser.uid), { correctPolls: increment(1) }).catch(console.error);
+      setRewardCollected(true);
+      if (newStickers.length > 0) onPackReady?.(newStickers);
+    } catch (e) { console.error('vote reward', e); }
+    setClaiming(false);
+  };
 
   const castVote = async (idx: number) => {
-    if (voting || userVote !== null || voteData?.closed || !voteId) return;
+    if (voting || userVote !== null || !voteId) return;
     try { if ('vibrate' in navigator) (navigator as any).vibrate([50, 30, 80]); } catch {}
     setVoting(true);
     try {
@@ -20236,6 +20372,7 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
         optionIdx: idx, uid: currentUser.uid, voteId,
         name: currentProfile?.name || 'Anonymous',
         votedAt: serverTimestamp(), rewardClaimed: false,
+        ...(isClosed ? { isPostClose: true } : {}),
       });
     } catch (e) { console.error('castVote', e); }
     setVoting(false);
@@ -20262,12 +20399,12 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
     </motion.div>
   );
 
-  const total = Math.max(liveTotal, 1);
+  const total = Math.max(displayTotal, 1);
   const hasVoted = userVote !== null;
-  const isClosed = voteData.closed;
   const BAR_MAX_H = 120;
+  const isWinner = isClosed && voteData.winner !== null && userVote === voteData.winner;
+  const alreadyClaimed = rawUserVote?.rewardClaimed || rewardCollected;
 
-  // Vivid per-option palette: gradient bg, glow colour, emoji
   const OPTION_PALETTE = [
     { grad: 'linear-gradient(135deg,#7c3aed,#ec4899)', glow: '#a855f7', dim: 'rgba(124,58,237,0.15)', emoji: '🔥' },
     { grad: 'linear-gradient(135deg,#0891b2,#34d399)', glow: '#06b6d4', dim: 'rgba(8,145,178,0.15)', emoji: '⚡' },
@@ -20282,11 +20419,11 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
       <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', stiffness: 380, damping: 36 }}
         className="flex flex-col overflow-hidden flex-1"
-        style={{ background: 'linear-gradient(180deg, #0f0c29 0%, #1a0533 40%, #0d1117 100%)' }}>
+        style={{ background: 'linear-gradient(180deg, #0a0a1a 0%, #0d1117 100%)' }}>
 
-        {/* Header */}
-        <div className="relative overflow-hidden shrink-0" style={{ background: 'linear-gradient(135deg, #1e0535 0%, #3b0764 40%, #1e1b4b 100%)' }}>
-          <MatrixRainCanvas opacity={0.18} fadeColor="rgba(15,5,40,0.25)" />
+        {/* Header — animated gradient when active, blue when closed */}
+        <div className={cn('relative overflow-hidden shrink-0', isClosed ? 'poll-closed-bg' : 'poll-active-bg')}>
+          <MatrixRainCanvas opacity={0.14} fadeColor={isClosed ? 'rgba(10,10,40,0.3)' : 'rgba(15,5,40,0.2)'} />
           {[
             { x: 5,  y: 10, size: 28, delay: 0,   dur: 3.0, e: '🔥' },
             { x: 65, y: 45, size: 22, delay: 0.8, dur: 2.7, e: '⚡' },
@@ -20303,14 +20440,25 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
           ))}
           <div className="relative z-10 flex items-start justify-between px-5 pt-5 pb-2">
             <div className="flex-1 pr-4">
-              <div className="flex items-center gap-1.5 mb-1">
-                <motion.span
-                  className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full"
-                  style={{ background: 'linear-gradient(90deg,#a855f7,#ec4899)', color: 'white' }}
-                  animate={{ opacity: [1, 0.6, 1] }}
-                  transition={{ duration: 1.4, repeat: Infinity }}
-                >● LIVE</motion.span>
-                <span className="text-[9px] font-bold text-purple-300/60 uppercase tracking-widest">Daily Vote</span>
+              <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                {!isClosed ? (
+                  <motion.span
+                    className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full"
+                    style={{ background: 'rgba(255,255,255,0.25)', color: 'white' }}
+                    animate={{ opacity: [1, 0.5, 1] }}
+                    transition={{ duration: 1.4, repeat: Infinity }}
+                  >● LIVE</motion.span>
+                ) : (
+                  <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-white/20 text-white">🔒 CLOSED</span>
+                )}
+                <span className="text-[9px] font-bold text-white/60 uppercase tracking-widest">Daily Vote</span>
+                {msLeft !== null && !isClosed && (
+                  <motion.span
+                    className="text-[9px] font-black px-2 py-0.5 rounded-full bg-white/20 text-white tabular-nums"
+                    animate={{ opacity: msLeft < 60000 ? [1, 0.4, 1] : 1 }}
+                    transition={{ duration: 0.8, repeat: msLeft < 60000 ? Infinity : 0 }}
+                  >⏱ {formatPollTimer(msLeft)}</motion.span>
+                )}
               </div>
               <h2 className="font-black text-xl text-white leading-snug">{voteData.question}</h2>
             </div>
@@ -20329,16 +20477,31 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
                 <p className="text-[10px] font-bold text-yellow-300/70 uppercase tracking-wider">Winner</p>
                 <p className="text-sm font-black text-white truncate">{voteData.options[voteData.winner]}</p>
               </div>
-              {hasVoted && userVote === voteData.winner && (
-                <motion.span
-                  animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 1, repeat: Infinity }}
-                  className="text-[10px] font-black bg-yellow-400/25 text-yellow-300 px-2.5 py-1.5 rounded-full whitespace-nowrap border border-yellow-400/30"
-                >🎁 Pack earned!</motion.span>
-              )}
             </motion.div>
           )}
-          <div className="relative z-10 px-5 pb-4 flex gap-3 text-xs font-bold text-purple-300/50">
-            <span>🗳️ {liveTotal} votes</span>
+          {/* You Won collect button */}
+          {isWinner && !alreadyClaimed && (
+            <motion.button
+              onClick={collectReward}
+              disabled={claiming}
+              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+              whileTap={{ scale: 0.95 }}
+              className="relative z-10 mx-5 mb-4 w-[calc(100%-2.5rem)] py-3.5 rounded-2xl font-black text-sm text-brand-navy flex items-center justify-center gap-2 overflow-hidden"
+              style={{ background: 'linear-gradient(135deg,#fbbf24,#f59e0b)' }}
+            >
+              <span className="card-shine-ray" />
+              <Gift size={18} />
+              {claiming ? 'Collecting…' : '🎉 You Won! Collect Stickers'}
+            </motion.button>
+          )}
+          {isWinner && alreadyClaimed && (
+            <div className="relative z-10 mx-5 mb-4 py-2.5 rounded-2xl text-center text-sm font-bold text-white/60 bg-white/10">
+              ✅ Stickers collected!
+            </div>
+          )}
+          <div className="relative z-10 px-5 pb-4 flex gap-3 text-xs font-bold text-white/40 flex-wrap">
+            <span>🗳️ {displayTotal} votes</span>
+            {postCloseTotal > 0 && <span className="text-blue-300/60">+{postCloseTotal} after close</span>}
             <span>·</span>
             <span>💬 {comments.length} comments</span>
           </div>
@@ -20350,10 +20513,13 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
             <div className="flex items-end gap-3 px-1 pt-2" style={{ height: 160 }}>
               {voteData.options.map((opt, i) => {
                 const count = liveCounts[String(i)] ?? 0;
+                const postCount = postCloseCounts[String(i)] ?? 0;
                 const pct = Math.round((count / total) * 100);
                 const barH = Math.max((pct / 100) * BAR_MAX_H, 4);
+                const postBarH = Math.max((postCount / Math.max(displayTotal + postCloseTotal, 1)) * BAR_MAX_H, 0);
                 const pal = OPTION_PALETTE[i % OPTION_PALETTE.length];
                 const isMe = userVote === i;
+                const isOptWinner = isClosed && voteData.winner === i;
                 return (
                   <div key={i} className="flex-1 flex flex-col items-center">
                     <motion.span
@@ -20361,16 +20527,32 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
                       style={{ fontSize: isMe ? 18 : 14, color: isMe ? pal.glow : 'rgba(255,255,255,0.5)' }}
                       initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 + 0.3 }}
                     >{pct}%</motion.span>
-                    <div className="w-full flex items-end rounded-t-2xl overflow-hidden" style={{ height: BAR_MAX_H, background: 'rgba(255,255,255,0.06)' }}>
+                    <div className="w-full flex flex-col-reverse items-center rounded-t-2xl overflow-hidden relative" style={{ height: BAR_MAX_H, background: 'rgba(255,255,255,0.06)' }}>
+                      {/* Pre-close bar */}
                       <motion.div
-                        className="w-full rounded-t-2xl"
-                        style={{ background: isMe ? pal.grad : 'rgba(255,255,255,0.18)', boxShadow: isMe ? `0 -6px 20px ${pal.glow}66` : 'none' }}
+                        className="w-full rounded-t-2xl absolute bottom-0"
+                        style={{ background: isOptWinner ? pal.grad : isMe ? pal.grad : 'rgba(255,255,255,0.18)', boxShadow: isMe ? `0 -6px 20px ${pal.glow}66` : 'none' }}
                         initial={{ height: 0 }}
                         animate={{ height: barH }}
                         transition={{ duration: 0.8, delay: i * 0.12, ease: [0.34, 1.56, 0.64, 1] }}
                       />
+                      {/* Post-close votes — lighter segment on top */}
+                      {postCount > 0 && (
+                        <motion.div
+                          className="w-full absolute"
+                          style={{ bottom: barH, height: Math.min(postBarH, BAR_MAX_H - barH), background: 'rgba(96,165,250,0.35)', borderTop: '1px dashed rgba(96,165,250,0.6)' }}
+                          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                          transition={{ delay: 1 }}
+                        />
+                      )}
                     </div>
-                    <p className="text-[10px] font-bold text-white/50 text-center mt-1.5 leading-tight px-1">{opt}</p>
+                    <div className="flex items-center gap-1 mt-1.5">
+                      <p className="text-[10px] font-bold text-white/50 text-center leading-tight px-1">{opt}</p>
+                      {isOptWinner && <Trophy size={10} className="text-yellow-400 shrink-0" />}
+                    </div>
+                    {postCount > 0 && (
+                      <p className="text-[9px] text-blue-300/50 font-bold">+{postCount}</p>
+                    )}
                   </div>
                 );
               })}
@@ -20381,25 +20563,25 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
           <div className="flex flex-col gap-3">
             {voteData.options.map((opt, i) => {
               const isMyVote = userVote === i;
-              const isWinner = isClosed && voteData.winner === i;
+              const isOptWinner = isClosed && voteData.winner === i;
               const pal = OPTION_PALETTE[i % OPTION_PALETTE.length];
+              const canVote = !hasVoted && !voting;
               return (
                 <motion.button
                   key={i}
                   onClick={() => castVote(i)}
-                  disabled={hasVoted || isClosed || voting}
+                  disabled={!canVote}
                   whileTap={{ scale: 0.97 }}
                   animate={isMyVote ? { boxShadow: [`0 0 0px ${pal.glow}00`, `0 0 22px ${pal.glow}88`, `0 0 0px ${pal.glow}00`] } : {}}
                   transition={{ duration: 1.8, repeat: Infinity }}
                   className="w-full rounded-[1.25rem] text-left px-5 py-4 font-bold text-sm transition-all relative overflow-hidden"
                   style={{
-                    background: isMyVote ? pal.grad : hasVoted || isClosed ? pal.dim : 'rgba(255,255,255,0.06)',
+                    background: isMyVote ? pal.grad : hasVoted ? pal.dim : 'rgba(255,255,255,0.06)',
                     border: `1.5px solid ${isMyVote ? pal.glow + '80' : 'rgba(255,255,255,0.10)'}`,
                     color: isMyVote ? 'white' : 'rgba(255,255,255,0.75)',
                   }}
                 >
-                  {/* Shimmer on unvoted options */}
-                  {!hasVoted && !isClosed && (
+                  {!hasVoted && (
                     <motion.div
                       className="absolute inset-0 pointer-events-none"
                       style={{ background: `linear-gradient(90deg, transparent 0%, ${pal.glow}22 50%, transparent 100%)` }}
@@ -20415,7 +20597,7 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
                         <Check size={18} className="text-white shrink-0" strokeWidth={3} />
                       </motion.div>
                     )}
-                    {isWinner && <Trophy size={16} className="text-yellow-400 shrink-0" />}
+                    {isOptWinner && <Trophy size={16} className="text-yellow-400 shrink-0" />}
                   </div>
                 </motion.button>
               );
@@ -20423,7 +20605,7 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
           </div>
 
           <p className="text-center text-xs text-white/30 font-bold">
-            {isClosed ? '🔒 Voting closed' : hasVoted ? `✅ ${liveTotal} votes · live` : '👆 Tap to cast your vote'}
+            {isClosed && hasVoted ? `🔒 Closed · your vote counted` : isClosed ? '🔒 Closed — vote to join the after-close tally' : hasVoted ? `✅ ${displayTotal} votes · live` : '👆 Tap to cast your vote'}
           </p>
 
           {/* Comment input */}
@@ -20435,7 +20617,7 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
               style={{ background: 'rgba(255,255,255,0.07)' }} />
             <button onClick={postComment} disabled={!commentText.trim() || posting}
               className="w-9 h-9 rounded-full flex items-center justify-center disabled:opacity-40 active:scale-90 transition-all"
-              style={{ background: 'linear-gradient(135deg,#7c3aed,#ec4899)' }}>
+              style={{ background: 'linear-gradient(135deg,#7c3aed,#2563EB)' }}>
               <Send size={15} className="text-white" />
             </button>
           </div>
@@ -20449,7 +20631,7 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
               return (
                 <div key={c.id} className="flex gap-3 py-3.5">
                   <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-black text-white"
-                    style={{ background: 'linear-gradient(135deg,#7c3aed,#ec4899)' }}>
+                    style={{ background: 'linear-gradient(135deg,#7c3aed,#2563EB)' }}>
                     {c.name?.[0]?.toUpperCase() ?? '?'}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -20477,16 +20659,18 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
 function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor }: { currentUser: FirebaseUser; currentProfile: UserProfile | null; onPackReady?: (s: CollectibleSticker[]) => void; tileColor?: UiColorSlot }) {
   const today = new Date().toISOString().split('T')[0];
   const [voteData, setVoteData] = useState<DailyVoteData | null>(null);
-  const [rawUserVote, setRawUserVote] = useState<{ optionIdx: number; voteId?: string } | null>(null);
-  const [liveCounts, setLiveCounts] = useState<Record<string, number>>({});
+  const [rawUserVote, setRawUserVote] = useState<{ optionIdx: number; voteId?: string; rewardClaimed?: boolean } | null>(null);
+  const [preCloseCounts, setPreCloseCounts] = useState<Record<string, number>>({});
   const [liveTotal, setLiveTotal] = useState(0);
   const [open, setOpen] = useState(false);
+  const [claiming, setClaiming] = useState(false);
+  const [rewardCollected, setRewardCollected] = useState(false);
 
   useEffect(() => onSnapshot(doc(db, 'daily_vote', today), snap => {
     setVoteData(snap.exists() ? snap.data() as DailyVoteData : null);
   }), [today]);
   useEffect(() => onSnapshot(doc(db, 'daily_vote', today, 'votes', currentUser.uid), snap => {
-    setRawUserVote(snap.exists() ? { optionIdx: snap.data().optionIdx, voteId: snap.data().voteId } : null);
+    setRawUserVote(snap.exists() ? { optionIdx: snap.data().optionIdx, voteId: snap.data().voteId, rewardClaimed: snap.data().rewardClaimed } : null);
   }), [today, currentUser.uid]);
   useEffect(() => {
     if (!voteData?.voteId) return;
@@ -20494,10 +20678,10 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor 
     return onSnapshot(collection(db, 'daily_vote', today, 'votes'), snap => {
       const counts: Record<string, number> = {};
       snap.docs.forEach(d => {
-        if (d.data().voteId !== vid) return;
+        if (d.data().voteId !== vid || d.data().isPostClose) return;
         const k = String(d.data().optionIdx); counts[k] = (counts[k] || 0) + 1;
       });
-      setLiveCounts(counts);
+      setPreCloseCounts(counts);
       setLiveTotal(Object.values(counts).reduce((a, b) => a + b, 0));
     });
   }, [today, voteData?.voteId]);
@@ -20506,32 +20690,51 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor 
 
   const voteId = voteData.voteId;
   const userVote = rawUserVote && voteId && rawUserVote.voteId === voteId ? rawUserVote.optionIdx : null;
-  const total = Math.max(liveTotal, 1);
+  const adminVotes = voteData.adminVotes || {};
+  const liveCounts: Record<string, number> = {};
+  voteData.options.forEach((_, i) => {
+    liveCounts[String(i)] = (preCloseCounts[String(i)] ?? 0) + (adminVotes[String(i)] ?? 0);
+  });
+  const displayTotal = Object.values(liveCounts).reduce((a, b) => a + b, 0);
+  const total = Math.max(displayTotal, 1);
   const hasVoted = userVote !== null;
-  const tc = tileColor ?? UI_COLOR_DEFAULTS.dailyVoteTile;
-  const dvDark = tc.dark;
-  const labelCls = dvDark ? 'text-white/60' : 'text-blue-700/70';
-  const titleCls = dvDark ? 'text-white' : 'text-blue-900';
-  const voteCls = dvDark ? 'text-white/60' : 'text-blue-700/60';
-  const barBg = dvDark ? 'bg-white/15' : 'bg-blue-700/15';
-  const barFill = dvDark ? 'bg-white' : 'bg-blue-700';
-  const barFillDim = dvDark ? 'bg-white/40' : 'bg-blue-700/40';
-  const dvTextStyle = (alpha = 1) => tileTextStyle(tc, alpha);
+  const endsAtMs = voteData.endsAt?.toMillis?.() ?? null;
+  const { msLeft, isExpired } = usePollTimer(endsAtMs, !!voteData.closed);
+  const isClosed = !!voteData.closed || isExpired;
+  const isWinner = isClosed && voteData.winner !== null && userVote === voteData.winner;
+  const alreadyClaimed = rawUserVote?.rewardClaimed || rewardCollected;
+
+  const collectReward = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (claiming || alreadyClaimed || userVote === null || voteData.winner !== userVote) return;
+    const voteRef = doc(db, 'daily_vote', today, 'votes', currentUser.uid);
+    const snap = await getDoc(voteRef);
+    if (!snap.exists() || snap.data().rewardClaimed) { setRewardCollected(true); return; }
+    setClaiming(true);
+    try {
+      const name = currentProfile?.name || 'Anonymous';
+      const newStickers = await issueUserStickers(currentUser.uid, name, 3).catch(() => [] as CollectibleSticker[]);
+      await updateDoc(voteRef, { rewardClaimed: true });
+      updateDoc(doc(db, 'users', currentUser.uid), { correctPolls: increment(1) }).catch(console.error);
+      setRewardCollected(true);
+      if (newStickers.length > 0) onPackReady?.(newStickers);
+    } catch (e) { console.error(e); }
+    setClaiming(false);
+  };
 
   return (
     <>
       <motion.button
         whileTap={{ scale: 0.96 }}
-        animate={{ boxShadow: hasVoted
-          ? ['0 0 0px #F5C51800', '0 4px 18px #F5C51855', '0 0 0px #F5C51800']
-          : ['0 0 0px #f472b600', '0 6px 28px #f472b655', '0 0 0px #f472b600'] }}
+        animate={{ boxShadow: isClosed
+          ? ['0 0 0px #2563EB00', '0 4px 18px #2563EB44', '0 0 0px #2563EB00']
+          : ['0 0 0px #7c3aed00', '0 6px 28px #7c3aed66', '0 0 0px #7c3aed00'] }}
         transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
         onClick={() => setOpen(true)}
-        className="flex-1 rounded-[1.5rem] overflow-hidden text-left"
+        className={cn('flex-1 rounded-[1.5rem] overflow-hidden text-left', isClosed ? 'poll-closed-bg' : 'poll-active-bg')}
       >
-        <div className="relative h-full px-4 py-4 flex flex-col gap-3"
-          style={{ background: tc.css }}>
-          {/* Animated floating emojis */}
+        <div className="relative h-full px-4 py-4 flex flex-col gap-3">
+          {/* Floating emojis */}
           {[
             { x: 6,  y: 12, size: 20, delay: 0,   dur: 2.8, e: '🔥' },
             { x: 70, y: 48, size: 16, delay: 0.7, dur: 2.5, e: '⚡' },
@@ -20546,28 +20749,63 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor 
             </motion.span>
           ))}
 
-          {/* Prize badge */}
-          <motion.div
-            className="absolute top-2 right-2 z-20 px-2 py-1 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center gap-1 shadow-lg"
-            animate={{ scale: [1, 1.08, 1] }}
-            transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
-          >
-            <Gift size={11} className="text-white" strokeWidth={2.5} />
-            <span className="text-white text-[9px] font-black">Prize</span>
-          </motion.div>
-
-          <div className="flex-1 min-w-0">
-            <p className="text-[9px] font-black uppercase tracking-widest text-white/60 mb-0.5">Daily Vote</p>
-            <p className="text-sm font-black text-white leading-tight line-clamp-2" style={dvTextStyle()}>{voteData.question}</p>
+          {/* Timer / closed badge */}
+          <div className="absolute top-2 right-2 z-20 flex flex-col items-end gap-1">
+            {!isClosed && msLeft !== null ? (
+              <motion.span
+                className="px-2 py-0.5 rounded-full text-[9px] font-black text-white tabular-nums"
+                style={{ background: 'rgba(255,255,255,0.2)' }}
+                animate={{ opacity: msLeft < 60000 ? [1, 0.4, 1] : 1 }}
+                transition={{ duration: 0.8, repeat: msLeft < 60000 ? Infinity : 0 }}
+              >⏱ {formatPollTimer(msLeft)}</motion.span>
+            ) : isClosed ? (
+              <span className="px-2 py-0.5 rounded-full text-[9px] font-black text-white bg-white/20">🔒</span>
+            ) : null}
+            {!isClosed && (
+              <motion.div
+                className="px-2 py-0.5 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center gap-1 shadow-lg"
+                animate={{ scale: [1, 1.08, 1] }}
+                transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+              >
+                <Gift size={10} className="text-white" strokeWidth={2.5} />
+                <span className="text-white text-[9px] font-black">Prize</span>
+              </motion.div>
+            )}
           </div>
 
-          {hasVoted ? (
+          <div className="flex-1 min-w-0 pr-14">
+            <p className="text-[9px] font-black uppercase tracking-widest text-white/60 mb-0.5">
+              {isClosed ? '🔒 Closed' : '● Live Vote'}
+            </p>
+            <p className="text-sm font-black text-white leading-tight line-clamp-2">{voteData.question}</p>
+          </div>
+
+          {/* You Won button */}
+          {isWinner && !alreadyClaimed ? (
+            <motion.button
+              onClick={collectReward}
+              disabled={claiming}
+              whileTap={{ scale: 0.95 }}
+              className="relative w-full py-2.5 rounded-xl font-black text-xs text-brand-navy overflow-hidden flex items-center justify-center gap-1.5"
+              style={{ background: 'linear-gradient(135deg,#fbbf24,#f59e0b)' }}
+              animate={{ scale: [1, 1.03, 1] }}
+              transition={{ duration: 1.2, repeat: Infinity }}
+            >
+              <span className="card-shine-ray" />
+              <Gift size={13} />
+              {claiming ? 'Collecting…' : '🎉 You Won! Collect Stickers'}
+            </motion.button>
+          ) : isWinner && alreadyClaimed ? (
+            <div className="w-full py-2 rounded-xl text-center text-xs font-bold text-white/60 bg-white/10">
+              ✅ Stickers collected!
+            </div>
+          ) : hasVoted ? (
             <div className="space-y-1.5">
               {voteData.options.map((_, i) => {
                 const pct = Math.round(((liveCounts[String(i)] ?? 0) / total) * 100);
                 const OPTION_GRADS = ['linear-gradient(90deg,#f472b6,#a78bfa)', 'linear-gradient(90deg,#34d399,#60a5fa)'];
                 return (
-                  <div key={i} className="space-y-0.5">
+                  <div key={i}>
                     <div className="h-2 bg-white/15 rounded-full overflow-hidden">
                       <motion.div
                         initial={{ width: 0 }}
@@ -20580,9 +20818,9 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor 
                   </div>
                 );
               })}
-              <p className="text-[9px] text-white/55 font-bold pt-0.5">{liveTotal} votes · live</p>
+              <p className="text-[9px] text-white/55 font-bold">{displayTotal} votes · {isClosed ? 'closed' : 'live'}</p>
             </div>
-          ) : !voteData.closed ? (
+          ) : !isClosed ? (
             <motion.div
               className="flex items-center gap-1"
               animate={{ x: [0, 4, 0] }}
@@ -20591,7 +20829,9 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor 
               <span className="text-[11px] font-black text-white/80">Tap to vote</span>
               <span className="text-white/80">→</span>
             </motion.div>
-          ) : null}
+          ) : (
+            <p className="text-[10px] text-white/50 font-bold">Tap to see results</p>
+          )}
         </div>
       </motion.button>
       <AnimatePresence>

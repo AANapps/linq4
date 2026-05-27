@@ -151,6 +151,20 @@
   background: linear-gradient(135deg, var(--color-brand-rose) 0%, var(--color-brand-bg) 100%);
 }
 
+@keyframes poll-gradient-shift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.poll-active-bg {
+  background: linear-gradient(135deg, #7c3aed, #4f46e5, #2563EB, #1d4ed8, #7c3aed);
+  background-size: 300% 300%;
+  animation: poll-gradient-shift 3s ease infinite;
+}
+.poll-closed-bg {
+  background: linear-gradient(135deg, #1D4ED8, #2563EB);
+}
+
 @keyframes scan {
   0% { top: 0; }
   100% { top: 100%; }
