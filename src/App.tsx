@@ -29016,13 +29016,13 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
     const q = query(
       collection(db, 'chats', activeChatId, 'messages'),
       orderBy('createdAt', 'desc'),
-      limit(15)
+      limit(5)
     );
     return onSnapshot(q, (snap) => {
       const latest = snap.docs.map(d => ({ id: d.id, ...d.data() } as ChatMessage)).reverse();
       setMessages(latest);
       // The last doc in desc order is the oldest in this window — cursor for loading older
-      if (snap.docs.length === 15) {
+      if (snap.docs.length === 5) {
         msgLastDocRef.current = snap.docs[snap.docs.length - 1];
         setMsgHasMore(true);
       }
@@ -29059,26 +29059,21 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
     const el = scrollContainerRef.current;
     const prevScrollHeight = el?.scrollHeight ?? 0;
     try {
+      // Load all remaining messages in one shot
       const snap = await getDocs(query(
         collection(db, 'chats', activeChatId, 'messages'),
         orderBy('createdAt', 'desc'),
-        startAfter(msgLastDocRef.current),
-        limit(15)
+        startAfter(msgLastDocRef.current)
       ));
       const older = snap.docs.map(d => ({ id: d.id, ...d.data() } as ChatMessage)).reverse();
       setOlderMessages(prev => [...older, ...prev]);
-      msgLastDocRef.current = snap.docs.length === 15 ? snap.docs[snap.docs.length - 1] : null;
-      setMsgHasMore(snap.docs.length === 15);
+      msgLastDocRef.current = null;
+      setMsgHasMore(false);
       // Restore scroll so content doesn't jump
       if (el) requestAnimationFrame(() => { el.scrollTop = el.scrollHeight - prevScrollHeight; });
     } catch { /* ignore */ }
     msgLoadingMoreRef.current = false;
     setMsgLoadingMore(false);
-  };
-
-  const handleMsgScroll = () => {
-    const el = scrollContainerRef.current;
-    if (el && el.scrollTop < 60) loadOlderMessages();
   };
 
   useEffect(() => {
@@ -29196,12 +29191,21 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
             </div>
           </div>
         </header>
-        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto py-4 space-y-3 px-4" onScroll={handleMsgScroll}>
-          {msgLoadingMore && (
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto py-4 space-y-3 px-4">
+          {msgHasMore && (
             <div className="flex justify-center py-2">
-              <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}>
-                <Sparkles className="w-4 h-4 text-brand-gold/50" />
-              </motion.div>
+              <button
+                onClick={loadOlderMessages}
+                disabled={msgLoadingMore}
+                className="px-5 py-2 rounded-2xl bg-brand-navy/8 text-brand-navy/75 text-xs font-bold active:scale-95 transition-all disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {msgLoadingMore ? (
+                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
+                    <Sparkles className="w-3 h-3" />
+                  </motion.div>
+                ) : <ChevronUp size={13} />}
+                {msgLoadingMore ? 'Loading…' : 'Load more'}
+              </button>
             </div>
           )}
           {[...olderMessages, ...messages].map(msg => (
@@ -29257,12 +29261,21 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
           </button>
         </header>
 
-        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto py-4 space-y-2" onClick={() => setSelectedMsgId(null)} onScroll={handleMsgScroll}>
-          {msgLoadingMore && (
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto py-4 space-y-2" onClick={() => setSelectedMsgId(null)}>
+          {msgHasMore && (
             <div className="flex justify-center py-2">
-              <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}>
-                <Sparkles className="w-4 h-4 text-brand-gold/50" />
-              </motion.div>
+              <button
+                onClick={loadOlderMessages}
+                disabled={msgLoadingMore}
+                className="px-5 py-2 rounded-2xl bg-brand-navy/8 text-brand-navy/75 text-xs font-bold active:scale-95 transition-all disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {msgLoadingMore ? (
+                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
+                    <Sparkles className="w-3 h-3" />
+                  </motion.div>
+                ) : <ChevronUp size={13} />}
+                {msgLoadingMore ? 'Loading…' : 'Load more'}
+              </button>
             </div>
           )}
           {(() => {
