@@ -3686,7 +3686,7 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
 
 // --- User Sticker Panel (profile view — own + other users) ---
 
-function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onReveal, onClose, onOpenPack }: {
+function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onReveal, onClose, onOpenPack, onScan }: {
   uid: string;
   isOwnProfile: boolean;
   stickers: CollectibleSticker[];
@@ -3694,6 +3694,7 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
   onReveal: (id: string) => void;
   onClose: () => void;
   onOpenPack?: (s: CollectibleSticker[]) => void;
+  onScan?: () => void;
 }) {
   const [selected, setSelected] = useState<{ sticker: CollectibleSticker; count: number } | null>(null);
   const [cardDefs, setCardDefs] = useState<CollectibleCardDef[]>([]);
@@ -3770,9 +3771,16 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
       <div className="flex-1 overflow-y-auto bg-brand-bg">
         <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm px-5 pt-5 pb-4 border-b border-black/5 z-10 flex items-center justify-between">
           <h2 className="font-display text-xl font-bold text-brand-navy">My Collection</h2>
-          <button onClick={onClose} className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm active:scale-95 transition-all">
-            <X size={18} className="text-brand-navy/75" />
-          </button>
+          <div className="flex items-center gap-2">
+            {isOwnProfile && onScan && (
+              <button onClick={onScan} className="p-2 rounded-2xl bg-brand-gold/10 border border-brand-gold/20 text-brand-gold active:scale-95 transition-all" title="Scan sticker QR">
+                <QrCode size={18} />
+              </button>
+            )}
+            <button onClick={onClose} className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm active:scale-95 transition-all">
+              <X size={18} className="text-brand-navy/75" />
+            </button>
+          </div>
         </div>
 
         <div className="p-5 space-y-6">
@@ -20792,58 +20800,43 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor 
       <motion.button
         whileTap={{ scale: 0.96 }}
         animate={{ boxShadow: isClosed
-          ? ['0 0 0px #2563EB00', '0 4px 18px #2563EB44', '0 0 0px #2563EB00']
-          : ['0 0 0px #7c3aed00', '0 6px 28px #7c3aed66', '0 0 0px #7c3aed00'] }}
+          ? ['0 0 0px #b91c1c00', '0 6px 24px #b91c1c55', '0 0 0px #b91c1c00']
+          : ['0 0 0px #dc262600', '0 8px 32px #dc262677', '0 0 0px #dc262600'] }}
         transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
         onClick={() => setOpen(true)}
-        className={cn('flex-1 rounded-[1.5rem] overflow-hidden text-left', isClosed ? 'poll-closed-bg' : 'poll-active-bg')}
+        className="flex-1 rounded-[1.5rem] overflow-hidden text-left"
+        style={{ background: isClosed ? 'linear-gradient(145deg,#7f1d1d,#b91c1c)' : 'linear-gradient(145deg,#dc2626,#ef4444,#f87171,#dc2626)', backgroundSize: '300% 300%', animation: isClosed ? 'none' : 'poll-gradient-shift 3s ease infinite' }}
       >
-        <div className="relative h-full px-4 py-4 flex flex-col gap-3">
-          {/* Floating emojis */}
-          {[
-            { x: 6,  y: 12, size: 20, delay: 0,   dur: 2.8, e: '🔥' },
-            { x: 70, y: 48, size: 16, delay: 0.7, dur: 2.5, e: '⚡' },
-            { x: 40, y: 66, size: 22, delay: 1.3, dur: 3.1, e: '🎯' },
-            { x: 82, y: 8,  size: 14, delay: 0.3, dur: 2.6, e: '💥' },
-          ].map((e, i) => (
-            <motion.span key={i} className="absolute pointer-events-none select-none z-0"
-              style={{ left: `${e.x}%`, top: `${e.y}%`, fontSize: e.size, opacity: 0.18 }}
-              animate={{ y: [-4, -14, -4], rotate: [-12, 12, -12], scale: [1, 1.2, 1] }}
-              transition={{ duration: e.dur, repeat: Infinity, delay: e.delay, ease: 'easeInOut' }}>
-              {e.e}
-            </motion.span>
-          ))}
+        <div className="relative h-full px-4 py-4 flex flex-col items-center gap-2">
+          {/* Shine ray */}
+          <span className="card-shine-ray opacity-30 pointer-events-none" />
 
-          {/* Timer / closed badge */}
-          <div className="absolute top-2 right-2 z-20 flex flex-col items-end gap-1">
-            {!isClosed && msLeft !== null ? (
-              <motion.span
-                className="px-2 py-0.5 rounded-full text-[9px] font-black text-white tabular-nums"
-                style={{ background: 'rgba(255,255,255,0.2)' }}
-                animate={{ opacity: msLeft < 60000 ? [1, 0.4, 1] : 1 }}
-                transition={{ duration: 0.8, repeat: msLeft < 60000 ? Infinity : 0 }}
-              >⏱ {formatPollTimer(msLeft)}</motion.span>
-            ) : isClosed ? (
-              <span className="px-2 py-0.5 rounded-full text-[9px] font-black text-white bg-white/20">🔒</span>
-            ) : null}
-            {!isClosed && (
-              <motion.div
-                className="px-2 py-0.5 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center gap-1 shadow-lg"
-                animate={{ scale: [1, 1.08, 1] }}
-                transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
-              >
-                <Gift size={10} className="text-white" strokeWidth={2.5} />
-                <span className="text-white text-[9px] font-black">Prize</span>
-              </motion.div>
-            )}
-          </div>
+          {/* Present icon */}
+          <motion.div
+            className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center mt-1 shrink-0"
+            animate={isClosed ? {} : { scale: [1, 1.07, 1] }}
+            transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            <span className="text-3xl">🎁</span>
+          </motion.div>
 
-          <div className="flex-1 min-w-0 pr-14">
-            <p className="text-[9px] font-black uppercase tracking-widest text-white/60 mb-0.5">
-              {isClosed ? '🔒 Closed' : '● Live Vote'}
-            </p>
-            <p className="text-sm font-black text-white leading-tight line-clamp-2">{voteData.question}</p>
-          </div>
+          {/* Title */}
+          <p className="text-sm font-black text-white tracking-wide">Daily Vote</p>
+
+          {/* Timer / status */}
+          {!isClosed && msLeft !== null ? (
+            <motion.p
+              className="text-[11px] font-black text-white/80 tabular-nums"
+              animate={{ opacity: msLeft < 60000 ? [1, 0.4, 1] : 1 }}
+              transition={{ duration: 0.8, repeat: msLeft < 60000 ? Infinity : 0 }}
+            >
+              ⏱ {formatPollTimer(msLeft)}
+            </motion.p>
+          ) : isClosed ? (
+            <p className="text-[11px] font-black text-white/70">🔒 Closed</p>
+          ) : (
+            <p className="text-[11px] font-black text-white/70">Tap to vote</p>
+          )}
 
           {/* You Won button */}
           {isWinner && !alreadyClaimed ? (
@@ -20851,52 +20844,38 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor 
               onClick={collectReward}
               disabled={claiming}
               whileTap={{ scale: 0.95 }}
-              className="relative w-full py-2.5 rounded-xl font-black text-xs text-brand-navy overflow-hidden flex items-center justify-center gap-1.5"
+              className="relative w-full py-2 rounded-xl font-black text-xs text-brand-navy overflow-hidden flex items-center justify-center gap-1"
               style={{ background: 'linear-gradient(135deg,#fbbf24,#f59e0b)' }}
-              animate={{ scale: [1, 1.03, 1] }}
+              animate={{ scale: [1, 1.04, 1] }}
               transition={{ duration: 1.2, repeat: Infinity }}
             >
               <span className="card-shine-ray" />
-              <Gift size={13} />
-              {claiming ? 'Collecting…' : '🎉 You Won! Collect Stickers'}
+              <Gift size={11} />
+              {claiming ? 'Collecting…' : '🎉 You Won!'}
             </motion.button>
           ) : isWinner && alreadyClaimed ? (
-            <div className="w-full py-2 rounded-xl text-center text-xs font-bold text-white/60 bg-white/10">
-              ✅ Stickers collected!
+            <div className="w-full py-1.5 rounded-xl text-center text-[10px] font-bold text-white/60 bg-white/10">
+              ✅ Claimed!
             </div>
           ) : hasVoted ? (
-            <div className="space-y-1.5">
+            <div className="w-full space-y-1">
               {voteData.options.map((_, i) => {
                 const pct = Math.round(((liveCounts[String(i)] ?? 0) / total) * 100);
-                const OPTION_GRADS = ['linear-gradient(90deg,#f472b6,#a78bfa)', 'linear-gradient(90deg,#34d399,#60a5fa)'];
                 return (
-                  <div key={i}>
-                    <div className="h-2 bg-white/15 rounded-full overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${pct}%` }}
-                        transition={{ duration: 0.7, delay: i * 0.12, ease: 'easeOut' }}
-                        className="h-full rounded-full"
-                        style={{ background: userVote === i ? OPTION_GRADS[i % 2] : 'rgba(255,255,255,0.3)' }}
-                      />
-                    </div>
+                  <div key={i} className="h-1.5 bg-white/20 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${pct}%` }}
+                      transition={{ duration: 0.7, delay: i * 0.1, ease: 'easeOut' }}
+                      className="h-full rounded-full"
+                      style={{ background: userVote === i ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.35)' }}
+                    />
                   </div>
                 );
               })}
-              <p className="text-[9px] text-white/55 font-bold">{displayTotal} votes · {isClosed ? 'closed' : 'live'}</p>
+              <p className="text-[9px] text-white/55 font-bold text-center">{displayTotal} votes</p>
             </div>
-          ) : !isClosed ? (
-            <motion.div
-              className="flex items-center gap-1"
-              animate={{ x: [0, 4, 0] }}
-              transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
-            >
-              <span className="text-[11px] font-black text-white/80">Tap to vote</span>
-              <span className="text-white/80">→</span>
-            </motion.div>
-          ) : (
-            <p className="text-[10px] text-white/50 font-bold">Tap to see results</p>
-          )}
+          ) : null}
         </div>
       </motion.button>
       <AnimatePresence>
@@ -25210,18 +25189,20 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
       {/* Sticker slider (75%) + Badge slider (25%) in one row */}
       <div className="flex gap-2">
         {/* Sticker slider — 75% */}
-        <div className="bg-white/70 rounded-2xl px-3 pt-2.5 pb-3 shadow-sm min-w-0" style={{ flex: '3 1 0%' }}>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75">Stickers</span>
+        <div className="relative rounded-2xl px-3 pt-2.5 pb-3 shadow-md min-w-0 overflow-hidden border-2 border-black/25" style={{ flex: '3 1 0%', background: uiColors.stickersTile.css }}>
+          <span className="shine-ray pointer-events-none" aria-hidden="true" />
+          <div className="relative z-10 flex items-center justify-between mb-2">
+            <span className="text-[10px] font-bold uppercase tracking-widest" style={tileTextStyle(uiColors.stickersTile, 0.75)}>Stickers</span>
             <div className="flex items-center gap-1.5">
-              <button onClick={() => setShowStickerScanner(true)} className="text-brand-gold active:opacity-70" title="Scan sticker QR">
+              <button onClick={() => setShowStickerScanner(true)} className="active:opacity-70" style={tileTextStyle(uiColors.stickersTile, 0.85)} title="Scan sticker QR">
                 <QrCode size={14} />
               </button>
-              <button onClick={() => stickerData && setShowStickerModal(true)} className="text-blue-500 active:opacity-70">
+              <button onClick={() => stickerData && setShowStickerModal(true)} className="active:opacity-70" style={tileTextStyle(uiColors.stickersTile, 0.85)}>
                 <Eye size={14} />
               </button>
             </div>
           </div>
+          <div className="relative z-10">
           {(() => {
             const universal = (stickerData?.stickers ?? [])
               .filter(s => !!s.cardDefId && !!s.cardImageUrl && !s.challengeId && (stickerData?.revealedIds ?? []).includes(s.id))
@@ -25231,7 +25212,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                 return new Date(b.earnedAt).getTime() - new Date(a.earnedAt).getTime();
               });
             if (universal.length === 0) return (
-              <p className="text-[10px] text-brand-navy/35 py-1">No cards yet</p>
+              <p className="text-[10px] py-1" style={tileTextStyle(uiColors.stickersTile, 0.5)}>No cards yet</p>
             );
             return (
               <div className="flex gap-2 overflow-x-auto scrollbar-hide">
@@ -25244,20 +25225,23 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
               </div>
             );
           })()}
+          </div>
         </div>
 
         {/* Badge — 25% */}
-        <div className="bg-white/70 rounded-2xl px-3 pt-2.5 pb-3 shadow-sm min-w-0 flex flex-col" style={{ flex: '1 1 0%' }}>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75">Badges</span>
-            <button onClick={() => setBadgesOpen(true)} className="text-blue-500 active:opacity-70">
+        <div className="relative rounded-2xl px-3 pt-2.5 pb-3 shadow-md min-w-0 flex flex-col overflow-hidden border-2 border-black/25" style={{ flex: '1 1 0%', background: uiColors.badgesTile.css }}>
+          <span className="shine-ray pointer-events-none" aria-hidden="true" />
+          <div className="relative z-10 flex items-center justify-between mb-2">
+            <span className="text-[10px] font-bold uppercase tracking-widest" style={tileTextStyle(uiColors.badgesTile, 0.75)}>Badges</span>
+            <button onClick={() => setBadgesOpen(true)} className="active:opacity-70" style={tileTextStyle(uiColors.badgesTile, 0.85)}>
               <Eye size={14} />
             </button>
           </div>
+          <div className="relative z-10 flex-1 flex flex-col justify-center">
           {earnedBadges.length === 0
-            ? <p className="text-[10px] text-brand-navy/35 py-1">No badges</p>
+            ? <p className="text-[10px] py-1" style={tileTextStyle(uiColors.badgesTile, 0.5)}>No badges</p>
             : (
-              <div className="flex-1 flex items-center justify-center">
+              <div className="flex items-center justify-center">
                 <button onClick={() => { setBadgesOpen(false); setSelectedBadge(earnedBadges[0]); }}
                   className="active:scale-90 transition-transform"
                   style={{ filter: 'drop-shadow(0 8px 6px rgba(0,0,0,0.55))' }}>
@@ -25266,6 +25250,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
               </div>
             )
           }
+          </div>
         </div>
       </div>
 
@@ -25286,7 +25271,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                 const pct = Math.min(100, Math.round((card.current_stamps / (store.stamps_required_for_reward || 10)) * 100));
                 return (
                   <div key={card.id}
-                    className="snap-start shrink-0 w-52 bg-white rounded-2xl overflow-hidden shadow-md border border-brand-navy/8">
+                    className="snap-start shrink-0 w-52 bg-white rounded-2xl overflow-hidden shadow-md border-2 border-black/20">
                     <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-brand-navy/6">
                       <div className="w-8 h-8 rounded-xl overflow-hidden shrink-0 shadow-sm cursor-pointer active:scale-95 transition-transform"
                         onClick={() => onViewStore?.(store)}>
@@ -25499,6 +25484,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
             onReveal={async (id) => { await updateDoc(doc(db, 'user_stickers', profile.uid), { revealedIds: arrayUnion(id) }); }}
             onClose={() => setShowStickerModal(false)}
             onOpenPack={stickers => { setShowStickerModal(false); setProfilePendingPack(stickers); }}
+            onScan={() => { setShowStickerModal(false); setShowStickerScanner(true); }}
           />
         )}
       </AnimatePresence>
@@ -27176,26 +27162,37 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                   }}
                   className={cn(
                     "w-full text-left rounded-xl overflow-hidden border-2 transition-all active:scale-[0.98]",
-                    isWinner ? "border-brand-gold" : voted ? "border-brand-gold/60" : "border-black/6 hover:border-brand-gold/40",
-                    isClosed && !voted ? "opacity-80" : ""
+                    isWinner ? "border-amber-400" : voted ? "border-violet-500" : "border-black/20 hover:border-violet-300",
+                    isClosed && !voted && !isWinner ? "opacity-70" : ""
                   )}
                 >
                   <div className="relative px-4 py-2.5 min-h-[42px] flex items-center">
+                    {/* Fill bar */}
                     <div
                       className={cn(
-                        "absolute left-0 top-0 bottom-0 rounded-[10px] transition-all duration-500",
-                        isWinner ? "bg-brand-gold/25" : voted ? "bg-brand-gold/15" : "bg-brand-navy/5"
+                        "absolute left-0 top-0 bottom-0 transition-all duration-500",
+                        voted ? "poll-voted-fill" : isWinner ? "" : "bg-brand-navy/5"
                       )}
-                      style={{ width: `${Math.max(pct, 4)}%` }}
+                      style={{
+                        width: `${Math.max(pct, 4)}%`,
+                        borderRadius: '10px',
+                        ...(isWinner && !voted ? { background: 'linear-gradient(90deg,#fbbf24,#f59e0b)' } : {}),
+                      }}
                     />
                     <div className="relative flex items-center justify-between w-full gap-2">
                       <div className="flex items-center gap-2">
-                        {isWinner && <Trophy size={14} className="text-brand-gold shrink-0" />}
-                        {!isWinner && voted && <CheckCircle2 size={14} className="text-brand-gold shrink-0" />}
-                        <span className={cn("text-sm font-medium", (voted || isWinner) && "font-bold")}>{opt.text}</span>
-                        {isClosed && voted && !isWinner && <span className="text-[9px] text-brand-navy/40 font-bold">(after close)</span>}
+                        {isWinner && <Trophy size={14} className="text-amber-500 shrink-0" />}
+                        {!isWinner && voted && <CheckCircle2 size={14} className="text-violet-500 shrink-0" />}
+                        <span className={cn(
+                          "text-sm font-medium",
+                          (voted || isWinner) && "font-bold",
+                          voted ? "text-white drop-shadow-sm" : ""
+                        )}>{opt.text}</span>
                       </div>
-                      <span className={cn("text-xs font-bold shrink-0", isWinner ? "text-brand-gold" : voted ? "text-brand-gold/70" : "text-brand-navy/75")}>{pct}%</span>
+                      <span className={cn(
+                        "text-xs font-bold shrink-0",
+                        isWinner ? "text-amber-600" : voted ? "text-white drop-shadow-sm" : "text-brand-navy/60"
+                      )}>{pct}%</span>
                     </div>
                   </div>
                 </button>
@@ -32488,13 +32485,15 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
             {/* Sticker + Badge sliders in one row */}
             <div className="flex gap-2">
               {/* Sticker slider — 75% */}
-              <div className="bg-white/70 rounded-2xl px-3 pt-2.5 pb-3 shadow-sm min-w-0" style={{ flex: '3 1 0%' }}>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75">Stickers</span>
-                  <button onClick={() => setPubStickerOpen(true)} className="text-blue-500 active:opacity-70">
+              <div className="relative rounded-2xl px-3 pt-2.5 pb-3 shadow-md min-w-0 overflow-hidden border-2 border-black/25" style={{ flex: '3 1 0%', background: uiColors.stickersTile.css }}>
+                <span className="shine-ray pointer-events-none" aria-hidden="true" />
+                <div className="relative z-10 flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-bold uppercase tracking-widest" style={tileTextStyle(uiColors.stickersTile, 0.75)}>Stickers</span>
+                  <button onClick={() => setPubStickerOpen(true)} className="active:opacity-70" style={tileTextStyle(uiColors.stickersTile, 0.85)}>
                     <Eye size={14} />
                   </button>
                 </div>
+                <div className="relative z-10">
                 {(() => {
                   const universal = pubStickers
                     .filter(s => !!s.cardDefId && !!s.cardImageUrl && !s.challengeId && pubRevealedIds.includes(s.id))
@@ -32503,7 +32502,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
                       if (tierDiff !== 0) return tierDiff;
                       return new Date(b.earnedAt).getTime() - new Date(a.earnedAt).getTime();
                     });
-                  if (universal.length === 0) return <p className="text-[10px] text-brand-navy/35 py-1">No cards yet</p>;
+                  if (universal.length === 0) return <p className="text-[10px] py-1" style={tileTextStyle(uiColors.stickersTile, 0.5)}>No cards yet</p>;
                   return (
                     <div className="flex gap-2 overflow-x-auto scrollbar-hide">
                       {universal.slice(0, 5).map(s => (
@@ -32515,20 +32514,23 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
                     </div>
                   );
                 })()}
+                </div>
               </div>
 
               {/* Badge — 25% */}
-              <div className="bg-white/70 rounded-2xl px-3 pt-2.5 pb-3 shadow-sm min-w-0 flex flex-col" style={{ flex: '1 1 0%' }}>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75">Badges</span>
-                  <button onClick={() => setPubBadgesOpen(true)} className="text-blue-500 active:opacity-70">
+              <div className="relative rounded-2xl px-3 pt-2.5 pb-3 shadow-md min-w-0 flex flex-col overflow-hidden border-2 border-black/25" style={{ flex: '1 1 0%', background: uiColors.badgesTile.css }}>
+                <span className="shine-ray pointer-events-none" aria-hidden="true" />
+                <div className="relative z-10 flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-bold uppercase tracking-widest" style={tileTextStyle(uiColors.badgesTile, 0.75)}>Badges</span>
+                  <button onClick={() => setPubBadgesOpen(true)} className="active:opacity-70" style={tileTextStyle(uiColors.badgesTile, 0.85)}>
                     <Eye size={14} />
                   </button>
                 </div>
+                <div className="relative z-10 flex-1 flex flex-col justify-center">
                 {earnedBadges.length === 0
-                  ? <p className="text-[10px] text-brand-navy/35 py-1">No badges</p>
+                  ? <p className="text-[10px] py-1" style={tileTextStyle(uiColors.badgesTile, 0.5)}>No badges</p>
                   : (
-                    <div className="flex-1 flex items-center justify-center">
+                    <div className="flex items-center justify-center">
                       <button onClick={() => { setPubBadgesOpen(false); setSelectedBadge(earnedBadges[0]); }}
                         className="active:scale-90 transition-transform"
                         style={{ filter: 'drop-shadow(0 8px 6px rgba(0,0,0,0.55))' }}>
@@ -32537,6 +32539,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
                     </div>
                   )
                 }
+                </div>
               </div>
             </div>
           </>
