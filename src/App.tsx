@@ -752,6 +752,11 @@ interface GlobalPost {
   storeReviewId?: string;
   pollOptions?: { text: string }[];
   pollVotes?: { [key: string]: string[] };
+  pollEndsAt?: any;
+  pollClosed?: boolean;
+  pollWinner?: number | null;
+  pollAdminVotes?: Record<string, number>;
+  pollClaimedBy?: string[];
   createdAt: any;
   likesCount: number;
   likedBy?: string[];
@@ -8738,6 +8743,8 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
   const [engageCommentName, setEngageCommentName] = useState('Sarah');
   const [engageCommentText, setEngageCommentText] = useState('');
   const [savingEngagement, setSavingEngagement] = useState(false);
+  const [pollVoteInputs, setPollVoteInputs] = useState<Record<string, string>>({});
+  const [pushingPollVote, setPushingPollVote] = useState<number | null>(null);
 
   // Create form
   const [content, setContent] = useState('');
@@ -9630,6 +9637,58 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
                             {savingEngagement ? 'Saving…' : 'Add Comment'}
                           </button>
                         </div>
+                        {/* Poll vote push */}
+                        {post.postType === 'poll' && post.pollOptions && (
+                          <div className="space-y-2 pt-1 border-t border-brand-navy/8">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/50">Push poll votes</p>
+                            {post.pollOptions.map((opt, i) => (
+                              <div key={i} className="flex items-center gap-2">
+                                <span className="text-xs font-medium text-brand-navy/70 flex-1 truncate">{opt.text}</span>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={pollVoteInputs[String(i)] ?? ''}
+                                  onChange={e => setPollVoteInputs(p => ({ ...p, [String(i)]: e.target.value }))}
+                                  placeholder="N"
+                                  className="w-16 px-2 py-1 rounded-lg bg-brand-bg border border-brand-navy/10 text-xs text-brand-navy outline-none text-center"
+                                />
+                                <button
+                                  onClick={async () => {
+                                    const amt = parseInt(pollVoteInputs[String(i)] || '0', 10);
+                                    if (!amt || amt <= 0) return;
+                                    setPushingPollVote(i);
+                                    try {
+                                      await updateDoc(doc(db, 'global_posts', post.id), { [`pollAdminVotes.${i}`]: increment(amt) });
+                                      setPollVoteInputs(p => { const n = { ...p }; delete n[String(i)]; return n; });
+                                    } catch {} finally { setPushingPollVote(null); }
+                                  }}
+                                  disabled={pushingPollVote === i || !pollVoteInputs[String(i)]}
+                                  className="px-2.5 py-1 rounded-lg bg-brand-navy text-white text-[10px] font-bold disabled:opacity-40 active:scale-90 transition-all"
+                                >
+                                  {pushingPollVote === i ? '…' : 'Push'}
+                                </button>
+                              </div>
+                            ))}
+                            {/* Force close poll */}
+                            {!post.pollClosed && (
+                              <button
+                                onClick={async () => {
+                                  const votes = post.pollVotes || {};
+                                  const adminV = post.pollAdminVotes || {};
+                                  let bestIdx = 0, bestCount = -1;
+                                  (post.pollOptions || []).forEach((_, idx) => {
+                                    const count = (votes[String(idx)]?.length || 0) + (adminV[String(idx)] || 0);
+                                    if (count > bestCount) { bestCount = count; bestIdx = idx; }
+                                  });
+                                  await updateDoc(doc(db, 'global_posts', post.id), { pollClosed: true, pollWinner: bestIdx });
+                                }}
+                                className="w-full py-1.5 rounded-xl border border-red-300 text-red-500 text-[10px] font-bold hover:bg-red-50 transition-colors"
+                              >
+                                Force close poll
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -26638,12 +26697,43 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
   };
 
   const isOwn = currentUser?.uid === post.authorUid;
+
+  // Poll timer — must be before any conditional return (Rules of Hooks)
+  const pollEndsAtMs = post.postType === 'poll' ? (post.pollEndsAt?.toMillis?.() ?? null) : null;
+  const { msLeft: pollMsLeft, isExpired: pollTimerExpired } = usePollTimer(pollEndsAtMs, !!post.pollClosed);
+  const isClosed = !!post.pollClosed || (pollTimerExpired && pollEndsAtMs !== null);
+  const [closingPoll, setClosingPoll] = useState(false);
+  const [claimingStickers, setClaimingStickers] = useState(false);
+
+  // Auto-close when timer expires
+  useEffect(() => {
+    if (!pollTimerExpired || post.pollClosed || !post.id || post.postType !== 'poll' || closingPoll) return;
+    setClosingPoll(true);
+    const votes = post.pollVotes || {};
+    const adminV = post.pollAdminVotes || {};
+    let bestIdx = 0, bestCount = -1;
+    (post.pollOptions || []).forEach((_, i) => {
+      const count = (votes[String(i)]?.length || 0) + (adminV[String(i)] || 0);
+      if (count > bestCount) { bestCount = count; bestIdx = i; }
+    });
+    updateDoc(doc(db, 'global_posts', post.id), {
+      pollClosed: true,
+      pollWinner: bestIdx,
+    }).catch(() => {}).finally(() => setClosingPoll(false));
+  }, [pollTimerExpired, post.pollClosed, post.id, post.postType]);
+
   const totalVotes = post.postType === 'poll'
     ? Object.values(post.pollVotes || {}).reduce((s, arr) => s + (arr?.length || 0), 0)
     : 0;
+  const totalAdminVotes = post.postType === 'poll'
+    ? Object.values(post.pollAdminVotes || {}).reduce((s, n) => s + (n || 0), 0)
+    : 0;
+  const totalDisplayVotes = totalVotes + totalAdminVotes;
   const userVoteKey = currentUser
     ? Object.keys(post.pollVotes || {}).find(k => (post.pollVotes![k] || []).includes(currentUser.uid))
     : undefined;
+  const userWon = post.postType === 'poll' && isClosed && post.pollWinner != null && userVoteKey === String(post.pollWinner);
+  const alreadyClaimed = currentUser ? (post.pollClaimedBy || []).includes(currentUser.uid) : false;
   const likesCount = localCount;
 
   useEffect(() => {
@@ -26987,8 +27077,9 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
               </div>
             )}
             {post.postType === 'poll' && (
-              <div className="w-7 h-7 bg-brand-gold/10 rounded-lg flex items-center justify-center">
-                <BarChart2 size={14} className="text-brand-gold" />
+              <div className={cn("flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-white text-[10px] font-bold", isClosed ? "poll-closed-bg" : "poll-active-bg")}>
+                <BarChart2 size={12} />
+                {isClosed ? 'Closed' : pollMsLeft !== null ? formatPollTimer(pollMsLeft) : 'Poll'}
               </div>
             )}
             <div className="relative">
@@ -27071,37 +27162,72 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
         {post.postType === 'poll' && post.pollOptions && (
           <div className="space-y-2 pt-1">
             {post.pollOptions.map((opt, i) => {
-              const voteCount = (post.pollVotes?.[String(i)] || []).length;
-              const pct = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
+              const voteCount = (post.pollVotes?.[String(i)] || []).length + (post.pollAdminVotes?.[String(i)] || 0);
+              const pct = totalDisplayVotes > 0 ? Math.round((voteCount / totalDisplayVotes) * 100) : 0;
               const voted = userVoteKey === String(i);
+              const isWinner = isClosed && post.pollWinner === i;
               return (
                 <button
                   key={i}
-                  onClick={() => { try { if ('vibrate' in navigator) (navigator as any).vibrate([50, 30, 80]); } catch {} onVote(post, i); }}
+                  onClick={() => {
+                    if (isClosed && userVoteKey !== undefined) return;
+                    try { if ('vibrate' in navigator) (navigator as any).vibrate([50, 30, 80]); } catch {}
+                    onVote(post, i);
+                  }}
                   className={cn(
                     "w-full text-left rounded-xl overflow-hidden border-2 transition-all active:scale-[0.98]",
-                    voted ? "border-brand-gold" : "border-black/6 hover:border-brand-gold/40"
+                    isWinner ? "border-brand-gold" : voted ? "border-brand-gold/60" : "border-black/6 hover:border-brand-gold/40",
+                    isClosed && !voted ? "opacity-80" : ""
                   )}
                 >
                   <div className="relative px-4 py-2.5 min-h-[42px] flex items-center">
                     <div
                       className={cn(
                         "absolute left-0 top-0 bottom-0 rounded-[10px] transition-all duration-500",
-                        voted ? "bg-brand-gold/20" : "bg-brand-navy/5"
+                        isWinner ? "bg-brand-gold/25" : voted ? "bg-brand-gold/15" : "bg-brand-navy/5"
                       )}
                       style={{ width: `${Math.max(pct, 4)}%` }}
                     />
                     <div className="relative flex items-center justify-between w-full gap-2">
                       <div className="flex items-center gap-2">
-                        {voted && <CheckCircle2 size={14} className="text-brand-gold shrink-0" />}
-                        <span className={cn("text-sm font-medium", voted && "font-bold")}>{opt.text}</span>
+                        {isWinner && <Trophy size={14} className="text-brand-gold shrink-0" />}
+                        {!isWinner && voted && <CheckCircle2 size={14} className="text-brand-gold shrink-0" />}
+                        <span className={cn("text-sm font-medium", (voted || isWinner) && "font-bold")}>{opt.text}</span>
+                        {isClosed && voted && !isWinner && <span className="text-[9px] text-brand-navy/40 font-bold">(after close)</span>}
                       </div>
-                      <span className={cn("text-xs font-bold shrink-0", voted ? "text-brand-gold" : "text-brand-navy/75")}>{pct}%</span>
+                      <span className={cn("text-xs font-bold shrink-0", isWinner ? "text-brand-gold" : voted ? "text-brand-gold/70" : "text-brand-navy/75")}>{pct}%</span>
                     </div>
                   </div>
                 </button>
               );
             })}
+            {/* Winner claim button */}
+            {userWon && !alreadyClaimed && currentUser && (
+              <button
+                onClick={async () => {
+                  if (claimingStickers || !currentUser) return;
+                  setClaimingStickers(true);
+                  try {
+                    await updateDoc(doc(db, 'global_posts', post.id), { pollClaimedBy: arrayUnion(currentUser.uid) });
+                    const snap = await getDoc(doc(db, 'users', currentUser.uid)).catch(() => null);
+                    const name = snap?.data()?.name || currentUser.displayName || 'User';
+                    await issueUserStickers(currentUser.uid, name, 3);
+                  } catch {} finally { setClaimingStickers(false); }
+                }}
+                className="w-full py-3 rounded-xl font-bold text-sm text-white poll-active-bg flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-md"
+              >
+                <Trophy size={16} />
+                {claimingStickers ? 'Collecting…' : 'You Won! Collect Stickers 🎉'}
+              </button>
+            )}
+            {userWon && alreadyClaimed && (
+              <div className="w-full py-2.5 rounded-xl border border-brand-gold/30 text-center text-sm font-bold text-brand-gold/70">
+                Stickers claimed ✓
+              </div>
+            )}
+            {isClosed && (
+              <p className="text-[10px] text-brand-navy/40 text-center font-medium pt-0.5">Poll closed · {totalDisplayVotes} votes</p>
+            )}
           </div>
         )}
       </div>
@@ -27139,7 +27265,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
           {post.postType === 'poll' && (
             <div className="flex items-center gap-1.5 text-gray-400 text-sm font-bold">
               <BarChart2 size={17} />
-              <span>{totalVotes}</span>
+              <span>{totalDisplayVotes}</span>
             </div>
           )}
         </div>
@@ -27306,6 +27432,7 @@ function CreatePostModal({ onClose, user, profile }: { onClose: () => void, user
   const [content, setContent] = useState('');
   const [isPoll, setIsPoll] = useState(false);
   const [pollOptions, setPollOptions] = useState(['', '']);
+  const [pollDurationMins, setPollDurationMins] = useState(60);
   const [isPosting, setIsPosting] = useState(false);
   const [vendorStore, setVendorStore] = useState<StoreProfile | null>(null);
 
@@ -27347,6 +27474,11 @@ function CreatePostModal({ onClose, user, profile }: { onClose: () => void, user
         postType: isPoll ? 'poll' : 'post',
         pollOptions: isPoll ? options : null,
         pollVotes: isPoll ? initialVotes : null,
+        pollEndsAt: isPoll ? Timestamp.fromMillis(Date.now() + pollDurationMins * 60 * 1000) : null,
+        pollClosed: false,
+        pollWinner: null,
+        pollAdminVotes: isPoll ? {} : null,
+        pollClaimedBy: isPoll ? [] : null,
         createdAt: serverTimestamp(),
         likesCount: 0,
         likedBy: []
@@ -27451,6 +27583,24 @@ function CreatePostModal({ onClose, user, profile }: { onClose: () => void, user
                 Add option
               </button>
             )}
+            {/* Duration picker */}
+            <div className="pt-1">
+              <p className="text-[10px] font-bold text-brand-navy/45 uppercase tracking-widest mb-1.5">Poll duration</p>
+              <div className="flex flex-wrap gap-1.5">
+                {POLL_DURATIONS.map(d => (
+                  <button
+                    key={d.mins}
+                    onClick={() => setPollDurationMins(d.mins)}
+                    className={cn(
+                      "px-3 py-1 rounded-lg text-xs font-bold transition-all",
+                      pollDurationMins === d.mins ? "poll-active-bg text-white shadow-sm" : "bg-brand-navy/5 text-brand-navy/70 hover:bg-brand-navy/10"
+                    )}
+                  >
+                    {d.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
