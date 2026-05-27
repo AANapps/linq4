@@ -20905,10 +20905,12 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor 
     <>
       <motion.button
         whileTap={{ scale: 0.96 }}
-        animate={{ boxShadow: isClosed
+        animate={{ boxShadow: isWinner && !alreadyClaimed
+          ? ['0 0 0px #fbbf2400', '0 0 28px #fbbf2499', '0 0 0px #fbbf2400']
+          : isClosed
           ? ['0 0 0px #b91c1c00', '0 6px 24px #b91c1c55', '0 0 0px #b91c1c00']
           : ['0 0 0px #dc262600', '0 8px 32px #dc262677', '0 0 0px #dc262600'] }}
-        transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+        transition={{ duration: isWinner && !alreadyClaimed ? 1.4 : 2.2, repeat: Infinity, ease: 'easeInOut' }}
         onClick={() => setOpen(true)}
         className="flex-1 rounded-[1.5rem] overflow-hidden text-left"
         style={{ background: isClosed ? 'linear-gradient(145deg,#7f1d1d,#b91c1c)' : 'linear-gradient(145deg,#dc2626,#ef4444,#f87171,#dc2626)', backgroundSize: '300% 300%', animation: isClosed ? 'none' : 'poll-gradient-shift 3s ease infinite' }}
@@ -20917,17 +20919,13 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor 
           {/* Shine ray */}
           <span className="card-shine-ray opacity-30 pointer-events-none" />
 
-          {/* Present icon */}
-          <motion.div
-            className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center mt-1 shrink-0"
-            animate={isClosed ? {} : { scale: [1, 1.07, 1] }}
-            transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-          >
-            <span className="text-3xl">🎁</span>
-          </motion.div>
+          {/* Red circle gift badge — top right, same as Linqle */}
+          <div className="absolute top-2 right-2 z-20 w-7 h-7 bg-red-700 rounded-full flex items-center justify-center shadow-md">
+            <Gift size={14} className="text-white" strokeWidth={2.5} />
+          </div>
 
           {/* Title */}
-          <p className="text-sm font-black text-white tracking-wide">Daily Vote</p>
+          <p className="text-sm font-black text-white tracking-wide mt-1">Daily Vote</p>
 
           {/* Timer / status */}
           {!isClosed && msLeft !== null ? (
@@ -20944,26 +20942,8 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor 
             <p className="text-[11px] font-black text-white/70">Tap to vote</p>
           )}
 
-          {/* You Won / Correct button */}
-          {isWinner && !alreadyClaimed ? (
-            <motion.button
-              onClick={collectReward}
-              disabled={claiming}
-              whileTap={{ scale: 0.95 }}
-              className="relative w-full py-2 rounded-xl font-black text-xs text-brand-navy overflow-hidden flex items-center justify-center gap-1"
-              style={{ background: 'linear-gradient(135deg,#fbbf24,#f59e0b)' }}
-              animate={{ scale: [1, 1.04, 1] }}
-              transition={{ duration: 1.2, repeat: Infinity }}
-            >
-              <span className="card-shine-ray" />
-              <Gift size={11} />
-              {claiming ? 'Collecting…' : voteData.pollType === 'correct' ? '🎉 Correct! Collect' : '🎉 You Won!'}
-            </motion.button>
-          ) : isWinner && alreadyClaimed ? (
-            <div className="w-full py-1.5 rounded-xl text-center text-[10px] font-bold text-white/60 bg-white/10">
-              ✅ Claimed!
-            </div>
-          ) : hasVoted ? (
+          {/* Mini vote bars when voted */}
+          {hasVoted && (
             <div className="w-full space-y-1">
               {voteData.options.map((_, i) => {
                 const pct = Math.round(((liveCounts[String(i)] ?? 0) / total) * 100);
@@ -20982,7 +20962,7 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor 
               })}
               <p className="text-[9px] text-white/55 font-bold text-center">{displayTotal} votes</p>
             </div>
-          ) : null}
+          )}
         </div>
       </motion.button>
       <AnimatePresence>
