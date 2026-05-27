@@ -525,6 +525,7 @@ interface UserProfile {
   waterCount?: number;
   totalSaved?: number;
   seenAnnouncementIds?: string[];
+  isAdmin?: boolean;
 }
 
 interface Announcement {
@@ -779,7 +780,7 @@ interface GlobalPost {
 
 const ADMIN_EMAIL = 'info@adastranetwork.co.uk';
 const isAppAdmin = (profile: UserProfile | null, email?: string | null) =>
-  email === ADMIN_EMAIL || profile?.email === ADMIN_EMAIL || profile?.role === 'admin';
+  email === ADMIN_EMAIL || profile?.email === ADMIN_EMAIL || profile?.role === 'admin' || profile?.isAdmin === true;
 
 // ── Analytics ──────────────────────────────────────────────────────────────
 let SESSION_ID: string;
@@ -7851,18 +7852,32 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
   );
 }
 
+type AugmentedUser = UserProfile & { _col: 'users' | 'vendors' };
+
 function AdminUsersPanel({ onClose }: { onClose: () => void }) {
-  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [users, setUsers] = useState<AugmentedUser[]>([]);
   const [search, setSearch] = useState('');
+  const [expandedUid, setExpandedUid] = useState<string | null>(null);
   const [confirmDeleteUid, setConfirmDeleteUid] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [togglingUid, setTogglingUid] = useState<string | null>(null);
-  const [togglingIntroUid, setTogglingIntroUid] = useState<string | null>(null);
 
   useEffect(() => {
-    return onSnapshot(collection(db, 'users'), snap =>
-      setUsers(snap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile)).sort((a, b) => (a.name || '').localeCompare(b.name || '')))
-    , () => {});
+    const unsub1 = onSnapshot(collection(db, 'users'), snap => {
+      const u = snap.docs.map(d => ({ uid: d.id, ...d.data(), _col: 'users' } as AugmentedUser));
+      setUsers(prev => {
+        const vendors = prev.filter(x => x._col === 'vendors');
+        return [...u, ...vendors].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      });
+    }, () => {});
+    const unsub2 = onSnapshot(collection(db, 'vendors'), snap => {
+      const v = snap.docs.map(d => ({ uid: d.id, ...d.data(), _col: 'vendors' } as AugmentedUser));
+      setUsers(prev => {
+        const consumers = prev.filter(x => x._col === 'users');
+        return [...consumers, ...v].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      });
+    }, () => {});
+    return () => { unsub1(); unsub2(); };
   }, []);
 
   const filtered = search.trim()
@@ -7877,44 +7892,50 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
       })
     : users;
 
-  const handleDelete = async (uid: string) => {
+  const handleDelete = async (u: AugmentedUser) => {
     setDeleting(true);
     try {
-      await deleteDoc(doc(db, 'users', uid));
-      await deleteDoc(doc(db, 'vendors', uid)).catch(() => {});
+      await deleteDoc(doc(db, u._col, u.uid));
+      if (u._col === 'users') await deleteDoc(doc(db, 'vendors', u.uid)).catch(() => {});
       setConfirmDeleteUid(null);
+      setExpandedUid(null);
     } finally {
       setDeleting(false);
     }
   };
 
-  const toggleAdmin = async (u: UserProfile) => {
+  const toggleAdmin = async (u: AugmentedUser) => {
     setTogglingUid(u.uid);
     try {
-      const newRole = u.role === 'admin' ? 'consumer' : 'admin';
-      await updateDoc(doc(db, 'users', u.uid), { role: newRole });
+      if (u._col === 'vendors') {
+        await updateDoc(doc(db, 'vendors', u.uid), { isAdmin: !u.isAdmin });
+      } else {
+        await updateDoc(doc(db, 'users', u.uid), { role: u.role === 'admin' ? 'consumer' : 'admin' });
+      }
     } finally {
       setTogglingUid(null);
     }
   };
 
-  const toggleIntro = async (u: UserProfile) => {
-    setTogglingIntroUid(u.uid);
+  const toggleIntro = async (u: AugmentedUser) => {
+    setTogglingUid(u.uid);
     try {
-      await updateDoc(doc(db, 'users', u.uid), { introComplete: !u.introComplete });
+      await updateDoc(doc(db, u._col, u.uid), { introComplete: !u.introComplete });
     } finally {
-      setTogglingIntroUid(null);
+      setTogglingUid(null);
     }
   };
 
-  const toggleVendorIntro = async (u: UserProfile) => {
-    setTogglingIntroUid(u.uid);
+  const toggleVendorIntro = async (u: AugmentedUser) => {
+    setTogglingUid(u.uid);
     try {
-      await updateDoc(doc(db, 'users', u.uid), { vendorIntroComplete: !u.vendorIntroComplete });
+      await updateDoc(doc(db, u._col, u.uid), { vendorIntroComplete: !u.vendorIntroComplete });
     } finally {
-      setTogglingIntroUid(null);
+      setTogglingUid(null);
     }
   };
+
+  const isAdmin = (u: AugmentedUser) => u._col === 'vendors' ? !!u.isAdmin : u.role === 'admin';
 
   const roleColor: Record<string, string> = {
     admin: 'bg-brand-gold/20 text-brand-gold',
@@ -7949,95 +7970,116 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
       </div>
 
       <div className="flex-1 overflow-y-auto px-5 py-2 space-y-2 pb-10">
-        {filtered.map(u => (
-          <div key={u.uid} className="bg-white rounded-2xl border border-brand-navy/5 overflow-hidden">
-            {confirmDeleteUid === u.uid ? (
-              <div className="px-4 py-3 flex items-center gap-3">
-                <p className="flex-1 text-xs font-bold text-red-500">Delete "{u.name}"?</p>
-                <button
-                  onClick={() => handleDelete(u.uid)}
-                  disabled={deleting}
-                  className="px-3 py-1.5 bg-red-500 text-white text-xs font-bold rounded-xl active:scale-95 transition-all disabled:opacity-50"
-                >
-                  {deleting ? '…' : 'Delete'}
-                </button>
-                <button
-                  onClick={() => setConfirmDeleteUid(null)}
-                  className="px-3 py-1.5 bg-brand-navy/10 text-brand-navy text-xs font-bold rounded-xl active:scale-95 transition-all"
-                >
-                  Cancel
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-3 px-4 py-3">
+        {filtered.map(u => {
+          const expanded = expandedUid === u.uid;
+          const admin = isAdmin(u);
+          return (
+            <div key={u.uid + u._col} className="bg-white rounded-2xl border border-brand-navy/5 overflow-hidden">
+              {/* Row header — tap to expand */}
+              <button
+                className="w-full flex items-center gap-3 px-4 py-3 text-left"
+                onClick={() => setExpandedUid(expanded ? null : u.uid)}
+              >
                 <div className="w-9 h-9 rounded-xl overflow-hidden bg-brand-navy/5 shrink-0">
                   {u.photoURL
                     ? <img src={u.photoURL} alt="" className="w-full h-full object-cover" />
                     : <UserIcon size={16} className="m-auto mt-2 text-brand-navy/32" />}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 min-w-0">
+                  <div className="flex items-center gap-1.5 min-w-0">
                     <p className="font-bold text-sm text-brand-navy truncate">{u.name || '—'}</p>
                     <span className={cn('text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0', roleColor[u.role] || 'bg-brand-navy/10 text-brand-navy/75')}>{u.role}</span>
+                    {admin && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 bg-brand-gold/20 text-brand-gold">admin</span>}
                   </div>
                   <p className="text-[10px] text-brand-navy/75 truncate">{u.handle ? `@${u.handle}` : u.email}</p>
                 </div>
-                <button
-                  onClick={() => toggleIntro(u)}
-                  disabled={togglingIntroUid === u.uid}
-                  title={u.introComplete ? 'Reset intro' : 'Mark intro done'}
-                  className={cn(
-                    'px-2 py-1 rounded-lg text-[10px] font-bold transition-all shrink-0 flex items-center gap-1',
-                    u.introComplete
-                      ? 'bg-emerald-100 text-emerald-600'
-                      : 'bg-brand-navy/8 text-brand-navy/40 hover:bg-emerald-100 hover:text-emerald-600',
-                    togglingIntroUid === u.uid && 'opacity-50'
-                  )}
-                >
-                  <CheckCircle2 size={10} />
-                  Intro
-                </button>
-                {u.role === 'vendor' && (
-                  <button
-                    onClick={() => toggleVendorIntro(u)}
-                    disabled={togglingIntroUid === u.uid}
-                    title={u.vendorIntroComplete ? 'Reset vendor intro' : 'Mark vendor intro done'}
-                    className={cn(
-                      'px-2 py-1 rounded-lg text-[10px] font-bold transition-all shrink-0 flex items-center gap-1',
-                      u.vendorIntroComplete
-                        ? 'bg-blue-100 text-blue-600'
-                        : 'bg-brand-navy/8 text-brand-navy/40 hover:bg-blue-100 hover:text-blue-600',
-                      togglingIntroUid === u.uid && 'opacity-50'
-                    )}
+                <ChevronDown size={16} className={cn('text-brand-navy/40 shrink-0 transition-transform duration-200', expanded && 'rotate-180')} />
+              </button>
+
+              {/* Expanded config */}
+              <AnimatePresence>
+                {expanded && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                    className="overflow-hidden"
                   >
-                    <Store size={10} />
-                    V.Intro
-                  </button>
+                    {confirmDeleteUid === u.uid ? (
+                      <div className="px-4 pb-3 flex items-center gap-3">
+                        <p className="flex-1 text-xs font-bold text-red-500">Delete "{u.name}"?</p>
+                        <button
+                          onClick={() => handleDelete(u)}
+                          disabled={deleting}
+                          className="px-3 py-1.5 bg-red-500 text-white text-xs font-bold rounded-xl active:scale-95 transition-all disabled:opacity-50"
+                        >{deleting ? '…' : 'Delete'}</button>
+                        <button
+                          onClick={() => setConfirmDeleteUid(null)}
+                          className="px-3 py-1.5 bg-brand-navy/10 text-brand-navy text-xs font-bold rounded-xl active:scale-95 transition-all"
+                        >Cancel</button>
+                      </div>
+                    ) : (
+                      <div className="px-4 pb-3 pt-1 border-t border-brand-navy/5 grid grid-cols-2 gap-2">
+                        {/* Intro toggle */}
+                        <button
+                          onClick={() => toggleIntro(u)}
+                          disabled={togglingUid === u.uid}
+                          className={cn(
+                            'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all',
+                            u.introComplete ? 'bg-emerald-100 text-emerald-700' : 'bg-brand-navy/8 text-brand-navy/50',
+                            togglingUid === u.uid && 'opacity-50'
+                          )}
+                        >
+                          <CheckCircle2 size={12} />
+                          {u.introComplete ? 'Intro done' : 'Mark intro done'}
+                        </button>
+
+                        {/* Vendor intro toggle (only for vendors) */}
+                        {(u.role === 'vendor' || u._col === 'vendors') && (
+                          <button
+                            onClick={() => toggleVendorIntro(u)}
+                            disabled={togglingUid === u.uid}
+                            className={cn(
+                              'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all',
+                              u.vendorIntroComplete ? 'bg-blue-100 text-blue-700' : 'bg-brand-navy/8 text-brand-navy/50',
+                              togglingUid === u.uid && 'opacity-50'
+                            )}
+                          >
+                            <Store size={12} />
+                            {u.vendorIntroComplete ? 'V.Intro done' : 'Mark V.Intro'}
+                          </button>
+                        )}
+
+                        {/* Admin toggle */}
+                        <button
+                          onClick={() => toggleAdmin(u)}
+                          disabled={togglingUid === u.uid}
+                          className={cn(
+                            'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all',
+                            admin ? 'bg-brand-gold/20 text-brand-gold' : 'bg-brand-navy/8 text-brand-navy/50',
+                            togglingUid === u.uid && 'opacity-50'
+                          )}
+                        >
+                          {admin ? '★' : '☆'} {admin ? 'Remove admin' : 'Make admin'}
+                        </button>
+
+                        {/* Delete */}
+                        <button
+                          onClick={() => setConfirmDeleteUid(u.uid)}
+                          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-red-50 text-red-500 transition-all"
+                        >
+                          <Trash2 size={12} />
+                          Delete user
+                        </button>
+                      </div>
+                    )}
+                  </motion.div>
                 )}
-                <button
-                  onClick={() => toggleAdmin(u)}
-                  disabled={togglingUid === u.uid}
-                  title={u.role === 'admin' ? 'Remove admin' : 'Make admin'}
-                  className={cn(
-                    'px-2 py-1 rounded-lg text-[10px] font-bold transition-all shrink-0',
-                    u.role === 'admin'
-                      ? 'bg-brand-gold/20 text-brand-gold'
-                      : 'bg-brand-navy/8 text-brand-navy/50 hover:bg-brand-gold/20 hover:text-brand-gold',
-                    togglingUid === u.uid && 'opacity-50'
-                  )}
-                >
-                  {u.role === 'admin' ? '★ Admin' : '☆ Admin'}
-                </button>
-                <button
-                  onClick={() => setConfirmDeleteUid(u.uid)}
-                  className="p-2 text-red-400 hover:text-red-600 transition-colors"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            )}
-          </div>
-        ))}
+              </AnimatePresence>
+            </div>
+          );
+        })}
         {filtered.length === 0 && (
           <p className="text-center text-brand-navy/72 text-sm py-10">No users found</p>
         )}
