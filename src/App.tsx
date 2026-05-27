@@ -20925,7 +20925,7 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor 
           </div>
 
           {/* Title */}
-          <p className="text-sm font-black text-white tracking-wide mt-1">Daily Vote</p>
+          <p className="text-sm font-black text-white tracking-wide mt-1 w-full text-center pr-9">Daily Vote</p>
 
           {/* Timer / status */}
           {!isClosed && msLeft !== null ? (
