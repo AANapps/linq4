@@ -26625,6 +26625,44 @@ function LazyImg({ src, alt, className, style, ...props }: React.ImgHTMLAttribut
   );
 }
 
+// Each dot animates independently with its own random speed + delay
+const POLL_DOTS = Array.from({ length: 16 }, (_, i) => ({
+  id: i,
+  size:     2 + Math.random() * 2.5,
+  leftPct:  Math.random() * 75,
+  topPct:   6 + Math.random() * 88,
+  duration: 0.6 + Math.random() * 1.9,
+  delay:    Math.random() * 3.2,
+  opacity:  0.28 + Math.random() * 0.38,
+}));
+
+function PollVotedFillDots() {
+  return (
+    <>
+      {POLL_DOTS.map(dot => (
+        <motion.span
+          key={dot.id}
+          className="absolute rounded-full bg-white pointer-events-none"
+          style={{
+            width:  dot.size,
+            height: dot.size,
+            left:   `${dot.leftPct}%`,
+            top:    `${dot.topPct}%`,
+            opacity: dot.opacity,
+          }}
+          animate={{ x: [0, 280] }}
+          transition={{
+            duration: dot.duration,
+            delay:    dot.delay,
+            repeat:   Infinity,
+            ease:     'linear',
+          }}
+        />
+      ))}
+    </>
+  );
+}
+
 function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewStore, onLike, onVote, onDelete, showPinnedTag, hideDivider }: {
   key?: React.Key;
   post: GlobalPost;
@@ -27169,16 +27207,19 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                   <div className="relative px-4 py-2.5 min-h-[42px] flex items-center">
                     {/* Fill bar */}
                     <div
-                      className={cn(
-                        "absolute left-0 top-0 bottom-0 transition-all duration-500",
-                        voted ? "poll-voted-fill" : isWinner ? "" : "bg-brand-navy/5"
-                      )}
+                      className="absolute left-0 top-0 bottom-0 overflow-hidden transition-all duration-500"
                       style={{
                         width: `${Math.max(pct, 4)}%`,
                         borderRadius: '10px',
-                        ...(isWinner && !voted ? { background: 'linear-gradient(90deg,#fbbf24,#f59e0b)' } : {}),
+                        background: voted
+                          ? 'linear-gradient(90deg, #7c3aed 0%, #4f46e5 45%, #2563eb 100%)'
+                          : isWinner
+                          ? 'linear-gradient(90deg, #fbbf24, #f59e0b)'
+                          : 'rgba(15,23,42,0.05)',
                       }}
-                    />
+                    >
+                      {voted && <PollVotedFillDots />}
+                    </div>
                     <div className="relative flex items-center justify-between w-full gap-2">
                       <div className="flex items-center gap-2">
                         {isWinner && <Trophy size={14} className="text-amber-500 shrink-0" />}
