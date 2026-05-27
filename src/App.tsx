@@ -20566,119 +20566,86 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[160] bg-black/70 backdrop-blur-sm flex flex-col max-w-md mx-auto"
+      className="fixed inset-0 z-[160] bg-black/50 backdrop-blur-sm flex flex-col max-w-md mx-auto"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', stiffness: 380, damping: 36 }}
-        className="flex flex-col overflow-hidden flex-1"
-        style={{ background: 'linear-gradient(180deg, #0a0a1a 0%, #0d1117 100%)' }}>
+        className="flex flex-col overflow-hidden flex-1 bg-white">
 
-        {/* Header — animated gradient when active, blue when closed */}
+        {/* Header */}
         <div className={cn('relative overflow-hidden shrink-0', isClosed ? 'poll-closed-bg' : 'poll-active-bg')}>
-          <MatrixRainCanvas opacity={0.14} fadeColor={isClosed ? 'rgba(10,10,40,0.3)' : 'rgba(15,5,40,0.2)'} />
-          {[
-            { x: 5,  y: 10, size: 28, delay: 0,   dur: 3.0, e: '🔥' },
-            { x: 65, y: 45, size: 22, delay: 0.8, dur: 2.7, e: '⚡' },
-            { x: 38, y: 65, size: 32, delay: 1.4, dur: 3.3, e: '🎯' },
-            { x: 80, y: 8,  size: 20, delay: 0.2, dur: 2.8, e: '💥' },
-            { x: 20, y: 55, size: 18, delay: 1.1, dur: 2.5, e: '🏆' },
-          ].map((e, i) => (
-            <motion.span key={i} className="absolute pointer-events-none select-none z-0"
-              style={{ left: `${e.x}%`, top: `${e.y}%`, fontSize: e.size, opacity: 0.13 }}
-              animate={{ y: [-6, -20, -6], rotate: [-12, 12, -12], scale: [1, 1.15, 1] }}
-              transition={{ duration: e.dur, repeat: Infinity, delay: e.delay, ease: 'easeInOut' }}>
-              {e.e}
-            </motion.span>
-          ))}
-          <div className="relative z-10 flex items-start justify-between px-5 pt-5 pb-2">
+          <span className="card-shine-ray opacity-40 pointer-events-none" />
+          <div className="relative z-10 flex items-start justify-between px-5 pt-5 pb-4">
             <div className="flex-1 pr-4">
-              <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
                 {!isClosed ? (
                   <motion.span
-                    className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full"
-                    style={{ background: 'rgba(255,255,255,0.25)', color: 'white' }}
+                    className="text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full bg-white/25 text-white"
                     animate={{ opacity: [1, 0.5, 1] }}
                     transition={{ duration: 1.4, repeat: Infinity }}
-                  >● LIVE</motion.span>
+                  >● Live</motion.span>
                 ) : (
-                  <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-white/20 text-white">🔒 CLOSED</span>
+                  <span className="text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full bg-white/20 text-white">Closed</span>
                 )}
-                <span className="text-[9px] font-bold text-white/60 uppercase tracking-widest">Daily Vote</span>
                 {msLeft !== null && !isClosed && (
                   <motion.span
-                    className="text-[9px] font-black px-2 py-0.5 rounded-full bg-white/20 text-white tabular-nums"
+                    className="text-[9px] font-black px-2.5 py-1 rounded-full bg-white/20 text-white tabular-nums"
                     animate={{ opacity: msLeft < 60000 ? [1, 0.4, 1] : 1 }}
                     transition={{ duration: 0.8, repeat: msLeft < 60000 ? Infinity : 0 }}
-                  >⏱ {formatPollTimer(msLeft)}</motion.span>
+                  >{formatPollTimer(msLeft)}</motion.span>
                 )}
+                <span className="text-[9px] font-bold text-white/60 uppercase tracking-widest ml-auto">{displayTotal} votes</span>
               </div>
               <h2 className="font-black text-xl text-white leading-snug">{voteData.question}</h2>
             </div>
-            <button onClick={onClose} className="shrink-0 w-9 h-9 rounded-full bg-white/10 border border-white/15 flex items-center justify-center active:scale-90 transition-all">
+            <button onClick={onClose} className="shrink-0 w-9 h-9 rounded-full bg-white/15 border border-white/20 flex items-center justify-center active:scale-90 transition-all">
               <X size={18} className="text-white" />
             </button>
           </div>
+          {/* Winner strip when closed */}
           {isClosed && voteData.winner !== null && (
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-              className="relative z-10 mx-5 mb-3 px-4 py-3 rounded-2xl border border-yellow-400/30 flex items-center gap-3"
-              style={{ background: 'linear-gradient(135deg,rgba(234,179,8,0.2),rgba(251,191,36,0.1))' }}
-            >
-              {voteData.pollType === 'correct' ? <CheckCircle2 size={18} className="text-emerald-400 shrink-0" /> : <Trophy size={18} className="text-yellow-400 shrink-0" />}
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-bold text-yellow-300/70 uppercase tracking-wider">{voteData.pollType === 'correct' ? 'Correct Answer' : 'Winner'}</p>
-                <p className="text-sm font-black text-white truncate">{voteData.options[voteData.winner]}</p>
-              </div>
-            </motion.div>
+            <div className="relative z-10 mx-5 mb-4 px-4 py-2.5 rounded-xl bg-white/15 flex items-center gap-2.5 border border-white/20">
+              {voteData.pollType === 'correct' ? <CheckCircle2 size={15} className="text-emerald-300 shrink-0" /> : <Trophy size={15} className="text-yellow-300 shrink-0" />}
+              <p className="text-[11px] font-black text-white/90 truncate">{voteData.pollType === 'correct' ? 'Correct: ' : 'Winner: '}<span className="text-white">{voteData.options[voteData.winner]}</span></p>
+            </div>
           )}
-          {/* You Won collect button */}
+          {/* Collect button */}
           {isWinner && !alreadyClaimed && (
             <motion.button
-              onClick={collectReward}
-              disabled={claiming}
+              onClick={collectReward} disabled={claiming}
               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
               whileTap={{ scale: 0.95 }}
-              className="relative z-10 mx-5 mb-4 w-[calc(100%-2.5rem)] py-3.5 rounded-2xl font-black text-sm text-brand-navy flex items-center justify-center gap-2 overflow-hidden"
+              className="relative z-10 mx-5 mb-4 w-[calc(100%-2.5rem)] py-3 rounded-2xl font-black text-sm text-brand-navy flex items-center justify-center gap-2 overflow-hidden shadow-lg"
               style={{ background: 'linear-gradient(135deg,#fbbf24,#f59e0b)' }}
             >
               <span className="card-shine-ray" />
-              <Gift size={18} />
-              {claiming ? 'Collecting…' : voteData.pollType === 'correct' ? '🎉 Correct! Collect Stickers' : '🎉 You Won! Collect Stickers'}
+              <Gift size={16} />
+              {claiming ? 'Collecting…' : voteData.pollType === 'correct' ? 'Correct! Collect Stickers 🎉' : 'You Won! Collect Stickers 🎉'}
             </motion.button>
           )}
           {isWinner && alreadyClaimed && (
-            <div className="relative z-10 mx-5 mb-4 py-2.5 rounded-2xl text-center text-sm font-bold text-white/60 bg-white/10">
+            <div className="relative z-10 mx-5 mb-4 py-2.5 rounded-2xl text-center text-sm font-bold text-white/70 bg-white/15 border border-white/20">
               ✅ Stickers collected!
             </div>
           )}
-          <div className="relative z-10 px-5 pb-4 flex gap-3 text-xs font-bold text-white/40 flex-wrap">
-            <span>🗳️ {displayTotal} votes</span>
-            {postCloseTotal > 0 && <span className="text-blue-300/60">+{postCloseTotal} after close</span>}
-            <span>·</span>
-            <span>💬 {comments.length} comments</span>
-          </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-5">
+        <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-4 bg-white">
           {/* Closed outcome banner */}
           {isClosed && (
             <motion.div
-              initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-              className="rounded-2xl px-4 py-3.5 flex items-center gap-3 border"
-              style={isWinner
-                ? { background: 'linear-gradient(135deg,rgba(251,191,36,0.18),rgba(245,158,11,0.1))', borderColor: 'rgba(251,191,36,0.35)' }
-                : { background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.12)' }}
+              initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+              className={cn("rounded-2xl px-4 py-3 flex items-center gap-3 border",
+                isWinner ? "border-amber-200 bg-amber-50" : "border-brand-navy/8 bg-brand-navy/3")}
             >
-              {isWinner
-                ? <Gift size={20} className="text-yellow-400 shrink-0" />
-                : <Lock size={20} className="text-white/40 shrink-0" />}
+              {isWinner ? <Gift size={18} className="text-amber-500 shrink-0" /> : <Lock size={18} className="text-brand-navy/35 shrink-0" />}
               <div className="flex-1 min-w-0">
-                <p className={cn("text-xs font-black uppercase tracking-wider", isWinner ? "text-yellow-400" : "text-white/40")}>
-                  {isWinner ? 'Poll Closed — You Won!' : 'Poll Closed'}
+                <p className={cn("text-[10px] font-black uppercase tracking-wider", isWinner ? "text-amber-600" : "text-brand-navy/40")}>
+                  {isWinner ? 'You Won!' : 'Poll Closed'}
                 </p>
-                <p className="text-sm font-bold text-white/80 mt-0.5">
+                <p className="text-xs font-semibold text-brand-navy/70 mt-0.5">
                   {isWinner
-                    ? voteData.pollType === 'correct' ? 'You answered correctly! Claim your sticker pack.' : 'You were in the majority! Claim your sticker pack.'
+                    ? voteData.pollType === 'correct' ? 'You answered correctly — claim your sticker pack above.' : 'You were in the majority — claim your sticker pack above.'
                     : hasVoted
                       ? voteData.pollType === 'correct' ? 'That wasn\'t the correct answer this time.' : 'The majority voted differently this time.'
                       : 'You didn\'t vote in time.'}
@@ -20686,51 +20653,50 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
               </div>
             </motion.div>
           )}
-          {/* Vertical bar graph — only after voting */}
+
+          {/* Bar graph — shown after voting */}
           {(hasVoted || isClosed) && (
-            <div className="flex items-end gap-3 px-1 pt-2" style={{ height: 160 }}>
+            <div className="flex items-end gap-2 px-1" style={{ height: 140 }}>
               {voteData.options.map((opt, i) => {
                 const count = liveCounts[String(i)] ?? 0;
                 const postCount = postCloseCounts[String(i)] ?? 0;
                 const pct = Math.round((count / total) * 100);
                 const barH = Math.max((pct / 100) * BAR_MAX_H, 4);
                 const postBarH = Math.max((postCount / Math.max(displayTotal + postCloseTotal, 1)) * BAR_MAX_H, 0);
-                const pal = OPTION_PALETTE[i % OPTION_PALETTE.length];
                 const isMe = userVote === i;
                 const isOptWinner = isClosed && voteData.winner === i;
+                const barColor = isOptWinner
+                  ? 'linear-gradient(180deg,#fbbf24,#f59e0b)'
+                  : isMe
+                  ? 'linear-gradient(180deg,#2563eb,#1d4ed8)'
+                  : 'rgba(37,99,235,0.18)';
                 return (
                   <div key={i} className="flex-1 flex flex-col items-center">
                     <motion.span
-                      className="font-black mb-1.5"
-                      style={{ fontSize: isMe ? 18 : 14, color: isMe ? pal.glow : 'rgba(255,255,255,0.5)' }}
-                      initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 + 0.3 }}
+                      className={cn("font-black mb-1 text-xs tabular-nums", isMe ? "text-brand-gold" : "text-brand-navy/40")}
+                      style={{ fontSize: isMe ? 14 : 12 }}
+                      initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 + 0.2 }}
                     >{pct}%</motion.span>
-                    <div className="w-full flex flex-col-reverse items-center rounded-t-2xl overflow-hidden relative" style={{ height: BAR_MAX_H, background: 'rgba(255,255,255,0.06)' }}>
-                      {/* Pre-close bar */}
+                    <div className="w-full rounded-t-xl overflow-hidden relative" style={{ height: BAR_MAX_H, background: 'rgba(37,99,235,0.06)' }}>
                       <motion.div
-                        className="w-full rounded-t-2xl absolute bottom-0"
-                        style={{ background: isOptWinner ? pal.grad : isMe ? pal.grad : 'rgba(255,255,255,0.18)', boxShadow: isMe ? `0 -6px 20px ${pal.glow}66` : 'none' }}
+                        className="w-full rounded-t-xl absolute bottom-0"
+                        style={{ background: barColor, boxShadow: isMe ? '0 -4px 14px rgba(37,99,235,0.3)' : 'none' }}
                         initial={{ height: 0 }}
                         animate={{ height: barH }}
-                        transition={{ duration: 0.8, delay: i * 0.12, ease: [0.34, 1.56, 0.64, 1] }}
+                        transition={{ duration: 0.8, delay: i * 0.1, ease: [0.34, 1.56, 0.64, 1] }}
                       />
-                      {/* Post-close votes — lighter segment on top */}
                       {postCount > 0 && (
                         <motion.div
                           className="w-full absolute"
-                          style={{ bottom: barH, height: Math.min(postBarH, BAR_MAX_H - barH), background: 'rgba(96,165,250,0.35)', borderTop: '1px dashed rgba(96,165,250,0.6)' }}
-                          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                          transition={{ delay: 1 }}
+                          style={{ bottom: barH, height: Math.min(postBarH, BAR_MAX_H - barH), background: 'rgba(37,99,235,0.2)', borderTop: '1px dashed rgba(37,99,235,0.4)' }}
+                          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}
                         />
                       )}
                     </div>
-                    <div className="flex items-center gap-1 mt-1.5">
-                      <p className="text-[10px] font-bold text-white/50 text-center leading-tight px-1">{opt}</p>
-                      {isOptWinner && <Trophy size={10} className="text-yellow-400 shrink-0" />}
+                    <div className="flex items-center gap-0.5 mt-1.5">
+                      <p className="text-[9px] font-semibold text-brand-navy/50 text-center leading-tight px-0.5">{opt}</p>
+                      {isOptWinner && <Trophy size={9} className="text-amber-500 shrink-0" />}
                     </div>
-                    {postCount > 0 && (
-                      <p className="text-[9px] text-blue-300/50 font-bold">+{postCount}</p>
-                    )}
                   </div>
                 );
               })}
@@ -20738,11 +20704,10 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
           )}
 
           {/* Vote buttons */}
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2.5">
             {voteData.options.map((opt, i) => {
               const isMyVote = userVote === i;
               const isOptWinner = isClosed && voteData.winner === i;
-              const pal = OPTION_PALETTE[i % OPTION_PALETTE.length];
               const canVote = !hasVoted && !voting;
               return (
                 <motion.button
@@ -20750,19 +20715,23 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
                   onClick={() => castVote(i)}
                   disabled={!canVote}
                   whileTap={{ scale: 0.97 }}
-                  animate={isMyVote ? { boxShadow: [`0 0 0px ${pal.glow}00`, `0 0 22px ${pal.glow}88`, `0 0 0px ${pal.glow}00`] } : {}}
-                  transition={{ duration: 1.8, repeat: Infinity }}
-                  className="w-full rounded-[1.25rem] text-left px-5 py-4 font-bold text-sm transition-all relative overflow-hidden"
+                  className="w-full rounded-2xl text-left px-5 py-3.5 font-bold text-sm transition-all relative overflow-hidden border-2"
                   style={{
-                    background: isMyVote ? pal.grad : hasVoted ? pal.dim : 'rgba(255,255,255,0.06)',
-                    border: `1.5px solid ${isMyVote ? pal.glow + '80' : 'rgba(255,255,255,0.10)'}`,
-                    color: isMyVote ? 'white' : 'rgba(255,255,255,0.75)',
+                    background: isMyVote
+                      ? 'linear-gradient(135deg,#2563eb,#1d4ed8)'
+                      : isOptWinner
+                      ? 'linear-gradient(135deg,#fef3c7,#fde68a)'
+                      : hasVoted
+                      ? 'rgba(37,99,235,0.04)'
+                      : '#f8faff',
+                    borderColor: isMyVote ? '#1d4ed8' : isOptWinner ? '#fbbf24' : 'rgba(37,99,235,0.12)',
+                    color: isMyVote ? 'white' : isOptWinner ? '#92400e' : 'rgba(15,23,42,0.75)',
                   }}
                 >
                   {!hasVoted && (
                     <motion.div
                       className="absolute inset-0 pointer-events-none"
-                      style={{ background: `linear-gradient(90deg, transparent 0%, ${pal.glow}22 50%, transparent 100%)` }}
+                      style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(37,99,235,0.06) 50%, transparent 100%)' }}
                       animate={{ x: ['-100%', '200%'] }}
                       transition={{ duration: 2.4, repeat: Infinity, delay: i * 0.6, ease: 'linear' }}
                     />
@@ -20771,57 +20740,54 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
                     <span className="flex-1 font-bold">{opt}</span>
                     {isMyVote && (
                       <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 400, damping: 15 }}>
-                        <Check size={18} className="text-white shrink-0" strokeWidth={3} />
+                        <Check size={16} className="text-white shrink-0" strokeWidth={3} />
                       </motion.div>
                     )}
-                    {isOptWinner && <Trophy size={16} className="text-yellow-400 shrink-0" />}
+                    {isOptWinner && <Trophy size={15} className="text-amber-500 shrink-0" />}
                   </div>
                 </motion.button>
               );
             })}
           </div>
 
-          <p className="text-center text-xs text-white/30 font-bold">
-            {isClosed && hasVoted ? `🔒 Closed · your vote counted` : isClosed ? '🔒 Closed — vote to join the after-close tally' : hasVoted ? `✅ ${displayTotal} votes · live` : '👆 Tap to cast your vote'}
+          <p className="text-center text-xs text-brand-navy/35 font-semibold">
+            {isClosed && hasVoted ? 'Closed · your vote counted' : isClosed ? 'Closed — tap an option to join the after-close tally' : hasVoted ? `${displayTotal} votes · live` : 'Tap to cast your vote'}
           </p>
 
           {/* Comment input */}
-          <div className="flex gap-2 items-center pt-1">
+          <div className="flex gap-2 items-center">
             <input value={commentText} onChange={e => setCommentText(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); postComment(); } }}
               placeholder="Add a comment…"
-              className="flex-1 rounded-2xl px-4 py-2.5 text-sm text-white placeholder:text-white/30 outline-none border border-white/10"
-              style={{ background: 'rgba(255,255,255,0.07)' }} />
+              className="flex-1 rounded-2xl px-4 py-2.5 text-sm text-brand-navy placeholder:text-brand-navy/30 outline-none border border-brand-navy/10 bg-brand-bg" />
             <button onClick={postComment} disabled={!commentText.trim() || posting}
-              className="w-9 h-9 rounded-full flex items-center justify-center disabled:opacity-40 active:scale-90 transition-all"
-              style={{ background: 'linear-gradient(135deg,#7c3aed,#2563EB)' }}>
+              className="w-9 h-9 rounded-full flex items-center justify-center disabled:opacity-40 active:scale-90 transition-all gradient-logo-blue">
               <Send size={15} className="text-white" />
             </button>
           </div>
 
           {/* Comments */}
-          <div className="divide-y divide-white/5">
-            {comments.length === 0 && <p className="text-center text-white/30 text-sm py-6">No comments yet — be first!</p>}
+          <div className="divide-y divide-brand-navy/5 pb-6">
+            {comments.length === 0 && <p className="text-center text-brand-navy/30 text-sm py-6">No comments yet — be first!</p>}
             {comments.map(c => {
               const liked = c.likes.includes(currentUser.uid);
               const ts = c.createdAt?.toDate?.();
               return (
-                <div key={c.id} className="flex gap-3 py-3.5">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-black text-white"
-                    style={{ background: 'linear-gradient(135deg,#7c3aed,#2563EB)' }}>
+                <div key={c.id} className="flex gap-3 py-3">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-black text-white gradient-logo-blue">
                     {c.name?.[0]?.toUpperCase() ?? '?'}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-2">
-                      <span className="text-xs font-bold text-white/80">{c.name}</span>
-                      {ts && <span className="text-[10px] text-white/30">{ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
+                      <span className="text-xs font-bold text-brand-navy">{c.name}</span>
+                      {ts && <span className="text-[10px] text-brand-navy/30">{ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
                     </div>
-                    <p className="text-sm text-white/60 mt-0.5 leading-snug">{c.text}</p>
+                    <p className="text-sm text-brand-navy/65 mt-0.5 leading-snug">{c.text}</p>
                   </div>
                   <button onClick={() => updateDoc(doc(db, 'daily_vote', today, 'comments', c.id), { likes: liked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid) })}
                     className="flex flex-col items-center gap-0.5 shrink-0 active:scale-90 transition-all pt-1">
-                    <Heart size={15} className={liked ? 'text-rose-400 fill-rose-400' : 'text-white/30'} />
-                    {c.likes.length > 0 && <span className="text-[10px] font-bold text-white/40">{c.likes.length}</span>}
+                    <Heart size={15} className={liked ? 'text-brand-gold fill-brand-gold' : 'text-brand-navy/25'} />
+                    {c.likes.length > 0 && <span className="text-[10px] font-bold text-brand-navy/35">{c.likes.length}</span>}
                   </button>
                 </div>
               );
@@ -20908,19 +20874,19 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor 
         animate={{ boxShadow: isWinner && !alreadyClaimed
           ? ['0 0 0px #fbbf2400', '0 0 28px #fbbf2499', '0 0 0px #fbbf2400']
           : isClosed
-          ? ['0 0 0px #b91c1c00', '0 6px 24px #b91c1c55', '0 0 0px #b91c1c00']
-          : ['0 0 0px #dc262600', '0 8px 32px #dc262677', '0 0 0px #dc262600'] }}
-        transition={{ duration: isWinner && !alreadyClaimed ? 1.4 : 2.2, repeat: Infinity, ease: 'easeInOut' }}
+          ? ['0 0 0px #6366f100', '0 6px 20px #6366f133', '0 0 0px #6366f100']
+          : ['0 0 0px #6366f100', '0 8px 28px #6366f14d', '0 0 0px #6366f100'] }}
+        transition={{ duration: isWinner && !alreadyClaimed ? 1.4 : 3.5, repeat: Infinity, ease: 'easeInOut' }}
         onClick={() => setOpen(true)}
         className="flex-1 rounded-[1.5rem] overflow-hidden text-left"
-        style={{ background: isClosed ? 'linear-gradient(145deg,#7f1d1d,#b91c1c)' : 'linear-gradient(145deg,#dc2626,#ef4444,#f87171,#dc2626)', backgroundSize: '300% 300%', animation: isClosed ? 'none' : 'poll-gradient-shift 3s ease infinite' }}
+        style={{ background: isClosed ? 'linear-gradient(145deg,#0f172a,#1e3a8a)' : 'linear-gradient(145deg,#1a1260,#3730a3,#0f0c29)', backgroundSize: '300% 300%', animation: isClosed ? 'none' : 'poll-gradient-shift 6s ease infinite' }}
       >
         <div className="relative h-full px-4 py-4 flex flex-col items-center gap-2">
           {/* Shine ray */}
           <span className="card-shine-ray opacity-30 pointer-events-none" />
 
-          {/* Red circle gift badge — top right, same as Linqle */}
-          <div className="absolute top-2 right-2 z-20 w-7 h-7 bg-red-700 rounded-full flex items-center justify-center shadow-md">
+          {/* Gift badge — top right */}
+          <div className="absolute top-2 right-2 z-20 w-7 h-7 bg-amber-500 rounded-full flex items-center justify-center shadow-md">
             <Gift size={14} className="text-white" strokeWidth={2.5} />
           </div>
 
