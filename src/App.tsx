@@ -27702,7 +27702,7 @@ function CreatePostModal({ onClose, user, profile, isAdmin }: { onClose: () => v
         </div>
 
         {isPoll && (
-          <div className="space-y-2 ml-13 pl-[52px]">
+          <div className="space-y-2">
             {pollOptions.map((opt, i) => (
               <div key={i} className="flex items-center gap-2">
                 <div className="flex-1 flex items-center gap-2 bg-brand-bg rounded-xl px-4 py-2.5 border border-brand-navy/8">
