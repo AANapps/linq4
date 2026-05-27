@@ -24888,7 +24888,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                   {item._type === 'global' ? (
                     <FeedPostCard post={item.data} currentUser={user} onViewUser={onViewUser}
                       onLike={async (p) => { const ref = doc(db, 'global_posts', p.id); const liked = (p.likedBy || []).includes(user.uid); await updateDoc(ref, { likedBy: liked ? arrayRemove(user.uid) : arrayUnion(user.uid), likesCount: liked ? Math.max(0, p.likesCount - 1) : p.likesCount + 1 }); }}
-                      onVote={async (p, i) => { const ref = doc(db, 'global_posts', p.id); const votes = p.pollVotes || {}; const oldKey = Object.keys(votes).find(k => (votes[k] || []).includes(user.uid)); const updates: any = { [`pollVotes.${i}`]: arrayUnion(user.uid) }; if (oldKey !== undefined && oldKey !== String(i)) updates[`pollVotes.${oldKey}`] = arrayRemove(user.uid); await updateDoc(ref, updates); }}
+                      onVote={async (p, i) => { const votes = p.pollVotes || {}; if (Object.keys(votes).some(k => (votes[k] || []).includes(user.uid))) return; await updateDoc(doc(db, 'global_posts', p.id), { [`pollVotes.${i}`]: arrayUnion(user.uid) }); }}
                     />
                   ) : (
                     <div className="px-6 py-4 space-y-2.5">
@@ -24939,7 +24939,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                     {postIdx > 0 && <div className="h-[3px] bg-gray-200" />}
                     <FeedPostCard post={item.post} currentUser={user} onViewUser={onViewUser}
                       onLike={async (p) => { const ref = doc(db, 'global_posts', p.id); const liked = (p.likedBy || []).includes(user.uid); await updateDoc(ref, { likedBy: liked ? arrayRemove(user.uid) : arrayUnion(user.uid), likesCount: liked ? Math.max(0, p.likesCount - 1) : p.likesCount + 1 }); }}
-                      onVote={async (p, i) => { const ref = doc(db, 'global_posts', p.id); const votes = p.pollVotes || {}; const oldKey = Object.keys(votes).find(k => (votes[k] || []).includes(user.uid)); const updates: any = { [`pollVotes.${i}`]: arrayUnion(user.uid) }; if (oldKey !== undefined && oldKey !== String(i)) updates[`pollVotes.${oldKey}`] = arrayRemove(user.uid); await updateDoc(ref, updates); }}
+                      onVote={async (p, i) => { const votes = p.pollVotes || {}; if (Object.keys(votes).some(k => (votes[k] || []).includes(user.uid))) return; await updateDoc(doc(db, 'global_posts', p.id), { [`pollVotes.${i}`]: arrayUnion(user.uid) }); }}
                     />
                   </React.Fragment>
                 );
@@ -25616,12 +25616,9 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                       });
                     }}
                     onVote={async (p, idx) => {
-                      const ref = doc(db, 'global_posts', p.id);
                       const votes = p.pollVotes || {};
-                      const oldKey = Object.keys(votes).find(k => (votes[k] || []).includes(user.uid));
-                      const updates: any = { [`pollVotes.${idx}`]: arrayUnion(user.uid) };
-                      if (oldKey !== undefined && oldKey !== String(idx)) updates[`pollVotes.${oldKey}`] = arrayRemove(user.uid);
-                      await updateDoc(ref, updates);
+                      if (Object.keys(votes).some(k => (votes[k] || []).includes(user.uid))) return;
+                      await updateDoc(doc(db, 'global_posts', p.id), { [`pollVotes.${idx}`]: arrayUnion(user.uid) });
                     }}
                   />
                 </React.Fragment>
@@ -25683,12 +25680,9 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                       });
                     }}
                     onVote={async (p, idx) => {
-                      const ref = doc(db, 'global_posts', p.id);
                       const votes = p.pollVotes || {};
-                      const oldKey = Object.keys(votes).find(k => (votes[k] || []).includes(user.uid));
-                      const updates: any = { [`pollVotes.${idx}`]: arrayUnion(user.uid) };
-                      if (oldKey !== undefined && oldKey !== String(idx)) updates[`pollVotes.${oldKey}`] = arrayRemove(user.uid);
-                      await updateDoc(ref, updates);
+                      if (Object.keys(votes).some(k => (votes[k] || []).includes(user.uid))) return;
+                      await updateDoc(doc(db, 'global_posts', p.id), { [`pollVotes.${idx}`]: arrayUnion(user.uid) });
                     }}
                   />
                 </React.Fragment>
@@ -27190,36 +27184,42 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
               const pct = totalDisplayVotes > 0 ? Math.round((voteCount / totalDisplayVotes) * 100) : 0;
               const voted = userVoteKey === String(i);
               const isWinner = isClosed && post.pollWinner === i;
+              // hide counts until the user has voted (or poll is closed)
+              const showResults = userVoteKey !== undefined || isClosed;
               return (
                 <button
                   key={i}
                   onClick={() => {
-                    if (isClosed && userVoteKey !== undefined) return;
+                    if (userVoteKey !== undefined) return; // one-time vote
                     try { if ('vibrate' in navigator) (navigator as any).vibrate([50, 30, 80]); } catch {}
                     onVote(post, i);
                   }}
+                  disabled={userVoteKey !== undefined && !isClosed}
                   className={cn(
                     "w-full text-left rounded-xl overflow-hidden border-2 transition-all active:scale-[0.98]",
-                    isWinner ? "border-amber-400" : voted ? "border-violet-500" : "border-black/20 hover:border-violet-300",
+                    isWinner ? "border-amber-400" : voted ? "border-violet-500" : "border-black/20",
+                    !showResults && !voted ? "hover:border-violet-300 cursor-pointer" : "",
                     isClosed && !voted && !isWinner ? "opacity-70" : ""
                   )}
                 >
                   <div className="relative px-4 py-2.5 min-h-[42px] flex items-center">
-                    {/* Fill bar */}
-                    <div
-                      className="absolute left-0 top-0 bottom-0 overflow-hidden transition-all duration-500"
-                      style={{
-                        width: `${Math.max(pct, 4)}%`,
-                        borderRadius: '10px',
-                        background: voted
-                          ? 'linear-gradient(90deg, #7c3aed 0%, #4f46e5 45%, #2563eb 100%)'
-                          : isWinner
-                          ? 'linear-gradient(90deg, #fbbf24, #f59e0b)'
-                          : 'rgba(15,23,42,0.05)',
-                      }}
-                    >
-                      {voted && <PollVotedFillDots />}
-                    </div>
+                    {/* Fill bar — only shown after voting */}
+                    {showResults && (
+                      <div
+                        className="absolute left-0 top-0 bottom-0 overflow-hidden transition-all duration-500"
+                        style={{
+                          width: `${Math.max(pct, 4)}%`,
+                          borderRadius: '10px',
+                          background: voted
+                            ? 'linear-gradient(90deg, #7c3aed 0%, #4f46e5 45%, #2563eb 100%)'
+                            : isWinner
+                            ? 'linear-gradient(90deg, #fbbf24, #f59e0b)'
+                            : 'rgba(15,23,42,0.05)',
+                        }}
+                      >
+                        {voted && <PollVotedFillDots />}
+                      </div>
+                    )}
                     <div className="relative flex items-center justify-between w-full gap-2">
                       <div className="flex items-center gap-2">
                         {isWinner && <Trophy size={14} className="text-amber-500 shrink-0" />}
@@ -27230,15 +27230,23 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                           voted ? "text-white drop-shadow-sm" : ""
                         )}>{opt.text}</span>
                       </div>
-                      <span className={cn(
-                        "text-xs font-bold shrink-0",
-                        isWinner ? "text-amber-600" : voted ? "text-white drop-shadow-sm" : "text-brand-navy/60"
-                      )}>{pct}%</span>
+                      {showResults ? (
+                        <span className={cn(
+                          "text-xs font-bold shrink-0",
+                          isWinner ? "text-amber-600" : voted ? "text-white drop-shadow-sm" : "text-brand-navy/60"
+                        )}>{pct}%</span>
+                      ) : (
+                        <span className="text-xs text-brand-navy/25 shrink-0">—</span>
+                      )}
                     </div>
                   </div>
                 </button>
               );
             })}
+            {/* Vote-to-reveal hint */}
+            {userVoteKey === undefined && !isClosed && (
+              <p className="text-[10px] text-brand-navy/40 text-center font-medium pt-0.5">Vote to see results</p>
+            )}
             {/* Winner claim button */}
             {userWon && !alreadyClaimed && currentUser && (
               <button
@@ -28803,17 +28811,10 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
 
   const handleVote = async (post: GlobalPost, optionIndex: number) => {
     if (!currentUser) return;
-    const ref = doc(db, 'global_posts', post.id);
     const votes = post.pollVotes || {};
     const currentVoteKey = Object.keys(votes).find(k => (votes[k] || []).includes(currentUser.uid));
-    const updates: any = {};
-    if (currentVoteKey !== undefined) {
-      updates[`pollVotes.${currentVoteKey}`] = arrayRemove(currentUser.uid);
-    }
-    if (currentVoteKey !== String(optionIndex)) {
-      updates[`pollVotes.${optionIndex}`] = arrayUnion(currentUser.uid);
-    }
-    if (Object.keys(updates).length > 0) await updateDoc(ref, updates);
+    if (currentVoteKey !== undefined) return; // one-time vote only
+    await updateDoc(doc(db, 'global_posts', post.id), { [`pollVotes.${optionIndex}`]: arrayUnion(currentUser.uid) });
   };
 
   const sortedFeed = (() => {
@@ -31899,7 +31900,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
               item._type === 'global' ? (
                 <FeedPostCard key={item.data.id} post={item.data} currentUser={user} onViewUser={onViewUser}
                   onLike={async (p) => { const ref = doc(db, 'global_posts', p.id); const liked = (p.likedBy || []).includes(user.uid); await updateDoc(ref, { likedBy: liked ? arrayRemove(user.uid) : arrayUnion(user.uid), likesCount: liked ? Math.max(0, p.likesCount - 1) : p.likesCount + 1 }); }}
-                  onVote={async (p, idx) => { const ref = doc(db, 'global_posts', p.id); const votes = p.pollVotes || {}; const oldKey = Object.keys(votes).find(k => (votes[k] || []).includes(user.uid)); const updates: any = { [`pollVotes.${idx}`]: arrayUnion(user.uid) }; if (oldKey !== undefined && oldKey !== String(idx)) updates[`pollVotes.${oldKey}`] = arrayRemove(user.uid); await updateDoc(ref, updates); }}
+                  onVote={async (p, idx) => { const votes = p.pollVotes || {}; if (Object.keys(votes).some(k => (votes[k] || []).includes(user.uid))) return; await updateDoc(doc(db, 'global_posts', p.id), { [`pollVotes.${idx}`]: arrayUnion(user.uid) }); }}
                   hideDivider
                 />
               ) : (() => {
@@ -32862,13 +32863,9 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
                 });
               }}
               onVote={async (p, optionIndex) => {
-                const ref = doc(db, 'global_posts', p.id);
                 const votes = p.pollVotes || {};
-                const currentVoteKey = Object.keys(votes).find(k => (votes[k] || []).includes(currentUser.uid));
-                const updates: any = {};
-                if (currentVoteKey !== undefined) updates[`pollVotes.${currentVoteKey}`] = arrayRemove(currentUser.uid);
-                if (currentVoteKey !== String(optionIndex)) updates[`pollVotes.${optionIndex}`] = arrayUnion(currentUser.uid);
-                if (Object.keys(updates).length > 0) await updateDoc(ref, updates);
+                if (Object.keys(votes).some(k => (votes[k] || []).includes(currentUser.uid))) return;
+                await updateDoc(doc(db, 'global_posts', p.id), { [`pollVotes.${optionIndex}`]: arrayUnion(currentUser.uid) });
               }}
             />
           </React.Fragment>
