@@ -786,6 +786,12 @@ const isAppAdmin = (profile: UserProfile | null, email?: string | null) =>
 let SESSION_ID: string;
 try { SESSION_ID = crypto.randomUUID(); } catch { SESSION_ID = Math.random().toString(36).slice(2) + Date.now().toString(36); }
 
+// Module-level flag: set true during any physical card QR scan so snapshot listeners
+// don't trigger pack-opening animations while we're already handling a reveal.
+let physicalScanActive = false;
+const beginPhysicalScan = () => { physicalScanActive = true; };
+const endPhysicalScan   = () => { setTimeout(() => { physicalScanActive = false; }, 2000); };
+
 const APP_VERSION = '1.0.0';
 
 function detectReferrer(): string {
@@ -4323,10 +4329,9 @@ function PhysicalCardRevealModal({ sticker, alreadyClaimed, onClose }: { sticker
   );
 }
 
-function StickerQRScanModal({ onClose, onSticker, skipPackRef }: {
+function StickerQRScanModal({ onClose, onSticker }: {
   onClose: () => void;
   onSticker: (s: CollectibleSticker, alreadyClaimed: boolean) => void;
-  skipPackRef?: React.MutableRefObject<boolean>;
 }) {
   type SS = 'scanning' | 'processing' | 'error';
   const [scanState, setScanState] = useState<SS>('scanning');
@@ -4368,16 +4373,15 @@ function StickerQRScanModal({ onClose, onSticker, skipPackRef }: {
       setStatusMsg('Checking card…');
       const user = auth.currentUser;
       if (!user) { setScanState('error'); setStatusMsg('You need to be signed in.'); return; }
-      if (skipPackRef) skipPackRef.current = true;
+      beginPhysicalScan();
       const result = await processPhysicalCardScan(physCardId, user);
       if ('error' in result) {
-        if (skipPackRef) skipPackRef.current = false;
+        endPhysicalScan();
         setScanState('error');
         setStatusMsg(result.error);
         return;
       }
-      // Reset flag after a short delay so any delayed snapshot listeners also see it
-      if (skipPackRef) setTimeout(() => { skipPackRef.current = false; }, 2000);
+      endPhysicalScan();
       onSticker(result.sticker, result.alreadyClaimed);
     };
 
@@ -10878,8 +10882,6 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const hasJoinedActiveProgramRef = useRef(false);
   const pendingPackRef = useRef<CollectibleSticker[] | null>(null);
   useEffect(() => { pendingPackRef.current = pendingPack; }, [pendingPack]);
-  // Set to true during a physical QR scan so snapshot listeners don't trigger pack opening
-  const physicalScanInProgressRef = useRef(false);
   useEffect(() => {
     const activeProgrammeIds = new Set(activePrograms.map(p => p.id));
     hasJoinedActiveProgramRef.current = myStickerCards.some(sc => activeProgrammeIds.has(sc.programme_id));
@@ -11128,7 +11130,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       const prev = prevStickerCountRef.current.get(sc.id) ?? -1;
       if (prev !== -1 && sc.stickers.length > prev && activeProgrammeIds.has(sc.programme_id)) {
         const unrevealed = (sc.stickers || []).filter((s: CollectibleSticker) => !(sc.revealedIds || []).includes(s.id));
-        if (unrevealed.length > 0 && !pendingPack && !physicalScanInProgressRef.current) {
+        if (unrevealed.length > 0 && !pendingPack && !physicalScanActive) {
           setPendingPack(unrevealed);
           setPendingPackCardId(sc.id);
         }
@@ -11148,7 +11150,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       }
       const prev = prevUserStickerCountRef.current;
       prevUserStickerCountRef.current = stickers.length;
-      if (stickers.length > prev && !hasJoinedActiveProgramRef.current && !pendingPackRef.current && !physicalScanInProgressRef.current) {
+      if (stickers.length > prev && !hasJoinedActiveProgramRef.current && !pendingPackRef.current && !physicalScanActive) {
         const addedCount = stickers.length - prev;
         const newStickers = stickers.slice(-addedCount);
         setPendingPack(newStickers);
@@ -13467,7 +13469,9 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady, initialQty }: {
       setScanState('processing'); setStatusMsg('Loading card…');
       const user = auth.currentUser;
       if (!user) { setScanState('error'); setStatusMsg('You need to be signed in.'); return; }
+      beginPhysicalScan();
       const result = await processPhysicalCardScan(physCardId, user);
+      endPhysicalScan();
       if ('error' in result) { setScanState('error'); setStatusMsg(result.error); return; }
       setScanState('idle');
       setPhysicalCardResult(result);
@@ -25478,7 +25482,6 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         {showStickerScanner && (
           <StickerQRScanModal
             onClose={() => setShowStickerScanner(false)}
-            skipPackRef={physicalScanInProgressRef}
             onSticker={(sticker, alreadyClaimed) => {
               setShowStickerScanner(false);
               setStickerScanResult({ sticker, alreadyClaimed });
