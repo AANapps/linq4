@@ -157,12 +157,12 @@
   100% { background-position: 0% 50%; }
 }
 .poll-active-bg {
-  background: linear-gradient(135deg, #0f172a, #1e3a8a, #0c0a3e, #0f172a);
+  background: linear-gradient(135deg, #7c3aed, #4f46e5, #2563EB, #1d4ed8, #7c3aed);
   background-size: 300% 300%;
-  animation: poll-gradient-shift 6s ease infinite;
+  animation: poll-gradient-shift 3s ease infinite;
 }
 .poll-closed-bg {
-  background: linear-gradient(135deg, #0f172a, #1e3a8a);
+  background: linear-gradient(135deg, #1D4ED8, #2563EB);
 }
 
 
