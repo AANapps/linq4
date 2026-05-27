@@ -412,8 +412,8 @@ const UI_COLOR_DEFAULTS: UiColors = {
   challengesFypTile: { css: 'rgba(241, 245, 249, 0.85)', dark: false },
   dailyVoteTile:     { css: 'linear-gradient(135deg, #A7F3D0 0%, #6EE7D4 45%, #99F6E4 75%, #CCFBF1 100%)', dark: false },
   winTab:            { css: 'linear-gradient(135deg, #d97706 0%, #f59e0b 35%, #fbbf24 60%, #f59e0b 100%)', dark: true },
-  challengesTile:    { css: 'linear-gradient(160deg, #0F766E 0%, #0D9488 40%, #14B8A6 70%, #2DD4BF 100%)', dark: true },
-  stickersTile:      { css: 'linear-gradient(160deg, #0F766E 0%, #0D9488 40%, #14B8A6 70%, #2DD4BF 100%)', dark: true },
+  challengesTile:    { css: 'linear-gradient(160deg, #1D4ED8 0%, #2563EB 40%, #3B82F6 70%, #60A5FA 100%)', dark: true },
+  stickersTile:      { css: 'linear-gradient(160deg, #1D4ED8 0%, #2563EB 40%, #3B82F6 70%, #60A5FA 100%)', dark: true },
   badgesTile:        { css: 'linear-gradient(135deg, #fef08a 0%, #fbbf24 30%, #f59e0b 65%, #d97706 100%)', dark: false },
 };
 const UI_COLOR_SLOT_DEFS: { key: keyof UiColors; label: string; desc: string; presets: UiColorPreset[] }[] = [
@@ -1118,7 +1118,7 @@ class AppErrorBoundary extends (React.Component as any) {
           <button
             onClick={() => window.location.reload()}
             className="mt-2 px-6 py-3 rounded-2xl text-white font-bold text-sm"
-            style={{ background: '#0D9488' }}
+            style={{ background: '#2563EB' }}
           >Reload app</button>
         </div>
       );
@@ -4214,7 +4214,7 @@ function ChallengeRedeemModal({ challenge, entry, userName, uid, onClose }: {
           </div>
 
           {/* Instagram story card */}
-          <div className="rounded-[2rem] overflow-hidden shadow-xl" style={{ background: 'linear-gradient(160deg, #0F172A 0%, #0F766E 50%, #0D9488 100%)', aspectRatio: '9/14', position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', padding: '32px 24px' }}>
+          <div className="rounded-[2rem] overflow-hidden shadow-xl" style={{ background: 'linear-gradient(160deg, #0F172A 0%, #1D4ED8 50%, #2563EB 100%)', aspectRatio: '9/14', position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', padding: '32px 24px' }}>
             {/* Top sparkles */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
               {[...Array(18)].map((_, i) => (
@@ -6648,7 +6648,7 @@ function ColorSwatchPicker({ value, onChange, presets, label }: {
   label?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const solidValue = /^#[0-9a-fA-F]{6}$/.test(value) ? value : '#0D9488';
+  const solidValue = /^#[0-9a-fA-F]{6}$/.test(value) ? value : '#2563EB';
   return (
     <div className="space-y-2">
       {/* Large swatch — tap to open rainbow picker */}
@@ -6706,7 +6706,7 @@ function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColo
   const [colors, setColors] = useState<UiColors>(uiColors);
   const [saving, setSaving] = useState(false);
   const [activeThemeId, setActiveThemeId] = useState<string>('blue');
-  const [themeCustomHex, setThemeCustomHex] = useState<string>('#0D9488');
+  const [themeCustomHex, setThemeCustomHex] = useState<string>('#2563EB');
   const [pendingThemeData, setPendingThemeData] = useState<{ themeId: string; customHex?: string } | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [saveError, setSaveError] = useState('');
@@ -6801,7 +6801,7 @@ function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColo
             <ColorSwatchPicker
               value={activeThemeId === 'custom'
                 ? themeCustomHex
-                : (THEME_PRESETS.find(t => t.id === activeThemeId)?.g2 ?? '#0D9488')
+                : (THEME_PRESETS.find(t => t.id === activeThemeId)?.g2 ?? '#2563EB')
               }
               onChange={handleThemeColorChange}
               presets={THEME_PRESETS.map(t => ({ id: t.id, label: t.label, css: t.g2 }))}
@@ -10691,7 +10691,7 @@ function buildStampCelebrationPages(
     type: 'stamp',
     storeName: store.name,
     storeLogoUrl: store.logoUrl || '',
-    storeTheme: store.theme || '#0D9488',
+    storeTheme: store.theme || '#2563EB',
     storeCategory: store.category || '',
     stampIcon: store.stampIcon || '⭐',
     stampIconUrl: store.stampIconUrl || '',
@@ -12561,7 +12561,7 @@ function VendorWelcomeSlideVisual({ step }: { step: number }) {
   const [visitsCount, setVisitsCount] = useState(0);
   const [themeIdx, setThemeIdx] = useState(0);
 
-  const THEMES = ['#0F172A', '#0D9488', '#7C3AED', '#DC2626', '#D97706'];
+  const THEMES = ['#0F172A', '#2563EB', '#7C3AED', '#DC2626', '#D97706'];
 
   useEffect(() => {
     if (step === 2) {
@@ -12605,7 +12605,7 @@ function VendorWelcomeSlideVisual({ step }: { step: number }) {
   if (step === 1) {
     const cards = [
       { label: 'Stamp Card', color: '#0F172A', icon: <Stamp size={14} className="text-white" />, sub: '10 stamps → free coffee' },
-      { label: 'Visit Points', color: '#0D9488', icon: <MapPin size={14} className="text-white" />, sub: '1 visit = 50 pts' },
+      { label: 'Visit Points', color: '#2563EB', icon: <MapPin size={14} className="text-white" />, sub: '1 visit = 50 pts' },
       { label: 'Spend Points', color: '#7C3AED', icon: <DollarSign size={14} className="text-white" />, sub: '$1 = 10 pts' },
     ];
     return (
@@ -13139,7 +13139,7 @@ function VendorQRScanner({ store, stampQty, onScanned, onClose, subtitle }: {
     onScannedRef.current(id);
   };
 
-  const cardTheme = store.theme || '#0D9488';
+  const cardTheme = store.theme || '#2563EB';
 
   return (
     <motion.div
@@ -13243,7 +13243,7 @@ function VendorQRDisplay({ store, onClose }: { store: StoreProfile; onClose: () 
   const [tokenId, setTokenId] = useState<string | null>(null);
   const [secsLeft, setSecsLeft] = useState(30);
   const [error, setError] = useState<string | null>(null);
-  const cardTheme = store.theme || '#0D9488';
+  const cardTheme = store.theme || '#2563EB';
 
   const rotateToken = useCallback(async () => {
     setError(null);
@@ -13356,7 +13356,7 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady, initialQty }: {
   const hasBarcodeDetector = typeof window !== 'undefined' && 'BarcodeDetector' in window;
   const limit = card.stamps_required || store?.stamps_required_for_reward || 10;
   const remaining = Math.max(1, limit - (card.current_stamps || 0));
-  const cardTheme = store?.theme || card.storeTheme || '#0D9488';
+  const cardTheme = store?.theme || card.storeTheme || '#2563EB';
 
   const stopCamera = () => {
     cancelAnimationFrame(rafRef.current);
@@ -13567,7 +13567,7 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
   const limit = card.stamps_required || store?.stamps_required_for_reward || 10;
   const current = card.current_stamps || 0;
   const remaining = limit - current;
-  const cardTheme = store?.theme || card.storeTheme || '#0D9488';
+  const cardTheme = store?.theme || card.storeTheme || '#2563EB';
 
   useEffect(() => () => { abortRef.current?.abort(); }, []);
 
@@ -14719,7 +14719,7 @@ function StampCelebrationModal({
                       initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
                       transition={{ type: 'spring', stiffness: 340, damping: 18, delay: 0.05 }}
                       className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-white shadow-lg"
-                      style={{ borderColor: page.membershipColor || '#0D9488' }}
+                      style={{ borderColor: page.membershipColor || '#2563EB' }}
                     >
                       <img src={page.storeLogoUrl} alt={page.storeName} className="w-full h-full object-cover" />
                     </motion.div>
@@ -14733,7 +14733,7 @@ function StampCelebrationModal({
                   >
                     <p
                       className="font-display font-black leading-none"
-                      style={{ fontSize: 72, color: page.membershipColor || '#0D9488' }}
+                      style={{ fontSize: 72, color: page.membershipColor || '#2563EB' }}
                     >
                       +{page.visitPoints ?? 1}
                     </p>
@@ -14755,9 +14755,9 @@ function StampCelebrationModal({
                   <motion.div
                     initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32 }}
                     className="rounded-2xl px-6 py-3 text-center"
-                    style={{ background: `${page.membershipColor || '#0D9488'}18` }}
+                    style={{ background: `${page.membershipColor || '#2563EB'}18` }}
                   >
-                    <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: page.membershipColor || '#0D9488' }}>Total points</p>
+                    <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: page.membershipColor || '#2563EB' }}>Total points</p>
                     <p className="font-display font-black text-3xl text-brand-navy">{page.currentStamps}</p>
                   </motion.div>
                 </div>
@@ -14818,7 +14818,7 @@ function StampCelebrationModal({
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
                   onClick={isLast ? onClose : () => setPageIdx(i => i + 1)}
                   className="w-full py-3.5 rounded-2xl font-bold text-sm text-white active:scale-[0.98] transition-all"
-                  style={{ background: `linear-gradient(135deg, ${page.membershipColor || '#0D9488'}, ${page.membershipColor || '#0D9488'}cc)` }}
+                  style={{ background: `linear-gradient(135deg, ${page.membershipColor || '#2563EB'}, ${page.membershipColor || '#2563EB'}cc)` }}
                 >
                   {ctaLabel}
                 </motion.button>
@@ -14862,7 +14862,7 @@ function StampCelebrationModal({
                 ) : page.type === 'stamp' ? (
                   /* Exact replica of the compact wallet loyalty card */
                   (() => {
-                    const cardTheme = page.storeTheme || '#0D9488';
+                    const cardTheme = page.storeTheme || '#2563EB';
                     const stampIcon = page.stampIcon || '⭐';
                     const stampIconUrl = (page as any).stampIconUrl || '';
                     const cardPattern = page.cardPattern || 'solid';
@@ -16648,7 +16648,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
           <div className="-mx-6 -mt-4">
             {/* Hero — full-bleed gradient */}
             <div className="relative overflow-hidden px-6 pt-14 pb-10 text-white"
-              style={{ background: 'linear-gradient(160deg, #0F172A 0%, #0F766E 45%, #0D9488 100%)' }}>
+              style={{ background: 'linear-gradient(160deg, #0F172A 0%, #1D4ED8 45%, #2563EB 100%)' }}>
               <div className="shine-ray" />
               <div className="relative z-10">
                 <div className="w-14 h-14 bg-white/15 rounded-[1.25rem] flex items-center justify-center mb-6 border border-white/20">
@@ -18105,7 +18105,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                   onClick={() => setVendorIssueMode('scan-user')}
                   className="glass-card rounded-[2rem] p-6 flex flex-col items-center gap-4 active:scale-95 transition-transform text-center col-span-2"
                 >
-                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(135deg, #0f766e, #14b8a6)' }}>
+                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(135deg, #1D4ED8, #3B82F6)' }}>
                     <Smartphone size={28} className="text-white" />
                   </div>
                   <div>
@@ -19202,7 +19202,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
     const hit = tiers.find(t => t.stamps > prev && t.stamps <= curr);
     if (hit) {
       setUnlockedReward(hit.reward);
-      confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 }, zIndex: TOP_Z, colors: ['#f5a623', '#ffffff', '#0D9488'] });
+      confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 }, zIndex: TOP_Z, colors: ['#f5a623', '#ffffff', '#2563EB'] });
       setTimeout(() => setUnlockedReward(null), 4000);
     }
   }, [card.current_stamps]);
@@ -19351,7 +19351,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
       >
 
         {(() => {
-          const cardTheme = store?.theme || card.storeTheme || '#0D9488';
+          const cardTheme = store?.theme || card.storeTheme || '#2563EB';
           const rawAccent = store?.stampBorderColor || '#ffffff';
           const accentColor = rawAccent === '#ffffff' ? cardTheme : rawAccent;
           const rewardTiers = store?.rewardTiers?.length ? store.rewardTiers : [{ stamps: limit, reward: store?.reward || '' }];
@@ -21866,7 +21866,7 @@ function SlideToRedeem({ onRedeem, disabled = false, label = 'Slide to redeem' }
       {!redeemed && (
         <div
           className="absolute inset-y-0 left-0 rounded-full"
-          style={{ width: x + THUMB + 4, background: 'linear-gradient(90deg, #0D9488 0%, #14B8A6 100%)', opacity: 0.18 }}
+          style={{ width: x + THUMB + 4, background: 'linear-gradient(90deg, #2563EB 0%, #3B82F6 100%)', opacity: 0.18 }}
         />
       )}
       {/* Label */}
@@ -22567,7 +22567,7 @@ function ScanUserPanel({ store, onIssue }: {
             onClick={() => visitScanMode === 'qr' ? setShowVisitQRScanner(true) : handleNFCScan()}
             disabled={nfcScanning || working}
             className="w-full relative overflow-hidden flex items-center justify-center gap-2 py-4 rounded-2xl font-bold text-white text-sm shadow-lg active:scale-[0.98] transition-all disabled:opacity-60"
-            style={{ background: 'linear-gradient(160deg, #0F766E 0%, #0D9488 40%, #14B8A6 70%, #2DD4BF 100%)' }}
+            style={{ background: 'linear-gradient(160deg, #1D4ED8 0%, #2563EB 40%, #3B82F6 70%, #60A5FA 100%)' }}
           >
             <span className="card-shine-ray" />
             {nfcScanning
@@ -22716,7 +22716,7 @@ function ScanUserPanel({ store, onIssue }: {
           onClick={lookupMode === 'phone' ? handlePhoneIssue : () => onIssue(handle, amount, setStatus, setWorking)}
           disabled={working || (lookupMode === 'handle' ? !handle : !phoneInput) || (!isVisit && !amount)}
           className="w-full py-4 rounded-2xl font-bold text-sm text-white disabled:opacity-40 transition-all active:scale-95"
-          style={{ background: 'linear-gradient(160deg, #0F766E 0%, #0D9488 40%, #14B8A6 70%, #2DD4BF 100%)' }}
+          style={{ background: 'linear-gradient(160deg, #1D4ED8 0%, #2563EB 40%, #3B82F6 70%, #60A5FA 100%)' }}
         >
           {working ? 'Issuing…' : isVisit ? 'Issue Points' : 'Issue Spend'}
         </button>
@@ -22854,7 +22854,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
   const [numTiers, setNumTiers] = useState(() => store?.rewardTiers?.length || 1);
   const [tiers, setTiers] = useState<{ stamps: number; reward: string; value?: number }[]>(() => initTiers(store));
   const [currency, setCurrency] = useState(store?.currency || 'AUD');
-  const [theme, setTheme] = useState(store?.theme || '#0D9488');
+  const [theme, setTheme] = useState(store?.theme || '#2563EB');
   const [stampIcon, setStampIcon] = useState(store?.stampIcon || '⭐');
   const [stampIconUrl, setStampIconUrl] = useState(store?.stampIconUrl || '');
   const [stampIconUploading, setStampIconUploading] = useState(false);
@@ -22957,7 +22957,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
     }
   };
 
-  const DARK_THEMES = ['#0D9488', '#8a4db8', '#2a9b72', '#c4622a', '#2e7fc4', '#b07830'];
+  const DARK_THEMES = ['#2563EB', '#8a4db8', '#2a9b72', '#c4622a', '#2e7fc4', '#b07830'];
   const totalStamps = tiers[tiers.length - 1]?.stamps || 10;
   const tierStampSet = new Set(tiers.map(t => t.stamps));
 
@@ -24438,7 +24438,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
 
   // ── Vendor profile layout ──
   if (profile.role === 'vendor') {
-    const theme = vendorStore?.theme || '#0D9488';
+    const theme = vendorStore?.theme || '#2563EB';
     return (
       <div className="space-y-6 pb-20 text-brand-navy">
         {settingsModal}
@@ -24546,7 +24546,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
 
         {/* Offers */}
         {vendorOffers.length > 0 && (() => {
-          const theme = vendorStore?.theme || '#0D9488';
+          const theme = vendorStore?.theme || '#2563EB';
           return (
             <div className="glass-card rounded-2xl overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-brand-navy/5">
@@ -24974,7 +24974,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
               {activeCards.map(card => {
                 const store = (stores || []).find(s => s.id === card.store_id);
                 if (!store) return null;
-                const brandPrimary = getComputedStyle(document.documentElement).getPropertyValue('--color-brand-gold').trim() || '#0D9488';
+                const brandPrimary = getComputedStyle(document.documentElement).getPropertyValue('--color-brand-gold').trim() || '#2563EB';
                 const primary = card.profileColor || brandPrimary;
                 const isMembership = card.card_type === 'membership';
                 const isVisit = isMembership && store.membershipType === 'visit';
@@ -25530,7 +25530,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
         setStoreName(s.name || '');
         setStoreReward(s.reward || '');
         setStoreCategory(s.category || 'Food');
-        setStoreTheme(s.theme || '#0D9488');
+        setStoreTheme(s.theme || '#2563EB');
         setStoreSecondaryColor(s.stampBorderColor || '#ffffff');
         setStoreLogo(s.logoUrl || '');
         setStoreLocation(s.location || s.address || '');
@@ -26534,7 +26534,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
       'linear-gradient(135deg,#D97706,#FBBF24)',
       'linear-gradient(135deg,#0891B2,#38BDF8)',
       'linear-gradient(135deg,#DB2777,#F472B6)',
-      'linear-gradient(135deg,#0D9488,#2DD4BF)',
+      'linear-gradient(135deg,#1D4ED8,#3B82F6)',
       'linear-gradient(135deg,#65A30D,#A3E635)',
     ];
     const avatarGrad = REWARD_AVATAR_GRADS[(post.authorName?.charCodeAt(0) || 0) % REWARD_AVATAR_GRADS.length];
@@ -30060,7 +30060,7 @@ function ProfileCardRow({ store, card, membershipCard, userId, onJoinLoyalty, on
     return (
       <div
         className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-white text-sm font-bold shadow-sm"
-        style={{ background: store.theme || '#0D9488' }}
+        style={{ background: store.theme || '#2563EB' }}
       >
         <Check size={15} strokeWidth={3} />
         Member
@@ -30075,7 +30075,7 @@ function ProfileCardRow({ store, card, membershipCard, userId, onJoinLoyalty, on
     <button
       onClick={handleJoin}
       className="w-full relative overflow-hidden flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm text-white shadow-lg active:scale-[0.98] transition-all"
-      style={{ background: store.theme || '#0D9488' }}
+      style={{ background: store.theme || '#2563EB' }}
     >
       <span className="card-shine-ray" />
       <Plus size={15} />
@@ -30550,7 +30550,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
         <div className="h-56 overflow-hidden">
           {store.coverUrl
             ? <img src={store.coverUrl} alt="" className="w-full h-full object-cover" />
-            : <div className="w-full h-full" style={{ background: `linear-gradient(135deg, ${store.theme || '#0D9488'}80 0%, ${store.theme || '#0D9488'}30 100%)` }} />
+            : <div className="w-full h-full" style={{ background: `linear-gradient(135deg, ${store.theme || '#2563EB'}80 0%, ${store.theme || '#2563EB'}30 100%)` }} />
           }
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
         </div>
@@ -30648,7 +30648,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
             <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
               {(addrText || hasCoords) && (
                 <button onClick={handleMapClick} className={pillClass}>
-                  <MapPin size={12} style={{ color: store.theme || '#0D9488' }} />
+                  <MapPin size={12} style={{ color: store.theme || '#2563EB' }} />
                   {distance !== null
                     ? `${distance < 1 ? `${Math.round(distance * 1000)}m` : `${distance.toFixed(1)}km`} away`
                     : 'Map'}
@@ -30656,13 +30656,13 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
               )}
               {store.phone && (
                 <a href={`tel:${store.phone}`} className={pillClass}>
-                  <Phone size={12} style={{ color: store.theme || '#0D9488' }} />
+                  <Phone size={12} style={{ color: store.theme || '#2563EB' }} />
                   {store.phone}
                 </a>
               )}
               {(store as any).website && (
                 <a href={(store as any).website} target="_blank" rel="noopener noreferrer" className={pillClass}>
-                  <Globe size={12} style={{ color: store.theme || '#0D9488' }} />
+                  <Globe size={12} style={{ color: store.theme || '#2563EB' }} />
                   Website
                 </a>
               )}
@@ -30683,7 +30683,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
               <button
                 onClick={() => setShowFullDesc(v => !v)}
                 className="text-xs font-bold mt-1"
-                style={{ color: store.theme || '#0D9488' }}
+                style={{ color: store.theme || '#2563EB' }}
               >
                 {showFullDesc ? 'Show less' : 'Read more'}
               </button>
@@ -30697,7 +30697,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
             <button
               onClick={handleFollowStore}
               className={cn("flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl font-bold text-xs transition-all active:scale-95 shadow", isFollowingStore ? "bg-brand-navy/8 text-brand-navy border border-brand-navy/15" : "text-white")}
-              style={isFollowingStore ? {} : { background: store.theme || '#0D9488' }}
+              style={isFollowingStore ? {} : { background: store.theme || '#2563EB' }}
             >
               {isFollowingStore ? <UserCheck size={13} /> : <UserPlus size={13} />}
               {isFollowingStore ? 'Following' : 'Follow'}
@@ -30706,7 +30706,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
               <button
                 onClick={handleMessageStore}
                 className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-white font-bold text-xs shadow active:scale-95 transition-all"
-                style={{ background: store.theme || '#0D9488' }}
+                style={{ background: store.theme || '#2563EB' }}
               >
                 <MessageCircle size={13} /> Message
               </button>
@@ -30789,7 +30789,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
         const topTier = (store.rewardTiers ?? []).slice().sort((a: any, b: any) => b.stamps - a.stamps)[0];
         const reward = topTier?.reward || store.reward || 'Reward';
         const pct = Math.min(100, Math.round((stamps / required) * 100));
-        const color = store.theme || '#0D9488';
+        const color = store.theme || '#2563EB';
         return (
           <button
             className="w-full rounded-[2rem] overflow-hidden shadow-lg active:scale-[0.98] transition-transform text-left"
@@ -31316,7 +31316,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                 >
                   {offer.imageUrl
                     ? <img src={offer.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                    : <div className="absolute inset-0 flex items-center justify-center" style={{ background: store.theme ? `linear-gradient(135deg, ${store.theme}cc, ${store.theme}88)` : 'linear-gradient(135deg, #0F766E, #0D9488)' }}><Ticket size={28} className="text-white/40" /></div>}
+                    : <div className="absolute inset-0 flex items-center justify-center" style={{ background: store.theme ? `linear-gradient(135deg, ${store.theme}cc, ${store.theme}88)` : 'linear-gradient(135deg, #1D4ED8, #2563EB)' }}><Ticket size={28} className="text-white/40" /></div>}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
                   {(offer.value ?? 0) > 0 && (
                     <div className="absolute top-2.5 left-2.5 bg-red-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-sm">Save ${offer.value!.toFixed(2)}</div>
@@ -31343,7 +31343,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                     : <div className="absolute inset-0 bg-brand-navy/3 flex items-center justify-center"><Gift size={28} className="text-brand-navy/10" /></div>}
                   {c.imageUrl && <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />}
                   <div className="absolute top-2.5 left-2.5">
-                    <span className="text-[8px] font-black uppercase tracking-wide px-2 py-0.5 rounded-full text-white" style={{ background: store.theme || '#0D9488' }}>
+                    <span className="text-[8px] font-black uppercase tracking-wide px-2 py-0.5 rounded-full text-white" style={{ background: store.theme || '#2563EB' }}>
                       {c.rewardTag || 'Challenge'}
                     </span>
                   </div>
@@ -31426,7 +31426,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
               "flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5",
               activeStoreTab === tab ? "text-white shadow-lg" : "text-brand-navy/75"
             )}
-            style={activeStoreTab === tab ? { background: store.theme || '#0D9488' } : {}}
+            style={activeStoreTab === tab ? { background: store.theme || '#2563EB' } : {}}
           >
             {tab === 'posts' ? <><MessageSquare size={13} /> Posts</>
              : tab === 'reviews' ? <><Star size={13} /> Reviews {storeReviews.length > 0 && `(${storeReviews.length})`}</>
@@ -31555,7 +31555,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                     <div key={star} className="flex items-center gap-2">
                       <span className="text-[10px] font-bold text-brand-navy/75 w-3 shrink-0">{star}</span>
                       <div className="flex-1 h-1.5 bg-brand-navy/10 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: store.theme || '#0D9488' }} />
+                        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: store.theme || '#2563EB' }} />
                       </div>
                     </div>
                   );
@@ -31604,7 +31604,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
               {store.phone && (
                 <a href={`tel:${store.phone}`} className="flex items-center gap-3 active:opacity-70">
                   <div className="w-9 h-9 rounded-xl bg-brand-navy/5 flex items-center justify-center shrink-0">
-                    <Phone size={14} style={{ color: store.theme || '#0D9488' }} />
+                    <Phone size={14} style={{ color: store.theme || '#2563EB' }} />
                   </div>
                   <span className="text-sm font-medium text-brand-navy">{store.phone}</span>
                 </a>
@@ -31612,7 +31612,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
               {store.email && (
                 <a href={`mailto:${store.email}`} className="flex items-center gap-3 active:opacity-70">
                   <div className="w-9 h-9 rounded-xl bg-brand-navy/5 flex items-center justify-center shrink-0">
-                    <Mail size={14} style={{ color: store.theme || '#0D9488' }} />
+                    <Mail size={14} style={{ color: store.theme || '#2563EB' }} />
                   </div>
                   <span className="text-sm font-medium text-brand-navy">{store.email}</span>
                 </a>
@@ -31620,7 +31620,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
               {(store as any).website && (
                 <a href={(store as any).website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 active:opacity-70">
                   <div className="w-9 h-9 rounded-xl bg-brand-navy/5 flex items-center justify-center shrink-0">
-                    <Globe size={14} style={{ color: store.theme || '#0D9488' }} />
+                    <Globe size={14} style={{ color: store.theme || '#2563EB' }} />
                   </div>
                   <span className="text-sm font-medium text-brand-navy truncate">{(store as any).website}</span>
                 </a>
@@ -31639,7 +31639,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                   <div key={day} className={cn('flex items-center justify-between', isToday && 'font-bold')}>
                     <span className={cn('text-sm capitalize', isToday ? 'text-brand-navy' : 'text-brand-navy/75')}>
                       {day.charAt(0).toUpperCase() + day.slice(1)}
-                      {isToday && <span className="ml-1.5 text-[10px] font-bold uppercase tracking-widest" style={{ color: store.theme || '#0D9488' }}>Today</span>}
+                      {isToday && <span className="ml-1.5 text-[10px] font-bold uppercase tracking-widest" style={{ color: store.theme || '#2563EB' }}>Today</span>}
                     </span>
                     <span className={cn('text-sm', h ? (isToday ? 'text-brand-navy' : 'text-brand-navy/75') : 'text-brand-navy/40')}>
                       {h ? `${h.open} – ${h.close}` : 'Closed'}
@@ -31662,7 +31662,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                 return (
                   <button key={loc.id} onClick={handleLocMap} className="w-full flex items-start gap-3 text-left active:opacity-70">
                     <div className="w-9 h-9 rounded-xl bg-brand-navy/5 flex items-center justify-center shrink-0 mt-0.5">
-                      <MapPin size={14} style={{ color: store.theme || '#0D9488' }} />
+                      <MapPin size={14} style={{ color: store.theme || '#2563EB' }} />
                     </div>
                     <div>
                       {loc.label && <p className="font-bold text-sm text-brand-navy">{loc.label}</p>}
@@ -31686,7 +31686,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                 className="flex items-start gap-3 text-left active:opacity-70 w-full"
               >
                 <div className="w-9 h-9 rounded-xl bg-brand-navy/5 flex items-center justify-center shrink-0">
-                  <MapPin size={14} style={{ color: store.theme || '#0D9488' }} />
+                  <MapPin size={14} style={{ color: store.theme || '#2563EB' }} />
                 </div>
                 <p className="text-sm text-brand-navy/75 mt-1.5">{store.location || (store as any).address}</p>
               </button>
@@ -32346,7 +32346,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
             {cards.map(card => {
               const store = stores.find(s => s.id === card.store_id);
               if (!store) return null;
-              const primary = card.profileColor || '#0D9488';
+              const primary = card.profileColor || '#2563EB';
               const isMembership = card.card_type === 'membership';
               const isVisit = isMembership && store.membershipType === 'visit';
               const pct = Math.min(100, Math.round((card.current_stamps / (store.stamps_required_for_reward || 10)) * 100));
