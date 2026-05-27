@@ -234,6 +234,11 @@ service cloud.firestore {
       allow update, delete: if isAuthenticated() && (isStoreOwner(resource.data.storeId) || isAdmin());
     }
 
+    match /physical_cards/{cardId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
     match /collectible_card_sets/{setId} {
       allow read: if isAuthenticated();
       allow create, update, delete: if isAdmin();
