@@ -5199,6 +5199,8 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [vendorIntroMap, setVendorIntroMap] = useState<Record<string, boolean>>({});
   const [vendorCollectionMap, setVendorCollectionMap] = useState<Record<string, 'users' | 'vendors'>>({});
+  const [vendorAdminMap, setVendorAdminMap] = useState<Record<string, boolean>>({});
+  const [togglingAdminUid, setTogglingAdminUid] = useState<string | null>(null);
 
   const handleToggleSub = async (store: StoreProfile) => {
     setTogglingId(store.id);
@@ -5293,8 +5295,13 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
           colMap[snap.id] = col;
         }
       });
+      const adminMap: Record<string, boolean> = {};
+      results.forEach(({ snap }) => {
+        if (snap.exists()) adminMap[snap.id] = !!snap.data()?.isAdmin;
+      });
       setVendorIntroMap(introMap);
       setVendorCollectionMap(colMap);
+      setVendorAdminMap(adminMap);
     }).catch(console.error);
   }, [stores.map(s => (s as any).ownerUid).join(',')]);
 
@@ -5517,6 +5524,44 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
                                 ? 'bg-emerald-50 text-emerald-600'
                                 : 'bg-amber-50 text-amber-600')}>
                             {vendorIntroMap[(store as any).ownerUid] ? '✓ Read — tap to reset' : 'Pending — tap to mark read'}
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Vendor admin access */}
+                      {(store as any).ownerUid && (
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-bold text-brand-navy">Admin access</p>
+                            <p className="text-[10px] text-brand-navy/50">
+                              {vendorAdminMap[(store as any).ownerUid] ? 'Has admin panel access' : 'No admin access'}
+                            </p>
+                          </div>
+                          <button
+                            disabled={togglingAdminUid === (store as any).ownerUid}
+                            onClick={async () => {
+                              const uid = (store as any).ownerUid;
+                              const col = vendorCollectionMap[uid] ?? 'vendors';
+                              const next = !vendorAdminMap[uid];
+                              setTogglingAdminUid(uid);
+                              try {
+                                await updateDoc(doc(db, col, uid), { isAdmin: next });
+                                setVendorAdminMap(m => ({ ...m, [uid]: next }));
+                              } catch (e) { console.error(e); }
+                              finally { setTogglingAdminUid(null); }
+                            }}
+                            className={cn(
+                              'px-3 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95 disabled:opacity-50',
+                              vendorAdminMap[(store as any).ownerUid]
+                                ? 'bg-red-50 text-red-500'
+                                : 'bg-purple-50 text-purple-600'
+                            )}
+                          >
+                            {togglingAdminUid === (store as any).ownerUid
+                              ? '…'
+                              : vendorAdminMap[(store as any).ownerUid]
+                                ? 'Remove admin'
+                                : 'Make admin'}
                           </button>
                         </div>
                       )}
@@ -7852,10 +7897,8 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
   );
 }
 
-type AugmentedUser = UserProfile & { _col: 'users' | 'vendors' };
-
 function AdminUsersPanel({ onClose }: { onClose: () => void }) {
-  const [users, setUsers] = useState<AugmentedUser[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
   const [search, setSearch] = useState('');
   const [expandedUid, setExpandedUid] = useState<string | null>(null);
   const [confirmDeleteUid, setConfirmDeleteUid] = useState<string | null>(null);
@@ -7863,21 +7906,9 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
   const [togglingUid, setTogglingUid] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsub1 = onSnapshot(collection(db, 'users'), snap => {
-      const u = snap.docs.map(d => ({ uid: d.id, ...d.data(), _col: 'users' } as AugmentedUser));
-      setUsers(prev => {
-        const vendors = prev.filter(x => x._col === 'vendors');
-        return [...u, ...vendors].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-      });
-    }, () => {});
-    const unsub2 = onSnapshot(collection(db, 'vendors'), snap => {
-      const v = snap.docs.map(d => ({ uid: d.id, ...d.data(), _col: 'vendors' } as AugmentedUser));
-      setUsers(prev => {
-        const consumers = prev.filter(x => x._col === 'users');
-        return [...consumers, ...v].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-      });
-    }, () => {});
-    return () => { unsub1(); unsub2(); };
+    return onSnapshot(collection(db, 'users'), snap =>
+      setUsers(snap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile)).sort((a, b) => (a.name || '').localeCompare(b.name || '')))
+    , () => {});
   }, []);
 
   const filtered = search.trim()
@@ -7892,11 +7923,11 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
       })
     : users;
 
-  const handleDelete = async (u: AugmentedUser) => {
+  const handleDelete = async (u: UserProfile) => {
     setDeleting(true);
     try {
-      await deleteDoc(doc(db, u._col, u.uid));
-      if (u._col === 'users') await deleteDoc(doc(db, 'vendors', u.uid)).catch(() => {});
+      await deleteDoc(doc(db, 'users', u.uid));
+      await deleteDoc(doc(db, 'vendors', u.uid)).catch(() => {});
       setConfirmDeleteUid(null);
       setExpandedUid(null);
     } finally {
@@ -7904,38 +7935,23 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
     }
   };
 
-  const toggleAdmin = async (u: AugmentedUser) => {
+  const toggleAdmin = async (u: UserProfile) => {
     setTogglingUid(u.uid);
     try {
-      if (u._col === 'vendors') {
-        await updateDoc(doc(db, 'vendors', u.uid), { isAdmin: !u.isAdmin });
-      } else {
-        await updateDoc(doc(db, 'users', u.uid), { role: u.role === 'admin' ? 'consumer' : 'admin' });
-      }
+      await updateDoc(doc(db, 'users', u.uid), { role: u.role === 'admin' ? 'consumer' : 'admin' });
     } finally {
       setTogglingUid(null);
     }
   };
 
-  const toggleIntro = async (u: AugmentedUser) => {
+  const toggleIntro = async (u: UserProfile) => {
     setTogglingUid(u.uid);
     try {
-      await updateDoc(doc(db, u._col, u.uid), { introComplete: !u.introComplete });
+      await updateDoc(doc(db, 'users', u.uid), { introComplete: !u.introComplete });
     } finally {
       setTogglingUid(null);
     }
   };
-
-  const toggleVendorIntro = async (u: AugmentedUser) => {
-    setTogglingUid(u.uid);
-    try {
-      await updateDoc(doc(db, u._col, u.uid), { vendorIntroComplete: !u.vendorIntroComplete });
-    } finally {
-      setTogglingUid(null);
-    }
-  };
-
-  const isAdmin = (u: AugmentedUser) => u._col === 'vendors' ? !!u.isAdmin : u.role === 'admin';
 
   const roleColor: Record<string, string> = {
     admin: 'bg-brand-gold/20 text-brand-gold',
@@ -7972,10 +7988,9 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
       <div className="flex-1 overflow-y-auto px-5 py-2 space-y-2 pb-10">
         {filtered.map(u => {
           const expanded = expandedUid === u.uid;
-          const admin = isAdmin(u);
+          const admin = u.role === 'admin';
           return (
-            <div key={u.uid + u._col} className="bg-white rounded-2xl border border-brand-navy/5 overflow-hidden">
-              {/* Row header — tap to expand */}
+            <div key={u.uid} className="bg-white rounded-2xl border border-brand-navy/5 overflow-hidden">
               <button
                 className="w-full flex items-center gap-3 px-4 py-3 text-left"
                 onClick={() => setExpandedUid(expanded ? null : u.uid)}
@@ -7989,14 +8004,12 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
                   <div className="flex items-center gap-1.5 min-w-0">
                     <p className="font-bold text-sm text-brand-navy truncate">{u.name || '—'}</p>
                     <span className={cn('text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0', roleColor[u.role] || 'bg-brand-navy/10 text-brand-navy/75')}>{u.role}</span>
-                    {admin && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 bg-brand-gold/20 text-brand-gold">admin</span>}
                   </div>
                   <p className="text-[10px] text-brand-navy/75 truncate">{u.handle ? `@${u.handle}` : u.email}</p>
                 </div>
                 <ChevronDown size={16} className={cn('text-brand-navy/40 shrink-0 transition-transform duration-200', expanded && 'rotate-180')} />
               </button>
 
-              {/* Expanded config */}
               <AnimatePresence>
                 {expanded && (
                   <motion.div
@@ -8009,66 +8022,32 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
                     {confirmDeleteUid === u.uid ? (
                       <div className="px-4 pb-3 flex items-center gap-3">
                         <p className="flex-1 text-xs font-bold text-red-500">Delete "{u.name}"?</p>
-                        <button
-                          onClick={() => handleDelete(u)}
-                          disabled={deleting}
-                          className="px-3 py-1.5 bg-red-500 text-white text-xs font-bold rounded-xl active:scale-95 transition-all disabled:opacity-50"
-                        >{deleting ? '…' : 'Delete'}</button>
-                        <button
-                          onClick={() => setConfirmDeleteUid(null)}
-                          className="px-3 py-1.5 bg-brand-navy/10 text-brand-navy text-xs font-bold rounded-xl active:scale-95 transition-all"
-                        >Cancel</button>
+                        <button onClick={() => handleDelete(u)} disabled={deleting}
+                          className="px-3 py-1.5 bg-red-500 text-white text-xs font-bold rounded-xl active:scale-95 transition-all disabled:opacity-50">
+                          {deleting ? '…' : 'Delete'}
+                        </button>
+                        <button onClick={() => setConfirmDeleteUid(null)}
+                          className="px-3 py-1.5 bg-brand-navy/10 text-brand-navy text-xs font-bold rounded-xl active:scale-95 transition-all">
+                          Cancel
+                        </button>
                       </div>
                     ) : (
                       <div className="px-4 pb-3 pt-1 border-t border-brand-navy/5 grid grid-cols-2 gap-2">
-                        {/* Intro toggle */}
-                        <button
-                          onClick={() => toggleIntro(u)}
-                          disabled={togglingUid === u.uid}
-                          className={cn(
-                            'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all',
+                        <button onClick={() => toggleIntro(u)} disabled={togglingUid === u.uid}
+                          className={cn('flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all',
                             u.introComplete ? 'bg-emerald-100 text-emerald-700' : 'bg-brand-navy/8 text-brand-navy/50',
-                            togglingUid === u.uid && 'opacity-50'
-                          )}
-                        >
+                            togglingUid === u.uid && 'opacity-50')}>
                           <CheckCircle2 size={12} />
                           {u.introComplete ? 'Intro done' : 'Mark intro done'}
                         </button>
-
-                        {/* Vendor intro toggle (only for vendors) */}
-                        {(u.role === 'vendor' || u._col === 'vendors') && (
-                          <button
-                            onClick={() => toggleVendorIntro(u)}
-                            disabled={togglingUid === u.uid}
-                            className={cn(
-                              'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all',
-                              u.vendorIntroComplete ? 'bg-blue-100 text-blue-700' : 'bg-brand-navy/8 text-brand-navy/50',
-                              togglingUid === u.uid && 'opacity-50'
-                            )}
-                          >
-                            <Store size={12} />
-                            {u.vendorIntroComplete ? 'V.Intro done' : 'Mark V.Intro'}
-                          </button>
-                        )}
-
-                        {/* Admin toggle */}
-                        <button
-                          onClick={() => toggleAdmin(u)}
-                          disabled={togglingUid === u.uid}
-                          className={cn(
-                            'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all',
+                        <button onClick={() => toggleAdmin(u)} disabled={togglingUid === u.uid}
+                          className={cn('flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all',
                             admin ? 'bg-brand-gold/20 text-brand-gold' : 'bg-brand-navy/8 text-brand-navy/50',
-                            togglingUid === u.uid && 'opacity-50'
-                          )}
-                        >
+                            togglingUid === u.uid && 'opacity-50')}>
                           {admin ? '★' : '☆'} {admin ? 'Remove admin' : 'Make admin'}
                         </button>
-
-                        {/* Delete */}
-                        <button
-                          onClick={() => setConfirmDeleteUid(u.uid)}
-                          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-red-50 text-red-500 transition-all"
-                        >
+                        <button onClick={() => setConfirmDeleteUid(u.uid)}
+                          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-red-50 text-red-500 col-span-2">
                           <Trash2 size={12} />
                           Delete user
                         </button>
