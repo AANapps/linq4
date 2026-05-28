@@ -23770,6 +23770,81 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
           </div>
         </div>
 
+        {/* Colours — primary & secondary side by side */}
+        <div className="space-y-2">
+          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Colours</label>
+          <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-2xl px-3 py-2.5 mb-1">
+            <span className="text-amber-500 text-xs mt-0.5">💡</span>
+            <p className="text-[10px] text-amber-800 leading-relaxed">Use a <strong>light secondary</strong> on a dark card, or <strong>dark secondary</strong> on a light card, for readable stamps.</p>
+          </div>
+          <div className="flex gap-3">
+            {/* Primary — card background & brand colour */}
+            <div className="flex-1 relative">
+              <p className="text-[10px] text-brand-navy/35 font-bold uppercase tracking-wider mb-1.5">Primary</p>
+              <button
+                onClick={() => setOpenColorPicker(v => v === 'primary' ? null : 'primary')}
+                className="w-full h-12 rounded-2xl border-2 border-brand-navy/10 flex items-center justify-center gap-2 bg-brand-bg active:scale-95 transition-all"
+              >
+                <div className="w-6 h-6 rounded-full border border-black/10 shadow-sm" style={{ backgroundColor: theme }} />
+                <span className="text-xs font-bold text-brand-navy/75">Brand &amp; Card</span>
+              </button>
+              {openColorPicker === 'primary' && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setOpenColorPicker(null)} />
+                  <div className="absolute top-full left-0 mt-2 z-50 bg-white rounded-2xl shadow-2xl border border-black/5 p-3 w-52">
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {DARK_THEMES.map(c => (
+                        <button key={c} onClick={() => { setTheme(c); setOpenColorPicker(null); }}
+                          className={cn("w-9 h-9 rounded-xl border-2 transition-all", theme === c ? "border-brand-gold scale-110 shadow" : "border-transparent")}
+                          style={{ backgroundColor: c }} />
+                      ))}
+                    </div>
+                    <div className="relative h-9">
+                      <input type="color" value={theme} onChange={e => setTheme(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                      <div className="h-9 rounded-xl border-2 border-dashed border-brand-navy/15 flex items-center justify-center gap-2" style={{ backgroundColor: theme }}>
+                        <Palette size={13} className="text-white/70" />
+                        <span className="text-[11px] text-white/70 font-bold">Custom</span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+            {/* Secondary — border & text */}
+            <div className="flex-1 relative">
+              <p className="text-[10px] text-brand-navy/35 font-bold uppercase tracking-wider mb-1.5">Secondary</p>
+              <button
+                onClick={() => setOpenColorPicker(v => v === 'secondary' ? null : 'secondary')}
+                className="w-full h-12 rounded-2xl border-2 border-brand-navy/10 flex items-center justify-center gap-2 bg-brand-bg active:scale-95 transition-all"
+              >
+                <div className="w-6 h-6 rounded-full border border-black/10 shadow-sm" style={{ backgroundColor: stampBorderColor }} />
+                <span className="text-xs font-bold text-brand-navy/75">Border &amp; Text</span>
+              </button>
+              {openColorPicker === 'secondary' && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setOpenColorPicker(null)} />
+                  <div className="absolute top-full left-0 mt-2 z-50 bg-white rounded-2xl shadow-2xl border border-black/5 p-3 w-52">
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {['#ffffff', '#f5a623', '#a78bfa', '#34d399', '#fb7185', '#60a5fa'].map(c => (
+                        <button key={c} onClick={() => { setStampBorderColor(c); setOpenColorPicker(null); }}
+                          className={cn("w-9 h-9 rounded-xl border-2 transition-all", stampBorderColor === c ? "border-brand-navy scale-110 shadow" : "border-transparent")}
+                          style={{ backgroundColor: c }} />
+                      ))}
+                    </div>
+                    <div className="relative h-9">
+                      <input type="color" value={stampBorderColor} onChange={e => setStampBorderColor(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                      <div className="h-9 rounded-xl border-2 border-dashed border-brand-navy/15 flex items-center justify-center gap-2" style={{ backgroundColor: stampBorderColor }}>
+                        <Palette size={13} className="text-white/70" />
+                        <span className="text-[11px] text-white/70 font-bold">Custom</span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* Stamp Icon */}
         <div className="space-y-3">
           <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Stamp Icon</label>
@@ -26488,74 +26563,6 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
                 <input value={storeLogo} onChange={e => setStoreLogo(e.target.value)} placeholder="Or paste logo URL directly..."
                   className="w-full px-5 py-4 rounded-2xl bg-white border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30" />
               )}
-            </div>
-
-            {/* Colours */}
-            <div className="space-y-5">
-              <SectionLabel icon={<Palette size={14} className="text-brand-gold" />} label="Brand Colours" />
-
-              {/* Contrast tip */}
-              <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
-                <span className="text-amber-500 text-sm mt-0.5">💡</span>
-                <p className="text-[11px] text-amber-800 leading-relaxed">
-                  For best readability: use a <strong>light secondary colour</strong> on a dark card, or a <strong>dark secondary colour</strong> on a light card.
-                </p>
-              </div>
-
-              {/* Primary — card background */}
-              <div className="space-y-3">
-                <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Primary — Card Colour</label>
-                <div className="grid grid-cols-4 gap-3">
-                  {THEME_COLOURS.map(c => (
-                    <button key={c.value} onClick={() => setStoreTheme(c.value)}
-                      className={cn("h-12 rounded-2xl transition-all active:scale-95 relative", storeTheme === c.value ? "ring-4 ring-offset-2 ring-brand-navy/30 scale-105" : "")}
-                      style={{ backgroundColor: c.value }}>
-                      {storeTheme === c.value && <CheckCircle2 size={16} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white drop-shadow" />}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex items-center gap-3">
-                  <label className="text-xs text-brand-navy/75 font-bold">Custom</label>
-                  <input type="color" value={storeTheme} onChange={e => setStoreTheme(e.target.value)}
-                    className="w-10 h-10 rounded-xl border border-brand-navy/10 cursor-pointer p-1 bg-white" />
-                  <span className="text-sm font-mono text-brand-navy/75">{storeTheme}</span>
-                </div>
-              </div>
-
-              {/* Secondary — stamp borders + card text */}
-              <div className="space-y-3">
-                <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Secondary — Stamp Borders &amp; Text</label>
-                <div className="flex flex-wrap gap-3">
-                  {['#ffffff', '#f5f5f5', '#f5a623', '#a78bfa', '#34d399', '#fb7185', '#60a5fa', '#0F172A'].map(c => (
-                    <button key={c} onClick={() => setStoreSecondaryColor(c)}
-                      className={cn("w-11 h-11 rounded-2xl border-2 transition-all active:scale-95 relative", storeSecondaryColor === c ? "ring-4 ring-offset-2 ring-brand-navy/30 scale-110" : "border-brand-navy/10")}
-                      style={{ backgroundColor: c }}>
-                      {storeSecondaryColor === c && (
-                        <CheckCircle2 size={14} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 drop-shadow"
-                          style={{ color: c === '#ffffff' || c === '#f5f5f5' ? '#0F172A' : '#ffffff' }} />
-                      )}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex items-center gap-3">
-                  <label className="text-xs text-brand-navy/75 font-bold">Custom</label>
-                  <input type="color" value={storeSecondaryColor} onChange={e => setStoreSecondaryColor(e.target.value)}
-                    className="w-10 h-10 rounded-xl border border-brand-navy/10 cursor-pointer p-1 bg-white" />
-                  <span className="text-sm font-mono text-brand-navy/75">{storeSecondaryColor}</span>
-                </div>
-                {/* Live preview swatch */}
-                <div className="rounded-2xl overflow-hidden h-12 flex items-center justify-center gap-3 px-4" style={{ backgroundColor: storeTheme }}>
-                  <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center" style={{ border: `2.5px solid ${storeSecondaryColor}` }}>
-                    <span className="text-[10px] font-bold" style={{ color: storeSecondaryColor }}>1</span>
-                  </div>
-                  <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center" style={{ border: `2.5px solid ${storeSecondaryColor}` }}>
-                    <span className="text-[10px] font-bold" style={{ color: storeSecondaryColor }}>2</span>
-                  </div>
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: storeTheme === '#ffffff' ? storeSecondaryColor : storeTheme, border: `2.5px solid ${storeSecondaryColor}` }}>
-                    <span className="text-[10px]">⭐</span>
-                  </div>
-                </div>
-              </div>
             </div>
 
             {/* Public Visibility */}
