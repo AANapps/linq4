@@ -29155,13 +29155,15 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
             className={cn(
               "pb-0.5 text-[11px] tracking-widest uppercase transition-all border-b",
               tab === 'polls' ? "font-black" : "font-semibold",
-              activeSubTab === tab ? "text-gray-500 border-gray-400" : "text-gray-300 border-transparent"
+              tab === 'polls'
+                ? activeSubTab === tab ? "text-gray-700 border-gray-600" : "text-gray-600 border-transparent"
+                : activeSubTab === tab ? "text-gray-500 border-gray-400" : "text-gray-300 border-transparent"
             )}
           >
             {tab === 'polls' ? (
               <motion.span
-                animate={{ scale: [1, 1.12, 1] }}
-                transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                animate={{ x: [0, -4, 4, -4, 4, -2, 2, 0, 0] }}
+                transition={{ duration: 2.8, times: [0, 0.06, 0.12, 0.18, 0.24, 0.29, 0.34, 0.38, 1], repeat: Infinity, ease: 'linear' }}
                 style={{ display: 'inline-block' }}
               >
                 Polls
@@ -29172,9 +29174,9 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
       </div>
 
       {activeSubTab === 'polls' ? (
-        <div className="space-y-0 -mx-0">
+        <div className="space-y-0 -mx-6">
           {/* Promo card */}
-          <div className="px-2 mb-4">
+          <div className="px-4 mb-4">
             <motion.div
               className="relative rounded-[1.5rem] overflow-hidden px-5 py-4 flex flex-col gap-1.5"
               style={{ background: 'linear-gradient(135deg,#6d28d9,#7c3aed,#a855f7,#ec4899,#f97316,#6d28d9)', backgroundSize: '300% 300%', animation: 'poll-gradient-shift 4s ease infinite' }}
@@ -29194,7 +29196,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
           </div>
           {/* Daily Vote — full width, only when a poll exists today */}
           {hasDailyVote && currentUser && currentProfile && (
-            <div className="px-2 mb-5">
+            <div className="px-4 mb-5">
               <div className="flex h-36">
                 <DailyVoteFYPCard currentUser={currentUser} currentProfile={currentProfile} onPackReady={onPackReady} />
               </div>
@@ -29205,7 +29207,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
               <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/50">Community Polls</p>
             </div>
           )}
-          <div>
+          <div className="bg-white border-t border-gray-100">
             {polls.map(post => (
               <FeedPostCard
                 key={post.id}
