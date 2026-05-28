@@ -26768,6 +26768,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
   const [klipyQuery, setKlipyQuery] = useState('');
   const [klipyResults, setKlipyResults] = useState<{ id: string; url: string; preview: string; title: string }[]>([]);
   const [klipyLoading, setKlipyLoading] = useState(false);
+  const [klipyError, setKlipyError] = useState('');
   const [commentGif, setCommentGif] = useState<{ url: string; preview: string } | null>(null);
   const [localLiked, setLocalLiked] = useState(() => currentUser ? (post.likedBy || []).includes(currentUser.uid) : false);
   const [localCount, setLocalCount] = useState(post.likesCount || 0);
@@ -26922,9 +26923,10 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
 
   const visibleComments = showAllComments ? comments : comments.slice(0, 2);
 
-  const KLIPY_KEY = (import.meta as any).env?.VITE_KLIPY_API_KEY || '';
+  const KLIPY_KEY = (process.env.VITE_KLIPY_API_KEY as string) || '';
   const fetchKlipy = async (q: string) => {
     setKlipyLoading(true);
+    setKlipyError('');
     try {
       const base = `https://api.klipy.com/api/v1/${KLIPY_KEY}/gifs`;
       const url = q.trim()
@@ -26932,13 +26934,16 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
         : `${base}/trending?limit=24`;
       const res = await fetch(url);
       const json = await res.json();
+      if (!json.result) throw new Error(json.errors?.message?.[0] || 'Klipy error');
       setKlipyResults((json.data?.data || []).map((item: any) => ({
         id: String(item.id),
         title: item.title || '',
         url: item.file?.hd?.gif?.url || item.file?.md?.gif?.url || '',
         preview: item.file?.xs?.gif?.url || item.file?.sm?.gif?.url || item.file?.md?.gif?.url || '',
       })));
-    } catch {} finally { setKlipyLoading(false); }
+    } catch (e: any) {
+      setKlipyError(e?.message || 'Failed to load GIFs');
+    } finally { setKlipyLoading(false); }
   };
 
   // Activity posts render the same as normal posts
@@ -27503,7 +27508,10 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                   <X size={12} />
                 </button>
               </div>
-              {klipyResults.length === 0 && !klipyLoading && (
+              {klipyError && (
+                <p className="text-center text-[10px] text-red-500 py-2 px-3">{klipyError}</p>
+              )}
+              {klipyResults.length === 0 && !klipyLoading && !klipyError && (
                 <div className="flex justify-center py-4">
                   <button
                     onClick={() => fetchKlipy('')}
