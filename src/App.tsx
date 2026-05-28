@@ -17399,11 +17399,11 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 const msPerDay = 86400000;
                 const _todayMid2 = new Date(); _todayMid2.setHours(0, 0, 0, 0);
                 const isDays = growthPeriod === 'days';
-                const periodCount = isDays ? 7 : 10;
+                // Always anchor to today — no back navigation to prevent the confusing "going down" effect
+                const periodCount = isDays ? 7 : 12;
                 const stepMs = isDays ? msPerDay : 7 * msPerDay;
-                const rangeMs = periodCount * stepMs;
-                const rangeEnd = (_todayMid2.getTime() + 86400000) - growthOffset * rangeMs;
-                const rangeStart = rangeEnd - rangeMs;
+                const rangeEnd = _todayMid2.getTime() + 86400000;
+                const rangeStart = rangeEnd - periodCount * stepMs;
                 const points: { label: string; cumulative: number }[] = [];
                 for (let i = 0; i < periodCount; i++) {
                   const slotEnd = rangeStart + (i + 1) * stepMs;
@@ -17428,20 +17428,11 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-bold text-brand-navy">User Base Growth</p>
-                        <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Cumulative members</p>
+                        <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Cumulative members · {points[points.length - 1]?.cumulative ?? 0} total</p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {/* Period toggle */}
-                        <div className="flex rounded-xl overflow-hidden border border-brand-navy/10 text-[10px] font-bold">
-                          <button onClick={() => { setGrowthPeriod('days'); setGrowthOffset(0); }} className={cn('px-2 py-1 transition-colors', isDays ? 'bg-brand-navy text-white' : 'text-brand-navy/60 hover:text-brand-navy')}>Days</button>
-                          <button onClick={() => { setGrowthPeriod('weeks'); setGrowthOffset(0); }} className={cn('px-2 py-1 transition-colors', !isDays ? 'bg-brand-navy text-white' : 'text-brand-navy/60 hover:text-brand-navy')}>Weeks</button>
-                        </div>
-                        <button onClick={() => setGrowthOffset(o => o + 1)} className="p-1.5 rounded-xl bg-brand-navy/8 active:scale-90 transition-all">
-                          <ChevronLeft size={14} className="text-brand-navy" />
-                        </button>
-                        <button onClick={() => setGrowthOffset(o => Math.max(0, o - 1))} disabled={growthOffset === 0} className="p-1.5 rounded-xl bg-brand-navy/8 disabled:opacity-30 active:scale-90 transition-all">
-                          <ChevronRight size={14} className="text-brand-navy" />
-                        </button>
+                      <div className="flex rounded-xl overflow-hidden border border-brand-navy/10 text-[10px] font-bold">
+                        <button onClick={() => { setGrowthPeriod('days'); setGrowthHoverIdx(null); }} className={cn('px-2 py-1 transition-colors', isDays ? 'bg-brand-navy text-white' : 'text-brand-navy/60 hover:text-brand-navy')}>Days</button>
+                        <button onClick={() => { setGrowthPeriod('weeks'); setGrowthHoverIdx(null); }} className={cn('px-2 py-1 transition-colors', !isDays ? 'bg-brand-navy text-white' : 'text-brand-navy/60 hover:text-brand-navy')}>Weeks</button>
                       </div>
                     </div>
                     {/* Y-axis labels + SVG line chart */}
