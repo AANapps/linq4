@@ -17473,14 +17473,15 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                             const val = points[growthHoverIdx].cumulative;
                             const lblW = 28; const lblH = 14;
                             const lblX = Math.max(lblW / 2 + padL, Math.min(svgW - padR - lblW / 2, hx));
-                            const lblY = Math.max(lblH + 2, hy - 8);
+                            const lblY = Math.max(lblH + 4, hy - 14);
                             return (
                               <>
                                 <line x1={hx} y1={padT} x2={hx} y2={svgH} stroke="#3b82f6" strokeWidth="1" strokeDasharray="3 2" opacity="0.35" />
                                 <line x1={padL} y1={hy} x2={svgW - padR} y2={hy} stroke="#3b82f6" strokeWidth="1" strokeDasharray="3 2" opacity="0.35" />
+                                {/* Dot first so label paints on top */}
+                                <circle cx={hx} cy={hy} r="4.5" fill="#3b82f6" stroke="white" strokeWidth="2" />
                                 <rect x={lblX - lblW / 2} y={lblY - lblH} width={lblW} height={lblH} rx="3" fill="#3b82f6" />
                                 <text x={lblX} y={lblY - lblH / 2 + 2.5} textAnchor="middle" fill="white" fontSize="7.5" fontWeight="bold" fontFamily="sans-serif">{val}</text>
-                                <circle cx={hx} cy={hy} r="4.5" fill="#3b82f6" stroke="white" strokeWidth="2" />
                               </>
                             );
                           })()}
