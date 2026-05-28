@@ -17292,7 +17292,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
 
               {/* Stamps chart */}
               {(() => {
-                const periodCount = chartMode === 'weeks' ? 8 : 14;
+                const periodCount = chartMode === 'weeks' ? 8 : 7;
                 const msPerPeriod = chartMode === 'weeks' ? 7 * 86400000 : 86400000;
                 const _todayMid = new Date(); _todayMid.setHours(0, 0, 0, 0);
                 const periodEnd = (_todayMid.getTime() + 86400000) - chartOffset * periodCount * msPerPeriod;
