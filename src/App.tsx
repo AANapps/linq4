@@ -21081,6 +21081,7 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor 
   const [open, setOpen] = useState(false);
   const [claiming, setClaiming] = useState(false);
   const [rewardCollected, setRewardCollected] = useState(false);
+  const autoCollectRef = useRef(false);
 
   useEffect(() => onSnapshot(doc(db, 'daily_vote', today), snap => {
     setVoteData(snap.exists() ? snap.data() as DailyVoteData : null);
@@ -21101,6 +21102,28 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor 
       setLiveTotal(Object.values(counts).reduce((a, b) => a + b, 0));
     });
   }, [today, voteData?.voteId]);
+
+  // Auto-issue stickers when poll closes and user is a winner — no manual tap required
+  useEffect(() => {
+    if (!voteData?.closed || voteData.winner === null || voteData.winner === undefined) return;
+    const vid = voteData.voteId;
+    const uv = rawUserVote && vid && rawUserVote.voteId === vid ? rawUserVote.optionIdx : null;
+    if (uv !== voteData.winner || rawUserVote?.rewardClaimed || rewardCollected || autoCollectRef.current) return;
+    autoCollectRef.current = true;
+    const voteRef = doc(db, 'daily_vote', today, 'votes', currentUser.uid);
+    (async () => {
+      const snap = await getDoc(voteRef).catch(() => null);
+      if (!snap?.exists() || snap.data().rewardClaimed) { setRewardCollected(true); return; }
+      setClaiming(true);
+      try {
+        const newStickers = await issueUserStickers(currentUser.uid, currentProfile?.name || 'Anonymous', 3).catch(() => [] as CollectibleSticker[]);
+        await updateDoc(voteRef, { rewardClaimed: true });
+        updateDoc(doc(db, 'users', currentUser.uid), { correctPolls: increment(1) }).catch(() => {});
+        setRewardCollected(true);
+        if (newStickers.length > 0) onPackReady?.(newStickers);
+      } finally { setClaiming(false); }
+    })();
+  }, [voteData?.closed, voteData?.winner, rawUserVote?.rewardClaimed, rewardCollected]);
 
   // usePollTimer must be called before any early return (Rules of Hooks)
   const endsAtMs = voteData?.endsAt?.toMillis?.() ?? null;
@@ -29084,6 +29107,11 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
     );
   }, []);
 
+  const [hasDailyVote, setHasDailyVote] = useState(false);
+  useEffect(() => {
+    const today = new Date().toISOString().split('T')[0];
+    return onSnapshot(doc(db, 'daily_vote', today), snap => setHasDailyVote(snap.exists()));
+  }, []);
   useEffect(() => {
     const q = query(collection(db, 'global_posts'), where('postType', '==', 'poll'), orderBy('createdAt', 'desc'), limit(50));
     return onSnapshot(q, snap => setPolls(snap.docs.map(d => ({ id: d.id, ...d.data() } as GlobalPost))));
@@ -29214,14 +29242,14 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
 
       {activeSubTab === 'polls' ? (
         <div className="space-y-0 -mx-0">
-          {/* Daily Vote — full width */}
-          <div className="px-2 mb-5">
-            <div className="flex h-36">
-              {currentUser && currentProfile && (
+          {/* Daily Vote — full width, only when a poll exists today */}
+          {hasDailyVote && currentUser && currentProfile && (
+            <div className="px-2 mb-5">
+              <div className="flex h-36">
                 <DailyVoteFYPCard currentUser={currentUser} currentProfile={currentProfile} onPackReady={onPackReady} />
-              )}
+              </div>
             </div>
-          </div>
+          )}
           {polls.length > 0 && (
             <div className="px-4 mb-2">
               <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/50">Community Polls</p>
