@@ -26935,8 +26935,8 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
       setKlipyResults((json.data?.data || []).map((item: any) => ({
         id: String(item.id),
         title: item.title || '',
-        url: item.file?.hd?.gif?.url || item.file?.md?.gif?.url || item.file?.sd?.gif?.url || '',
-        preview: item.file?.sd?.gif?.url || item.file?.md?.gif?.url || item.file?.hd?.gif?.url || '',
+        url: item.file?.hd?.gif?.url || item.file?.md?.gif?.url || '',
+        preview: item.file?.xs?.gif?.url || item.file?.sm?.gif?.url || item.file?.md?.gif?.url || '',
       })));
     } catch {} finally { setKlipyLoading(false); }
   };
