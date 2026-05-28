@@ -2201,14 +2201,6 @@ export default function App() {
           icon={['consumer','admin'].includes(profile?.role ?? '') ? <Compass /> : <Plus />}
           label={['consumer','admin'].includes(profile?.role ?? '') ? 'Discovery' : 'Issue'}
         />
-        {['consumer','admin'].includes(profile?.role ?? '') && (
-          <NavButton
-            active={activeTab === 'polls'}
-            onClick={() => { setActiveTab('polls'); setViewingStore(null); setViewingUser(null); }}
-            icon={<PollsTabIcon />}
-            label="Polls"
-          />
-        )}
         <NavButton
           active={activeTab === 'profile'}
           onClick={() => { setActiveTab('profile'); setViewingStore(null); setViewingUser(null); }}
@@ -12533,16 +12525,6 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           onViewUser={onViewUser}
           currentUser={user}
           currentProfile={profile}
-        />
-      )}
-
-      {activeTab === 'polls' && (
-        <PollsScreen
-          currentUser={user}
-          currentProfile={profile}
-          onViewUser={onViewUser}
-          onViewStore={onViewStore}
-          onPackReady={(stickers) => { setPendingPack(stickers); setPendingPackCardId(null); }}
         />
       )}
 
@@ -28853,7 +28835,8 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [activeSubTab, setActiveSubTab] = useState<'discovery' | 'following'>('discovery');
+  const [activeSubTab, setActiveSubTab] = useState<'discovery' | 'following' | 'polls'>('discovery');
+  const [polls, setPolls] = useState<GlobalPost[]>([]);
   const [showAllDeals, setShowAllDeals] = useState(false);
   const [feedChallenges, setFeedChallenges] = useState<Challenge[]>([]);
   const [feedCompletedChallenges, setFeedCompletedChallenges] = useState<Challenge[]>([]);
@@ -29101,6 +29084,11 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
     );
   }, []);
 
+  useEffect(() => {
+    const q = query(collection(db, 'global_posts'), where('postType', '==', 'poll'), orderBy('createdAt', 'desc'), limit(50));
+    return onSnapshot(q, snap => setPolls(snap.docs.map(d => ({ id: d.id, ...d.data() } as GlobalPost))));
+  }, []);
+
   const visibleFeedChallenges = feedChallenges.filter(c => {
     if (c.challengeLat == null || c.challengeLng == null) return true;
     if (!forYouUserCoords) return true;
@@ -29210,7 +29198,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
     <div className="space-y-5 pb-20">
       {/* Tab bar */}
       <div className="relative flex justify-center items-center gap-6">
-        {(['discovery', 'following'] as const).map(tab => (
+        {(['discovery', 'following', 'polls'] as const).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveSubTab(tab)}
@@ -29219,13 +29207,48 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
               activeSubTab === tab ? "text-gray-500 border-gray-400" : "text-gray-300 border-transparent"
             )}
           >
-            {tab === 'discovery' ? 'Discovery' : 'Following'}
+            {tab === 'discovery' ? 'Discovery' : tab === 'following' ? 'Following' : 'Polls'}
           </button>
         ))}
-
       </div>
 
-      {activeSubTab === 'following' ? (
+      {activeSubTab === 'polls' ? (
+        <div className="space-y-0 -mx-0">
+          {/* Daily Vote — full width */}
+          <div className="px-2 mb-5">
+            <div className="flex h-36">
+              {currentUser && currentProfile && (
+                <DailyVoteFYPCard currentUser={currentUser} currentProfile={currentProfile} onPackReady={onPackReady} />
+              )}
+            </div>
+          </div>
+          {polls.length > 0 && (
+            <div className="px-4 mb-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/50">Community Polls</p>
+            </div>
+          )}
+          <div>
+            {polls.map(post => (
+              <FeedPostCard
+                key={post.id}
+                post={post}
+                currentUser={currentUser}
+                currentProfile={currentProfile}
+                onViewUser={onViewUser}
+                onViewStore={onViewStore}
+                onLike={handleLike}
+                onVote={handleVote}
+              />
+            ))}
+            {polls.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <p className="text-brand-navy/40 text-sm font-bold">No polls yet</p>
+                <p className="text-brand-navy/30 text-xs mt-1">Community polls will appear here</p>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : activeSubTab === 'following' ? (
         loading ? <FeedLoadingSpinner /> : (
           <div className="divide-y-[3px] divide-gray-200 bg-white -mx-6 border-t border-gray-100">
             {followingFeed.map((item) =>
