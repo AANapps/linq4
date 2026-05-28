@@ -758,6 +758,8 @@ interface GlobalPost {
   pollAdminVotes?: Record<string, number>;
   pollClaimedBy?: string[];
   isAdminPoll?: boolean;
+  pollType?: 'popularity' | 'correct';
+  pollCorrectAnswer?: number | null;
   createdAt: any;
   likesCount: number;
   likedBy?: string[];
@@ -27094,16 +27096,22 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
   useEffect(() => {
     if (!isAdminPoll || !pollTimerExpired || post.pollClosed || !post.id || post.postType !== 'poll' || closingPoll) return;
     setClosingPoll(true);
-    const votes = post.pollVotes || {};
-    const adminV = post.pollAdminVotes || {};
-    let bestIdx = 0, bestCount = -1;
-    (post.pollOptions || []).forEach((_, i) => {
-      const count = (votes[String(i)]?.length || 0) + (adminV[String(i)] || 0);
-      if (count > bestCount) { bestCount = count; bestIdx = i; }
-    });
+    let winner: number;
+    if (post.pollType === 'correct' && post.pollCorrectAnswer != null) {
+      winner = post.pollCorrectAnswer;
+    } else {
+      const votes = post.pollVotes || {};
+      const adminV = post.pollAdminVotes || {};
+      let bestIdx = 0, bestCount = -1;
+      (post.pollOptions || []).forEach((_, i) => {
+        const count = (votes[String(i)]?.length || 0) + (adminV[String(i)] || 0);
+        if (count > bestCount) { bestCount = count; bestIdx = i; }
+      });
+      winner = bestIdx;
+    }
     updateDoc(doc(db, 'global_posts', post.id), {
       pollClosed: true,
-      pollWinner: bestIdx,
+      pollWinner: winner,
     }).catch(() => {}).finally(() => setClosingPoll(false));
   }, [isAdminPoll, pollTimerExpired, post.pollClosed, post.id, post.postType]);
 
@@ -27558,7 +27566,9 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                   disabled={userVoteKey !== undefined && !isClosed}
                   className={cn(
                     "w-full text-left rounded-xl overflow-hidden border-2 transition-all active:scale-[0.98]",
-                    isWinner ? "border-amber-400" : voted ? "border-violet-500" : "border-black/35",
+                    isWinner
+                      ? post.pollType === 'correct' ? "border-emerald-400" : "border-amber-400"
+                      : voted ? "border-violet-500" : "border-black/35",
                     !showResults ? "hover:border-violet-300 cursor-pointer" : "",
                     isClosed && !voted && !isWinner ? "opacity-70" : ""
                   )}
@@ -27575,7 +27585,9 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                           background: voted
                             ? 'linear-gradient(90deg, #7c3aed 0%, #4f46e5 45%, #2563eb 100%)'
                             : isWinner
-                            ? 'linear-gradient(90deg, #fbbf24, #f59e0b)'
+                            ? post.pollType === 'correct'
+                              ? 'linear-gradient(90deg, #10b981, #34d399)'
+                              : 'linear-gradient(90deg, #fbbf24, #f59e0b)'
                             : 'rgba(15,23,42,0.05)',
                         }}
                       >
@@ -27584,7 +27596,8 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                     )}
                     <div className="relative flex items-center justify-between w-full gap-2">
                       <div className="flex items-center gap-2">
-                        {isWinner && <Trophy size={14} className="text-amber-500 shrink-0" />}
+                        {isWinner && post.pollType === 'correct' && <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />}
+                        {isWinner && post.pollType !== 'correct' && <Trophy size={14} className="text-amber-500 shrink-0" />}
                         {!isWinner && voted && <CheckCircle2 size={14} className="text-violet-500 shrink-0" />}
                         <span className={cn(
                           "text-sm font-medium",
@@ -27770,6 +27783,8 @@ function CreatePostModal({ onClose, user, profile, isAdmin }: { onClose: () => v
   const [isPoll, setIsPoll] = useState(false);
   const [pollOptions, setPollOptions] = useState(['', '']);
   const [pollDurationMins, setPollDurationMins] = useState(60);
+  const [pollType, setPollType] = useState<'popularity' | 'correct'>('popularity');
+  const [correctAnswerIdx, setCorrectAnswerIdx] = useState<number | null>(null);
   const [isPosting, setIsPosting] = useState(false);
   const [vendorStore, setVendorStore] = useState<StoreProfile | null>(null);
 
@@ -27794,6 +27809,7 @@ function CreatePostModal({ onClose, user, profile, isAdmin }: { onClose: () => v
   const handleSubmit = async () => {
     if (!content.trim() && !isPoll) return;
     if (isPoll && pollOptions.filter(o => o.trim()).length < 2) return;
+    if (isPoll && isAdmin && pollType === 'correct' && correctAnswerIdx === null) return;
     setIsPosting(true);
     try {
       const initialVotes: { [key: string]: string[] } = {};
@@ -27817,6 +27833,8 @@ function CreatePostModal({ onClose, user, profile, isAdmin }: { onClose: () => v
         pollAdminVotes: isPoll && isAdmin ? {} : null,
         pollClaimedBy: isPoll && isAdmin ? [] : null,
         isAdminPoll: isPoll && isAdmin ? true : null,
+        pollType: isPoll && isAdmin ? pollType : null,
+        pollCorrectAnswer: isPoll && isAdmin && pollType === 'correct' ? correctAnswerIdx : null,
         createdAt: serverTimestamp(),
         likesCount: 0,
         likedBy: []
@@ -27921,25 +27939,73 @@ function CreatePostModal({ onClose, user, profile, isAdmin }: { onClose: () => v
                 Add option
               </button>
             )}
-            {/* Duration picker — admin polls only */}
+            {/* Admin-only options: poll type + duration */}
             {isAdmin && (
-            <div className="pt-1">
-              <p className="text-[10px] font-bold text-brand-navy/45 uppercase tracking-widest mb-1.5">Poll duration</p>
-              <div className="flex flex-wrap gap-1.5">
-                {POLL_DURATIONS.map(d => (
-                  <button
-                    key={d.mins}
-                    onClick={() => setPollDurationMins(d.mins)}
-                    className={cn(
-                      "px-3 py-1 rounded-lg text-xs font-bold transition-all",
-                      pollDurationMins === d.mins ? "poll-active-bg text-white shadow-sm" : "bg-brand-navy/5 text-brand-navy/70 hover:bg-brand-navy/10"
+              <div className="space-y-3 pt-1">
+                {/* Poll type */}
+                <div>
+                  <p className="text-[10px] font-bold text-brand-navy/45 uppercase tracking-widest mb-1.5">Poll type</p>
+                  <div className="flex gap-2">
+                    {(['popularity', 'correct'] as const).map(t => (
+                      <button
+                        key={t}
+                        onClick={() => { setPollType(t); if (t === 'popularity') setCorrectAnswerIdx(null); }}
+                        className={cn(
+                          "flex-1 py-2 rounded-xl text-xs font-bold transition-all",
+                          pollType === t ? "poll-active-bg text-white shadow-sm" : "bg-brand-navy/5 text-brand-navy/70 hover:bg-brand-navy/10"
+                        )}
+                      >
+                        {t === 'popularity' ? '📊 Popularity' : '✅ One Right Answer'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Correct answer selector */}
+                {pollType === 'correct' && pollOptions.filter(o => o.trim()).length >= 2 && (
+                  <div>
+                    <p className="text-[10px] font-bold text-brand-navy/45 uppercase tracking-widest mb-1.5">Select correct answer</p>
+                    <div className="space-y-1.5">
+                      {pollOptions.map((opt, i) => opt.trim() ? (
+                        <button
+                          key={i}
+                          onClick={() => setCorrectAnswerIdx(i)}
+                          className={cn(
+                            "w-full text-left px-3 py-2 rounded-xl text-xs font-bold border-2 transition-all",
+                            correctAnswerIdx === i
+                              ? "border-emerald-400 bg-emerald-50 text-emerald-700"
+                              : "border-brand-navy/10 bg-brand-navy/4 text-brand-navy/70 hover:border-brand-navy/25"
+                          )}
+                        >
+                          {correctAnswerIdx === i && '✓ '}{opt}
+                        </button>
+                      ) : null)}
+                    </div>
+                    {correctAnswerIdx === null && (
+                      <p className="text-[10px] text-rose-500 font-bold mt-1">Select the correct answer to publish</p>
                     )}
-                  >
-                    {d.label}
-                  </button>
-                ))}
+                  </div>
+                )}
+
+                {/* Duration picker */}
+                <div>
+                  <p className="text-[10px] font-bold text-brand-navy/45 uppercase tracking-widest mb-1.5">Poll duration</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {POLL_DURATIONS.map(d => (
+                      <button
+                        key={d.mins}
+                        onClick={() => setPollDurationMins(d.mins)}
+                        className={cn(
+                          "px-3 py-1 rounded-lg text-xs font-bold transition-all",
+                          pollDurationMins === d.mins ? "poll-active-bg text-white shadow-sm" : "bg-brand-navy/5 text-brand-navy/70 hover:bg-brand-navy/10"
+                        )}
+                      >
+                        {d.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
             )}
           </div>
         )}
@@ -27947,7 +28013,7 @@ function CreatePostModal({ onClose, user, profile, isAdmin }: { onClose: () => v
         <div className="flex items-center justify-end gap-3 pt-2 border-t border-brand-navy/5">
           <button
             onClick={handleSubmit}
-            disabled={isPosting || (!content.trim() && !isPoll) || (isPoll && pollOptions.filter(o => o.trim()).length < 2)}
+            disabled={isPosting || (!content.trim() && !isPoll) || (isPoll && pollOptions.filter(o => o.trim()).length < 2) || (isPoll && isAdmin && pollType === 'correct' && correctAnswerIdx === null)}
             className="px-6 py-2.5 gradient-red text-white rounded-xl font-bold text-sm disabled:opacity-40 transition-all active:scale-95 shadow-md shadow-blue-500/20"
           >
             {isPosting ? 'Posting...' : 'Post'}
