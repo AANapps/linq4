@@ -26764,12 +26764,6 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
   const [isCommenting, setIsCommenting] = useState(false);
   const [reportSent, setReportSent] = useState(false);
   const [authorProfile, setAuthorProfile] = useState<{ name: string; logoUrl?: string; gender?: string; avatar?: UserAvatar; streak?: number } | null>(null);
-  const [showKlipy, setShowKlipy] = useState(false);
-  const [klipyQuery, setKlipyQuery] = useState('');
-  const [klipyResults, setKlipyResults] = useState<{ id: string; url: string; preview: string; title: string }[]>([]);
-  const [klipyLoading, setKlipyLoading] = useState(false);
-  const [klipyError, setKlipyError] = useState('');
-  const [commentGif, setCommentGif] = useState<{ url: string; preview: string } | null>(null);
   const [localLiked, setLocalLiked] = useState(() => currentUser ? (post.likedBy || []).includes(currentUser.uid) : false);
   const [localCount, setLocalCount] = useState(post.likesCount || 0);
 
@@ -26889,7 +26883,6 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
         likesCount: 0,
         likedBy: [],
         createdAt: serverTimestamp(),
-        ...(commentGif ? { gifUrl: commentGif.url } : {}),
       });
       if (post.authorUid !== currentUser.uid) {
         addDoc(collection(db, 'notifications'), {
@@ -26904,8 +26897,6 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
         }).catch(() => {});
       }
       setNewComment('');
-      setCommentGif(null);
-      setShowKlipy(false);
     } finally {
       setIsCommenting(false);
     }
@@ -26922,29 +26913,6 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
   };
 
   const visibleComments = showAllComments ? comments : comments.slice(0, 2);
-
-  const KLIPY_KEY = (process.env.VITE_KLIPY_API_KEY as string) || '';
-  const fetchKlipy = async (q: string) => {
-    setKlipyLoading(true);
-    setKlipyError('');
-    try {
-      const base = `https://api.klipy.com/api/v1/${KLIPY_KEY}/gifs`;
-      const url = q.trim()
-        ? `${base}/search?q=${encodeURIComponent(q)}&limit=24`
-        : `${base}/trending?limit=24`;
-      const res = await fetch(url);
-      const json = await res.json();
-      if (!json.result) throw new Error(json.errors?.message?.[0] || 'Klipy error');
-      setKlipyResults((json.data?.data || []).map((item: any) => ({
-        id: String(item.id),
-        title: item.title || '',
-        url: item.file?.hd?.gif?.url || item.file?.md?.gif?.url || '',
-        preview: item.file?.xs?.gif?.url || item.file?.sm?.gif?.url || item.file?.md?.gif?.url || '',
-      })));
-    } catch (e: any) {
-      setKlipyError(e?.message || 'Failed to load GIFs');
-    } finally { setKlipyLoading(false); }
-  };
 
   // Activity posts render the same as normal posts
   if (post.postType === 'activity') {
@@ -27483,73 +27451,6 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
       {/* Comment input — hidden for anonymous admin posts */}
       {!isAnonAdmin && currentUser && (
         <div className="pt-3 space-y-2">
-          {/* Klipy GIF picker */}
-          {showKlipy && (
-            <div className="rounded-2xl border border-brand-navy/8 bg-brand-bg overflow-hidden">
-              <div className="flex items-center gap-2 px-3 pt-2.5 pb-2">
-                <input
-                  value={klipyQuery}
-                  onChange={e => { setKlipyQuery(e.target.value); }}
-                  onKeyDown={e => { if (e.key === 'Enter') fetchKlipy(klipyQuery); }}
-                  placeholder="Search Klipy GIFs…"
-                  className="flex-1 bg-white rounded-xl px-3 py-1.5 text-xs outline-none border border-brand-navy/10 text-brand-navy"
-                  autoFocus
-                />
-                <button
-                  onClick={() => fetchKlipy(klipyQuery)}
-                  className="px-2.5 py-1.5 rounded-xl bg-brand-navy text-white text-[10px] font-bold active:scale-90 transition-all"
-                >
-                  {klipyLoading ? '…' : 'Go'}
-                </button>
-                <button
-                  onClick={() => { setShowKlipy(false); setKlipyResults([]); setKlipyQuery(''); }}
-                  className="p-1.5 rounded-xl bg-brand-navy/8 text-brand-navy/50 active:scale-90 transition-all"
-                >
-                  <X size={12} />
-                </button>
-              </div>
-              {klipyError && (
-                <p className="text-center text-[10px] text-red-500 py-2 px-3">{klipyError}</p>
-              )}
-              {klipyResults.length === 0 && !klipyLoading && !klipyError && (
-                <div className="flex justify-center py-4">
-                  <button
-                    onClick={() => fetchKlipy('')}
-                    className="text-[10px] font-bold text-brand-navy/50 hover:text-brand-gold transition-colors"
-                  >
-                    Load trending GIFs
-                  </button>
-                </div>
-              )}
-              {klipyResults.length > 0 && (
-                <div className="grid grid-cols-3 gap-1 px-2 pb-2 max-h-48 overflow-y-auto">
-                  {klipyResults.map(gif => (
-                    <button
-                      key={gif.id}
-                      onClick={() => { setCommentGif({ url: gif.url, preview: gif.preview }); setShowKlipy(false); setKlipyResults([]); setKlipyQuery(''); }}
-                      className="relative aspect-video rounded-lg overflow-hidden active:scale-95 transition-all border-2 border-transparent hover:border-brand-gold"
-                    >
-                      <img src={gif.preview || gif.url} alt={gif.title} className="w-full h-full object-cover" loading="lazy" />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Selected GIF preview */}
-          {commentGif && (
-            <div className="relative inline-block">
-              <img src={commentGif.preview} alt="" className="rounded-xl max-h-28 object-cover" />
-              <button
-                onClick={() => setCommentGif(null)}
-                className="absolute top-1 right-1 w-5 h-5 bg-black/60 rounded-full flex items-center justify-center"
-              >
-                <X size={10} className="text-white" />
-              </button>
-            </div>
-          )}
-
           <div className="flex gap-2">
             <div className="w-7 h-7 rounded-full overflow-hidden border border-black/5 shrink-0 bg-blue-50 flex items-center justify-center">
               <LivePixelAvatar uid={currentUser.uid} size={28} view="head" />
@@ -27563,15 +27464,8 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                 className="flex-1 bg-brand-bg rounded-2xl px-3 py-2 text-xs border-none focus:outline-none focus:ring-2 focus:ring-brand-gold/20"
               />
               <button
-                onClick={() => { setShowKlipy(v => !v); if (!showKlipy && klipyResults.length === 0) fetchKlipy(''); }}
-                className={cn('w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all active:scale-90 text-sm', showKlipy ? 'bg-brand-gold text-white' : 'bg-brand-bg text-brand-navy/50 hover:text-brand-gold')}
-                title="Add GIF"
-              >
-                GIF
-              </button>
-              <button
                 onClick={handleSubmitComment}
-                disabled={(!newComment.trim() && !commentGif) || isCommenting}
+                disabled={!newComment.trim() || isCommenting}
                 className="w-8 h-8 rounded-xl bg-brand-gold text-white flex items-center justify-center disabled:opacity-40 transition-opacity shrink-0"
               >
                 <Send size={13} />
