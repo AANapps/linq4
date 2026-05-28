@@ -16204,6 +16204,10 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
   const [chartMode, setChartMode] = useState<'days' | 'weeks'>('weeks');
   const [chartOffset, setChartOffset] = useState(0);
   const [signupsOffset, setSignupsOffset] = useState(0);
+  const [growthPeriod, setGrowthPeriod] = useState<'days' | 'weeks'>('weeks');
+  const [growthOffset, setGrowthOffset] = useState(0);
+  const [signupsChartPeriod, setSignupsChartPeriod] = useState<'days' | 'weeks'>('weeks');
+  const [signupsChartOffset, setSignupsChartOffset] = useState(0);
   const [chartTransactions, setChartTransactions] = useState<any[]>([]);
   const [isLoadingCheckout, setIsLoadingCheckout] = useState(false);
   const [tickNow, setTickNow] = useState(Date.now());
@@ -17391,56 +17395,81 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 });
                 const joinTimestamps = [...firstTxByUser.values()].sort((a, b) => a - b);
                 if (joinTimestamps.length === 0) return null;
-                const periodCount = 10;
                 const msPerDay = 86400000;
                 const _todayMid2 = new Date(); _todayMid2.setHours(0, 0, 0, 0);
-                const rangeMs = periodCount * msPerDay;
-                const rangeEnd = (_todayMid2.getTime() + 86400000) - signupsOffset * rangeMs;
+                const isDays = growthPeriod === 'days';
+                const periodCount = isDays ? 7 : 10;
+                const stepMs = isDays ? msPerDay : 7 * msPerDay;
+                const rangeMs = periodCount * stepMs;
+                const rangeEnd = (_todayMid2.getTime() + 86400000) - growthOffset * rangeMs;
                 const rangeStart = rangeEnd - rangeMs;
                 const points: { label: string; cumulative: number }[] = [];
                 for (let i = 0; i < periodCount; i++) {
-                  const dayEnd = rangeStart + (i + 1) * msPerDay;
-                  const cumulative = joinTimestamps.filter(ms => ms < dayEnd).length;
-                  const d = new Date(rangeStart + i * msPerDay);
+                  const slotEnd = rangeStart + (i + 1) * stepMs;
+                  const cumulative = joinTimestamps.filter(ms => ms < slotEnd).length;
+                  const d = new Date(rangeStart + i * stepMs);
                   points.push({ label: `${d.getDate()}/${d.getMonth() + 1}`, cumulative });
                 }
                 const maxVal = Math.max(...points.map(p => p.cumulative), 1);
+                const minVal = Math.min(...points.map(p => p.cumulative));
+                // SVG line chart
+                const svgW = 300; const svgH = 80;
+                const padL = 4; const padR = 4; const padT = 6; const padB = 0;
+                const plotW = svgW - padL - padR;
+                const plotH = svgH - padT - padB;
+                const valRange = Math.max(maxVal - minVal, 1);
+                const toX = (i: number) => padL + (i / Math.max(points.length - 1, 1)) * plotW;
+                const toY = (v: number) => padT + (1 - (v - minVal) / valRange) * plotH;
+                const polyPts = points.map((p, i) => `${toX(i)},${toY(p.cumulative)}`).join(' ');
+                const areaPts = `${toX(0)},${svgH} ${polyPts} ${toX(points.length - 1)},${svgH}`;
                 return (
-                  <div className="glass-card p-5 rounded-[2rem] space-y-4">
+                  <div className="glass-card p-5 rounded-[2rem] space-y-3">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-bold text-brand-navy">User Base Growth</p>
                         <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Cumulative members</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <button onClick={() => setSignupsOffset(o => o + 1)} className="p-1.5 rounded-xl bg-brand-navy/8 active:scale-90 transition-all">
+                        {/* Period toggle */}
+                        <div className="flex rounded-xl overflow-hidden border border-brand-navy/10 text-[10px] font-bold">
+                          <button onClick={() => { setGrowthPeriod('days'); setGrowthOffset(0); }} className={cn('px-2 py-1 transition-colors', isDays ? 'bg-brand-navy text-white' : 'text-brand-navy/60 hover:text-brand-navy')}>Days</button>
+                          <button onClick={() => { setGrowthPeriod('weeks'); setGrowthOffset(0); }} className={cn('px-2 py-1 transition-colors', !isDays ? 'bg-brand-navy text-white' : 'text-brand-navy/60 hover:text-brand-navy')}>Weeks</button>
+                        </div>
+                        <button onClick={() => setGrowthOffset(o => o + 1)} className="p-1.5 rounded-xl bg-brand-navy/8 active:scale-90 transition-all">
                           <ChevronLeft size={14} className="text-brand-navy" />
                         </button>
-                        <button onClick={() => setSignupsOffset(o => Math.max(0, o - 1))} disabled={signupsOffset === 0} className="p-1.5 rounded-xl bg-brand-navy/8 disabled:opacity-30 active:scale-90 transition-all">
+                        <button onClick={() => setGrowthOffset(o => Math.max(0, o - 1))} disabled={growthOffset === 0} className="p-1.5 rounded-xl bg-brand-navy/8 disabled:opacity-30 active:scale-90 transition-all">
                           <ChevronRight size={14} className="text-brand-navy" />
                         </button>
                       </div>
                     </div>
-                    <div className="flex gap-1 items-end">
-                      <div className="flex flex-col justify-between text-right shrink-0 mb-3" style={{ height: '80px', minWidth: '16px' }}>
+                    {/* Y-axis labels + SVG line chart */}
+                    <div className="flex gap-1 items-stretch">
+                      <div className="flex flex-col justify-between text-right shrink-0" style={{ height: `${svgH}px`, minWidth: '18px' }}>
                         <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{maxVal}</span>
-                        <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{Math.round(maxVal / 2)}</span>
-                        <span className="text-[8px] text-brand-navy/72 font-bold leading-none">0</span>
+                        <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{Math.round((maxVal + minVal) / 2)}</span>
+                        <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{minVal}</span>
                       </div>
-                      <div className="flex items-end gap-1 h-28 flex-1">
-                        {points.map((p, i) => (
-                          <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                            <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
-                              <motion.div
-                                initial={{ height: 0 }} animate={{ height: `${Math.round((p.cumulative / maxVal) * 80)}px` }}
-                                transition={{ duration: 0.4, delay: i * 0.03 }}
-                                className="w-full rounded-t-lg bg-blue-400"
-                                style={{ minHeight: p.cumulative > 0 ? '4px' : '0' }}
-                              />
-                            </div>
-                            <p className="text-[8px] text-brand-navy/72 font-bold leading-none">{p.label}</p>
-                          </div>
-                        ))}
+                      <div className="flex-1 flex flex-col gap-1">
+                        <svg viewBox={`0 0 ${svgW} ${svgH}`} preserveAspectRatio="none" className="w-full" style={{ height: `${svgH}px` }}>
+                          <defs>
+                            <linearGradient id="growthFill" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#60a5fa" stopOpacity="0.35" />
+                              <stop offset="100%" stopColor="#60a5fa" stopOpacity="0.03" />
+                            </linearGradient>
+                          </defs>
+                          <polygon points={areaPts} fill="url(#growthFill)" />
+                          <polyline points={polyPts} fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+                          {points.map((p, i) => (
+                            <circle key={i} cx={toX(i)} cy={toY(p.cumulative)} r="3" fill="#3b82f6" stroke="white" strokeWidth="1.5" />
+                          ))}
+                        </svg>
+                        {/* X-axis labels */}
+                        <div className="flex justify-between px-1">
+                          {points.map((p, i) => (
+                            <span key={i} className="text-[7px] text-brand-navy/60 font-bold leading-none" style={{ width: `${100 / points.length}%`, textAlign: 'center' }}>{p.label}</span>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -17461,51 +17490,57 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     firstTxByUser2.set(card.user_id, ms > 0 ? ms : Date.now());
                   }
                 });
-                const periodCount = 14;
-                const msPerDay = 86400000;
+                const msPerDay2 = 86400000;
                 const _todayMid3 = new Date(); _todayMid3.setHours(0, 0, 0, 0);
-                const rangeEnd = (_todayMid3.getTime() + 86400000) - signupsOffset * periodCount * msPerDay;
-                const rangeStart = rangeEnd - periodCount * msPerDay;
-                const days: { label: string; count: number }[] = [];
-                for (let i = 0; i < periodCount; i++) {
-                  const dayStart = rangeStart + i * msPerDay;
-                  const dayEnd = dayStart + msPerDay;
-                  const count = [...firstTxByUser2.values()].filter(ms => ms >= dayStart && ms < dayEnd).length;
-                  const d = new Date(dayStart);
-                  days.push({ label: `${d.getDate()}/${d.getMonth() + 1}`, count });
+                const isDays2 = signupsChartPeriod === 'days';
+                const periodCount2 = isDays2 ? 7 : 10;
+                const stepMs2 = isDays2 ? msPerDay2 : 7 * msPerDay2;
+                const rangeEnd2 = (_todayMid3.getTime() + 86400000) - signupsChartOffset * periodCount2 * stepMs2;
+                const rangeStart2 = rangeEnd2 - periodCount2 * stepMs2;
+                const signupBuckets: { label: string; count: number }[] = [];
+                for (let i = 0; i < periodCount2; i++) {
+                  const slotStart = rangeStart2 + i * stepMs2;
+                  const slotEnd = slotStart + stepMs2;
+                  const count = [...firstTxByUser2.values()].filter(ms => ms >= slotStart && ms < slotEnd).length;
+                  const d = new Date(slotStart);
+                  signupBuckets.push({ label: `${d.getDate()}/${d.getMonth() + 1}`, count });
                 }
-                const maxVal = Math.max(...days.map(d => d.count), 1);
-                const totalNew = days.reduce((s, d) => s + d.count, 0);
+                const maxVal2 = Math.max(...signupBuckets.map(d => d.count), 1);
+                const totalNew = signupBuckets.reduce((s, d) => s + d.count, 0);
                 return (
                   <div className="glass-card p-5 rounded-[2rem] space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-bold text-brand-navy">New Sign-ups / Day</p>
+                        <p className="font-bold text-brand-navy">{isDays2 ? 'New Sign-ups / Day' : 'New Sign-ups / Week'}</p>
                         <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">
                           {totalNew} new in this period
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <button onClick={() => setSignupsOffset(o => o + 1)} className="p-1.5 rounded-xl bg-brand-navy/8 active:scale-90 transition-all">
+                        <div className="flex rounded-xl overflow-hidden border border-brand-navy/10 text-[10px] font-bold">
+                          <button onClick={() => { setSignupsChartPeriod('days'); setSignupsChartOffset(0); }} className={cn('px-2 py-1 transition-colors', isDays2 ? 'bg-brand-navy text-white' : 'text-brand-navy/60 hover:text-brand-navy')}>Days</button>
+                          <button onClick={() => { setSignupsChartPeriod('weeks'); setSignupsChartOffset(0); }} className={cn('px-2 py-1 transition-colors', !isDays2 ? 'bg-brand-navy text-white' : 'text-brand-navy/60 hover:text-brand-navy')}>Weeks</button>
+                        </div>
+                        <button onClick={() => setSignupsChartOffset(o => o + 1)} className="p-1.5 rounded-xl bg-brand-navy/8 active:scale-90 transition-all">
                           <ChevronLeft size={14} className="text-brand-navy" />
                         </button>
-                        <button onClick={() => setSignupsOffset(o => Math.max(0, o - 1))} disabled={signupsOffset === 0} className="p-1.5 rounded-xl bg-brand-navy/8 disabled:opacity-30 active:scale-90 transition-all">
+                        <button onClick={() => setSignupsChartOffset(o => Math.max(0, o - 1))} disabled={signupsChartOffset === 0} className="p-1.5 rounded-xl bg-brand-navy/8 disabled:opacity-30 active:scale-90 transition-all">
                           <ChevronRight size={14} className="text-brand-navy" />
                         </button>
                       </div>
                     </div>
                     <div className="flex gap-1 items-end">
                       <div className="flex flex-col justify-between text-right shrink-0 mb-3" style={{ height: '80px', minWidth: '16px' }}>
-                        <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{maxVal}</span>
-                        <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{Math.round(maxVal / 2)}</span>
+                        <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{maxVal2}</span>
+                        <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{Math.round(maxVal2 / 2)}</span>
                         <span className="text-[8px] text-brand-navy/72 font-bold leading-none">0</span>
                       </div>
                       <div className="flex items-end gap-1 h-28 flex-1">
-                        {days.map((d, i) => (
+                        {signupBuckets.map((d, i) => (
                           <div key={i} className="flex-1 flex flex-col items-center gap-1">
                             <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
                               <motion.div
-                                initial={{ height: 0 }} animate={{ height: `${Math.round((d.count / maxVal) * 80)}px` }}
+                                initial={{ height: 0 }} animate={{ height: `${Math.round((d.count / maxVal2) * 80)}px` }}
                                 transition={{ duration: 0.4, delay: i * 0.03 }}
                                 className="w-full rounded-t-lg bg-emerald-400"
                                 style={{ minHeight: d.count > 0 ? '4px' : '0' }}
