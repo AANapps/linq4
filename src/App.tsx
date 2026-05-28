@@ -17412,15 +17412,15 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                   points.push({ label: `${d.getDate()}/${d.getMonth() + 1}`, cumulative });
                 }
                 const maxVal = Math.max(...points.map(p => p.cumulative), 1);
-                const minVal = Math.min(...points.map(p => p.cumulative));
+                // Always floor at 0 so y-axis labels are distinct and line sits correctly
+                const minVal = 0;
                 // SVG line chart
                 const svgW = 300; const svgH = 80;
                 const padL = 4; const padR = 4; const padT = 6; const padB = 0;
                 const plotW = svgW - padL - padR;
                 const plotH = svgH - padT - padB;
-                const valRange = Math.max(maxVal - minVal, 1);
                 const toX = (i: number) => padL + (i / Math.max(points.length - 1, 1)) * plotW;
-                const toY = (v: number) => padT + (1 - (v - minVal) / valRange) * plotH;
+                const toY = (v: number) => padT + (1 - v / maxVal) * plotH;
                 const polyPts = points.map((p, i) => `${toX(i)},${toY(p.cumulative)}`).join(' ');
                 const areaPts = `${toX(0)},${svgH} ${polyPts} ${toX(points.length - 1)},${svgH}`;
                 return (
@@ -17439,8 +17439,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     <div className="flex gap-1 items-stretch">
                       <div className="flex flex-col justify-between text-right shrink-0" style={{ height: `${svgH}px`, minWidth: '18px' }}>
                         <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{maxVal}</span>
-                        <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{Math.round((maxVal + minVal) / 2)}</span>
-                        <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{minVal}</span>
+                        <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{Math.round(maxVal / 2)}</span>
+                        <span className="text-[8px] text-brand-navy/72 font-bold leading-none">0</span>
                       </div>
                       <div className="flex-1 flex flex-col gap-1">
                         <svg
