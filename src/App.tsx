@@ -30898,7 +30898,7 @@ function AdminStoreEditModal({ store, onClose }: { store: StoreProfile; onClose:
 }
 
 // ─── Small card pills shown on vendor profile when user has joined ────────────
-function ProfileCardRow({ store, card, membershipCard, userId, onJoinLoyalty, onJoinMembership }: {
+function ProfileCardRow({ store, card, membershipCard, userId, onJoinLoyalty, onJoinMembership, onLeaveMembership }: {
   store: StoreProfile;
   card: Card | null;
   membershipCard: Card | null;
@@ -30906,27 +30906,82 @@ function ProfileCardRow({ store, card, membershipCard, userId, onJoinLoyalty, on
   userProfile: UserProfile | null;
   onJoinLoyalty: () => void;
   onJoinMembership: () => void;
+  onLeaveMembership?: () => Promise<void>;
 }) {
-  const [showSheet, setShowSheet] = useState(false);
-  const [removing, setRemoving] = useState<string | null>(null);
+  const [showLeaveSheet, setShowLeaveSheet] = useState(false);
+  const [leaving, setLeaving] = useState(false);
 
   const loyaltyEnabled = storeCardActive(store);
   const membershipEnabled = !!store.membershipEnabled;
-  const isJoined = (loyaltyEnabled && !!card) || (membershipEnabled && !!membershipCard);
-
-  const removeCard = async (cardId: string) => {
-    setRemoving(cardId);
-    try {
-      await updateDoc(doc(db, 'cards', cardId), { isArchived: true });
-      await updateDoc(doc(db, 'users', userId), { total_cards_held: increment(-1) });
-    } catch (err) { console.error(err); }
-    setRemoving(null);
-    setShowSheet(false);
-  };
+  const hasMembership = membershipEnabled && !!membershipCard && !membershipCard.isArchived;
+  const hasLoyalty = loyaltyEnabled && !!card && !card.isArchived;
+  const membershipName = store.membershipName || 'Membership';
 
   if (!loyaltyEnabled && !membershipEnabled) return null;
 
-  if (isJoined) {
+  const handleLeaveConfirm = async () => {
+    setLeaving(true);
+    try { await onLeaveMembership?.(); } catch (err) { console.error(err); }
+    setLeaving(false);
+    setShowLeaveSheet(false);
+  };
+
+  // Membership joined — show tappable "Member" button with leave option
+  if (hasMembership) {
+    return (
+      <>
+        <button
+          onClick={() => setShowLeaveSheet(true)}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-white text-sm font-bold shadow-sm active:scale-[0.98] transition-all"
+          style={{ background: store.theme || '#2563EB' }}
+        >
+          <Check size={15} strokeWidth={3} />
+          {membershipName} Member
+          <ChevronDown size={14} className="opacity-70" />
+        </button>
+
+        {/* Leave confirmation sheet */}
+        <AnimatePresence>
+          {showLeaveSheet && (
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[300] bg-black/50 backdrop-blur-sm flex items-end justify-center max-w-md mx-auto"
+              onClick={() => setShowLeaveSheet(false)}
+            >
+              <motion.div
+                initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+                transition={{ type: 'spring', stiffness: 380, damping: 36 }}
+                onClick={e => e.stopPropagation()}
+                className="w-full bg-white rounded-t-[2rem] px-6 py-6 pb-10 space-y-4"
+              >
+                <div className="w-10 h-1 bg-brand-navy/10 rounded-full mx-auto mb-2" />
+                <div className="text-center space-y-1">
+                  <p className="font-black text-brand-navy text-lg">Leave {membershipName}?</p>
+                  <p className="text-sm text-brand-navy/60">Your membership with {store.name} will be ended. You can rejoin at any time.</p>
+                </div>
+                <button
+                  onClick={handleLeaveConfirm}
+                  disabled={leaving}
+                  className="w-full py-3.5 rounded-2xl bg-red-500 text-white font-bold text-sm disabled:opacity-50 active:scale-[0.98] transition-all"
+                >
+                  {leaving ? 'Leaving…' : `Leave ${membershipName}`}
+                </button>
+                <button
+                  onClick={() => setShowLeaveSheet(false)}
+                  className="w-full py-3 rounded-2xl bg-brand-navy/5 text-brand-navy font-bold text-sm active:scale-[0.98] transition-all"
+                >
+                  Cancel
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </>
+    );
+  }
+
+  // Loyalty card joined (no membership) — non-interactive badge
+  if (hasLoyalty && !membershipEnabled) {
     return (
       <div
         className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-white text-sm font-bold shadow-sm"
@@ -30938,8 +30993,9 @@ function ProfileCardRow({ store, card, membershipCard, userId, onJoinLoyalty, on
     );
   }
 
+  // Not yet joined
   const handleJoin = membershipEnabled ? onJoinMembership : onJoinLoyalty;
-  const joinLabel = membershipEnabled ? (store.membershipName || 'Membership') : 'Loyalty Card';
+  const joinLabel = membershipEnabled ? membershipName : 'Loyalty Card';
 
   return (
     <button
@@ -31198,6 +31254,14 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
       userPhoto,
     });
     await updateDoc(doc(db, 'users', user.uid), { total_cards_held: increment(1) });
+  };
+
+  const handleLeaveMembership = async () => {
+    const membershipId = `${user.uid}_${store.id}_membership`;
+    try {
+      await updateDoc(doc(db, 'cards', membershipId), { isArchived: true });
+      await updateDoc(doc(db, 'users', user.uid), { total_cards_held: increment(-1) });
+    } catch (err) { console.error(err); }
   };
 
   const handleCreatePost = async () => {
@@ -31648,6 +31712,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
           userProfile={profile}
           onJoinLoyalty={handleJoinStore}
           onJoinMembership={handleJoinMembership}
+          onLeaveMembership={handleLeaveMembership}
         />
       )}
 
