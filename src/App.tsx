@@ -26926,16 +26926,17 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
   const fetchKlipy = async (q: string) => {
     setKlipyLoading(true);
     try {
+      const base = `https://api.klipy.com/api/v1/${KLIPY_KEY}/gifs`;
       const url = q.trim()
-        ? `https://api.klipy.com/api/v1/gifs/search?api_key=${KLIPY_KEY}&q=${encodeURIComponent(q)}&limit=24`
-        : `https://api.klipy.com/api/v1/gifs/trending?api_key=${KLIPY_KEY}&limit=24`;
+        ? `${base}/search?q=${encodeURIComponent(q)}&limit=24`
+        : `${base}/trending?limit=24`;
       const res = await fetch(url);
       const json = await res.json();
-      setKlipyResults((json.data || []).map((item: any) => ({
-        id: item.id,
+      setKlipyResults((json.data?.data || []).map((item: any) => ({
+        id: String(item.id),
         title: item.title || '',
-        url: item.images?.original?.url || item.url || '',
-        preview: item.images?.preview_gif?.url || item.images?.original?.url || item.url || '',
+        url: item.file?.hd?.gif?.url || item.file?.md?.gif?.url || item.file?.sd?.gif?.url || '',
+        preview: item.file?.sd?.gif?.url || item.file?.md?.gif?.url || item.file?.hd?.gif?.url || '',
       })));
     } catch {} finally { setKlipyLoading(false); }
   };
