@@ -29231,11 +29231,20 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
             key={tab}
             onClick={() => setActiveSubTab(tab)}
             className={cn(
-              "pb-0.5 text-[11px] font-semibold tracking-widest uppercase transition-all border-b",
+              "pb-0.5 text-[11px] tracking-widest uppercase transition-all border-b",
+              tab === 'polls' ? "font-black" : "font-semibold",
               activeSubTab === tab ? "text-gray-500 border-gray-400" : "text-gray-300 border-transparent"
             )}
           >
-            {tab === 'discovery' ? 'Discovery' : tab === 'following' ? 'Following' : 'Polls'}
+            {tab === 'polls' ? (
+              <motion.span
+                animate={{ scale: [1, 1.12, 1] }}
+                transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                style={{ display: 'inline-block' }}
+              >
+                Polls
+              </motion.span>
+            ) : tab === 'discovery' ? 'Discovery' : 'Following'}
           </button>
         ))}
       </div>
