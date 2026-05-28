@@ -16206,6 +16206,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
   const [signupsOffset, setSignupsOffset] = useState(0);
   const [growthPeriod, setGrowthPeriod] = useState<'days' | 'weeks'>('weeks');
   const [growthOffset, setGrowthOffset] = useState(0);
+  const [growthHoverIdx, setGrowthHoverIdx] = useState<number | null>(null);
   const [signupsChartPeriod, setSignupsChartPeriod] = useState<'days' | 'weeks'>('weeks');
   const [signupsChartOffset, setSignupsChartOffset] = useState(0);
   const [chartTransactions, setChartTransactions] = useState<any[]>([]);
@@ -17451,7 +17452,19 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                         <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{minVal}</span>
                       </div>
                       <div className="flex-1 flex flex-col gap-1">
-                        <svg viewBox={`0 0 ${svgW} ${svgH}`} preserveAspectRatio="none" className="w-full" style={{ height: `${svgH}px` }}>
+                        <svg
+                          viewBox={`0 0 ${svgW} ${svgH}`}
+                          preserveAspectRatio="none"
+                          className="w-full cursor-pointer"
+                          style={{ height: `${svgH}px` }}
+                          onClick={e => {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const svgX = ((e.clientX - rect.left) / rect.width) * svgW;
+                            let nearest = 0; let minDist = Infinity;
+                            points.forEach((_, i) => { const d = Math.abs(toX(i) - svgX); if (d < minDist) { minDist = d; nearest = i; } });
+                            setGrowthHoverIdx(prev => prev === nearest ? null : nearest);
+                          }}
+                        >
                           <defs>
                             <linearGradient id="growthFill" x1="0" y1="0" x2="0" y2="1">
                               <stop offset="0%" stopColor="#60a5fa" stopOpacity="0.35" />
@@ -17463,6 +17476,25 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                           {points.map((p, i) => (
                             <circle key={i} cx={toX(i)} cy={toY(p.cumulative)} r="3" fill="#3b82f6" stroke="white" strokeWidth="1.5" />
                           ))}
+                          {growthHoverIdx !== null && points[growthHoverIdx] != null && (() => {
+                            const hx = toX(growthHoverIdx);
+                            const hy = toY(points[growthHoverIdx].cumulative);
+                            const val = points[growthHoverIdx].cumulative;
+                            const lblW = 28; const lblH = 14;
+                            const lblX = Math.max(lblW / 2 + padL, Math.min(svgW - padR - lblW / 2, hx));
+                            const lblY = Math.max(lblH + 2, hy - 8);
+                            return (
+                              <>
+                                <line x1={hx} y1={padT} x2={hx} y2={svgH} stroke="#3b82f6" strokeWidth="1" strokeDasharray="3 2" opacity="0.35" />
+                                <line x1={padL} y1={hy} x2={svgW - padR} y2={hy} stroke="#3b82f6" strokeWidth="1" strokeDasharray="3 2" opacity="0.35" />
+                                <rect x={lblX - lblW / 2} y={lblY - lblH} width={lblW} height={lblH} rx="3" fill="#3b82f6" />
+                                <text x={lblX} y={lblY - lblH / 2 + 2.5} textAnchor="middle" fill="white" fontSize="7.5" fontWeight="bold" fontFamily="sans-serif">{val}</text>
+                                <circle cx={hx} cy={hy} r="4.5" fill="#3b82f6" stroke="white" strokeWidth="2" />
+                              </>
+                            );
+                          })()}
+                          {/* Transparent overlay to capture taps between points */}
+                          <rect x={0} y={0} width={svgW} height={svgH} fill="transparent" />
                         </svg>
                         {/* X-axis labels */}
                         <div className="flex justify-between px-1">
