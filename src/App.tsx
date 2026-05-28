@@ -27558,17 +27558,19 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                   disabled={userVoteKey !== undefined && !isClosed}
                   className={cn(
                     "w-full text-left rounded-xl overflow-hidden border-2 transition-all active:scale-[0.98]",
-                    isWinner ? "border-amber-400" : voted ? "border-violet-500" : "border-black/20",
+                    isWinner ? "border-amber-400" : voted ? "border-violet-500" : "border-black/35",
                     !showResults ? "hover:border-violet-300 cursor-pointer" : "",
                     isClosed && !voted && !isWinner ? "opacity-70" : ""
                   )}
                 >
                   <div className="relative px-4 py-2.5 min-h-[42px] flex items-center">
                     {showResults && (
-                      <div
-                        className="absolute left-0 top-0 bottom-0 overflow-hidden transition-all duration-500"
+                      <motion.div
+                        initial={{ width: '0%' }}
+                        animate={{ width: `${Math.max(pct, 4)}%` }}
+                        transition={{ duration: 0.55, ease: 'easeOut' }}
+                        className="absolute left-0 top-0 bottom-0 overflow-hidden"
                         style={{
-                          width: `${Math.max(pct, 4)}%`,
                           borderRadius: '10px',
                           background: voted
                             ? 'linear-gradient(90deg, #7c3aed 0%, #4f46e5 45%, #2563eb 100%)'
@@ -27578,7 +27580,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                         }}
                       >
                         {voted && <PollVotedFillDots />}
-                      </div>
+                      </motion.div>
                     )}
                     <div className="relative flex items-center justify-between w-full gap-2">
                       <div className="flex items-center gap-2">
@@ -29169,9 +29171,9 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
           >
             {tab === 'polls' ? (
               <motion.span
-                animate={{ x: [0, -4, 4, -4, 4, -2, 2, 0, 0] }}
+                animate={{ rotate: [0, -6, 6, -6, 6, -3, 3, 0, 0] }}
                 transition={{ duration: 2.8, times: [0, 0.06, 0.12, 0.18, 0.24, 0.29, 0.34, 0.38, 1], repeat: Infinity, ease: 'linear' }}
-                style={{ display: 'inline-block' }}
+                style={{ display: 'inline-block', transformOrigin: 'bottom center' }}
               >
                 Polls
               </motion.span>
@@ -29214,7 +29216,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
               <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/50">Community Polls</p>
             </div>
           )}
-          <div className="bg-white border-t border-gray-100">
+          <div className="bg-white divide-y-[2px] divide-gray-300 border-t-[2px] border-gray-300">
             {polls.map(post => (
               <FeedPostCard
                 key={post.id}
@@ -29237,7 +29239,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
         </div>
       ) : activeSubTab === 'following' ? (
         loading ? <FeedLoadingSpinner /> : (
-          <div className="divide-y-[3px] divide-gray-200 bg-white -mx-6 border-t border-gray-100">
+          <div className="divide-y-[2px] divide-gray-300 bg-white -mx-6 border-t-[2px] border-gray-300">
             {followingFeed.map((item) =>
               !item._type
                 ? <FeedPostCard key={`gp-${item.id}`} post={item as GlobalPost} currentUser={currentUser} currentProfile={currentProfile} onViewUser={onViewUser} onViewStore={onViewStore} onLike={handleLike} onVote={handleVote} onDelete={async (p) => { await deleteStorageImage(p.postImageUrl); await deleteDoc(doc(db, 'global_posts', p.id)); }} />
