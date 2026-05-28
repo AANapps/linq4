@@ -16209,6 +16209,9 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
   const [growthHoverIdx, setGrowthHoverIdx] = useState<number | null>(null);
   const [signupsChartPeriod, setSignupsChartPeriod] = useState<'days' | 'weeks'>('weeks');
   const [signupsChartOffset, setSignupsChartOffset] = useState(0);
+  const [stampHoverIdx, setStampHoverIdx] = useState<number | null>(null);
+  const [signupsHoverIdx, setSignupsHoverIdx] = useState<number | null>(null);
+  const [pointsHoverIdx, setPointsHoverIdx] = useState<number | null>(null);
   const [chartTransactions, setChartTransactions] = useState<any[]>([]);
   const [isLoadingCheckout, setIsLoadingCheckout] = useState(false);
   const [tickNow, setTickNow] = useState(Date.now());
@@ -17357,20 +17360,33 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                         <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{Math.round(maxVal / 2)}</span>
                         <span className="text-[8px] text-brand-navy/72 font-bold leading-none">0</span>
                       </div>
-                      <div className="flex items-end gap-1 h-28 flex-1">
-                        {periods.map((p, i) => (
-                          <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                            <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
-                              <motion.div
-                                initial={{ height: 0 }} animate={{ height: `${Math.round((p.count / maxVal) * 80)}px` }}
-                                transition={{ duration: 0.4, delay: i * 0.03 }}
-                                className="w-full rounded-t-lg bg-brand-gold"
-                                style={{ minHeight: p.count > 0 ? '4px' : '0' }}
-                              />
+                      <div className="relative flex items-end gap-1 h-28 flex-1">
+                        {stampHoverIdx !== null && periods[stampHoverIdx]?.count > 0 && (
+                          <div className="absolute left-0 right-0 border-t border-dashed border-brand-navy/20 pointer-events-none z-10"
+                            style={{ bottom: `${Math.round((periods[stampHoverIdx].count / maxVal) * 80) + 16}px` }} />
+                        )}
+                        {periods.map((p, i) => {
+                          const barH = Math.round((p.count / maxVal) * 80);
+                          const sel = stampHoverIdx === i;
+                          return (
+                            <div key={i} className="relative flex-1 flex flex-col items-center gap-1 cursor-pointer"
+                              onClick={() => setStampHoverIdx(prev => prev === i ? null : i)}>
+                              <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
+                                <motion.div
+                                  initial={{ height: 0 }} animate={{ height: `${barH}px` }}
+                                  transition={{ duration: 0.4, delay: i * 0.03 }}
+                                  className={cn('w-full rounded-t-lg transition-colors', sel ? 'bg-brand-gold' : 'bg-brand-gold/70')}
+                                  style={{ minHeight: p.count > 0 ? '4px' : '0' }}
+                                />
+                              </div>
+                              {sel && p.count > 0 && (
+                                <span className="absolute text-[7px] font-black text-white bg-brand-navy/70 px-1 py-px rounded leading-none pointer-events-none"
+                                  style={{ bottom: `${barH + 20}px` }}>{p.count}</span>
+                              )}
+                              <p className="text-[8px] text-brand-navy/72 font-bold leading-none">{p.label}</p>
                             </div>
-                            <p className="text-[8px] text-brand-navy/72 font-bold leading-none">{p.label}</p>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                     {stampTxns.length === 0 && (
@@ -17399,10 +17415,9 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 const msPerDay = 86400000;
                 const _todayMid2 = new Date(); _todayMid2.setHours(0, 0, 0, 0);
                 const isDays = growthPeriod === 'days';
-                // Always anchor to today — no back navigation to prevent the confusing "going down" effect
                 const periodCount = isDays ? 7 : 12;
                 const stepMs = isDays ? msPerDay : 7 * msPerDay;
-                const rangeEnd = _todayMid2.getTime() + 86400000;
+                const rangeEnd = (_todayMid2.getTime() + 86400000) - growthOffset * periodCount * stepMs;
                 const rangeStart = rangeEnd - periodCount * stepMs;
                 const points: { label: string; cumulative: number }[] = [];
                 for (let i = 0; i < periodCount; i++) {
@@ -17430,9 +17445,13 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                         <p className="font-bold text-brand-navy">User Base Growth</p>
                         <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Cumulative members · {points[points.length - 1]?.cumulative ?? 0} total</p>
                       </div>
-                      <div className="flex rounded-xl overflow-hidden border border-brand-navy/10 text-[10px] font-bold">
-                        <button onClick={() => { setGrowthPeriod('days'); setGrowthHoverIdx(null); }} className={cn('px-2 py-1 transition-colors', isDays ? 'bg-brand-navy text-white' : 'text-brand-navy/60 hover:text-brand-navy')}>Days</button>
-                        <button onClick={() => { setGrowthPeriod('weeks'); setGrowthHoverIdx(null); }} className={cn('px-2 py-1 transition-colors', !isDays ? 'bg-brand-navy text-white' : 'text-brand-navy/60 hover:text-brand-navy')}>Weeks</button>
+                      <div className="flex items-center gap-2">
+                        <div className="flex rounded-xl overflow-hidden border border-brand-navy/10 text-[10px] font-bold">
+                          <button onClick={() => { setGrowthPeriod('days'); setGrowthOffset(0); setGrowthHoverIdx(null); }} className={cn('px-2 py-1 transition-colors', isDays ? 'bg-brand-navy text-white' : 'text-brand-navy/60 hover:text-brand-navy')}>Days</button>
+                          <button onClick={() => { setGrowthPeriod('weeks'); setGrowthOffset(0); setGrowthHoverIdx(null); }} className={cn('px-2 py-1 transition-colors', !isDays ? 'bg-brand-navy text-white' : 'text-brand-navy/60 hover:text-brand-navy')}>Weeks</button>
+                        </div>
+                        <button onClick={() => { setGrowthOffset(o => o + 1); setGrowthHoverIdx(null); }} className="p-1.5 rounded-xl bg-brand-navy/8 active:scale-90 transition-all"><ChevronLeft size={14} className="text-brand-navy" /></button>
+                        <button onClick={() => { setGrowthOffset(o => Math.max(0, o - 1)); setGrowthHoverIdx(null); }} disabled={growthOffset === 0} className="p-1.5 rounded-xl bg-brand-navy/8 disabled:opacity-30 active:scale-90 transition-all"><ChevronRight size={14} className="text-brand-navy" /></button>
                       </div>
                     </div>
                     {/* Y-axis labels + SVG line chart */}
@@ -17559,20 +17578,33 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                         <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{Math.round(maxVal2 / 2)}</span>
                         <span className="text-[8px] text-brand-navy/72 font-bold leading-none">0</span>
                       </div>
-                      <div className="flex items-end gap-1 h-28 flex-1">
-                        {signupBuckets.map((d, i) => (
-                          <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                            <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
-                              <motion.div
-                                initial={{ height: 0 }} animate={{ height: `${Math.round((d.count / maxVal2) * 80)}px` }}
-                                transition={{ duration: 0.4, delay: i * 0.03 }}
-                                className="w-full rounded-t-lg bg-emerald-400"
-                                style={{ minHeight: d.count > 0 ? '4px' : '0' }}
-                              />
+                      <div className="relative flex items-end gap-1 h-28 flex-1">
+                        {signupsHoverIdx !== null && signupBuckets[signupsHoverIdx]?.count > 0 && (
+                          <div className="absolute left-0 right-0 border-t border-dashed border-brand-navy/20 pointer-events-none z-10"
+                            style={{ bottom: `${Math.round((signupBuckets[signupsHoverIdx].count / maxVal2) * 80) + 16}px` }} />
+                        )}
+                        {signupBuckets.map((d, i) => {
+                          const barH = Math.round((d.count / maxVal2) * 80);
+                          const sel = signupsHoverIdx === i;
+                          return (
+                            <div key={i} className="relative flex-1 flex flex-col items-center gap-1 cursor-pointer"
+                              onClick={() => setSignupsHoverIdx(prev => prev === i ? null : i)}>
+                              <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
+                                <motion.div
+                                  initial={{ height: 0 }} animate={{ height: `${barH}px` }}
+                                  transition={{ duration: 0.4, delay: i * 0.03 }}
+                                  className={cn('w-full rounded-t-lg transition-colors', sel ? 'bg-emerald-400' : 'bg-emerald-400/70')}
+                                  style={{ minHeight: d.count > 0 ? '4px' : '0' }}
+                                />
+                              </div>
+                              {sel && d.count > 0 && (
+                                <span className="absolute text-[7px] font-black text-white bg-brand-navy/70 px-1 py-px rounded leading-none pointer-events-none"
+                                  style={{ bottom: `${barH + 20}px` }}>{d.count}</span>
+                              )}
+                              <p className="text-[8px] text-brand-navy/72 font-bold leading-none">{d.label}</p>
                             </div>
-                            <p className="text-[8px] text-brand-navy/72 font-bold leading-none">{d.label}</p>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                     {totalNew === 0 && (
@@ -17925,15 +17957,30 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                             <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{Math.round(maxVal / 2)}</span>
                             <span className="text-[8px] text-brand-navy/72 font-bold leading-none">0</span>
                           </div>
-                          <div className="flex items-end gap-1 h-28 flex-1">
-                            {periods.map((p, i) => (
-                              <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                                <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
-                                  <motion.div initial={{ height: 0 }} animate={{ height: `${Math.round((p.count / maxVal) * 80)}px` }} transition={{ duration: 0.4, delay: i * 0.03 }} className="w-full rounded-t-lg bg-emerald-400" style={{ minHeight: p.count > 0 ? '4px' : '0' }} />
+                          <div className="relative flex items-end gap-1 h-28 flex-1">
+                            {pointsHoverIdx !== null && periods[pointsHoverIdx]?.count > 0 && (
+                              <div className="absolute left-0 right-0 border-t border-dashed border-brand-navy/20 pointer-events-none z-10"
+                                style={{ bottom: `${Math.round((periods[pointsHoverIdx].count / maxVal) * 80) + 16}px` }} />
+                            )}
+                            {periods.map((p, i) => {
+                              const barH = Math.round((p.count / maxVal) * 80);
+                              const sel = pointsHoverIdx === i;
+                              return (
+                                <div key={i} className="relative flex-1 flex flex-col items-center gap-1 cursor-pointer"
+                                  onClick={() => setPointsHoverIdx(prev => prev === i ? null : i)}>
+                                  <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
+                                    <motion.div initial={{ height: 0 }} animate={{ height: `${barH}px` }} transition={{ duration: 0.4, delay: i * 0.03 }}
+                                      className={cn('w-full rounded-t-lg transition-colors', sel ? 'bg-emerald-400' : 'bg-emerald-400/70')}
+                                      style={{ minHeight: p.count > 0 ? '4px' : '0' }} />
+                                  </div>
+                                  {sel && p.count > 0 && (
+                                    <span className="absolute text-[7px] font-black text-white bg-brand-navy/70 px-1 py-px rounded leading-none pointer-events-none"
+                                      style={{ bottom: `${barH + 20}px` }}>{p.count}</span>
+                                  )}
+                                  <p className="text-[8px] text-brand-navy/72 font-bold leading-none">{p.label}</p>
                                 </div>
-                                <p className="text-[8px] text-brand-navy/72 font-bold leading-none">{p.label}</p>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </div>
                         {spendTxns.length === 0 && <p className="text-center text-xs text-brand-navy/72 font-bold py-2">No spend transactions yet</p>}
