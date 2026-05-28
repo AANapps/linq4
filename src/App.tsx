@@ -1301,6 +1301,139 @@ export default function App() {
     }
   }, [user, userCards]);
 
+  // 8am Linqle reminder — once per day after 8am if not yet played today
+  useEffect(() => {
+    if (!user || !profile || !['consumer', 'admin'].includes(profile.role)) return;
+    const now = new Date();
+    if (now.getHours() < 8) return;
+    const today = now.toISOString().slice(0, 10);
+    if (profile.linqleLastCompleted === today) return;
+    const key = `linqle_reminder_${user.uid}_${today}`;
+    if (localStorage.getItem(key)) return;
+    localStorage.setItem(key, '1');
+    addDoc(collection(db, 'notifications'), {
+      toUid: user.uid, fromUid: 'system', fromName: 'Linq', fromPhoto: '',
+      type: 'system',
+      message: "Today's Linqle is live — guess the word and earn stickers!",
+      isRead: false, createdAt: serverTimestamp(),
+    }).catch(() => {});
+  }, [user, profile]);
+
+  // 8am daily vote reminder — once per day after 8am if not yet voted today
+  useEffect(() => {
+    if (!user || !profile || !['consumer', 'admin'].includes(profile.role)) return;
+    const now = new Date();
+    if (now.getHours() < 8) return;
+    const today = now.toISOString().slice(0, 10);
+    const key = `vote_reminder_${user.uid}_${today}`;
+    if (localStorage.getItem(key)) return;
+    localStorage.setItem(key, '1');
+    getDoc(doc(db, 'daily_vote', today, 'votes', user.uid)).then(snap => {
+      if (snap.exists()) return;
+      addDoc(collection(db, 'notifications'), {
+        toUid: user.uid, fromUid: 'system', fromName: 'Linq', fromPhoto: '',
+        type: 'system',
+        message: "Today's daily vote is live — cast your vote and win stickers!",
+        isRead: false, createdAt: serverTimestamp(),
+      }).catch(() => {});
+    }).catch(() => {});
+  }, [user, profile]);
+
+  // 5pm sticker reminder — once per day after 5pm if Linqle or daily vote not yet done
+  useEffect(() => {
+    if (!user || !profile || !['consumer', 'admin'].includes(profile.role)) return;
+    const now = new Date();
+    if (now.getHours() < 17) return;
+    const today = now.toISOString().slice(0, 10);
+    const key = `sticker_reminder_${user.uid}_${today}`;
+    if (localStorage.getItem(key)) return;
+    localStorage.setItem(key, '1');
+    const linqleDone = profile.linqleLastCompleted === today;
+    getDoc(doc(db, 'daily_vote', today, 'votes', user.uid)).then(snap => {
+      const voteDone = snap.exists();
+      if (linqleDone && voteDone) return;
+      const missing: string[] = [];
+      if (!linqleDone) missing.push('Linqle');
+      if (!voteDone) missing.push('the daily vote');
+      addDoc(collection(db, 'notifications'), {
+        toUid: user.uid, fromUid: 'system', fromName: 'Linq', fromPhoto: '',
+        type: 'system',
+        message: `Still time to earn stickers today — play ${missing.join(' and ')} before it closes!`,
+        isRead: false, createdAt: serverTimestamp(),
+      }).catch(() => {});
+    }).catch(() => {});
+  }, [user, profile]);
+
+  // Daily vote results — once per day when the vote has closed with a winner
+  useEffect(() => {
+    if (!user || !profile || !['consumer', 'admin'].includes(profile.role)) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const key = `vote_results_${user.uid}_${today}`;
+    if (localStorage.getItem(key)) return;
+    getDoc(doc(db, 'daily_vote', today)).then(async voteSnap => {
+      if (!voteSnap.exists()) return;
+      const data = voteSnap.data() as DailyVoteData;
+      if (!data.closed || data.winner === null) return;
+      localStorage.setItem(key, '1');
+      const winnerLabel = data.options[data.winner] ?? 'the winner';
+      const userVoteSnap = await getDoc(doc(db, 'daily_vote', today, 'votes', user.uid));
+      let message: string;
+      if (userVoteSnap.exists() && userVoteSnap.data().optionIdx === data.winner) {
+        message = `You picked the winner! "${winnerLabel}" won today's vote.`;
+      } else if (userVoteSnap.exists()) {
+        message = `Today's vote is in — "${winnerLabel}" won.`;
+      } else {
+        message = `Today's vote is closed — "${winnerLabel}" was the winner.`;
+      }
+      addDoc(collection(db, 'notifications'), {
+        toUid: user.uid, fromUid: 'system', fromName: 'Linq', fromPhoto: '',
+        type: 'system', message, isRead: false, createdAt: serverTimestamp(),
+      }).catch(() => {});
+    }).catch(() => {});
+  }, [user, profile]);
+
+  // Near vendor — notify when within 300m of a vendor with an active stamp card
+  useEffect(() => {
+    if (!user || !profile || !['consumer', 'admin'].includes(profile.role)) return;
+    const activeCards = userCards.filter(c => !c.isArchived && !c.isHidden && !c.vendorDisabled);
+    if (activeCards.length === 0 || !navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(async pos => {
+      const { latitude: userLat, longitude: userLng } = pos.coords;
+      const today = new Date().toISOString().slice(0, 10);
+      const storeIds = Array.from(new Set(activeCards.map(c => c.store_id))) as string[];
+      for (const storeId of storeIds) {
+        const notifKey = `nearby_vendor_${user.uid}_${storeId}_${today}`;
+        if (localStorage.getItem(notifKey)) continue;
+        try {
+          const storeSnap = await getDoc(doc(db, 'stores', storeId));
+          if (!storeSnap.exists()) continue;
+          const store = { id: storeSnap.id, ...storeSnap.data() } as StoreProfile;
+          const locations: Array<{ lat?: number; lng?: number }> = [
+            { lat: store.lat, lng: store.lng },
+            ...(store.locations || []),
+          ];
+          const nearby = locations.some(loc => {
+            if (!loc.lat || !loc.lng) return false;
+            return haversineKm(userLat, userLng, loc.lat, loc.lng) <= 0.3;
+          });
+          if (!nearby) continue;
+          localStorage.setItem(notifKey, '1');
+          const card = activeCards.find(c => c.store_id === storeId);
+          const stampsNeeded = store.stamps_required_for_reward || 10;
+          const stampsLeft = stampsNeeded - (card?.current_stamps || 0);
+          addDoc(collection(db, 'notifications'), {
+            toUid: user.uid, fromUid: 'system', fromName: store.name || 'Linq',
+            fromPhoto: store.logoUrl || '', type: 'system', storeId,
+            message: stampsLeft > 0
+              ? `You're near ${store.name}! Pop in to collect your stamp — ${stampsLeft} to go for a reward.`
+              : `You're near ${store.name}! You have stamps ready to collect.`,
+            isRead: false, createdAt: serverTimestamp(),
+          }).catch(() => {});
+        } catch { /* ignore */ }
+      }
+    }, () => { /* geolocation denied — silent */ }, { timeout: 10000 });
+  }, [user, userCards]);
+
   // Listen to profile changes
   useEffect(() => {
     if (!user || !profileCollection) return;
