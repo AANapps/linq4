@@ -2201,6 +2201,14 @@ export default function App() {
           icon={['consumer','admin'].includes(profile?.role ?? '') ? <Compass /> : <Plus />}
           label={['consumer','admin'].includes(profile?.role ?? '') ? 'Discovery' : 'Issue'}
         />
+        {['consumer','admin'].includes(profile?.role ?? '') && (
+          <NavButton
+            active={activeTab === 'polls'}
+            onClick={() => { setActiveTab('polls'); setViewingStore(null); setViewingUser(null); }}
+            icon={<PollsTabIcon />}
+            label="Polls"
+          />
+        )}
         <NavButton
           active={activeTab === 'profile'}
           onClick={() => { setActiveTab('profile'); setViewingStore(null); setViewingUser(null); }}
@@ -12528,6 +12536,16 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         />
       )}
 
+      {activeTab === 'polls' && (
+        <PollsScreen
+          currentUser={user}
+          currentProfile={profile}
+          onViewUser={onViewUser}
+          onViewStore={onViewStore}
+          onPackReady={(stickers) => { setPendingPack(stickers); setPendingPackCardId(null); }}
+        />
+      )}
+
       {activeTab === 'profile' && (
         <ProfileScreen
           profile={profile}
@@ -21568,6 +21586,99 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
             })}
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function PollsTabIcon({ size }: { size?: number }) {
+  const s = size || 24;
+  return (
+    <div className="relative">
+      <svg viewBox="0 0 24 24" width={s} height={s} fill="currentColor">
+        <rect x="2" y="14" width="5" height="8" rx="1.5" />
+        <rect x="9.5" y="8" width="5" height="14" rx="1.5" />
+        <rect x="17" y="3" width="5" height="19" rx="1.5" />
+      </svg>
+      <span className="tab-shake absolute -top-1.5 -right-3 bg-red-500 text-white text-[6px] font-black px-1 py-px rounded leading-none tracking-wide">New</span>
+    </div>
+  );
+}
+
+function PollsScreen({ currentUser, currentProfile, onViewUser, onViewStore, onPackReady }: {
+  currentUser: FirebaseUser;
+  currentProfile: UserProfile | null;
+  onViewUser: (u: UserProfile) => void;
+  onViewStore?: (s: StoreProfile) => void;
+  onPackReady?: (s: CollectibleSticker[]) => void;
+}) {
+  const [polls, setPolls] = useState<GlobalPost[]>([]);
+
+  useEffect(() => {
+    const q = query(collection(db, 'global_posts'), where('postType', '==', 'poll'), orderBy('createdAt', 'desc'), limit(50));
+    return onSnapshot(q, snap => {
+      setPolls(snap.docs.map(d => ({ id: d.id, ...d.data() } as GlobalPost)));
+    });
+  }, []);
+
+  const handleLike = async (post: GlobalPost) => {
+    if (!currentUser) return;
+    const liked = (post.likedBy || []).includes(currentUser.uid);
+    await updateDoc(doc(db, 'global_posts', post.id), {
+      likedBy: liked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid),
+      likesCount: liked ? Math.max(0, (post.likesCount || 0) - 1) : (post.likesCount || 0) + 1,
+    });
+  };
+
+  const handleVote = async (post: GlobalPost, idx: number) => {
+    if (!currentUser) return;
+    const votes = post.pollVotes || {};
+    if (Object.keys(votes).some(k => (votes[k] || []).includes(currentUser.uid))) return;
+    await updateDoc(doc(db, 'global_posts', post.id), { [`pollVotes.${idx}`]: arrayUnion(currentUser.uid) });
+  };
+
+  return (
+    <div className="flex flex-col min-h-full pb-24">
+      <div className="px-4 pt-6 pb-3">
+        <h1 className="font-display text-2xl font-black text-brand-navy">Polls</h1>
+      </div>
+
+      {/* Daily Vote — full width */}
+      <div className="px-4 mb-5">
+        <div className="flex h-36">
+          <DailyVoteFYPCard
+            currentUser={currentUser}
+            currentProfile={currentProfile}
+            onPackReady={onPackReady}
+          />
+        </div>
+      </div>
+
+      {/* Community polls */}
+      {polls.length > 0 && (
+        <div className="px-4 mb-2">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/50">Community Polls</p>
+        </div>
+      )}
+      <div>
+        {polls.map(post => (
+          <FeedPostCard
+            key={post.id}
+            post={post}
+            currentUser={currentUser}
+            currentProfile={currentProfile}
+            onViewUser={onViewUser}
+            onViewStore={onViewStore}
+            onLike={handleLike}
+            onVote={handleVote}
+          />
+        ))}
+        {polls.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+            <p className="text-brand-navy/40 text-sm font-bold">No polls yet</p>
+            <p className="text-brand-navy/30 text-xs mt-1">Community polls will appear here</p>
+          </div>
+        )}
       </div>
     </div>
   );
