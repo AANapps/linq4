@@ -29242,6 +29242,25 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
 
       {activeSubTab === 'polls' ? (
         <div className="space-y-0 -mx-0">
+          {/* Promo card */}
+          <div className="px-2 mb-4">
+            <motion.div
+              className="relative rounded-[1.5rem] overflow-hidden px-5 py-4 flex flex-col gap-1.5"
+              style={{ background: 'linear-gradient(135deg,#6d28d9,#7c3aed,#a855f7,#ec4899,#f97316,#6d28d9)', backgroundSize: '300% 300%', animation: 'poll-gradient-shift 4s ease infinite' }}
+            >
+              <span className="card-shine-ray opacity-20 pointer-events-none" />
+              <p className="relative z-10 text-white font-black text-base leading-snug">Complete polls to win sticker packs</p>
+              <p className="relative z-10 text-white/75 text-xs leading-relaxed">
+                Stickers can be used to fill your board and win prizes in{' '}
+                <button
+                  onClick={() => onViewChallenges?.()}
+                  className="font-black text-white underline underline-offset-2 active:opacity-70 transition-opacity"
+                >
+                  Challenges
+                </button>
+              </p>
+            </motion.div>
+          </div>
           {/* Daily Vote — full width, only when a poll exists today */}
           {hasDailyVote && currentUser && currentProfile && (
             <div className="px-2 mb-5">
