@@ -1275,7 +1275,7 @@ export default function App() {
     }, () => {});
   }, [user]);
 
-  // Daily stamp reminder — fires once per day per device
+  // Daily stamp reminder — only fires if user is within 5 stamps of a reward on any active card
   useEffect(() => {
     if (!user || userCards.length === 0) return;
     const today = new Date().toISOString().slice(0, 10);
@@ -1288,79 +1288,45 @@ export default function App() {
       const ts = c.last_tap_timestamp.toDate?.() || new Date(c.last_tap_timestamp);
       return ts.toISOString().slice(0, 10) === today;
     });
-    if (!stampedToday) {
-      localStorage.setItem(key, '1');
-      addDoc(collection(db, 'notifications'), {
-        toUid: user.uid,
-        fromUid: 'system',
-        fromName: 'Linq',
-        fromPhoto: '',
-        type: 'system',
-        message: `Don't forget to collect your stamps today! You have ${activeCards.length} active card${activeCards.length > 1 ? 's' : ''}.`,
-        isRead: false,
-        createdAt: serverTimestamp(),
-      }).catch(() => {});
-    }
-  }, [user, userCards]);
-
-  // 8am Linqle reminder — once per day after 8am if not yet played today
-  useEffect(() => {
-    if (!user || !profile || !['consumer', 'admin'].includes(profile.role)) return;
-    const now = new Date();
-    if (now.getHours() < 8) return;
-    const today = now.toISOString().slice(0, 10);
-    if (profile.linqleLastCompleted === today) return;
-    const key = `linqle_reminder_${user.uid}_${today}`;
-    if (localStorage.getItem(key)) return;
+    if (stampedToday) return;
+    // Only notify if close to a reward (within 5 stamps)
+    const closeCard = activeCards.find(c => {
+      const required = (c as any).stamps_required_for_reward || 10;
+      const current = c.current_stamps || 0;
+      return (required - current) <= 5 && current > 0;
+    });
+    if (!closeCard) return;
+    const required = (closeCard as any).stamps_required_for_reward || 10;
+    const left = required - (closeCard.current_stamps || 0);
     localStorage.setItem(key, '1');
     addDoc(collection(db, 'notifications'), {
       toUid: user.uid, fromUid: 'system', fromName: 'Linq', fromPhoto: '',
       type: 'system',
-      message: "Today's Linqle is live — guess the word and earn stickers!",
+      message: `You're only ${left} stamp${left !== 1 ? 's' : ''} away from a reward — pop in today!`,
       isRead: false, createdAt: serverTimestamp(),
     }).catch(() => {});
-  }, [user, profile]);
+  }, [user, userCards]);
 
-  // 8am daily vote reminder — once per day after 8am if not yet voted today
+  // 8am daily activities reminder — one combined notif for Linqle + vote, after 8am, once per day
   useEffect(() => {
     if (!user || !profile || !['consumer', 'admin'].includes(profile.role)) return;
     const now = new Date();
     if (now.getHours() < 8) return;
     const today = now.toISOString().slice(0, 10);
-    const key = `vote_reminder_${user.uid}_${today}`;
-    if (localStorage.getItem(key)) return;
-    localStorage.setItem(key, '1');
-    getDoc(doc(db, 'daily_vote', today, 'votes', user.uid)).then(snap => {
-      if (snap.exists()) return;
-      addDoc(collection(db, 'notifications'), {
-        toUid: user.uid, fromUid: 'system', fromName: 'Linq', fromPhoto: '',
-        type: 'system',
-        message: "Today's daily vote is live — cast your vote and win stickers!",
-        isRead: false, createdAt: serverTimestamp(),
-      }).catch(() => {});
-    }).catch(() => {});
-  }, [user, profile]);
-
-  // 5pm sticker reminder — once per day after 5pm if Linqle or daily vote not yet done
-  useEffect(() => {
-    if (!user || !profile || !['consumer', 'admin'].includes(profile.role)) return;
-    const now = new Date();
-    if (now.getHours() < 17) return;
-    const today = now.toISOString().slice(0, 10);
-    const key = `sticker_reminder_${user.uid}_${today}`;
+    const key = `daily_activities_reminder_${user.uid}_${today}`;
     if (localStorage.getItem(key)) return;
     localStorage.setItem(key, '1');
     const linqleDone = profile.linqleLastCompleted === today;
     getDoc(doc(db, 'daily_vote', today, 'votes', user.uid)).then(snap => {
       const voteDone = snap.exists();
       if (linqleDone && voteDone) return;
-      const missing: string[] = [];
-      if (!linqleDone) missing.push('Linqle');
-      if (!voteDone) missing.push('the daily vote');
+      const pending: string[] = [];
+      if (!linqleDone) pending.push('Linqle');
+      if (!voteDone) pending.push('the daily vote');
       addDoc(collection(db, 'notifications'), {
         toUid: user.uid, fromUid: 'system', fromName: 'Linq', fromPhoto: '',
         type: 'system',
-        message: `Still time to earn stickers today — play ${missing.join(' and ')} before it closes!`,
+        message: `Today's ${pending.join(' and ')} ${pending.length > 1 ? 'are' : 'is'} live — play to earn stickers!`,
         isRead: false, createdAt: serverTimestamp(),
       }).catch(() => {});
     }).catch(() => {});
