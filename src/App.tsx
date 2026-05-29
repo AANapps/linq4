@@ -13738,12 +13738,14 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady, initialQty }: {
   const rafRef = useRef<number>(0);
   const detectorRef = useRef<any>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const scanningRef = useRef(false); // guards against ghost ticks resuming after stopCamera
   const hasBarcodeDetector = typeof window !== 'undefined' && 'BarcodeDetector' in window;
   const limit = card.stamps_required || store?.stamps_required_for_reward || 10;
   const remaining = Math.max(1, limit - (card.current_stamps || 0));
   const cardTheme = store?.theme || card.storeTheme || '#2563EB';
 
   const stopCamera = () => {
+    scanningRef.current = false; // kill any tick that resumes mid-await
     cancelAnimationFrame(rafRef.current);
     streamRef.current?.getTracks().forEach(t => t.stop());
     streamRef.current = null;
@@ -13807,32 +13809,17 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady, initialQty }: {
     await processQR(decoded.storeId);
   };
 
-  const startCamera = async () => {
-    setScanState('scanning');
-    setCamError('');
-    try {
-      if (hasBarcodeDetector) {
-        detectorRef.current = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
-      }
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play().then(tick);
-      }
-    } catch (err: any) {
-      setScanState('error');
-      setStatusMsg(err?.message || 'Camera unavailable');
-    }
-  };
-
   const tick = async () => {
+    if (!scanningRef.current) return; // ghost tick guard — stop if camera was closed mid-await
     const video = videoRef.current;
-    if (!video || video.readyState < 2) { rafRef.current = requestAnimationFrame(tick); return; }
-
+    if (!video || video.readyState < 2) {
+      if (scanningRef.current) rafRef.current = requestAnimationFrame(tick);
+      return;
+    }
     try {
       if (hasBarcodeDetector && detectorRef.current) {
         const barcodes = await detectorRef.current.detect(video);
+        if (!scanningRef.current) return; // check again after async detect
         for (const b of barcodes) { await handleRawValue(b.rawValue as string); return; }
       } else {
         // jsQR fallback for iOS / browsers without BarcodeDetector
@@ -13845,13 +13832,37 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady, initialQty }: {
             ctx.drawImage(video, 0, 0);
             const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const jsQR = (await import('jsqr')).default;
+            if (!scanningRef.current) return; // check again after async import
             const result = jsQR(imgData.data, imgData.width, imgData.height);
             if (result) { await handleRawValue(result.data); return; }
           }
         }
       }
     } catch { /* non-fatal */ }
-    rafRef.current = requestAnimationFrame(tick);
+    if (scanningRef.current) rafRef.current = requestAnimationFrame(tick);
+  };
+
+  const startCamera = async () => {
+    stopCamera(); // always reset first — clears any ghost ticks from a previous session
+    scanningRef.current = true;
+    setScanState('scanning');
+    setCamError('');
+    try {
+      if (hasBarcodeDetector) {
+        detectorRef.current = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      if (!scanningRef.current) { stream.getTracks().forEach(t => t.stop()); return; } // was cancelled during getUserMedia
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play().catch(() => {}); // don't chain tick — play rejection shouldn't block scanning
+        tick(); // start tick immediately; readyState guard handles not-yet-playing state
+      }
+    } catch (err: any) {
+      setScanState('error');
+      setStatusMsg(err?.message || 'Camera unavailable');
+    }
   };
 
   useEffect(() => { startCamera(); }, []);
@@ -13883,7 +13894,7 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady, initialQty }: {
         <div className="bg-black/70 backdrop-blur-sm px-6 pt-5 pb-10 rounded-t-3xl">
           <p className="text-white/80 text-sm text-center font-bold mb-2">Point at the store's QR code</p>
           {camError && <p className="text-red-400 text-xs text-center mb-2">{camError}</p>}
-          <button onClick={() => { stopCamera(); setScanState('idle'); }}
+          <button onClick={handleClose}
             className="w-full text-white/70 text-sm font-bold py-3">Cancel</button>
         </div>
       </motion.div>
@@ -13970,6 +13981,7 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
   };
 
   const startScan = async () => {
+    abortRef.current?.abort();
     if (!hasNFC) { setScanState('error'); setStatusMsg('NFC not supported on this device.'); return; }
     setScanState('scanning');
     const ctrl = new AbortController(); abortRef.current = ctrl;
@@ -14167,11 +14179,13 @@ function VisitScanSheet({ card, store, onClose, onPackReady, initialQty }: { car
   const rafRef = useRef<number>(0);
   const detectorRef = useRef<any>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const scanningRef = useRef(false);
   const hasBarcodeDetector = typeof window !== 'undefined' && 'BarcodeDetector' in window;
   const color = store?.membershipColor || '#0f4c81';
   const membershipVisits = card.membership_visits ?? 0;
 
   const stopCamera = () => {
+    scanningRef.current = false;
     cancelAnimationFrame(rafRef.current);
     streamRef.current?.getTracks().forEach(t => t.stop());
     streamRef.current = null;
@@ -14240,11 +14254,16 @@ function VisitScanSheet({ card, store, onClose, onPackReady, initialQty }: { car
   };
 
   const tickQR = async () => {
+    if (!scanningRef.current) return;
     const video = videoRef.current;
-    if (!video || video.readyState < 2) { rafRef.current = requestAnimationFrame(tickQR); return; }
+    if (!video || video.readyState < 2) {
+      if (scanningRef.current) rafRef.current = requestAnimationFrame(tickQR);
+      return;
+    }
     try {
       if (hasBarcodeDetector && detectorRef.current) {
         const barcodes = await detectorRef.current.detect(video);
+        if (!scanningRef.current) return;
         for (const b of barcodes) { await handleQRValue(b.rawValue as string); return; }
       } else {
         const canvas = canvasRef.current;
@@ -14255,28 +14274,33 @@ function VisitScanSheet({ card, store, onClose, onPackReady, initialQty }: { car
             ctx.drawImage(video, 0, 0);
             const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const jsQR = (await import('jsqr')).default;
+            if (!scanningRef.current) return;
             const result = jsQR(imgData.data, imgData.width, imgData.height);
             if (result) { await handleQRValue(result.data); return; }
           }
         }
       }
     } catch { /* non-fatal */ }
-    rafRef.current = requestAnimationFrame(tickQR);
+    if (scanningRef.current) rafRef.current = requestAnimationFrame(tickQR);
   };
 
   const startQRCamera = async () => {
+    stopCamera();
+    scanningRef.current = true;
     setScanMode('qr'); setScanState('scanning');
     try {
       if (hasBarcodeDetector) detectorRef.current = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      if (!scanningRef.current) { stream.getTracks().forEach(t => t.stop()); return; }
       streamRef.current = stream;
-      if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play().then(tickQR); }
+      if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play().catch(() => {}); tickQR(); }
     } catch (err: any) {
       setScanState('error'); setStatusMsg(err?.message || 'Camera unavailable');
     }
   };
 
   const startScan = async () => {
+    abortRef.current?.abort();
     if (!hasNFC) { setScanState('error'); setStatusMsg('NFC not supported on this device.'); return; }
     setScanState('scanning');
     const ctrl = new AbortController(); abortRef.current = ctrl;
