@@ -19817,7 +19817,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
     const userPhoto = auth.currentUser?.photoURL || '';
     const rewardLabel = store?.rewardTiers?.length ? store.rewardTiers[store.rewardTiers.length - 1].reward : (store?.reward || 'a reward');
     logEvent('redemption', card.user_id, { cardId: card.id, storeId: card.store_id, rewardLabel, tiersCompleted: numTiers, cardType: 'loyalty', redeemedBy: 'staff' });
-    postActivity(uid, userName, userPhoto, `${userName} just got ${rewardLabel} at ${store?.name || 'a store'}!`, '🎁');
+    postActivity(uid, userName, userPhoto, `${userName} just earned a free ${rewardLabel}!`, '🎁');
   };
 
   const handleDelete = async (e: React.MouseEvent) => {
@@ -20238,7 +20238,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
       logEvent('redemption', card.user_id, { cardId: card.id, storeId: card.store_id, pointsUsed: pointsToUse, rewardLabel: selectedReward.reward, cardType: 'sub' });
       setRedeemSuccess(selectedReward.reward);
       const u = auth.currentUser;
-      if (u) postActivity(u.uid, u.displayName || 'Someone', u.photoURL || '', `${u.displayName || 'Someone'} redeemed ${pointsToUse} points at ${store?.name || 'a store'}!`, '⭐');
+      if (u) postActivity(u.uid, u.displayName || 'Someone', u.photoURL || '', `${u.displayName || 'Someone'} just earned a free ${selectedReward.reward}!`, '⭐');
       setTimeout(() => {
         setRedeemSuccess(null);
         setSelectedReward(null);
