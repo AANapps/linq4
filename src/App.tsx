@@ -7571,6 +7571,21 @@ function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
   const [saving, setSaving] = useState(false);
   const todayStr = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
 
+  const nextAvailableStr = (w: string[], sd: string) => {
+    const base = new Date(sd || todayStr);
+    base.setDate(base.getDate() + w.length);
+    return `${base.getFullYear()}-${String(base.getMonth()+1).padStart(2,'0')}-${String(base.getDate()).padStart(2,'0')}`;
+  };
+
+  const [selectedDate, setSelectedDate] = useState(todayStr);
+
+  const dateOptions = Array.from({ length: 90 }, (_, i) => {
+    const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() + i);
+    const val = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const label = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+    return { val, label };
+  });
+
   useEffect(() => {
     getDoc(doc(db, 'linqle', 'queue')).then(snap => {
       if (snap.exists()) {
@@ -7585,8 +7600,10 @@ function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
           loadedStart = todayStr;
           setDoc(doc(db, 'linqle', 'queue'), { words: rotated, startDate: loadedStart });
           setWords(rotated);
+          setSelectedDate(nextAvailableStr(rotated, loadedStart));
         } else {
           setWords(loadedWords);
+          setSelectedDate(nextAvailableStr(loadedWords, loadedStart || todayStr));
         }
         setStartDate(loadedStart || todayStr);
       }
@@ -7608,8 +7625,20 @@ function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
     const clean = input.trim().toUpperCase();
     if (clean.length !== 5 || !/^[A-Z]+$/.test(clean) || words.includes(clean)) return;
     const newStartDate = startDate || todayStr;
-    saveQueue([...words, clean], newStartDate);
+    // Compute insert index from selectedDate
+    const s = new Date(newStartDate); s.setHours(0,0,0,0);
+    const sel = new Date(selectedDate); sel.setHours(0,0,0,0);
+    const targetIdx = Math.floor((sel.getTime() - s.getTime()) / 86400000);
+    let updated: string[];
+    if (targetIdx < 0 || targetIdx >= words.length) {
+      updated = [...words, clean]; // append (auto-assign or beyond queue)
+    } else {
+      updated = [...words];
+      updated.splice(targetIdx, 0, clean); // insert, shifting later words +1 day
+    }
+    saveQueue(updated, newStartDate);
     setInput('');
+    setSelectedDate(nextAvailableStr(updated, newStartDate));
   };
 
   const handleRemove = async (wordIdx: number) => {
@@ -7639,7 +7668,9 @@ function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
         await deleteDoc(d.ref);
       }));
     } catch (e) { console.error('score delete failed', e); }
-    saveQueue(words.filter((_, idx) => idx !== wordIdx), startDate);
+    const updated = words.filter((_, idx) => idx !== wordIdx);
+    saveQueue(updated, startDate);
+    setSelectedDate(nextAvailableStr(updated, startDate));
   };
 
   const todayQueueIdx = startDate ? (() => {
@@ -7648,12 +7679,15 @@ function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
     return Math.floor((t.getTime() - s.getTime()) / 86400000);
   })() : 0;
 
-  const nextAssignedDate = (() => {
-    const base = new Date(startDate || todayStr);
-    base.setDate(base.getDate() + words.length);
-    return base.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
-  })();
+  const selectedQueueIdx = startDate ? (() => {
+    const s = new Date(startDate); s.setHours(0,0,0,0);
+    const sel = new Date(selectedDate); sel.setHours(0,0,0,0);
+    return Math.floor((sel.getTime() - s.getTime()) / 86400000);
+  })() : -1;
 
+  const scheduledWord = (selectedQueueIdx >= 0 && selectedQueueIdx < words.length) ? words[selectedQueueIdx] : null;
+  const selectedIsToday = selectedDate === todayStr;
+  const isAutoSlot = selectedDate === nextAvailableStr(words, startDate || todayStr);
   const todayWord = (todayQueueIdx >= 0 && todayQueueIdx < words.length) ? words[todayQueueIdx] : null;
   const inputClean = input.trim().toUpperCase();
   const inputValid = inputClean.length === 5 && /^[A-Z]+$/.test(inputClean) && !words.includes(inputClean);
@@ -7681,9 +7715,38 @@ function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
               : <p className="text-xs text-amber-500">Add words below</p>}
           </div>
 
+          {/* Date selector */}
+          <div>
+            <div className="flex items-center gap-2 mb-1.5">
+              <p className="text-[10px] font-bold text-brand-navy/80 uppercase tracking-widest">Schedule for date</p>
+              {isAutoSlot && <span className="text-[9px] font-bold text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded-full uppercase tracking-wide">Auto</span>}
+            </div>
+            <select
+              value={selectedDate}
+              onChange={e => setSelectedDate(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-2xl bg-white border border-brand-navy/10 text-sm text-brand-navy outline-none"
+            >
+              {dateOptions.map(o => (
+                <option key={o.val} value={o.val}>
+                  {o.val === todayStr ? `Today — ${o.label}` : o.val === nextAvailableStr(words, startDate || todayStr) ? `Next slot — ${o.label}` : o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Scheduled word for selected date */}
+          <div className={`px-4 py-3 rounded-2xl flex items-center justify-between ${scheduledWord ? (selectedIsToday ? 'bg-green-50 border border-green-200' : 'bg-brand-navy/4 border border-brand-navy/10') : 'bg-blue-50 border border-blue-200'}`}>
+            <p className={`text-xs font-semibold ${scheduledWord ? (selectedIsToday ? 'text-green-700' : 'text-brand-navy/75') : 'text-blue-600'}`}>
+              {scheduledWord ? (selectedIsToday ? "Today's word" : 'Scheduled word') : (isAutoSlot ? 'Next available slot' : 'No word — will insert here')}
+            </p>
+            {scheduledWord
+              ? <p className={`font-black tracking-[0.25em] ${selectedIsToday ? 'text-green-700' : 'text-brand-navy'}`}>{scheduledWord}</p>
+              : <p className="text-xs text-blue-500">{isAutoSlot ? 'Add a word below' : '↓ inserting shifts later words +1 day'}</p>}
+          </div>
+
           {/* Add word */}
           <div>
-            <p className="text-[10px] font-bold text-brand-navy/80 mb-1.5 uppercase tracking-widest">Add to queue</p>
+            <p className="text-[10px] font-bold text-brand-navy/80 mb-1.5 uppercase tracking-widest">Add word</p>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -7699,9 +7762,6 @@ function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
                 {saving ? '…' : 'Add'}
               </button>
             </div>
-            {inputValid && (
-              <p className="text-[10px] text-brand-navy/60 mt-1.5 px-1">Scheduled for {nextAssignedDate}</p>
-            )}
           </div>
 
           {/* Queue list */}
