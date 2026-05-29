@@ -27596,7 +27596,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
         )}
 
         {post.postType === 'poll' && post.pollOptions && (
-          <div className="space-y-2 pt-1">
+          <div className="space-y-2 mt-2 rounded-2xl p-3" style={{ background: 'linear-gradient(135deg, #3730a3 0%, #6d28d9 50%, #1d4ed8 100%)' }}>
             {post.pollOptions.map((opt, i) => {
               const voteCount = (post.pollVotes?.[String(i)] || []).length + (post.pollAdminVotes?.[String(i)] || 0);
               const pct = totalDisplayVotes > 0 ? Math.round((voteCount / totalDisplayVotes) * 100) : 0;
@@ -27613,12 +27613,12 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                   }}
                   disabled={userVoteKey !== undefined && !isClosed}
                   className={cn(
-                    "w-full text-left rounded-xl overflow-hidden border-2 transition-all active:scale-[0.98]",
+                    "w-full text-left rounded-xl overflow-hidden border transition-all active:scale-[0.98] bg-white/10",
                     isWinner
                       ? post.pollType === 'correct' ? "border-emerald-400" : "border-amber-400"
-                      : voted ? "border-violet-500" : "border-black/35",
-                    !showResults ? "hover:border-violet-300 cursor-pointer" : "",
-                    isClosed && !voted && !isWinner ? "opacity-70" : ""
+                      : voted ? "border-white" : "border-white/35",
+                    !showResults ? "hover:border-white/70 cursor-pointer" : "",
+                    isClosed && !voted && !isWinner ? "opacity-60" : ""
                   )}
                 >
                   <div className="relative px-4 py-2.5 min-h-[42px] flex items-center">
@@ -27631,12 +27631,12 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                         style={{
                           borderRadius: '10px',
                           background: voted
-                            ? 'linear-gradient(90deg, #7c3aed 0%, #4f46e5 45%, #2563eb 100%)'
+                            ? 'rgba(255,255,255,0.28)'
                             : isWinner
                             ? post.pollType === 'correct'
                               ? 'linear-gradient(90deg, #10b981, #34d399)'
                               : 'linear-gradient(90deg, #fbbf24, #f59e0b)'
-                            : 'rgba(15,23,42,0.05)',
+                            : 'rgba(255,255,255,0.08)',
                         }}
                       >
                         {voted && <PollVotedFillDots />}
@@ -27644,22 +27644,23 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                     )}
                     <div className="relative flex items-center justify-between w-full gap-2">
                       <div className="flex items-center gap-2">
-                        {isWinner && post.pollType === 'correct' && <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />}
-                        {isWinner && post.pollType !== 'correct' && <Trophy size={14} className="text-amber-500 shrink-0" />}
-                        {!isWinner && voted && <CheckCircle2 size={14} className="text-violet-500 shrink-0" />}
+                        {isWinner && post.pollType === 'correct' && <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />}
+                        {isWinner && post.pollType !== 'correct' && <Trophy size={14} className="text-amber-400 shrink-0" />}
+                        {!isWinner && voted && <CheckCircle2 size={14} className="text-white/80 shrink-0" />}
                         <span className={cn(
-                          "text-sm font-medium",
+                          "text-sm font-medium text-white",
                           (voted || isWinner) && "font-bold",
-                          voted ? "text-white drop-shadow-sm" : ""
                         )}>{opt.text}</span>
                       </div>
                       {showResults ? (
                         <span className={cn(
                           "text-xs font-bold shrink-0",
-                          isWinner ? "text-amber-600" : voted ? "text-white drop-shadow-sm" : "text-brand-navy/60"
+                          isWinner
+                            ? post.pollType === 'correct' ? "text-emerald-300" : "text-amber-300"
+                            : "text-white/80"
                         )}>{pct}%</span>
                       ) : (
-                        <span className="text-xs text-brand-navy/25 shrink-0">—</span>
+                        <span className="text-xs text-white/30 shrink-0">—</span>
                       )}
                     </div>
                   </div>
@@ -27668,7 +27669,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
             })}
             {/* Vote-to-reveal hint — admin polls only */}
             {isAdminPoll && userVoteKey === undefined && !isClosed && (
-              <p className="text-[10px] text-brand-navy/40 text-center font-medium pt-0.5">Vote to see results</p>
+              <p className="text-[10px] text-white/50 text-center font-medium pt-0.5">Vote to see results</p>
             )}
             {/* Admin poll: winner claim button */}
             {isAdminPoll && userWon && !alreadyClaimed && currentUser && (
@@ -27683,19 +27684,19 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                     await issueUserStickers(currentUser.uid, name, 3);
                   } catch {} finally { setClaimingStickers(false); }
                 }}
-                className="w-full py-3 rounded-xl font-bold text-sm text-white poll-active-bg flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-md"
+                className="w-full py-3 rounded-xl font-bold text-sm text-white bg-white/20 border border-white/30 flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
               >
                 <Trophy size={16} />
                 {claimingStickers ? 'Collecting…' : 'You Won! Collect Stickers 🎉'}
               </button>
             )}
             {isAdminPoll && userWon && alreadyClaimed && (
-              <div className="w-full py-2.5 rounded-xl border border-brand-gold/30 text-center text-sm font-bold text-brand-gold/70">
+              <div className="w-full py-2.5 rounded-xl border border-white/25 text-center text-sm font-bold text-white/60">
                 Stickers claimed ✓
               </div>
             )}
             {isClosed && (
-              <p className="text-[10px] text-brand-navy/40 text-center font-medium pt-0.5">Poll closed · {totalDisplayVotes} votes</p>
+              <p className="text-[10px] text-white/50 text-center font-medium pt-0.5">Poll closed · {totalDisplayVotes} votes</p>
             )}
           </div>
         )}
