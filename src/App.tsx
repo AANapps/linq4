@@ -17065,6 +17065,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                   { icon: <Gift size={18} className="text-rose-500" />, label: 'Reward Tracking', desc: 'Every reward given and redeemed' },
                   { icon: <MessageSquare size={18} className="text-amber-500" />, label: 'Broadcast', desc: 'Message all your customers at once' },
                   { icon: <Stamp size={18} className="text-brand-gold" />, label: 'Issue Stamps', desc: 'Via QR, NFC, or manual entry' },
+                  { icon: <Zap size={18} className="text-indigo-500" />, label: 'POS Integration', desc: 'Auto-stamp at checkout via your till system' },
                 ].map(({ icon, label, desc }) => (
                   <div key={label} className="rounded-[1.25rem] border border-brand-navy/8 bg-brand-bg p-4">
                     <div className="mb-2">{icon}</div>
