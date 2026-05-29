@@ -7549,79 +7549,78 @@ function linqleDayIndex(dateStr: string) {
   const d = new Date(dateStr); d.setHours(0, 0, 0, 0);
   return Math.floor((d.getTime() - LINQLE_EPOCH) / 86400000);
 }
-function linqleTodayWord(words: string[]) {
+function linqleTodayWord(words: string[], startDate?: string) {
   if (!words.length) return null;
   const today = new Date(); today.setHours(0, 0, 0, 0);
+  if (startDate) {
+    const start = new Date(startDate); start.setHours(0, 0, 0, 0);
+    const idx = Math.floor((today.getTime() - start.getTime()) / 86400000);
+    if (idx < 0 || idx >= words.length) return null;
+    return words[idx].toUpperCase();
+  }
+  // Legacy fallback: epoch-based cycling (pre-FIFO queues)
   const idx = Math.floor((today.getTime() - LINQLE_EPOCH) / 86400000);
   return words[((idx % words.length) + words.length) % words.length].toUpperCase();
 }
 
 function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
   const [words, setWords] = useState<string[]>([]);
+  const [startDate, setStartDate] = useState('');
   const [loading, setLoading] = useState(true);
   const [input, setInput] = useState('');
   const [saving, setSaving] = useState(false);
-  const todayStr = new Date().toISOString().split('T')[0];
-  const [selectedDate, setSelectedDate] = useState(todayStr);
-
-  // Build next-90-days options for the dropdown
-  const dateOptions = Array.from({ length: 90 }, (_, i) => {
-    const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + i);
-    const val = d.toISOString().split('T')[0];
-    const label = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
-    return { val, label };
-  });
+  const todayStr = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
 
   useEffect(() => {
     getDoc(doc(db, 'linqle', 'queue')).then(snap => {
-      if (snap.exists()) setWords((snap.data().words as string[]) || []);
+      if (snap.exists()) {
+        const data = snap.data();
+        const loadedWords: string[] = data.words || [];
+        let loadedStart: string = data.startDate || '';
+        if (!loadedStart && loadedWords.length) {
+          // Migrate: rotate array so today's word (epoch-based) lands at index 0
+          const todayIdx = linqleDayIndex(todayStr);
+          const rotateBy = ((todayIdx % loadedWords.length) + loadedWords.length) % loadedWords.length;
+          const rotated = [...loadedWords.slice(rotateBy), ...loadedWords.slice(0, rotateBy)];
+          loadedStart = todayStr;
+          setDoc(doc(db, 'linqle', 'queue'), { words: rotated, startDate: loadedStart });
+          setWords(rotated);
+        } else {
+          setWords(loadedWords);
+        }
+        setStartDate(loadedStart || todayStr);
+      }
       setLoading(false);
     });
   }, []);
 
-  const saveQueue = async (newWords: string[]) => {
+  const saveQueue = async (newWords: string[], newStartDate: string) => {
     setSaving(true);
     try {
-      await setDoc(doc(db, 'linqle', 'queue'), { words: newWords });
+      await setDoc(doc(db, 'linqle', 'queue'), { words: newWords, startDate: newStartDate });
       setWords(newWords);
+      setStartDate(newStartDate);
     } catch (e) { console.error(e); }
     finally { setSaving(false); }
   };
 
-  const wordForDate = (dateStr: string, w: string[]) => {
-    if (!w.length) return null;
-    const idx = linqleDayIndex(dateStr);
-    return w[((idx % w.length) + w.length) % w.length];
-  };
-
   const handleAdd = () => {
     const clean = input.trim().toUpperCase();
-    if (clean.length !== 5 || !/^[A-Z]+$/.test(clean)) return;
-    // Insert at position so it plays on selectedDate
-    const newLen = words.length + 1;
-    const targetIdx = Math.abs(linqleDayIndex(selectedDate) % newLen);
-    const updated = [...words];
-    // Remove duplicate if already exists
-    const existing = updated.indexOf(clean);
-    if (existing !== -1) updated.splice(existing, 1);
-    updated.splice(targetIdx, 0, clean);
-    saveQueue(updated);
+    if (clean.length !== 5 || !/^[A-Z]+$/.test(clean) || words.includes(clean)) return;
+    const newStartDate = startDate || todayStr;
+    saveQueue([...words, clean], newStartDate);
     setInput('');
   };
 
-  const handleRemove = async (i: number) => {
-    // Calculate what date this word plays on before removing it
-    const todayDayIdx = linqleDayIndex(todayStr);
-    const daysUntil = (((i - (todayDayIdx % words.length)) + words.length) % words.length);
-    const playsDate = new Date(); playsDate.setDate(playsDate.getDate() + daysUntil);
-    const playsDateStr = playsDate.toISOString().split('T')[0];
-    // For each score: remove completion from user profile + decrement all-time wins if they won
+  const handleRemove = async (wordIdx: number) => {
+    const base = new Date(startDate);
+    base.setDate(base.getDate() + wordIdx);
+    const playsDateStr = `${base.getFullYear()}-${String(base.getMonth()+1).padStart(2,'0')}-${String(base.getDate()).padStart(2,'0')}`;
     try {
       const scoresSnap = await getDocs(collection(db, 'linqle', playsDateStr, 'scores'));
       await Promise.all(scoresSnap.docs.map(async d => {
         const score = d.data();
         const uid: string = score.uid;
-        // Remove the day's entry from user profile
         try {
           const userSnap = await getDoc(doc(db, 'users', uid));
           if (userSnap.exists()) {
@@ -7631,24 +7630,33 @@ function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
             });
           }
         } catch (e) { console.error('user completion remove failed', e); }
-        // Decrement all-time stats on users/{uid}
         try {
           await updateDoc(doc(db, 'users', uid), {
             linqleTotalPlays: increment(-1),
             ...(score.won ? { linqleTotalWins: increment(-1) } : {}),
           });
         } catch (e) { console.error('alltime decrement failed', e); }
-        // Delete the score doc
         await deleteDoc(d.ref);
       }));
     } catch (e) { console.error('score delete failed', e); }
-    saveQueue(words.filter((_, idx) => idx !== i));
+    saveQueue(words.filter((_, idx) => idx !== wordIdx), startDate);
   };
 
+  const todayQueueIdx = startDate ? (() => {
+    const t = new Date(todayStr); t.setHours(0,0,0,0);
+    const s = new Date(startDate); s.setHours(0,0,0,0);
+    return Math.floor((t.getTime() - s.getTime()) / 86400000);
+  })() : 0;
+
+  const nextAssignedDate = (() => {
+    const base = new Date(startDate || todayStr);
+    base.setDate(base.getDate() + words.length);
+    return base.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  })();
+
+  const todayWord = (todayQueueIdx >= 0 && todayQueueIdx < words.length) ? words[todayQueueIdx] : null;
   const inputClean = input.trim().toUpperCase();
-  const inputValid = inputClean.length === 5 && /^[A-Z]+$/.test(inputClean);
-  const scheduledWord = wordForDate(selectedDate, words);
-  const selectedIsToday = selectedDate === todayStr;
+  const inputValid = inputClean.length === 5 && /^[A-Z]+$/.test(inputClean) && !words.includes(inputClean);
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -7657,39 +7665,25 @@ function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-brand-navy/8 shrink-0">
           <div>
             <h2 className="font-black text-lg text-brand-navy">Linqle — Word Queue</h2>
-            <p className="text-xs text-brand-navy/75">{words.length} word{words.length !== 1 ? 's' : ''} · cycles daily</p>
+            <p className="text-xs text-brand-navy/75">{words.length} word{words.length !== 1 ? 's' : ''} · FIFO, one per day</p>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-full bg-brand-navy/8 flex items-center justify-center"><X size={16} /></button>
         </div>
 
         <div className="overflow-y-auto flex-1 p-5 space-y-4 pb-8">
-          {/* Date selector */}
-          <div>
-            <p className="text-[10px] font-bold text-brand-navy/80 mb-1.5 uppercase tracking-widest">Schedule for date</p>
-            <select
-              value={selectedDate}
-              onChange={e => setSelectedDate(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-2xl bg-white border border-brand-navy/10 text-sm text-brand-navy outline-none"
-            >
-              {dateOptions.map(o => (
-                <option key={o.val} value={o.val}>{o.val === todayStr ? `Today — ${o.label}` : o.label}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Scheduled word for selected date */}
-          <div className={`px-4 py-3 rounded-2xl flex items-center justify-between ${scheduledWord ? (selectedIsToday ? 'bg-green-50 border border-green-200' : 'bg-brand-navy/4 border border-brand-navy/10') : 'bg-amber-50 border border-amber-200'}`}>
-            <p className={`text-xs font-semibold ${scheduledWord ? (selectedIsToday ? 'text-green-700' : 'text-brand-navy/75') : 'text-amber-600'}`}>
-              {scheduledWord ? (selectedIsToday ? "Today's word" : 'Scheduled word') : 'No words in queue'}
+          {/* Today's word */}
+          <div className={`px-4 py-3 rounded-2xl flex items-center justify-between ${todayWord ? 'bg-green-50 border border-green-200' : 'bg-amber-50 border border-amber-200'}`}>
+            <p className={`text-xs font-semibold ${todayWord ? 'text-green-700' : 'text-amber-600'}`}>
+              {todayWord ? "Today's word" : 'No word for today'}
             </p>
-            {scheduledWord
-              ? <p className={`font-black tracking-[0.25em] ${selectedIsToday ? 'text-green-700' : 'text-brand-navy'}`}>{scheduledWord}</p>
+            {todayWord
+              ? <p className="font-black tracking-[0.25em] text-green-700">{todayWord}</p>
               : <p className="text-xs text-amber-500">Add words below</p>}
           </div>
 
-          {/* Add word for this date */}
+          {/* Add word */}
           <div>
-            <p className="text-[10px] font-bold text-brand-navy/80 mb-1.5 uppercase tracking-widest">Add word for this date</p>
+            <p className="text-[10px] font-bold text-brand-navy/80 mb-1.5 uppercase tracking-widest">Add to queue</p>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -7702,9 +7696,12 @@ function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
               />
               <button onClick={handleAdd} disabled={!inputValid || saving}
                 className="px-4 py-2.5 rounded-2xl bg-green-500 text-white font-bold text-sm active:scale-95 transition-all disabled:opacity-40">
-                {saving ? '…' : 'Set'}
+                {saving ? '…' : 'Add'}
               </button>
             </div>
+            {inputValid && (
+              <p className="text-[10px] text-brand-navy/60 mt-1.5 px-1">Scheduled for {nextAssignedDate}</p>
+            )}
           </div>
 
           {/* Queue list */}
@@ -7716,26 +7713,25 @@ function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
             <div className="space-y-2">
               <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75">Full queue ({words.length})</p>
               {words.map((w, i) => {
-                const todayDayIdx = linqleDayIndex(todayStr);
-                const daysUntil = (((i - (todayDayIdx % words.length)) + words.length) % words.length);
-                const playsOn = new Date(); playsOn.setDate(playsOn.getDate() + daysUntil);
-                const playsStr = playsOn.toISOString().split('T')[0];
-                const isToday = daysUntil === 0;
-                const isSelected = playsStr === selectedDate;
+                const d = new Date(startDate);
+                d.setDate(d.getDate() + i);
+                const wordDateLabel = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                const isPlayed = i < todayQueueIdx;
+                const isToday = i === todayQueueIdx;
                 return (
-                  <div key={i} className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl border ${isToday ? 'bg-green-50 border-green-200' : isSelected ? 'bg-blue-50 border-blue-200' : 'bg-white border-brand-navy/8'}`}>
-                    <span className="text-xs font-bold text-brand-navy/72 w-5 text-right shrink-0">{i + 1}</span>
-                    <span className={`flex-1 font-black tracking-[0.2em] text-sm ${isToday ? 'text-green-700' : isSelected ? 'text-blue-700' : 'text-brand-navy'}`}>{w}</span>
+                  <div key={i} className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl border ${isToday ? 'bg-green-50 border-green-200' : isPlayed ? 'bg-brand-navy/3 border-brand-navy/6' : 'bg-white border-brand-navy/8'}`}>
+                    <span className="text-xs font-bold text-brand-navy/40 w-5 text-right shrink-0">{i + 1}</span>
+                    <span className={`flex-1 font-black tracking-[0.2em] text-sm ${isToday ? 'text-green-700' : isPlayed ? 'text-brand-navy/25 line-through' : 'text-brand-navy'}`}>{w}</span>
                     {isToday
                       ? <span className="text-[10px] font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded-full shrink-0">Today</span>
-                      : isSelected
-                        ? <span className="text-[10px] font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full shrink-0">Selected</span>
-                        : <span className="text-[10px] text-brand-navy/72 shrink-0">{playsOn.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+                      : <span className={`text-[10px] shrink-0 ${isPlayed ? 'text-brand-navy/30' : 'text-brand-navy/60'}`}>{wordDateLabel}</span>
                     }
-                    <button onClick={() => handleRemove(i)} disabled={saving}
-                      className="w-6 h-6 rounded-full bg-brand-navy/8 flex items-center justify-center active:scale-90 transition-all disabled:opacity-40 shrink-0">
-                      <X size={11} className="text-brand-navy/80" />
-                    </button>
+                    {!isPlayed && (
+                      <button onClick={() => handleRemove(i)} disabled={saving}
+                        className="w-6 h-6 rounded-full bg-brand-navy/8 flex items-center justify-center active:scale-90 transition-all disabled:opacity-40 shrink-0">
+                        <X size={11} className="text-brand-navy/80" />
+                      </button>
+                    )}
                   </div>
                 );
               })}
@@ -21325,8 +21321,9 @@ function LinqleGame({ currentUser, currentProfile, onClose, onPackReady }: { cur
   useEffect(() => {
     getDoc(doc(db, 'linqle', 'queue')).then(snap => {
       if (snap.exists()) {
-        const words: string[] = snap.data().words || [];
-        const w = linqleTodayWord(words);
+        const data = snap.data();
+        const words: string[] = data.words || [];
+        const w = linqleTodayWord(words, data.startDate || undefined);
         if (w) setAnswer(w);
       }
       setLoading(false);
