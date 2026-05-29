@@ -27715,7 +27715,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
               }}
               className={cn(
                 "flex items-center gap-1.5 transition-all active:scale-95 text-sm font-bold",
-                isLiked ? "text-brand-gold" : "text-gray-400 hover:text-brand-gold"
+                isLiked ? "text-brand-gold" : "text-brand-navy/50 hover:text-brand-gold"
               )}
             >
               <Heart size={17} className={cn("transition-all", isLiked ? "fill-brand-gold scale-110" : "")} />
@@ -27725,14 +27725,14 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
 
           <button
             onClick={() => setShowAllComments(v => !v)}
-            className="flex items-center gap-1.5 text-sm font-bold text-gray-400 hover:text-gray-600 transition-colors"
+            className="flex items-center gap-1.5 text-sm font-bold text-brand-navy/50 hover:text-brand-navy/80 transition-colors"
           >
             <MessageCircle size={17} />
             <span>{comments.length}</span>
           </button>
 
           {post.postType === 'poll' && (
-            <div className="flex items-center gap-1.5 text-gray-400 text-sm font-bold">
+            <div className="flex items-center gap-1.5 text-brand-navy/50 text-sm font-bold">
               <BarChart2 size={17} />
               <span>{totalDisplayVotes}</span>
             </div>
@@ -27808,7 +27808,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                 onChange={e => setNewComment(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmitComment(); } }}
                 placeholder="Add a comment…"
-                className="flex-1 bg-brand-bg rounded-2xl px-3 py-2 text-xs border-none focus:outline-none focus:ring-2 focus:ring-brand-gold/20"
+                className="flex-1 bg-brand-navy/8 rounded-2xl px-3 py-2 text-xs border-none focus:outline-none focus:ring-2 focus:ring-brand-gold/20"
               />
               <button
                 onClick={handleSubmitComment}
