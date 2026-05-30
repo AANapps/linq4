@@ -1,4 +1,5 @@
 import { onCall, onRequest, HttpsError } from 'firebase-functions/v2/https';
+import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { defineSecret } from 'firebase-functions/params';
 import * as admin from 'firebase-admin';
 import Stripe from 'stripe';
@@ -126,3 +127,24 @@ export const stripeWebhook = onRequest(
     res.json({ received: true });
   }
 );
+
+// Delete notifications older than 30 days — runs daily at 03:00 UTC
+export const pruneOldNotifications = onSchedule('every day 03:00', async () => {
+  const cutoff = admin.firestore.Timestamp.fromMillis(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const snap = await db.collection('notifications')
+    .where('createdAt', '<', cutoff)
+    .limit(500)
+    .get();
+
+  if (snap.empty) return;
+
+  // Delete in batches of 500 (Firestore limit)
+  const batches: Promise<admin.firestore.WriteResult[]>[] = [];
+  for (let i = 0; i < snap.docs.length; i += 500) {
+    const batch = db.batch();
+    snap.docs.slice(i, i + 500).forEach((d: admin.firestore.QueryDocumentSnapshot) => batch.delete(d.ref));
+    batches.push(batch.commit());
+  }
+  await Promise.all(batches);
+  console.log(`Pruned ${snap.docs.length} notifications older than 30 days`);
+});
