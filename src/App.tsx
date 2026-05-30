@@ -659,6 +659,7 @@ interface Card {
   storeName?: string;
   storeLogoUrl?: string;
   storeTheme?: string;
+  createdAt?: any;
 }
 
 interface Notification {
@@ -821,6 +822,28 @@ function logEvent(type: string, userId: string, meta: Record<string, unknown> = 
     appVersion: APP_VERSION,
     ...meta,
   }).catch(() => {});
+}
+
+function stampEventMeta(
+  store: StoreProfile,
+  prevCard: { last_tap_timestamp?: any; total_completed_cycles?: number } | null,
+  newStamps: number
+): Record<string, unknown> {
+  const now = new Date();
+  const suburb = store.locations?.[0]?.town || (store.location as string) || '';
+  const lastMs = prevCard?.last_tap_timestamp?.toMillis?.()
+    ?? (prevCard?.last_tap_timestamp?.seconds ? prevCard.last_tap_timestamp.seconds * 1000 : null);
+  const daysSinceLastVisit = typeof lastMs === 'number' ? Math.floor((Date.now() - lastMs) / 86400000) : null;
+  const limit = store.stamps_required_for_reward || 10;
+  const consecutiveVisitNumber = (prevCard?.total_completed_cycles ?? 0) * limit + newStamps;
+  return {
+    suburb,
+    dayOfWeek: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][now.getDay()],
+    timeOfDay: now.getHours(),
+    stampNumberOnCurrentCard: newStamps,
+    consecutiveVisitNumber,
+    ...(daysSinceLastVisit !== null ? { daysSinceLastVisit } : {}),
+  };
 }
 // ───────────────────────────────────────────────────────────────────────────
 
@@ -1160,7 +1183,18 @@ export default function App() {
   const [vendorQREnabled, setVendorQREnabled] = useState(false);
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior }); }, [activeTab]);
-  useEffect(() => { if (user) logEvent('screen_view', user.uid, { screen: activeTab }); }, [activeTab]);
+  const screenSessionRef = useRef<{ screen: string; enteredAt: number } | null>(null);
+  useEffect(() => {
+    if (!user) return;
+    const now = Date.now();
+    if (screenSessionRef.current) {
+      logEvent('screen_view', user.uid, {
+        screen: screenSessionRef.current.screen,
+        timeSpent: Math.round((now - screenSessionRef.current.enteredAt) / 1000),
+      });
+    }
+    screenSessionRef.current = { screen: activeTab, enteredAt: now };
+  }, [activeTab]);
   useEffect(() => { if (viewingStore || viewingUser) window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior }); }, [viewingStore, viewingUser]);
 
   // Ad Astra Network logo (cached in localStorage for instant display)
@@ -3311,9 +3345,19 @@ async function updateChallengeProgress(customerUid: string, storeId: string, qty
       if (c.vendorIds?.length && !c.vendorIds.includes(storeId)) return;
       const prevCount = entryData.count ?? 0;
       await updateDoc(entryDoc.ref, { count: increment(qty) });
-      // Award avatar item prize on first completion
-      if (c.isAvatarPrize && c.avatarPrizeItemId && prevCount < c.goal && prevCount + qty >= c.goal) {
-        awardAvatarItem(customerUid, c.avatarPrizeItemId).catch(console.error);
+      // Award avatar item prize and fire completion event on first completion
+      if (prevCount < c.goal && prevCount + qty >= c.goal) {
+        const entryCreatedMs = entryDoc.data().createdAt?.toMillis?.()
+          ?? (entryDoc.data().createdAt?.seconds ? entryDoc.data().createdAt.seconds * 1000 : null);
+        logEvent('challenge_completed', customerUid, {
+          challengeId,
+          goal: c.goal,
+          rewardValue: c.rewardValue ?? null,
+          ...(entryCreatedMs ? { timeToCompleteSeconds: Math.round((Date.now() - entryCreatedMs) / 1000) } : {}),
+        });
+        if (c.isAvatarPrize && c.avatarPrizeItemId) {
+          awardAvatarItem(customerUid, c.avatarPrizeItemId).catch(console.error);
+        }
       }
     }));
   } catch (err) {
@@ -10287,6 +10331,12 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
         ...(stdCity.trim() ? { city: stdCity.trim() } : {}),
         ...(cityCoords ? { challengeLat: cityCoords.lat, challengeLng: cityCoords.lng } : {}),
       });
+      if (auth.currentUser) logEvent('challenge_created', auth.currentUser.uid, {
+        type: 'standard', goal: g, unit: stdUnit.trim(), reward: stdReward.trim(),
+        ...(parseFloat(stdRewardValue) > 0 ? { rewardValue: parseFloat(stdRewardValue) } : {}),
+        ...(stdEndsAt ? { endsAt: stdEndsAt } : {}),
+        vendorCount: stdVendorIds.length,
+      });
       setStdTitle(''); setStdDesc(''); setStdGoal(''); setStdUnit(''); setStdReward(''); setStdRewardValue(''); setStdEndsAt(''); setStdVendorIds([]); setStdRewardTag(''); setStdIsAvatarPrize(false); setStdAvatarPrizeItemId(''); setStdImageUrl(''); setStdCity(''); setStdCityCoords(null);
     } finally {
       setDeploying(false);
@@ -10309,6 +10359,10 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
         ...(colEndsAt ? { endsAt: Timestamp.fromDate(new Date(colEndsAt)) } : {}),
         ...(colImageUrl ? { imageUrl: colImageUrl } : {}),
         ...(colCardSetId ? { cardSetId: colCardSetId } : {}),
+      });
+      if (auth.currentUser) logEvent('challenge_created', auth.currentUser.uid, {
+        type: 'collectible', reward: colReward.trim(), tierChances: colChances,
+        ...(colEndsAt ? { endsAt: colEndsAt } : {}),
       });
       setColTitle(''); setColReward(''); setColEndsAt(''); setColChances({ ...DEFAULT_TIER_CHANCES }); setColImageUrl(''); setColCardSetId('');
     } finally {
@@ -11850,6 +11904,17 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
     );
   }, []);
 
+  const viewedChallengeIdsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (visibleActiveStandardChallenges.length === 0) return;
+    visibleActiveStandardChallenges.forEach(c => {
+      if (!viewedChallengeIdsRef.current.has(c.id)) {
+        viewedChallengeIdsRef.current.add(c.id);
+        logEvent('challenge_viewed', user.uid, { challengeId: c.id, goal: c.goal, type: c.type });
+      }
+    });
+  }, [visibleActiveStandardChallenges]);
+
   useEffect(() => {
     const q = query(collection(db, 'challenge_entries'), where('uid', '==', user.uid));
     return onSnapshot(q, snap => {
@@ -11968,6 +12033,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           isArchived: false,
           userName,
           userPhoto,
+          createdAt: serverTimestamp(),
         });
       } else {
         await setDoc(cardRef, {
@@ -11981,6 +12047,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           isRedeemed: false,
           userName,
           userPhoto,
+          createdAt: serverTimestamp(),
         });
       }
       await updateDoc(doc(db, 'users', user.uid), { total_cards_held: increment(1) });
@@ -12659,6 +12726,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                                     ...(c.vendorIds?.length ? { stampsAtJoinPerStore } : {}),
                                     createdAt: serverTimestamp(),
                                   });
+                                  logEvent('challenge_started', user.uid, { challengeId: c.id, goal: c.goal, type: c.type });
                                 }}
                                 className={cn(
                                   'relative w-full py-3 rounded-2xl text-sm font-bold transition-all active:scale-95 overflow-hidden',
@@ -13015,7 +13083,7 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
     const cardId = `${user.uid}_${store.id}`;
     const cardRef = doc(db, 'cards', cardId);
     const cardSnap = await getDoc(cardRef);
-
+    const prevCardData = cardSnap.exists() && !cardSnap.data()?.isArchived ? cardSnap.data() : null;
 
     const userName = profile?.name || user.displayName || user.email?.split('@')[0] || 'Customer';
     const userPhoto = profile?.photoURL || user.photoURL || '';
@@ -13029,6 +13097,7 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
         total_completed_cycles: newCycles, stamps_required: limit,
         last_tap_timestamp: serverTimestamp(), isArchived: false, isRedeemed: false, userName, userPhoto,
         storeName: store.name, storeLogoUrl: store.logoUrl || '', storeTheme: store.theme || '',
+        createdAt: serverTimestamp(),
       });
       await updateDoc(doc(db, 'users', user.uid), { total_cards_held: increment(1) });
     } else {
@@ -13049,7 +13118,7 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
 
     await updateDoc(doc(db, 'users', user.uid), { totalStamps: increment(qty), lastStampAt: serverTimestamp() });
     bumpStreak(user.uid).catch(console.error);
-    logEvent('stamp_issued', user.uid, { storeId: store.id, cardId, stampCount: qty, method: 'nfc' });
+    logEvent('stamp_issued', user.uid, { storeId: store.id, cardId, stampCount: qty, method: 'nfc', ...stampEventMeta(store, prevCardData, newStamps) });
     if (newStamps >= store.stamps_required_for_reward || 0) {
       logEvent('card_completed', user.uid, { storeId: store.id, cardId, totalStamps: store.stamps_required_for_reward || 10 });
     }
@@ -16187,6 +16256,15 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
         }));
       }
       setSentCount(recipientUids.length);
+      if (filter === 'atRisk') {
+        const uid = auth.currentUser?.uid;
+        if (uid) logEvent('win_back_sent', uid, {
+          storeId: store.id,
+          segment: filter,
+          recipientCount: recipientUids.length,
+          sentAt: new Date().toISOString(),
+        });
+      }
       setMsgTitle('');
       setMsgBody('');
     } catch (err: any) {
@@ -17018,8 +17096,10 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
         const cardDoc = await getDoc(cardRef);
         const qty = Number(stampQuantity);
         const limit = store.stamps_required_for_reward;
+        const prevCardDataHandle = cardDoc.exists() ? cardDoc.data() as Card : null;
 
         let _cycleCompleted = false;
+        let _newStampsHandle = 0;
         if (cardDoc.exists()) {
           const data = cardDoc.data() as Card;
           let newStamps = data.current_stamps + qty;
@@ -17031,6 +17111,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
             newCycles += 1;
             if (newStamps > limit) newStamps = limit;
           }
+          _newStampsHandle = newStamps;
           const txData = cycleCompleted
             ? { user_id: customer.uid, store_id: store.id, completed_at: serverTimestamp(), stamp_count: qty, stamps_at_completion: limit, reward_claimed: false }
             : { user_id: customer.uid, store_id: store.id, completed_at: serverTimestamp(), stamp_count: qty };
@@ -17052,6 +17133,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
             newCycles = 1;
             if (newStamps > limit) newStamps = limit;
           }
+          _newStampsHandle = newStamps;
           const txData2 = cycleCompleted2
             ? { user_id: customer.uid, store_id: store.id, completed_at: serverTimestamp(), stamp_count: qty, stamps_at_completion: limit, reward_claimed: false }
             : { user_id: customer.uid, store_id: store.id, completed_at: serverTimestamp(), stamp_count: qty };
@@ -17065,7 +17147,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
             stamps_required: limit,
             tiersCompleted: store.rewardTiers?.length || 1,
             last_tap_timestamp: serverTimestamp(),
-            isArchived: false
+            isArchived: false,
+            createdAt: serverTimestamp(),
           });
 
           await updateDoc(doc(db, 'users', customer.uid), {
@@ -17087,7 +17170,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
           totalStamps: increment(qty), lastStampAt: serverTimestamp()
         });
         bumpStreak(customer.uid).catch(console.error);
-        logEvent('stamp_issued', customer.uid, { storeId: store.id, cardId: `${customer.uid}_${store.id}`, stampCount: qty, method: 'vendor_handle' });
+        logEvent('stamp_issued', customer.uid, { storeId: store.id, cardId: `${customer.uid}_${store.id}`, stampCount: qty, method: 'vendor_handle', ...stampEventMeta(store, prevCardDataHandle, _newStampsHandle) });
         if (_cycleCompleted) logEvent('card_completed', customer.uid, { storeId: store.id, cardId: `${customer.uid}_${store.id}`, totalStamps: limit });
 
         // Food stamps increase avatar mood and record date
@@ -17145,7 +17228,9 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
       const qty = Number(stampQuantity);
       const lim = store.stamps_required_for_reward;
       const cardDoc = await getDoc(cardRef);
+      const prevCardDataUid = cardDoc.exists() ? cardDoc.data() as Card : null;
       let _uidCycleCompleted = false;
+      let _newStampsUid = 0;
 
       if (cardDoc.exists()) {
         const data = cardDoc.data() as Card;
@@ -17154,6 +17239,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
         const cycleCompleted = newStamps >= lim;
         _uidCycleCompleted = cycleCompleted;
         if (cycleCompleted) { newCycles += 1; if (newStamps > lim) newStamps = lim; }
+        _newStampsUid = newStamps;
         const txData = cycleCompleted
           ? { user_id: userId, store_id: store.id, completed_at: serverTimestamp(), stamp_count: qty, stamps_at_completion: lim, reward_claimed: false }
           : { user_id: userId, store_id: store.id, completed_at: serverTimestamp(), stamp_count: qty };
@@ -17165,6 +17251,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
         const cycleCompleted2 = newStamps >= lim;
         _uidCycleCompleted = cycleCompleted2;
         if (cycleCompleted2) { newCycles = 1; if (newStamps > lim) newStamps = lim; }
+        _newStampsUid = newStamps;
         const txData = cycleCompleted2
           ? { user_id: userId, store_id: store.id, completed_at: serverTimestamp(), stamp_count: qty, stamps_at_completion: lim, reward_claimed: false }
           : { user_id: userId, store_id: store.id, completed_at: serverTimestamp(), stamp_count: qty };
@@ -17174,12 +17261,13 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
           stamps_required: lim, isArchived: false, tiersCompleted: store.rewardTiers?.length || 1,
           userName: customer.name, userPhoto: (customer as any).photoURL || '',
           storeName: store.name, storeLogoUrl: store.logoUrl || '', storeTheme: store.theme || '',
+          createdAt: serverTimestamp(),
         });
         await updateDoc(doc(db, 'users', userId), { total_cards_held: increment(1) });
       }
       await updateDoc(doc(db, 'users', userId), { totalStamps: increment(qty), lastStampAt: serverTimestamp() });
       bumpStreak(userId).catch(console.error);
-      logEvent('stamp_issued', userId, { storeId: store.id, cardId: `${userId}_${store.id}`, stampCount: qty, method: 'vendor_uid' });
+      logEvent('stamp_issued', userId, { storeId: store.id, cardId: `${userId}_${store.id}`, stampCount: qty, method: 'vendor_uid', ...stampEventMeta(store, prevCardDataUid, _newStampsUid) });
       if (_uidCycleCompleted) logEvent('card_completed', userId, { storeId: store.id, cardId: `${userId}_${store.id}`, totalStamps: lim });
       issueUserStickers(userId, customer.name, qty).catch(console.error);
       updateChallengeProgress(userId, store.id, qty).catch(console.error);
@@ -19449,7 +19537,11 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
         total_value_redeemed: increment(redeemDollarNum),
         last_redeemed_at: serverTimestamp(),
       });
-      logEvent('redemption', card.user_id, { cardId: card.id, storeId: card.store_id, rewardValue: redeemDollarNum, cardType: 'membership_value' });
+      const _memCreatedMs = card.createdAt?.toMillis?.() ?? (card.createdAt?.seconds ? card.createdAt.seconds * 1000 : null);
+      logEvent('redemption', card.user_id, {
+        cardId: card.id, storeId: card.store_id, rewardValue: redeemDollarNum, cardType: 'membership_value',
+        ...(_memCreatedMs ? { daysBetweenCardStartAndRedemption: Math.floor((Date.now() - _memCreatedMs) / 86400000) } : {}),
+      });
       setRedeemStage('success');
     } catch (err) {
       console.error(err);
@@ -20349,7 +20441,12 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
     const userName = auth.currentUser?.displayName || 'Someone';
     const userPhoto = auth.currentUser?.photoURL || '';
     const rewardLabel = store?.rewardTiers?.length ? store.rewardTiers[store.rewardTiers.length - 1].reward : (store?.reward || 'a reward');
-    logEvent('redemption', card.user_id, { cardId: card.id, storeId: card.store_id, rewardLabel, tiersCompleted: numTiers, cardType: 'loyalty', redeemedBy: 'staff' });
+    const _cardCreatedMs = card.createdAt?.toMillis?.() ?? (card.createdAt?.seconds ? card.createdAt.seconds * 1000 : null);
+    logEvent('redemption', card.user_id, {
+      cardId: card.id, storeId: card.store_id, rewardLabel, tiersCompleted: numTiers, cardType: 'loyalty', redeemedBy: 'staff',
+      stampsRequired: card.stamps_required || store?.stamps_required_for_reward || 10,
+      ...(_cardCreatedMs ? { daysBetweenCardStartAndRedemption: Math.floor((Date.now() - _cardCreatedMs) / 86400000) } : {}),
+    });
     postActivity(uid, userName, userPhoto, `${userName} just earned a free ${rewardLabel}!`, '🎁');
   };
 
@@ -20768,7 +20865,11 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
         ...(selectedReward.moneyValue ? { money_value: selectedReward.moneyValue } : {}),
         redeemed_at: serverTimestamp(),
       });
-      logEvent('redemption', card.user_id, { cardId: card.id, storeId: card.store_id, pointsUsed: pointsToUse, rewardLabel: selectedReward.reward, cardType: 'sub' });
+      const _subCreatedMs = card.createdAt?.toMillis?.() ?? (card.createdAt?.seconds ? card.createdAt.seconds * 1000 : null);
+      logEvent('redemption', card.user_id, {
+        cardId: card.id, storeId: card.store_id, pointsUsed: pointsToUse, rewardLabel: selectedReward.reward, cardType: 'sub',
+        ...(_subCreatedMs ? { daysBetweenCardStartAndRedemption: Math.floor((Date.now() - _subCreatedMs) / 86400000) } : {}),
+      });
       setRedeemSuccess(selectedReward.reward);
       const u = auth.currentUser;
       if (u) postActivity(u.uid, u.displayName || 'Someone', u.photoURL || '', `${u.displayName || 'Someone'} just earned a free ${selectedReward.reward}!`, '⭐');
@@ -29458,6 +29559,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
   const [challengeView, setChallengeView] = useState<'active' | 'completed'>('active');
   const [completedIdx, setCompletedIdx] = useState(0);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const lbOpenedAtRef = useRef<number | null>(null);
   const [lbPeriod, setLbPeriod] = useState<'alltime' | 'weekly'>('alltime');
   const [lbCategory, setLbCategory] = useState<'stamps' | 'rewards' | 'streak' | 'points'>('stamps');
   const [lbUsers, setLbUsers] = useState<UserProfile[]>([]);
@@ -30042,6 +30144,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
               <button
                 onClick={() => {
                   setShowLeaderboard(true);
+                  lbOpenedAtRef.current = Date.now();
                   confetti({ particleCount: 80, spread: 60, startVelocity: 30, gravity: 0.8, scalar: 0.9, origin: { y: 0.6 }, zIndex: 9999, colors: ['#FFD700', '#FFC200', '#FFE566', '#FFAA00', '#FFF8DC'] });
                 }}
                 className="relative rounded-[1.5rem] overflow-hidden active:scale-[0.97] transition-transform shrink-0 shadow-lg"
@@ -30121,13 +30224,28 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
               const podiumColors = ['bg-brand-navy/10', 'bg-brand-gold/30', 'bg-brand-navy/5'];
               const podiumMedals = ['🥈', '🥇', '🥉'];
               const podiumIndexes = [1, 0, 2];
+              const closeLb = () => {
+                const timeSpent = lbOpenedAtRef.current ? Math.round((Date.now() - lbOpenedAtRef.current) / 1000) : null;
+                const lastStampMs = (currentProfile as any)?.lastStampAt?.toMillis?.()
+                  ?? ((currentProfile as any)?.lastStampAt?.seconds ? (currentProfile as any).lastStampAt.seconds * 1000 : null);
+                const visitedWithin24h = lastStampMs ? (Date.now() - lastStampMs) < 86400000 : false;
+                if (currentUser) logEvent('leaderboard_viewed', currentUser.uid, {
+                  category: lbCategory,
+                  period: lbPeriod,
+                  ...(myRank !== null ? { rankAtView: myRank } : {}),
+                  ...(timeSpent !== null ? { timeSpent } : {}),
+                  visitedWithin24h,
+                });
+                setShowLeaderboard(false);
+                lbOpenedAtRef.current = null;
+              };
               return (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-end max-w-md mx-auto"
-                  onClick={() => setShowLeaderboard(false)}
+                  onClick={closeLb}
                 >
                   <motion.div
                     initial={{ y: '100%' }}
@@ -30142,7 +30260,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                         <span className="text-2xl">🏆</span>
                         <h3 className="font-display font-bold text-xl">Leaderboard</h3>
                       </div>
-                      <button onClick={() => setShowLeaderboard(false)} className="p-2 rounded-full bg-brand-navy/8 active:scale-95 transition-all">
+                      <button onClick={closeLb} className="p-2 rounded-full bg-brand-navy/8 active:scale-95 transition-all">
                         <X size={18} className="text-brand-navy" />
                       </button>
                     </div>
