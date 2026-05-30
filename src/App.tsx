@@ -16338,9 +16338,12 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
   const needsPayment = store !== null && !isInTrial && !isSubscribed;
 
 
-  const [STRIPE_PAYMENT_LINK, setStripePaymentLink] = useState('https://buy.stripe.com/test_aFa5kF5JZh193yT6OEd7q00');
+  const [STRIPE_PAYMENT_LINK, setStripePaymentLink] = useState(
+    import.meta.env.VITE_STRIPE_PAYMENT_LINK || 'https://buy.stripe.com/aFa5kF5JZh193yT6OEd7q00'
+  );
   const [NFC_ORDER_STRIPE_LINK, setNfcOrderStripeLink] = useState('https://buy.stripe.com/PLACEHOLDER_NFC_LINK');
   useEffect(() => {
+    if (import.meta.env.VITE_STRIPE_PAYMENT_LINK) return; // env var overrides Firestore
     getDoc(doc(db, 'app_config', 'stripe_links')).then(snap => {
       if (!snap.exists()) return;
       const d = snap.data();
