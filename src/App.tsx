@@ -11895,7 +11895,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                   onClick={() => setWalletSubTab('challenges')}
                   className={cn(
                     'flex-1 py-2.5 rounded-xl text-sm font-bold transition-all relative overflow-hidden text-white',
-                    walletSubTab === 'challenges' ? 'shadow-md opacity-100' : 'opacity-60'
+                    walletSubTab === 'challenges' ? 'shadow-md' : ''
                   )}
                   style={{ background: 'linear-gradient(90deg,#7c3aed,#4f46e5,#2563eb)' }}
                 >
