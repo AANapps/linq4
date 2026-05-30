@@ -16338,7 +16338,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
   const needsPayment = store !== null && !isInTrial && !isSubscribed;
 
 
-  const [STRIPE_PAYMENT_LINK, setStripePaymentLink] = useState('https://buy.stripe.com/aFa5kF5JZh193yT6OEd7q00');
+  const [STRIPE_PAYMENT_LINK, setStripePaymentLink] = useState('https://buy.stripe.com/test_aFa5kF5JZh193yT6OEd7q00');
   const [NFC_ORDER_STRIPE_LINK, setNfcOrderStripeLink] = useState('https://buy.stripe.com/PLACEHOLDER_NFC_LINK');
   useEffect(() => {
     getDoc(doc(db, 'app_config', 'stripe_links')).then(snap => {
