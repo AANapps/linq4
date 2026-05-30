@@ -33677,19 +33677,23 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
               const isMembership = card.card_type === 'membership';
               const isVisit = isMembership && store.membershipType === 'visit';
               const pct = Math.min(100, Math.round((card.current_stamps / (store.stamps_required_for_reward || 10)) * 100));
+              const isAnon = !!targetUser.privacyMode;
               return (
                 <div
                   key={card.id}
-                  onClick={() => onViewStore(store)}
-                  className="snap-start shrink-0 w-52 bg-white rounded-2xl overflow-hidden cursor-pointer shadow-md border border-brand-navy/8 active:scale-[0.98] transition-transform"
+                  onClick={isAnon ? undefined : () => onViewStore(store)}
+                  className={cn("snap-start shrink-0 w-52 bg-white rounded-2xl overflow-hidden shadow-md border border-brand-navy/8 transition-transform", isAnon ? "cursor-default" : "cursor-pointer active:scale-[0.98]")}
                 >
                   <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-brand-navy/6">
-                    <div className="w-8 h-8 rounded-xl overflow-hidden shrink-0 shadow-sm">
-                      <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
+                    <div className="w-8 h-8 rounded-xl shrink-0 shadow-sm overflow-hidden flex items-center justify-center bg-purple-100">
+                      {isAnon
+                        ? <Lock size={16} className="text-purple-500" />
+                        : <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
+                      }
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-bold text-brand-navy text-xs truncate leading-tight">{store.name}</p>
-                      <p className="text-brand-navy/40 text-[9px] font-semibold uppercase tracking-wider">{store.category || 'Retail'}</p>
+                      <p className="font-bold text-brand-navy text-xs truncate leading-tight">{isAnon ? 'Anonymous' : store.name}</p>
+                      <p className="text-brand-navy/40 text-[9px] font-semibold uppercase tracking-wider">{isAnon ? '••••' : store.category || 'Retail'}</p>
                     </div>
                   </div>
                   {isMembership ? (
