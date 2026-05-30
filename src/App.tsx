@@ -17423,7 +17423,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
               {/* INTELLIGENCE TIER */}
               <div className="flex items-center justify-between pt-2">
                 <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-purple-700 bg-purple-50 border border-purple-200 px-2.5 py-1 rounded-full">
-                  <Sparkles size={9} /> Intelligence — $49/month
+                  <Sparkles size={9} /> Intelligence{!isSubscribed && ' — $49/month'}
                 </span>
                 {!isSubscribed && (
                   <button onClick={handleSubscribe} className="text-xs font-bold text-white bg-purple-600 px-3 py-1.5 rounded-xl active:scale-95 transition-transform">
@@ -17433,29 +17433,52 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
               </div>
 
               {!isSubscribed ? (
-                <div className="rounded-[1.5rem] border border-purple-200 bg-purple-50 p-5 space-y-4">
-                  <p className="font-bold text-purple-900 text-sm">Unlock customer intelligence</p>
-                  <div className="space-y-2">
-                    {[
-                      'At-risk alerts with one-tap win-back',
-                      'Visit frequency trends & charts',
-                      'Peak day and hour analytics',
-                      'Customer lifetime value per person',
-                      "Users who haven't visited in 3 weeks",
-                      'Newcomers list',
-                      'Monthly health score & recommendations',
-                    ].map(f => (
-                      <div key={f} className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
-                          <Lock size={8} className="text-purple-500" />
-                        </div>
-                        <p className="text-xs text-purple-800">{f}</p>
-                      </div>
-                    ))}
+                <div className="rounded-[2rem] overflow-hidden" style={{ background: 'linear-gradient(160deg, #1e1b4b 0%, #3730a3 40%, #7c3aed 100%)' }}>
+                  {/* Hero */}
+                  <div className="px-6 pt-7 pb-5 text-center space-y-2">
+                    <div className="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center mx-auto mb-3">
+                      <Sparkles size={24} className="text-purple-200" />
+                    </div>
+                    <p className="text-white font-black text-xl leading-tight">Customer Intelligence</p>
+                    <p className="text-purple-200 text-xs leading-relaxed">Turn raw stamp data into actionable insights that grow your loyal customer base.</p>
                   </div>
-                  <button onClick={handleSubscribe} className="w-full py-3 rounded-2xl text-white text-sm font-bold active:scale-95 transition-transform" style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}>
-                    Subscribe — $49/month
-                  </button>
+
+                  {/* Blurred stat preview */}
+                  <div className="px-5 pb-5">
+                    <div className="grid grid-cols-3 gap-2 mb-5 select-none pointer-events-none" style={{ filter: 'blur(4px)', opacity: 0.5 }}>
+                      {[['12', 'Churn Risk'], ['8', 'Newcomers'], ['2.4', 'Avg/Visit']].map(([v, l]) => (
+                        <div key={l} className="bg-white/10 rounded-2xl p-3 text-center">
+                          <p className="text-white font-black text-2xl">{v}</p>
+                          <p className="text-purple-200 text-[9px] font-bold uppercase tracking-widest mt-0.5">{l}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Feature grid */}
+                    <div className="grid grid-cols-2 gap-2 mb-5">
+                      {[
+                        { icon: <AlertTriangle size={14} />, title: 'At-Risk Alerts', desc: 'One-tap win-back for lapsing customers' },
+                        { icon: <TrendingUp size={14} />, title: 'Growth Charts', desc: 'Visit frequency & user base trends' },
+                        { icon: <Clock size={14} />, title: 'Peak Hours', desc: 'Best days & times for promotions' },
+                        { icon: <Star size={14} />, title: 'Lifetime Value', desc: 'Revenue per customer, ranked' },
+                        { icon: <UserPlus size={14} />, title: 'Newcomers', desc: 'New customers joined last 30 days' },
+                        { icon: <BarChart2 size={14} />, title: 'Health Score', desc: 'Monthly business health & tips' },
+                      ].map(f => (
+                        <div key={f.title} className="bg-white/10 rounded-2xl p-3 space-y-1">
+                          <div className="flex items-center gap-1.5 text-purple-200">{f.icon}<p className="text-[10px] font-black text-white">{f.title}</p></div>
+                          <p className="text-[9px] text-purple-300 leading-snug">{f.desc}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <button
+                      onClick={handleSubscribe}
+                      className="w-full py-3.5 rounded-2xl text-sm font-black tracking-wide active:scale-95 transition-transform"
+                      style={{ background: 'linear-gradient(135deg, #fbbf24, #f59e0b)' }}
+                    >
+                      <span className="text-amber-900">Unlock Intelligence — $49/month</span>
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <>
