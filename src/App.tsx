@@ -21218,12 +21218,12 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
                 const isOptWinner = isClosed && voteData.winner === i;
                 return (
                   <div key={i} className="flex-1 flex flex-col items-center">
-                    <motion.span
-                      className="font-black mb-1.5"
-                      style={{ fontSize: isMe ? 18 : 14, color: isMe ? pal.glow : 'rgba(255,255,255,0.5)' }}
-                      initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 + 0.3 }}
-                    >{pct}%</motion.span>
                     <div className="w-full flex flex-col-reverse items-center rounded-t-2xl overflow-hidden relative" style={{ height: BAR_MAX_H, background: 'rgba(255,255,255,0.06)' }}>
+                      <motion.span
+                        className="absolute top-1.5 left-0 right-0 text-center font-black z-10 pointer-events-none"
+                        style={{ fontSize: isMe ? 15 : 12, color: isMe ? 'white' : 'rgba(255,255,255,0.55)' }}
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.1 + 0.5 }}
+                      >{pct}%</motion.span>
                       {/* Pre-close bar */}
                       <motion.div
                         className="w-full rounded-t-2xl absolute bottom-0"
