@@ -32633,15 +32633,11 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
           <Trophy size={18} className="text-brand-gold" />
         </div>
         <div className="space-y-3">
-          {leaderboard
-            .filter(entry => {
-              const lbProf = leaderboardProfiles.get(entry.user_id);
-              // Consumers: hide privacy-mode users entirely. Vendors: show them (as Anonymous).
-              return isVendorUser || !lbProf?.privacyMode;
-            })
-            .map((entry, index) => {
+          {leaderboard.map((entry, index) => {
             const lbProfile = leaderboardProfiles.get(entry.user_id);
             const anon = !!lbProfile?.privacyMode;
+            // Consumers don't see privacy-mode entries at all; vendors see them as Anonymous
+            if (anon && !isVendorUser) return null;
             const displayName = anon ? 'Anonymous' : (lbProfile?.name || entry.userName || 'Loyal Customer');
             const scoreLabel = lbActiveType === 'loyalty'
               ? `${entry.lifetimeStamps} stamps`
