@@ -1875,7 +1875,15 @@ export default function App() {
           <Plus className="w-5 h-5 text-white" />
         </button>
         <button onClick={() => setShowSettings(true)} className="absolute left-1/2 -translate-x-1/2 hover:opacity-80 transition-opacity">
-          <h1 className="text-2xl font-black italic tracking-tight leading-none select-none" style={{ fontFamily: 'Poppins, sans-serif', background: 'linear-gradient(90deg, #60a5fa, #a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', willChange: 'transform', padding: '2px 4px', margin: '-2px -4px' }}>Linq</h1>
+          <svg width="56" height="28" viewBox="0 0 56 28" aria-label="Linq" style={{ userSelect: 'none', display: 'block', overflow: 'visible' }}>
+              <defs>
+                <linearGradient id="hdrLinqGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#60a5fa" />
+                  <stop offset="100%" stopColor="#a855f7" />
+                </linearGradient>
+              </defs>
+              <text x="2" y="22" fontFamily="Poppins, sans-serif" fontWeight="900" fontStyle="italic" fontSize="26" fill="url(#hdrLinqGrad)">Linq</text>
+            </svg>
         </button>
         <div className="flex items-center gap-0.5">
           {['consumer','admin'].includes(profile?.role ?? '') && (
