@@ -16376,7 +16376,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
 
   const handleSubscribe = () => {
     if (!store?.id) return;
-    localStorage.setItem('linq_payment_pending', store.id);
+    localStorage.setItem('linq_payment_pending_v2', JSON.stringify({ storeId: store.id, ts: Date.now() }));
     const url = new URL(STRIPE_PAYMENT_LINK);
     url.searchParams.set('client_reference_id', store.id);
     if (profile?.email) url.searchParams.set('prefilled_email', profile.email);
@@ -16461,21 +16461,30 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
   }, [store?.id]);
 
   // Detect return from Stripe payment — show verifying state until webhook confirms subscription.
-  // If no confirmation within 30s, assume abandoned and fall back to paywall.
+  // Uses a timestamp so the 30s window survives page refreshes.
   useEffect(() => {
-    const pendingId = localStorage.getItem('linq_payment_pending');
-    if (!pendingId || !store) return;
-    if (store.id !== pendingId) return;
+    const raw = localStorage.getItem('linq_payment_pending_v2');
+    if (!raw || !store) return;
+    let pending: { storeId: string; ts: number } | null = null;
+    try { pending = JSON.parse(raw); } catch { localStorage.removeItem('linq_payment_pending_v2'); return; }
+    if (!pending || pending.storeId !== store.id) return;
     if (isSubscribed) {
-      localStorage.removeItem('linq_payment_pending');
+      localStorage.removeItem('linq_payment_pending_v2');
+      setPaymentVerifying(false);
+      return;
+    }
+    const elapsed = Date.now() - pending.ts;
+    const remaining = 30_000 - elapsed;
+    if (remaining <= 0) {
+      localStorage.removeItem('linq_payment_pending_v2');
       setPaymentVerifying(false);
       return;
     }
     setPaymentVerifying(true);
     const timer = setTimeout(() => {
-      localStorage.removeItem('linq_payment_pending');
+      localStorage.removeItem('linq_payment_pending_v2');
       setPaymentVerifying(false);
-    }, 30_000);
+    }, remaining);
     return () => clearTimeout(timer);
   }, [store?.id, isSubscribed]);
 
