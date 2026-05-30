@@ -127,25 +127,38 @@
   pointer-events: none;
 }
 
-/* Continuously moving shimmer for challenge bar / buttons */
-@keyframes challenge-shimmer {
-  0%   { transform: translateX(-100%) skewX(-15deg); }
-  100% { transform: translateX(300%) skewX(-15deg); }
+/* Challenge bar — dots travelling left to right */
+@keyframes challenge-dot-travel {
+  0%   { transform: translateX(-12px); opacity: 0; }
+  6%   { opacity: 0.9; }
+  92%  { opacity: 0.9; }
+  100% { transform: translateX(100vw);  opacity: 0; }
 }
-.challenge-shimmer {
+.challenge-dot {
   position: absolute;
-  inset-y: 0;
-  left: 0;
-  width: 35%;
-  height: 100%;
-  background: linear-gradient(
-    105deg,
-    transparent 15%,
-    rgba(255, 255, 255, 0.38) 50%,
-    transparent 85%
-  );
-  animation: challenge-shimmer 1.8s linear infinite;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 0 5px rgba(255, 255, 255, 0.7), 0 0 10px rgba(255, 255, 255, 0.3);
+  animation: challenge-dot-travel 1.9s linear infinite;
   pointer-events: none;
+}
+
+/* Challenge bar — sparkles that twinkle in place */
+@keyframes challenge-sparkle-pop {
+  0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); }
+  35%, 65% { opacity: 1; transform: scale(1) rotate(160deg); }
+}
+.challenge-sparkle {
+  position: absolute;
+  font-size: 7px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 0 4px rgba(255, 255, 255, 0.8);
+  animation: challenge-sparkle-pop 2.2s ease-in-out infinite;
+  pointer-events: none;
+  user-select: none;
 }
 
 .shine-ray {

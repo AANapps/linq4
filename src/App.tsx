@@ -12335,7 +12335,17 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                                   animate={{ width: `${progressPct}%` }}
                                   transition={{ duration: 0.85, ease: [0.34, 1.56, 0.64, 1] }}
                                 >
-                                  {!isComplete && progressPct > 4 && <span className="challenge-shimmer" />}
+                                  {!isComplete && progressPct > 4 && (
+                                    <>
+                                      <span className="challenge-dot" style={{ top: '18%', animationDelay: '0s' }} />
+                                      <span className="challenge-dot" style={{ top: '58%', animationDelay: '0.63s' }} />
+                                      <span className="challenge-dot" style={{ top: '36%', animationDelay: '1.26s' }} />
+                                      <span className="challenge-sparkle" style={{ top: '8%',  left: '18%', animationDelay: '0.1s' }}>✦</span>
+                                      <span className="challenge-sparkle" style={{ top: '52%', left: '45%', animationDelay: '0.85s' }}>✦</span>
+                                      <span className="challenge-sparkle" style={{ top: '15%', left: '72%', animationDelay: '1.5s' }}>✦</span>
+                                      <span className="challenge-sparkle" style={{ top: '60%', left: '88%', animationDelay: '0.4s' }}>★</span>
+                                    </>
+                                  )}
                                 </motion.div>
                               </div>
                               {isComplete && (
@@ -12428,7 +12438,15 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                                 )}
                                 style={joinedCount < 5 ? { background: 'linear-gradient(90deg,#7c3aed,#4f46e5,#2563eb)' } : {}}
                               >
-                                {joinedCount < 5 && <span className="challenge-shimmer" />}
+                                {joinedCount < 5 && (
+                                  <>
+                                    <span className="challenge-dot" style={{ top: '25%', animationDelay: '0s' }} />
+                                    <span className="challenge-dot" style={{ top: '60%', animationDelay: '0.7s' }} />
+                                    <span className="challenge-sparkle" style={{ top: '5%',  left: '20%', animationDelay: '0.2s' }}>✦</span>
+                                    <span className="challenge-sparkle" style={{ top: '55%', left: '55%', animationDelay: '1.0s' }}>✦</span>
+                                    <span className="challenge-sparkle" style={{ top: '10%', left: '80%', animationDelay: '0.5s' }}>★</span>
+                                  </>
+                                )}
                                 <span className="relative z-10">Join Challenge</span>
                               </button>
                             </>
