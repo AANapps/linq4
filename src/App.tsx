@@ -32633,9 +32633,16 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
           <Trophy size={18} className="text-brand-gold" />
         </div>
         <div className="space-y-3">
-          {leaderboard.map((entry, index) => {
+          {leaderboard
+            .filter(entry => {
+              const lbProf = leaderboardProfiles.get(entry.user_id);
+              // Consumers: hide privacy-mode users entirely. Vendors: show them (as Anonymous).
+              return isVendorUser || !lbProf?.privacyMode;
+            })
+            .map((entry, index) => {
             const lbProfile = leaderboardProfiles.get(entry.user_id);
-            const displayName = lbProfile?.name || entry.userName || 'Loyal Customer';
+            const anon = !!lbProfile?.privacyMode;
+            const displayName = anon ? 'Anonymous' : (lbProfile?.name || entry.userName || 'Loyal Customer');
             const scoreLabel = lbActiveType === 'loyalty'
               ? `${entry.lifetimeStamps} stamps`
               : lbActiveType === 'visit'
@@ -32649,16 +32656,18 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
             return (
               <div
                 key={`lb-${entry.id}`}
-                onClick={() => lbProfile && onViewUser(lbProfile)}
-                className="flex items-center justify-between p-3 rounded-2xl hover:bg-brand-bg transition-colors cursor-pointer group"
+                onClick={() => lbProfile && !anon && onViewUser(lbProfile)}
+                className={cn("flex items-center justify-between p-3 rounded-2xl transition-colors group", !anon ? "hover:bg-brand-bg cursor-pointer" : "cursor-default")}
               >
                 <div className="flex items-center gap-3">
                   {!isOwnStore && !isVendorUser && <div className="w-6 h-6 flex items-center justify-center font-bold text-xs text-brand-navy/75">#{index + 1}</div>}
-                  <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-navy/5 bg-blue-50 flex items-center justify-center shrink-0">
-                    <PixelAvatar config={lbProfile?.avatar} uid={lbProfile?.uid ?? entry.user_id} size={40} view="head" />
+                  <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-navy/5 bg-brand-navy/8 flex items-center justify-center shrink-0">
+                    {anon
+                      ? <UserIcon size={16} className="text-brand-navy/30" />
+                      : <PixelAvatar config={lbProfile?.avatar} uid={lbProfile?.uid ?? entry.user_id} size={40} view="head" />}
                   </div>
                   <div>
-                    <p className="font-bold text-sm group-hover:text-brand-gold transition-colors">{displayName}</p>
+                    <p className={cn("font-bold text-sm", !anon && "group-hover:text-brand-gold transition-colors")}>{displayName}</p>
                     {!isOwnStore && !isVendorUser && <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest">{subLabel}</p>}
                   </div>
                 </div>
