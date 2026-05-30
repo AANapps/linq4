@@ -1825,7 +1825,7 @@ export default function App() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-between gradient-logo-blue py-16 px-6">
         <div className="flex-1 flex items-center justify-center">
-          <span className="text-6xl font-black tracking-tight select-none leading-none" style={{ fontFamily: 'Poppins, sans-serif' }}><span style={{ color: '#60a5fa' }}>li</span><span style={{ color: '#1d4ed8' }}>nq</span></span>
+          <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={{ fontFamily: 'Poppins, sans-serif', color: '#ffffff' }}>Linq</span>
         </div>
         <div className="flex flex-col items-center gap-2">
           <img src={adastraLogoUrl || '/app-logo.png'} alt="Ad Astra Network" className="w-14 h-14 rounded-2xl object-contain" />
@@ -1852,7 +1852,7 @@ export default function App() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-between gradient-logo-blue py-16 px-6">
         <div className="flex-1 flex items-center justify-center">
-          <span className="text-6xl font-black tracking-tight select-none leading-none" style={{ fontFamily: 'Poppins, sans-serif' }}><span style={{ color: '#60a5fa' }}>li</span><span style={{ color: '#1d4ed8' }}>nq</span></span>
+          <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={{ fontFamily: 'Poppins, sans-serif', color: '#ffffff' }}>Linq</span>
         </div>
         <div className="flex flex-col items-center gap-2">
           <img src={adastraLogoUrl || '/app-logo.png'} alt="Ad Astra Network" className="w-14 h-14 rounded-2xl object-contain" />
@@ -1875,7 +1875,7 @@ export default function App() {
           <Plus className="w-5 h-5 text-white" />
         </button>
         <button onClick={() => setShowSettings(true)} className="absolute left-1/2 -translate-x-1/2 hover:opacity-80 transition-opacity">
-          <h1 className="text-2xl font-black italic tracking-tight leading-none" style={{ fontFamily: 'Poppins, sans-serif', color: '#60a5fa' }}>Linq</h1>
+          <h1 className="text-2xl font-black italic tracking-tight leading-none" style={{ fontFamily: 'Poppins, sans-serif', background: 'linear-gradient(90deg, #60a5fa, #a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Linq</h1>
         </button>
         <div className="flex items-center gap-0.5">
           {['consumer','admin'].includes(profile?.role ?? '') && (
@@ -2130,7 +2130,7 @@ export default function App() {
             active={activeTab === 'deals'}
             onClick={() => { setActiveTab('deals'); setViewingStore(null); setViewingUser(null); }}
             icon={<Tag />}
-            label=""
+            label="Deals"
           />
         ) : (
           <NavButton
@@ -2168,7 +2168,7 @@ export default function App() {
           active={activeTab === 'discover'}
           onClick={() => { setActiveTab('discover'); setViewingStore(null); setViewingUser(null); }}
           icon={['consumer','admin'].includes(profile?.role ?? '') ? <Compass /> : <Plus />}
-          label={['consumer','admin'].includes(profile?.role ?? '') ? '' : 'Issue'}
+          label={['consumer','admin'].includes(profile?.role ?? '') ? 'Discovery' : 'Issue'}
         />
         <NavButton
           active={activeTab === 'profile'}
