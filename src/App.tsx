@@ -6145,7 +6145,7 @@ function AppEditPanel({ onClose, onLogoChange }: { onClose: () => void; onLogoCh
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [subLink, setSubLink] = useState('https://buy.stripe.com/aFa5kF5JZh193yT6OEd7q00');
+  const [subLink, setSubLink] = useState('https://buy.stripe.com/test_aFa5kF5JZh193yT6OEd7q00');
   const [nfcLink, setNfcLink] = useState('');
   const [linksSaved, setLinksSaved] = useState(false);
   const [linksSaving, setLinksSaving] = useState(false);
@@ -6156,7 +6156,7 @@ function AppEditPanel({ onClose, onLogoChange }: { onClose: () => void; onLogoCh
     }).catch(() => {});
     getDoc(doc(db, 'app_config', 'stripe_links')).then(snap => {
       if (snap.exists()) {
-        setSubLink(snap.data().subscriptionLink || 'https://buy.stripe.com/aFa5kF5JZh193yT6OEd7q00');
+        setSubLink(snap.data().subscriptionLink || 'https://buy.stripe.com/test_aFa5kF5JZh193yT6OEd7q00');
         setNfcLink(snap.data().nfcOrderLink || '');
       }
     }).catch(() => {});
@@ -16339,7 +16339,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
 
 
   const [STRIPE_PAYMENT_LINK, setStripePaymentLink] = useState(
-    import.meta.env.VITE_STRIPE_PAYMENT_LINK || 'https://buy.stripe.com/aFa5kF5JZh193yT6OEd7q00'
+    import.meta.env.VITE_STRIPE_PAYMENT_LINK || 'https://buy.stripe.com/test_aFa5kF5JZh193yT6OEd7q00'
   );
   const [NFC_ORDER_STRIPE_LINK, setNfcOrderStripeLink] = useState('https://buy.stripe.com/PLACEHOLDER_NFC_LINK');
   useEffect(() => {
