@@ -29707,8 +29707,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                     className="w-full h-full relative overflow-hidden px-3 py-3 flex flex-col items-center justify-center gap-0.5 active:opacity-90 transition-opacity"
                     style={{ background: uiColors.savedTile.css }}
                   >
-                    <p className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-white/40 text-center"
-                      style={tileTextStyle(uiColors.savedTile, 0.4)}>Saved with Linq</p>
+                    <p className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-white text-center">Saved with Linq</p>
                     {saved > 0
                       ? <CountUpValue value={saved} prefix={sym} className="relative z-10 font-display text-xl font-black text-white"
                           style={tileTextStyle(uiColors.savedTile)} />
