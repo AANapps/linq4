@@ -26881,18 +26881,6 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
               )}
             </div>
 
-            {/* Privacy Mode */}
-            <div className="space-y-3">
-              <SectionLabel icon={<Lock size={14} className="text-brand-gold" />} label="Privacy" />
-              <div className="flex items-center justify-between bg-white px-5 py-4 rounded-2xl border border-brand-navy/10">
-                <div className="flex-1 min-w-0 pr-4">
-                  <p className="text-sm font-bold text-brand-navy">Privacy Mode</p>
-                  <p className="text-xs text-brand-navy/50 mt-0.5">Hide your name and avatar from vendor leaderboards and customer lists — shown as Anonymous.</p>
-                </div>
-                <ToggleSwitch on={privacyMode} onChange={setPrivacyMode} />
-              </div>
-            </div>
-
             {/* Public Visibility */}
             <div className="space-y-3">
               <SectionLabel icon={<Settings size={14} className="text-brand-gold" />} label="Public Visibility" />
@@ -26909,6 +26897,18 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
 
           </motion.div>
         )}
+
+        {/* Privacy Mode — visible to all users */}
+        <div className="space-y-3">
+          <SectionLabel icon={<Lock size={14} className="text-brand-gold" />} label="Privacy" />
+          <div className="flex items-center justify-between bg-white px-5 py-4 rounded-2xl border border-brand-navy/10">
+            <div className="flex-1 min-w-0 pr-4">
+              <p className="text-sm font-bold text-brand-navy">Privacy Mode</p>
+              <p className="text-xs text-brand-navy/50 mt-0.5">Hide your name and avatar from vendor leaderboards and customer lists — shown as Anonymous.</p>
+            </div>
+            <ToggleSwitch on={privacyMode} onChange={setPrivacyMode} />
+          </div>
+        </div>
 
         {/* Intro status */}
         <div className="flex items-center justify-between px-5 py-3 rounded-2xl bg-brand-navy/4">
