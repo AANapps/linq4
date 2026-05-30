@@ -3645,7 +3645,7 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-        className="fixed inset-0 z-[250] flex flex-col max-w-md mx-auto"
+        className="fixed inset-0 z-[250] flex flex-col"
       >
         <button onClick={onClose} className="flex-shrink-0 h-16 w-full" />
         <div className="flex-1 bg-brand-bg rounded-t-[2.5rem] shadow-2xl flex flex-col overflow-hidden">
@@ -3880,7 +3880,7 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] flex flex-col max-w-md mx-auto">
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] flex flex-col">
       <div className="flex-1 overflow-y-auto" style={{ background: collectionTab === 'stickers' ? 'radial-gradient(ellipse at 20% 0%, #1a003a 0%, #0a0020 40%, #000510 100%)' : '#000510' }}>
         {/* Arcade scanline overlay */}
         {collectionTab === 'stickers' && (
@@ -3964,7 +3964,6 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
           <div className="relative z-[1] flex flex-col items-center px-5 pt-8 pb-10 gap-6" style={{ minHeight: '70vh' }}>
             {/* Arcade marquee header */}
             <div className="relative w-full rounded-3xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #1a0030, #0d001a)', border: '2px solid rgba(245,158,11,0.4)', boxShadow: '0 0 30px rgba(245,158,11,0.15)' }}>
-              {/* Blinking lights strip */}
               <div className="flex justify-around px-4 py-2">
                 {['#ef4444','#f59e0b','#22c55e','#3b82f6','#a855f7','#ec4899','#ef4444','#f59e0b','#22c55e'].map((c, i) => (
                   <motion.div key={i} className="w-2.5 h-2.5 rounded-full"
@@ -4002,12 +4001,57 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
               ✨ COMING SOON ✨
             </motion.div>
 
-            <p className="text-center text-sm" style={{ color: 'rgba(255,255,255,0.55)', maxWidth: 280 }}>
-              The Trading Post is being loaded into the arcade. Here's a sneak peek at what's coming…
-            </p>
+            {/* ── Trade with other players ── */}
+            <div className="w-full rounded-3xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(99,102,241,0.3)' }}>
+              <div className="px-5 py-3" style={{ background: 'linear-gradient(90deg,rgba(99,102,241,0.25),rgba(124,58,237,0.18))', borderBottom: '1px solid rgba(99,102,241,0.2)' }}>
+                <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'rgba(167,139,250,0.8)' }}>Feature spotlight</p>
+                <p className="font-display font-black text-white text-base">🤝 Trade with Other Players</p>
+              </div>
+              <div className="p-5 space-y-4">
+                {/* Player vs Player swap illustration */}
+                <div className="flex items-center gap-3 justify-center">
+                  {/* Player A */}
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl" style={{ background: 'rgba(99,102,241,0.18)', border: '1px solid rgba(99,102,241,0.35)' }}>🧑</div>
+                    <div className="px-2.5 py-1 rounded-xl text-[10px] font-black" style={{ background: 'rgba(59,130,246,0.2)', color: '#93c5fd', border: '1px solid rgba(59,130,246,0.35)' }}>Your card</div>
+                  </div>
+                  {/* Animated swap arrows */}
+                  <div className="flex flex-col items-center gap-1">
+                    <motion.div style={{ color: '#f59e0b', fontSize: 18 }}
+                      animate={{ x: [0, 6, 0] }} transition={{ duration: 1, repeat: Infinity }}>→</motion.div>
+                    <div className="w-8 h-px" style={{ background: 'rgba(245,158,11,0.3)' }} />
+                    <motion.div style={{ color: '#a855f7', fontSize: 18 }}
+                      animate={{ x: [0, -6, 0] }} transition={{ duration: 1, repeat: Infinity, delay: 0.5 }}>←</motion.div>
+                  </div>
+                  {/* Player B */}
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl" style={{ background: 'rgba(168,85,247,0.18)', border: '1px solid rgba(168,85,247,0.35)' }}>👤</div>
+                    <div className="px-2.5 py-1 rounded-xl text-[10px] font-black" style={{ background: 'rgba(168,85,247,0.2)', color: '#c084fc', border: '1px solid rgba(168,85,247,0.35)' }}>Their card</div>
+                  </div>
+                </div>
 
-            {/* Trade examples */}
-            <div className="w-full space-y-3">
+                {/* Feature bullets */}
+                <div className="space-y-2">
+                  {[
+                    { icon: '🔍', text: 'Browse what other players are offering' },
+                    { icon: '📤', text: 'List your duplicates for trade' },
+                    { icon: '🤝', text: 'Agree a deal — swap instantly' },
+                    { icon: '🏆', text: 'Complete your sets faster together' },
+                  ].map((f, i) => (
+                    <motion.div key={i} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.07 + 0.3 }}
+                      className="flex items-center gap-3 px-4 py-2.5 rounded-2xl"
+                      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                      <span className="text-lg shrink-0">{f.icon}</span>
+                      <p className="text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.75)' }}>{f.text}</p>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Card upgrade trades */}
+            <div className="w-full space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest px-1" style={{ color: 'rgba(245,158,11,0.7)' }}>Card upgrade trades</p>
               {[
                 { from: '5× Rare Cards', arrow: '→', to: '1× Legendary Card', fromColor: '#3b82f6', toColor: '#f59e0b', icon: '🃏', prize: false },
                 { from: '10× Rare Cards', arrow: '→', to: '1× Legendary Card', fromColor: '#a855f7', toColor: '#f59e0b', icon: '👑', prize: false },
@@ -4031,7 +4075,7 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-xs font-black px-2 py-0.5 rounded-lg" style={{ background: `${ex.fromColor}22`, color: ex.fromColor, border: `1px solid ${ex.fromColor}44` }}>{ex.from}</span>
-                      <span className="text-white/50 font-bold text-sm">{ex.arrow}</span>
+                      <span className="font-bold text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>{ex.arrow}</span>
                       <span className="text-xs font-black px-2 py-0.5 rounded-lg" style={{ background: `${ex.toColor}22`, color: ex.toColor, border: `1px solid ${ex.toColor}44` }}>{ex.to}</span>
                     </div>
                   </div>
@@ -4040,7 +4084,7 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
               ))}
             </div>
 
-            {/* Notify me placeholder */}
+            {/* Notify me */}
             <div className="w-full rounded-2xl px-5 py-4 text-center" style={{ background: 'rgba(245,158,11,0.08)', border: '1px dashed rgba(245,158,11,0.3)' }}>
               <p className="text-xs font-bold" style={{ color: 'rgba(245,158,11,0.8)' }}>🔔 We'll let you know when trading goes live!</p>
             </div>
