@@ -16460,7 +16460,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
     return onSnapshot(q, snap => setStoreCards(snap.docs.map(d => ({ id: d.id, ...d.data() } as Card))), () => {});
   }, [store?.id]);
 
-  // Detect return from Stripe payment — show verifying state until webhook confirms subscription
+  // Detect return from Stripe payment — show verifying state until webhook confirms subscription.
+  // If no confirmation within 30s, assume abandoned and fall back to paywall.
   useEffect(() => {
     const pendingId = localStorage.getItem('linq_payment_pending');
     if (!pendingId || !store) return;
@@ -16468,9 +16469,14 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
     if (isSubscribed) {
       localStorage.removeItem('linq_payment_pending');
       setPaymentVerifying(false);
-    } else {
-      setPaymentVerifying(true);
+      return;
     }
+    setPaymentVerifying(true);
+    const timer = setTimeout(() => {
+      localStorage.removeItem('linq_payment_pending');
+      setPaymentVerifying(false);
+    }, 30_000);
+    return () => clearTimeout(timer);
   }, [store?.id, isSubscribed]);
 
   // Run automations once when store + cards are ready
