@@ -6831,6 +6831,7 @@ function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColo
   const [pendingThemeData, setPendingThemeData] = useState<{ themeId: string; customHex?: string } | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [editingSlot, setEditingSlot] = useState<keyof UiColors | null>(null);
 
   useEffect(() => {
     getDoc(doc(db, 'app_config', 'theme')).then(snap => {
@@ -6932,20 +6933,27 @@ function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColo
 
           <div className="border-t border-brand-navy/8" />
 
-          {UI_COLOR_SLOT_DEFS.map(slot => {
-            const current = colors[slot.key];
+          {editingSlot ? (() => {
+            const slot = UI_COLOR_SLOT_DEFS.find(s => s.key === editingSlot)!;
+            const current = colors[editingSlot];
             return (
-              <div key={slot.key} className="space-y-3">
-                <div>
-                  <p className="font-bold text-brand-navy text-sm">{slot.label}</p>
-                  <p className="text-[11px] text-brand-navy/60">{slot.desc}</p>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setEditingSlot(null)} className="p-2 rounded-xl bg-brand-navy/8 active:scale-95 transition-transform">
+                    <ChevronLeft size={16} className="text-brand-navy" />
+                  </button>
+                  <div>
+                    <p className="font-bold text-brand-navy text-sm">{slot.label}</p>
+                    <p className="text-[11px] text-brand-navy/60">{slot.desc}</p>
+                  </div>
                 </div>
+                <div className="rounded-2xl h-20 w-full border border-black/5 shadow-sm" style={{ background: current.css }} />
                 <div className="space-y-3">
                   <div>
                     <p className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-wider mb-1.5">Background</p>
                     <ColorSwatchPicker
                       value={current.css}
-                      onChange={css => pickBg(slot.key, css)}
+                      onChange={css => pickBg(editingSlot, css)}
                       presets={slot.presets.map(p => ({ id: p.id, css: p.css, label: p.label }))}
                       label="Tap to open colour picker"
                     />
@@ -6954,14 +6962,34 @@ function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColo
                     <p className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-wider mb-1.5">Text colour</p>
                     <ColorSwatchPicker
                       value={current.textColor ?? (current.dark ? '#ffffff' : '#0f172a')}
-                      onChange={color => pickTextColor(slot.key, color)}
+                      onChange={color => pickTextColor(editingSlot, color)}
                       label="Tap to open colour picker"
                     />
                   </div>
                 </div>
               </div>
             );
-          })}
+          })() : (
+            <div className="grid grid-cols-2 gap-3">
+              {UI_COLOR_SLOT_DEFS.map(slot => {
+                const current = colors[slot.key];
+                const textCol = current.textColor ?? (current.dark ? '#ffffff' : '#0f172a');
+                return (
+                  <button
+                    key={slot.key}
+                    onClick={() => setEditingSlot(slot.key)}
+                    className="rounded-2xl overflow-hidden h-24 relative shadow-sm active:scale-[0.97] transition-transform border border-black/5 text-left"
+                    style={{ background: current.css }}
+                  >
+                    <div className="absolute inset-0 flex flex-col justify-end p-3">
+                      <p className="text-xs font-bold leading-tight drop-shadow-sm" style={{ color: textCol }}>{slot.label}</p>
+                      <p className="text-[9px] mt-0.5 leading-tight opacity-70" style={{ color: textCol }}>{slot.desc}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
@@ -21517,7 +21545,7 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor 
         transition={{ duration: isWinner && !alreadyClaimed ? 1.4 : 2.2, repeat: Infinity, ease: 'easeInOut' }}
         onClick={() => setOpen(true)}
         className="flex-1 rounded-[1.5rem] overflow-hidden text-left"
-        style={{ background: isClosed ? 'linear-gradient(145deg,#7f1d1d,#b91c1c)' : 'linear-gradient(145deg,#dc2626,#ef4444,#f87171,#dc2626)', backgroundSize: '300% 300%', animation: isClosed ? 'none' : 'poll-gradient-shift 3s ease infinite' }}
+        style={{ background: tileColor?.css ?? (isClosed ? 'linear-gradient(145deg,#7f1d1d,#b91c1c)' : 'linear-gradient(145deg,#dc2626,#ef4444,#f87171,#dc2626)'), backgroundSize: '300% 300%', animation: isClosed ? 'none' : 'poll-gradient-shift 3s ease infinite' }}
       >
         <div className="relative h-full px-4 py-4 flex flex-col items-center gap-2">
           {/* Shine ray */}
