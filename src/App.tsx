@@ -3808,6 +3808,7 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
   onOpenPack?: (s: CollectibleSticker[]) => void;
   onScan?: () => void;
 }) {
+  const [collectionTab, setCollectionTab] = useState<'stickers' | 'trading'>('stickers');
   const [selected, setSelected] = useState<{ sticker: CollectibleSticker; count: number } | null>(null);
   const [cardDefs, setCardDefs] = useState<CollectibleCardDef[]>([]);
   const [cardSets, setCardSets] = useState<CollectibleCardSet[]>([]);
@@ -3838,9 +3839,9 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
     bySet.get(setId)!.push(s);
   });
 
-  // Order: known sets first (sorted by name), then __none__
+  // Order: universal (isDefault) sets only, sorted by name
   const setOrder = cardSets
-    .filter(s => bySet.has(s.id))
+    .filter(s => s.isDefault && bySet.has(s.id))
     .sort((a, b) => a.name.localeCompare(b.name));
 
   // Deduplicate: group by cardDefId or tier+variant, keep most recent, track count
@@ -3860,13 +3861,13 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
     const deduped = dedupe(cards);
     return (
       <div key={key} className="space-y-3">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/60">{name} · {cards.length} card{cards.length !== 1 ? 's' : ''}</p>
+        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'rgba(168,85,247,0.8)', textShadow: '0 0 8px rgba(168,85,247,0.4)' }}>{name} · {cards.length} card{cards.length !== 1 ? 's' : ''}</p>
         <div className="flex flex-wrap gap-3">
           {deduped.map(({ sticker, count }) => (
             <div key={sticker.cardDefId ?? `${sticker.tier}-${sticker.variant}`} className="relative" onClick={() => setSelected({ sticker, count })}>
               <StickerCard sticker={sticker} isRevealed={true} size="sm" />
               {count > 1 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-brand-navy text-white text-[9px] font-black rounded-full w-5 h-5 flex items-center justify-center shadow">
+                <span className="absolute -top-1.5 -right-1.5 text-white text-[9px] font-black rounded-full w-5 h-5 flex items-center justify-center shadow" style={{ background: '#7c3aed' }}>
                   x{count}
                 </span>
               )}
@@ -3880,43 +3881,182 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] flex flex-col max-w-md mx-auto">
-      <div className="flex-1 overflow-y-auto bg-brand-bg">
-        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm px-5 pt-5 pb-4 border-b border-black/5 z-10 flex items-center justify-between">
-          <h2 className="font-display text-xl font-bold text-brand-navy">My Collection</h2>
-          <div className="flex items-center gap-2">
-            {isOwnProfile && onScan && (
-              <button onClick={onScan} className="p-2 rounded-2xl bg-brand-gold/10 border border-brand-gold/20 text-brand-gold active:scale-95 transition-all" title="Scan sticker QR">
-                <QrCode size={18} />
+      <div className="flex-1 overflow-y-auto" style={{ background: collectionTab === 'stickers' ? 'radial-gradient(ellipse at 20% 0%, #1a003a 0%, #0a0020 40%, #000510 100%)' : '#000510' }}>
+        {/* Arcade scanline overlay */}
+        {collectionTab === 'stickers' && (
+          <div className="pointer-events-none fixed inset-0 z-0" style={{
+            backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(255,255,255,0.015) 3px, rgba(255,255,255,0.015) 4px)',
+            mixBlendMode: 'screen',
+          }} />
+        )}
+
+        {/* Header */}
+        <div className="sticky top-0 z-10 px-5 pt-5 pb-3" style={{ background: 'rgba(0,5,16,0.92)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-display text-xl font-bold" style={{ color: '#fff', textShadow: '0 0 18px #a855f7aa' }}>
+              🕹️ My Collection
+            </h2>
+            <div className="flex items-center gap-2">
+              {isOwnProfile && onScan && (
+                <button onClick={onScan} className="p-2 rounded-2xl active:scale-95 transition-all" style={{ background: 'rgba(168,85,247,0.15)', border: '1px solid rgba(168,85,247,0.3)', color: '#c084fc' }} title="Scan sticker QR">
+                  <QrCode size={18} />
+                </button>
+              )}
+              <button onClick={onClose} className="p-2 rounded-2xl active:scale-95 transition-all" style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.7)' }}>
+                <X size={18} />
               </button>
-            )}
-            <button onClick={onClose} className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm active:scale-95 transition-all">
-              <X size={18} className="text-brand-navy/75" />
+            </div>
+          </div>
+          {/* Tab switcher */}
+          <div className="flex gap-1 p-1 rounded-xl" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <button
+              onClick={() => setCollectionTab('stickers')}
+              className="flex-1 py-2 rounded-lg text-sm font-bold transition-all"
+              style={collectionTab === 'stickers'
+                ? { background: 'linear-gradient(135deg, #7c3aed, #4f46e5)', color: '#fff', boxShadow: '0 0 12px rgba(124,58,237,0.5)' }
+                : { color: 'rgba(255,255,255,0.45)' }}
+            >
+              🃏 Stickers
+            </button>
+            <button
+              onClick={() => setCollectionTab('trading')}
+              className="flex-1 py-2 rounded-lg text-sm font-bold transition-all relative overflow-hidden"
+              style={collectionTab === 'trading'
+                ? { background: 'linear-gradient(135deg, #d97706, #f59e0b)', color: '#000', boxShadow: '0 0 14px rgba(245,158,11,0.55)' }
+                : { color: 'rgba(255,255,255,0.45)' }}
+            >
+              🔄 Trading
+              <span className="absolute top-0.5 right-1 text-[7px] font-black px-1 py-0.5 rounded-full leading-none" style={{ background: '#ef4444', color: '#fff' }}>NEW</span>
             </button>
           </div>
         </div>
 
-        <div className="p-5 space-y-6">
-          {/* Unrevealed CTA */}
-          {isOwnProfile && unrevealed.length > 0 && (
-            <motion.button className="w-full py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"
-              style={{ background: 'linear-gradient(135deg, #0D0D2B, #1A0730)', color: 'white' }}
-              onClick={() => { onOpenPack?.(unrevealed); onClose(); }}
-              whileTap={{ scale: 0.97 }}
-              animate={{ boxShadow: ['0 0 0px #F5C51800', '0 0 18px #F5C51866', '0 0 0px #F5C51800'] }}
+        {/* Stickers tab */}
+        {collectionTab === 'stickers' && (
+          <div className="relative z-[1] p-5 space-y-6">
+            {/* Neon corner dots */}
+            <div className="pointer-events-none absolute top-2 left-3 w-2 h-2 rounded-full" style={{ background: '#a855f7', boxShadow: '0 0 8px #a855f7', opacity: 0.7 }} />
+            <div className="pointer-events-none absolute top-2 right-3 w-2 h-2 rounded-full" style={{ background: '#22d3ee', boxShadow: '0 0 8px #22d3ee', opacity: 0.7 }} />
+
+            {/* Unrevealed CTA */}
+            {isOwnProfile && unrevealed.length > 0 && (
+              <motion.button className="w-full py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"
+                style={{ background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: 'white', boxShadow: '0 0 20px rgba(124,58,237,0.4)' }}
+                onClick={() => { onOpenPack?.(unrevealed); onClose(); }}
+                whileTap={{ scale: 0.97 }}
+                animate={{ boxShadow: ['0 0 10px rgba(124,58,237,0.3)', '0 0 28px rgba(124,58,237,0.65)', '0 0 10px rgba(124,58,237,0.3)'] }}
+                transition={{ duration: 2, repeat: Infinity }}>
+                🎴 Open {unrevealed.length} card{unrevealed.length !== 1 ? 's' : ''}
+              </motion.button>
+            )}
+
+            {validStickers.length === 0 && (
+              <p className="text-center text-sm py-8" style={{ color: 'rgba(255,255,255,0.35)' }}>No cards yet — earn stamps to collect!</p>
+            )}
+
+            {/* Universal sets only */}
+            {setOrder.map(set => renderSet(set.id, set.name, bySet.get(set.id)!))}
+          </div>
+        )}
+
+        {/* Trading tab — Coming Soon */}
+        {collectionTab === 'trading' && (
+          <div className="relative z-[1] flex flex-col items-center px-5 pt-8 pb-10 gap-6" style={{ minHeight: '70vh' }}>
+            {/* Arcade marquee header */}
+            <div className="relative w-full rounded-3xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #1a0030, #0d001a)', border: '2px solid rgba(245,158,11,0.4)', boxShadow: '0 0 30px rgba(245,158,11,0.15)' }}>
+              {/* Blinking lights strip */}
+              <div className="flex justify-around px-4 py-2">
+                {['#ef4444','#f59e0b','#22c55e','#3b82f6','#a855f7','#ec4899','#ef4444','#f59e0b','#22c55e'].map((c, i) => (
+                  <motion.div key={i} className="w-2.5 h-2.5 rounded-full"
+                    style={{ background: c, boxShadow: `0 0 8px ${c}` }}
+                    animate={{ opacity: [1, 0.2, 1] }}
+                    transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.09, ease: 'easeInOut' }}
+                  />
+                ))}
+              </div>
+              <div className="px-6 py-5 text-center">
+                <motion.p className="font-display text-3xl font-black mb-1"
+                  style={{ color: '#f59e0b', textShadow: '0 0 20px #f59e0b, 0 0 40px #d97706' }}
+                  animate={{ textShadow: ['0 0 20px #f59e0b, 0 0 40px #d97706', '0 0 30px #fbbf24, 0 0 60px #f59e0b', '0 0 20px #f59e0b, 0 0 40px #d97706'] }}
+                  transition={{ duration: 1.6, repeat: Infinity }}>
+                  TRADING POST
+                </motion.p>
+                <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'rgba(245,158,11,0.6)' }}>Insert coins to continue…</p>
+              </div>
+              <div className="flex justify-around px-4 py-2">
+                {['#a855f7','#ec4899','#ef4444','#f59e0b','#22c55e','#3b82f6','#a855f7','#ec4899','#22c55e'].map((c, i) => (
+                  <motion.div key={i} className="w-2.5 h-2.5 rounded-full"
+                    style={{ background: c, boxShadow: `0 0 8px ${c}` }}
+                    animate={{ opacity: [1, 0.2, 1] }}
+                    transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.09 + 0.4, ease: 'easeInOut' }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Coming soon badge */}
+            <motion.div className="px-8 py-3 rounded-full font-black text-lg"
+              style={{ background: 'linear-gradient(135deg, #7c3aed, #4f46e5)', color: '#fff', boxShadow: '0 0 24px rgba(124,58,237,0.6)', letterSpacing: '0.12em' }}
+              animate={{ scale: [1, 1.04, 1], boxShadow: ['0 0 18px rgba(124,58,237,0.5)', '0 0 32px rgba(124,58,237,0.8)', '0 0 18px rgba(124,58,237,0.5)'] }}
               transition={{ duration: 2, repeat: Infinity }}>
-              🎴 Open {unrevealed.length} card{unrevealed.length !== 1 ? 's' : ''}
-            </motion.button>
-          )}
+              ✨ COMING SOON ✨
+            </motion.div>
 
-          {validStickers.length === 0 && (
-            <p className="text-center text-sm text-brand-navy/50 py-8">No cards yet</p>
-          )}
+            <p className="text-center text-sm" style={{ color: 'rgba(255,255,255,0.55)', maxWidth: 280 }}>
+              The Trading Post is being loaded into the arcade. Here's a sneak peek at what's coming…
+            </p>
 
-          {/* Sets in order */}
-          {setOrder.map(set => renderSet(set.id, set.name, bySet.get(set.id)!))}
-          {/* Cards with no named set */}
-          {bySet.has('__none__') && renderSet('__none__', 'Other', bySet.get('__none__')!)}
-        </div>
+            {/* Trade examples */}
+            <div className="w-full space-y-3">
+              {[
+                { from: '5× Rare Cards', arrow: '→', to: '1× Legendary Card', fromColor: '#3b82f6', toColor: '#f59e0b', icon: '🃏', prize: false },
+                { from: '10× Rare Cards', arrow: '→', to: '1× Legendary Card', fromColor: '#a855f7', toColor: '#f59e0b', icon: '👑', prize: false },
+                { from: '5× Legendary Cards', arrow: '→', to: '🏖️ Free Holiday', fromColor: '#f59e0b', toColor: '#22c55e', icon: '✈️', prize: true },
+                { from: '5× Legendary Cards', arrow: '→', to: '📺 Free TV', fromColor: '#f59e0b', toColor: '#ec4899', icon: '🎁', prize: true },
+              ].map((ex, i) => (
+                <motion.div key={i}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.08 + 0.2 }}
+                  className="relative rounded-2xl overflow-hidden flex items-center gap-3 px-4 py-3"
+                  style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${ex.fromColor}33` }}>
+                  {ex.prize && (
+                    <motion.div className="absolute inset-0 pointer-events-none rounded-2xl"
+                      style={{ background: `radial-gradient(ellipse at 80% 50%, ${ex.toColor}18, transparent 60%)` }}
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 2, repeat: Infinity, delay: i * 0.3 }}
+                    />
+                  )}
+                  <span className="text-2xl shrink-0">{ex.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-xs font-black px-2 py-0.5 rounded-lg" style={{ background: `${ex.fromColor}22`, color: ex.fromColor, border: `1px solid ${ex.fromColor}44` }}>{ex.from}</span>
+                      <span className="text-white/50 font-bold text-sm">{ex.arrow}</span>
+                      <span className="text-xs font-black px-2 py-0.5 rounded-lg" style={{ background: `${ex.toColor}22`, color: ex.toColor, border: `1px solid ${ex.toColor}44` }}>{ex.to}</span>
+                    </div>
+                  </div>
+                  {ex.prize && <span className="shrink-0 text-[9px] font-black px-2 py-1 rounded-full" style={{ background: '#22c55e22', color: '#4ade80', border: '1px solid #22c55e44' }}>PRIZE</span>}
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Notify me placeholder */}
+            <div className="w-full rounded-2xl px-5 py-4 text-center" style={{ background: 'rgba(245,158,11,0.08)', border: '1px dashed rgba(245,158,11,0.3)' }}>
+              <p className="text-xs font-bold" style={{ color: 'rgba(245,158,11,0.8)' }}>🔔 We'll let you know when trading goes live!</p>
+            </div>
+
+            {/* Pixel decoration */}
+            <div className="flex gap-2 opacity-30">
+              {['#ef4444','#f59e0b','#22c55e','#3b82f6','#a855f7'].map((c, i) => (
+                <motion.div key={i} className="w-3 h-3 rounded-sm"
+                  style={{ background: c }}
+                  animate={{ y: [0, -4, 0], opacity: [0.4, 1, 0.4] }}
+                  transition={{ duration: 1, repeat: Infinity, delay: i * 0.15 }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Card detail overlay */}
@@ -3925,12 +4065,11 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
           const selDef = selected.sticker.cardDefId ? cardDefs.find(d => d.id === selected.sticker.cardDefId) : null;
           return (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/70 backdrop-blur-sm z-20 flex items-center justify-center p-6"
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm z-20 flex items-center justify-center p-6"
               onClick={() => setSelected(null)}>
               <motion.div initial={{ scale: 0.85, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.85, opacity: 0 }}
                 className="flex flex-col items-center gap-5"
                 onClick={e => e.stopPropagation()}>
-                {/* Tier glow */}
                 <div style={{ position: 'absolute', inset: -32, borderRadius: 48, background: cfg.solid, filter: 'blur(48px)', opacity: 0.35, pointerEvents: 'none' }} />
                 <StickerCard sticker={selected.sticker} isRevealed={true} size="lg" />
                 {selDef?.description && (
@@ -3941,18 +4080,18 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
                 )}
                 <div className="flex gap-3">
                   <div className="relative inline-flex flex-col items-center">
-                    <button disabled className="px-8 py-2.5 rounded-2xl font-bold text-sm text-white cursor-not-allowed"
-                      style={{ background: '#3b82f6' }}>
-                      Trade
+                    <button onClick={() => { setSelected(null); setCollectionTab('trading'); }} className="px-8 py-2.5 rounded-2xl font-bold text-sm text-white"
+                      style={{ background: 'linear-gradient(135deg,#d97706,#f59e0b)', boxShadow: '0 0 14px rgba(245,158,11,0.45)' }}>
+                      🔄 Trade
                     </button>
-                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full leading-none">
-                      Coming soon
+                    <span className="absolute -top-2 -right-2 text-[7px] font-black px-1.5 py-0.5 rounded-full leading-none" style={{ background: '#7c3aed', color: '#fff' }}>
+                      Soon
                     </span>
                   </div>
                 </div>
                 <button onClick={() => setSelected(null)}
-                  className="px-8 py-3 rounded-2xl font-bold text-sm text-white/70"
-                  style={{ background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.16)' }}>
+                  className="px-8 py-3 rounded-2xl font-bold text-sm"
+                  style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.65)' }}>
                   Close
                 </button>
               </motion.div>
