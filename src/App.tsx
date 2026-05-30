@@ -1875,7 +1875,7 @@ export default function App() {
           <Plus className="w-5 h-5 text-white" />
         </button>
         <button onClick={() => setShowSettings(true)} className="absolute left-1/2 -translate-x-1/2 hover:opacity-80 transition-opacity">
-          <h1 className="font-display font-bold text-2xl tracking-tight"><span className="text-brand-gold">Li</span>nq</h1>
+          <h1 className="text-2xl font-black tracking-tight leading-none" style={{ fontFamily: 'Poppins, sans-serif' }}><span style={{ color: '#60a5fa' }}>li</span><span style={{ color: '#1d4ed8' }}>nq</span></h1>
         </button>
         <div className="flex items-center gap-0.5">
           {['consumer','admin'].includes(profile?.role ?? '') && (
@@ -2130,7 +2130,7 @@ export default function App() {
             active={activeTab === 'deals'}
             onClick={() => { setActiveTab('deals'); setViewingStore(null); setViewingUser(null); }}
             icon={<Tag />}
-            label="Deals"
+            label=""
           />
         ) : (
           <NavButton
@@ -2168,7 +2168,7 @@ export default function App() {
           active={activeTab === 'discover'}
           onClick={() => { setActiveTab('discover'); setViewingStore(null); setViewingUser(null); }}
           icon={['consumer','admin'].includes(profile?.role ?? '') ? <Compass /> : <Plus />}
-          label={['consumer','admin'].includes(profile?.role ?? '') ? 'Discovery' : 'Issue'}
+          label={['consumer','admin'].includes(profile?.role ?? '') ? '' : 'Issue'}
         />
         <NavButton
           active={activeTab === 'profile'}
