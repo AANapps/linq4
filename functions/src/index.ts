@@ -76,11 +76,13 @@ export const stripeWebhook = onRequest(
 
         const customerId = typeof session.customer === 'string' ? session.customer : (session.customer as Stripe.Customer | null)?.id ?? '';
 
+        const isActive = sub.status === 'active' || sub.status === 'trialing';
         await db.collection('stores').doc(storeId).update({
           subscriptionStatus: sub.status,
           subscriptionId: sub.id,
           stripeCustomerId: customerId,
           subscriptionEnd: admin.firestore.Timestamp.fromMillis(sub.current_period_end * 1000),
+          ...(isActive ? { cardEnabled: true } : {}),
         });
         break;
       }

@@ -16180,6 +16180,25 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
   );
 }
 
+// --- Payment Verifying Screen ---
+
+function PaymentVerifyingScreen() {
+  return (
+    <div className="flex flex-col items-center justify-center py-24 px-6 text-center gap-6">
+      <div className="w-20 h-20 rounded-full bg-green-50 border-4 border-green-200 flex items-center justify-center">
+        <svg className="w-8 h-8 text-green-500 animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
+      </div>
+      <div className="space-y-2">
+        <h2 className="font-display text-2xl font-bold text-brand-navy">Activating your subscription…</h2>
+        <p className="text-brand-navy/60 text-sm">Payment received. This usually takes just a few seconds.</p>
+      </div>
+    </div>
+  );
+}
+
 // --- Vendor App ---
 
 function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, onViewUser, notifications, activeChatId, setActiveChatId, onLogout, onDeleteAccount, showVendorQR, setShowVendorQR, onVendorQRStatus }: { activeTab: string, setActiveTab: (tab: string) => void, profile: UserProfile | null, user: FirebaseUser, profileCollection: 'users' | 'vendors', onViewUser: (u: UserProfile) => void, notifications: Notification[], activeChatId: string | null, setActiveChatId: (id: string | null) => void, onLogout: () => void, onDeleteAccount: () => Promise<void>, showVendorQR?: boolean, setShowVendorQR?: (v: boolean) => void, onVendorQRStatus?: (enabled: boolean) => void, key?: React.Key }) {
@@ -16244,6 +16263,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
   const [pointsHoverIdx, setPointsHoverIdx] = useState<number | null>(null);
   const [chartTransactions, setChartTransactions] = useState<any[]>([]);
   const [isLoadingCheckout, setIsLoadingCheckout] = useState(false);
+  const [paymentVerifying, setPaymentVerifying] = useState(false);
   const [tickNow, setTickNow] = useState(Date.now());
   const [showVendorWelcome, setShowVendorWelcome] = useState(false);
   const [vendorWelcomeStep, setVendorWelcomeStep] = useState(0);
@@ -16356,7 +16376,11 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
 
   const handleSubscribe = () => {
     if (!store?.id) return;
-    window.location.href = `${STRIPE_PAYMENT_LINK}?client_reference_id=${store.id}`;
+    localStorage.setItem('linq_payment_pending', store.id);
+    const url = new URL(STRIPE_PAYMENT_LINK);
+    url.searchParams.set('client_reference_id', store.id);
+    if (profile?.email) url.searchParams.set('prefilled_email', profile.email);
+    window.location.href = url.toString();
   };
 
   const handleManageBilling = async () => {
@@ -16435,6 +16459,19 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
     const q = query(collection(db, 'cards'), where('store_id', '==', store.id));
     return onSnapshot(q, snap => setStoreCards(snap.docs.map(d => ({ id: d.id, ...d.data() } as Card))), () => {});
   }, [store?.id]);
+
+  // Detect return from Stripe payment — show verifying state until webhook confirms subscription
+  useEffect(() => {
+    const pendingId = localStorage.getItem('linq_payment_pending');
+    if (!pendingId || !store) return;
+    if (store.id !== pendingId) return;
+    if (isSubscribed) {
+      localStorage.removeItem('linq_payment_pending');
+      setPaymentVerifying(false);
+    } else {
+      setPaymentVerifying(true);
+    }
+  }, [store?.id, isSubscribed]);
 
   // Run automations once when store + cards are ready
   useEffect(() => {
@@ -16968,7 +17005,9 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
       )}
 
       {activeTab === 'messages' && (
-        needsPayment ? (
+        paymentVerifying && !isSubscribed ? (
+          <PaymentVerifyingScreen />
+        ) : needsPayment ? (
           /* ── Messages paywall: landing page ── */
           <div className="-mx-6 -mt-4">
             {/* Hero */}
@@ -17040,10 +17079,10 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 Subscribe Now — $50/month
               </button>
               <p className="text-center text-xs text-brand-navy/40">Secure payment via Stripe · Cancel anytime</p>
-              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
-                <Clock size={15} className="text-amber-500 shrink-0 mt-0.5" />
-                <p className="text-amber-800 text-xs leading-relaxed">
-                  <span className="font-bold">After payment,</span> our team will manually grant access — usually within 24 hours.
+              <div className="bg-green-50 border border-green-200 rounded-2xl p-4 flex items-start gap-3">
+                <CheckCircle2 size={15} className="text-green-500 shrink-0 mt-0.5" />
+                <p className="text-green-800 text-xs leading-relaxed">
+                  <span className="font-bold">Instant access.</span> Your dashboard unlocks automatically the moment payment clears — no waiting.
                 </p>
               </div>
             </div>
@@ -17062,7 +17101,9 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
       )}
 
       {activeTab === 'home' && (
-        needsPayment ? (
+        paymentVerifying && !isSubscribed ? (
+          <PaymentVerifyingScreen />
+        ) : needsPayment ? (
           /* ── Out-of-trial paywall: landing page → blurred preview ── */
           <div className="-mx-6 -mt-4">
             {/* Hero — full-bleed gradient */}
@@ -17109,10 +17150,10 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 Subscribe Now — $50/month
               </button>
               <p className="text-center text-xs text-brand-navy/40">Secure payment via Stripe · Cancel anytime</p>
-              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
-                <Clock size={15} className="text-amber-500 shrink-0 mt-0.5" />
-                <p className="text-amber-800 text-xs leading-relaxed">
-                  <span className="font-bold">After payment,</span> our team will manually grant access — usually within 24 hours.
+              <div className="bg-green-50 border border-green-200 rounded-2xl p-4 flex items-start gap-3">
+                <CheckCircle2 size={15} className="text-green-500 shrink-0 mt-0.5" />
+                <p className="text-green-800 text-xs leading-relaxed">
+                  <span className="font-bold">Instant access.</span> Your dashboard unlocks automatically the moment payment clears — no waiting.
                 </p>
               </div>
             </div>
