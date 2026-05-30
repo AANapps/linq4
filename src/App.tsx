@@ -15787,7 +15787,7 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
   const [subTab, setSubTab] = useState<'mass' | 'automations'>('mass');
 
   // Mass message
-  const [filter, setFilter] = useState<'cardholders' | 'followers' | 'both' | 'topX'>('cardholders');
+  const [filter, setFilter] = useState<'cardholders' | 'followers' | 'both' | 'topX' | 'atRisk'>('cardholders');
   const [topXCount, setTopXCount] = useState(10);
   const [msgTitle, setMsgTitle] = useState('');
   const [msgBody, setMsgBody] = useState('');
@@ -15812,6 +15812,19 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
     .sort((a, b) => b.stamps - a.stamps)
     .slice(0, topXCount)
     .map(u => u.uid);
+
+  // At-risk users: 21d+ no stamp
+  const atRiskUids = (() => {
+    const now = Date.now();
+    const ms21 = 21 * 86400000;
+    const stampOnlyCards = storeCards.filter(c => !c.card_type || c.card_type === 'stamp');
+    return [...new Set<string>(stampOnlyCards.map(c => c.user_id))].filter(uid => {
+      const cards = stampOnlyCards.filter(c => c.user_id === uid && !c.isArchived);
+      if (cards.length === 0) return false;
+      const lastMs = Math.max(...cards.map(c => c.last_tap_timestamp?.toMillis?.() ?? (c.last_tap_timestamp?.seconds ?? 0) * 1000), 0);
+      return lastMs > 0 && (now - lastMs) > ms21;
+    });
+  })();
 
   useEffect(() => {
     let done = 0;
@@ -15839,6 +15852,7 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
     if (filter === 'cardholders' || filter === 'both') cardHolderUids.forEach(u => s.add(u));
     if (filter === 'followers' || filter === 'both') followerUids.forEach(u => s.add(u));
     if (filter === 'topX') topXUids.forEach(u => s.add(u));
+    if (filter === 'atRisk') atRiskUids.forEach(u => s.add(u));
     return [...s];
   })();
 
@@ -15967,16 +15981,16 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75 mb-2">Send To</p>
                   <div className="grid grid-cols-2 gap-2">
-                    {(['cardholders', 'followers', 'both', 'topX'] as const).map(f => (
+                    {(['cardholders', 'followers', 'both', 'topX', 'atRisk'] as const).map(f => (
                       <button
                         key={f}
                         onClick={() => { setFilter(f); setSentCount(null); setSendError(null); }}
                         className={cn(
                           'py-2.5 rounded-xl text-xs font-bold transition-all',
-                          filter === f ? 'bg-brand-navy text-white' : 'bg-brand-navy/5 text-brand-navy/80'
+                          filter === f ? (f === 'atRisk' ? 'bg-rose-500 text-white' : 'bg-brand-navy text-white') : (f === 'atRisk' ? 'bg-rose-50 text-rose-700' : 'bg-brand-navy/5 text-brand-navy/80')
                         )}
                       >
-                        {f === 'cardholders' ? 'Card Holders' : f === 'followers' ? 'Followers' : f === 'both' ? 'Both' : '⭐ Top Users'}
+                        {f === 'cardholders' ? 'Card Holders' : f === 'followers' ? 'Followers' : f === 'both' ? 'Both' : f === 'topX' ? '⭐ Top Users' : '🚨 Churn Risk'}
                       </button>
                     ))}
                   </div>
@@ -15993,9 +16007,9 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
                     </div>
                   )}
                   <p className="text-xs text-brand-navy/75 mt-2 text-center">
-                    {loadingFollowers && filter !== 'topX'
+                    {loadingFollowers && filter !== 'topX' && filter !== 'atRisk'
                       ? 'Loading...'
-                      : `${recipientUids.length} recipient${recipientUids.length !== 1 ? 's' : ''}`}
+                      : `${recipientUids.length} recipient${recipientUids.length !== 1 ? 's' : ''}${filter === 'atRisk' ? ' · 21d+ no stamp' : ''}`}
                   </p>
                 </div>
 
@@ -16228,7 +16242,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
   const [cardRewardInput, setCardRewardInput] = useState('');
   const [isSavingCard, setIsSavingCard] = useState(false);
   const [cardSaved, setCardSaved] = useState(false);
-  const [statModal, setStatModal] = useState<null | 'members' | 'stamps' | 'activeCards'>(null);
+  const [statModal, setStatModal] = useState<null | 'members' | 'stamps' | 'activeCards' | 'churnRisk' | 'newcomers'>(null);
   const [statModalSearch, setStatModalSearch] = useState('');
   const [statModalVisible, setStatModalVisible] = useState(10);
   const availableDashTabs = (
@@ -16629,7 +16643,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
     });
   }, [storeCards.length]);
 
-  const openStatModal = async (type: 'members' | 'stamps' | 'activeCards') => {
+  const openStatModal = async (type: 'members' | 'stamps' | 'activeCards' | 'churnRisk' | 'newcomers') => {
     setStatModal(type);
     setStatModalSearch('');
     setStatModalVisible(10);
@@ -17094,7 +17108,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 className="w-full font-bold py-4 rounded-2xl active:scale-[0.98] transition-transform text-base text-white"
                 style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' }}
               >
-                Subscribe Now — $50/month
+                Subscribe Now — $49/month
               </button>
               <p className="text-center text-xs text-brand-navy/40">Secure payment via Stripe · Cancel anytime</p>
               <div className="bg-green-50 border border-green-200 rounded-2xl p-4 flex items-start gap-3">
@@ -17121,141 +17135,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
       {activeTab === 'home' && (
         paymentVerifying && !isSubscribed ? (
           <PaymentVerifyingScreen />
-        ) : needsPayment ? (
-          /* ── Out-of-trial paywall: landing page → blurred preview ── */
-          <div className="-mx-6 -mt-4">
-            {/* Hero — full-bleed gradient */}
-            <div className="relative overflow-hidden px-6 pt-14 pb-10 text-white"
-              style={{ background: 'linear-gradient(160deg, #0F172A 0%, #1D4ED8 45%, #2563EB 100%)' }}>
-              <div className="shine-ray" />
-              <div className="relative z-10">
-                <div className="w-14 h-14 bg-white/15 rounded-[1.25rem] flex items-center justify-center mb-6 border border-white/20">
-                  <LayoutDashboard size={26} className="text-white" />
-                </div>
-                <h1 className="font-display text-3xl font-bold leading-tight mb-3">Unlock Your Business Dashboard</h1>
-                <p className="text-white/75 text-sm leading-relaxed">Everything you need to grow your loyalty programme — in one place.</p>
-              </div>
-            </div>
-
-            {/* Feature grid */}
-            <div className="px-6 pt-6 pb-2 bg-white">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-4">What's included</p>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { icon: <TrendingUp size={18} className="text-blue-500" />, label: 'Live Analytics', desc: 'Stamps, visits & spend trends at a glance' },
-                  { icon: <Users size={18} className="text-purple-500" />, label: 'Customer Insights', desc: "Who's visiting, how often, what they earn" },
-                  { icon: <BarChart2 size={18} className="text-emerald-500" />, label: 'Weekly Reports', desc: 'Charts to track growth week over week' },
-                  { icon: <Gift size={18} className="text-rose-500" />, label: 'Reward Tracking', desc: 'Every reward given and redeemed' },
-                  { icon: <MessageSquare size={18} className="text-amber-500" />, label: 'Broadcast', desc: 'Message all your customers at once' },
-                  { icon: <Stamp size={18} className="text-brand-gold" />, label: 'Issue Stamps', desc: 'Via QR, NFC, or manual entry' },
-                  { icon: <Zap size={18} className="text-indigo-500" />, label: 'POS Integration', desc: 'Auto-stamp at checkout via your till system' },
-                ].map(({ icon, label, desc }) => (
-                  <div key={label} className="rounded-[1.25rem] border border-brand-navy/8 bg-brand-bg p-4">
-                    <div className="mb-2">{icon}</div>
-                    <p className="font-bold text-brand-navy text-xs">{label}</p>
-                    <p className="text-brand-navy/50 text-[10px] mt-0.5 leading-tight">{desc}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* CTA + notes */}
-            <div className="px-6 py-6 bg-white space-y-3">
-              <button
-                onClick={handleSubscribe}
-                className="w-full bg-brand-navy text-white font-bold py-4 rounded-2xl active:scale-[0.98] transition-transform text-base"
-              >
-                Subscribe Now — $50/month
-              </button>
-              <p className="text-center text-xs text-brand-navy/40">Secure payment via Stripe · Cancel anytime</p>
-              <div className="bg-green-50 border border-green-200 rounded-2xl p-4 flex items-start gap-3">
-                <CheckCircle2 size={15} className="text-green-500 shrink-0 mt-0.5" />
-                <p className="text-green-800 text-xs leading-relaxed">
-                  <span className="font-bold">Instant access.</span> Your dashboard unlocks automatically the moment payment clears — no waiting.
-                </p>
-              </div>
-            </div>
-
-            {/* Scroll cue */}
-            <div className="bg-white px-6 pb-6 flex flex-col items-center gap-1">
-              <p className="text-[11px] text-brand-navy/35 font-semibold">Scroll to preview your dashboard</p>
-              <ChevronDown size={16} className="text-brand-navy/25 animate-bounce" />
-            </div>
-
-            {/* Blurred preview — flows below landing page */}
-          <div className="relative pointer-events-none select-none bg-brand-bg px-6 pt-4 pb-20">
-            <div className="absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-white to-transparent z-10" />
-
-            <div className="space-y-5">
-              {/* Tab switcher — fully visible structural frame */}
-              <div className="flex p-1 bg-brand-navy/8 rounded-2xl gap-1">
-                {[{ label: 'Stamps', active: true }, { label: 'Spend Pts', active: false }, { label: 'Visit Pts', active: false }].map(({ label, active }) => (
-                  <div key={label} className={cn('flex-1 flex items-center justify-center py-2.5 rounded-[10px] text-[11px] font-bold', active ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/60')}>
-                    {label}
-                  </div>
-                ))}
-              </div>
-              {/* Stat tiles — label + icon visible, value blurred */}
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { icon: <Users className="text-blue-500" />, label: 'Members', value: '247' },
-                  { icon: <Stamp className="text-brand-gold" />, label: 'Stamps Given', value: '1,432' },
-                  { icon: <Wallet className="text-purple-500" />, label: 'Active Cards', value: '89' },
-                  { icon: <RefreshCw className="text-orange-500" />, label: 'Return Rate', value: '68%' },
-                  { icon: <TrendingUp className="text-green-500" />, label: 'Avg/Wk/User', value: '2.4' },
-                  { icon: <Gift className="text-rose-500" />, label: 'Rewards Given', value: '31' },
-                ].map(({ icon, label, value }) => (
-                  <div key={label} className="glass-card aspect-square rounded-[1.5rem] flex flex-col items-center justify-center p-3">
-                    <div className="w-7 h-7 bg-brand-bg rounded-xl flex items-center justify-center mb-1.5">
-                      {React.cloneElement(icon as React.ReactElement, { size: 15 })}
-                    </div>
-                    <p className="font-display text-base font-bold text-brand-navy leading-none mb-0.5 blur-sm">{value}</p>
-                    <p className="text-[8px] text-brand-navy/75 font-bold uppercase tracking-wider text-center">{label}</p>
-                  </div>
-                ))}
-              </div>
-              {/* Bar chart — title + x-axis labels visible, bars blurred */}
-              <div className="glass-card p-5 rounded-[2rem] space-y-4">
-                <div>
-                  <p className="font-bold text-brand-navy">Stamps Chart</p>
-                  <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">By week</p>
-                </div>
-                <div className="flex items-end gap-1.5 h-28">
-                  {[38, 55, 44, 70, 58, 82, 65, 76].map((h, i) => (
-                    <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                      <div className="w-full rounded-t-lg bg-brand-navy/25 blur-sm" style={{ height: `${(h / 82) * 100}%` }} />
-                      <span className="text-[8px] text-brand-navy/40 font-bold">{['2/4','9/4','16/4','23/4','30/4','7/5','14/5','21/5'][i]}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              {/* Recent activity — row frame + avatar visible, text content blurred */}
-              <div className="space-y-3">
-                <h3 className="font-display text-xl font-bold">Recent Activity</h3>
-                {[
-                  { initials: 'ER', w1: 'w-20', w2: 'w-32', time: '2m ago' },
-                  { initials: 'JT', w1: 'w-24', w2: 'w-28', time: '14m ago' },
-                  { initials: 'SM', w1: 'w-16', w2: 'w-36', time: '1h ago' },
-                  { initials: 'OK', w1: 'w-20', w2: 'w-30', time: '2h ago' },
-                ].map(({ initials, w1, w2, time }, i) => (
-                  <div key={i} className="glass-card rounded-2xl px-4 py-3 flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-brand-navy/10 flex items-center justify-center shrink-0">
-                      <span className="text-xs font-bold text-brand-navy/40 blur-sm">{initials}</span>
-                    </div>
-                    <div className="flex-1 min-w-0 space-y-1.5">
-                      <div className={cn('h-3 bg-brand-navy/20 rounded-full blur-sm', w1)} />
-                      <div className={cn('h-2.5 bg-brand-navy/12 rounded-full blur-sm', w2)} />
-                    </div>
-                    <span className="text-[10px] text-brand-navy/40 font-bold shrink-0 blur-sm">{time}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-brand-bg to-transparent z-10" />
-          </div>
-          </div>
         ) : (
-          /* ── Normal dashboard ── */
           <div className="space-y-6">
           <header>
             <h2 className="font-display text-3xl font-bold mb-1">Dashboard</h2>
@@ -17359,6 +17239,13 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
           {/* ===== STAMPS TAB ===== */}
           {dashTab === 'stamps' && (
             <>
+              {/* FREE TIER */}
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
+                  <Star size={9} /> Free — forever
+                </span>
+              </div>
+
               <div className="grid grid-cols-3 gap-3">
                 <div onClick={() => openStatModal('members')} className="cursor-pointer active:scale-95 transition-transform">
                   <StatSquare icon={<Users className="text-blue-500" />} label="Members" value={String(totalMembers)} />
@@ -17374,29 +17261,146 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 <StatSquare icon={<Gift className="text-rose-500" />} label="Rewards Given" value={String(vendorRewardsGiven)} />
               </div>
 
-              {/* Advanced stamp metrics row */}
+              {/* Free: Simple leaderboard view */}
               {(() => {
-                const now = Date.now();
-                const ms21 = 21 * 86400000;
-                const uniqueUids = [...new Set<string>(stampCards.map(c => c.user_id))];
-                const atRisk = uniqueUids.filter(uid => {
-                  const userCards = stampCards.filter(c => c.user_id === uid && !c.isArchived);
-                  if (userCards.length === 0) return false;
-                  const lastMs = Math.max(...userCards.map(c => c.last_tap_timestamp?.toMillis?.() ?? (c.last_tap_timestamp?.seconds ?? 0) * 1000), 0);
-                  return lastMs > 0 && (now - lastMs) > ms21;
-                }).length;
-                const totalTxStamps = stampTxns.reduce((s, tx) => s + (tx.stamp_count || 1), 0);
-                const avgVisit = stampTxns.length > 0 ? (totalTxStamps / stampTxns.length).toFixed(1) : '—';
-                const completedCount = uniqueUids.filter(uid => stampCards.filter(c => c.user_id === uid).some(c => (c.total_completed_cycles || 0) > 0)).length;
-                const completionPct = uniqueUids.length > 0 ? Math.round((completedCount / uniqueUids.length) * 100) : 0;
+                const top10 = [...new Set<string>(stampCards.map(c => c.user_id))]
+                  .map(uid => {
+                    const cards = stampCards.filter(c => c.user_id === uid);
+                    const stamps = cards.reduce((s, c) => s + (c.current_stamps || 0) + ((c.total_completed_cycles || 0) * stampsPerReward), 0);
+                    return { uid, stamps, prof: memberProfiles.get(uid) };
+                  })
+                  .sort((a, b) => b.stamps - a.stamps)
+                  .slice(0, 10);
+                if (top10.length === 0) return null;
                 return (
-                  <div className="grid grid-cols-3 gap-3">
-                    <StatSquare icon={<AlertTriangle className="text-rose-500" />} label="Churn Risk" value={String(atRisk)} sub="21d+ no stamp" />
-                    <StatSquare icon={<Zap className="text-amber-500" />} label="Avg/Visit" value={avgVisit} sub="stamps per scan" />
-                    <StatSquare icon={<CheckCircle2 className="text-teal-500" />} label="Completion" value={`${completionPct}%`} sub="completed ≥1 card" />
+                  <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="font-bold text-brand-navy">Top 10 Users</p>
+                      <Trophy size={16} className="text-brand-gold" />
+                    </div>
+                    {top10.map(({ uid, stamps, prof }) => (
+                      <div key={uid} className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full overflow-hidden bg-blue-50 shrink-0 flex items-center justify-center">
+                          <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={32} view="head" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-sm truncate">{prof?.name || 'Customer'}</p>
+                          <div className="h-1 bg-brand-navy/8 rounded-full mt-1 overflow-hidden">
+                            <div className="h-full bg-brand-gold rounded-full" style={{ width: `${Math.round((stamps / (top10[0].stamps || 1)) * 100)}%` }} />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 );
               })()}
+
+              {/* Free: Challenge performance */}
+              {(() => {
+                const uniqueUids = [...new Set<string>(stampCards.map(c => c.user_id))];
+                if (uniqueUids.length === 0) return null;
+                const completedCount = uniqueUids.filter(uid => stampCards.filter(c => c.user_id === uid).some(c => (c.total_completed_cycles || 0) > 0)).length;
+                const completionPct = Math.round((completedCount / uniqueUids.length) * 100);
+                return (
+                  <div className="glass-card p-5 rounded-[2rem]">
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <p className="font-bold text-brand-navy">Challenge Performance</p>
+                        <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Card completion rate</p>
+                      </div>
+                      <CheckCircle2 size={16} className="text-teal-500" />
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <p className="font-display text-3xl font-black text-teal-600">{completionPct}%</p>
+                      <div className="flex-1 space-y-1">
+                        <div className="h-3 bg-brand-navy/5 rounded-full overflow-hidden">
+                          <motion.div initial={{ width: 0 }} animate={{ width: `${completionPct}%` }} transition={{ duration: 0.6 }} className="h-full bg-teal-400 rounded-full" />
+                        </div>
+                        <p className="text-[10px] text-brand-navy/50">{completedCount} of {uniqueUids.length} members completed ≥1 card</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* INTELLIGENCE TIER */}
+              <div className="flex items-center justify-between pt-2">
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-purple-700 bg-purple-50 border border-purple-200 px-2.5 py-1 rounded-full">
+                  <Sparkles size={9} /> Intelligence — $49/month
+                </span>
+                {!isSubscribed && (
+                  <button onClick={handleSubscribe} className="text-xs font-bold text-white bg-purple-600 px-3 py-1.5 rounded-xl active:scale-95 transition-transform">
+                    Upgrade
+                  </button>
+                )}
+              </div>
+
+              {!isSubscribed ? (
+                <div className="rounded-[1.5rem] border border-purple-200 bg-purple-50 p-5 space-y-4">
+                  <p className="font-bold text-purple-900 text-sm">Unlock customer intelligence</p>
+                  <div className="space-y-2">
+                    {[
+                      'At-risk alerts with one-tap win-back',
+                      'Visit frequency trends & charts',
+                      'Peak day and hour analytics',
+                      'Customer lifetime value per person',
+                      "Users who haven't visited in 3 weeks",
+                      'Newcomers list',
+                      'Monthly health score & recommendations',
+                    ].map(f => (
+                      <div key={f} className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
+                          <Lock size={8} className="text-purple-500" />
+                        </div>
+                        <p className="text-xs text-purple-800">{f}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <button onClick={handleSubscribe} className="w-full py-3 rounded-2xl text-white text-sm font-bold active:scale-95 transition-transform" style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}>
+                    Subscribe — $49/month
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {/* Intelligence: At-risk + Newcomers + Avg/Visit */}
+                  {(() => {
+                    const now = Date.now();
+                    const ms21 = 21 * 86400000;
+                    const ms30 = 30 * 86400000;
+                    const uniqueUids = [...new Set<string>(stampCards.map(c => c.user_id))];
+                    const atRisk = uniqueUids.filter(uid => {
+                      const userCards = stampCards.filter(c => c.user_id === uid && !c.isArchived);
+                      if (userCards.length === 0) return false;
+                      const lastMs = Math.max(...userCards.map(c => c.last_tap_timestamp?.toMillis?.() ?? (c.last_tap_timestamp?.seconds ?? 0) * 1000), 0);
+                      return lastMs > 0 && (now - lastMs) > ms21;
+                    }).length;
+                    const firstTxByUser = new Map<string, number>();
+                    stampTxns.forEach(tx => {
+                      const uid = tx.user_id;
+                      const ms = tx.completed_at?.toMillis?.() ?? (tx.completed_at?.seconds ?? 0) * 1000;
+                      if (ms > 0 && (!firstTxByUser.has(uid) || ms < firstTxByUser.get(uid)!)) firstTxByUser.set(uid, ms);
+                    });
+                    stampCards.forEach(card => {
+                      if (!firstTxByUser.has(card.user_id)) {
+                        const ms = card.last_tap_timestamp?.toMillis?.() ?? (card.last_tap_timestamp?.seconds ?? 0) * 1000;
+                        firstTxByUser.set(card.user_id, ms > 0 ? ms : Date.now());
+                      }
+                    });
+                    const newcomers = [...firstTxByUser.values()].filter(ms => (now - ms) < ms30).length;
+                    const totalTxStamps = stampTxns.reduce((s, tx) => s + (tx.stamp_count || 1), 0);
+                    const avgVisit = stampTxns.length > 0 ? (totalTxStamps / stampTxns.length).toFixed(1) : '—';
+                    return (
+                      <div className="grid grid-cols-3 gap-3">
+                        <div onClick={() => openStatModal('churnRisk')} className="cursor-pointer active:scale-95 transition-transform">
+                          <StatSquare icon={<AlertTriangle className="text-rose-500" />} label="Churn Risk" value={String(atRisk)} sub="21d+ no stamp" />
+                        </div>
+                        <div onClick={() => openStatModal('newcomers')} className="cursor-pointer active:scale-95 transition-transform">
+                          <StatSquare icon={<UserPlus className="text-emerald-500" />} label="Newcomers" value={String(newcomers)} sub="joined last 30d" />
+                        </div>
+                        <StatSquare icon={<Zap className="text-amber-500" />} label="Avg/Visit" value={avgVisit} sub="stamps per scan" />
+                      </div>
+                    );
+                  })()}
 
               {/* Stamps chart */}
               {(() => {
@@ -17704,40 +17708,6 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 );
               })()}
 
-              {/* Top 10 users by stamps */}
-              {(() => {
-                const top10 = [...new Set<string>(stampCards.map(c => c.user_id))]
-                  .map(uid => {
-                    const cards = stampCards.filter(c => c.user_id === uid);
-                    const stamps = cards.reduce((s, c) => s + (c.current_stamps || 0) + ((c.total_completed_cycles || 0) * stampsPerReward), 0);
-                    return { uid, stamps, prof: memberProfiles.get(uid) };
-                  })
-                  .sort((a, b) => b.stamps - a.stamps)
-                  .slice(0, 10);
-                if (top10.length === 0) return null;
-                return (
-                  <div className="glass-card p-5 rounded-[2rem] space-y-3">
-                    <div className="flex items-center justify-between">
-                      <p className="font-bold text-brand-navy">Top 10 Users</p>
-                      <Trophy size={16} className="text-brand-gold" />
-                    </div>
-                    {top10.map(({ uid, stamps, prof }) => (
-                      <div key={uid} className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full overflow-hidden bg-blue-50 shrink-0 flex items-center justify-center">
-                          <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={32} view="head" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-bold text-sm truncate">{prof?.name || 'Customer'}</p>
-                          <div className="h-1 bg-brand-navy/8 rounded-full mt-1 overflow-hidden">
-                            <div className="h-full bg-brand-gold rounded-full" style={{ width: `${Math.round((stamps / (top10[0].stamps || 1)) * 100)}%` }} />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })()}
-
               {/* Busiest Days of Week */}
               {(() => {
                 const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -17874,16 +17844,176 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 );
               })()}
 
+                  {/* Intelligence: Customer Lifetime Value */}
+                  {(() => {
+                    const uniqueUids = [...new Set<string>(stampCards.map(c => c.user_id))];
+                    if (uniqueUids.length === 0) return null;
+                    const clvStamps = uniqueUids.map(uid =>
+                      stampCards.filter(c => c.user_id === uid).reduce((s, c) => s + (c.current_stamps || 0) + ((c.total_completed_cycles || 0) * stampsPerReward), 0)
+                    );
+                    const avgClv = (clvStamps.reduce((s, v) => s + v, 0) / uniqueUids.length).toFixed(1);
+                    const topClv = Math.max(...clvStamps);
+                    return (
+                      <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-bold text-brand-navy">Customer Lifetime Value</p>
+                            <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Lifetime stamps per member</p>
+                          </div>
+                          <TrendingUp size={16} className="text-blue-500" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-blue-50 rounded-2xl p-3 text-center">
+                            <p className="font-display text-xl font-bold text-blue-700">{avgClv}</p>
+                            <p className="text-[10px] text-blue-600/70 font-bold uppercase tracking-wider mt-0.5">Avg stamps</p>
+                          </div>
+                          <div className="bg-purple-50 rounded-2xl p-3 text-center">
+                            <p className="font-display text-xl font-bold text-purple-700">{topClv}</p>
+                            <p className="text-[10px] text-purple-600/70 font-bold uppercase tracking-wider mt-0.5">Top user</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Intelligence: Monthly Health Score */}
+                  {(() => {
+                    const uniqueUids = [...new Set<string>(stampCards.map(c => c.user_id))];
+                    if (uniqueUids.length === 0) return null;
+                    const now = Date.now();
+                    const active = uniqueUids.filter(uid => {
+                      const cards = stampCards.filter(c => c.user_id === uid);
+                      const lastMs = Math.max(...cards.map(c => c.last_tap_timestamp?.toMillis?.() ?? (c.last_tap_timestamp?.seconds ?? 0) * 1000), 0);
+                      return lastMs > 0 && (now - lastMs) < 30 * 86400000;
+                    }).length;
+                    const completedCount = uniqueUids.filter(uid => stampCards.filter(c => c.user_id === uid).some(c => (c.total_completed_cycles || 0) > 0)).length;
+                    const retentionScore = Math.round((active / uniqueUids.length) * 100);
+                    const completionScore = Math.round((completedCount / uniqueUids.length) * 100);
+                    const growthScore = Math.min(100, totalMembers * 2);
+                    const healthScore = Math.round((retentionScore + completionScore + growthScore) / 3);
+                    const isHealthy = healthScore >= 70;
+                    const isMid = healthScore >= 40;
+                    const scoreColor = isHealthy ? 'text-teal-600' : isMid ? 'text-amber-600' : 'text-rose-600';
+                    const scoreBg = isHealthy ? 'bg-teal-50 border-teal-200' : isMid ? 'bg-amber-50 border-amber-200' : 'bg-rose-50 border-rose-200';
+                    const barColor = isHealthy ? 'bg-teal-400' : isMid ? 'bg-amber-400' : 'bg-rose-400';
+                    const scoreLabel = isHealthy ? 'Healthy' : isMid ? 'Needs Attention' : 'At Risk';
+                    return (
+                      <div className={cn('rounded-[1.5rem] border p-5 space-y-3', scoreBg)}>
+                        <div className="flex items-center justify-between">
+                          <p className="font-bold text-brand-navy">Monthly Health Score</p>
+                          <span className={cn('font-display text-2xl font-black', scoreColor)}>{healthScore}</span>
+                        </div>
+                        <p className={cn('text-xs font-bold', scoreColor)}>{scoreLabel}</p>
+                        <div className="h-2 bg-white/60 rounded-full overflow-hidden">
+                          <motion.div initial={{ width: 0 }} animate={{ width: `${healthScore}%` }} transition={{ duration: 0.6 }} className={cn('h-full rounded-full', barColor)} />
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 text-center">
+                          <div><p className="text-xs font-bold text-brand-navy">{retentionScore}%</p><p className="text-[9px] text-brand-navy/50 font-bold uppercase tracking-wide">Retention</p></div>
+                          <div><p className="text-xs font-bold text-brand-navy">{completionScore}%</p><p className="text-[9px] text-brand-navy/50 font-bold uppercase tracking-wide">Completion</p></div>
+                          <div><p className="text-xs font-bold text-brand-navy">{growthScore}%</p><p className="text-[9px] text-brand-navy/50 font-bold uppercase tracking-wide">Growth</p></div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Intelligence: Automated Recommendations */}
+                  {(() => {
+                    const uniqueUids = [...new Set<string>(stampCards.map(c => c.user_id))];
+                    if (uniqueUids.length === 0) return null;
+                    const now = Date.now();
+                    const ms21 = 21 * 86400000;
+                    const atRiskCount = uniqueUids.filter(uid => {
+                      const cards = stampCards.filter(c => c.user_id === uid && !c.isArchived);
+                      const lastMs = Math.max(...cards.map(c => c.last_tap_timestamp?.toMillis?.() ?? (c.last_tap_timestamp?.seconds ?? 0) * 1000), 0);
+                      return lastMs > 0 && (now - lastMs) > ms21;
+                    }).length;
+                    const active30 = uniqueUids.filter(uid => {
+                      const cards = stampCards.filter(c => c.user_id === uid);
+                      const lastMs = Math.max(...cards.map(c => c.last_tap_timestamp?.toMillis?.() ?? (c.last_tap_timestamp?.seconds ?? 0) * 1000), 0);
+                      return lastMs > 0 && (now - lastMs) < 30 * 86400000;
+                    }).length;
+                    const completedCount = uniqueUids.filter(uid => stampCards.filter(c => c.user_id === uid).some(c => (c.total_completed_cycles || 0) > 0)).length;
+                    const completionPct = uniqueUids.length > 0 ? Math.round((completedCount / uniqueUids.length) * 100) : 0;
+                    const recs: { icon: string; text: string }[] = [];
+                    if (atRiskCount > 0) recs.push({ icon: '⚠️', text: `${atRiskCount} customer${atRiskCount !== 1 ? 's' : ''} haven't stamped in 3 weeks — send a win-back message from the Churn Risk list` });
+                    if (completionPct < 30) recs.push({ icon: '🎯', text: 'Low card completion — consider reducing your stamp goal or offering a better reward' });
+                    if (active30 < uniqueUids.length * 0.5) recs.push({ icon: '📣', text: 'Less than half your members visited this month — a broadcast could re-engage them' });
+                    if (totalMembers < 20) recs.push({ icon: '🚀', text: 'Grow your member base — share your QR code on social media or at your counter' });
+                    if (recs.length === 0) recs.push({ icon: '✅', text: 'Great work! Your loyalty programme is performing well — keep the stamps coming' });
+                    return (
+                      <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                        <div className="flex items-center justify-between">
+                          <p className="font-bold text-brand-navy">Recommendations</p>
+                          <Zap size={16} className="text-amber-500" />
+                        </div>
+                        <div className="space-y-2">
+                          {recs.map((r, i) => (
+                            <div key={i} className="flex items-start gap-3 p-3 bg-brand-bg rounded-2xl">
+                              <span className="text-base leading-none mt-0.5">{r.icon}</span>
+                              <p className="text-xs text-brand-navy/80 leading-snug">{r.text}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Intelligence: Competitor Benchmarking — coming soon */}
+                  <div className="glass-card p-5 rounded-[2rem] opacity-60">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="font-bold text-brand-navy">Competitor Benchmarking</p>
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/40 bg-brand-navy/8 px-2 py-0.5 rounded-full">Coming soon</span>
+                    </div>
+                    <p className="text-xs text-brand-navy/50">See how your programme compares to similar local businesses.</p>
+                  </div>
+                </>
+              )}
+
               <AnimatePresence>
                 {statModal && (() => {
-                  const titles: Record<string, string> = { members: 'Members', stamps: 'Stamps Breakdown', activeCards: 'Active Cards' };
+                  const titles: Record<string, string> = { members: 'Members', stamps: 'Stamps Breakdown', activeCards: 'Active Cards', churnRisk: 'Churn Risk', newcomers: 'Newcomers' };
                   const uniqueUids = [...new Set<string>(stampCards.map(c => c.user_id))];
+                  const now = Date.now();
                   const q = statModalSearch.toLowerCase();
                   const matchesSearch = (uid: string) => {
                     if (!q) return true;
                     const prof = memberProfiles.get(uid);
                     return (prof?.name || '').toLowerCase().includes(q) || (prof?.handle || '').toLowerCase().includes(q) || uid.toLowerCase().includes(q);
                   };
+
+                  // Churn risk: 21d+ no stamp
+                  const ms21 = 21 * 86400000;
+                  const churnRiskRows = uniqueUids.filter(uid => {
+                    const userCards = stampCards.filter(c => c.user_id === uid && !c.isArchived);
+                    if (userCards.length === 0) return false;
+                    const lastMs = Math.max(...userCards.map(c => c.last_tap_timestamp?.toMillis?.() ?? (c.last_tap_timestamp?.seconds ?? 0) * 1000), 0);
+                    return lastMs > 0 && (now - lastMs) > ms21;
+                  }).filter(matchesSearch).map(uid => {
+                    const userCards = stampCards.filter(c => c.user_id === uid && !c.isArchived);
+                    const lastMs = Math.max(...userCards.map(c => c.last_tap_timestamp?.toMillis?.() ?? (c.last_tap_timestamp?.seconds ?? 0) * 1000), 0);
+                    return { uid, prof: memberProfiles.get(uid), lastMs };
+                  }).sort((a, b) => a.lastMs - b.lastMs);
+
+                  // Newcomers: joined last 30 days
+                  const ms30 = 30 * 86400000;
+                  const firstTxByUserM = new Map<string, number>();
+                  stampTxns.forEach(tx => {
+                    const uid = tx.user_id;
+                    const ms = tx.completed_at?.toMillis?.() ?? (tx.completed_at?.seconds ?? 0) * 1000;
+                    if (ms > 0 && (!firstTxByUserM.has(uid) || ms < firstTxByUserM.get(uid)!)) firstTxByUserM.set(uid, ms);
+                  });
+                  stampCards.forEach(card => {
+                    if (!firstTxByUserM.has(card.user_id)) {
+                      const ms = card.last_tap_timestamp?.toMillis?.() ?? (card.last_tap_timestamp?.seconds ?? 0) * 1000;
+                      firstTxByUserM.set(card.user_id, ms > 0 ? ms : Date.now());
+                    }
+                  });
+                  const newcomerRows = uniqueUids.filter(uid => {
+                    const joinMs = firstTxByUserM.get(uid) ?? 0;
+                    return joinMs > 0 && (now - joinMs) < ms30;
+                  }).filter(matchesSearch).map(uid => ({ uid, prof: memberProfiles.get(uid), joinMs: firstTxByUserM.get(uid) ?? 0 }))
+                    .sort((a, b) => b.joinMs - a.joinMs);
+
                   const memberRows = uniqueUids.filter(matchesSearch).map(uid => {
                     const cards = stampCards.filter(c => c.user_id === uid);
                     const prof = memberProfiles.get(uid);
@@ -17899,12 +18029,52 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                   }).sort((a, b) => b.totalStamps - a.totalStamps);
                   const activeRows = stampCards.filter(c => !c.isArchived && matchesSearch(c.user_id)).sort((a, b) => (b.current_stamps || 0) - (a.current_stamps || 0));
                   return (
-                    <Modal title={titles[statModal]} onClose={() => setStatModal(null)}>
+                    <Modal title={titles[statModal] || statModal} onClose={() => setStatModal(null)}>
                       <div className="relative mb-3">
                         <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-navy/72 pointer-events-none" />
                         <input type="text" value={statModalSearch} onChange={e => setStatModalSearch(e.target.value)} placeholder="Search by name or handle…" className="w-full pl-9 pr-4 py-2.5 rounded-2xl bg-brand-bg border border-brand-navy/10 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/40" autoFocus />
                       </div>
                       <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
+                        {statModal === 'churnRisk' && (
+                          <>
+                            <p className="text-[10px] text-brand-navy/50 font-bold uppercase tracking-widest mb-2 px-1">Haven't stamped in 21+ days</p>
+                            {churnRiskRows.slice(0, statModalVisible).map(({ uid, prof, lastMs }) => (
+                              <div key={uid} className="flex items-center gap-3 p-3 rounded-2xl bg-rose-50 border border-rose-100">
+                                <div className="w-9 h-9 rounded-full overflow-hidden bg-blue-50 shrink-0 flex items-center justify-center"><PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={36} view="head" /></div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-bold text-sm truncate">{prof?.name || 'Unknown'}</p>
+                                  <p className="text-[11px] text-rose-600">{lastMs > 0 ? `${Math.floor((now - lastMs) / 86400000)}d since last stamp` : 'No stamps yet'}</p>
+                                </div>
+                                <button
+                                  onClick={() => { setStatModal(null); setStatModalSearch(''); setActiveChatId(uid); setActiveTab('messages'); }}
+                                  className="text-[11px] font-bold text-white bg-rose-500 px-3 py-1.5 rounded-xl active:scale-95 transition-transform shrink-0"
+                                >Win Back</button>
+                              </div>
+                            ))}
+                            {churnRiskRows.length > statModalVisible && <button onClick={() => setStatModalVisible(v => v + 10)} className="w-full py-2.5 rounded-2xl bg-brand-navy/5 text-brand-navy/75 text-xs font-bold">Load 10 more ({churnRiskRows.length - statModalVisible} remaining)</button>}
+                            {churnRiskRows.length === 0 && <p className="text-center text-brand-navy/72 py-8 font-bold text-sm">No customers at churn risk</p>}
+                          </>
+                        )}
+                        {statModal === 'newcomers' && (
+                          <>
+                            <p className="text-[10px] text-brand-navy/50 font-bold uppercase tracking-widest mb-2 px-1">Joined in the last 30 days</p>
+                            {newcomerRows.slice(0, statModalVisible).map(({ uid, prof, joinMs }) => (
+                              <div key={uid} className="flex items-center gap-3 p-3 rounded-2xl bg-emerald-50 border border-emerald-100">
+                                <div className="w-9 h-9 rounded-full overflow-hidden bg-blue-50 shrink-0 flex items-center justify-center"><PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={36} view="head" /></div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-bold text-sm truncate">{prof?.name || 'Unknown'}</p>
+                                  <p className="text-[11px] text-emerald-600">{joinMs > 0 ? `Joined ${Math.floor((now - joinMs) / 86400000)}d ago` : 'New member'}</p>
+                                </div>
+                                <button
+                                  onClick={() => { setStatModal(null); setStatModalSearch(''); setActiveChatId(uid); setActiveTab('messages'); }}
+                                  className="text-[11px] font-bold text-white bg-emerald-500 px-3 py-1.5 rounded-xl active:scale-95 transition-transform shrink-0"
+                                >Message</button>
+                              </div>
+                            ))}
+                            {newcomerRows.length > statModalVisible && <button onClick={() => setStatModalVisible(v => v + 10)} className="w-full py-2.5 rounded-2xl bg-brand-navy/5 text-brand-navy/75 text-xs font-bold">Load 10 more ({newcomerRows.length - statModalVisible} remaining)</button>}
+                            {newcomerRows.length === 0 && <p className="text-center text-brand-navy/72 py-8 font-bold text-sm">No newcomers in the last 30 days</p>}
+                          </>
+                        )}
                         {statModal === 'members' && memberRows.slice(0, statModalVisible).map(({ uid, prof, totalStamps, cycles }) => (
                           <div key={uid} className="flex items-center gap-3 p-3 rounded-2xl bg-brand-bg">
                             <div className="w-9 h-9 rounded-full overflow-hidden bg-blue-50 shrink-0 flex items-center justify-center"><PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={36} view="head" /></div>
@@ -20998,11 +21168,12 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
               ✅ Stickers collected!
             </div>
           )}
-          <div className="relative z-10 px-5 pb-4 flex gap-3 text-xs font-bold text-white/40 flex-wrap">
-            <span>🗳️ {displayTotal} votes</span>
-            {postCloseTotal > 0 && <span className="text-blue-300/60">+{postCloseTotal} after close</span>}
-            <span>·</span>
-            <span>💬 {comments.length} comments</span>
+          <div className="relative z-10 px-5 pb-4 flex items-center gap-3 flex-wrap">
+            <span className="text-lg font-black text-white">🗳️ {displayTotal}</span>
+            <span className="text-xs font-bold text-white/50">total votes</span>
+            {postCloseTotal > 0 && <span className="text-xs font-bold text-blue-300/60">+{postCloseTotal} after close</span>}
+            <span className="text-white/25">·</span>
+            <span className="text-xs font-bold text-white/40">💬 {comments.length} comments</span>
           </div>
         </div>
 
@@ -21075,6 +21246,7 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
                       <p className="text-[10px] font-bold text-white/50 text-center leading-tight px-1">{opt}</p>
                       {isOptWinner && <Trophy size={10} className="text-yellow-400 shrink-0" />}
                     </div>
+                    <p className="text-xs font-black text-white/70 mt-0.5">{count}</p>
                     {postCount > 0 && (
                       <p className="text-[9px] text-blue-300/50 font-bold">+{postCount}</p>
                     )}
