@@ -526,6 +526,7 @@ interface UserProfile {
   totalSaved?: number;
   seenAnnouncementIds?: string[];
   isAdmin?: boolean;
+  privacyMode?: boolean;
 }
 
 interface Announcement {
@@ -17278,19 +17279,22 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                       <p className="font-bold text-brand-navy">Top 10 Users</p>
                       <Trophy size={16} className="text-brand-gold" />
                     </div>
-                    {top10.map(({ uid, stamps, prof }) => (
-                      <div key={uid} className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full overflow-hidden bg-blue-50 shrink-0 flex items-center justify-center">
-                          <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={32} view="head" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-bold text-sm truncate">{prof?.name || 'Customer'}</p>
-                          <div className="h-1 bg-brand-navy/8 rounded-full mt-1 overflow-hidden">
-                            <div className="h-full bg-brand-gold rounded-full" style={{ width: `${Math.round((stamps / (top10[0].stamps || 1)) * 100)}%` }} />
+                    {top10.map(({ uid, stamps, prof }) => {
+                      const anon = !!prof?.privacyMode;
+                      return (
+                        <div key={uid} className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full overflow-hidden bg-brand-navy/8 shrink-0 flex items-center justify-center">
+                            {anon ? <UserIcon size={14} className="text-brand-navy/30" /> : <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={32} view="head" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-sm truncate">{anon ? 'Anonymous' : (prof?.name || 'Customer')}</p>
+                            <div className="h-1 bg-brand-navy/8 rounded-full mt-1 overflow-hidden">
+                              <div className="h-full bg-brand-gold rounded-full" style={{ width: `${Math.round((stamps / (top10[0].stamps || 1)) * 100)}%` }} />
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 );
               })()}
@@ -18038,19 +18042,24 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                         {statModal === 'churnRisk' && (
                           <>
                             <p className="text-[10px] text-brand-navy/50 font-bold uppercase tracking-widest mb-2 px-1">Haven't stamped in 21+ days</p>
-                            {churnRiskRows.slice(0, statModalVisible).map(({ uid, prof, lastMs }) => (
-                              <div key={uid} className="flex items-center gap-3 p-3 rounded-2xl bg-rose-50 border border-rose-100">
-                                <div className="w-9 h-9 rounded-full overflow-hidden bg-blue-50 shrink-0 flex items-center justify-center"><PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={36} view="head" /></div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-bold text-sm truncate">{prof?.name || 'Unknown'}</p>
-                                  <p className="text-[11px] text-rose-600">{lastMs > 0 ? `${Math.floor((now - lastMs) / 86400000)}d since last stamp` : 'No stamps yet'}</p>
+                            {churnRiskRows.slice(0, statModalVisible).map(({ uid, prof, lastMs }) => {
+                              const anon = !!prof?.privacyMode;
+                              return (
+                                <div key={uid} className="flex items-center gap-3 p-3 rounded-2xl bg-rose-50 border border-rose-100">
+                                  <div className="w-9 h-9 rounded-full overflow-hidden bg-brand-navy/8 shrink-0 flex items-center justify-center">
+                                    {anon ? <UserIcon size={16} className="text-brand-navy/30" /> : <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={36} view="head" />}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-bold text-sm truncate">{anon ? 'Anonymous' : (prof?.name || 'Unknown')}</p>
+                                    <p className="text-[11px] text-rose-600">{lastMs > 0 ? `${Math.floor((now - lastMs) / 86400000)}d since last stamp` : 'No stamps yet'}</p>
+                                  </div>
+                                  <button
+                                    onClick={() => { setStatModal(null); setStatModalSearch(''); setActiveChatId(uid); setActiveTab('messages'); }}
+                                    className="text-[11px] font-bold text-white bg-rose-500 px-3 py-1.5 rounded-xl active:scale-95 transition-transform shrink-0"
+                                  >Win Back</button>
                                 </div>
-                                <button
-                                  onClick={() => { setStatModal(null); setStatModalSearch(''); setActiveChatId(uid); setActiveTab('messages'); }}
-                                  className="text-[11px] font-bold text-white bg-rose-500 px-3 py-1.5 rounded-xl active:scale-95 transition-transform shrink-0"
-                                >Win Back</button>
-                              </div>
-                            ))}
+                              );
+                            })}
                             {churnRiskRows.length > statModalVisible && <button onClick={() => setStatModalVisible(v => v + 10)} className="w-full py-2.5 rounded-2xl bg-brand-navy/5 text-brand-navy/75 text-xs font-bold">Load 10 more ({churnRiskRows.length - statModalVisible} remaining)</button>}
                             {churnRiskRows.length === 0 && <p className="text-center text-brand-navy/72 py-8 font-bold text-sm">No customers at churn risk</p>}
                           </>
@@ -18058,54 +18067,72 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                         {statModal === 'newcomers' && (
                           <>
                             <p className="text-[10px] text-brand-navy/50 font-bold uppercase tracking-widest mb-2 px-1">Joined in the last 30 days</p>
-                            {newcomerRows.slice(0, statModalVisible).map(({ uid, prof, joinMs }) => (
-                              <div key={uid} className="flex items-center gap-3 p-3 rounded-2xl bg-emerald-50 border border-emerald-100">
-                                <div className="w-9 h-9 rounded-full overflow-hidden bg-blue-50 shrink-0 flex items-center justify-center"><PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={36} view="head" /></div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-bold text-sm truncate">{prof?.name || 'Unknown'}</p>
-                                  <p className="text-[11px] text-emerald-600">{joinMs > 0 ? `Joined ${Math.floor((now - joinMs) / 86400000)}d ago` : 'New member'}</p>
+                            {newcomerRows.slice(0, statModalVisible).map(({ uid, prof, joinMs }) => {
+                              const anon = !!prof?.privacyMode;
+                              return (
+                                <div key={uid} className="flex items-center gap-3 p-3 rounded-2xl bg-emerald-50 border border-emerald-100">
+                                  <div className="w-9 h-9 rounded-full overflow-hidden bg-brand-navy/8 shrink-0 flex items-center justify-center">
+                                    {anon ? <UserIcon size={16} className="text-brand-navy/30" /> : <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={36} view="head" />}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-bold text-sm truncate">{anon ? 'Anonymous' : (prof?.name || 'Unknown')}</p>
+                                    <p className="text-[11px] text-emerald-600">{joinMs > 0 ? `Joined ${Math.floor((now - joinMs) / 86400000)}d ago` : 'New member'}</p>
+                                  </div>
+                                  <button
+                                    onClick={() => { setStatModal(null); setStatModalSearch(''); setActiveChatId(uid); setActiveTab('messages'); }}
+                                    className="text-[11px] font-bold text-white bg-emerald-500 px-3 py-1.5 rounded-xl active:scale-95 transition-transform shrink-0"
+                                  >Message</button>
                                 </div>
-                                <button
-                                  onClick={() => { setStatModal(null); setStatModalSearch(''); setActiveChatId(uid); setActiveTab('messages'); }}
-                                  className="text-[11px] font-bold text-white bg-emerald-500 px-3 py-1.5 rounded-xl active:scale-95 transition-transform shrink-0"
-                                >Message</button>
-                              </div>
-                            ))}
+                              );
+                            })}
                             {newcomerRows.length > statModalVisible && <button onClick={() => setStatModalVisible(v => v + 10)} className="w-full py-2.5 rounded-2xl bg-brand-navy/5 text-brand-navy/75 text-xs font-bold">Load 10 more ({newcomerRows.length - statModalVisible} remaining)</button>}
                             {newcomerRows.length === 0 && <p className="text-center text-brand-navy/72 py-8 font-bold text-sm">No newcomers in the last 30 days</p>}
                           </>
                         )}
-                        {statModal === 'members' && memberRows.slice(0, statModalVisible).map(({ uid, prof, totalStamps, cycles }) => (
-                          <div key={uid} className="flex items-center gap-3 p-3 rounded-2xl bg-brand-bg">
-                            <div className="w-9 h-9 rounded-full overflow-hidden bg-blue-50 shrink-0 flex items-center justify-center"><PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={36} view="head" /></div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1"><p className="font-bold text-sm truncate">{prof?.name || 'Unknown'}</p><StreakBadge streak={prof?.streak} /></div>
-                              <p className="text-[11px] text-brand-navy/75">@{prof?.handle || uid.slice(0, 8)}</p>
+                        {statModal === 'members' && memberRows.slice(0, statModalVisible).map(({ uid, prof, totalStamps, cycles }) => {
+                          const anon = !!prof?.privacyMode;
+                          return (
+                            <div key={uid} className="flex items-center gap-3 p-3 rounded-2xl bg-brand-bg">
+                              <div className="w-9 h-9 rounded-full overflow-hidden bg-brand-navy/8 shrink-0 flex items-center justify-center">
+                                {anon ? <UserIcon size={16} className="text-brand-navy/30" /> : <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={36} view="head" />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1"><p className="font-bold text-sm truncate">{anon ? 'Anonymous' : (prof?.name || 'Unknown')}</p>{!anon && <StreakBadge streak={prof?.streak} />}</div>
+                                <p className="text-[11px] text-brand-navy/75">{anon ? '—' : `@${prof?.handle || uid.slice(0, 8)}`}</p>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <p className="font-bold text-sm">{totalStamps} stamps</p>
+                                {cycles > 0 && <p className="text-[11px] text-brand-gold">{cycles}× completed</p>}
+                              </div>
                             </div>
-                            <div className="text-right shrink-0">
-                              <p className="font-bold text-sm">{totalStamps} stamps</p>
-                              {cycles > 0 && <p className="text-[11px] text-brand-gold">{cycles}× completed</p>}
+                          );
+                        })}
+                        {statModal === 'stamps' && stampRows.slice(0, statModalVisible).map(({ uid, prof, totalStamps }) => {
+                          const anon = !!prof?.privacyMode;
+                          return (
+                            <div key={uid} className="flex items-center gap-3 p-3 rounded-2xl bg-brand-bg">
+                              <div className="w-9 h-9 rounded-full overflow-hidden bg-brand-navy/8 shrink-0 flex items-center justify-center">
+                                {anon ? <UserIcon size={16} className="text-brand-navy/30" /> : <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={36} view="head" />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1"><p className="font-bold text-sm truncate">{anon ? 'Anonymous' : (prof?.name || 'Unknown')}</p>{!anon && <StreakBadge streak={prof?.streak} />}</div>
+                                <p className="text-[11px] text-brand-navy/75">{anon ? '—' : `@${prof?.handle || uid.slice(0, 8)}`}</p>
+                              </div>
+                              <div className="text-right shrink-0"><p className="font-bold text-sm">{totalStamps} stamps</p></div>
                             </div>
-                          </div>
-                        ))}
-                        {statModal === 'stamps' && stampRows.slice(0, statModalVisible).map(({ uid, prof, totalStamps }) => (
-                          <div key={uid} className="flex items-center gap-3 p-3 rounded-2xl bg-brand-bg">
-                            <div className="w-9 h-9 rounded-full overflow-hidden bg-blue-50 shrink-0 flex items-center justify-center"><PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={36} view="head" /></div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1"><p className="font-bold text-sm truncate">{prof?.name || 'Unknown'}</p><StreakBadge streak={prof?.streak} /></div>
-                              <p className="text-[11px] text-brand-navy/75">@{prof?.handle || uid.slice(0, 8)}</p>
-                            </div>
-                            <div className="text-right shrink-0"><p className="font-bold text-sm">{totalStamps} stamps</p></div>
-                          </div>
-                        ))}
+                          );
+                        })}
                         {statModal === 'activeCards' && activeRows.slice(0, statModalVisible).map(card => {
                           const prof = memberProfiles.get(card.user_id);
+                          const anon = !!prof?.privacyMode;
                           return (
                             <div key={card.id} className="flex items-center gap-3 p-3 rounded-2xl bg-brand-bg">
-                              <div className="w-9 h-9 rounded-full overflow-hidden bg-blue-50 shrink-0 flex items-center justify-center"><PixelAvatar config={prof?.avatar} uid={prof?.uid ?? card.user_id} size={36} view="head" /></div>
+                              <div className="w-9 h-9 rounded-full overflow-hidden bg-brand-navy/8 shrink-0 flex items-center justify-center">
+                                {anon ? <UserIcon size={16} className="text-brand-navy/30" /> : <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? card.user_id} size={36} view="head" />}
+                              </div>
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1"><p className="font-bold text-sm truncate">{prof?.name || card.userName || 'Unknown'}</p><StreakBadge streak={prof?.streak} /></div>
-                                <p className="text-[11px] text-brand-navy/75">@{prof?.handle || card.user_id.slice(0, 8)}</p>
+                                <div className="flex items-center gap-1"><p className="font-bold text-sm truncate">{anon ? 'Anonymous' : (prof?.name || card.userName || 'Unknown')}</p>{!anon && <StreakBadge streak={prof?.streak} />}</div>
+                                <p className="text-[11px] text-brand-navy/75">{anon ? '—' : `@${prof?.handle || card.user_id.slice(0, 8)}`}</p>
                               </div>
                               <div className="text-right shrink-0">
                                 <p className="font-bold text-sm">{card.current_stamps}/{stampsPerReward}</p>
@@ -18766,8 +18793,10 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
             {recentTransactions.slice(0, activityVisible).map(tx => {
               const isCompletion = !!tx.stamps_at_completion;
               const ts = tx.completed_at || tx.issued_at;
-              const name = tx.userName || memberProfiles.get(tx.user_id)?.name || 'Customer';
-              const photo = tx.userPhoto || memberProfiles.get(tx.user_id)?.photoURL || '';
+              const txProf = memberProfiles.get(tx.user_id);
+              const anon = !!txProf?.privacyMode;
+              const name = anon ? 'Anonymous' : (tx.userName || txProf?.name || 'Customer');
+              const photo = anon ? '' : (tx.userPhoto || txProf?.photoURL || '');
               return (
                 <div key={tx.id} className="glass-card p-3.5 rounded-2xl flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full overflow-hidden bg-brand-navy/5 shrink-0 flex items-center justify-center">
@@ -25759,6 +25788,11 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="font-display text-2xl font-bold">{profile.name}</h2>
               <StreakBadge streak={profile.streak} size="lg" />
+              {profile.privacyMode && (
+                <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full">
+                  <Lock size={7} /> Anonymous
+                </span>
+              )}
             </div>
             <p className="text-brand-gold font-bold text-xs uppercase tracking-[0.2em]">@{profile.handle || user.email?.split('@')[0]}</p>
             <div className="flex items-center gap-3 mt-2 text-sm">
@@ -26518,6 +26552,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
   const [storeLocation, setStoreLocation] = useState('');
   const [storeLocations, setStoreLocations] = useState<Array<{ id: string; label: string; line1: string; line2: string; town: string; state: string; postcode: string; lat?: number; lng?: number }>>([]);
   const [visibility, setVisibility] = useState({ members: true, stamps: true, activeCards: true, returnRate: true, followers: true });
+  const [privacyMode, setPrivacyMode] = useState(profile.privacyMode ?? false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -26559,7 +26594,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
   const handleSave = async () => {
     setSaving(true);
     try {
-      const profileUpdates: any = { name, ...(gender ? { gender } : {}) };
+      const profileUpdates: any = { name, privacyMode, ...(gender ? { gender } : {}) };
       await updateDoc(doc(db, 'users', profile.uid), profileUpdates);
 
       if (profile.role === 'vendor' && store) {
@@ -26844,6 +26879,18 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
                 <input value={storeLogo} onChange={e => setStoreLogo(e.target.value)} placeholder="Or paste logo URL directly..."
                   className="w-full px-5 py-4 rounded-2xl bg-white border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30" />
               )}
+            </div>
+
+            {/* Privacy Mode */}
+            <div className="space-y-3">
+              <SectionLabel icon={<Lock size={14} className="text-brand-gold" />} label="Privacy" />
+              <div className="flex items-center justify-between bg-white px-5 py-4 rounded-2xl border border-brand-navy/10">
+                <div className="flex-1 min-w-0 pr-4">
+                  <p className="text-sm font-bold text-brand-navy">Privacy Mode</p>
+                  <p className="text-xs text-brand-navy/50 mt-0.5">Hide your name and avatar from vendor leaderboards and customer lists — shown as Anonymous.</p>
+                </div>
+                <ToggleSwitch on={privacyMode} onChange={setPrivacyMode} />
+              </div>
             </div>
 
             {/* Public Visibility */}
