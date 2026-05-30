@@ -20938,7 +20938,7 @@ function formatPollTimer(ms: number): string {
 function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: { currentUser: FirebaseUser; currentProfile: UserProfile | null; onClose: () => void; onPackReady?: (s: CollectibleSticker[]) => void }) {
   const today = new Date().toISOString().split('T')[0];
   const [voteData, setVoteData] = useState<DailyVoteData | null>(null);
-  const [rawUserVote, setRawUserVote] = useState<{ optionIdx: number; voteId?: string; rewardClaimed?: boolean } | null>(null);
+  const [rawUserVote, setRawUserVote] = useState<{ optionIdx: number; voteId?: string; rewardClaimed?: boolean; isPostClose?: boolean } | null>(null);
   const [preCloseCounts, setPreCloseCounts] = useState<Record<string, number>>({});
   const [postCloseCounts, setPostCloseCounts] = useState<Record<string, number>>({});
   const [liveTotal, setLiveTotal] = useState(0);
@@ -20969,7 +20969,7 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
   }), [today]);
 
   useEffect(() => onSnapshot(doc(db, 'daily_vote', today, 'votes', currentUser.uid), snap => {
-    setRawUserVote(snap.exists() ? { optionIdx: snap.data().optionIdx, voteId: snap.data().voteId, rewardClaimed: snap.data().rewardClaimed } : null);
+    setRawUserVote(snap.exists() ? { optionIdx: snap.data().optionIdx, voteId: snap.data().voteId, rewardClaimed: snap.data().rewardClaimed, isPostClose: snap.data().isPostClose ?? false } : null);
   }), [today, currentUser.uid]);
 
   useEffect(() => {
@@ -21016,10 +21016,10 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
   }, [isExpired, voteData?.closed, voteId]);
 
   const collectReward = async () => {
-    if (claiming || rewardCollected || userVote === null || voteData?.winner !== userVote) return;
+    if (claiming || rewardCollected || userVote === null || voteData?.winner !== userVote || rawUserVote?.isPostClose) return;
     const voteRef = doc(db, 'daily_vote', today, 'votes', currentUser.uid);
     const snap = await getDoc(voteRef);
-    if (!snap.exists() || snap.data().rewardClaimed) { setRewardCollected(true); return; }
+    if (!snap.exists() || snap.data().rewardClaimed || snap.data().isPostClose) { setRewardCollected(true); return; }
     setClaiming(true);
     try {
       const name = currentProfile?.name || 'Anonymous';
@@ -21071,7 +21071,7 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
   const total = Math.max(displayTotal, 1);
   const hasVoted = userVote !== null;
   const BAR_MAX_H = 120;
-  const isWinner = isClosed && voteData.winner !== null && userVote === voteData.winner;
+  const isWinner = isClosed && voteData.winner !== null && userVote === voteData.winner && !rawUserVote?.isPostClose;
   const alreadyClaimed = rawUserVote?.rewardClaimed || rewardCollected;
 
   const OPTION_PALETTE = [
@@ -21355,7 +21355,7 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
 function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor }: { currentUser: FirebaseUser; currentProfile: UserProfile | null; onPackReady?: (s: CollectibleSticker[]) => void; tileColor?: UiColorSlot }) {
   const today = new Date().toISOString().split('T')[0];
   const [voteData, setVoteData] = useState<DailyVoteData | null>(null);
-  const [rawUserVote, setRawUserVote] = useState<{ optionIdx: number; voteId?: string; rewardClaimed?: boolean } | null>(null);
+  const [rawUserVote, setRawUserVote] = useState<{ optionIdx: number; voteId?: string; rewardClaimed?: boolean; isPostClose?: boolean } | null>(null);
   const [preCloseCounts, setPreCloseCounts] = useState<Record<string, number>>({});
   const [liveTotal, setLiveTotal] = useState(0);
   const [open, setOpen] = useState(false);
@@ -21367,7 +21367,7 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor 
     setVoteData(snap.exists() ? snap.data() as DailyVoteData : null);
   }), [today]);
   useEffect(() => onSnapshot(doc(db, 'daily_vote', today, 'votes', currentUser.uid), snap => {
-    setRawUserVote(snap.exists() ? { optionIdx: snap.data().optionIdx, voteId: snap.data().voteId, rewardClaimed: snap.data().rewardClaimed } : null);
+    setRawUserVote(snap.exists() ? { optionIdx: snap.data().optionIdx, voteId: snap.data().voteId, rewardClaimed: snap.data().rewardClaimed, isPostClose: snap.data().isPostClose ?? false } : null);
   }), [today, currentUser.uid]);
   useEffect(() => {
     if (!voteData?.voteId) return;
@@ -21388,12 +21388,12 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor 
     if (!voteData?.closed || voteData.winner === null || voteData.winner === undefined) return;
     const vid = voteData.voteId;
     const uv = rawUserVote && vid && rawUserVote.voteId === vid ? rawUserVote.optionIdx : null;
-    if (uv !== voteData.winner || rawUserVote?.rewardClaimed || rewardCollected || autoCollectRef.current) return;
+    if (uv !== voteData.winner || rawUserVote?.rewardClaimed || rawUserVote?.isPostClose || rewardCollected || autoCollectRef.current) return;
     autoCollectRef.current = true;
     const voteRef = doc(db, 'daily_vote', today, 'votes', currentUser.uid);
     (async () => {
       const snap = await getDoc(voteRef).catch(() => null);
-      if (!snap?.exists() || snap.data().rewardClaimed) { setRewardCollected(true); return; }
+      if (!snap?.exists() || snap.data().rewardClaimed || snap.data().isPostClose) { setRewardCollected(true); return; }
       setClaiming(true);
       try {
         const newStickers = await issueUserStickers(currentUser.uid, currentProfile?.name || 'Anonymous', 3).catch(() => [] as CollectibleSticker[]);
@@ -21422,15 +21422,15 @@ function DailyVoteFYPCard({ currentUser, currentProfile, onPackReady, tileColor 
   const total = Math.max(displayTotal, 1);
   const hasVoted = userVote !== null;
   const isClosed = !!voteData.closed || isExpired;
-  const isWinner = isClosed && voteData.winner !== null && userVote === voteData.winner;
+  const isWinner = isClosed && voteData.winner !== null && userVote === voteData.winner && !rawUserVote?.isPostClose;
   const alreadyClaimed = rawUserVote?.rewardClaimed || rewardCollected;
 
   const collectReward = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (claiming || alreadyClaimed || userVote === null || voteData.winner !== userVote) return;
+    if (claiming || alreadyClaimed || userVote === null || voteData.winner !== userVote || rawUserVote?.isPostClose) return;
     const voteRef = doc(db, 'daily_vote', today, 'votes', currentUser.uid);
     const snap = await getDoc(voteRef);
-    if (!snap.exists() || snap.data().rewardClaimed) { setRewardCollected(true); return; }
+    if (!snap.exists() || snap.data().rewardClaimed || snap.data().isPostClose) { setRewardCollected(true); return; }
     setClaiming(true);
     try {
       const name = currentProfile?.name || 'Anonymous';
