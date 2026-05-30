@@ -108,11 +108,6 @@ function facePixels(skin: string, hairColor: string, _mood: number): CR[] {
   pixels.push(px(4, 5, 3, 2, white), px(9, 5, 3, 2, white));
   pixels.push(px(5, 6, 1, 1, dark), px(10, 6, 1, 1, dark));
 
-  // mouth — gentle smile
-  pixels.push(
-    px(5, 7, 1, 1, dark), px(10, 7, 1, 1, dark),
-    px(6, 8, 4, 1, lip),
-  );
 
   return pixels;
 }
