@@ -12118,16 +12118,23 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                                   })}
                                 </div>
                                 {/* Progress bar */}
-                                <div className="flex items-center gap-2">
-                                  <div className="flex-1 h-1.5 bg-brand-navy/8 rounded-full overflow-hidden">
+                                <div className="space-y-1">
+                                  <div className="flex items-baseline justify-between">
+                                    <span className="text-xs font-black text-brand-navy">{myProgSets}<span className="text-brand-navy/40 font-bold text-[10px]"> / {maxSets} sets</span></span>
+                                    <span className={cn('text-xs font-black', isComplete ? 'text-green-500' : 'text-brand-gold')}>{pct}%</span>
+                                  </div>
+                                  <div className="relative h-5 bg-brand-navy/8 rounded-xl overflow-hidden">
                                     <motion.div
-                                      className={cn("h-full rounded-full", isComplete ? 'bg-green-400' : 'bg-brand-gold')}
+                                      className="absolute inset-y-0 left-0 rounded-xl"
+                                      style={{
+                                        background: isComplete ? 'linear-gradient(90deg,#34d399,#10b981)' : 'linear-gradient(90deg,#f59e0b,#fbbf24)',
+                                        boxShadow: isComplete ? '3px 0 12px rgba(52,211,153,0.5)' : '3px 0 12px rgba(251,191,36,0.5)',
+                                      }}
                                       initial={{ width: 0 }}
                                       animate={{ width: `${pct}%` }}
-                                      transition={{ duration: 0.6, ease: 'easeOut' }}
+                                      transition={{ duration: 0.85, ease: [0.34, 1.56, 0.64, 1] }}
                                     />
                                   </div>
-                                  <span className="text-[10px] font-bold text-brand-navy/75 shrink-0">{pct}%</span>
                                 </div>
                                 {isComplete && (
                                   <p className="text-[10px] font-bold text-amber-600 mt-1">🏆 Complete! Claim: {prog.reward}</p>
@@ -12301,25 +12308,45 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                           ) : null}
 
                           {joined && (
-                            <div className="space-y-1.5">
-                              <div className="flex justify-between items-center">
-                                <p className="text-xs font-bold text-brand-navy/75">
-                                  {stampsProgress} / {c.goal} {c.unit}
-                                </p>
-                                <p className="text-xs font-bold text-brand-navy/75">{progressPct}%</p>
+                            <div className="space-y-2">
+                              {/* Specs row */}
+                              <div className="flex items-baseline justify-between">
+                                <span className="text-sm font-black text-brand-navy">
+                                  {stampsProgress}
+                                  <span className="text-brand-navy/40 font-bold text-xs"> / {c.goal} {c.unit}</span>
+                                </span>
+                                <span className={cn('text-sm font-black', isComplete ? 'text-green-500' : 'text-brand-gold')}>{progressPct}%</span>
                               </div>
-                              <div className="h-2.5 bg-brand-navy/5 rounded-full overflow-hidden">
+                              {/* Animated bar */}
+                              <div className="relative h-6 bg-brand-navy/6 rounded-2xl overflow-hidden">
                                 <motion.div
-                                  className={cn("h-full rounded-full", isComplete ? 'bg-green-400' : 'bg-brand-gold')}
+                                  className="absolute inset-y-0 left-0 rounded-2xl"
+                                  style={{
+                                    background: isComplete
+                                      ? 'linear-gradient(90deg,#34d399,#10b981)'
+                                      : 'linear-gradient(90deg,#f59e0b,#fbbf24)',
+                                    boxShadow: isComplete
+                                      ? '3px 0 14px rgba(52,211,153,0.55)'
+                                      : '3px 0 14px rgba(251,191,36,0.55)',
+                                  }}
                                   initial={{ width: 0 }}
                                   animate={{ width: `${progressPct}%` }}
-                                  transition={{ duration: 0.6, ease: 'easeOut' }}
+                                  transition={{ duration: 0.85, ease: [0.34, 1.56, 0.64, 1] }}
                                 />
+                                {progressPct > 4 && (
+                                  <motion.div
+                                    className="absolute inset-y-0 left-0 rounded-2xl pointer-events-none"
+                                    style={{ width: `${progressPct}%`, background: 'linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.22) 55%,transparent 100%)' }}
+                                    initial={{ opacity: 0 }} animate={{ opacity: [0, 1, 0] }}
+                                    transition={{ duration: 1.0, delay: 0.6 }}
+                                  />
+                                )}
                               </div>
                               {isComplete && (
-                                <p className="text-[10px] font-bold text-green-600 text-center">
-                                  ✓ Goal reached! Claim your reward below.
-                                </p>
+                                <motion.p
+                                  initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                                  className="text-[10px] font-bold text-green-600 text-center"
+                                >✓ Goal reached! Claim your reward below.</motion.p>
                               )}
                             </div>
                           )}
@@ -14980,14 +15007,22 @@ function StampCelebrationModal({
                               ? <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 400, damping: 14 }} className="text-[10px] font-black text-green-500 shrink-0">✓ DONE!</motion.span>
                               : <span className="text-[10px] font-bold text-brand-navy/60 shrink-0">{c.currentStamps}/{c.totalStamps}</span>}
                           </div>
-                          <div className="space-y-1">
+                          <div className="space-y-1.5">
                             <p className="text-[10px] text-brand-navy/75 truncate">{c.reward}</p>
-                            <div className="h-1.5 bg-brand-navy/8 rounded-full overflow-hidden">
+                            <div className="flex items-baseline justify-between mb-0.5">
+                              <span className="text-xs font-black text-brand-navy">{c.currentStamps}<span className="text-brand-navy/40 font-bold text-[10px]"> / {c.totalStamps}</span></span>
+                              <span className={cn('text-xs font-black', c.done ? 'text-green-500' : 'text-brand-gold')}>{c.totalStamps > 0 ? Math.min(100, Math.round((c.currentStamps / c.totalStamps) * 100)) : 0}%</span>
+                            </div>
+                            <div className="relative h-5 bg-brand-navy/8 rounded-xl overflow-hidden">
                               <motion.div
-                                className={cn('h-full rounded-full', c.done ? 'bg-green-400' : 'bg-brand-gold')}
+                                className="absolute inset-y-0 left-0 rounded-xl"
+                                style={{
+                                  background: c.done ? 'linear-gradient(90deg,#34d399,#10b981)' : 'linear-gradient(90deg,#f59e0b,#fbbf24)',
+                                  boxShadow: c.done ? '3px 0 10px rgba(52,211,153,0.5)' : '3px 0 10px rgba(251,191,36,0.5)',
+                                }}
                                 initial={{ width: 0 }}
                                 animate={{ width: `${c.totalStamps > 0 ? Math.min(100, Math.round((c.currentStamps / c.totalStamps) * 100)) : 0}%` }}
-                                transition={{ duration: 0.8, ease: 'easeOut', delay: 0.2 + i * 0.07 }}
+                                transition={{ duration: 0.85, ease: [0.34, 1.56, 0.64, 1], delay: 0.2 + i * 0.07 }}
                               />
                             </div>
                           </div>
