@@ -1825,7 +1825,7 @@ export default function App() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-between gradient-logo-blue py-16 px-6">
         <div className="flex-1 flex items-center justify-center">
-          <span className="font-display text-6xl font-black tracking-tight select-none text-white">linq</span>
+          <span className="text-6xl font-black tracking-tight select-none leading-none" style={{ fontFamily: 'Poppins, sans-serif' }}><span style={{ color: '#60a5fa' }}>li</span><span style={{ color: '#1d4ed8' }}>nq</span></span>
         </div>
         <div className="flex flex-col items-center gap-2">
           <img src={adastraLogoUrl || '/app-logo.png'} alt="Ad Astra Network" className="w-14 h-14 rounded-2xl object-contain" />
@@ -1852,7 +1852,7 @@ export default function App() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-between gradient-logo-blue py-16 px-6">
         <div className="flex-1 flex items-center justify-center">
-          <span className="font-display text-6xl font-black tracking-tight select-none text-white">linq</span>
+          <span className="text-6xl font-black tracking-tight select-none leading-none" style={{ fontFamily: 'Poppins, sans-serif' }}><span style={{ color: '#60a5fa' }}>li</span><span style={{ color: '#1d4ed8' }}>nq</span></span>
         </div>
         <div className="flex flex-col items-center gap-2">
           <img src={adastraLogoUrl || '/app-logo.png'} alt="Ad Astra Network" className="w-14 h-14 rounded-2xl object-contain" />
@@ -2335,7 +2335,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-8 text-center" style={bg}>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-12">
-          <h1 className="font-display text-4xl font-bold text-white mb-4">linq</h1>
+          <h1 className="text-4xl font-black mb-4 leading-none" style={{ fontFamily: 'Poppins, sans-serif' }}><span style={{ color: '#60a5fa' }}>li</span><span style={{ color: '#1d4ed8' }}>nq</span></h1>
           <p className="text-white/60 text-lg max-w-xs mx-auto">Collect stamps, unlock rewards, and support your favourite local businesses.</p>
         </motion.div>
         <div className="w-full max-w-xs space-y-3">
@@ -4348,7 +4348,7 @@ function ChallengeRedeemModal({ challenge, entry, userName, uid, onClose }: {
 
             {/* Linq wordmark */}
             <div className="text-center relative z-10">
-              <p className="font-display text-5xl font-black text-white tracking-tight leading-none">linq</p>
+              <p className="text-5xl font-black tracking-tight leading-none" style={{ fontFamily: 'Poppins, sans-serif' }}><span style={{ color: '#60a5fa' }}>li</span><span style={{ color: '#1d4ed8' }}>nq</span></p>
               <div className="h-0.5 bg-white/20 rounded-full mt-2 mx-4" />
             </div>
 
@@ -4370,7 +4370,7 @@ function ChallengeRedeemModal({ challenge, entry, userName, uid, onClose }: {
             {/* Footer tagline */}
             <div className="text-center relative z-10 space-y-1">
               <p className="text-white/50 text-xs font-medium">Collect stamps &amp; rewards with</p>
-              <p className="font-display text-xl font-black text-white tracking-tight">linq</p>
+              <p className="text-xl font-black tracking-tight leading-none" style={{ fontFamily: 'Poppins, sans-serif' }}><span style={{ color: '#60a5fa' }}>li</span><span style={{ color: '#1d4ed8' }}>nq</span></p>
               <p className="text-white/30 text-[10px] font-bold tracking-widest">@joinlinq</p>
             </div>
           </div>
@@ -6286,7 +6286,7 @@ function AppEditPanel({ onClose, onLogoChange }: { onClose: () => void; onLogoCh
           <div className="rounded-3xl overflow-hidden">
             <p className="text-xs font-bold text-brand-navy/50 uppercase tracking-widest mb-2 px-1">Preview</p>
             <div className="gradient-logo-blue rounded-3xl py-12 flex flex-col items-center justify-between gap-8">
-              <span className="font-display text-5xl font-black text-white">linq</span>
+              <span className="text-5xl font-black leading-none" style={{ fontFamily: 'Poppins, sans-serif' }}><span style={{ color: '#93c5fd' }}>li</span><span style={{ color: '#bfdbfe' }}>nq</span></span>
               <div className="flex flex-col items-center gap-1.5">
                 <div className="w-14 h-14 rounded-2xl overflow-hidden bg-white/10 flex items-center justify-center">
                   {logoUrl
@@ -11897,9 +11897,13 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                     'flex-1 py-2.5 rounded-xl text-sm font-bold transition-all relative overflow-hidden text-white',
                     walletSubTab === 'challenges' ? 'shadow-md opacity-100' : 'opacity-60'
                   )}
-                  style={{ background: uiColors.winTab.css, ...(uiColors.winTab.textColor ? { color: uiColors.winTab.textColor } : {}) }}
+                  style={{ background: 'linear-gradient(90deg,#7c3aed,#4f46e5,#2563eb)' }}
                 >
-                  <span className="shine-ray" aria-hidden="true" />
+                  <span className="challenge-dot" style={{ top: '20%', animationDelay: '0s' }} />
+                  <span className="challenge-dot" style={{ top: '58%', animationDelay: '0.7s' }} />
+                  <span className="challenge-sparkle" style={{ top: '5%',  left: '15%', animationDelay: '0.2s' }}>✦</span>
+                  <span className="challenge-sparkle" style={{ top: '50%', left: '50%', animationDelay: '1.0s' }}>✦</span>
+                  <span className="challenge-sparkle" style={{ top: '8%',  left: '80%', animationDelay: '0.5s' }}>★</span>
                   <span className={cn('relative z-10', walletSubTab !== 'challenges' && 'tab-shake')}>🏆 Win</span>
                   {totalUnrevealed > 0 && (
                     <span className="absolute top-1 right-3 w-4 h-4 bg-white/30 text-white text-[9px] font-black rounded-full flex items-center justify-center z-10">
@@ -12186,10 +12190,11 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                                   ))}
                                 </div>
                                 <button
-                                  onClick={() => setOpenProgrammeId(prog.id)}
-                                  className="px-3 py-1.5 rounded-xl bg-brand-navy text-white text-[11px] font-bold active:scale-95 transition-all shrink-0"
+                                  onClick={() => { if (prog.endsAt && (prog.endsAt.toMillis?.() ?? (prog.endsAt.seconds ?? 0) * 1000) < Date.now()) return; setOpenProgrammeId(prog.id); }}
+                                  disabled={!!prog.endsAt && (prog.endsAt.toMillis?.() ?? (prog.endsAt.seconds ?? 0) * 1000) < Date.now()}
+                                  className={cn("px-3 py-1.5 rounded-xl text-[11px] font-bold active:scale-95 transition-all shrink-0", !!prog.endsAt && (prog.endsAt.toMillis?.() ?? (prog.endsAt.seconds ?? 0) * 1000) < Date.now() ? 'bg-brand-navy/20 text-brand-navy/50 cursor-not-allowed' : 'bg-brand-navy text-white')}
                                 >
-                                  Join
+                                  {!!prog.endsAt && (prog.endsAt.toMillis?.() ?? (prog.endsAt.seconds ?? 0) * 1000) < Date.now() ? 'Ended' : 'Join'}
                                 </button>
                               </div>
                             </div>
@@ -12249,6 +12254,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                     const isComplete = progressPct >= 100;
                     const isRedeemed = !!entry?.redeemed;
                     const isHighlighted = highlightedChallengeId === c.id;
+                    const isEnded = c.endsAt ? (c.endsAt.toMillis?.() ?? (c.endsAt.seconds ?? 0) * 1000) < Date.now() : false;
                     if (isRedeemed) return null; // shown in archived section
                     return (
                       <div key={c.id} id={`challenge-${c.id}`} className={cn("rounded-[2rem] shadow-lg overflow-hidden transition-all duration-500", isHighlighted ? 'ring-2 ring-brand-gold/60' : '')}>
@@ -12403,15 +12409,18 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                             )
                           ) : (
                             <>
-                              {joinedCount >= 5 && (
+                              {isEnded && (
+                                <p className="text-[11px] text-center text-brand-navy/50 font-semibold">This challenge has ended.</p>
+                              )}
+                              {!isEnded && joinedCount >= 5 && (
                                 <p className="text-[11px] text-center text-brand-rose font-semibold">
                                   You're in 5 challenges — leave one to join this.
                                 </p>
                               )}
                               <button
-                                disabled={joinedCount >= 5}
+                                disabled={joinedCount >= 5 || isEnded}
                                 onClick={async () => {
-                                  if (joinedCount >= 5) return;
+                                  if (joinedCount >= 5 || isEnded) return;
                                   await updateDoc(doc(db, 'challenges', c.id), { participantUids: arrayUnion(user.uid) });
                                   const stampsAtJoinPerStore: Record<string, number> = {};
                                   if (c.vendorIds?.length) {
@@ -12434,11 +12443,11 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                                 }}
                                 className={cn(
                                   'relative w-full py-3 rounded-2xl text-sm font-bold transition-all active:scale-95 overflow-hidden',
-                                  joinedCount >= 5 ? 'bg-brand-navy/20 text-brand-navy/75 cursor-not-allowed' : 'text-white'
+                                  (joinedCount >= 5 || isEnded) ? 'bg-brand-navy/20 text-brand-navy/75 cursor-not-allowed' : 'text-white'
                                 )}
-                                style={joinedCount < 5 ? { background: 'linear-gradient(90deg,#7c3aed,#4f46e5,#2563eb)' } : {}}
+                                style={!(joinedCount >= 5 || isEnded) ? { background: 'linear-gradient(90deg,#7c3aed,#4f46e5,#2563eb)' } : {}}
                               >
-                                {joinedCount < 5 && (
+                                {!(joinedCount >= 5 || isEnded) && (
                                   <>
                                     <span className="challenge-dot" style={{ top: '25%', animationDelay: '0s' }} />
                                     <span className="challenge-dot" style={{ top: '60%', animationDelay: '0.7s' }} />
@@ -12447,7 +12456,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                                     <span className="challenge-sparkle" style={{ top: '10%', left: '80%', animationDelay: '0.5s' }}>★</span>
                                   </>
                                 )}
-                                <span className="relative z-10">Join Challenge</span>
+                                <span className="relative z-10">{isEnded ? 'Challenge Ended' : 'Join Challenge'}</span>
                               </button>
                             </>
                           )}
@@ -13019,8 +13028,7 @@ function VendorWelcomeSlideVisual({ step }: { step: number }) {
     return (
       <div className="flex flex-col items-center gap-1 py-2">
         <div className="flex items-baseline leading-none">
-          <span className="font-display text-5xl font-black text-black tracking-tight">lin</span>
-          <span className="font-display text-5xl font-black text-blue-600 tracking-tight">q</span>
+          <span className="text-5xl font-black tracking-tight" style={{ fontFamily: 'Poppins, sans-serif', color: '#60a5fa' }}>li</span><span className="text-5xl font-black tracking-tight" style={{ fontFamily: 'Poppins, sans-serif', color: '#1d4ed8' }}>nq</span>
         </div>
         <div className="flex gap-1.5 mt-1">
           <div className="w-2 h-2 rounded-full bg-black" />
@@ -13314,8 +13322,7 @@ function WelcomeSlideVisual({ step }: { step: number }) {
     return (
       <div className="flex flex-col items-center gap-1 py-2">
         <div className="flex items-baseline leading-none">
-          <span className="font-display text-5xl font-black text-black tracking-tight">lin</span>
-          <span className="font-display text-5xl font-black text-blue-600 tracking-tight">q</span>
+          <span className="text-5xl font-black tracking-tight" style={{ fontFamily: 'Poppins, sans-serif', color: '#60a5fa' }}>li</span><span className="text-5xl font-black tracking-tight" style={{ fontFamily: 'Poppins, sans-serif', color: '#1d4ed8' }}>nq</span>
         </div>
         <div className="flex gap-1.5 mt-1">
           <div className="w-2 h-2 rounded-full bg-black" />
@@ -22247,9 +22254,7 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
 
   return (
     <div className="space-y-6">
-      <header>
-        <h2 className="font-display text-3xl font-bold mb-4">Discovery</h2>
-        <div className="space-y-4">
+      <div className="space-y-4">
           <div className="flex gap-2 p-1 glass-card rounded-2xl">
             <button 
               onClick={() => setSearchType('stores')}
@@ -28758,11 +28763,6 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
   return (
     <>
     <div className="space-y-6 pb-6">
-      <div>
-        <h1 className="font-display font-bold text-2xl text-brand-navy">Deals</h1>
-        <p className="text-brand-navy/80 text-sm mt-0.5">Rewards waiting for you</p>
-      </div>
-
       {/* Search bar */}
       <div className="relative">
         <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-navy/35 pointer-events-none" />
