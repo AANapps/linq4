@@ -159,6 +159,7 @@ import {
   ScanLine,
   BookOpen,
   ShieldAlert,
+  ShieldCheck,
   MapPin,
   Share2,
   Globe,
@@ -526,6 +527,8 @@ interface UserProfile {
   totalSaved?: number;
   seenAnnouncementIds?: string[];
   isAdmin?: boolean;
+  privacyAcceptedAt?: any;
+  vendorTermsAcceptedAt?: any;
   privacyMode?: boolean;
 }
 
@@ -1787,6 +1790,11 @@ export default function App() {
       ]);
       await Promise.all([...a.docs, ...b.docs].map(d => deleteDoc(d.ref)));
     });
+    // Analytics events for this user
+    await tryDelete(async () => {
+      const snap = await getDocs(query(collection(db, 'events'), where('userId', '==', uid)));
+      await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+    });
     // Profile documents
     await tryDelete(() => deleteDoc(doc(db, 'users', uid)));
     await tryDelete(() => deleteDoc(doc(db, 'vendors', uid)));
@@ -1808,6 +1816,7 @@ export default function App() {
         photoURL: user.photoURL || '',
         role: 'consumer',
         onboardingComplete: true,
+        privacyAcceptedAt: serverTimestamp(),
         ...(user.phoneNumber ? { phone: user.phoneNumber } : {}),
         ...(data.gender ? { gender: data.gender } : {}),
         ...(data.birthday ? { birthday: data.birthday } : {}),
@@ -1826,6 +1835,8 @@ export default function App() {
         photoURL: user.photoURL || '',
         role: 'vendor',
         onboardingComplete: true,
+        privacyAcceptedAt: serverTimestamp(),
+        vendorTermsAcceptedAt: serverTimestamp(),
         total_cards_held: 0,
         totalStamps: 0,
         totalRedeemed: 0
@@ -2891,11 +2902,13 @@ function OnboardingScreen({ user, onComplete }: {
 }) {
   const [role, setRole] = React.useState<'consumer' | 'vendor' | null>(null);
   const isVendor = role === 'vendor';
-  // Step 0 = role selection; steps 1-4 = role-specific details
-  const TOTAL_STEPS = 5;
+  // Step 0 = role selection; steps 1-4 = role-specific details; step 5 = privacy consent
+  const TOTAL_STEPS = 6;
 
   const [step, setStep] = React.useState(0);
   const [saving, setSaving] = React.useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = React.useState(false);
+  const [onboardingLegal, setOnboardingLegal] = React.useState<'privacy' | 'terms' | null>(null);
 
   // Consumer fields
   const [fullName, setFullName] = React.useState('');
@@ -2944,6 +2957,7 @@ function OnboardingScreen({ user, onComplete }: {
 
   const canAdvance =
     step === 0 ? role !== null
+    : step === TOTAL_STEPS - 1 ? privacyAccepted
     : isVendor
       ? step === 1 ? businessName.trim().length > 0
       : step === 2 ? !!category
@@ -3081,7 +3095,35 @@ function OnboardingScreen({ user, onComplete }: {
       <h2 className="font-display font-bold text-2xl text-brand-navy mb-1">Find nearby deals</h2>
       <p className="text-sm text-brand-navy/75 mb-8">Allow location access to discover businesses around you</p>
       <LocationStep locationData={locationData} locationStatus={locationStatus} onRequest={requestLocation} />
-    </>
+    </>,
+    // Step 3 — Privacy consent
+    <div className="w-full text-left space-y-4">
+      <div className="w-14 h-14 bg-brand-navy/8 rounded-full flex items-center justify-center mx-auto mb-4">
+        <ShieldCheck className="w-7 h-7 text-brand-navy" />
+      </div>
+      <h2 className="font-display font-bold text-2xl text-brand-navy text-center mb-1">Privacy & Terms</h2>
+      <p className="text-sm text-brand-navy/75 text-center mb-4">Please read and agree before continuing</p>
+      <div className="bg-white rounded-2xl border border-brand-navy/10 p-4 space-y-3 text-xs text-brand-navy/75 leading-relaxed max-h-48 overflow-y-auto">
+        <p><span className="font-bold text-brand-navy">Data we collect:</span> Your profile, loyalty activity (stamps, points, visits), and anonymised behavioural patterns such as visit times, day of week, and suburb.</p>
+        <p><span className="font-bold text-brand-navy">How it's used:</span> To run your loyalty cards, personalise your experience, and produce anonymised aggregated insights that may be shared with third parties (e.g. research partners, councils, real estate firms). <span className="font-semibold text-brand-navy">Your personal details are never shared.</span> Only statistical patterns.</p>
+        <p><span className="font-bold text-brand-navy">Retention:</span> Raw event data is kept for 24 months, then aggregated and deleted.</p>
+        <p><span className="font-bold text-brand-navy">Your rights:</span> Delete all your data at any time from Settings → Delete Account.</p>
+      </div>
+      <div className="flex gap-3 text-xs">
+        <button onClick={() => setOnboardingLegal('privacy')} className="text-brand-gold font-semibold underline underline-offset-2">Privacy Policy</button>
+        <span className="text-brand-navy/30">·</span>
+        <button onClick={() => setOnboardingLegal('terms')} className="text-brand-gold font-semibold underline underline-offset-2">Terms of Service</button>
+      </div>
+      <label className="flex items-start gap-3 cursor-pointer group mt-2">
+        <div className={`w-5 h-5 rounded-md border-2 shrink-0 mt-0.5 flex items-center justify-center transition-all ${privacyAccepted ? 'bg-brand-navy border-brand-navy' : 'border-brand-navy/30 group-hover:border-brand-navy/60'}`}
+          onClick={() => setPrivacyAccepted(v => !v)}>
+          {privacyAccepted && <CheckCircle2 size={13} className="text-white" />}
+        </div>
+        <span className="text-xs text-brand-navy/80 leading-relaxed" onClick={() => setPrivacyAccepted(v => !v)}>
+          I have read and agree to the Privacy Policy and Terms of Service, including the collection of anonymised behavioural data.
+        </span>
+      </label>
+    </div>
   ];
 
   const vendorSteps = [
@@ -3197,7 +3239,35 @@ function OnboardingScreen({ user, onComplete }: {
       <h2 className="font-display font-bold text-2xl text-brand-navy mb-1">Pin your location</h2>
       <p className="text-sm text-brand-navy/75 mb-8">Allow location access so customers nearby can discover you</p>
       <LocationStep locationData={locationData} locationStatus={locationStatus} onRequest={requestLocation} />
-    </>
+    </>,
+    // Step 4 — Privacy & vendor terms consent
+    <div className="w-full text-left space-y-4">
+      <div className="w-14 h-14 bg-brand-navy/8 rounded-full flex items-center justify-center mx-auto mb-4">
+        <ShieldCheck className="w-7 h-7 text-brand-navy" />
+      </div>
+      <h2 className="font-display font-bold text-2xl text-brand-navy text-center mb-1">Privacy & Terms</h2>
+      <p className="text-sm text-brand-navy/75 text-center mb-4">Please read and agree before launching</p>
+      <div className="bg-white rounded-2xl border border-brand-navy/10 p-4 space-y-3 text-xs text-brand-navy/75 leading-relaxed max-h-48 overflow-y-auto">
+        <p><span className="font-bold text-brand-navy">Customer data:</span> Your customers' activity (stamps, visits, redemptions) is collected as anonymised behavioural data. We may share aggregated, anonymised insights with third parties such as research organisations, councils, and commercial partners. <span className="font-semibold text-brand-navy">No individual customer is ever identified.</span></p>
+        <p><span className="font-bold text-brand-navy">Your business data:</span> Business performance metrics may be included in anonymised benchmarking reports.</p>
+        <p><span className="font-bold text-brand-navy">Retention:</span> Raw event data is kept for 24 months, then aggregated and deleted.</p>
+        <p><span className="font-bold text-brand-navy">Your rights:</span> You can delete your account and all associated data at any time from Settings.</p>
+      </div>
+      <div className="flex gap-3 text-xs">
+        <button onClick={() => setOnboardingLegal('privacy')} className="text-brand-gold font-semibold underline underline-offset-2">Privacy Policy</button>
+        <span className="text-brand-navy/30">·</span>
+        <button onClick={() => setOnboardingLegal('terms')} className="text-brand-gold font-semibold underline underline-offset-2">Terms of Service</button>
+      </div>
+      <label className="flex items-start gap-3 cursor-pointer group mt-2">
+        <div className={`w-5 h-5 rounded-md border-2 shrink-0 mt-0.5 flex items-center justify-center transition-all ${privacyAccepted ? 'bg-brand-navy border-brand-navy' : 'border-brand-navy/30 group-hover:border-brand-navy/60'}`}
+          onClick={() => setPrivacyAccepted(v => !v)}>
+          {privacyAccepted && <CheckCircle2 size={13} className="text-white" />}
+        </div>
+        <span className="text-xs text-brand-navy/80 leading-relaxed" onClick={() => setPrivacyAccepted(v => !v)}>
+          I agree to the Privacy Policy, Terms of Service, and the use of anonymised customer activity data for research and commercial insights.
+        </span>
+      </label>
+    </div>
   ];
 
   const roleStep = (
@@ -3242,7 +3312,7 @@ function OnboardingScreen({ user, onComplete }: {
   const isLastStep = step === TOTAL_STEPS - 1;
 
   return (
-    <div className="min-h-screen flex flex-col bg-brand-bg px-8">
+    <div className="min-h-screen flex flex-col bg-brand-bg px-8 relative overflow-hidden">
       <div className="flex items-center justify-center gap-2 pt-14 mb-10">
         {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
           <div
@@ -3280,12 +3350,62 @@ function OnboardingScreen({ user, onComplete }: {
             ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}><Sparkles size={16} /></motion.div> Setting up…</>
             : !isLastStep ? 'Continue' : isVendor ? 'Launch My Business' : 'Get Started'}
         </button>
-        {step > 1 && !isLastStep && !isVendor && (
+        {step > 1 && !isLastStep && step < TOTAL_STEPS - 1 && !isVendor && (
           <button onClick={() => setStep(s => s + 1)} className="w-full py-3 text-xs text-brand-navy/72 hover:text-brand-navy/80 transition-colors">
             Skip for now
           </button>
         )}
       </div>
+
+      {/* Inline legal modal overlay */}
+      <AnimatePresence>
+        {onboardingLegal && (
+          <motion.div
+            initial={{ opacity: 0, y: '100%' }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: '100%' }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            className="absolute inset-0 bg-brand-bg flex flex-col z-10"
+          >
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-brand-navy/8 shrink-0">
+              <button onClick={() => setOnboardingLegal(null)} className="w-9 h-9 rounded-full bg-brand-navy/8 flex items-center justify-center active:scale-95 transition-transform">
+                <ArrowLeft size={16} className="text-brand-navy" />
+              </button>
+              <h2 className="font-display font-bold text-brand-navy text-lg">
+                {onboardingLegal === 'privacy' ? 'Privacy Policy' : 'Terms of Service'}
+              </h2>
+            </div>
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4 text-sm text-brand-navy/75 leading-relaxed">
+              {onboardingLegal === 'privacy' ? (
+                <>
+                  <p className="font-bold text-brand-navy">Last updated: May 2026</p>
+                  <p>Linq ("we", "us", "our") is committed to protecting your personal information. This policy explains what data we collect, how we use it, and your rights.</p>
+                  <p><span className="font-bold text-brand-navy">What we collect:</span> Your name, email address, profile handle, location (when you grant permission), and loyalty activity (stamps, points, challenge entries). We also collect anonymised behavioural data: visit timestamps, day of week, time of day, suburb of visit, consecutive visit counts, and screen interaction patterns.</p>
+                  <p><span className="font-bold text-brand-navy">How we use it:</span> To operate your loyalty cards, personalise your experience, show nearby stores and challenges, and send notifications you opt into. Anonymised, aggregated behavioural patterns may be shared with third parties such as research organisations, councils, and commercial partners (e.g. real estate firms, urban planners). Your personal details are never included — only statistical patterns.</p>
+                  <p><span className="font-bold text-brand-navy">Data retention:</span> Raw event data is retained for 24 months. After that, it is aggregated into statistical summaries and the raw records are deleted.</p>
+                  <p><span className="font-bold text-brand-navy">Who we share it with:</span> Participating businesses can see aggregate activity on their own loyalty programmes. Anonymised, aggregated insights may be shared with third-party partners. We do not sell your personal data.</p>
+                  <p><span className="font-bold text-brand-navy">Your rights:</span> You can update or delete your account at any time from Settings. Deleting your account removes your profile, activity data, and analytics events. To request a data export, contact us at info@adastranetwork.co.uk.</p>
+                  <p><span className="font-bold text-brand-navy">Cookies & analytics:</span> We use Firebase (Google) for authentication and data storage. No personally identifiable data is shared with advertisers.</p>
+                  <p>Questions? Email <span className="text-brand-gold font-semibold">info@adastranetwork.co.uk</span></p>
+                </>
+              ) : (
+                <>
+                  <p className="font-bold text-brand-navy">Last updated: May 2026</p>
+                  <p>By using Linq you agree to these terms. Please read them carefully.</p>
+                  <p><span className="font-bold text-brand-navy">1. Use of the app:</span> Linq is provided for personal, non-commercial use. You must not misuse the app or attempt to gain stamps, points, or rewards fraudulently.</p>
+                  <p><span className="font-bold text-brand-navy">2. Accounts:</span> You are responsible for keeping your login secure. You must be 13 years or older to create an account.</p>
+                  <p><span className="font-bold text-brand-navy">3. Data and analytics:</span> By using Linq you agree to the collection of anonymised behavioural data as described in the Privacy Policy. Vendors additionally agree that their customers' activity data may be used in anonymised, aggregated form for research and commercial insight purposes.</p>
+                  <p><span className="font-bold text-brand-navy">4. Loyalty rewards:</span> Rewards, points, and prizes are issued at the sole discretion of participating businesses. Linq is not responsible for a business's failure to honour a reward.</p>
+                  <p><span className="font-bold text-brand-navy">5. Challenges:</span> Challenge prizes are subject to availability. Winners may be required to provide proof of identity.</p>
+                  <p><span className="font-bold text-brand-navy">6. Termination:</span> We may suspend or delete accounts that violate these terms, engage in fraud, or abuse the platform.</p>
+                  <p><span className="font-bold text-brand-navy">7. Changes:</span> We may update these terms at any time. Continued use of Linq after changes constitutes acceptance.</p>
+                  <p>Questions? Email <span className="text-brand-gold font-semibold">info@adastranetwork.co.uk</span></p>
+                </>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -27355,11 +27475,12 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
                 <>
                   <p className="font-bold text-brand-navy">Last updated: May 2026</p>
                   <p>Linq ("we", "us", "our") is committed to protecting your personal information. This policy explains what data we collect, how we use it, and your rights.</p>
-                  <p><span className="font-bold text-brand-navy">What we collect:</span> Your name, email address, profile handle, location (when you grant permission), and loyalty activity (stamps, points, challenge entries).</p>
-                  <p><span className="font-bold text-brand-navy">How we use it:</span> To operate your loyalty cards, personalise your experience, show nearby stores and challenges, and send you notifications you opt into.</p>
-                  <p><span className="font-bold text-brand-navy">Who we share it with:</span> Participating businesses can see aggregate activity on their own loyalty cards. We do not sell your data to third parties.</p>
-                  <p><span className="font-bold text-brand-navy">Your rights:</span> You can update or delete your account at any time from Settings. To request a full data export, contact us at info@adastranetwork.co.uk.</p>
-                  <p><span className="font-bold text-brand-navy">Cookies & analytics:</span> We use Firebase Analytics (Google) to understand app usage. No personally identifiable data is shared with advertisers.</p>
+                  <p><span className="font-bold text-brand-navy">What we collect:</span> Your name, email address, profile handle, location (when you grant permission), and loyalty activity (stamps, points, challenge entries). We also collect anonymised behavioural data: visit timestamps, day of week, time of day, suburb of visit, consecutive visit counts, and screen interaction patterns.</p>
+                  <p><span className="font-bold text-brand-navy">How we use it:</span> To operate your loyalty cards, personalise your experience, show nearby stores and challenges, and send notifications you opt into. Anonymised, aggregated behavioural patterns may be shared with third parties such as research organisations, councils, and commercial partners (e.g. real estate firms, urban planners). Your personal details are never included — only statistical patterns.</p>
+                  <p><span className="font-bold text-brand-navy">Data retention:</span> Raw event data is retained for 24 months. After that, it is aggregated into statistical summaries and the raw records are deleted.</p>
+                  <p><span className="font-bold text-brand-navy">Who we share it with:</span> Participating businesses can see aggregate activity on their own loyalty programmes. Anonymised, aggregated insights may be shared with third-party partners. We do not sell your personal data.</p>
+                  <p><span className="font-bold text-brand-navy">Your rights:</span> You can update or delete your account at any time from Settings. Deleting your account removes your profile, activity data, and analytics events. To request a data export, contact us at info@adastranetwork.co.uk.</p>
+                  <p><span className="font-bold text-brand-navy">Cookies & analytics:</span> We use Firebase (Google) for authentication and data storage. No personally identifiable data is shared with advertisers.</p>
                   <p>Questions? Email <span className="text-brand-gold font-semibold">info@adastranetwork.co.uk</span></p>
                 </>
               ) : (
@@ -27368,10 +27489,11 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
                   <p>By using Linq you agree to these terms. Please read them carefully.</p>
                   <p><span className="font-bold text-brand-navy">1. Use of the app:</span> Linq is provided for personal, non-commercial use. You must not misuse the app or attempt to gain stamps, points, or rewards fraudulently.</p>
                   <p><span className="font-bold text-brand-navy">2. Accounts:</span> You are responsible for keeping your login secure. You must be 13 years or older to create an account.</p>
-                  <p><span className="font-bold text-brand-navy">3. Loyalty rewards:</span> Rewards, points, and prizes are issued at the sole discretion of participating businesses. Linq is not responsible for a business's failure to honour a reward.</p>
-                  <p><span className="font-bold text-brand-navy">4. Challenges:</span> Challenge prizes are subject to availability. Winners may be required to provide proof of identity. Linq and participating businesses reserve the right to disqualify entries that violate these terms.</p>
-                  <p><span className="font-bold text-brand-navy">5. Termination:</span> We may suspend or delete accounts that violate these terms, engage in fraud, or abuse the platform.</p>
-                  <p><span className="font-bold text-brand-navy">6. Changes:</span> We may update these terms at any time. Continued use of Linq after changes constitutes acceptance.</p>
+                  <p><span className="font-bold text-brand-navy">3. Data and analytics:</span> By using Linq you agree to the collection of anonymised behavioural data as described in the Privacy Policy. Vendors additionally agree that their customers' activity data may be used in anonymised, aggregated form for research and commercial insight purposes. No individual is ever identified.</p>
+                  <p><span className="font-bold text-brand-navy">4. Loyalty rewards:</span> Rewards, points, and prizes are issued at the sole discretion of participating businesses. Linq is not responsible for a business's failure to honour a reward.</p>
+                  <p><span className="font-bold text-brand-navy">5. Challenges:</span> Challenge prizes are subject to availability. Winners may be required to provide proof of identity. Linq and participating businesses reserve the right to disqualify entries that violate these terms.</p>
+                  <p><span className="font-bold text-brand-navy">6. Termination:</span> We may suspend or delete accounts that violate these terms, engage in fraud, or abuse the platform.</p>
+                  <p><span className="font-bold text-brand-navy">7. Changes:</span> We may update these terms at any time. Continued use of Linq after changes constitutes acceptance.</p>
                   <p>Questions? Email <span className="text-brand-gold font-semibold">info@adastranetwork.co.uk</span></p>
                 </>
               )}
@@ -27403,7 +27525,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
                   <Trash2 size={24} className="text-red-500" />
                 </div>
                 <h3 className="font-display font-bold text-xl text-brand-navy">Delete Account?</h3>
-                <p className="text-sm text-brand-navy/80">This permanently removes your profile, posts, and follow connections. Your stamp history and loyalty cards will remain.</p>
+                <p className="text-sm text-brand-navy/80">This permanently removes your profile, posts, follow connections, loyalty cards, and all analytics events we hold for you. This cannot be undone.</p>
               </div>
               <div className="space-y-3">
                 <button
