@@ -12125,15 +12125,17 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                                   </div>
                                   <div className="relative h-5 bg-brand-navy/8 rounded-xl overflow-hidden">
                                     <motion.div
-                                      className="absolute inset-y-0 left-0 rounded-xl"
+                                      className="absolute inset-y-0 left-0 rounded-xl overflow-hidden"
                                       style={{
-                                        background: isComplete ? 'linear-gradient(90deg,#34d399,#10b981)' : 'linear-gradient(90deg,#f59e0b,#fbbf24)',
-                                        boxShadow: isComplete ? '3px 0 12px rgba(52,211,153,0.5)' : '3px 0 12px rgba(251,191,36,0.5)',
+                                        background: isComplete ? 'linear-gradient(90deg,#34d399,#10b981)' : 'linear-gradient(90deg,#7c3aed,#4f46e5,#2563eb)',
+                                        boxShadow: isComplete ? '3px 0 12px rgba(52,211,153,0.5)' : '3px 0 12px rgba(99,102,241,0.5)',
                                       }}
                                       initial={{ width: 0 }}
                                       animate={{ width: `${pct}%` }}
                                       transition={{ duration: 0.85, ease: [0.34, 1.56, 0.64, 1] }}
-                                    />
+                                    >
+                                      {!isComplete && <span className="challenge-shimmer" />}
+                                    </motion.div>
                                   </div>
                                 </div>
                                 {isComplete && (
@@ -12315,32 +12317,26 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                                   {stampsProgress}
                                   <span className="text-brand-navy/40 font-bold text-xs"> / {c.goal} {c.unit}</span>
                                 </span>
-                                <span className={cn('text-sm font-black', isComplete ? 'text-green-500' : 'text-brand-gold')}>{progressPct}%</span>
+                                <span className={cn('text-sm font-black', isComplete ? 'text-green-500' : 'text-indigo-500')}>{progressPct}%</span>
                               </div>
                               {/* Animated bar */}
                               <div className="relative h-6 bg-brand-navy/6 rounded-2xl overflow-hidden">
                                 <motion.div
-                                  className="absolute inset-y-0 left-0 rounded-2xl"
+                                  className="absolute inset-y-0 left-0 rounded-2xl overflow-hidden"
                                   style={{
                                     background: isComplete
                                       ? 'linear-gradient(90deg,#34d399,#10b981)'
-                                      : 'linear-gradient(90deg,#f59e0b,#fbbf24)',
+                                      : 'linear-gradient(90deg,#7c3aed,#4f46e5,#2563eb)',
                                     boxShadow: isComplete
-                                      ? '3px 0 14px rgba(52,211,153,0.55)'
-                                      : '3px 0 14px rgba(251,191,36,0.55)',
+                                      ? '3px 0 14px rgba(52,211,153,0.5)'
+                                      : '3px 0 14px rgba(99,102,241,0.55)',
                                   }}
                                   initial={{ width: 0 }}
                                   animate={{ width: `${progressPct}%` }}
                                   transition={{ duration: 0.85, ease: [0.34, 1.56, 0.64, 1] }}
-                                />
-                                {progressPct > 4 && (
-                                  <motion.div
-                                    className="absolute inset-y-0 left-0 rounded-2xl pointer-events-none"
-                                    style={{ width: `${progressPct}%`, background: 'linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.22) 55%,transparent 100%)' }}
-                                    initial={{ opacity: 0 }} animate={{ opacity: [0, 1, 0] }}
-                                    transition={{ duration: 1.0, delay: 0.6 }}
-                                  />
-                                )}
+                                >
+                                  {!isComplete && progressPct > 4 && <span className="challenge-shimmer" />}
+                                </motion.div>
                               </div>
                               {isComplete && (
                                 <motion.p
@@ -12427,11 +12423,13 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                                   });
                                 }}
                                 className={cn(
-                                  'w-full py-3 rounded-2xl text-sm font-bold transition-all active:scale-95',
-                                  joinedCount >= 5 ? 'bg-brand-navy/20 text-brand-navy/75 cursor-not-allowed' : 'bg-brand-navy text-white'
+                                  'relative w-full py-3 rounded-2xl text-sm font-bold transition-all active:scale-95 overflow-hidden',
+                                  joinedCount >= 5 ? 'bg-brand-navy/20 text-brand-navy/75 cursor-not-allowed' : 'text-white'
                                 )}
+                                style={joinedCount < 5 ? { background: 'linear-gradient(90deg,#7c3aed,#4f46e5,#2563eb)' } : {}}
                               >
-                                Join Challenge
+                                {joinedCount < 5 && <span className="challenge-shimmer" />}
+                                <span className="relative z-10">Join Challenge</span>
                               </button>
                             </>
                           )}
@@ -15015,15 +15013,17 @@ function StampCelebrationModal({
                             </div>
                             <div className="relative h-5 bg-brand-navy/8 rounded-xl overflow-hidden">
                               <motion.div
-                                className="absolute inset-y-0 left-0 rounded-xl"
+                                className="absolute inset-y-0 left-0 rounded-xl overflow-hidden"
                                 style={{
-                                  background: c.done ? 'linear-gradient(90deg,#34d399,#10b981)' : 'linear-gradient(90deg,#f59e0b,#fbbf24)',
-                                  boxShadow: c.done ? '3px 0 10px rgba(52,211,153,0.5)' : '3px 0 10px rgba(251,191,36,0.5)',
+                                  background: c.done ? 'linear-gradient(90deg,#34d399,#10b981)' : 'linear-gradient(90deg,#7c3aed,#4f46e5,#2563eb)',
+                                  boxShadow: c.done ? '3px 0 10px rgba(52,211,153,0.5)' : '3px 0 10px rgba(99,102,241,0.5)',
                                 }}
                                 initial={{ width: 0 }}
                                 animate={{ width: `${c.totalStamps > 0 ? Math.min(100, Math.round((c.currentStamps / c.totalStamps) * 100)) : 0}%` }}
                                 transition={{ duration: 0.85, ease: [0.34, 1.56, 0.64, 1], delay: 0.2 + i * 0.07 }}
-                              />
+                              >
+                                {!c.done && <span className="challenge-shimmer" />}
+                              </motion.div>
                             </div>
                           </div>
                         </motion.div>

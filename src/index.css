@@ -127,6 +127,27 @@
   pointer-events: none;
 }
 
+/* Continuously moving shimmer for challenge bar / buttons */
+@keyframes challenge-shimmer {
+  0%   { transform: translateX(-100%) skewX(-15deg); }
+  100% { transform: translateX(300%) skewX(-15deg); }
+}
+.challenge-shimmer {
+  position: absolute;
+  inset-y: 0;
+  left: 0;
+  width: 35%;
+  height: 100%;
+  background: linear-gradient(
+    105deg,
+    transparent 15%,
+    rgba(255, 255, 255, 0.38) 50%,
+    transparent 85%
+  );
+  animation: challenge-shimmer 1.8s linear infinite;
+  pointer-events: none;
+}
+
 .shine-ray {
   position: absolute;
   top: -30%;
