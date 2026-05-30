@@ -22288,7 +22288,7 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
             />
           </div>
         </div>
-      </header>
+      </div>
 
       {searchType === 'stores' && (
         <>
