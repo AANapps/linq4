@@ -20722,7 +20722,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h3 className="font-display text-2xl font-bold">Redeem Points</h3>
-                    <p className="text-brand-navy/75 text-xs mt-0.5">{fmtK(netAvailablePoints)} pts available · up to ${maxRedeemDollars.toFixed(2)} off</p>
+                    <p className="text-brand-navy/75 text-xs mt-0.5">{netAvailablePoints.toLocaleString()} pts available · up to ${maxRedeemDollars.toFixed(2)} off</p>
                   </div>
                   <button onClick={closeRedeemFlow} className="p-2 text-brand-navy/75 hover:text-brand-navy"><X size={20} /></button>
                 </div>
@@ -20844,7 +20844,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
         <div className="bg-white px-4 py-5 flex flex-col items-center text-center">
           {membershipType === 'spend' ? (
             <div className="w-full flex flex-col items-center gap-1.5">
-              <p className="text-brand-navy font-black text-4xl leading-none">{fmtK(netAvailablePoints)}</p>
+              <p className="text-brand-navy font-black text-4xl leading-none">{netAvailablePoints.toLocaleString()}</p>
               <p className="text-brand-navy/75 text-[9px] font-bold uppercase tracking-widest">points available</p>
               {redeemableValue > 0 && (
                 <p className="text-brand-navy/75 font-bold text-xs">≈ ${redeemableValue.toFixed(2)} redeemable</p>
@@ -20921,7 +20921,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               <div className="grid grid-cols-2 gap-3 mb-6">
                 <div className="glass-card p-5 rounded-2xl">
                   <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-1">Available</p>
-                  <p className="text-3xl font-black text-brand-navy">{fmtK(netAvailablePoints)}</p>
+                  <p className="text-3xl font-black text-brand-navy">{netAvailablePoints.toLocaleString()}</p>
                   {pointsRate > 0 && <p className="text-[10px] text-brand-navy/75 mt-1">{pointsRate} pts per $1</p>}
                 </div>
                 <div className="glass-card p-5 rounded-2xl">
@@ -21258,7 +21258,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
           {membershipType === 'spend' ? (
             <>
               <div className="text-center mb-3">
-                <p className="text-brand-navy font-black text-5xl leading-none tracking-tight">{fmtK(netAvailablePoints)}</p>
+                <p className="text-brand-navy font-black text-5xl leading-none tracking-tight">{netAvailablePoints.toLocaleString()}</p>
                 <p className="text-brand-navy/75 text-xs font-bold uppercase tracking-widest mt-1.5">points available</p>
                 {redeemableValue > 0 && (
                   <p className="text-brand-navy text-2xl font-black mt-2 leading-none">≈ ${redeemableValue.toFixed(2)} off</p>
@@ -21356,7 +21356,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               <div className="grid grid-cols-2 gap-3 mb-6">
                 <div className="glass-card p-5 rounded-2xl">
                   <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-1">Available</p>
-                  <p className="text-3xl font-black text-brand-navy">{fmtK(netAvailablePoints)}</p>
+                  <p className="text-3xl font-black text-brand-navy">{netAvailablePoints.toLocaleString()}</p>
                   {pointsRate > 0 && <p className="text-[10px] text-brand-navy/75 mt-1">{pointsRate} pts per $1</p>}
                 </div>
                 <div className="glass-card p-5 rounded-2xl">
