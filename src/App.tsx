@@ -20513,6 +20513,8 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
   const [selectedRedeemItem, setSelectedRedeemItem] = useState<{ id: string; name: string; points: number; description?: string } | null>(null);
   const [redeemSwipeDone, setRedeemSwipeDone] = useState(false);
   const [redeemSwipeSaving, setRedeemSwipeSaving] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const [visitScanQty, setVisitScanQty] = useState(store?.membershipStampsPerVisit || 1);
   const [showRedeemFlow, setShowRedeemFlow] = useState(false);
   const [redeemDollars, setRedeemDollars] = useState('');
@@ -20568,6 +20570,17 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
       setShowRedeemSheet(true);
     } catch (err) { console.error(err); }
     setRedeemingMenuItem(null);
+  };
+
+  const handleLeaveMembership = async () => {
+    setLeaving(true);
+    try {
+      await updateDoc(doc(db, 'cards', card.id), { isArchived: true });
+      const user = auth.currentUser;
+      if (user) await updateDoc(doc(db, 'users', user.uid), { total_cards_held: increment(-1) });
+      setShowLeaveConfirm(false);
+    } catch (err) { console.error(err); }
+    setLeaving(false);
   };
 
   const redeemDollarNum = parseFloat(redeemDollars) || 0;
@@ -20721,10 +20734,16 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
             <h4 className="font-bold text-white text-sm leading-tight truncate">{store?.name || 'Store'}</h4>
             <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">{membershipName}</p>
           </div>
-          <div className="relative z-10 shrink-0">
+          <div className="relative z-10 flex items-center gap-1.5 shrink-0">
             <span className="bg-white/20 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest border border-white/30">
               {membershipType === 'visit' ? 'Points' : 'Spend'}
             </span>
+            <button
+              onClick={e => { e.stopPropagation(); setShowLeaveConfirm(true); }}
+              className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center active:scale-90 transition-transform"
+            >
+              <MoreVertical size={12} className="text-white" />
+            </button>
           </div>
         </div>
         {/* White content section — centred points display */}
@@ -21066,6 +21085,29 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Leave membership confirmation — compact */}
+      <AnimatePresence>
+        {showLeaveConfirm && (
+          <div className="fixed inset-0 z-[150] flex items-end justify-center">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowLeaveConfirm(false)} />
+            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 350, damping: 35 }} className="relative z-10 w-full max-w-md bg-white rounded-t-[2rem] px-6 pt-6 pb-10 space-y-4" onClick={e => e.stopPropagation()}>
+              <div className="w-10 h-1 bg-brand-navy/10 rounded-full mx-auto mb-2" />
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0"><AlertTriangle size={18} className="text-red-500" /></div>
+                <div>
+                  <p className="font-bold text-brand-navy">Leave {membershipName}?</p>
+                  <p className="text-xs text-brand-navy/60 mt-0.5">Your points and history will be lost. You can rejoin at any time.</p>
+                </div>
+              </div>
+              <button onClick={handleLeaveMembership} disabled={leaving} className="w-full py-3.5 rounded-2xl bg-red-500 text-white font-bold text-sm disabled:opacity-50 active:scale-[0.98] transition-all">
+                {leaving ? 'Leaving…' : 'Leave Membership'}
+              </button>
+              <button onClick={() => setShowLeaveConfirm(false)} className="w-full py-3 rounded-2xl bg-brand-navy/5 text-brand-navy font-bold text-sm active:scale-[0.98] transition-all">Cancel</button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
       </>
     );
   }
@@ -21090,6 +21132,12 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
           style={{ background: `linear-gradient(160deg, ${color}ff 0%, ${color}dd 60%, ${color}aa 100%)` }}
         >
           <span className="card-shine-ray" aria-hidden="true" />
+          <button
+            onClick={e => { e.stopPropagation(); setShowLeaveConfirm(true); }}
+            className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/15 flex items-center justify-center active:scale-90 transition-transform"
+          >
+            <MoreVertical size={15} className="text-white" />
+          </button>
           <div
             className="relative z-10 w-[72px] h-[72px] rounded-full overflow-hidden border-[3px] border-white/60 shadow-xl cursor-pointer"
             onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}
@@ -21504,6 +21552,29 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               </div>
             )}
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Leave membership confirmation — non-compact */}
+      <AnimatePresence>
+        {showLeaveConfirm && (
+          <div className="fixed inset-0 z-[150] flex items-end justify-center">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowLeaveConfirm(false)} />
+            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 350, damping: 35 }} className="relative z-10 w-full max-w-md bg-white rounded-t-[2rem] px-6 pt-6 pb-10 space-y-4" onClick={e => e.stopPropagation()}>
+              <div className="w-10 h-1 bg-brand-navy/10 rounded-full mx-auto mb-2" />
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0"><AlertTriangle size={18} className="text-red-500" /></div>
+                <div>
+                  <p className="font-bold text-brand-navy">Leave {membershipName}?</p>
+                  <p className="text-xs text-brand-navy/60 mt-0.5">Your points and history will be lost. You can rejoin at any time.</p>
+                </div>
+              </div>
+              <button onClick={handleLeaveMembership} disabled={leaving} className="w-full py-3.5 rounded-2xl bg-red-500 text-white font-bold text-sm disabled:opacity-50 active:scale-[0.98] transition-all">
+                {leaving ? 'Leaving…' : 'Leave Membership'}
+              </button>
+              <button onClick={() => setShowLeaveConfirm(false)} className="w-full py-3 rounded-2xl bg-brand-navy/5 text-brand-navy font-bold text-sm active:scale-[0.98] transition-all">Cancel</button>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
