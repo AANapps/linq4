@@ -20688,7 +20688,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               )}
               {/* Collect Points button */}
               <button
-                onClick={e => { e.stopPropagation(); if (store?.scanMethod === 'nfc') { onScan?.(); } else { setShowVisitScanSheet(true); } }}
+                onClick={e => { e.stopPropagation(); if (store?.scanMethod === 'nfc') { onScan?.(); } else { setShowVisitQRScanner(true); } }}
                 className="w-full mt-1 py-2 rounded-xl text-[10px] font-black text-white/90 active:scale-95 transition-transform flex items-center justify-center gap-1"
                 style={{ background: `${color}99` }}
               >
@@ -21074,7 +21074,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               )}
               {/* Collect Points */}
               <button
-                onClick={e => { e.stopPropagation(); if (store?.scanMethod === 'nfc') { onScan?.(); } else { setShowVisitScanSheet(true); } }}
+                onClick={e => { e.stopPropagation(); if (store?.scanMethod === 'nfc') { onScan?.(); } else { setShowVisitQRScanner(true); } }}
                 className="w-full py-2.5 rounded-2xl text-xs font-black text-white/90 active:scale-[0.98] transition-transform flex items-center justify-center gap-1.5 mb-2"
                 style={{ background: `${color}99` }}
               >
