@@ -14660,7 +14660,7 @@ function VendorSpendQRDisplay({ store, onClose }: { store: StoreProfile; onClose
 
 // ── Consumer-side spend QR scanner ──────────────────────────────────────────
 
-function SpendQRScannerModal({ onClose }: { onClose: () => void }) {
+function SpendQRScannerModal({ onClose, onPackReady }: { onClose: () => void; onPackReady?: (s: CollectibleSticker[]) => void }) {
   type SS = 'scanning' | 'processing' | 'success' | 'error';
   const [scanState, setScanState] = React.useState<SS>('scanning');
   const [statusMsg, setStatusMsg] = React.useState('');
@@ -14772,6 +14772,8 @@ function SpendQRScannerModal({ onClose }: { onClose: () => void }) {
       setEarnedPts(pts);
       setNetAvailablePts(newNet);
       haptic([40]); playSound('points');
+      const stickers = await issueUserStickers(user.uid, '', 3).catch(() => [] as CollectibleSticker[]);
+      if (stickers.length > 0) onPackReady?.(stickers);
       setScanState('success');
     } catch (err: any) {
       setScanState('error');
@@ -14892,7 +14894,7 @@ function SpendQRScannerModal({ onClose }: { onClose: () => void }) {
 
 // ── Consumer-side visit QR scanner ──────────────────────────────────────────
 
-function VisitQRScannerModal({ storeId, onClose }: { storeId: string; onClose: () => void }) {
+function VisitQRScannerModal({ storeId, onClose, onPackReady }: { storeId: string; onClose: () => void; onPackReady?: (s: CollectibleSticker[]) => void }) {
   type SS = 'scanning' | 'processing' | 'success' | 'error';
   const [scanState, setScanState] = React.useState<SS>('scanning');
   const [statusMsg, setStatusMsg] = React.useState('');
@@ -14957,6 +14959,8 @@ function VisitQRScannerModal({ storeId, onClose }: { storeId: string; onClose: (
       setEarnedPts(pts);
       setNetAvailablePts(Math.max(0, prevVisits + pts - prevRedeemed));
       haptic([40]); playSound('points');
+      const stickers = await issueUserStickers(user.uid, '', 3).catch(() => [] as CollectibleSticker[]);
+      if (stickers.length > 0) onPackReady?.(stickers);
       setScanState('success');
     } catch (err: any) {
       setScanState('error');
@@ -20943,7 +20947,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
 
       {/* Spend QR scanner — customer scans vendor's QR */}
       <AnimatePresence>
-        {showSpendScanner && <SpendQRScannerModal onClose={() => setShowSpendScanner(false)} />}
+        {showSpendScanner && <SpendQRScannerModal onClose={() => setShowSpendScanner(false)} onPackReady={onPackReady} />}
       </AnimatePresence>
 
       {/* Visit detail sheet */}
@@ -21064,7 +21068,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
       {/* Visit QR scanner */}
       <AnimatePresence>
         {showVisitQRScanner && store && (
-          <VisitQRScannerModal storeId={store.id} onClose={() => setShowVisitQRScanner(false)} />
+          <VisitQRScannerModal storeId={store.id} onClose={() => setShowVisitQRScanner(false)} onPackReady={onPackReady} />
         )}
       </AnimatePresence>
 
@@ -21407,7 +21411,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
 
       {/* Spend QR scanner — compact card */}
       <AnimatePresence>
-        {showSpendScanner && <SpendQRScannerModal onClose={() => setShowSpendScanner(false)} />}
+        {showSpendScanner && <SpendQRScannerModal onClose={() => setShowSpendScanner(false)} onPackReady={onPackReady} />}
       </AnimatePresence>
 
       {/* Visit detail sheet */}
@@ -21537,7 +21541,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
       {/* Visit QR scanner — customer scans vendor's nav QR */}
       <AnimatePresence>
         {showVisitQRScanner && store && (
-          <VisitQRScannerModal storeId={store.id} onClose={() => setShowVisitQRScanner(false)} />
+          <VisitQRScannerModal storeId={store.id} onClose={() => setShowVisitQRScanner(false)} onPackReady={onPackReady} />
         )}
       </AnimatePresence>
 
