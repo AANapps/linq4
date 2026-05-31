@@ -14762,6 +14762,169 @@ function SpendQRScannerModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+// ── Consumer-side visit QR scanner ──────────────────────────────────────────
+
+function VisitQRScannerModal({ storeId, onClose }: { storeId: string; onClose: () => void }) {
+  type SS = 'scanning' | 'processing' | 'success' | 'error';
+  const [scanState, setScanState] = React.useState<SS>('scanning');
+  const [statusMsg, setStatusMsg] = React.useState('');
+  const [earnedPts, setEarnedPts] = React.useState(0);
+  const [storeName, setStoreName] = React.useState('');
+  const videoRef = React.useRef<HTMLVideoElement>(null);
+  const streamRef = React.useRef<MediaStream | null>(null);
+  const rafRef = React.useRef<number>(0);
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  const scanningRef = React.useRef(false);
+  const hasBarcodeDetector = typeof window !== 'undefined' && 'BarcodeDetector' in window;
+
+  const stopCamera = () => {
+    scanningRef.current = false;
+    cancelAnimationFrame(rafRef.current);
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    streamRef.current = null;
+    if (videoRef.current) videoRef.current.srcObject = null;
+  };
+
+  const processVisitQR = async (raw: string) => {
+    const decoded = decodeVendorQR(raw);
+    if (!decoded) return;
+    if (decoded.storeId !== storeId) { setScanState('error'); setStatusMsg('Wrong store — this QR is for a different shop.'); return; }
+    stopCamera();
+    setScanState('processing'); setStatusMsg('Verifying…');
+    const user = auth.currentUser;
+    if (!user) { setScanState('error'); setStatusMsg('You need to be signed in.'); return; }
+    try {
+      await runTransaction(db, async tx => {
+        const tokenRef = doc(db, 'qr_tokens', decoded.tokenId);
+        const tokenSnap = await tx.get(tokenRef);
+        if (!tokenSnap.exists()) throw new Error('QR code not found — ask vendor to refresh.');
+        const data = tokenSnap.data();
+        const createdMs = typeof data.createdAt === 'number' ? data.createdAt : (data.createdAt?.toMillis?.() ?? null);
+        if (createdMs !== null && Date.now() - createdMs > 300_000) throw new Error('QR expired — ask vendor to refresh.');
+        const claimedBy: string[] = data.claimedBy || [];
+        if (claimedBy.includes(user.uid)) throw new Error("You've already claimed this visit.");
+        tx.update(tokenRef, { claimedBy: arrayUnion(user.uid) });
+      });
+
+      const storeSnap = await getDoc(doc(db, 'stores', storeId));
+      if (!storeSnap.exists()) throw new Error('Store not found.');
+      const store = { id: storeSnap.id, ...storeSnap.data() } as StoreProfile;
+      setStoreName(store.name);
+      const pts = store.membershipStampsPerVisit || 1;
+
+      const cardId = `${user.uid}_${store.id}_membership`;
+      const cardRef = doc(db, 'cards', cardId);
+      const cardSnap = await getDoc(cardRef);
+      if (cardSnap.exists()) {
+        await updateDoc(cardRef, { membership_visits: increment(pts), total_points_earned: increment(pts), last_transaction_at: serverTimestamp() });
+      } else {
+        await setDoc(cardRef, { user_id: user.uid, store_id: store.id, card_type: 'membership', membership_type: 'visit', membership_visits: pts, total_points_earned: pts, isArchived: false, last_transaction_at: serverTimestamp() });
+        await updateDoc(doc(db, 'users', user.uid), { total_cards_held: increment(1) });
+      }
+      await addDoc(collection(db, 'transactions'), { user_id: user.uid, store_id: store.id, card_type: 'membership', membership_type: 'visit', stamps_per_visit: pts, issued_at: serverTimestamp(), method: 'customer_qr_scan' });
+      await updateDoc(doc(db, 'users', user.uid), { totalStamps: increment(1), lastStampAt: serverTimestamp() });
+      setEarnedPts(pts);
+      setScanState('success');
+    } catch (err: any) {
+      setScanState('error');
+      setStatusMsg(err?.message || 'Failed to claim points — try again.');
+    }
+  };
+
+  const tick = async () => {
+    if (!scanningRef.current) return;
+    const video = videoRef.current;
+    if (!video || video.readyState < 2) { if (scanningRef.current) rafRef.current = requestAnimationFrame(tick); return; }
+    try {
+      if (hasBarcodeDetector && (window as any).__visitDetector) {
+        const barcodes = await (window as any).__visitDetector.detect(video);
+        if (!scanningRef.current) return;
+        for (const b of barcodes) { await processVisitQR(b.rawValue as string); return; }
+      } else {
+        const canvas = canvasRef.current;
+        if (canvas) {
+          canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(video, 0, 0);
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const jsQR = (await import('jsqr')).default;
+            if (!scanningRef.current) return;
+            const result = jsQR(imgData.data, imgData.width, imgData.height);
+            if (result) { await processVisitQR(result.data); return; }
+          }
+        }
+      }
+    } catch { /* non-fatal */ }
+    if (scanningRef.current) rafRef.current = requestAnimationFrame(tick);
+  };
+
+  React.useEffect(() => {
+    scanningRef.current = true;
+    const start = async () => {
+      try {
+        if (hasBarcodeDetector) (window as any).__visitDetector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        if (!scanningRef.current) { stream.getTracks().forEach(t => t.stop()); return; }
+        streamRef.current = stream;
+        if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play().catch(() => {}); tick(); }
+      } catch { setScanState('error'); setStatusMsg('Camera access denied.'); }
+    };
+    start();
+    return () => stopCamera();
+  }, []);
+
+  return createPortal(
+    <motion.div initial={{ opacity: 0, y: '100%' }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }} className="fixed inset-0 z-[200] bg-black flex flex-col">
+      <div className="flex items-center gap-3 px-5 py-4 shrink-0">
+        <button onClick={() => { stopCamera(); onClose(); }} className="p-2 bg-white/10 rounded-full"><X size={20} className="text-white" /></button>
+        <div>
+          <p className="text-white/60 text-xs font-bold uppercase tracking-widest">Scan store QR</p>
+          <h2 className="text-white font-bold text-base">Earn Visit Points</h2>
+        </div>
+      </div>
+      <div className="flex-1 relative overflow-hidden">
+        <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
+        <canvas ref={canvasRef} className="hidden" />
+        {scanState === 'scanning' && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-60 h-60 relative">
+              <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-lg" />
+              <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white rounded-tr-lg" />
+              <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white rounded-bl-lg" />
+              <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white rounded-br-lg" />
+              <motion.div className="absolute left-0 right-0 h-0.5 bg-white/60" animate={{ top: ['10%', '90%', '10%'] }} transition={{ duration: 2.4, repeat: Infinity, ease: 'linear' }} />
+            </div>
+            <p className="absolute bottom-24 text-white/70 text-sm font-bold">Point at the store's QR code</p>
+          </div>
+        )}
+        {scanState === 'processing' && (
+          <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center gap-4">
+            <Loader2 size={40} className="text-white animate-spin" />
+            <p className="text-white font-bold">{statusMsg}</p>
+          </div>
+        )}
+        {scanState === 'success' && (
+          <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center gap-4 px-8 text-center">
+            <div className="w-20 h-20 bg-emerald-500 rounded-full flex items-center justify-center"><CheckCircle2 size={40} className="text-white" /></div>
+            <p className="text-white font-black text-3xl">+{earnedPts} pts</p>
+            <p className="text-white/70 text-sm">{storeName && `Earned at ${storeName}`}</p>
+            <button onClick={() => { stopCamera(); onClose(); }} className="mt-4 px-8 py-3 bg-white rounded-2xl font-bold text-brand-navy active:scale-95 transition-transform">Done</button>
+          </div>
+        )}
+        {scanState === 'error' && (
+          <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center gap-4 px-8 text-center">
+            <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center"><AlertCircle size={32} className="text-red-400" /></div>
+            <p className="text-white font-bold text-base">{statusMsg}</p>
+            <button onClick={() => { stopCamera(); onClose(); }} className="mt-2 px-8 py-3 bg-white/20 rounded-2xl font-bold text-white active:scale-95 transition-transform">Close</button>
+          </div>
+        )}
+      </div>
+    </motion.div>,
+    document.body
+  );
+}
+
 function ConsumerQRScanner({ card, store, onClose, onPackReady, initialQty }: {
   card: Card; store?: StoreProfile; onClose: () => void; onPackReady?: (s: CollectibleSticker[]) => void; initialQty?: number;
 }) {
@@ -17377,7 +17540,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
 
   useEffect(() => {
     const isSpendOnly = store?.membershipEnabled === true && store.membershipType === 'spend';
-    onVendorQRStatus?.(!!store && !isSpendOnly && store.cardEnabled !== false);
+    const isVisitEnabled = store?.membershipEnabled === true && store.membershipType === 'visit';
+    onVendorQRStatus?.(!!store && !isSpendOnly && (store.cardEnabled !== false || isVisitEnabled));
   }, [store]);
 
   const trialEndsMs = store?.trialEndsAt
@@ -20274,6 +20438,8 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
   const [showSpendScanner, setShowSpendScanner] = useState(false);
   const [showVisitScan, setShowVisitScan] = useState(false);
   const [showVisitScanSheet, setShowVisitScanSheet] = useState(false);
+  const [showVisitEarnSheet, setShowVisitEarnSheet] = useState(false);
+  const [showVisitQRScanner, setShowVisitQRScanner] = useState(false);
   const [visitScanQty, setVisitScanQty] = useState(store?.membershipStampsPerVisit || 1);
   const [showRedeemFlow, setShowRedeemFlow] = useState(false);
   const [redeemDollars, setRedeemDollars] = useState('');
@@ -20724,13 +20890,15 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               <div className="bg-brand-navy/20 rounded-full mx-auto mb-5" style={{ width: 40, height: 4 }} />
               <h3 className="font-display text-xl font-bold text-center mb-1">{store?.name}</h3>
               <p className="text-brand-navy/60 text-xs text-center mb-5">{membershipVisits} points</p>
-              <div className="flex items-center justify-center gap-6 mb-6">
-                <button onClick={() => setVisitScanQty(q => Math.max(1, q - 1))} className="w-11 h-11 rounded-full bg-brand-navy/8 flex items-center justify-center text-brand-navy font-bold text-2xl active:scale-95 transition-transform">−</button>
-                <span className="font-black text-5xl text-brand-navy w-14 text-center leading-none">{visitScanQty}</span>
-                <button onClick={() => setVisitScanQty(q => q + 1)} className="w-11 h-11 rounded-full bg-brand-navy/8 flex items-center justify-center text-brand-navy font-bold text-2xl active:scale-95 transition-transform">+</button>
+              {/* Identity QR — vendor scans via nav QR button */}
+              <div className="bg-brand-navy rounded-2xl px-5 py-4 mb-5 flex flex-col items-center gap-3">
+                <p className="text-white/50 text-[9px] font-bold uppercase tracking-widest">Show this to the vendor</p>
+                <div className="bg-white p-2 rounded-xl">
+                  <QRCodeSVG value={`stamp:${card.user_id}:${card.store_id}`} size={140} />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3 mb-5">
-                <button onClick={() => { setShowVisitScanSheet(false); setShowVisitScan(true); }}
+                <button onClick={() => { setShowVisitScanSheet(false); setShowVisitQRScanner(true); }}
                   className="flex flex-col items-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform gradient-logo-blue text-white shadow-lg relative overflow-hidden">
                   <span className="card-shine-ray" aria-hidden="true" />
                   <QrCode size={28} className="relative z-10" />
@@ -20745,6 +20913,13 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               <button onClick={() => setShowVisitScanSheet(false)} className="w-full text-brand-navy/75 font-bold text-sm py-2">Close</button>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Visit QR scanner — compact card */}
+      <AnimatePresence>
+        {showVisitQRScanner && store && (
+          <VisitQRScannerModal storeId={store.id} onClose={() => setShowVisitQRScanner(false)} />
         )}
       </AnimatePresence>
       </>
@@ -21107,13 +21282,15 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               <div className="bg-brand-navy/20 rounded-full mx-auto mb-5" style={{ width: 40, height: 4 }} />
               <h3 className="font-display text-xl font-bold text-center mb-1">{store?.name}</h3>
               <p className="text-brand-navy/60 text-xs text-center mb-5">{membershipVisits} points</p>
-              <div className="flex items-center justify-center gap-6 mb-6">
-                <button onClick={() => setVisitScanQty(q => Math.max(1, q - 1))} className="w-11 h-11 rounded-full bg-brand-navy/8 flex items-center justify-center text-brand-navy font-bold text-2xl active:scale-95 transition-transform">−</button>
-                <span className="font-black text-5xl text-brand-navy w-14 text-center leading-none">{visitScanQty}</span>
-                <button onClick={() => setVisitScanQty(q => q + 1)} className="w-11 h-11 rounded-full bg-brand-navy/8 flex items-center justify-center text-brand-navy font-bold text-2xl active:scale-95 transition-transform">+</button>
+              {/* Identity QR — vendor scans via nav QR button */}
+              <div className="bg-brand-navy rounded-2xl px-5 py-4 mb-5 flex flex-col items-center gap-3">
+                <p className="text-white/50 text-[9px] font-bold uppercase tracking-widest">Show this to the vendor</p>
+                <div className="bg-white p-2 rounded-xl">
+                  <QRCodeSVG value={`stamp:${card.user_id}:${card.store_id}`} size={140} />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3 mb-5">
-                <button onClick={() => { setShowVisitScanSheet(false); setShowVisitScan(true); }}
+                <button onClick={() => { setShowVisitScanSheet(false); setShowVisitQRScanner(true); }}
                   className="flex flex-col items-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform gradient-logo-blue text-white shadow-lg relative overflow-hidden">
                   <span className="card-shine-ray" aria-hidden="true" />
                   <QrCode size={28} className="relative z-10" />
@@ -21128,6 +21305,13 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               <button onClick={() => setShowVisitScanSheet(false)} className="w-full text-brand-navy/75 font-bold text-sm py-2">Close</button>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Visit QR scanner — customer scans vendor's nav QR */}
+      <AnimatePresence>
+        {showVisitQRScanner && store && (
+          <VisitQRScannerModal storeId={store.id} onClose={() => setShowVisitQRScanner(false)} />
         )}
       </AnimatePresence>
 
@@ -24704,10 +24888,7 @@ function ScanUserPanel({ store, onIssue }: {
   const [amount, setAmount] = useState('');
   const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [working, setWorking] = useState(false);
-  const [nfcScanning, setNfcScanning] = useState(false);
-  const [showVisitQRScanner, setShowVisitQRScanner] = useState(false);
   const [showSpendQRScanner, setShowSpendQRScanner] = useState(false);
-  const [visitScanMode, setVisitScanMode] = useState<'nfc' | 'qr'>('nfc');
 
   const memType = store?.membershipType ?? 'spend';
   const isVisit = memType === 'visit';
@@ -24731,118 +24912,23 @@ function ScanUserPanel({ store, onIssue }: {
     }
   };
 
-  const handleNFCScan = async () => {
-    if (!('NDEFReader' in window)) {
-      setStatus({ type: 'error', message: 'NFC not supported on this device' });
-      return;
-    }
-    setNfcScanning(true);
-    setStatus(null);
-    try {
-      const ndef = new (window as any).NDEFReader();
-      await ndef.scan();
-      ndef.addEventListener('reading', async ({ message }: any) => {
-        setNfcScanning(false);
-        for (const record of message.records) {
-          const decoder = new TextDecoder();
-          let uid = '';
-          if (record.recordType === 'text') {
-            uid = decoder.decode(record.data).trim();
-          } else if (record.recordType === 'url') {
-            const url = decoder.decode(record.data);
-            const match = url.match(/[?&]uid=([^&]+)/);
-            if (match) uid = match[1];
-          }
-          if (uid) {
-            // Look up user by UID
-            const userSnap = await getDoc(doc(db, 'users', uid));
-            if (userSnap.exists()) {
-              const u = userSnap.data() as UserProfile;
-              const h = u.handle || '';
-              setHandle(h);
-              if (h) onIssue(h, '', setStatus, setWorking);
-            } else {
-              setStatus({ type: 'error', message: 'User not found for this NFC tag' });
-            }
-            return;
-          }
-        }
-        setStatus({ type: 'error', message: 'Could not read user info from NFC tag' });
-      });
-      ndef.addEventListener('readingerror', () => {
-        setNfcScanning(false);
-        setStatus({ type: 'error', message: 'NFC read error — try again' });
-      });
-    } catch (err: any) {
-      setNfcScanning(false);
-      setStatus({ type: 'error', message: err?.message || 'NFC scan failed' });
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div>
         <h3 className="font-display text-2xl font-bold mb-1">{isVisit ? 'Issue Points' : 'Issue Spend'}</h3>
         <p className="text-brand-navy/80 text-sm">
           {isVisit
-            ? `Issue ${pointsPerVisit} point${pointsPerVisit !== 1 ? 's' : ''} per visit on the customer's ${store?.membershipName || 'membership'} card.`
+            ? `Customers scan the store QR or tap NFC to earn ${pointsPerVisit} point${pointsPerVisit !== 1 ? 's' : ''} per visit automatically.`
             : `Add spend to the customer's ${store?.membershipName || 'membership'} card.`}
         </p>
       </div>
 
-      {/* NFC / QR toggle — visit type only */}
       {isVisit && (
-        <div className="space-y-3">
-          <div className="flex gap-2 p-1 bg-brand-navy/5 rounded-2xl">
-            {(['nfc', 'qr'] as const).map(m => (
-              <button
-                key={m}
-                onClick={() => { setStatus(null); setNfcScanning(false); setVisitScanMode(m); }}
-                className={cn(
-                  'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all',
-                  visitScanMode === m ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/50'
-                )}
-              >
-                {m === 'nfc' ? <><Wifi size={13} className="-rotate-90" /> NFC</> : <><QrCode size={13} /> QR Code</>}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={() => visitScanMode === 'qr' ? setShowVisitQRScanner(true) : handleNFCScan()}
-            disabled={nfcScanning || working}
-            className="w-full relative overflow-hidden flex items-center justify-center gap-2 py-4 rounded-2xl font-bold text-white text-sm shadow-lg active:scale-[0.98] transition-all disabled:opacity-60"
-            style={{ background: 'linear-gradient(160deg, #1D4ED8 0%, #2563EB 40%, #3B82F6 70%, #60A5FA 100%)' }}
-          >
-            <span className="card-shine-ray" />
-            {nfcScanning
-              ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full" /> Scanning…</>
-              : visitScanMode === 'qr'
-                ? <><QrCode size={16} /> Scan QR Code</>
-                : <><ScanLine size={16} /> Tap to scan</>}
-          </button>
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex items-start gap-3">
+          <Info size={16} className="text-blue-500 shrink-0 mt-0.5" />
+          <p className="text-blue-700 text-xs leading-relaxed">Visit points are issued automatically when the customer taps NFC or scans the store QR from their wallet card — no action needed here.</p>
         </div>
       )}
-      <AnimatePresence>
-        {showVisitQRScanner && store && (
-          <VendorQRScanner
-            store={store}
-            stampQty={0}
-            subtitle="Scan customer's QR code to issue visit points"
-            onScanned={async (userId) => {
-              setShowVisitQRScanner(false);
-              setWorking(true); setStatus(null);
-              try {
-                const userSnap = await getDoc(doc(db, 'users', userId));
-                if (!userSnap.exists()) { setStatus({ type: 'error', message: 'User not found' }); setWorking(false); return; }
-                const h = (userSnap.data() as UserProfile).handle || '';
-                if (!h) { setStatus({ type: 'error', message: 'Customer has no handle — ask them to set one' }); setWorking(false); return; }
-                onIssue(h, '', setStatus, setWorking);
-              } catch { setStatus({ type: 'error', message: 'Lookup failed — try again' }); setWorking(false); }
-            }}
-            onClose={() => setShowVisitQRScanner(false)}
-          />
-        )}
-      </AnimatePresence>
 
       {/* QR scanner button — spend type */}
       {!isVisit && (
