@@ -20937,12 +20937,12 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-brand-navy/80 text-xs font-bold uppercase tracking-widest">Points Earned</span>
-                  <span className="text-brand-navy font-black">{fmtK(membershipPoints)}</span>
+                  <span className="text-brand-navy font-black">{membershipPoints.toLocaleString()}</span>
                 </div>
                 {pointsAlreadyRedeemed > 0 && (
                   <div className="flex items-center justify-between">
                     <span className="text-brand-navy/80 text-xs font-bold uppercase tracking-widest">Points Redeemed</span>
-                    <span className="text-red-500 font-black">−{fmtK(pointsAlreadyRedeemed)}</span>
+                    <span className="text-red-500 font-black">−{pointsAlreadyRedeemed.toLocaleString()}</span>
                   </div>
                 )}
                 {earnedRewards > 0 && (
@@ -21374,12 +21374,12 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 </div>
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Points Earned</p>
-                  <p className="font-black text-brand-navy">{fmtK(membershipPoints)}</p>
+                  <p className="font-black text-brand-navy">{membershipPoints.toLocaleString()}</p>
                 </div>
                 {pointsAlreadyRedeemed > 0 && (
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Points Redeemed</p>
-                    <p className="font-black text-red-500">−{fmtK(pointsAlreadyRedeemed)}</p>
+                    <p className="font-black text-red-500">−{pointsAlreadyRedeemed.toLocaleString()}</p>
                   </div>
                 )}
                 {earnedRewards > 0 && (
@@ -22351,7 +22351,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
               >
                 <div className="bg-brand-navy/20 rounded-full mx-auto mb-5" style={{ width: 40, height: 4 }} />
                 <h3 className="font-display text-xl font-bold text-center mb-1">{store?.name}</h3>
-                <p className="text-brand-navy/60 text-xs text-center mb-6">{fmtK(points)} pts · {visits} visits</p>
+                <p className="text-brand-navy/60 text-xs text-center mb-6">{points.toLocaleString()} pts · {visits} visits</p>
                 <button onClick={() => { setShowScanSheet(false); setShowQRScan(true); }}
                   className="w-full flex items-center justify-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform gradient-logo-blue text-white shadow-lg relative overflow-hidden mb-5">
                   <span className="card-shine-ray" aria-hidden="true" />
@@ -22406,7 +22406,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
         {/* Center stats */}
         <div className="flex items-center justify-center gap-10 py-6">
           <div className="text-center">
-            <p className="text-white font-black text-4xl leading-none">{fmtK(points)}</p>
+            <p className="text-white font-black text-4xl leading-none">{points.toLocaleString()}</p>
             <p className="text-indigo-200 text-xs font-bold uppercase tracking-widest mt-1">pts</p>
           </div>
           <div className="w-px h-10 bg-white/20" />
@@ -22481,7 +22481,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="font-display text-xl font-bold text-brand-navy">Redeem Points</h3>
-                  <p className="text-xs text-brand-navy/60 mt-0.5">Balance: <span className="font-bold text-blue-600">{fmtK(points)} pts</span></p>
+                  <p className="text-xs text-brand-navy/60 mt-0.5">Balance: <span className="font-bold text-blue-600">{points.toLocaleString()} pts</span></p>
                 </div>
                 <button onClick={() => { setShowRedeemSheet(false); setSelectedReward(null); }} className="p-2 text-brand-navy/75">
                   <X size={20} />
@@ -22519,11 +22519,11 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
                               <Gift size={16} className={isSelected ? 'text-blue-600' : affordable ? 'text-indigo-400' : 'text-brand-navy/30'} />
                               <div>
                                 <p className={cn('font-bold text-sm', isSelected ? 'text-blue-700' : 'text-brand-navy')}>{r.reward}</p>
-                                <p className="text-[10px] text-brand-navy/50">{fmtK(r.points)} pts</p>
+                                <p className="text-[10px] text-brand-navy/50">{r.points.toLocaleString()} pts</p>
                               </div>
                             </div>
                             <div className="flex items-center gap-1.5 shrink-0">
-                              {!affordable && <span className="text-[10px] text-brand-navy/40">{fmtK(r.points - points)} more</span>}
+                              {!affordable && <span className="text-[10px] text-brand-navy/40">{(r.points - points).toLocaleString()} more</span>}
                               {isSelected && <CheckCircle2 size={18} className="text-blue-600" />}
                             </div>
                           </button>
@@ -22551,7 +22551,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
                               <Wallet size={16} className={isSelected ? 'text-emerald-600' : 'text-emerald-400'} />
                               <div>
                                 <p className={cn('font-bold text-sm', isSelected ? 'text-emerald-700' : 'text-brand-navy')}>${moneyValue} off</p>
-                                <p className="text-[10px] text-brand-navy/50">{fmtK(moneyPts)} pts · {rate} pts = $1</p>
+                                <p className="text-[10px] text-brand-navy/50">{moneyPts.toLocaleString()} pts · {rate} pts = $1</p>
                               </div>
                             </div>
                             {isSelected && <CheckCircle2 size={18} className="text-emerald-500" />}
@@ -22566,7 +22566,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
                   )}
 
                   {unlockedRewards.length === 0 && moneyValue === 0 && sortedRewards.length > 0 && (
-                    <p className="text-center text-brand-navy/50 text-sm py-4">Keep collecting — {fmtK(sortedRewards[0].points - points)} more pts until your first reward.</p>
+                    <p className="text-center text-brand-navy/50 text-sm py-4">Keep collecting — {(sortedRewards[0].points - points).toLocaleString()} more pts until your first reward.</p>
                   )}
 
                   {redeemError && <p className="text-red-500 text-sm font-bold text-center">{redeemError}</p>}
@@ -22577,7 +22577,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
                     className="w-full bg-indigo-600 text-white py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 disabled:opacity-40 active:scale-[0.98] transition-all mt-2"
                   >
                     <Gift size={16} />
-                    {isRedeeming ? 'Processing…' : selectedReward ? `Redeem — ${fmtK(selectedReward.points)} pts` : 'Select a reward'}
+                    {isRedeeming ? 'Processing…' : selectedReward ? `Redeem — ${selectedReward.points.toLocaleString()} pts` : 'Select a reward'}
                   </button>
                 </div>
               )}
@@ -22599,7 +22599,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
             >
               <div className="bg-brand-navy/20 rounded-full mx-auto mb-5" style={{ width: 40, height: 4 }} />
               <h3 className="font-display text-xl font-bold text-center mb-1">{store?.name}</h3>
-              <p className="text-brand-navy/60 text-xs text-center mb-6">{fmtK(points)} pts · {visits} visits</p>
+              <p className="text-brand-navy/60 text-xs text-center mb-6">{points.toLocaleString()} pts · {visits} visits</p>
               <button onClick={() => { setShowScanSheet(false); setShowQRScan(true); }}
                 className="w-full flex items-center justify-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform gradient-logo-blue text-white shadow-lg relative overflow-hidden mb-5">
                 <span className="card-shine-ray" aria-hidden="true" />
@@ -26337,7 +26337,7 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
                     const val = parseFloat(redemptionRate) > 0 ? pts / parseFloat(redemptionRate) : 0;
                     return (
                       <div className="flex items-center justify-between pt-1 border-t border-brand-navy/10">
-                        <span className="text-sm font-bold text-brand-navy">= {fmtK(pts)} pts</span>
+                        <span className="text-sm font-bold text-brand-navy">= {pts.toLocaleString()} pts</span>
                         <span className="text-sm font-bold text-emerald-600">≈ ${val.toFixed(2)} off</span>
                       </div>
                     );
@@ -27830,7 +27830,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                           </>
                         ) : (
                           <>
-                            <span className="text-[10px] font-bold" style={{ color: primary }}>{fmtK(card.membership_points ?? 0)} pts</span>
+                            <span className="text-[10px] font-bold" style={{ color: primary }}>{(card.membership_points ?? 0).toLocaleString()} pts</span>
                             {(card.total_spent ?? 0) > 0 && <span className="text-[10px] font-bold text-brand-navy/50">£{(card.total_spent ?? 0).toFixed(2)}</span>}
                           </>
                         )}
@@ -33933,7 +33933,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                   <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">Collect Points</p>
                 </div>
                 <div className="relative z-10 text-right shrink-0">
-                  <p className="text-white font-black text-2xl leading-none">{fmtK(spvNetAvailable)}</p>
+                  <p className="text-white font-black text-2xl leading-none">{spvNetAvailable.toLocaleString()}</p>
                   <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">pts available</p>
                 </div>
               </div>
@@ -33979,7 +33979,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                     <div className="grid grid-cols-2 gap-3 mb-4">
                       <div className="glass-card p-5 rounded-2xl">
                         <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-1">Available</p>
-                        <p className="text-3xl font-black text-brand-navy">{fmtK(spvNetAvailable)}</p>
+                        <p className="text-3xl font-black text-brand-navy">{spvNetAvailable.toLocaleString()}</p>
                         {pointsRate > 0 && <p className="text-[10px] text-brand-navy/75 mt-1">{pointsRate} pts per £1</p>}
                       </div>
                       <div className="glass-card p-5 rounded-2xl">
@@ -33997,12 +33997,12 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                       </div>
                       <div className="flex items-center justify-between">
                         <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Points Earned</p>
-                        <p className="font-black text-brand-navy">{fmtK(pts)}</p>
+                        <p className="font-black text-brand-navy">{pts.toLocaleString()}</p>
                       </div>
                       {spvPointsAlreadyRedeemed > 0 && (
                         <div className="flex items-center justify-between">
                           <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Points Redeemed</p>
-                          <p className="font-black text-red-500">−{fmtK(spvPointsAlreadyRedeemed)}</p>
+                          <p className="font-black text-red-500">−{spvPointsAlreadyRedeemed.toLocaleString()}</p>
                         </div>
                       )}
                       {rewards > 0 && (
@@ -34073,7 +34073,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                         <div className="flex items-center justify-between mb-6">
                           <div>
                             <h3 className="font-display text-2xl font-bold">Redeem Points</h3>
-                            <p className="text-brand-navy/75 text-xs mt-0.5">{fmtK(pts)} pts · up to £{maxRedeemDollars.toFixed(2)} off</p>
+                            <p className="text-brand-navy/75 text-xs mt-0.5">{pts.toLocaleString()} pts · up to £{maxRedeemDollars.toFixed(2)} off</p>
                           </div>
                           <button onClick={closeRedeem} className="p-2 text-brand-navy/75"><X size={20} /></button>
                         </div>
@@ -34200,7 +34200,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                   <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">Visit Points</p>
                 </div>
                 <div className="relative z-10 text-right shrink-0">
-                  <p className="text-white font-black text-2xl leading-none">{fmtK(visits)}</p>
+                  <p className="text-white font-black text-2xl leading-none">{visits.toLocaleString()}</p>
                   <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">pts</p>
                 </div>
               </div>
@@ -34227,14 +34227,14 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                     <div className="flex items-center justify-between mb-6">
                       <div>
                         <h3 className="font-display text-2xl font-bold">{store.membershipName || 'Membership'}</h3>
-                        <p className="text-brand-navy/75 text-xs mt-0.5">{fmtK(netVisits)} points available</p>
+                        <p className="text-brand-navy/75 text-xs mt-0.5">{netVisits.toLocaleString()} points available</p>
                       </div>
                       <button onClick={() => setShowVisitSheet(false)} className="p-2 text-brand-navy/75"><X size={20} /></button>
                     </div>
 
                     {/* Points + next reward */}
                     <div className="glass-card p-5 rounded-2xl mb-4 text-center">
-                      <p className="text-brand-navy font-black text-5xl leading-none">{fmtK(netVisits)}</p>
+                      <p className="text-brand-navy font-black text-5xl leading-none">{netVisits.toLocaleString()}</p>
                       <p className="text-brand-navy/75 text-xs font-bold uppercase tracking-widest mt-1.5">Points</p>
                       {nextReward && (
                         <>
@@ -35451,7 +35451,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
                         </>
                       ) : (
                         <>
-                          <span className="text-[10px] font-bold" style={{ color: primary }}>{fmtK(card.membership_points ?? 0)} pts</span>
+                          <span className="text-[10px] font-bold" style={{ color: primary }}>{(card.membership_points ?? 0).toLocaleString()} pts</span>
                           {(card.total_spent ?? 0) > 0 && <span className="text-[10px] font-bold text-brand-navy/50">£{(card.total_spent ?? 0).toFixed(2)}</span>}
                         </>
                       )}
