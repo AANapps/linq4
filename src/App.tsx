@@ -646,7 +646,7 @@ interface StoreProfile {
   membershipRedemptionRate?: number;
   membershipVisitRewards?: { visits: number; reward: string }[];
   membershipStampsPerVisit?: number;
-  membershipMenuItems?: { id: string; name: string; points: number; description?: string }[];
+  membershipMenuItems?: { id: string; name: string; points: number; value?: number; description?: string }[];
   scanMethod?: 'nfc' | 'qr';
   businessRules?: string;
   charityAnimalImageUrl?: string;
@@ -20582,7 +20582,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
   const [showVisitEarnSheet, setShowVisitEarnSheet] = useState(false);
   const [showVisitQRScanner, setShowVisitQRScanner] = useState(false);
   const [showVisitRedeemSheet, setShowVisitRedeemSheet] = useState(false);
-  const [selectedRedeemItem, setSelectedRedeemItem] = useState<{ id: string; name: string; points: number; description?: string } | null>(null);
+  const [selectedRedeemItem, setSelectedRedeemItem] = useState<{ id: string; name: string; points: number; value?: number; description?: string } | null>(null);
   const [redeemSwipeDone, setRedeemSwipeDone] = useState(false);
   const [redeemSwipeSaving, setRedeemSwipeSaving] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
@@ -20671,6 +20671,10 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
         total_value_redeemed: increment(redeemDollarNum),
         last_redeemed_at: serverTimestamp(),
       });
+      const user = auth.currentUser;
+      if (user && redeemDollarNum > 0) {
+        updateDoc(doc(db, 'users', user.uid), { totalSaved: increment(redeemDollarNum) }).catch(() => {});
+      }
       const _memCreatedMs = card.createdAt?.toMillis?.() ?? (card.createdAt?.seconds ? card.createdAt.seconds * 1000 : null);
       logEvent('redemption', card.user_id, {
         cardId: card.id, storeId: card.store_id, rewardValue: redeemDollarNum, cardType: 'membership_value',
@@ -20988,8 +20992,9 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                               <p className="text-sm font-bold text-brand-navy truncate">{item.name}</p>
                               {item.description && <p className="text-[11px] text-brand-navy/75 mt-0.5 truncate">{item.description}</p>}
                             </div>
-                            <div className="flex items-center gap-2 shrink-0 ml-3">
+                            <div className="flex flex-col items-end gap-0.5 shrink-0 ml-3">
                               <span className="text-xs font-black" style={{ color }}>{item.points} pts</span>
+                              {item.value ? <span className="text-[10px] font-bold text-emerald-600">${item.value.toFixed(2)}</span> : null}
                               {canAfford && !isRedeeming && <ChevronRight size={14} className="text-brand-navy/72" />}
                               {isRedeeming && <span className="text-[10px] text-brand-navy/75">Redeeming…</span>}
                             </div>
@@ -21098,8 +21103,9 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                           <p className="text-sm font-bold text-brand-navy truncate">{item.name}</p>
                           {item.description && <p className="text-[11px] text-brand-navy/60 mt-0.5 truncate">{item.description}</p>}
                         </div>
-                        <div className="flex items-center gap-2 shrink-0 ml-3">
+                        <div className="flex flex-col items-end gap-0.5 shrink-0 ml-3">
                           <span className="text-xs font-black" style={{ color }}>{item.points} pts</span>
+                          {item.value ? <span className="text-[10px] font-bold text-emerald-600">${item.value.toFixed(2)}</span> : null}
                           {canAfford && <ChevronRight size={14} className="text-brand-navy/40" />}
                         </div>
                       </button>
@@ -21144,7 +21150,11 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                   setRedeemSwipeSaving(true);
                   try {
                     await updateDoc(doc(db, 'cards', card.id), { total_visits_redeemed: increment(selectedRedeemItem.points), last_redeemed_at: serverTimestamp() });
-                    await addDoc(collection(db, 'transactions'), { user_id: card.user_id, store_id: card.store_id, card_type: 'membership', membership_type: 'visit', type: 'menu_redeem', item_name: selectedRedeemItem.name, points_redeemed: selectedRedeemItem.points, redeemed_at: serverTimestamp() });
+                    await addDoc(collection(db, 'transactions'), { user_id: card.user_id, store_id: card.store_id, card_type: 'membership', membership_type: 'visit', type: 'menu_redeem', item_name: selectedRedeemItem.name, points_redeemed: selectedRedeemItem.points, item_value: selectedRedeemItem.value ?? 0, redeemed_at: serverTimestamp() });
+                    if (selectedRedeemItem.value && selectedRedeemItem.value > 0) {
+                      const u = auth.currentUser;
+                      if (u) updateDoc(doc(db, 'users', u.uid), { totalSaved: increment(selectedRedeemItem.value) }).catch(() => {});
+                    }
                     setLocalVisitsRedeemed(prev => prev + selectedRedeemItem!.points);
                     haptic([80, 60, 120]); playSound('complete');
                     setRedeemSwipeDone(true);
@@ -21459,8 +21469,9 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                               <p className="text-sm font-bold text-brand-navy truncate">{item.name}</p>
                               {item.description && <p className="text-[11px] text-brand-navy/75 mt-0.5 truncate">{item.description}</p>}
                             </div>
-                            <div className="flex items-center gap-2 shrink-0 ml-3">
+                            <div className="flex flex-col items-end gap-0.5 shrink-0 ml-3">
                               <span className="text-xs font-black" style={{ color }}>{item.points} pts</span>
+                              {item.value ? <span className="text-[10px] font-bold text-emerald-600">${item.value.toFixed(2)}</span> : null}
                               {canAfford && !isRedeeming && <ChevronRight size={14} className="text-brand-navy/72" />}
                               {isRedeeming && <span className="text-[10px] text-brand-navy/75">Redeeming…</span>}
                             </div>
@@ -21571,8 +21582,9 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                           <p className="text-sm font-bold text-brand-navy truncate">{item.name}</p>
                           {item.description && <p className="text-[11px] text-brand-navy/60 mt-0.5 truncate">{item.description}</p>}
                         </div>
-                        <div className="flex items-center gap-2 shrink-0 ml-3">
+                        <div className="flex flex-col items-end gap-0.5 shrink-0 ml-3">
                           <span className="text-xs font-black" style={{ color }}>{item.points} pts</span>
+                          {item.value ? <span className="text-[10px] font-bold text-emerald-600">${item.value.toFixed(2)}</span> : null}
                           {canAfford && <ChevronRight size={14} className="text-brand-navy/40" />}
                         </div>
                       </button>
@@ -21613,7 +21625,11 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                   setRedeemSwipeSaving(true);
                   try {
                     await updateDoc(doc(db, 'cards', card.id), { total_visits_redeemed: increment(selectedRedeemItem.points), last_redeemed_at: serverTimestamp() });
-                    await addDoc(collection(db, 'transactions'), { user_id: card.user_id, store_id: card.store_id, card_type: 'membership', membership_type: 'visit', type: 'menu_redeem', item_name: selectedRedeemItem.name, points_redeemed: selectedRedeemItem.points, redeemed_at: serverTimestamp() });
+                    await addDoc(collection(db, 'transactions'), { user_id: card.user_id, store_id: card.store_id, card_type: 'membership', membership_type: 'visit', type: 'menu_redeem', item_name: selectedRedeemItem.name, points_redeemed: selectedRedeemItem.points, item_value: selectedRedeemItem.value ?? 0, redeemed_at: serverTimestamp() });
+                    if (selectedRedeemItem.value && selectedRedeemItem.value > 0) {
+                      const u = auth.currentUser;
+                      if (u) updateDoc(doc(db, 'users', u.uid), { totalSaved: increment(selectedRedeemItem.value) }).catch(() => {});
+                    }
                     setLocalVisitsRedeemed(prev => prev + selectedRedeemItem!.points);
                     haptic([80, 60, 120]); playSound('complete');
                     setRedeemSwipeDone(true);
@@ -26346,12 +26362,27 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
                       <Trash2 size={14} />
                     </button>
                   </div>
-                  <input
-                    value={item.description || ''}
-                    onChange={e => setMenuItems(prev => prev.map((x, idx) => idx === i ? { ...x, description: e.target.value } : x))}
-                    className="w-full px-3 py-2 rounded-xl bg-white border border-brand-navy/10 text-xs text-brand-navy/75 outline-none focus:border-brand-navy/30"
-                    placeholder="Description (optional)"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      value={item.description || ''}
+                      onChange={e => setMenuItems(prev => prev.map((x, idx) => idx === i ? { ...x, description: e.target.value } : x))}
+                      className="flex-1 px-3 py-2 rounded-xl bg-white border border-brand-navy/10 text-xs text-brand-navy/75 outline-none focus:border-brand-navy/30"
+                      placeholder="Description (optional)"
+                    />
+                    <div className="flex items-center gap-1 bg-white rounded-xl px-3 py-2 border border-brand-navy/10 w-24 shrink-0">
+                      <span className="text-[9px] font-bold text-brand-navy/50 shrink-0">$</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={item.value ?? ''}
+                        onChange={e => setMenuItems(prev => prev.map((x, idx) => idx === i ? { ...x, value: parseFloat(e.target.value) || 0 } : x))}
+                        className="w-full text-xs font-bold text-brand-navy bg-transparent outline-none"
+                        placeholder="0.00"
+                      />
+                      <span className="text-[9px] font-bold text-brand-navy/50 shrink-0">val</span>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
