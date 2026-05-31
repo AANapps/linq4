@@ -20858,6 +20858,15 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 <QrCode size={13} className="relative z-10" />
                 <span className="relative z-10">Collect Points</span>
               </button>
+              {redeemableValue > 0 && (
+                <button
+                  onClick={e => { e.stopPropagation(); setShowRedeemSheet(true); }}
+                  className="w-full py-2.5 rounded-xl text-[11px] font-black text-white active:scale-95 transition-transform flex items-center justify-center gap-1.5"
+                  style={{ background: color }}
+                >
+                  <Gift size={12} /> Redeem Points
+                </button>
+              )}
             </div>
           ) : (
             <div className="w-full flex flex-col items-center gap-1.5">
@@ -21273,6 +21282,15 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 <QrCode size={16} className="relative z-10" />
                 <span className="relative z-10">Collect Points</span>
               </button>
+              {redeemableValue > 0 && (
+                <button
+                  onClick={e => { e.stopPropagation(); setShowRedeemSheet(true); }}
+                  className="w-full py-3 rounded-2xl text-sm font-black text-white active:scale-[0.98] transition-transform flex items-center justify-center gap-2 shadow-md mb-2"
+                  style={{ background: color }}
+                >
+                  <Gift size={15} /> Redeem Points
+                </button>
+              )}
               <div className="flex items-center justify-between">
                 <span className="text-brand-navy/35 text-[11px] font-bold">${totalSpent.toFixed(2)} spent{earnedRewards > 0 ? ` · ${earnedRewards} rewards` : ''}</span>
                 <span className="text-brand-navy/75 text-[10px] font-bold flex items-center gap-1"><Gift size={11} /> Tap to view</span>
