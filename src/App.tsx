@@ -14569,12 +14569,11 @@ function VendorSpendQRDisplay({ store, onClose }: { store: StoreProfile; onClose
       const claimed: string[] = snap.data().claimedBy ?? [];
       if (claimed.length > 0) {
         setJustScanned(true);
-        setTimeout(() => setJustScanned(false), 1500);
-        generateToken(confirmedAmount, true);
+        setTimeout(() => onClose(), 1200);
       }
     }, () => {});
     return unsub;
-  }, [tokenId, phase, confirmedAmount, generateToken]);
+  }, [tokenId, phase, onClose]);
 
   const handleConfirmAmount = async () => {
     const parsed = parseFloat(amountInput);
@@ -14721,7 +14720,7 @@ function SpendQRScannerModal({ onClose, onPackReady }: { onClose: () => void; on
         const createdMs = typeof data.createdAt === 'number' ? data.createdAt : (data.createdAt?.toMillis?.() ?? null);
         if (createdMs !== null && Date.now() - createdMs > 300_000) throw new Error('QR expired — ask vendor to generate a new one.');
         const claimedBy: string[] = data.claimedBy || [];
-        if (claimedBy.includes(user.uid)) throw new Error("You've already claimed this transaction.");
+        if (claimedBy.length > 0) throw new Error('This QR code has already been used.');
         amount = data.amount as number;
         tx.update(tokenRef, { claimedBy: arrayUnion(user.uid) });
       });
