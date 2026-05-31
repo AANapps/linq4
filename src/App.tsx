@@ -20622,7 +20622,14 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
       <>
       <div
         className="rounded-3xl overflow-hidden"
-        onClick={() => membershipType === 'visit' ? setShowVisitScanSheet(true) : setShowRedeemSheet(true)}
+        onClick={() => {
+          if (membershipType === 'visit') {
+            if (store?.scanMethod === 'nfc') { onScan?.(); }
+            else { setShowVisitScanSheet(true); }
+          } else {
+            setShowRedeemSheet(true);
+          }
+        }}
       >
         {/* Colored header — mirrors compact LoyaltyCard header */}
         <div className="relative overflow-hidden flex items-center gap-3 px-4 py-3" style={{ backgroundColor: color }}>
@@ -20930,7 +20937,14 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
     <>
       <motion.div
         className="relative rounded-[2rem] overflow-hidden select-none h-full flex flex-col"
-        onClick={() => membershipType === 'visit' ? setShowVisitScanSheet(true) : setShowRedeemSheet(true)}
+        onClick={() => {
+          if (membershipType === 'visit') {
+            if (store?.scanMethod === 'nfc') { onScan?.(); }
+            else { setShowVisitScanSheet(true); }
+          } else {
+            setShowRedeemSheet(true);
+          }
+        }}
         whileTap={{ scale: 0.98 }}
       >
         {/* Gradient header — same structure as stamp card */}
@@ -21510,7 +21524,11 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
     <>
       <motion.div
         whileTap={{ scale: 0.97 }}
-        onClick={() => !isCompleted && !card.isRedeemed && setShowQR(true)}
+        onClick={() => {
+          if (isCompleted || card.isRedeemed) return;
+          if (store?.scanMethod === 'nfc') { onScan?.(); }
+          else { setShowQR(true); }
+        }}
         className={cn(
           "relative rounded-[2rem] overflow-hidden shadow-xl w-full select-none h-full flex flex-col",
           !isCompleted && !card.isRedeemed ? "cursor-pointer" : ""
@@ -25071,9 +25089,31 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
 
   const [pendingType, setPendingType] = useState<'stamp' | 'spend' | 'visit' | null>(null);
   const [switching, setSwitching] = useState(false);
+  const [pendingScanMethod, setPendingScanMethod] = useState<'qr' | 'nfc' | null>(null);
+  const [savingScanMethod, setSavingScanMethod] = useState(false);
+  const [showNFCReorder, setShowNFCReorder] = useState(false);
+
+  const currentScanMethod = store?.scanMethod ?? 'qr';
+
   const handleTypeClick = (type: 'stamp' | 'spend' | 'visit') => {
     if (type === activeType) return;
     setPendingType(type);
+  };
+
+  const handleScanMethodClick = (method: 'qr' | 'nfc') => {
+    if (method === currentScanMethod) return;
+    setPendingScanMethod(method);
+  };
+
+  const confirmScanMethodSwitch = async () => {
+    if (!pendingScanMethod || !store?.id) return;
+    setSavingScanMethod(true);
+    try {
+      await updateDoc(doc(db, 'stores', store.id), { scanMethod: pendingScanMethod });
+    } finally {
+      setSavingScanMethod(false);
+    }
+    setPendingScanMethod(null);
   };
 
   const confirmSwitch = async () => {
@@ -25156,6 +25196,102 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
               </div>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ─── Scan method selector (stamp + visit only) ─── */}
+      {(activeType === 'stamp' || activeType === 'visit') && (
+        <div className="glass-card rounded-[2rem] p-5 space-y-4">
+          <div>
+            <p className="font-bold text-brand-navy text-sm mb-0.5">How customers earn points</p>
+            <p className="text-xs text-brand-navy/60">Choose how your customers collect stamps or visit points.</p>
+          </div>
+          <div className="flex gap-2 p-1 bg-brand-navy/5 rounded-2xl">
+            {([
+              { key: 'qr' as const, label: 'QR Code', icon: <QrCode size={14} /> },
+              { key: 'nfc' as const, label: 'NFC', icon: <Wifi size={14} className="-rotate-90" /> },
+            ]).map(({ key, label, icon }) => (
+              <button
+                key={key}
+                onClick={() => handleScanMethodClick(key)}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold transition-all',
+                  currentScanMethod === key ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/50'
+                )}
+              >
+                {icon} {label}
+              </button>
+            ))}
+          </div>
+
+          {currentScanMethod === 'nfc' && (
+            <div className="space-y-3">
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+                <AlertTriangle size={15} className="text-amber-500 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-amber-800 text-xs font-bold">NFC device required</p>
+                  <p className="text-amber-700 text-xs leading-relaxed">NFC requires a pre-programmed physical tag placed at your counter. Customers tap their phone to it — no scanning needed. Tags must be ordered separately.</p>
+                </div>
+              </div>
+              {store?.nfcOrdered ? (
+                <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-2xl p-3">
+                  <CheckCircle2 size={15} className="text-blue-500 shrink-0" />
+                  <p className="text-blue-700 text-xs font-bold flex-1">NFC tag ordered — we'll ship it shortly.</p>
+                  <button onClick={() => setShowNFCReorder(true)} className="text-blue-600 text-xs font-bold underline underline-offset-2 shrink-0">Order another</button>
+                </div>
+              ) : (
+                <button onClick={() => setShowNFCReorder(true)} className="w-full py-3 rounded-2xl bg-brand-navy text-white text-sm font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-all">
+                  <Wifi size={15} className="-rotate-90" /> Order NFC Tag — $50
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ─── Scan method switch warning ─── */}
+      <AnimatePresence>
+        {pendingScanMethod && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm">
+            <div className="glass-card rounded-[2rem] p-6 w-full max-w-sm space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+                  <AlertTriangle size={20} className="text-amber-500" />
+                </div>
+                <h3 className="font-display text-lg font-bold text-brand-navy">Switch scan method?</h3>
+              </div>
+              <p className="text-sm text-brand-navy/75">
+                Switching to <span className="font-bold text-brand-navy">{pendingScanMethod === 'qr' ? 'QR Code' : 'NFC'}</span> will change how customers earn points.
+                {pendingScanMethod === 'nfc' ? ' Make sure your NFC tag is in place before switching.' : ' The QR button will appear on your customers\' wallet cards immediately.'}
+              </p>
+              {pendingScanMethod === 'nfc' && !store?.nfcOrdered && (
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-xs text-amber-700 leading-relaxed">
+                  You haven't ordered an NFC tag yet. Customers won't be able to earn points until one is installed.
+                </div>
+              )}
+              <div className="flex gap-3">
+                <button onClick={() => setPendingScanMethod(null)} disabled={savingScanMethod} className="flex-1 py-3 rounded-2xl border border-brand-navy/10 text-sm font-bold text-brand-navy/75 disabled:opacity-40">Cancel</button>
+                <button onClick={confirmScanMethodSwitch} disabled={savingScanMethod} className="flex-1 py-3 rounded-2xl bg-brand-navy text-white text-sm font-bold disabled:opacity-40">
+                  {savingScanMethod ? 'Saving…' : 'Switch'}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ─── NFC re-order modal ─── */}
+      <AnimatePresence>
+        {showNFCReorder && store && (
+          <NFCOrderModal
+            onClose={() => setShowNFCReorder(false)}
+            onOrder={async () => {
+              const snap = await getDoc(doc(db, 'app_config', 'settings'));
+              const link = snap.data()?.nfcOrderLink || 'https://buy.stripe.com/PLACEHOLDER_NFC_LINK';
+              await updateDoc(doc(db, 'stores', store.id), { nfcOrdered: true });
+              window.location.href = `${link}?client_reference_id=${store.id}`;
+            }}
+          />
         )}
       </AnimatePresence>
 
