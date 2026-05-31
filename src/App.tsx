@@ -20440,6 +20440,10 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
   const [showVisitScanSheet, setShowVisitScanSheet] = useState(false);
   const [showVisitEarnSheet, setShowVisitEarnSheet] = useState(false);
   const [showVisitQRScanner, setShowVisitQRScanner] = useState(false);
+  const [showVisitRedeemSheet, setShowVisitRedeemSheet] = useState(false);
+  const [selectedRedeemItem, setSelectedRedeemItem] = useState<{ id: string; name: string; points: number; description?: string } | null>(null);
+  const [redeemSwipeDone, setRedeemSwipeDone] = useState(false);
+  const [redeemSwipeSaving, setRedeemSwipeSaving] = useState(false);
   const [visitScanQty, setVisitScanQty] = useState(store?.membershipStampsPerVisit || 1);
   const [showRedeemFlow, setShowRedeemFlow] = useState(false);
   const [redeemDollars, setRedeemDollars] = useState('');
@@ -20669,8 +20673,25 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
             <>
               <p className="text-brand-navy font-black text-4xl leading-none">{membershipVisits}</p>
               <p className="text-brand-navy/75 text-[9px] font-bold uppercase tracking-widest mt-1">points</p>
-              {nextVisitReward && (
-                <p className="text-brand-navy/80 text-xs font-bold mt-1.5">{nextVisitReward.visits - membershipVisits} more → {nextVisitReward.reward}</p>
+              {menuItems.length > 0 ? (
+                <div className="mt-2 w-full space-y-1">
+                  {menuItems.slice(0, 2).map(item => (
+                    <div key={item.id} className="flex items-center justify-between px-2 py-1 bg-brand-navy/5 rounded-xl">
+                      <span className="text-[10px] font-bold text-brand-navy truncate">{item.name}</span>
+                      <span className="text-[10px] font-black shrink-0 ml-1" style={{ color }}>{item.points}pts</span>
+                    </div>
+                  ))}
+                  {menuItems.length > 2 && <p className="text-[9px] text-brand-navy/40 font-bold text-center">+{menuItems.length - 2} more</p>}
+                </div>
+              ) : null}
+              {menuItems.length > 0 && (
+                <button
+                  onClick={e => { e.stopPropagation(); setShowVisitRedeemSheet(true); }}
+                  className="mt-2 px-4 py-1.5 rounded-xl text-[10px] font-black text-white active:scale-95 transition-transform"
+                  style={{ background: color }}
+                >
+                  Redeem
+                </button>
               )}
             </>
           )}
@@ -20805,44 +20826,6 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                     </div>
                   </div>
                 )}
-                {visitRewards.length > 0 && (
-                  <div>
-                    <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-3">Milestone Rewards</p>
-                    {nextVisitReward && (
-                      <div className="glass-card p-4 rounded-2xl mb-2">
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="font-bold text-brand-navy text-sm">{nextVisitReward.reward}</p>
-                          <p className="text-brand-navy/75 text-xs font-bold">{membershipVisits}/{nextVisitReward.visits} pts</p>
-                        </div>
-                        <div className="h-2 bg-brand-navy/10 rounded-full overflow-hidden">
-                          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, (membershipVisits / nextVisitReward.visits) * 100)}%`, background: `linear-gradient(90deg, ${color}cc, ${color}ff)` }} />
-                        </div>
-                        <p className="text-[10px] text-brand-navy/75 mt-1.5 font-bold">{nextVisitReward.visits - membershipVisits} more points to unlock</p>
-                      </div>
-                    )}
-                    <div className="space-y-1.5">
-                      {visitRewards.map((r, i) => (
-                        <div key={i} className={`flex items-center gap-3 p-3 rounded-2xl ${membershipVisits >= r.visits ? 'bg-emerald-50' : 'bg-brand-bg'}`}>
-                          <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${membershipVisits >= r.visits ? 'bg-emerald-500' : 'bg-brand-navy/10'}`}>
-                            {membershipVisits >= r.visits ? <Check size={13} className="text-white" /> : <span className="text-[9px] font-black text-brand-navy/75">{r.visits}</span>}
-                          </div>
-                          <div className="flex-1">
-                            <p className={`text-sm font-bold ${membershipVisits >= r.visits ? 'text-emerald-700' : 'text-brand-navy'}`}>{r.reward}</p>
-                            <p className="text-[10px] text-brand-navy/75">{r.visits} pts to unlock</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                <button
-                  onClick={() => { setShowRedeemSheet(false); setShowVisitScan(true); }}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-white/90 text-xs active:scale-95 transition-all"
-                  style={{ background: `linear-gradient(135deg, ${color}99 0%, ${color}66 100%)` }}
-                >
-                  <ScanLine size={14} />
-                  Tap to scan
-                </button>
               </div>
             </motion.div>
           </div>
@@ -20915,6 +20898,89 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
           <VisitQRScannerModal storeId={store.id} onClose={() => setShowVisitQRScanner(false)} />
         )}
       </AnimatePresence>
+
+      {/* Visit redeem sheet — menu item selection */}
+      <AnimatePresence>
+        {showVisitRedeemSheet && (
+          <div className="fixed inset-0 z-[130] flex items-end justify-center">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowVisitRedeemSheet(false)} />
+            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 350, damping: 35 }} className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] px-6 pt-6 pb-10 shadow-2xl max-h-[85vh] overflow-y-auto">
+              <div className="bg-brand-navy/20 rounded-full mx-auto mb-5" style={{ width: 40, height: 4 }} />
+              <h3 className="font-display text-xl font-bold mb-1">Redeem Points</h3>
+              <p className="text-brand-navy/60 text-xs mb-5">{netAvailableVisits} points available</p>
+              {menuItems.length === 0 ? (
+                <p className="text-center text-brand-navy/50 text-sm py-6">No items available to redeem</p>
+              ) : (
+                <div className="space-y-2">
+                  {menuItems.map(item => {
+                    const canAfford = netAvailableVisits >= item.points;
+                    return (
+                      <button
+                        key={item.id}
+                        disabled={!canAfford}
+                        onClick={() => { setShowVisitRedeemSheet(false); setSelectedRedeemItem(item); setRedeemSwipeDone(false); }}
+                        className={cn('w-full flex items-center justify-between px-4 py-4 rounded-2xl text-left transition-all', canAfford ? 'bg-brand-bg active:scale-[0.99]' : 'bg-brand-bg/50 opacity-40 cursor-default')}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-brand-navy truncate">{item.name}</p>
+                          {item.description && <p className="text-[11px] text-brand-navy/60 mt-0.5 truncate">{item.description}</p>}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0 ml-3">
+                          <span className="text-xs font-black" style={{ color }}>{item.points} pts</span>
+                          {canAfford && <ChevronRight size={14} className="text-brand-navy/40" />}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              <button onClick={() => setShowVisitRedeemSheet(false)} className="w-full text-brand-navy/60 font-bold text-sm py-3 mt-4">Close</button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Vendor swipe confirmation */}
+      <AnimatePresence>
+        {selectedRedeemItem && (
+          <motion.div initial={{ opacity: 0, y: '100%' }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }} className="fixed inset-0 z-[140] flex flex-col items-center justify-center px-8" style={{ background: color }}>
+            <button onClick={() => { setSelectedRedeemItem(null); setRedeemSwipeDone(false); }} className="absolute top-12 right-5 p-2 bg-white/20 rounded-full"><X size={20} className="text-white" /></button>
+            {redeemSwipeDone ? (
+              <div className="flex flex-col items-center gap-4 text-center">
+                <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg">
+                  <CheckCircle2 size={40} style={{ color }} />
+                </div>
+                <p className="text-white font-black text-3xl">Redeemed!</p>
+                <p className="text-white/75 text-sm">{selectedRedeemItem.name}</p>
+                <p className="text-white/60 text-xs">{selectedRedeemItem.points} pts deducted · {Math.max(0, netAvailableVisits - selectedRedeemItem.points)} pts remaining</p>
+                <button onClick={() => { setSelectedRedeemItem(null); setRedeemSwipeDone(false); }} className="mt-4 px-8 py-3 bg-white rounded-2xl font-bold active:scale-95 transition-transform" style={{ color }}>Done</button>
+              </div>
+            ) : (
+              <div className="w-full max-w-xs flex flex-col items-center gap-6">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <Gift size={28} className="text-white" />
+                  </div>
+                  <p className="text-white font-black text-2xl leading-tight">{selectedRedeemItem.name}</p>
+                  <p className="text-white/75 text-sm mt-1">{selectedRedeemItem.points} pts · {Math.max(0, netAvailableVisits - selectedRedeemItem.points)} remaining after</p>
+                </div>
+                <div className="bg-white/15 rounded-2xl px-5 py-3 w-full text-center">
+                  <p className="text-white/70 text-xs font-bold">Hand your phone to the vendor to confirm</p>
+                </div>
+                <SwipeConfirm onConfirm={async () => {
+                  setRedeemSwipeSaving(true);
+                  try {
+                    await updateDoc(doc(db, 'cards', card.id), { total_visits_redeemed: increment(selectedRedeemItem.points), last_redeemed_at: serverTimestamp() });
+                    await addDoc(collection(db, 'transactions'), { user_id: card.user_id, store_id: card.store_id, card_type: 'membership', membership_type: 'visit', type: 'menu_redeem', item_name: selectedRedeemItem.name, points_redeemed: selectedRedeemItem.points, redeemed_at: serverTimestamp() });
+                    setRedeemSwipeDone(true);
+                  } catch { /* non-fatal */ } finally { setRedeemSwipeSaving(false); }
+                }} />
+                {redeemSwipeSaving && <p className="text-white/60 text-xs">Saving…</p>}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
       </>
     );
   }
@@ -20978,26 +21044,36 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               <div className="text-center mb-4">
                 <p className="text-brand-navy font-black text-5xl leading-none tracking-tight">{membershipVisits}</p>
                 <p className="text-brand-navy/75 text-xs font-bold uppercase tracking-widest mt-1.5">points</p>
-                {nextVisitReward && (
-                  <p className="text-brand-navy/75 text-sm mt-2 leading-snug">
-                    {nextVisitReward.visits - membershipVisits} more pts → <span className="font-bold" style={{ color }}>{nextVisitReward.reward}</span>
-                  </p>
-                )}
               </div>
-              {nextVisitReward && (
-                <div className="mb-4">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <p className="text-brand-navy/75 text-[10px] font-bold uppercase tracking-widest truncate pr-2">{nextVisitReward.reward}</p>
-                    <p className="text-brand-navy/72 text-[10px] font-bold shrink-0">{membershipVisits}/{nextVisitReward.visits} pts</p>
-                  </div>
-                  <div className="h-2 bg-brand-navy/10 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, (membershipVisits / nextVisitReward.visits) * 100)}%`, backgroundColor: color }} />
-                  </div>
+              {menuItems.length > 0 ? (
+                <div className="space-y-1.5 mb-4">
+                  {menuItems.slice(0, 3).map(item => {
+                    const canAfford = netAvailableVisits >= item.points;
+                    return (
+                      <div key={item.id} className="flex items-center justify-between px-3 py-2 bg-brand-navy/5 rounded-2xl">
+                        <span className="text-xs font-bold text-brand-navy truncate">{item.name}</span>
+                        <span className={`text-xs font-black shrink-0 ml-2 ${canAfford ? '' : 'opacity-40'}`} style={{ color }}>{item.points} pts</span>
+                      </div>
+                    );
+                  })}
+                  {menuItems.length > 3 && <p className="text-[10px] text-brand-navy/40 font-bold text-center">+{menuItems.length - 3} more items</p>}
                 </div>
-              )}
+              ) : null}
               <div className="flex items-center justify-between">
-                <span className="text-brand-navy/35 text-[11px] font-bold">{lastVisitReward ? `Last: ${lastVisitReward.reward}` : 'Tap card to scan'}</span>
-                <span className="text-brand-navy/75 text-[10px] font-bold flex items-center gap-1"><ScanLine size={11} /> Tap to scan</span>
+                {menuItems.length > 0 ? (
+                  <button
+                    onClick={e => { e.stopPropagation(); setShowVisitRedeemSheet(true); }}
+                    className="px-5 py-2 rounded-xl text-xs font-black text-white active:scale-95 transition-transform flex items-center gap-1.5"
+                    style={{ background: color }}
+                  >
+                    <Gift size={12} /> Redeem
+                  </button>
+                ) : (
+                  <span className="text-brand-navy/35 text-[11px] font-bold">Tap card to scan</span>
+                )}
+                <span className="text-brand-navy/75 text-[10px] font-bold flex items-center gap-1">
+                  {store?.scanMethod === 'nfc' ? <><ScanLine size={11} /> Tap to scan</> : <><QrCode size={11} /> Scan QR</>}
+                </span>
               </div>
             </>
           )}
@@ -21186,47 +21262,6 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                   </div>
                 )}
 
-                {/* Milestone rewards */}
-                {visitRewards.length > 0 && (
-                  <div>
-                    <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-3">Milestone Rewards</p>
-                    {nextVisitReward && (
-                      <div className="glass-card p-4 rounded-2xl mb-2">
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="font-bold text-brand-navy text-sm">{nextVisitReward.reward}</p>
-                          <p className="text-brand-navy/75 text-xs font-bold">{membershipVisits}/{nextVisitReward.visits} pts</p>
-                        </div>
-                        <div className="h-2 bg-brand-navy/10 rounded-full overflow-hidden">
-                          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, (membershipVisits / nextVisitReward.visits) * 100)}%`, background: `linear-gradient(90deg, ${color}cc, ${color}ff)` }} />
-                        </div>
-                        <p className="text-[10px] text-brand-navy/75 mt-1.5 font-bold">{nextVisitReward.visits - membershipVisits} more points to unlock</p>
-                      </div>
-                    )}
-                    <div className="space-y-1.5">
-                      {visitRewards.map((r, i) => (
-                        <div key={i} className={`flex items-center gap-3 p-3 rounded-2xl ${membershipVisits >= r.visits ? 'bg-emerald-50' : 'bg-brand-bg'}`}>
-                          <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${membershipVisits >= r.visits ? 'bg-emerald-500' : 'bg-brand-navy/10'}`}>
-                            {membershipVisits >= r.visits ? <Check size={13} className="text-white" /> : <span className="text-[9px] font-black text-brand-navy/75">{r.visits}</span>}
-                          </div>
-                          <div className="flex-1">
-                            <p className={`text-sm font-bold ${membershipVisits >= r.visits ? 'text-emerald-700' : 'text-brand-navy'}`}>{r.reward}</p>
-                            <p className="text-[10px] text-brand-navy/75">{r.visits} pts to unlock</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Scan NFC — at the bottom so menu items are seen first */}
-                <button
-                  onClick={() => { setShowRedeemSheet(false); setShowVisitScan(true); }}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-white/90 text-xs active:scale-95 transition-all"
-                  style={{ background: `linear-gradient(135deg, ${color}99 0%, ${color}66 100%)` }}
-                >
-                  <ScanLine size={14} />
-                  Tap to scan
-                </button>
               </div>
             </motion.div>
           </div>
@@ -21298,6 +21333,85 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
       <AnimatePresence>
         {showVisitQRScanner && store && (
           <VisitQRScannerModal storeId={store.id} onClose={() => setShowVisitQRScanner(false)} />
+        )}
+      </AnimatePresence>
+
+      {/* Visit redeem sheet — non-compact */}
+      <AnimatePresence>
+        {showVisitRedeemSheet && (
+          <div className="fixed inset-0 z-[130] flex items-end justify-center">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowVisitRedeemSheet(false)} />
+            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 350, damping: 35 }} className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] px-6 pt-6 pb-10 shadow-2xl max-h-[85vh] overflow-y-auto">
+              <div className="bg-brand-navy/20 rounded-full mx-auto mb-5" style={{ width: 40, height: 4 }} />
+              <h3 className="font-display text-xl font-bold mb-1">Redeem Points</h3>
+              <p className="text-brand-navy/60 text-xs mb-5">{netAvailableVisits} points available</p>
+              {menuItems.length === 0 ? (
+                <p className="text-center text-brand-navy/50 text-sm py-6">No items available to redeem</p>
+              ) : (
+                <div className="space-y-2">
+                  {menuItems.map(item => {
+                    const canAfford = netAvailableVisits >= item.points;
+                    return (
+                      <button
+                        key={item.id}
+                        disabled={!canAfford}
+                        onClick={() => { setShowVisitRedeemSheet(false); setSelectedRedeemItem(item); setRedeemSwipeDone(false); }}
+                        className={cn('w-full flex items-center justify-between px-4 py-4 rounded-2xl text-left transition-all', canAfford ? 'bg-brand-bg active:scale-[0.99]' : 'bg-brand-bg/50 opacity-40 cursor-default')}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-brand-navy truncate">{item.name}</p>
+                          {item.description && <p className="text-[11px] text-brand-navy/60 mt-0.5 truncate">{item.description}</p>}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0 ml-3">
+                          <span className="text-xs font-black" style={{ color }}>{item.points} pts</span>
+                          {canAfford && <ChevronRight size={14} className="text-brand-navy/40" />}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              <button onClick={() => setShowVisitRedeemSheet(false)} className="w-full text-brand-navy/60 font-bold text-sm py-3 mt-4">Close</button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Vendor swipe confirmation — non-compact */}
+      <AnimatePresence>
+        {selectedRedeemItem && (
+          <motion.div initial={{ opacity: 0, y: '100%' }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }} className="fixed inset-0 z-[140] flex flex-col items-center justify-center px-8" style={{ background: color }}>
+            <button onClick={() => { setSelectedRedeemItem(null); setRedeemSwipeDone(false); }} className="absolute top-12 right-5 p-2 bg-white/20 rounded-full"><X size={20} className="text-white" /></button>
+            {redeemSwipeDone ? (
+              <div className="flex flex-col items-center gap-4 text-center">
+                <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg"><CheckCircle2 size={40} style={{ color }} /></div>
+                <p className="text-white font-black text-3xl">Redeemed!</p>
+                <p className="text-white/75 text-sm">{selectedRedeemItem.name}</p>
+                <p className="text-white/60 text-xs">{selectedRedeemItem.points} pts deducted · {Math.max(0, netAvailableVisits - selectedRedeemItem.points)} pts remaining</p>
+                <button onClick={() => { setSelectedRedeemItem(null); setRedeemSwipeDone(false); }} className="mt-4 px-8 py-3 bg-white rounded-2xl font-bold active:scale-95 transition-transform" style={{ color }}>Done</button>
+              </div>
+            ) : (
+              <div className="w-full max-w-xs flex flex-col items-center gap-6">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4"><Gift size={28} className="text-white" /></div>
+                  <p className="text-white font-black text-2xl leading-tight">{selectedRedeemItem.name}</p>
+                  <p className="text-white/75 text-sm mt-1">{selectedRedeemItem.points} pts · {Math.max(0, netAvailableVisits - selectedRedeemItem.points)} remaining after</p>
+                </div>
+                <div className="bg-white/15 rounded-2xl px-5 py-3 w-full text-center">
+                  <p className="text-white/70 text-xs font-bold">Hand your phone to the vendor to confirm</p>
+                </div>
+                <SwipeConfirm onConfirm={async () => {
+                  setRedeemSwipeSaving(true);
+                  try {
+                    await updateDoc(doc(db, 'cards', card.id), { total_visits_redeemed: increment(selectedRedeemItem.points), last_redeemed_at: serverTimestamp() });
+                    await addDoc(collection(db, 'transactions'), { user_id: card.user_id, store_id: card.store_id, card_type: 'membership', membership_type: 'visit', type: 'menu_redeem', item_name: selectedRedeemItem.name, points_redeemed: selectedRedeemItem.points, redeemed_at: serverTimestamp() });
+                    setRedeemSwipeDone(true);
+                  } catch { /* non-fatal */ } finally { setRedeemSwipeSaving(false); }
+                }} />
+                {redeemSwipeSaving && <p className="text-white/60 text-xs">Saving…</p>}
+              </div>
+            )}
+          </motion.div>
         )}
       </AnimatePresence>
 
@@ -25952,51 +26066,6 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
               placeholder="1"
             />
             <p className="text-[10px] text-brand-navy/75 font-medium">Points awarded each time a member visits.</p>
-          </div>
-        )}
-
-        {/* Visit-based: rewards */}
-        {membershipType === 'visit' && (
-          <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Rewards</label>
-            {visitRewards.map((r, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <div className="flex items-center gap-1 bg-brand-bg rounded-xl px-2.5 py-2.5 border border-brand-navy/10 w-20 shrink-0">
-                  <span className="text-[10px] font-bold text-brand-navy/50">@</span>
-                  <input
-                    type="number"
-                    min="1"
-                    value={r.visits}
-                    onChange={e => setVisitRewards(prev => prev.map((x, idx) => idx === i ? { ...x, visits: Math.max(1, parseInt(e.target.value) || 1) } : x))}
-                    className="w-full text-sm font-bold text-brand-navy bg-transparent outline-none"
-                    placeholder="5"
-                  />
-                </div>
-                <input
-                  value={r.reward}
-                  onChange={e => setVisitRewards(prev => prev.map((x, idx) => idx === i ? { ...x, reward: e.target.value } : x))}
-                  className="flex-1 min-w-0 px-3 py-2.5 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm font-medium text-brand-navy outline-none focus:border-brand-navy/30 focus:ring-2 focus:ring-brand-gold/30"
-                  placeholder="e.g. Free coffee, 10% off"
-                />
-                <button
-                  onClick={() => setVisitRewards(prev => prev.filter((_, idx) => idx !== i))}
-                  className="flex-shrink-0 w-8 h-8 rounded-xl bg-brand-rose/10 text-brand-rose flex items-center justify-center active:scale-95 transition-all"
-                >
-                  <Trash2 size={13} />
-                </button>
-              </div>
-            ))}
-            {visitRewards.length < 10 && (
-              <button
-                onClick={() => setVisitRewards(r => [...r, { visits: (r[r.length - 1]?.visits ?? 0) + 5, reward: '' }])}
-                className="w-full py-2.5 rounded-xl border-2 border-dashed border-brand-navy/15 text-xs font-bold text-brand-navy/50 flex items-center justify-center gap-1.5 hover:border-brand-gold/40 hover:text-brand-navy/70 active:scale-[0.98] transition-all"
-              >
-                <Plus size={13} /> Add Reward
-              </button>
-            )}
-            {visitRewards.length === 0 && (
-              <p className="text-xs text-brand-navy/50 text-center py-2">No rewards yet</p>
-            )}
           </div>
         )}
 
