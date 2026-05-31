@@ -14733,6 +14733,7 @@ function SpendQRScannerModal({ onClose, onPackReady }: { onClose: () => void; on
       setStoreName(store.name);
 
       const pointsRate = store.membershipPointsRate ?? 0;
+      if (pointsRate <= 0) throw new Error('Store has no points rate configured — ask the vendor to set it up in Card Settings.');
       const pts = Math.round(amount * pointsRate);
       const threshold = store.membershipSpendThreshold || 0;
 
@@ -20684,8 +20685,9 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
     if (redeeming || !canProceedRedeem) return;
     setRedeeming(true);
     try {
+      // Only track the dollar amount redeemed — membership_points stays as total earned.
+      // netAvailablePoints = membership_points - (total_value_redeemed * redemptionRate)
       await updateDoc(doc(db, 'cards', card.id), {
-        membership_points: increment(-pointsToDeduct),
         total_value_redeemed: increment(redeemDollarNum),
         last_redeemed_at: serverTimestamp(),
       });
@@ -33983,7 +33985,6 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
           setRedeeming(true);
           try {
             await updateDoc(doc(db, 'cards', mc.id), {
-              membership_points: increment(-pointsToDeduct),
               total_value_redeemed: increment(redeemDollarNum),
               last_redeemed_at: serverTimestamp(),
             });
