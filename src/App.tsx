@@ -21670,12 +21670,36 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
   );
 }
 
+function LeaveCardSheet({ storeName, onConfirm, onClose, leaving }: { storeName?: string; onConfirm: () => void; onClose: () => void; leaving: boolean }) {
+  return (
+    <div className="fixed inset-0 z-[150] flex items-end justify-center">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 350, damping: 35 }} className="relative z-10 w-full max-w-md bg-white rounded-t-[2rem] px-6 pt-6 pb-10 space-y-4" onClick={e => e.stopPropagation()}>
+        <div className="w-10 h-1 bg-brand-navy/10 rounded-full mx-auto mb-2" />
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0"><AlertTriangle size={18} className="text-red-500" /></div>
+          <div>
+            <p className="font-bold text-brand-navy">Leave {storeName ? `${storeName}` : 'loyalty card'}?</p>
+            <p className="text-xs text-brand-navy/60 mt-0.5">Your stamps and history will be lost. You can rejoin at any time.</p>
+          </div>
+        </div>
+        <button onClick={onConfirm} disabled={leaving} className="w-full py-3.5 rounded-2xl bg-red-500 text-white font-bold text-sm disabled:opacity-50 active:scale-[0.98] transition-all">
+          {leaving ? 'Leaving…' : 'Leave Loyalty Card'}
+        </button>
+        <button onClick={onClose} className="w-full py-3 rounded-2xl bg-brand-navy/5 text-brand-navy font-bold text-sm active:scale-[0.98] transition-all">Cancel</button>
+      </motion.div>
+    </div>
+  );
+}
+
 function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = false, onClose, onScan }: { card: Card, store?: StoreProfile, onViewStore?: (s: StoreProfile) => void, compact?: boolean, autoOpen?: boolean, onClose?: () => void, onScan?: () => void, key?: React.Key }) {
   const [showQR, setShowQR] = useState(autoOpen);
   const [showCompletionPopup, setShowCompletionPopup] = useState(false);
   const [showQRScan, setShowQRScan] = useState(false);
   const [showTCModal, setShowTCModal] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const [testQty, setTestQty] = useState(1);
   const [isTestIssuing, setIsTestIssuing] = useState(false);
   const [lastTestTime, setLastTestTime] = useState(0);
@@ -21818,6 +21842,17 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
       ...(_cardCreatedMs ? { daysBetweenCardStartAndRedemption: Math.floor((Date.now() - _cardCreatedMs) / 86400000) } : {}),
     });
     postActivity(uid, userName, userPhoto, `${userName} just earned a free ${rewardLabel}!`, '🎁');
+  };
+
+  const handleLeaveCard = async () => {
+    if (!auth.currentUser) return;
+    setLeaving(true);
+    try {
+      await updateDoc(doc(db, 'cards', card.id), { isArchived: true });
+      await updateDoc(doc(db, 'users', auth.currentUser.uid), { total_cards_held: increment(-1) });
+      setShowLeaveConfirm(false);
+    } catch (err) { console.error(err); }
+    setLeaving(false);
   };
 
   const handleDelete = async (e: React.MouseEvent) => {
@@ -21977,6 +22012,9 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                 <div className="relative z-10 flex items-center gap-1.5 shrink-0">
                   {claimableTier && !card.isRedeemed && <div className="bg-white/25 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest animate-pulse">Redeem!</div>}
                   {card.isRedeemed && <div className="bg-green-400 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">Claimed</div>}
+                  <button onClick={e => { e.stopPropagation(); setShowLeaveConfirm(true); }} className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center active:scale-90 transition-transform">
+                    <MoreVertical size={12} className="text-white" />
+                  </button>
                 </div>
               </div>
               {stampGrid(5, 'gap-1.5', 'px-4 pt-4 pb-4', 15, 'text-[11px]')}
@@ -22001,6 +22039,9 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                   {card.isRedeemed && (
                     <div className="absolute top-4 left-4 bg-green-400 text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest z-10">Claimed</div>
                   )}
+                  <button onClick={e => { e.stopPropagation(); setShowLeaveConfirm(true); }} className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/15 flex items-center justify-center active:scale-90 transition-transform">
+                    <MoreVertical size={15} className="text-white" />
+                  </button>
                   <div className="relative z-10 w-[72px] h-[72px] rounded-full overflow-hidden border-[3px] border-white/60 shadow-xl cursor-pointer"
                     onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}>
                     <img src={store?.logoUrl || card.storeLogoUrl || storeFallbackImg(store?.name || card.storeName, store?.theme)} alt="" className="w-full h-full object-cover" />
@@ -22182,6 +22223,11 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Leave card confirmation — non-compact */}
+      <AnimatePresence>
+        {showLeaveConfirm && <LeaveCardSheet storeName={store?.name} onConfirm={handleLeaveCard} onClose={() => setShowLeaveConfirm(false)} leaving={leaving} />}
+      </AnimatePresence>
     </>
   );
 }
@@ -22271,6 +22317,9 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
             <p className="text-xs font-bold text-indigo-200">Redeem</p>
             <p className="text-white font-bold text-sm">${moneyValue} off</p>
           </div>
+          <button onClick={e => { e.stopPropagation(); setShowLeaveConfirm(true); }} className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center active:scale-90 transition-transform shrink-0">
+            <MoreVertical size={13} className="text-white" />
+          </button>
         </div>
         <AnimatePresence>
           {showScanSheet && (
@@ -22300,6 +22349,10 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
           {showQRScan && store && (
             <ConsumerQRScanner card={card} store={store} onClose={() => setShowQRScan(false)} />
           )}
+        </AnimatePresence>
+        {/* Leave card confirmation — compact sub/points card */}
+        <AnimatePresence>
+          {showLeaveConfirm && <LeaveCardSheet storeName={store?.name} onConfirm={handleLeaveCard} onClose={() => setShowLeaveConfirm(false)} leaving={leaving} />}
         </AnimatePresence>
       </>
     );
