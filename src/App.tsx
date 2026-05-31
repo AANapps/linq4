@@ -20689,10 +20689,12 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               )}
               <button
                 onClick={e => { e.stopPropagation(); setShowRedeemSheet(false); setShowSpendScanner(true); }}
-                className="w-full mt-1 py-2.5 rounded-xl text-[11px] font-black text-white active:scale-95 transition-transform flex items-center justify-center gap-1.5 shadow-md"
-                style={{ background: `linear-gradient(135deg, ${color}, ${color}cc)` }}
+                className="w-full mt-1.5 py-3.5 rounded-2xl text-xs font-black text-white active:scale-95 transition-transform flex items-center justify-center gap-1.5 shadow-lg relative overflow-hidden"
+                style={{ background: `linear-gradient(135deg, ${color}ff 0%, ${color}cc 100%)` }}
               >
-                <QrCode size={12} /> Collect Points
+                <span className="card-shine-ray" aria-hidden="true" />
+                <QrCode size={13} className="relative z-10" />
+                <span className="relative z-10">Collect Points</span>
               </button>
             </div>
           ) : (
@@ -20713,10 +20715,12 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               {/* Collect Points button */}
               <button
                 onClick={e => { e.stopPropagation(); if (store?.scanMethod === 'nfc') { onScan?.(); } else { setShowVisitQRScanner(true); } }}
-                className="w-full mt-1 py-2 rounded-xl text-[10px] font-black text-white/90 active:scale-95 transition-transform flex items-center justify-center gap-1"
-                style={{ background: `${color}99` }}
+                className="w-full mt-1.5 py-3.5 rounded-2xl text-xs font-black text-white active:scale-95 transition-transform flex items-center justify-center gap-1.5 shadow-lg relative overflow-hidden"
+                style={{ background: `linear-gradient(135deg, ${color}ff 0%, ${color}cc 100%)` }}
               >
-                {store?.scanMethod === 'nfc' ? <ScanLine size={11} /> : <QrCode size={11} />} Collect Points
+                <span className="card-shine-ray" aria-hidden="true" />
+                {store?.scanMethod === 'nfc' ? <ScanLine size={13} className="relative z-10" /> : <QrCode size={13} className="relative z-10" />}
+                <span className="relative z-10">Collect Points</span>
               </button>
               {/* Redeem button — full width */}
               {menuItems.length > 0 && (
@@ -20745,10 +20749,12 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               {/* Collect Points — scan vendor QR */}
               <button
                 onClick={() => { setShowRedeemSheet(false); setShowSpendScanner(true); }}
-                className="w-full mb-6 py-4 rounded-2xl font-bold text-white text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-lg"
-                style={{ background: `linear-gradient(135deg, ${color}, ${color}cc)` }}
+                className="w-full mb-6 py-4 rounded-2xl font-bold text-white text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-lg relative overflow-hidden"
+                style={{ background: `linear-gradient(135deg, ${color}ff 0%, ${color}cc 100%)` }}
               >
-                <QrCode size={16} /> Collect Points
+                <span className="card-shine-ray" aria-hidden="true" />
+                <QrCode size={16} className="relative z-10" />
+                <span className="relative z-10">Collect Points</span>
               </button>
               <div className="grid grid-cols-2 gap-3 mb-6">
                 <div className="glass-card p-5 rounded-2xl">
@@ -21062,10 +21068,12 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               </div>
               <button
                 onClick={e => { e.stopPropagation(); setShowRedeemSheet(false); setShowSpendScanner(true); }}
-                className="w-full py-3 rounded-2xl text-sm font-black text-white active:scale-[0.98] transition-transform flex items-center justify-center gap-2 shadow-md mb-2"
-                style={{ background: `linear-gradient(135deg, ${color}, ${color}cc)` }}
+                className="w-full py-4 rounded-2xl text-sm font-black text-white active:scale-[0.98] transition-transform flex items-center justify-center gap-2 shadow-lg mb-2 relative overflow-hidden"
+                style={{ background: `linear-gradient(135deg, ${color}ff 0%, ${color}cc 100%)` }}
               >
-                <QrCode size={15} /> Collect Points
+                <span className="card-shine-ray" aria-hidden="true" />
+                <QrCode size={16} className="relative z-10" />
+                <span className="relative z-10">Collect Points</span>
               </button>
               <div className="flex items-center justify-between">
                 <span className="text-brand-navy/35 text-[11px] font-bold">${totalSpent.toFixed(2)} spent{earnedRewards > 0 ? ` · ${earnedRewards} rewards` : ''}</span>
@@ -21095,10 +21103,12 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               {/* Collect Points */}
               <button
                 onClick={e => { e.stopPropagation(); if (store?.scanMethod === 'nfc') { onScan?.(); } else { setShowVisitQRScanner(true); } }}
-                className="w-full py-2.5 rounded-2xl text-xs font-black text-white/90 active:scale-[0.98] transition-transform flex items-center justify-center gap-1.5 mb-2"
-                style={{ background: `${color}99` }}
+                className="w-full py-4 rounded-2xl text-sm font-black text-white active:scale-[0.98] transition-transform flex items-center justify-center gap-2 mb-2 shadow-lg relative overflow-hidden"
+                style={{ background: `linear-gradient(135deg, ${color}ff 0%, ${color}cc 100%)` }}
               >
-                {store?.scanMethod === 'nfc' ? <ScanLine size={13} /> : <QrCode size={13} />} Collect Points
+                <span className="card-shine-ray" aria-hidden="true" />
+                {store?.scanMethod === 'nfc' ? <ScanLine size={16} className="relative z-10" /> : <QrCode size={16} className="relative z-10" />}
+                <span className="relative z-10">Collect Points</span>
               </button>
               {/* Redeem — full width */}
               {menuItems.length > 0 && (
@@ -21136,10 +21146,12 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               {/* Collect Points — scan vendor QR */}
               <button
                 onClick={() => { setShowRedeemSheet(false); setShowSpendScanner(true); }}
-                className="w-full mb-6 py-4 rounded-2xl font-bold text-white text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-lg"
-                style={{ background: `linear-gradient(135deg, ${color}, ${color}cc)` }}
+                className="w-full mb-6 py-4 rounded-2xl font-bold text-white text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-lg relative overflow-hidden"
+                style={{ background: `linear-gradient(135deg, ${color}ff 0%, ${color}cc 100%)` }}
               >
-                <QrCode size={16} /> Collect Points
+                <span className="card-shine-ray" aria-hidden="true" />
+                <QrCode size={16} className="relative z-10" />
+                <span className="relative z-10">Collect Points</span>
               </button>
 
               {/* Balance row */}
