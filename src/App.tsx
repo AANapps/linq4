@@ -18001,6 +18001,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
               </div>
 
               {!isSubscribed ? (
+                <>
                 <div className="rounded-[2rem] overflow-hidden" style={{ background: 'linear-gradient(160deg, #1e1b4b 0%, #3730a3 40%, #7c3aed 100%)' }}>
                   {/* Hero */}
                   <div className="px-6 pt-7 pb-5 text-center space-y-2">
@@ -18048,6 +18049,91 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     </button>
                   </div>
                 </div>
+
+                {/* ── Locked stats & chart preview ── */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-1.5 pt-1">
+                    <Lock size={11} className="text-brand-navy/35" />
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/35">Subscribe to unlock</p>
+                  </div>
+
+                  {/* Locked stat tiles — mirrors the real Intelligence grid */}
+                  <div className="grid grid-cols-3 gap-3">
+                    {([
+                      { icon: <AlertTriangle className="text-rose-500" />, label: 'Churn Risk', sub: '21d+ no stamp' },
+                      { icon: <UserPlus className="text-emerald-500" />, label: 'Newcomers', sub: 'joined last 30d' },
+                      { icon: <Zap className="text-amber-500" />, label: 'Avg/Visit', sub: 'stamps/scan' },
+                    ] as { icon: React.ReactElement; label: string; sub: string }[]).map(({ icon, label, sub }) => (
+                      <div key={label} className="glass-card aspect-square rounded-[1.5rem] flex flex-col items-center justify-center p-3 select-none">
+                        <div className="w-7 h-7 bg-brand-bg rounded-xl flex items-center justify-center mb-1.5">
+                          {React.cloneElement(icon, { size: 15 })}
+                        </div>
+                        <Lock size={13} className="text-brand-navy/30 mb-0.5" />
+                        <p className="text-[8px] text-brand-navy/75 font-bold uppercase tracking-wider text-center">{label}</p>
+                        <p className="text-[7px] text-brand-navy/40 font-bold uppercase tracking-wider text-center mt-0.5 leading-tight">{sub}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Locked stamps chart */}
+                  <div className="glass-card p-5 rounded-[2rem] space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-brand-navy">Stamps Chart</p>
+                        <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">By week</p>
+                      </div>
+                      <Lock size={15} className="text-brand-navy/30" />
+                    </div>
+                    <div className="relative" style={{ height: '96px' }}>
+                      <div className="absolute inset-0 flex gap-1 items-end opacity-20 select-none pointer-events-none">
+                        {[42, 68, 50, 82, 58, 91, 73, 63].map((h, i) => (
+                          <div key={i} className="relative flex-1 flex flex-col items-center gap-1">
+                            <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
+                              <div className="w-full rounded-t-lg bg-brand-gold" style={{ height: `${h}%` }} />
+                            </div>
+                            <div className="w-3 h-1 rounded-full bg-brand-navy/30" />
+                          </div>
+                        ))}
+                      </div>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                        <div className="w-9 h-9 bg-white rounded-full shadow-md flex items-center justify-center">
+                          <Lock size={16} className="text-brand-navy/40" />
+                        </div>
+                        <p className="text-[10px] font-bold text-brand-navy/40">Subscribe to see your data</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Locked growth chart */}
+                  <div className="glass-card p-5 rounded-[2rem] space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-brand-navy">Customer Growth</p>
+                        <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">User base trend</p>
+                      </div>
+                      <Lock size={15} className="text-brand-navy/30" />
+                    </div>
+                    <div className="relative" style={{ height: '96px' }}>
+                      <div className="absolute inset-0 flex gap-1 items-end opacity-20 select-none pointer-events-none">
+                        {[18, 26, 33, 40, 47, 55, 58, 63].map((h, i) => (
+                          <div key={i} className="relative flex-1 flex flex-col items-center gap-1">
+                            <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
+                              <div className="w-full rounded-t-lg bg-blue-400" style={{ height: `${h}%` }} />
+                            </div>
+                            <div className="w-3 h-1 rounded-full bg-brand-navy/30" />
+                          </div>
+                        ))}
+                      </div>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                        <div className="w-9 h-9 bg-white rounded-full shadow-md flex items-center justify-center">
+                          <Lock size={16} className="text-brand-navy/40" />
+                        </div>
+                        <p className="text-[10px] font-bold text-brand-navy/40">Subscribe to see your data</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                </>
               ) : (
                 <>
                   {/* Intelligence: At-risk + Newcomers + Avg/Visit */}
