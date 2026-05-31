@@ -20670,11 +20670,11 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               </div>
             </>
           ) : (
-            <>
+            <div className="w-full flex flex-col items-center gap-1.5">
               <p className="text-brand-navy font-black text-4xl leading-none">{membershipVisits}</p>
-              <p className="text-brand-navy/75 text-[9px] font-bold uppercase tracking-widest mt-1">points</p>
-              {menuItems.length > 0 ? (
-                <div className="mt-2 w-full space-y-1">
+              <p className="text-brand-navy/75 text-[9px] font-bold uppercase tracking-widest">points</p>
+              {menuItems.length > 0 && (
+                <div className="w-full space-y-1 mt-1">
                   {menuItems.slice(0, 2).map(item => (
                     <div key={item.id} className="flex items-center justify-between px-2 py-1 bg-brand-navy/5 rounded-xl">
                       <span className="text-[10px] font-bold text-brand-navy truncate">{item.name}</span>
@@ -20683,17 +20683,26 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                   ))}
                   {menuItems.length > 2 && <p className="text-[9px] text-brand-navy/40 font-bold text-center">+{menuItems.length - 2} more</p>}
                 </div>
-              ) : null}
+              )}
+              {/* Collect Points button */}
+              <button
+                onClick={e => { e.stopPropagation(); if (store?.scanMethod === 'nfc') { onScan?.(); } else { setShowVisitScanSheet(true); } }}
+                className="w-full mt-1 py-2 rounded-xl text-[10px] font-black text-white/90 active:scale-95 transition-transform flex items-center justify-center gap-1"
+                style={{ background: `${color}99` }}
+              >
+                {store?.scanMethod === 'nfc' ? <ScanLine size={11} /> : <QrCode size={11} />} Collect Points
+              </button>
+              {/* Redeem button — full width */}
               {menuItems.length > 0 && (
                 <button
                   onClick={e => { e.stopPropagation(); setShowVisitRedeemSheet(true); }}
-                  className="mt-2 px-4 py-1.5 rounded-xl text-[10px] font-black text-white active:scale-95 transition-transform"
+                  className="w-full py-2.5 rounded-xl text-[11px] font-black text-white active:scale-95 transition-transform flex items-center justify-center gap-1.5"
                   style={{ background: color }}
                 >
-                  Redeem
+                  <Gift size={12} /> Redeem
                 </button>
               )}
-            </>
+            </div>
           )}
         </div>
       </div>
@@ -20973,6 +20982,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                     await updateDoc(doc(db, 'cards', card.id), { total_visits_redeemed: increment(selectedRedeemItem.points), last_redeemed_at: serverTimestamp() });
                     await addDoc(collection(db, 'transactions'), { user_id: card.user_id, store_id: card.store_id, card_type: 'membership', membership_type: 'visit', type: 'menu_redeem', item_name: selectedRedeemItem.name, points_redeemed: selectedRedeemItem.points, redeemed_at: serverTimestamp() });
                     setRedeemSwipeDone(true);
+                    fireCelebAnimation('fireworks');
                   } catch { /* non-fatal */ } finally { setRedeemSwipeSaving(false); }
                 }} />
                 {redeemSwipeSaving && <p className="text-white/60 text-xs">Saving…</p>}
@@ -21041,12 +21051,12 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
             </>
           ) : (
             <>
-              <div className="text-center mb-4">
+              <div className="text-center mb-3">
                 <p className="text-brand-navy font-black text-5xl leading-none tracking-tight">{membershipVisits}</p>
                 <p className="text-brand-navy/75 text-xs font-bold uppercase tracking-widest mt-1.5">points</p>
               </div>
-              {menuItems.length > 0 ? (
-                <div className="space-y-1.5 mb-4">
+              {menuItems.length > 0 && (
+                <div className="space-y-1.5 mb-3">
                   {menuItems.slice(0, 3).map(item => {
                     const canAfford = netAvailableVisits >= item.points;
                     return (
@@ -21058,23 +21068,25 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                   })}
                   {menuItems.length > 3 && <p className="text-[10px] text-brand-navy/40 font-bold text-center">+{menuItems.length - 3} more items</p>}
                 </div>
-              ) : null}
-              <div className="flex items-center justify-between">
-                {menuItems.length > 0 ? (
-                  <button
-                    onClick={e => { e.stopPropagation(); setShowVisitRedeemSheet(true); }}
-                    className="px-5 py-2 rounded-xl text-xs font-black text-white active:scale-95 transition-transform flex items-center gap-1.5"
-                    style={{ background: color }}
-                  >
-                    <Gift size={12} /> Redeem
-                  </button>
-                ) : (
-                  <span className="text-brand-navy/35 text-[11px] font-bold">Tap card to scan</span>
-                )}
-                <span className="text-brand-navy/75 text-[10px] font-bold flex items-center gap-1">
-                  {store?.scanMethod === 'nfc' ? <><ScanLine size={11} /> Tap to scan</> : <><QrCode size={11} /> Scan QR</>}
-                </span>
-              </div>
+              )}
+              {/* Collect Points */}
+              <button
+                onClick={e => { e.stopPropagation(); if (store?.scanMethod === 'nfc') { onScan?.(); } else { setShowVisitScanSheet(true); } }}
+                className="w-full py-2.5 rounded-2xl text-xs font-black text-white/90 active:scale-[0.98] transition-transform flex items-center justify-center gap-1.5 mb-2"
+                style={{ background: `${color}99` }}
+              >
+                {store?.scanMethod === 'nfc' ? <ScanLine size={13} /> : <QrCode size={13} />} Collect Points
+              </button>
+              {/* Redeem — full width */}
+              {menuItems.length > 0 && (
+                <button
+                  onClick={e => { e.stopPropagation(); setShowVisitRedeemSheet(true); }}
+                  className="w-full py-3 rounded-2xl text-sm font-black text-white active:scale-[0.98] transition-transform flex items-center justify-center gap-2 shadow-md"
+                  style={{ background: color }}
+                >
+                  <Gift size={15} /> Redeem Points
+                </button>
+              )}
             </>
           )}
         </div>
@@ -21406,6 +21418,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                     await updateDoc(doc(db, 'cards', card.id), { total_visits_redeemed: increment(selectedRedeemItem.points), last_redeemed_at: serverTimestamp() });
                     await addDoc(collection(db, 'transactions'), { user_id: card.user_id, store_id: card.store_id, card_type: 'membership', membership_type: 'visit', type: 'menu_redeem', item_name: selectedRedeemItem.name, points_redeemed: selectedRedeemItem.points, redeemed_at: serverTimestamp() });
                     setRedeemSwipeDone(true);
+                    fireCelebAnimation('fireworks');
                   } catch { /* non-fatal */ } finally { setRedeemSwipeSaving(false); }
                 }} />
                 {redeemSwipeSaving && <p className="text-white/60 text-xs">Saving…</p>}
