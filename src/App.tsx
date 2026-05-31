@@ -9687,6 +9687,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
   const [cardDefs, setCardDefs] = useState<CollectibleCardDef[]>([]);
   const [selectedCardDef, setSelectedCardDef] = useState<CollectibleCardDef | null>(null);
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [customAuthorName, setCustomAuthorName] = useState('');
   const [anonBgType, setAnonBgType] = useState<'gradient' | 'solid'>('gradient');
   const [anonBgFrom, setAnonBgFrom] = useState('#1E1B4B');
   const [anonBgTo, setAnonBgTo] = useState('#4C1D95');
@@ -9825,7 +9826,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
       }
       await addDoc(collection(db, 'global_posts'), {
         authorUid: 'linq_admin',
-        authorName: isAnonymous ? '' : 'Linq',
+        authorName: isAnonymous ? '' : (customAuthorName.trim() || 'Linq'),
         authorPhoto: '',
         authorRole: 'admin',
         isAnonymous: isAnonymous || false,
@@ -9848,6 +9849,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
       setSelectedCardSet(null);
       setSelectedCardDef(null);
       setIsAnonymous(false);
+      setCustomAuthorName('');
       setAnonBgType('gradient');
       setAnonBgFrom('#1E1B4B');
       setAnonBgTo('#4C1D95');
@@ -9979,8 +9981,8 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
                   )}
                   <div>
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      {!isAnonymous && <span className="font-bold text-sm text-brand-navy">Linq</span>}
-                      {!isAnonymous && <span className="text-[9px] font-bold text-white px-1.5 py-0.5 rounded-full uppercase tracking-wide" style={{ background: 'var(--color-brand-gold)' }}>Official</span>}
+                      {!isAnonymous && <span className="font-bold text-sm text-brand-navy">{customAuthorName.trim() || 'Linq'}</span>}
+                      {!isAnonymous && !customAuthorName.trim() && <span className="text-[9px] font-bold text-white px-1.5 py-0.5 rounded-full uppercase tracking-wide" style={{ background: 'var(--color-brand-gold)' }}>Official</span>}
                       {isAnonymous && <span className="text-[10px] font-bold text-brand-navy/40 italic">Anonymous</span>}
                       {selectedBadge && (
                         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full border"
@@ -10010,6 +10012,22 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
               <span>Anonymous post</span>
               <span className="text-xs font-medium opacity-75">{isAnonymous ? 'Linq logo hidden' : 'Shows Linq logo'}</span>
             </button>
+
+            {/* Author name override */}
+            {!isAnonymous && (
+              <div className="bg-white rounded-2xl border border-brand-navy/8 p-4 space-y-1.5">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/50">Author name</p>
+                <input
+                  value={customAuthorName}
+                  onChange={e => setCustomAuthorName(e.target.value)}
+                  placeholder="Leave blank for Linq (official post)"
+                  className="w-full px-3 py-2.5 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm text-brand-navy outline-none focus:border-brand-navy/30"
+                />
+                <p className="text-[10px] text-brand-navy/40">
+                  {customAuthorName.trim() ? `Posts as "${customAuthorName.trim()}" — no Official badge` : 'Posts as Linq with Official badge'}
+                </p>
+              </div>
+            )}
 
             {/* Anonymous background picker */}
             {isAnonymous && (
@@ -29155,7 +29173,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
 
   useEffect(() => {
     if (post.authorRole === 'admin') {
-      setAuthorProfile({ name: 'Linq' });
+      setAuthorProfile({ name: post.authorName || 'Linq' });
       return;
     }
     if (post.authorRole === 'vendor' && post.storeId) {
@@ -29502,8 +29520,8 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                 </p>
               ) : post.authorRole === 'admin' ? (
                 <span className="inline-flex items-center gap-1.5">
-                  {!post.isAnonymous && <span className="font-bold text-sm text-brand-navy">Linq</span>}
-                  {!post.isAnonymous && <span className="text-[9px] font-bold text-white px-1.5 py-0.5 rounded-full uppercase tracking-wide" style={{ background: 'var(--color-brand-gold)' }}>Official</span>}
+                  {!post.isAnonymous && <span className="font-bold text-sm text-brand-navy">{post.authorName || 'Linq'}</span>}
+                  {!post.isAnonymous && (!post.authorName || post.authorName === 'Linq') && <span className="text-[9px] font-bold text-white px-1.5 py-0.5 rounded-full uppercase tracking-wide" style={{ background: 'var(--color-brand-gold)' }}>Official</span>}
                   {!post.isAnonymous && post.cardSetName && <span className="text-[9px] font-bold text-white px-1.5 py-0.5 rounded-full" style={{ background: 'var(--color-brand-gold)' }}>🃏 {post.cardSetName}</span>}
                 </span>
               ) : post.authorRole === 'vendor' && post.storeName && !post.wallPost ? (
