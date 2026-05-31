@@ -20661,16 +20661,20 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
         {/* White content section — centred points display */}
         <div className="bg-white px-4 py-5 flex flex-col items-center text-center">
           {membershipType === 'spend' ? (
-            <>
+            <div className="w-full flex flex-col items-center gap-1.5">
               <p className="text-brand-navy font-black text-4xl leading-none">{fmtK(netAvailablePoints)}</p>
-              <p className="text-brand-navy/75 text-[9px] font-bold uppercase tracking-widest mt-1">points available</p>
+              <p className="text-brand-navy/75 text-[9px] font-bold uppercase tracking-widest">points available</p>
               {redeemableValue > 0 && (
-                <p className="text-brand-navy/75 font-bold text-xs mt-1.5">≈ ${redeemableValue.toFixed(2)} redeemable</p>
+                <p className="text-brand-navy/75 font-bold text-xs">≈ ${redeemableValue.toFixed(2)} redeemable</p>
               )}
-              <div className="mt-3 w-full bg-brand-navy/5 rounded-2xl px-3 py-2 text-center">
-                <p className="text-brand-navy/75 text-[9px] font-bold uppercase tracking-widest">Tap to show QR to vendor</p>
-              </div>
-            </>
+              <button
+                onClick={e => { e.stopPropagation(); setShowRedeemSheet(false); setShowSpendScanner(true); }}
+                className="w-full mt-1 py-2.5 rounded-xl text-[11px] font-black text-white active:scale-95 transition-transform flex items-center justify-center gap-1.5 shadow-md"
+                style={{ background: `linear-gradient(135deg, ${color}, ${color}cc)` }}
+              >
+                <QrCode size={12} /> Collect Points
+              </button>
+            </div>
           ) : (
             <div className="w-full flex flex-col items-center gap-1.5">
               <p className="text-brand-navy font-black text-4xl leading-none">{netAvailableVisits}</p>
@@ -20718,22 +20722,14 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 <div><h3 className="font-display text-2xl font-bold">{membershipName}</h3><p className="text-brand-navy/75 text-xs mt-0.5">Points & Redemption</p></div>
                 <button onClick={() => setShowRedeemSheet(false)} className="p-2 text-brand-navy/75 hover:text-brand-navy"><X size={20} /></button>
               </div>
-              {/* Primary: scan vendor QR to earn */}
+              {/* Collect Points — scan vendor QR */}
               <button
                 onClick={() => { setShowRedeemSheet(false); setShowSpendScanner(true); }}
-                className="w-full mb-4 py-4 rounded-2xl font-bold text-white text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-lg"
+                className="w-full mb-6 py-4 rounded-2xl font-bold text-white text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-lg"
                 style={{ background: `linear-gradient(135deg, ${color}, ${color}cc)` }}
               >
-                <QrCode size={16} /> Scan to Earn Points
+                <QrCode size={16} /> Collect Points
               </button>
-              {/* Fallback: show QR to vendor */}
-              <div className="bg-brand-navy/5 rounded-2xl px-5 py-4 mb-6 flex flex-col items-center gap-3">
-                <p className="text-brand-navy/40 text-[9px] font-bold uppercase tracking-widest">Or show this to the vendor</p>
-                <div className="bg-white p-2 rounded-xl border border-brand-navy/10">
-                  <QRCodeSVG value={`stamp:${card.user_id}:${card.store_id}`} size={110} />
-                </div>
-                {userHandle && <p className="text-brand-navy/60 font-bold text-sm">@{userHandle}</p>}
-              </div>
               <div className="grid grid-cols-2 gap-3 mb-6">
                 <div className="glass-card p-5 rounded-2xl">
                   <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-1">Available</p>
@@ -21037,16 +21033,20 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
         <div className="bg-white px-8 pt-7 pb-6 flex-1">
           {membershipType === 'spend' ? (
             <>
-              <div className="text-center mb-4">
+              <div className="text-center mb-3">
                 <p className="text-brand-navy font-black text-5xl leading-none tracking-tight">{fmtK(netAvailablePoints)}</p>
                 <p className="text-brand-navy/75 text-xs font-bold uppercase tracking-widest mt-1.5">points available</p>
                 {redeemableValue > 0 && (
                   <p className="text-brand-navy text-2xl font-black mt-2 leading-none">≈ ${redeemableValue.toFixed(2)} off</p>
                 )}
               </div>
-              <div className="bg-brand-navy/5 rounded-2xl px-4 py-2 mb-3 text-center">
-                <p className="text-brand-navy/75 text-[9px] font-bold uppercase tracking-widest">Tap to show QR to vendor</p>
-              </div>
+              <button
+                onClick={e => { e.stopPropagation(); setShowRedeemSheet(false); setShowSpendScanner(true); }}
+                className="w-full py-3 rounded-2xl text-sm font-black text-white active:scale-[0.98] transition-transform flex items-center justify-center gap-2 shadow-md mb-2"
+                style={{ background: `linear-gradient(135deg, ${color}, ${color}cc)` }}
+              >
+                <QrCode size={15} /> Collect Points
+              </button>
               <div className="flex items-center justify-between">
                 <span className="text-brand-navy/35 text-[11px] font-bold">${totalSpent.toFixed(2)} spent{earnedRewards > 0 ? ` · ${earnedRewards} rewards` : ''}</span>
                 <span className="text-brand-navy/75 text-[10px] font-bold flex items-center gap-1"><Gift size={11} /> Tap to view</span>
@@ -21113,22 +21113,14 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 <button onClick={() => setShowRedeemSheet(false)} className="p-2 text-brand-navy/75 hover:text-brand-navy"><X size={20} /></button>
               </div>
 
-              {/* Primary: scan vendor QR to earn */}
+              {/* Collect Points — scan vendor QR */}
               <button
                 onClick={() => { setShowRedeemSheet(false); setShowSpendScanner(true); }}
-                className="w-full mb-4 py-4 rounded-2xl font-bold text-white text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-lg"
+                className="w-full mb-6 py-4 rounded-2xl font-bold text-white text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-lg"
                 style={{ background: `linear-gradient(135deg, ${color}, ${color}cc)` }}
               >
-                <QrCode size={16} /> Scan to Earn Points
+                <QrCode size={16} /> Collect Points
               </button>
-              {/* Fallback: show QR to vendor */}
-              <div className="bg-brand-navy/5 rounded-2xl px-5 py-4 mb-6 flex flex-col items-center gap-3">
-                <p className="text-brand-navy/40 text-[9px] font-bold uppercase tracking-widest">Or show this to the vendor</p>
-                <div className="bg-white p-2 rounded-xl border border-brand-navy/10">
-                  <QRCodeSVG value={`stamp:${card.user_id}:${card.store_id}`} size={110} />
-                </div>
-                {userHandle && <p className="text-brand-navy/60 font-bold text-sm">@{userHandle}</p>}
-              </div>
 
               {/* Balance row */}
               <div className="grid grid-cols-2 gap-3 mb-6">
