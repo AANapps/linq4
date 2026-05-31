@@ -14799,10 +14799,26 @@ function SpendQRScannerModal({ onClose, onPackReady }: { onClose: () => void; on
     }
   };
 
+  const startCamera = React.useCallback(async () => {
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    try {
+      if (hasBarcodeDetector) (window as any).__spendDetector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      if (!scanningRef.current) { stream.getTracks().forEach(t => t.stop()); return; }
+      streamRef.current = stream;
+      if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play().catch(() => {}); }
+    } catch { setScanState('error'); setStatusMsg('Camera access denied.'); }
+  }, [hasBarcodeDetector]);
+
   const tick = async () => {
     if (!scanningRef.current) return;
     const video = videoRef.current;
     if (!video || video.readyState < 2) { if (scanningRef.current) rafRef.current = requestAnimationFrame(tick); return; }
+    // Resume if paused (e.g. app came back from background)
+    if (video.paused) { video.play().catch(() => {}); if (scanningRef.current) rafRef.current = requestAnimationFrame(tick); return; }
+    // Restart if track ended (camera taken by another app)
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (track && track.readyState === 'ended') { startCamera().then(() => { if (scanningRef.current) rafRef.current = requestAnimationFrame(tick); }); return; }
     try {
       if (hasBarcodeDetector && (window as any).__spendDetector) {
         const barcodes = await (window as any).__spendDetector.detect(video);
@@ -14829,17 +14845,10 @@ function SpendQRScannerModal({ onClose, onPackReady }: { onClose: () => void; on
 
   React.useEffect(() => {
     scanningRef.current = true;
-    const start = async () => {
-      try {
-        if (hasBarcodeDetector) (window as any).__spendDetector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        if (!scanningRef.current) { stream.getTracks().forEach(t => t.stop()); return; }
-        streamRef.current = stream;
-        if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play().catch(() => {}); tick(); }
-      } catch { setScanState('error'); setStatusMsg('Camera access denied.'); }
-    };
-    start();
-    return () => stopCamera();
+    startCamera().then(() => { if (scanningRef.current) tick(); });
+    const onVisible = () => { if (document.visibilityState === 'visible' && scanningRef.current) startCamera().then(() => { if (scanningRef.current) { cancelAnimationFrame(rafRef.current); tick(); } }); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { stopCamera(); document.removeEventListener('visibilitychange', onVisible); };
   }, []);
 
   return createPortal(
@@ -14986,10 +14995,24 @@ function VisitQRScannerModal({ storeId, onClose, onPackReady }: { storeId: strin
     }
   };
 
+  const startCamera = React.useCallback(async () => {
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    try {
+      if (hasBarcodeDetector) (window as any).__visitDetector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      if (!scanningRef.current) { stream.getTracks().forEach(t => t.stop()); return; }
+      streamRef.current = stream;
+      if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play().catch(() => {}); }
+    } catch { setScanState('error'); setStatusMsg('Camera access denied.'); }
+  }, [hasBarcodeDetector]);
+
   const tick = async () => {
     if (!scanningRef.current) return;
     const video = videoRef.current;
     if (!video || video.readyState < 2) { if (scanningRef.current) rafRef.current = requestAnimationFrame(tick); return; }
+    if (video.paused) { video.play().catch(() => {}); if (scanningRef.current) rafRef.current = requestAnimationFrame(tick); return; }
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (track && track.readyState === 'ended') { startCamera().then(() => { if (scanningRef.current) rafRef.current = requestAnimationFrame(tick); }); return; }
     try {
       if (hasBarcodeDetector && (window as any).__visitDetector) {
         const barcodes = await (window as any).__visitDetector.detect(video);
@@ -15016,17 +15039,10 @@ function VisitQRScannerModal({ storeId, onClose, onPackReady }: { storeId: strin
 
   React.useEffect(() => {
     scanningRef.current = true;
-    const start = async () => {
-      try {
-        if (hasBarcodeDetector) (window as any).__visitDetector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        if (!scanningRef.current) { stream.getTracks().forEach(t => t.stop()); return; }
-        streamRef.current = stream;
-        if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play().catch(() => {}); tick(); }
-      } catch { setScanState('error'); setStatusMsg('Camera access denied.'); }
-    };
-    start();
-    return () => stopCamera();
+    startCamera().then(() => { if (scanningRef.current) tick(); });
+    const onVisible = () => { if (document.visibilityState === 'visible' && scanningRef.current) startCamera().then(() => { if (scanningRef.current) { cancelAnimationFrame(rafRef.current); tick(); } }); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { stopCamera(); document.removeEventListener('visibilitychange', onVisible); };
   }, []);
 
   return createPortal(
@@ -15173,6 +15189,11 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady, initialQty }: {
       if (scanningRef.current) rafRef.current = requestAnimationFrame(tick);
       return;
     }
+    // Resume if browser paused playback (e.g. after returning from background)
+    if (video.paused) { video.play().catch(() => {}); if (scanningRef.current) rafRef.current = requestAnimationFrame(tick); return; }
+    // Restart if track ended (e.g. camera taken by another app)
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (track && track.readyState === 'ended') { startCamera(); return; }
     try {
       if (hasBarcodeDetector && detectorRef.current) {
         const barcodes = await detectorRef.current.detect(video);
@@ -15222,8 +15243,12 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady, initialQty }: {
     }
   };
 
-  useEffect(() => { startCamera(); }, []);
-  useEffect(() => () => stopCamera(), []);
+  useEffect(() => {
+    startCamera();
+    const onVisible = () => { if (document.visibilityState === 'visible' && scanningRef.current) startCamera(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { stopCamera(); document.removeEventListener('visibilitychange', onVisible); };
+  }, []);
 
   const handleClose = () => { stopCamera(); onClose(); };
 
