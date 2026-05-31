@@ -476,6 +476,8 @@ interface ConsumerOnboardingData {
 interface VendorOnboardingData {
   type: 'vendor';
   businessName: string;
+  country: string;
+  companyNumber: string;
   category: string;
   addrLine1: string;
   addrLine2: string;
@@ -530,6 +532,9 @@ interface UserProfile {
   privacyAcceptedAt?: any;
   vendorTermsAcceptedAt?: any;
   privacyMode?: boolean;
+  accountStatus?: 'pending' | 'approved';
+  country?: string;
+  companyNumber?: string;
 }
 
 interface Announcement {
@@ -1835,6 +1840,9 @@ export default function App() {
         photoURL: user.photoURL || '',
         role: 'vendor',
         onboardingComplete: true,
+        accountStatus: 'pending',
+        country: data.country,
+        companyNumber: data.companyNumber,
         privacyAcceptedAt: serverTimestamp(),
         vendorTermsAcceptedAt: serverTimestamp(),
         total_cards_held: 0,
@@ -1891,6 +1899,10 @@ export default function App() {
 
   if (needsOnboarding) {
     return <OnboardingScreen user={user} onComplete={handleOnboardingComplete} />;
+  }
+
+  if (profile?.role === 'vendor' && profile?.accountStatus === 'pending') {
+    return <VendorPendingScreen profile={profile} onLogout={handleLogout} />;
   }
 
   if (!profile) {
@@ -2256,6 +2268,44 @@ function composeAddress(line1: string, line2: string, town: string, state: strin
 }
 
 // --- Shared Components ---
+
+function VendorPendingScreen({ profile, onLogout }: { profile: UserProfile; onLogout: () => void }) {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-brand-bg px-8 text-center">
+      <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
+        <Clock className="w-8 h-8 text-amber-500" />
+      </div>
+      <h1 className="font-display font-bold text-2xl text-brand-navy mb-2">Application received</h1>
+      <p className="text-sm text-brand-navy/75 leading-relaxed mb-6 max-w-xs">
+        We're verifying your business details. You'll receive an email once your account has been approved — this usually takes 1–2 business days.
+      </p>
+      <div className="bg-white rounded-2xl border border-brand-navy/10 p-4 w-full max-w-xs text-left space-y-2 mb-8">
+        <div className="flex items-center gap-3">
+          <Building2 size={16} className="text-brand-navy/50 shrink-0" />
+          <span className="text-sm font-semibold text-brand-navy truncate">{(profile as any).businessName || profile.name}</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <Mail size={16} className="text-brand-navy/50 shrink-0" />
+          <span className="text-sm text-brand-navy/75 truncate">{profile.email}</span>
+        </div>
+        {profile.country && (
+          <div className="flex items-center gap-3">
+            <Globe size={16} className="text-brand-navy/50 shrink-0" />
+            <span className="text-sm text-brand-navy/75">{profile.country}{profile.companyNumber ? ` · ${profile.companyNumber}` : ''}</span>
+          </div>
+        )}
+      </div>
+      <p className="text-xs text-brand-navy/50 mb-6">Questions? Email <span className="text-brand-gold font-semibold">info@adastranetwork.co.uk</span></p>
+      <button
+        onClick={onLogout}
+        className="flex items-center gap-2 text-sm text-brand-navy/60 hover:text-brand-navy transition-colors"
+      >
+        <LogOut size={15} />
+        Sign out
+      </button>
+    </div>
+  );
+}
 
 function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
   onLogin: () => Promise<string | null>;
@@ -2902,8 +2952,8 @@ function OnboardingScreen({ user, onComplete }: {
 }) {
   const [role, setRole] = React.useState<'consumer' | 'vendor' | null>(null);
   const isVendor = role === 'vendor';
-  // Step 0 = role selection; steps 1-4 = role-specific details; step 5 = privacy consent
-  const TOTAL_STEPS = 6;
+  // Step 0 = role selection; vendor steps 1-6; consumer steps 1-5 (privacy is always last)
+  const TOTAL_STEPS = isVendor ? 7 : 6;
 
   const [step, setStep] = React.useState(0);
   const [saving, setSaving] = React.useState(false);
@@ -2920,6 +2970,8 @@ function OnboardingScreen({ user, onComplete }: {
 
   // Vendor fields
   const [businessName, setBusinessName] = React.useState('');
+  const [country, setCountry] = React.useState('');
+  const [companyNumber, setCompanyNumber] = React.useState('');
   const [category, setCategory] = React.useState('');
   const [addrLine1, setAddrLine1] = React.useState('');
   const [addrLine2, setAddrLine2] = React.useState('');
@@ -2935,6 +2987,20 @@ function OnboardingScreen({ user, onComplete }: {
 
   const GENDERS = ['Male', 'Female', 'Non-binary', 'Prefer not to say'];
   const CATEGORIES: Category[] = ['Food', 'Beauty', 'Barber', 'Gym', 'Parking', 'Retail'];
+
+  const COUNTRY_REG: Record<string, { name: string; flag: string; label: string; placeholder: string }> = {
+    GB: { name: 'United Kingdom', flag: '🇬🇧', label: 'Companies House Reg No', placeholder: '12345678' },
+    AU: { name: 'Australia', flag: '🇦🇺', label: 'ABN (Australian Business Number)', placeholder: '12 345 678 901' },
+    US: { name: 'United States', flag: '🇺🇸', label: 'EIN (Employer Identification Number)', placeholder: 'XX-XXXXXXX' },
+    CA: { name: 'Canada', flag: '🇨🇦', label: 'Business Number (BN)', placeholder: '123456789' },
+    IE: { name: 'Ireland', flag: '🇮🇪', label: 'CRO Number', placeholder: '123456' },
+    NZ: { name: 'New Zealand', flag: '🇳🇿', label: 'NZBN', placeholder: '9429000000000' },
+    ZA: { name: 'South Africa', flag: '🇿🇦', label: 'Company Registration Number', placeholder: '2023/123456/07' },
+    SG: { name: 'Singapore', flag: '🇸🇬', label: 'UEN (Unique Entity Number)', placeholder: '201234567C' },
+    AE: { name: 'UAE', flag: '🇦🇪', label: 'Trade License Number', placeholder: 'CN-1234567' },
+    IN: { name: 'India', flag: '🇮🇳', label: 'CIN / GSTIN', placeholder: 'U74999MH2021PTC123456' },
+  };
+  const selectedCountryReg = country ? COUNTRY_REG[country] : null;
 
   const requestLocation = () => {
     setLocationStatus('requesting');
@@ -2960,8 +3026,9 @@ function OnboardingScreen({ user, onComplete }: {
     : step === TOTAL_STEPS - 1 ? privacyAccepted
     : isVendor
       ? step === 1 ? businessName.trim().length > 0
-      : step === 2 ? !!category
-      : step === 3 ? addrLine1.trim().length > 0 && addrTown.trim().length > 0 && phone.trim().length > 0
+      : step === 2 ? !!country && companyNumber.trim().length > 0
+      : step === 3 ? !!category
+      : step === 4 ? addrLine1.trim().length > 0 && addrTown.trim().length > 0 && phone.trim().length > 0
       : locationStatus === 'granted' || locationStatus === 'denied'
     : step === 1 ? fullName.trim().length > 0 && handle.trim().length >= 3 && !handleError && !handleChecking
       : step === 2 ? !!gender
@@ -2993,7 +3060,7 @@ function OnboardingScreen({ user, onComplete }: {
   const handleFinish = async () => {
     setSaving(true);
     if (isVendor) {
-      await onComplete({ type: 'vendor', businessName, category, addrLine1, addrLine2, addrTown, addrState, addrPostcode, phone, description, location: locationData });
+      await onComplete({ type: 'vendor', businessName, country, companyNumber, category, addrLine1, addrLine2, addrTown, addrState, addrPostcode, phone, description, location: locationData });
     } else {
       await onComplete({ type: 'consumer', name: fullName.trim(), handle, gender, birthday, location: locationData });
     }
@@ -3151,7 +3218,44 @@ function OnboardingScreen({ user, onComplete }: {
         />
       </div>
     </>,
-    // Step 1 — Category
+    // Step 1 — Country & Company Registration
+    <>
+      <div className="w-14 h-14 bg-brand-gold/10 rounded-full flex items-center justify-center mx-auto mb-4">
+        <Globe className="w-7 h-7 text-brand-gold" />
+      </div>
+      <h2 className="font-display font-bold text-2xl text-brand-navy mb-1">Business registration</h2>
+      <p className="text-sm text-brand-navy/75 mb-6">Select your country and enter your registration number</p>
+      <div className="w-full space-y-3">
+        <div className="w-full grid grid-cols-2 gap-2 max-h-64 overflow-y-auto pb-1">
+          {Object.entries(COUNTRY_REG).map(([code, c]) => (
+            <button
+              key={code}
+              onClick={() => { setCountry(code); setCompanyNumber(''); }}
+              className={`py-3 px-3 rounded-2xl font-semibold text-sm flex items-center gap-2 transition-all active:scale-[0.98] ${
+                country === code ? 'bg-brand-navy text-white shadow-lg shadow-brand-navy/20' : 'bg-white border-2 border-brand-navy/10 text-brand-navy hover:border-brand-gold/40'
+              }`}
+            >
+              <span className="text-base">{c.flag}</span>
+              <span className="truncate text-xs">{c.name}</span>
+              {country === code && <Sparkles size={12} className="text-brand-gold ml-auto shrink-0" />}
+            </button>
+          ))}
+        </div>
+        {selectedCountryReg && (
+          <div className="pt-1">
+            <label className="text-xs font-semibold text-brand-navy/60 uppercase tracking-wide pl-1 mb-1.5 block">{selectedCountryReg.label}</label>
+            <input
+              type="text"
+              value={companyNumber}
+              onChange={e => setCompanyNumber(e.target.value)}
+              placeholder={selectedCountryReg.placeholder}
+              className="w-full px-5 py-4 rounded-2xl bg-white border-2 border-brand-navy/10 text-brand-navy font-bold text-base focus:outline-none focus:border-brand-gold/60 placeholder:font-normal placeholder:text-brand-navy/72"
+            />
+          </div>
+        )}
+      </div>
+    </>,
+    // Step 2 — Category
     <>
       <div className="w-14 h-14 bg-brand-gold/10 rounded-full flex items-center justify-center mx-auto mb-4">
         <Hash className="w-7 h-7 text-brand-gold" />
@@ -3173,7 +3277,7 @@ function OnboardingScreen({ user, onComplete }: {
         ))}
       </div>
     </>,
-    // Step 2 — Contact & Address
+    // Step 3 — Contact & Address
     <>
       <div className="w-14 h-14 bg-brand-gold/10 rounded-full flex items-center justify-center mx-auto mb-4">
         <MapPin className="w-7 h-7 text-brand-gold" />
@@ -3231,7 +3335,7 @@ function OnboardingScreen({ user, onComplete }: {
         </div>
       </div>
     </>,
-    // Step 3 — Location (GPS)
+    // Step 4 — Location (GPS)
     <>
       <div className="w-14 h-14 bg-brand-gold/10 rounded-full flex items-center justify-center mx-auto mb-4">
         <MapPin className="w-7 h-7 text-brand-gold" />
@@ -3240,7 +3344,7 @@ function OnboardingScreen({ user, onComplete }: {
       <p className="text-sm text-brand-navy/75 mb-8">Allow location access so customers nearby can discover you</p>
       <LocationStep locationData={locationData} locationStatus={locationStatus} onRequest={requestLocation} />
     </>,
-    // Step 4 — Privacy & vendor terms consent
+    // Step 5 — Privacy & vendor terms consent
     <div className="w-full text-left space-y-4">
       <div className="w-14 h-14 bg-brand-navy/8 rounded-full flex items-center justify-center mx-auto mb-4">
         <ShieldCheck className="w-7 h-7 text-brand-navy" />
@@ -5686,6 +5790,9 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
   const [vendorCollectionMap, setVendorCollectionMap] = useState<Record<string, 'users' | 'vendors'>>({});
   const [vendorAdminMap, setVendorAdminMap] = useState<Record<string, boolean>>({});
   const [togglingAdminUid, setTogglingAdminUid] = useState<string | null>(null);
+  const [storesPanelTab, setStoresPanelTab] = useState<'businesses' | 'pending'>('businesses');
+  const [pendingVendors, setPendingVendors] = useState<UserProfile[]>([]);
+  const [approvingUid, setApprovingUid] = useState<string | null>(null);
 
   const handleToggleSub = async (store: StoreProfile) => {
     setTogglingId(store.id);
@@ -5790,6 +5897,23 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
     }).catch(console.error);
   }, [stores.map(s => (s as any).ownerUid).join(',')]);
 
+  useEffect(() => {
+    return onSnapshot(
+      query(collection(db, 'vendors'), where('accountStatus', '==', 'pending')),
+      snap => setPendingVendors(snap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile))),
+      () => {}
+    );
+  }, []);
+
+  const handleApproveVendor = async (uid: string) => {
+    setApprovingUid(uid);
+    try {
+      await updateDoc(doc(db, 'vendors', uid), { accountStatus: 'approved' });
+    } finally {
+      setApprovingUid(null);
+    }
+  };
+
   const filtered = search.trim()
     ? stores.filter(s => s.name?.toLowerCase().includes(search.toLowerCase()))
     : stores;
@@ -5820,6 +5944,57 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
         </div>
       </header>
 
+      <div className="px-5 pt-3 pb-0 flex gap-2">
+        <button
+          onClick={() => setStoresPanelTab('businesses')}
+          className={`px-4 py-2 rounded-2xl text-sm font-bold transition-all ${storesPanelTab === 'businesses' ? 'bg-brand-navy text-white' : 'bg-white border border-brand-navy/10 text-brand-navy/75'}`}
+        >
+          All businesses
+        </button>
+        <button
+          onClick={() => setStoresPanelTab('pending')}
+          className={`px-4 py-2 rounded-2xl text-sm font-bold transition-all flex items-center gap-1.5 ${storesPanelTab === 'pending' ? 'bg-amber-500 text-white' : 'bg-white border border-brand-navy/10 text-brand-navy/75'}`}
+        >
+          Pending
+          {pendingVendors.length > 0 && (
+            <span className={`text-xs font-black px-1.5 py-0.5 rounded-full ${storesPanelTab === 'pending' ? 'bg-white/20' : 'bg-amber-500 text-white'}`}>{pendingVendors.length}</span>
+          )}
+        </button>
+      </div>
+
+      {storesPanelTab === 'pending' ? (
+        <div className="flex-1 overflow-y-auto px-5 py-3 space-y-3 pb-10">
+          {pendingVendors.length === 0 ? (
+            <div className="text-center py-12 text-brand-navy/40 text-sm">No pending applications</div>
+          ) : pendingVendors.map(vendor => (
+            <div key={vendor.uid} className="bg-white rounded-2xl border border-brand-navy/8 p-4 space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="font-bold text-sm text-brand-navy truncate">{(vendor as any).name || vendor.email}</p>
+                  <p className="text-xs text-brand-navy/60 truncate">{vendor.email}</p>
+                </div>
+                <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-1 rounded-full shrink-0">Pending</span>
+              </div>
+              {vendor.country && (
+                <div className="flex items-center gap-2 text-xs text-brand-navy/70">
+                  <Globe size={13} className="shrink-0" />
+                  <span>{vendor.country}{vendor.companyNumber ? ` · ${vendor.companyNumber}` : ''}</span>
+                </div>
+              )}
+              <button
+                onClick={() => handleApproveVendor(vendor.uid)}
+                disabled={approvingUid === vendor.uid}
+                className="w-full py-2.5 rounded-xl bg-green-600 text-white font-bold text-sm disabled:opacity-50 flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+              >
+                {approvingUid === vendor.uid
+                  ? <><Loader2 size={14} className="animate-spin" /> Approving…</>
+                  : <><Check size={14} /> Approve</>}
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : (
+      <>
       <div className="px-5 pt-3 pb-2">
         <input
           value={search}
@@ -6103,6 +6278,8 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
           <AdminStoreEditModal store={editingStore} onClose={() => setEditingStore(null)} />
         )}
       </AnimatePresence>
+      </>
+      )}
     </motion.div>
   );
 }
