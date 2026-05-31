@@ -21021,7 +21021,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                             </div>
                             <div className="flex flex-col items-end gap-0.5 shrink-0 ml-3">
                               <span className="text-xs font-black" style={{ color }}>{item.points} pts</span>
-                              {item.value ? <span className="text-[10px] font-bold text-emerald-600">${item.value.toFixed(2)}</span> : null}
+                              {item.value ? <span className="text-[10px] font-bold text-white bg-emerald-500 px-1.5 py-0.5 rounded-full">Save ${item.value.toFixed(2)}</span> : null}
                               {canAfford && !isRedeeming && <ChevronRight size={14} className="text-brand-navy/72" />}
                               {isRedeeming && <span className="text-[10px] text-brand-navy/75">Redeeming…</span>}
                             </div>
@@ -21507,7 +21507,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                             </div>
                             <div className="flex flex-col items-end gap-0.5 shrink-0 ml-3">
                               <span className="text-xs font-black" style={{ color }}>{item.points} pts</span>
-                              {item.value ? <span className="text-[10px] font-bold text-emerald-600">${item.value.toFixed(2)}</span> : null}
+                              {item.value ? <span className="text-[10px] font-bold text-white bg-emerald-500 px-1.5 py-0.5 rounded-full">Save ${item.value.toFixed(2)}</span> : null}
                               {canAfford && !isRedeeming && <ChevronRight size={14} className="text-brand-navy/72" />}
                               {isRedeeming && <span className="text-[10px] text-brand-navy/75">Redeeming…</span>}
                             </div>
