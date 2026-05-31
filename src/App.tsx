@@ -20897,33 +20897,19 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               <div className="bg-brand-navy/20 rounded-full mx-auto mb-5" style={{ width: 40, height: 4 }} />
               <h3 className="font-display text-xl font-bold text-center mb-1">{store?.name}</h3>
               <p className="text-brand-navy/60 text-xs text-center mb-5">{membershipVisits} points</p>
-              {/* Identity QR — vendor scans via nav QR button */}
-              <div className="bg-brand-navy rounded-2xl px-5 py-4 mb-5 flex flex-col items-center gap-3">
-                <p className="text-white/50 text-[9px] font-bold uppercase tracking-widest">Show this to the vendor</p>
-                <div className="bg-white p-2 rounded-xl">
-                  <QRCodeSVG value={`stamp:${card.user_id}:${card.store_id}`} size={140} />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3 mb-5">
-                <button onClick={() => { setShowVisitScanSheet(false); setShowVisitQRScanner(true); }}
-                  className="flex flex-col items-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform gradient-logo-blue text-white shadow-lg relative overflow-hidden">
-                  <span className="card-shine-ray" aria-hidden="true" />
-                  <QrCode size={28} className="relative z-10" />
-                  <span className="relative z-10">Scan QR Code</span>
-                </button>
-                <button onClick={() => { setShowVisitScanSheet(false); onScan?.(); }}
-                  className="flex flex-col items-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform bg-brand-navy/8 text-brand-navy">
-                  <ScanLine size={28} />
-                  Tap to scan
-                </button>
-              </div>
+              <button onClick={() => { setShowVisitScanSheet(false); setShowVisitQRScanner(true); }}
+                className="w-full flex items-center justify-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform gradient-logo-blue text-white shadow-lg relative overflow-hidden mb-5">
+                <span className="card-shine-ray" aria-hidden="true" />
+                <QrCode size={22} className="relative z-10" />
+                <span className="relative z-10">Scan QR Code</span>
+              </button>
               <button onClick={() => setShowVisitScanSheet(false)} className="w-full text-brand-navy/75 font-bold text-sm py-2">Close</button>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
 
-      {/* Visit QR scanner — compact card */}
+      {/* Visit QR scanner */}
       <AnimatePresence>
         {showVisitQRScanner && store && (
           <VisitQRScannerModal storeId={store.id} onClose={() => setShowVisitQRScanner(false)} />
@@ -21296,26 +21282,12 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               <div className="bg-brand-navy/20 rounded-full mx-auto mb-5" style={{ width: 40, height: 4 }} />
               <h3 className="font-display text-xl font-bold text-center mb-1">{store?.name}</h3>
               <p className="text-brand-navy/60 text-xs text-center mb-5">{membershipVisits} points</p>
-              {/* Identity QR — vendor scans via nav QR button */}
-              <div className="bg-brand-navy rounded-2xl px-5 py-4 mb-5 flex flex-col items-center gap-3">
-                <p className="text-white/50 text-[9px] font-bold uppercase tracking-widest">Show this to the vendor</p>
-                <div className="bg-white p-2 rounded-xl">
-                  <QRCodeSVG value={`stamp:${card.user_id}:${card.store_id}`} size={140} />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3 mb-5">
-                <button onClick={() => { setShowVisitScanSheet(false); setShowVisitQRScanner(true); }}
-                  className="flex flex-col items-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform gradient-logo-blue text-white shadow-lg relative overflow-hidden">
-                  <span className="card-shine-ray" aria-hidden="true" />
-                  <QrCode size={28} className="relative z-10" />
-                  <span className="relative z-10">Scan QR Code</span>
-                </button>
-                <button onClick={() => { setShowVisitScanSheet(false); onScan?.(); }}
-                  className="flex flex-col items-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform bg-brand-navy/8 text-brand-navy">
-                  <ScanLine size={28} />
-                  Tap to scan
-                </button>
-              </div>
+              <button onClick={() => { setShowVisitScanSheet(false); setShowVisitQRScanner(true); }}
+                className="w-full flex items-center justify-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform gradient-logo-blue text-white shadow-lg relative overflow-hidden mb-5">
+                <span className="card-shine-ray" aria-hidden="true" />
+                <QrCode size={22} className="relative z-10" />
+                <span className="relative z-10">Scan QR Code</span>
+              </button>
               <button onClick={() => setShowVisitScanSheet(false)} className="w-full text-brand-navy/75 font-bold text-sm py-2">Close</button>
             </motion.div>
           </div>
@@ -21688,9 +21660,9 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
 
       {!isCompleted && !card.isRedeemed && (
         <p className="text-center text-brand-navy/40 text-[11px] font-bold mt-2 flex items-center justify-center gap-1">
-          {store?.scanMethod === 'qr'
-            ? <><QrCode size={11} /> Tap card to scan store QR</>
-            : <><ScanLine size={11} /> Tap to scan</>}
+          {store?.scanMethod === 'nfc'
+            ? <><ScanLine size={11} /> Tap to scan</>
+            : <><QrCode size={11} /> Tap card to scan QR</>}
         </p>
       )}
 
@@ -21789,23 +21761,14 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                 <button onClick={() => setTestQty(q => Math.min(Math.max(1, limit - card.current_stamps), q + 1))} className="w-11 h-11 rounded-full bg-brand-navy/8 flex items-center justify-center text-brand-navy font-bold text-2xl active:scale-95 transition-transform">+</button>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 mb-5">
-                <button
-                  onClick={() => { setShowQR(false); setShowQRScan(true); }}
-                  className="flex flex-col items-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform gradient-logo-blue text-white shadow-lg relative overflow-hidden"
-                >
-                  <span className="card-shine-ray" aria-hidden="true" />
-                  <QrCode size={28} className="relative z-10" />
-                  <span className="relative z-10">Scan QR Code</span>
-                </button>
-                <button
-                  onClick={() => { setShowQR(false); onScan?.(); }}
-                  className="flex flex-col items-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform bg-brand-navy/8 text-brand-navy"
-                >
-                  <ScanLine size={28} />
-                  Tap to scan
-                </button>
-              </div>
+              <button
+                onClick={() => { setShowQR(false); setShowQRScan(true); }}
+                className="w-full flex items-center justify-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform gradient-logo-blue text-white shadow-lg relative overflow-hidden mb-5"
+              >
+                <span className="card-shine-ray" aria-hidden="true" />
+                <QrCode size={22} className="relative z-10" />
+                <span className="relative z-10">Scan QR Code</span>
+              </button>
 
               <button onClick={closeQR} className="w-full text-brand-navy/75 font-bold text-sm py-2">Close</button>
             </motion.div>
@@ -21957,19 +21920,12 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
                 <div className="bg-brand-navy/20 rounded-full mx-auto mb-5" style={{ width: 40, height: 4 }} />
                 <h3 className="font-display text-xl font-bold text-center mb-1">{store?.name}</h3>
                 <p className="text-brand-navy/60 text-xs text-center mb-6">{fmtK(points)} pts · {visits} visits</p>
-                <div className="grid grid-cols-2 gap-3 mb-5">
-                  <button onClick={() => { setShowScanSheet(false); setShowQRScan(true); }}
-                    className="flex flex-col items-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform gradient-logo-blue text-white shadow-lg relative overflow-hidden">
-                    <span className="card-shine-ray" aria-hidden="true" />
-                    <QrCode size={28} className="relative z-10" />
-                    <span className="relative z-10">Scan QR Code</span>
-                  </button>
-                  <button onClick={() => { setShowScanSheet(false); onScan?.(); }}
-                    className="flex flex-col items-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform bg-brand-navy/8 text-brand-navy">
-                    <ScanLine size={28} />
-                    Tap to scan
-                  </button>
-                </div>
+                <button onClick={() => { setShowScanSheet(false); setShowQRScan(true); }}
+                  className="w-full flex items-center justify-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform gradient-logo-blue text-white shadow-lg relative overflow-hidden mb-5">
+                  <span className="card-shine-ray" aria-hidden="true" />
+                  <QrCode size={22} className="relative z-10" />
+                  <span className="relative z-10">Scan QR Code</span>
+                </button>
                 <button onClick={() => setShowScanSheet(false)} className="w-full text-brand-navy/75 font-bold text-sm py-2">Close</button>
               </motion.div>
             </div>
@@ -22208,19 +22164,12 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
               <div className="bg-brand-navy/20 rounded-full mx-auto mb-5" style={{ width: 40, height: 4 }} />
               <h3 className="font-display text-xl font-bold text-center mb-1">{store?.name}</h3>
               <p className="text-brand-navy/60 text-xs text-center mb-6">{fmtK(points)} pts · {visits} visits</p>
-              <div className="grid grid-cols-2 gap-3 mb-5">
-                <button onClick={() => { setShowScanSheet(false); setShowQRScan(true); }}
-                  className="flex flex-col items-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform gradient-logo-blue text-white shadow-lg relative overflow-hidden">
-                  <span className="card-shine-ray" aria-hidden="true" />
-                  <QrCode size={28} className="relative z-10" />
-                  <span className="relative z-10">Scan QR Code</span>
-                </button>
-                <button onClick={() => { setShowScanSheet(false); onScan?.(); }}
-                  className="flex flex-col items-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform bg-brand-navy/8 text-brand-navy">
-                  <ScanLine size={28} />
-                  Tap to scan
-                </button>
-              </div>
+              <button onClick={() => { setShowScanSheet(false); setShowQRScan(true); }}
+                className="w-full flex items-center justify-center gap-3 py-5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform gradient-logo-blue text-white shadow-lg relative overflow-hidden mb-5">
+                <span className="card-shine-ray" aria-hidden="true" />
+                <QrCode size={22} className="relative z-10" />
+                <span className="relative z-10">Scan QR Code</span>
+              </button>
               <button onClick={() => setShowScanSheet(false)} className="w-full text-brand-navy/75 font-bold text-sm py-2">Close</button>
             </motion.div>
           </div>
