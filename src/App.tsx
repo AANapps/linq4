@@ -60,6 +60,47 @@ import { Capacitor } from '@capacitor/core';
 const functions = getFunctions();
 const storage = getStorage();
 
+// ── Sound + haptic utilities ─────────────────────────────────────────────────
+
+function haptic(pattern: number | number[]) {
+  try { if ('vibrate' in navigator) navigator.vibrate(pattern); } catch { /* non-fatal */ }
+}
+
+function playSound(type: 'stamp' | 'complete' | 'points') {
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx() as AudioContext;
+    const play = (freq: number, startAt: number, duration: number, vol = 0.28) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(vol, ctx.currentTime + startAt);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + startAt + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + startAt);
+      osc.stop(ctx.currentTime + startAt + duration + 0.05);
+    };
+    if (type === 'stamp') {
+      play(880, 0, 0.08);
+      play(1320, 0.07, 0.12);
+    } else if (type === 'complete') {
+      play(523, 0, 0.18);
+      play(659, 0.16, 0.18);
+      play(784, 0.32, 0.28);
+      play(1047, 0.50, 0.35, 0.35);
+    } else {
+      play(660, 0, 0.10);
+      play(990, 0.09, 0.18);
+    }
+    setTimeout(() => ctx.close().catch(() => {}), 1200);
+  } catch { /* non-fatal */ }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 function deleteStorageImage(url?: string | null) {
   if (!url || !url.includes('firebasestorage.googleapis.com')) return Promise.resolve();
   try {
@@ -13509,6 +13550,12 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
       }).catch(console.error);
     }).catch(console.error);
 
+    const cardComplete = newStamps >= (store.stamps_required_for_reward || 10);
+    if (cardComplete) {
+      haptic([80, 60, 120]); playSound('complete');
+    } else {
+      haptic([40]); playSound('stamp');
+    }
     onStatus('success', `Stamp added at ${store.name}!`);
     return newStickers;
   } catch (err: any) {
@@ -14656,6 +14703,7 @@ function SpendQRScannerModal({ onClose }: { onClose: () => void }) {
       const newNet = Math.max(0, prevPoints + pts - pointsAlreadyRedeemed);
       setEarnedPts(pts);
       setNetAvailablePts(newNet);
+      haptic([40]); playSound('points');
       setScanState('success');
     } catch (err: any) {
       setScanState('error');
@@ -14840,6 +14888,7 @@ function VisitQRScannerModal({ storeId, onClose }: { storeId: string; onClose: (
       const prevRedeemed = (cardSnap.data()?.total_visits_redeemed as number) ?? 0;
       setEarnedPts(pts);
       setNetAvailablePts(Math.max(0, prevVisits + pts - prevRedeemed));
+      haptic([40]); playSound('points');
       setScanState('success');
     } catch (err: any) {
       setScanState('error');
@@ -21006,6 +21055,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                     await updateDoc(doc(db, 'cards', card.id), { total_visits_redeemed: increment(selectedRedeemItem.points), last_redeemed_at: serverTimestamp() });
                     await addDoc(collection(db, 'transactions'), { user_id: card.user_id, store_id: card.store_id, card_type: 'membership', membership_type: 'visit', type: 'menu_redeem', item_name: selectedRedeemItem.name, points_redeemed: selectedRedeemItem.points, redeemed_at: serverTimestamp() });
                     setLocalVisitsRedeemed(prev => prev + selectedRedeemItem!.points);
+                    haptic([80, 60, 120]); playSound('complete');
                     setRedeemSwipeDone(true);
                     fireCelebAnimation('fireworks');
                   } catch { /* non-fatal */ } finally { setRedeemSwipeSaving(false); }
@@ -21445,6 +21495,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                     await updateDoc(doc(db, 'cards', card.id), { total_visits_redeemed: increment(selectedRedeemItem.points), last_redeemed_at: serverTimestamp() });
                     await addDoc(collection(db, 'transactions'), { user_id: card.user_id, store_id: card.store_id, card_type: 'membership', membership_type: 'visit', type: 'menu_redeem', item_name: selectedRedeemItem.name, points_redeemed: selectedRedeemItem.points, redeemed_at: serverTimestamp() });
                     setLocalVisitsRedeemed(prev => prev + selectedRedeemItem!.points);
+                    haptic([80, 60, 120]); playSound('complete');
                     setRedeemSwipeDone(true);
                     fireCelebAnimation('fireworks');
                   } catch { /* non-fatal */ } finally { setRedeemSwipeSaving(false); }
@@ -21495,19 +21546,19 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
     const curr = card.current_stamps;
     prevStampsRef.current = curr;
     if (curr <= prev || card.isArchived) return;
-    // Haptic feedback
-    if ('vibrate' in navigator) navigator.vibrate([80, 40, 120]);
-    // "Stamp added" banner
-    setStampJustAdded(true);
-    setTimeout(() => setStampJustAdded(false), 2500);
-    // Confetti + tier unlock popup when a reward tier is hit
     const tiers = store?.rewardTiers?.length ? store.rewardTiers : [{ stamps: limit, reward: store?.reward || 'Reward Unlocked!' }];
     const hit = tiers.find(t => t.stamps > prev && t.stamps <= curr);
     if (hit) {
+      haptic([80, 60, 120]); playSound('complete');
       setUnlockedReward(hit.reward);
       confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 }, zIndex: TOP_Z, colors: ['#f5a623', '#ffffff', '#2563EB'] });
       setTimeout(() => setUnlockedReward(null), 4000);
+    } else {
+      haptic([40]); playSound('stamp');
     }
+    // "Stamp added" banner
+    setStampJustAdded(true);
+    setTimeout(() => setStampJustAdded(false), 2500);
   }, [card.current_stamps]);
 
   const handleTestStamp = async () => {
