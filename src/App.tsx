@@ -26411,6 +26411,7 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
             <div className="space-y-3">
               {menuItems.map((item, i) => (
                 <div key={item.id} className="bg-brand-bg rounded-2xl p-3 space-y-2 border border-brand-navy/5">
+                  {/* Row 1: name + delete */}
                   <div className="flex items-center gap-2">
                     <input
                       value={item.name}
@@ -26418,7 +26419,13 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
                       className="flex-1 px-3 py-2.5 rounded-xl bg-white border border-brand-navy/10 text-sm font-bold text-brand-navy outline-none focus:border-brand-navy/30"
                       placeholder="Item name (e.g. Free Coffee)"
                     />
-                    <div className="flex items-center gap-1 bg-white rounded-xl px-3 py-2.5 border border-brand-navy/10 w-24 shrink-0">
+                    <button onClick={() => setMenuItems(prev => prev.filter((_, idx) => idx !== i))} className="p-1.5 text-red-400 shrink-0">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                  {/* Row 2: points + value on one row */}
+                  <div className="flex gap-2">
+                    <div className="flex-1 flex items-center gap-1 bg-white rounded-xl px-3 py-2.5 border border-brand-navy/10">
                       <input
                         type="number"
                         min="1"
@@ -26427,20 +26434,9 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
                         className="w-full text-sm font-bold text-brand-navy bg-transparent outline-none"
                         placeholder="50"
                       />
-                      <span className="text-[9px] font-bold text-brand-navy/75 shrink-0">pts</span>
+                      <span className="text-[9px] font-bold text-brand-navy/50 shrink-0">pts cost</span>
                     </div>
-                    <button onClick={() => setMenuItems(prev => prev.filter((_, idx) => idx !== i))} className="p-1.5 text-red-400 shrink-0">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                  <div className="flex gap-2">
-                    <input
-                      value={item.description || ''}
-                      onChange={e => setMenuItems(prev => prev.map((x, idx) => idx === i ? { ...x, description: e.target.value } : x))}
-                      className="flex-1 px-3 py-2 rounded-xl bg-white border border-brand-navy/10 text-xs text-brand-navy/75 outline-none focus:border-brand-navy/30"
-                      placeholder="Description (optional)"
-                    />
-                    <div className="flex items-center gap-1 bg-white rounded-xl px-3 py-2 border border-brand-navy/10 w-24 shrink-0">
+                    <div className="flex-1 flex items-center gap-1 bg-white rounded-xl px-3 py-2.5 border border-brand-navy/10">
                       <span className="text-[9px] font-bold text-brand-navy/50 shrink-0">$</span>
                       <input
                         type="number"
@@ -26448,12 +26444,13 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
                         step="0.01"
                         value={item.value ?? ''}
                         onChange={e => setMenuItems(prev => prev.map((x, idx) => idx === i ? { ...x, value: parseFloat(e.target.value) || 0 } : x))}
-                        className="w-full text-xs font-bold text-brand-navy bg-transparent outline-none"
+                        className="w-full text-sm font-bold text-brand-navy bg-transparent outline-none"
                         placeholder="0.00"
                       />
-                      <span className="text-[9px] font-bold text-brand-navy/50 shrink-0">val</span>
+                      <span className="text-[9px] font-bold text-brand-navy/50 shrink-0">saved</span>
                     </div>
                   </div>
+                  <p className="text-[10px] text-brand-navy/40 px-1">$ value = amount added to the customer's "Saved with Linq" total when redeemed</p>
                 </div>
               ))}
             </div>
