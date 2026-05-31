@@ -520,6 +520,7 @@ interface VendorOnboardingData {
   country: string;
   companyNumber: string;
   category: string;
+  cardType: 'stamp' | 'spend' | 'visit';
   addrLine1: string;
   addrLine2: string;
   addrTown: string;
@@ -1912,6 +1913,8 @@ export default function App() {
         town: data.addrTown, state: data.addrState, postcode: data.addrPostcode,
         ...(data.location ? { lat: data.location.lat, lng: data.location.lng } : {}),
       };
+      const isVisit = data.cardType === 'visit';
+      const isSpend = data.cardType === 'spend';
       await addDoc(collection(db, 'stores'), {
         name: data.businessName,
         category: data.category,
@@ -1923,6 +1926,10 @@ export default function App() {
         isVerified: false,
         stamps_required_for_reward: 10,
         rewardsGiven: 0,
+        cardEnabled: !isVisit && !isSpend,
+        membershipEnabled: isVisit || isSpend,
+        ...(isVisit ? { membershipType: 'visit', membershipStampsPerVisit: 1, scanMethod: 'qr' } : {}),
+        ...(isSpend ? { membershipType: 'spend', membershipPointsRate: 1, membershipRedemptionRate: 100, scanMethod: 'qr' } : {}),
         trialEndsAt: Timestamp.fromDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
         ...(data.location ? { lat: data.location.lat, lng: data.location.lng, location: data.location.city ?? '' } : {}),
       });
@@ -3009,8 +3016,8 @@ function OnboardingScreen({ user, onComplete }: {
 }) {
   const [role, setRole] = React.useState<'consumer' | 'vendor' | null>(null);
   const isVendor = role === 'vendor';
-  // Step 0 = role selection; vendor steps 1-6; consumer steps 1-5 (privacy is always last)
-  const TOTAL_STEPS = isVendor ? 7 : 6;
+  // Step 0 = role selection; vendor steps 1-7; consumer steps 1-5 (privacy is always last)
+  const TOTAL_STEPS = isVendor ? 8 : 6;
 
   const [step, setStep] = React.useState(0);
   const [saving, setSaving] = React.useState(false);
@@ -3041,6 +3048,7 @@ function OnboardingScreen({ user, onComplete }: {
   // Shared
   const [locationData, setLocationData] = React.useState<{ lat: number; lng: number; city?: string } | null>(null);
   const [locationStatus, setLocationStatus] = React.useState<'idle' | 'requesting' | 'granted' | 'denied'>('idle');
+  const [cardType, setCardType] = React.useState<'stamp' | 'spend' | 'visit' | null>(null);
 
   const GENDERS = ['Male', 'Female', 'Non-binary', 'Prefer not to say'];
   const CATEGORIES: Category[] = ['Food', 'Beauty', 'Barber', 'Gym', 'Parking', 'Retail'];
@@ -3085,7 +3093,8 @@ function OnboardingScreen({ user, onComplete }: {
       ? step === 1 ? businessName.trim().length > 0
       : step === 2 ? !!country && companyNumber.trim().length > 0
       : step === 3 ? !!category
-      : step === 4 ? addrLine1.trim().length > 0 && addrTown.trim().length > 0 && phone.trim().length > 0
+      : step === 4 ? !!cardType
+      : step === 5 ? addrLine1.trim().length > 0 && addrTown.trim().length > 0 && phone.trim().length > 0
       : locationStatus === 'granted' || locationStatus === 'denied'
     : step === 1 ? fullName.trim().length > 0 && handle.trim().length >= 3 && !handleError && !handleChecking
       : step === 2 ? !!gender
@@ -3117,7 +3126,7 @@ function OnboardingScreen({ user, onComplete }: {
   const handleFinish = async () => {
     setSaving(true);
     if (isVendor) {
-      await onComplete({ type: 'vendor', businessName, country, companyNumber, category, addrLine1, addrLine2, addrTown, addrState, addrPostcode, phone, description, location: locationData });
+      await onComplete({ type: 'vendor', businessName, country, companyNumber, category, cardType: cardType ?? 'stamp', addrLine1, addrLine2, addrTown, addrState, addrPostcode, phone, description, location: locationData });
     } else {
       await onComplete({ type: 'consumer', name: fullName.trim(), handle, gender, birthday, location: locationData });
     }
@@ -3334,7 +3343,66 @@ function OnboardingScreen({ user, onComplete }: {
         ))}
       </div>
     </>,
-    // Step 3 — Contact & Address
+    // Step 3 — Card Type
+    <>
+      <div className="w-14 h-14 bg-brand-gold/10 rounded-full flex items-center justify-center mx-auto mb-4">
+        <CreditCard className="w-7 h-7 text-brand-gold" />
+      </div>
+      <h2 className="font-display font-bold text-2xl text-brand-navy mb-1">Choose your loyalty card</h2>
+      <p className="text-sm text-brand-navy/75 mb-6">Pick the type that best fits your business</p>
+      <div className="w-full space-y-3 text-left">
+        {([
+          {
+            key: 'stamp' as const,
+            icon: '⭐',
+            title: 'Stamp Card',
+            tagline: 'Best for food, drink & services',
+            desc: 'Customers collect stamps per visit or purchase. Simple and familiar — ideal for cafés, restaurants, barbers and salons.',
+            eg: 'Coffee shops · Barbers · Restaurants · Nail bars',
+          },
+          {
+            key: 'spend' as const,
+            icon: '💳',
+            title: 'Spend Points',
+            tagline: 'Best for retail & higher-spend',
+            desc: 'Customers earn points based on how much they spend. Rewards high-value customers and drives larger basket sizes.',
+            eg: 'Clothing · Electronics · Spas · Boutiques',
+          },
+          {
+            key: 'visit' as const,
+            icon: '📍',
+            title: 'Visit Points',
+            tagline: 'Best for memberships & recurring visits',
+            desc: 'Customers earn a fixed number of points each time they visit. Perfect for subscription-style or frequency-based businesses.',
+            eg: 'Gyms · Studios · Clubs · Car washes',
+          },
+        ] as const).map(opt => (
+          <button
+            key={opt.key}
+            onClick={() => setCardType(opt.key)}
+            className={`w-full text-left rounded-3xl p-5 border-2 transition-all active:scale-[0.99] ${
+              cardType === opt.key
+                ? 'border-brand-navy bg-brand-navy/5 shadow-md'
+                : 'border-brand-navy/10 bg-white hover:border-brand-navy/30'
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              <span className="text-2xl leading-none mt-0.5">{opt.icon}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <p className="font-bold text-brand-navy text-sm">{opt.title}</p>
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-brand-gold/15 text-brand-gold uppercase tracking-wide">{opt.tagline}</span>
+                </div>
+                <p className="text-xs text-brand-navy/70 leading-relaxed mb-1.5">{opt.desc}</p>
+                <p className="text-[10px] text-brand-navy/40 font-bold">{opt.eg}</p>
+              </div>
+              {cardType === opt.key && <CheckCircle2 size={16} className="text-brand-navy shrink-0 mt-0.5" />}
+            </div>
+          </button>
+        ))}
+      </div>
+    </>,
+    // Step 4 — Contact & Address
     <>
       <div className="w-14 h-14 bg-brand-gold/10 rounded-full flex items-center justify-center mx-auto mb-4">
         <MapPin className="w-7 h-7 text-brand-gold" />
@@ -3392,7 +3460,7 @@ function OnboardingScreen({ user, onComplete }: {
         </div>
       </div>
     </>,
-    // Step 4 — Location (GPS)
+    // Step 5 — Location (GPS)
     <>
       <div className="w-14 h-14 bg-brand-gold/10 rounded-full flex items-center justify-center mx-auto mb-4">
         <MapPin className="w-7 h-7 text-brand-gold" />
@@ -3401,7 +3469,7 @@ function OnboardingScreen({ user, onComplete }: {
       <p className="text-sm text-brand-navy/75 mb-8">Allow location access so customers nearby can discover you</p>
       <LocationStep locationData={locationData} locationStatus={locationStatus} onRequest={requestLocation} />
     </>,
-    // Step 5 — Privacy & vendor terms consent
+    // Step 6 — Privacy & vendor terms consent
     <div className="w-full text-left space-y-4">
       <div className="w-14 h-14 bg-brand-navy/8 rounded-full flex items-center justify-center mx-auto mb-4">
         <ShieldCheck className="w-7 h-7 text-brand-navy" />
