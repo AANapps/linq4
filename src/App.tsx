@@ -14278,43 +14278,49 @@ const decodeVendorQR = (val: string): { storeId: string; tokenId: string } | nul
 
 function VendorQRDisplay({ store, onClose }: { store: StoreProfile; onClose: () => void }) {
   const [tokenId, setTokenId] = useState<string | null>(null);
-  const [secsLeft, setSecsLeft] = useState(30);
+  const [rotating, setRotating] = useState(false);
+  const [justScanned, setJustScanned] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const cardTheme = store.theme || '#2563EB';
+  const rotatingRef = useRef(false);
 
   const rotateToken = useCallback(async () => {
+    if (rotatingRef.current) return;
+    rotatingRef.current = true;
+    setRotating(true);
     setError(null);
     try {
       const id = await createQRToken(store.id);
       setTokenId(id);
-      setSecsLeft(30);
     } catch (e: any) {
       console.error('[VendorQRDisplay] createQRToken failed:', e?.code, e?.message, e);
       setError(`Failed to generate QR — ${e?.code ?? e?.message ?? 'check connection'}`);
+    } finally {
+      rotatingRef.current = false;
+      setRotating(false);
     }
   }, [store.id]);
 
-  // Create initial token
+  // Generate initial token
   useEffect(() => { rotateToken(); }, [rotateToken]);
 
-  // Countdown + rotate every 30s
+  // Watch for claims — rotate immediately when customer scans
   useEffect(() => {
-    let secs = 30;
-    const id = setInterval(() => {
-      secs -= 1;
-      if (secs <= 0) {
-        secs = 30;
+    if (!tokenId) return;
+    const unsub = onSnapshot(doc(db, 'qr_tokens', tokenId), (snap) => {
+      if (!snap.exists()) return;
+      const claimed: string[] = snap.data().claimedBy ?? [];
+      if (claimed.length > 0) {
+        setJustScanned(true);
+        setTimeout(() => setJustScanned(false), 1500);
         rotateToken();
       }
-      setSecsLeft(secs);
-    }, 1000);
-    return () => clearInterval(id);
-  }, [rotateToken]);
+    }, () => {});
+    return unsub;
+  }, [tokenId, rotateToken]);
 
   const qrValue = tokenId ? encodeVendorQR(store.id, tokenId) : null;
-  const progress = secsLeft / 30;
 
-  // Render via portal to escape any CSS-transform containing block from parent motion.div
   return createPortal(
     <AnimatePresence>
       <motion.div
@@ -14336,34 +14342,26 @@ function VendorQRDisplay({ store, onClose }: { store: StoreProfile; onClose: () 
             <h2 className="text-white font-bold text-2xl">{store.name}</h2>
           </div>
 
-          {/* QR code */}
           <div className="bg-white rounded-3xl p-5 shadow-2xl flex items-center justify-center" style={{ width: 230, height: 230 }}>
             {error
               ? <p className="text-xs text-red-500 text-center px-2">{error}</p>
-              : qrValue
-                ? <QRCodeSVG key={tokenId} value={qrValue} size={200} />
-                : <Loader2 size={32} className="animate-spin text-brand-navy/30" />
+              : (rotating || !qrValue)
+                ? <Loader2 size={32} className="animate-spin text-brand-navy/30" />
+                : <QRCodeSVG key={tokenId} value={qrValue} size={200} />
             }
           </div>
 
-          {/* Countdown */}
           {!error && (
-            <div className="flex flex-col items-center gap-2 w-48">
-              <div className="w-full h-1.5 bg-white/20 rounded-full overflow-hidden">
-                <motion.div
-                  className="h-full bg-white rounded-full"
-                  animate={{ width: `${progress * 100}%` }}
-                  transition={{ duration: 0.9, ease: 'linear' }}
-                />
-              </div>
-              <p className="text-white/60 text-xs font-bold">Refreshes in {secsLeft}s</p>
+            <div className="flex items-center gap-2">
+              {justScanned
+                ? <><CheckCircle2 size={14} className="text-emerald-300" /><p className="text-emerald-300 text-xs font-bold">Scanned! Refreshing…</p></>
+                : <><div className="w-2 h-2 rounded-full bg-white/60 animate-pulse" /><p className="text-white/60 text-xs font-bold">Ready to scan</p></>
+              }
             </div>
           )}
 
           {error && (
-            <button onClick={rotateToken} className="px-6 py-2 bg-white/20 rounded-2xl text-white text-sm font-bold">
-              Retry
-            </button>
+            <button onClick={rotateToken} className="px-6 py-2 bg-white/20 rounded-2xl text-white text-sm font-bold">Retry</button>
           )}
 
           <p className="text-white/50 text-xs text-center max-w-[220px]">
@@ -14406,36 +14404,44 @@ function VendorSpendQRDisplay({ store, onClose }: { store: StoreProfile; onClose
   const [amountInput, setAmountInput] = React.useState('');
   const [confirmedAmount, setConfirmedAmount] = React.useState(0);
   const [tokenId, setTokenId] = React.useState<string | null>(null);
-  const [secsLeft, setSecsLeft] = React.useState(30);
+  const [rotating, setRotating] = React.useState(false);
+  const [justScanned, setJustScanned] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [generating, setGenerating] = React.useState(false);
   const color = store.membershipColor || '#0f4c81';
+  const rotatingRef = React.useRef(false);
 
-  const generateToken = React.useCallback(async (amount: number) => {
+  const generateToken = React.useCallback(async (amount: number, silent = false) => {
+    if (rotatingRef.current) return;
+    rotatingRef.current = true;
+    if (!silent) setGenerating(true); else setRotating(true);
     setError(null);
-    setGenerating(true);
     try {
       const id = await createSpendQRToken(store.id, amount);
       setTokenId(id);
-      setSecsLeft(30);
     } catch (e: any) {
       setError(`Failed to generate QR — ${e?.code ?? e?.message ?? 'check connection'}`);
     } finally {
+      rotatingRef.current = false;
       setGenerating(false);
+      setRotating(false);
     }
   }, [store.id]);
 
-  // Countdown + rotate every 30 s once in QR phase
+  // Watch for claims — rotate immediately when customer scans
   React.useEffect(() => {
-    if (phase !== 'qr') return;
-    let secs = 30;
-    const id = setInterval(() => {
-      secs -= 1;
-      if (secs <= 0) { secs = 30; generateToken(confirmedAmount); }
-      setSecsLeft(secs);
-    }, 1000);
-    return () => clearInterval(id);
-  }, [phase, confirmedAmount, generateToken]);
+    if (!tokenId || phase !== 'qr') return;
+    const unsub = onSnapshot(doc(db, 'qr_tokens', tokenId), (snap) => {
+      if (!snap.exists()) return;
+      const claimed: string[] = snap.data().claimedBy ?? [];
+      if (claimed.length > 0) {
+        setJustScanned(true);
+        setTimeout(() => setJustScanned(false), 1500);
+        generateToken(confirmedAmount, true);
+      }
+    }, () => {});
+    return unsub;
+  }, [tokenId, phase, confirmedAmount, generateToken]);
 
   const handleConfirmAmount = async () => {
     const parsed = parseFloat(amountInput);
@@ -14445,7 +14451,6 @@ function VendorSpendQRDisplay({ store, onClose }: { store: StoreProfile; onClose
     await generateToken(parsed);
   };
 
-  const qrValue = tokenId ? encodeSpendQR(store.id, tokenId) : null;
   const pointsRate = store.membershipPointsRate ?? 0;
   const pts = Math.round(confirmedAmount * pointsRate);
 
@@ -14514,16 +14519,16 @@ function VendorSpendQRDisplay({ store, onClose }: { store: StoreProfile; onClose
             <div className="bg-white rounded-3xl p-5 shadow-2xl flex items-center justify-center" style={{ width: 230, height: 230 }}>
               {error
                 ? <p className="text-xs text-red-500 text-center px-2">{error}</p>
-                : qrValue
-                  ? <QRCodeSVG key={tokenId} value={qrValue} size={200} />
-                  : <Loader2 size={32} className="animate-spin text-brand-navy/30" />}
+                : (rotating || generating || !tokenId)
+                  ? <Loader2 size={32} className="animate-spin text-brand-navy/30" />
+                  : <QRCodeSVG key={tokenId} value={encodeSpendQR(store.id, tokenId)} size={200} />}
             </div>
             {!error && (
-              <div className="flex flex-col items-center gap-2 w-48">
-                <div className="w-full h-1.5 bg-white/20 rounded-full overflow-hidden">
-                  <motion.div className="h-full bg-white rounded-full" animate={{ width: `${(secsLeft / 30) * 100}%` }} transition={{ duration: 0.9, ease: 'linear' }} />
-                </div>
-                <p className="text-white/60 text-xs font-bold">Refreshes in {secsLeft}s</p>
+              <div className="flex items-center gap-2">
+                {justScanned
+                  ? <><CheckCircle2 size={14} className="text-emerald-300" /><p className="text-emerald-300 text-xs font-bold">Scanned! Refreshing…</p></>
+                  : <><div className="w-2 h-2 rounded-full bg-white/60 animate-pulse" /><p className="text-white/60 text-xs font-bold">Ready to scan</p></>
+                }
               </div>
             )}
             {error && (
