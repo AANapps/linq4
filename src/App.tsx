@@ -20472,8 +20472,10 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
   const lastVisitReward = visitRewards.filter(r => r.visits <= membershipVisits).pop();
   const menuItems = store?.membershipMenuItems ?? [];
 
-  const totalVisitsRedeemed = card.total_visits_redeemed ?? 0;
-  const netAvailableVisits = Math.max(0, membershipVisits - totalVisitsRedeemed);
+  const [localVisitsRedeemed, setLocalVisitsRedeemed] = useState(card.total_visits_redeemed ?? 0);
+  // Keep local state in sync when the card prop updates from Firestore
+  useEffect(() => { setLocalVisitsRedeemed(card.total_visits_redeemed ?? 0); }, [card.total_visits_redeemed]);
+  const netAvailableVisits = Math.max(0, membershipVisits - localVisitsRedeemed);
 
   const handleMenuRedeem = async (item: { id: string; name: string; points: number }) => {
     if (redeemingMenuItem || netAvailableVisits < item.points) return;
@@ -20981,6 +20983,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                   try {
                     await updateDoc(doc(db, 'cards', card.id), { total_visits_redeemed: increment(selectedRedeemItem.points), last_redeemed_at: serverTimestamp() });
                     await addDoc(collection(db, 'transactions'), { user_id: card.user_id, store_id: card.store_id, card_type: 'membership', membership_type: 'visit', type: 'menu_redeem', item_name: selectedRedeemItem.name, points_redeemed: selectedRedeemItem.points, redeemed_at: serverTimestamp() });
+                    setLocalVisitsRedeemed(prev => prev + selectedRedeemItem!.points);
                     setRedeemSwipeDone(true);
                     fireCelebAnimation('fireworks');
                   } catch { /* non-fatal */ } finally { setRedeemSwipeSaving(false); }
@@ -21417,6 +21420,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                   try {
                     await updateDoc(doc(db, 'cards', card.id), { total_visits_redeemed: increment(selectedRedeemItem.points), last_redeemed_at: serverTimestamp() });
                     await addDoc(collection(db, 'transactions'), { user_id: card.user_id, store_id: card.store_id, card_type: 'membership', membership_type: 'visit', type: 'menu_redeem', item_name: selectedRedeemItem.name, points_redeemed: selectedRedeemItem.points, redeemed_at: serverTimestamp() });
+                    setLocalVisitsRedeemed(prev => prev + selectedRedeemItem!.points);
                     setRedeemSwipeDone(true);
                     fireCelebAnimation('fireworks');
                   } catch { /* non-fatal */ } finally { setRedeemSwipeSaving(false); }
