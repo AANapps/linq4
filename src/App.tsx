@@ -21053,7 +21053,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 </div>
                 <h3 className="font-display text-xl font-bold">{menuConfirm.name}</h3>
                 <p className="text-brand-navy/75 text-sm mt-1">Redeem for <span className="font-black" style={{ color }}>{menuConfirm.points} points</span></p>
-                <p className="text-brand-navy/72 text-xs mt-0.5">{membershipVisits - menuConfirm.points} points remaining after</p>
+                <p className="text-brand-navy/72 text-xs mt-0.5">{Math.max(0, netAvailableVisits - menuConfirm.points)} points remaining after</p>
               </div>
               <button
                 onClick={() => handleMenuRedeem(menuConfirm)}
@@ -21159,7 +21159,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 </div>
                 <p className="text-white font-black text-3xl">Redeemed!</p>
                 <p className="text-white/75 text-sm">{selectedRedeemItem.name}</p>
-                <p className="text-white/60 text-xs">{selectedRedeemItem.points} pts deducted · {Math.max(0, netAvailableVisits - selectedRedeemItem.points)} pts remaining</p>
+                <p className="text-white/60 text-xs">{selectedRedeemItem.points} pts deducted · {netAvailableVisits} pts remaining</p>
                 <button onClick={() => { setSelectedRedeemItem(null); setRedeemSwipeDone(false); }} className="mt-4 px-8 py-3 bg-white rounded-2xl font-bold active:scale-95 transition-transform" style={{ color }}>Done</button>
               </div>
             ) : (
@@ -21541,7 +21541,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 </div>
                 <h3 className="font-display text-xl font-bold">{menuConfirm.name}</h3>
                 <p className="text-brand-navy/75 text-sm mt-1">Redeem for <span className="font-black" style={{ color }}>{menuConfirm.points} points</span></p>
-                <p className="text-brand-navy/72 text-xs mt-0.5">{membershipVisits - menuConfirm.points} points remaining after</p>
+                <p className="text-brand-navy/72 text-xs mt-0.5">{Math.max(0, netAvailableVisits - menuConfirm.points)} points remaining after</p>
               </div>
               <button
                 onClick={() => handleMenuRedeem(menuConfirm)}
@@ -21645,7 +21645,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg"><CheckCircle2 size={40} style={{ color }} /></div>
                 <p className="text-white font-black text-3xl">Redeemed!</p>
                 <p className="text-white/75 text-sm">{selectedRedeemItem.name}</p>
-                <p className="text-white/60 text-xs">{selectedRedeemItem.points} pts deducted · {Math.max(0, netAvailableVisits - selectedRedeemItem.points)} pts remaining</p>
+                <p className="text-white/60 text-xs">{selectedRedeemItem.points} pts deducted · {netAvailableVisits} pts remaining</p>
                 <button onClick={() => { setSelectedRedeemItem(null); setRedeemSwipeDone(false); }} className="mt-4 px-8 py-3 bg-white rounded-2xl font-bold active:scale-95 transition-transform" style={{ color }}>Done</button>
               </div>
             ) : (
@@ -34415,7 +34415,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                   </div>
                   <h3 className="font-display text-xl font-bold">{menuConfirm.name}</h3>
                   <p className="text-brand-navy/75 text-sm mt-1">Redeem for <span className="font-black" style={{ color }}>{menuConfirm.points} points</span></p>
-                  <p className="text-brand-navy/72 text-xs mt-0.5">{netVisits - menuConfirm.points} points remaining after</p>
+                  <p className="text-brand-navy/72 text-xs mt-0.5">{Math.max(0, netVisits - menuConfirm.points)} points remaining after</p>
                 </div>
                 <button
                   onClick={() => handleMenuRedeem(menuConfirm)}
