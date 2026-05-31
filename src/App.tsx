@@ -14550,6 +14550,7 @@ function SpendQRScannerModal({ onClose }: { onClose: () => void }) {
   const [scanState, setScanState] = React.useState<SS>('scanning');
   const [statusMsg, setStatusMsg] = React.useState('');
   const [earnedPts, setEarnedPts] = React.useState(0);
+  const [netAvailablePts, setNetAvailablePts] = React.useState(0);
   const [storeName, setStoreName] = React.useState('');
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const streamRef = React.useRef<MediaStream | null>(null);
@@ -14648,9 +14649,14 @@ function SpendQRScannerModal({ onClose }: { onClose: () => void }) {
 
       await updateDoc(doc(db, 'users', user.uid), { totalStamps: increment(1), lastStampAt: serverTimestamp() });
 
+      const prevPoints = (cardSnap.data()?.membership_points as number) ?? 0;
+      const prevValueRedeemed = (cardSnap.data()?.total_value_redeemed as number) ?? 0;
+      const redemptionRate = store.membershipRedemptionRate ?? 0;
+      const pointsAlreadyRedeemed = Math.round(prevValueRedeemed * redemptionRate);
+      const newNet = Math.max(0, prevPoints + pts - pointsAlreadyRedeemed);
       setEarnedPts(pts);
+      setNetAvailablePts(newNet);
       setScanState('success');
-      setStatusMsg(`+${pts} points earned at ${store.name}`);
     } catch (err: any) {
       setScanState('error');
       setStatusMsg(err?.message || 'Failed to claim points — try again.');
@@ -14746,8 +14752,9 @@ function SpendQRScannerModal({ onClose }: { onClose: () => void }) {
             <div className="w-20 h-20 bg-emerald-500 rounded-full flex items-center justify-center">
               <CheckCircle2 size={40} className="text-white" />
             </div>
-            <p className="text-white font-black text-3xl">+{earnedPts} pts</p>
-            <p className="text-white/70 text-sm">{storeName && `Earned at ${storeName}`}</p>
+            <p className="text-white font-black text-3xl">{netAvailablePts} pts</p>
+            <p className="text-white/70 text-sm">available{storeName ? ` at ${storeName}` : ''}</p>
+            <p className="text-white/40 text-xs">+{earnedPts} earned this visit</p>
             <button onClick={() => { stopCamera(); onClose(); }} className="mt-4 px-8 py-3 bg-white rounded-2xl font-bold text-brand-navy active:scale-95 transition-transform">Done</button>
           </div>
         )}
@@ -14774,6 +14781,7 @@ function VisitQRScannerModal({ storeId, onClose }: { storeId: string; onClose: (
   const [scanState, setScanState] = React.useState<SS>('scanning');
   const [statusMsg, setStatusMsg] = React.useState('');
   const [earnedPts, setEarnedPts] = React.useState(0);
+  const [netAvailablePts, setNetAvailablePts] = React.useState(0);
   const [storeName, setStoreName] = React.useState('');
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const streamRef = React.useRef<MediaStream | null>(null);
@@ -14828,7 +14836,10 @@ function VisitQRScannerModal({ storeId, onClose }: { storeId: string; onClose: (
       }
       await addDoc(collection(db, 'transactions'), { user_id: user.uid, store_id: store.id, card_type: 'membership', membership_type: 'visit', stamps_per_visit: pts, issued_at: serverTimestamp(), method: 'customer_qr_scan' });
       await updateDoc(doc(db, 'users', user.uid), { totalStamps: increment(1), lastStampAt: serverTimestamp() });
+      const prevVisits = (cardSnap.data()?.membership_visits as number) ?? 0;
+      const prevRedeemed = (cardSnap.data()?.total_visits_redeemed as number) ?? 0;
       setEarnedPts(pts);
+      setNetAvailablePts(Math.max(0, prevVisits + pts - prevRedeemed));
       setScanState('success');
     } catch (err: any) {
       setScanState('error');
@@ -14912,8 +14923,9 @@ function VisitQRScannerModal({ storeId, onClose }: { storeId: string; onClose: (
         {scanState === 'success' && (
           <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center gap-4 px-8 text-center">
             <div className="w-20 h-20 bg-emerald-500 rounded-full flex items-center justify-center"><CheckCircle2 size={40} className="text-white" /></div>
-            <p className="text-white font-black text-3xl">+{earnedPts} pts</p>
-            <p className="text-white/70 text-sm">{storeName && `Earned at ${storeName}`}</p>
+            <p className="text-white font-black text-3xl">{netAvailablePts} pts</p>
+            <p className="text-white/70 text-sm">available{storeName ? ` at ${storeName}` : ''}</p>
+            <p className="text-white/40 text-xs">+{earnedPts} earned this visit</p>
             <button onClick={() => { stopCamera(); onClose(); }} className="mt-4 px-8 py-3 bg-white rounded-2xl font-bold text-brand-navy active:scale-95 transition-transform">Done</button>
           </div>
         )}
@@ -17544,9 +17556,9 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
   }, [showVendorQR]);
 
   useEffect(() => {
-    const isSpendOnly = store?.membershipEnabled === true && store.membershipType === 'spend';
     const isVisitEnabled = store?.membershipEnabled === true && store.membershipType === 'visit';
-    onVendorQRStatus?.(!!store && !isSpendOnly && (store.cardEnabled !== false || isVisitEnabled));
+    const isSpendEnabled = store?.membershipEnabled === true && store.membershipType === 'spend';
+    onVendorQRStatus?.(!!store && (store.cardEnabled !== false || isVisitEnabled || isSpendEnabled));
   }, [store]);
 
   const trialEndsMs = store?.trialEndsAt
@@ -20302,7 +20314,9 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
       {/* QR Display — vendor shows this, customer scans it */}
       <AnimatePresence>
         {showQRScanner && store && (
-          <VendorQRDisplay store={store} onClose={() => setShowQRScanner(false)} />
+          store.membershipEnabled && store.membershipType === 'spend'
+            ? <VendorSpendQRDisplay store={store} onClose={() => setShowQRScanner(false)} />
+            : <VendorQRDisplay store={store} onClose={() => setShowQRScanner(false)} />
         )}
       </AnimatePresence>
 
