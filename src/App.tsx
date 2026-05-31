@@ -20673,7 +20673,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
             </>
           ) : (
             <div className="w-full flex flex-col items-center gap-1.5">
-              <p className="text-brand-navy font-black text-4xl leading-none">{membershipVisits}</p>
+              <p className="text-brand-navy font-black text-4xl leading-none">{netAvailableVisits}</p>
               <p className="text-brand-navy/75 text-[9px] font-bold uppercase tracking-widest">points</p>
               {menuItems.length > 0 && (
                 <div className="w-full space-y-1 mt-1">
@@ -21055,7 +21055,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
           ) : (
             <>
               <div className="text-center mb-3">
-                <p className="text-brand-navy font-black text-5xl leading-none tracking-tight">{membershipVisits}</p>
+                <p className="text-brand-navy font-black text-5xl leading-none tracking-tight">{netAvailableVisits}</p>
                 <p className="text-brand-navy/75 text-xs font-bold uppercase tracking-widest mt-1.5">points</p>
               </div>
               {menuItems.length > 0 && (
