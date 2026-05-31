@@ -1764,19 +1764,28 @@ export default function App() {
       const snap = await getDocs(query(collection(db, 'stores'), where('ownerUid', '==', uid)));
       await Promise.all(snap.docs.map(async (storeDoc) => {
         const sid = storeDoc.id;
-        const [posts, storeReviews, storeFollows, storeCards, storeTxns] = await Promise.all([
+        const [posts, storeReviews, storeFollows, storeCards, storeTxns, storeOffers, storeAutomations, storeStickerCards] = await Promise.all([
           getDocs(collection(db, 'stores', sid, 'posts')),
           getDocs(query(collection(db, 'store_reviews'), where('storeId', '==', sid))),
           getDocs(query(collection(db, 'store_follows'), where('storeId', '==', sid))),
           getDocs(query(collection(db, 'cards'), where('store_id', '==', sid))),
           getDocs(query(collection(db, 'transactions'), where('store_id', '==', sid))),
+          getDocs(query(collection(db, 'store_offers'), where('storeId', '==', sid))),
+          getDocs(query(collection(db, 'store_automations'), where('storeId', '==', sid))),
+          getDocs(query(collection(db, 'sticker_cards'), where('store_id', '==', sid))),
         ]);
         await Promise.all([
           ...posts.docs, ...storeReviews.docs, ...storeFollows.docs,
-          ...storeCards.docs, ...storeTxns.docs,
+          ...storeCards.docs, ...storeTxns.docs, ...storeOffers.docs,
+          ...storeAutomations.docs, ...storeStickerCards.docs,
         ].map(d => deleteDoc(d.ref)));
         await deleteDoc(storeDoc.ref);
       }));
+    });
+    // Sticker cards held by this user
+    await tryDelete(async () => {
+      const snap = await getDocs(query(collection(db, 'sticker_cards'), where('user_id', '==', uid)));
+      await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
     });
     // Chats this user is part of (+ messages subcollections)
     await tryDelete(async () => {
@@ -1804,9 +1813,16 @@ export default function App() {
     await tryDelete(() => deleteDoc(doc(db, 'users', uid)));
     await tryDelete(() => deleteDoc(doc(db, 'vendors', uid)));
 
-    // Delete the Firebase Auth record first (requires user to still be authenticated),
-    // then sign out. If deletion fails (e.g. requires-recent-login), sign out anyway.
-    try { await user.delete(); } catch { /* requires-recent-login or similar — auth account survives */ }
+    // Delete the Firebase Auth record. If it fails with requires-recent-login,
+    // the profile docs are already gone so re-login lands on onboarding, not the app.
+    try {
+      await user.delete();
+    } catch (e: any) {
+      // Auth account couldn't be deleted (e.g. requires re-auth) — sign out so the
+      // user is forced to log back in. On re-login the missing profile will trigger
+      // onboarding, so they cannot resume the old account.
+      console.warn('Auth delete failed, signing out:', e?.code);
+    }
     await signOut(auth);
   };
 
