@@ -26188,6 +26188,29 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
   );
 }
 
+function InfoTip({ text }: { text: string }) {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <span className="relative inline-flex items-center ml-1 shrink-0">
+      <button
+        type="button"
+        onClick={e => { e.stopPropagation(); setOpen(v => !v); }}
+        className="w-[15px] h-[15px] rounded-full bg-brand-navy/10 text-brand-navy/50 text-[8px] font-black flex items-center justify-center hover:bg-brand-navy/20 active:scale-90 transition-all"
+      >
+        i
+      </button>
+      {open && (
+        <>
+          <span className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <span className="absolute left-5 top-0 w-56 bg-brand-navy text-white text-[10px] font-medium px-3 py-2.5 rounded-xl z-50 leading-relaxed shadow-xl">
+            {text}
+          </span>
+        </>
+      )}
+    </span>
+  );
+}
+
 function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
   const [membershipType, setMembershipType] = useState<'spend' | 'visit'>(store?.membershipType || 'spend');
   const [membershipName, setMembershipName] = useState(store?.membershipName || 'Membership');
@@ -26259,7 +26282,10 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
 
         {/* Name */}
         <div className="space-y-2">
-          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Card Name</label>
+          <div className="flex items-center">
+            <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Card Name</label>
+            <InfoTip text="The name shown on the card in your customer's wallet — e.g. 'Gold Card' or 'VIP Club'." />
+          </div>
           <input
             value={membershipName}
             onChange={e => setMembershipName(e.target.value)}
@@ -26270,7 +26296,10 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
 
         {/* Description */}
         <div className="space-y-2">
-          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Description</label>
+          <div className="flex items-center">
+            <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Description</label>
+            <InfoTip text="A short line shown on the card to explain the programme to customers." />
+          </div>
           <textarea
             value={membershipDescription}
             onChange={e => setMembershipDescription(e.target.value)}
@@ -26282,7 +26311,10 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
 
         {/* Color */}
         <div className="space-y-2">
-          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Card Color</label>
+          <div className="flex items-center">
+            <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Card Color</label>
+            <InfoTip text="The background colour of the membership card shown in your customer's wallet." />
+          </div>
           <div className="flex gap-3 flex-wrap">
             {MEMBER_COLORS.map(c => (
               <button
@@ -26311,10 +26343,16 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
           <div className="space-y-5">
             {/* Points earning */}
             <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75 mb-3 block">Points System</label>
+              <div className="flex items-center mb-3">
+                <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Points System</label>
+                <InfoTip text="Controls how customers earn and redeem points. Set both values to activate the programme." />
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-brand-navy/75 uppercase tracking-widest">Points per $1 spent</label>
+                  <div className="flex items-center">
+                    <label className="text-[10px] font-bold text-brand-navy/75 uppercase tracking-widest">Points per $1 spent</label>
+                    <InfoTip text="Points earned per dollar the customer spends. E.g. 10 = customer gets 10 pts for every $1." />
+                  </div>
                   <input
                     type="number"
                     min="0"
@@ -26325,7 +26363,10 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-brand-navy/75 uppercase tracking-widest">Points per $1 off</label>
+                  <div className="flex items-center">
+                    <label className="text-[10px] font-bold text-brand-navy/75 uppercase tracking-widest">Points per $1 off</label>
+                    <InfoTip text="Points needed to redeem $1 off. E.g. 100 means the customer needs 100 pts to get $1 discount." />
+                  </div>
                   <input
                     type="number"
                     min="1"
@@ -26366,10 +26407,16 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
 
             {/* Milestone reward */}
             <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75 mb-3 block">Milestone Reward (optional)</label>
+              <div className="flex items-center mb-3">
+                <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Milestone Reward (optional)</label>
+                <InfoTip text="A bonus reward given when a customer reaches a total spend amount — on top of their regular points." />
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-brand-navy/75 uppercase tracking-widest">Reward every $</label>
+                  <div className="flex items-center">
+                    <label className="text-[10px] font-bold text-brand-navy/75 uppercase tracking-widest">Reward every $</label>
+                    <InfoTip text="The cumulative spend amount that triggers the milestone reward. E.g. 100 = reward every $100 spent." />
+                  </div>
                   <input
                     type="number"
                     value={spendThreshold}
@@ -26379,7 +26426,10 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-brand-navy/75 uppercase tracking-widest">Reward</label>
+                  <div className="flex items-center">
+                    <label className="text-[10px] font-bold text-brand-navy/75 uppercase tracking-widest">Reward</label>
+                    <InfoTip text="What the customer receives when they hit the milestone — e.g. 'Free coffee' or '10% off'." />
+                  </div>
                   <input
                     value={spendReward}
                     onChange={e => setSpendReward(e.target.value)}
@@ -26395,7 +26445,10 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
         {/* Visit-based: stamps per visit */}
         {membershipType === 'visit' && (
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Points Per Visit</label>
+            <div className="flex items-center">
+              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Points Per Visit</label>
+              <InfoTip text="Points awarded to the customer each time they scan your QR code or tap NFC." />
+            </div>
             <input
               type="number"
               min="1"
@@ -26413,7 +26466,10 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
         {membershipType === 'visit' && (
           <div>
             <div className="flex items-center justify-between mb-3">
-              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Menu Items</label>
+              <div className="flex items-center">
+                <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Menu Items</label>
+                <InfoTip text="Redeemable rewards that customers can exchange their points for. Set the points cost and the real-world value of each item." />
+              </div>
               {menuItems.length < 20 && (
                 <button
                   onClick={() => setMenuItems(prev => [...prev, { id: `menu_${Date.now()}`, name: '', points: 50, description: '' }])}
@@ -26443,7 +26499,11 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
                   </div>
                   {/* Row 2: points + value on one row */}
                   <div className="flex gap-2">
-                    <div className="flex-1 flex items-center gap-1 bg-white rounded-xl px-3 py-2.5 border border-brand-navy/10">
+                    <div className="flex-1 bg-white rounded-xl px-3 py-2.5 border border-brand-navy/10">
+                      <div className="flex items-center gap-1 mb-0.5">
+                        <span className="text-[8px] font-bold text-brand-navy/40 uppercase tracking-widest">Pts cost</span>
+                        <InfoTip text="Points the customer must spend to claim this item." />
+                      </div>
                       <input
                         type="number"
                         min="1"
@@ -26452,10 +26512,12 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
                         className="w-full text-sm font-bold text-brand-navy bg-transparent outline-none"
                         placeholder="50"
                       />
-                      <span className="text-[9px] font-bold text-brand-navy/50 shrink-0">pts cost</span>
                     </div>
-                    <div className="flex-1 flex items-center gap-1 bg-white rounded-xl px-3 py-2.5 border border-brand-navy/10">
-                      <span className="text-[9px] font-bold text-brand-navy/50 shrink-0">$</span>
+                    <div className="flex-1 bg-white rounded-xl px-3 py-2.5 border border-brand-navy/10">
+                      <div className="flex items-center gap-1 mb-0.5">
+                        <span className="text-[8px] font-bold text-brand-navy/40 uppercase tracking-widest">$ Value saved</span>
+                        <InfoTip text="The real-world value of this item — e.g. if a free coffee costs $4, enter 4.00. This is added to the customer's 'Saved with Linq' total when redeemed." />
+                      </div>
                       <input
                         type="number"
                         min="0"
@@ -26465,10 +26527,8 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
                         className="w-full text-sm font-bold text-brand-navy bg-transparent outline-none"
                         placeholder="0.00"
                       />
-                      <span className="text-[9px] font-bold text-brand-navy/50 shrink-0">saved</span>
                     </div>
                   </div>
-                  <p className="text-[10px] text-brand-navy/40 px-1">$ value = amount added to the customer's "Saved with Linq" total when redeemed</p>
                 </div>
               ))}
             </div>
