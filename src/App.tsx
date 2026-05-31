@@ -20412,7 +20412,7 @@ function SwipeConfirm({ onConfirm }: { onConfirm: () => void }) {
   };
 
   return (
-    <div ref={trackRef} className="relative h-14 bg-emerald-50 rounded-full overflow-hidden border-2 border-emerald-200 select-none">
+    <div ref={trackRef} className="relative h-14 w-full bg-emerald-50 rounded-full overflow-hidden border-2 border-emerald-200 select-none">
       <motion.div className="absolute inset-y-0 left-0 bg-emerald-200/60 rounded-full" style={{ width: fillPct }} />
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         <span className="text-emerald-700/50 text-sm font-bold tracking-wide">Slide to redeem →</span>
