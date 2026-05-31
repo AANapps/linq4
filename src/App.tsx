@@ -15836,7 +15836,7 @@ function VisitScanSheet({ card, store, onClose, onPackReady, initialQty }: { car
 
 const PAGE_ICONS: Record<string, string> = { stamp: '⭐', challenge: '🏆', challenge_done: '🎉', upsell: '🎯', monopoly_pack: '🎰', challenges_list: '🏃', upsell_list: '🎯', stage_reward: '🎁', collectible_promo: '🎴', visit_points: '🎉' };
 const PAGE_ANIM: Record<string, CelebAnimType> = { stamp: 'confetti', challenge: 'sparkles', challenge_done: 'fireworks', upsell: 'burst', monopoly_pack: 'sparks', challenges_list: 'sparkles', upsell_list: 'burst', stage_reward: 'fireworks', collectible_promo: 'sparks', visit_points: 'confetti' };
-const CTA_LABELS = ['Keep smashing it! 🚀', 'You\'re on fire! 🔥', 'Unstoppable! 💪', 'Legend! ⭐', 'Amazing work! 🎉'];
+const CTA_LABELS = ["Keep smashing it!", "You're on fire!", 'Unstoppable!', 'Legend!', 'Amazing work!'];
 
 function getCharityFeedback(type: 'animal' | 'tree', newCount: number): { emoji: string; title: string; detail: string } {
   if (type === 'tree') {
@@ -15946,8 +15946,8 @@ function StampCelebrationModal({
   }, [pageIdx, rankAfterVal]);
 
   const ctaLabel = isLast
-    ? (isUpsell ? 'Join the challenge! 🎯' : isUpsellList ? 'Explore Challenges! 🎯' : CTA_LABELS[pageIdx % CTA_LABELS.length])
-    : 'Next 🎉';
+    ? (isUpsell ? 'Join the challenge!' : isUpsellList ? 'Explore Challenges!' : CTA_LABELS[pageIdx % CTA_LABELS.length])
+    : 'Next';
 
   return (
     <motion.div
@@ -16078,9 +16078,10 @@ function StampCelebrationModal({
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: rankRevealed ? 1 : 0.35, y: 0 }} transition={{ delay: 0.35 }}
                   onClick={rankRevealed ? (isLast ? onClose : () => setPageIdx(i => i + 1)) : undefined}
                   style={{ pointerEvents: rankRevealed ? 'auto' : 'none' }}
-                  className="w-full py-3.5 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-[0.98] transition-all"
+                  className="w-full py-3.5 rounded-2xl font-bold text-sm text-white active:scale-[0.98] transition-all gradient-logo-blue relative overflow-hidden"
                 >
-                  {ctaLabel}
+                  <span className="card-shine-ray" aria-hidden="true" />
+                  <span className="relative z-10">{ctaLabel}</span>
                 </motion.button>
               </>
             ) : isStageReward ? (
@@ -16403,9 +16404,10 @@ function StampCelebrationModal({
                 <motion.button
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
                   onClick={isLast ? onClose : () => setPageIdx(i => i + 1)}
-                  className="w-full py-3.5 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-[0.98] transition-all"
+                  className="w-full py-3.5 rounded-2xl font-bold text-sm text-white active:scale-[0.98] transition-all gradient-logo-blue relative overflow-hidden"
                 >
-                  {ctaLabel}
+                  <span className="card-shine-ray" aria-hidden="true" />
+                  <span className="relative z-10">{ctaLabel}</span>
                 </motion.button>
               </>
             ) : isUpsellList ? (
@@ -16421,9 +16423,10 @@ function StampCelebrationModal({
                 <motion.button
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
                   onClick={isLast ? onClose : () => setPageIdx(i => i + 1)}
-                  className="w-full py-3.5 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-[0.98] transition-all"
+                  className="w-full py-3.5 rounded-2xl font-bold text-sm text-white active:scale-[0.98] transition-all gradient-logo-blue relative overflow-hidden"
                 >
-                  {ctaLabel}
+                  <span className="card-shine-ray" aria-hidden="true" />
+                  <span className="relative z-10">{ctaLabel}</span>
                 </motion.button>
               </>
             ) : isCollectiblePromo ? (
@@ -16482,9 +16485,10 @@ function StampCelebrationModal({
                 <motion.button
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
                   onClick={isLast ? onClose : () => setPageIdx(i => i + 1)}
-                  className="w-full py-3.5 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-[0.98] transition-all"
+                  className="w-full py-3.5 rounded-2xl font-bold text-sm text-white active:scale-[0.98] transition-all gradient-logo-blue relative overflow-hidden"
                 >
-                  {ctaLabel}
+                  <span className="card-shine-ray" aria-hidden="true" />
+                  <span className="relative z-10">{ctaLabel}</span>
                 </motion.button>
               </>
             ) : isVisitPoints ? (
@@ -16595,10 +16599,11 @@ function StampCelebrationModal({
                 <motion.button
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
                   onClick={isLast ? onClose : () => setPageIdx(i => i + 1)}
-                  className="w-full py-3.5 rounded-2xl font-bold text-sm text-white active:scale-[0.98] transition-all"
+                  className="w-full py-3.5 rounded-2xl font-bold text-sm text-white active:scale-[0.98] transition-all relative overflow-hidden"
                   style={{ background: `linear-gradient(135deg, ${page.membershipColor || '#2563EB'}, ${page.membershipColor || '#2563EB'}cc)` }}
                 >
-                  {ctaLabel}
+                  <span className="card-shine-ray" aria-hidden="true" />
+                  <span className="relative z-10">{ctaLabel}</span>
                 </motion.button>
               </>
             ) : (
@@ -16845,9 +16850,10 @@ function StampCelebrationModal({
                 <motion.button
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
                   onClick={isLast ? onClose : () => setPageIdx(i => i + 1)}
-                  className="w-full py-3.5 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-[0.98] transition-all"
+                  className="w-full py-3.5 rounded-2xl font-bold text-sm text-white active:scale-[0.98] transition-all gradient-logo-blue relative overflow-hidden"
                 >
-                  {ctaLabel}
+                  <span className="card-shine-ray" aria-hidden="true" />
+                  <span className="relative z-10">{ctaLabel}</span>
                 </motion.button>
               </>
             )}
