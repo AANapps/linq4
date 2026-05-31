@@ -19965,24 +19965,24 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     );
                   })()}
 
-                  {/* Top 10 by visits */}
+                  {/* Top 10 by points */}
                   {(() => {
                     const top10 = [...new Set<string>(visitCards.map(c => c.user_id))]
                       .map(uid => {
                         const cards = visitCards.filter(c => c.user_id === uid);
-                        const visits = cards.reduce((s, c) => s + (c.total_visits || 0) + (c.membership_visits || 0), 0);
-                        return { uid, visits, prof: memberProfiles.get(uid) };
+                        const pts = cards.reduce((s, c) => s + (c.membership_visits || 0), 0);
+                        return { uid, pts, prof: memberProfiles.get(uid) };
                       })
-                      .sort((a, b) => b.visits - a.visits)
+                      .sort((a, b) => b.pts - a.pts)
                       .slice(0, 10);
                     if (top10.length === 0) return null;
                     return (
                       <div className="glass-card p-5 rounded-[2rem] space-y-3">
                         <div className="flex items-center justify-between">
-                          <p className="font-bold text-brand-navy">Top 10 by Visits</p>
+                          <p className="font-bold text-brand-navy">Top 10 by Points</p>
                           <Trophy size={16} className="text-blue-400" />
                         </div>
-                        {top10.map(({ uid, visits, prof }) => (
+                        {top10.map(({ uid, pts, prof }) => (
                           <div key={uid} className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full overflow-hidden bg-blue-50 shrink-0 flex items-center justify-center">
                               <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={32} view="head" />
@@ -19990,9 +19990,10 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                             <div className="flex-1 min-w-0">
                               <p className="font-bold text-sm truncate">{prof?.name || 'Customer'}</p>
                               <div className="h-1 bg-brand-navy/8 rounded-full mt-1 overflow-hidden">
-                                <div className="h-full bg-blue-400 rounded-full" style={{ width: `${Math.round((visits / (top10[0].visits || 1)) * 100)}%` }} />
+                                <div className="h-full bg-blue-400 rounded-full" style={{ width: `${Math.round((pts / (top10[0].pts || 1)) * 100)}%` }} />
                               </div>
                             </div>
+                            <span className="text-xs font-bold text-brand-navy/60 shrink-0">{pts} pts</span>
                           </div>
                         ))}
                       </div>
