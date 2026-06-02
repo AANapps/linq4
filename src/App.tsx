@@ -11889,6 +11889,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
 
   // Stamp celebration
   const [celebrationPages, setCelebrationPages] = useState<CelebrationPage[] | null>(null);
+  const [celebrationKey, setCelebrationKey] = useState(0);
   const [pendingRedeemCardId, setPendingRedeemCardId] = useState<string | null>(null);
   const [celebrationArchiveFn, setCelebrationArchiveFn] = useState<((tierStamps: number, isFinal: boolean) => Promise<void>) | null>(null);
   const prevCardStampsRef = useRef<Map<string, number>>(new Map());
@@ -11994,6 +11995,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
 
             if (pages.length > 0) {
               setCelebrationPages(pages);
+              setCelebrationKey(k => k + 1);
               const _capturedCard = card;
               const _capturedStore = store;
               const _limit = card.stamps_required || store.stamps_required_for_reward || 10;
@@ -13405,6 +13407,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       <AnimatePresence>
         {celebrationPages && (
           <StampCelebrationModal
+            key={celebrationKey}
             pages={celebrationPages}
             onClose={() => { setCelebrationPages(null); setCelebrationArchiveFn(null); }}
             onArchiveTier={celebrationArchiveFn ?? undefined}
