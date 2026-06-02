@@ -1044,6 +1044,7 @@ interface Challenge {
   city?: string;
   challengeLat?: number;
   challengeLng?: number;
+  postCompletionSteps?: string;
 }
 
 interface StoreOffer {
@@ -10736,6 +10737,7 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
   // Collectible programme form state
   const [colTitle, setColTitle] = useState('');
   const [colReward, setColReward] = useState('');
+  const [colPostSteps, setColPostSteps] = useState('');
   const [colEndsAt, setColEndsAt] = useState('');
   const [stdEndsAt, setStdEndsAt] = useState('');
   const [colChances, setColChances] = useState<{ brown: number; lightblue: number; red: number; blue: number; gold: number }>({ ...DEFAULT_TIER_CHANCES });
@@ -10808,12 +10810,13 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
         ...(colEndsAt ? { endsAt: Timestamp.fromDate(new Date(colEndsAt)) } : {}),
         ...(colImageUrl ? { imageUrl: colImageUrl } : {}),
         ...(colCardSetId ? { cardSetId: colCardSetId } : {}),
+        ...(colPostSteps.trim() ? { postCompletionSteps: colPostSteps.trim() } : {}),
       });
       if (auth.currentUser) logEvent('challenge_created', auth.currentUser.uid, {
         type: 'collectible', reward: colReward.trim(), tierChances: colChances,
         ...(colEndsAt ? { endsAt: colEndsAt } : {}),
       });
-      setColTitle(''); setColReward(''); setColEndsAt(''); setColChances({ ...DEFAULT_TIER_CHANCES }); setColImageUrl(''); setColCardSetId('');
+      setColTitle(''); setColReward(''); setColPostSteps(''); setColEndsAt(''); setColChances({ ...DEFAULT_TIER_CHANCES }); setColImageUrl(''); setColCardSetId('');
     } finally {
       setDeployingCollectible(false);
     }
@@ -11378,6 +11381,18 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
               </select>
             </div>
 
+            {/* Post-completion steps */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-amber-700/60 uppercase tracking-widest">Post-completion steps (shown to winners)</label>
+              <textarea
+                value={colPostSteps}
+                onChange={e => setColPostSteps(e.target.value)}
+                placeholder="e.g. Screenshot your completed card and DM us on Instagram to claim your prize."
+                rows={3}
+                className="w-full px-3 py-2 rounded-xl bg-white border border-amber-200 text-xs text-amber-800 focus:outline-none resize-none"
+              />
+            </div>
+
             <button
               onClick={handleDeployCollectible}
               disabled={deployingCollectible || !colTitle.trim() || !colReward.trim() || Math.round(sumChances(colChances)) !== 100}
@@ -11452,6 +11467,20 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
                               <option key={s.id} value={s.id}>{s.name}{s.isDefault ? ' ★' : ''}</option>
                             ))}
                           </select>
+                        {/* Post-completion steps — live edit */}
+                        <div className="flex items-start gap-1.5 pt-1">
+                          <span className="text-[10px] text-amber-600/50 flex-shrink-0 mt-0.5">📋</span>
+                          <textarea
+                            rows={2}
+                            defaultValue={c.postCompletionSteps ?? ''}
+                            placeholder="Post-completion steps (shown to winners)..."
+                            onBlur={e => {
+                              const val = e.target.value.trim();
+                              updateDoc(doc(db, 'challenges', c.id), { postCompletionSteps: val || null }).catch(console.error);
+                            }}
+                            className="flex-1 text-[10px] text-amber-800 bg-transparent border-none outline-none resize-none"
+                          />
+                        </div>
                         </div>
                       </div>
 
@@ -11871,6 +11900,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const [walletSubTab, setWalletSubTab] = useState<'stamps' | 'challenges'>('stamps');
   const [walletLayout, setWalletLayout] = useState<'carousel' | 'list'>('carousel');
   const [walletManaging, setWalletManaging] = useState(false);
+  const [expandedStepsIds, setExpandedStepsIds] = useState<Set<string>>(new Set());
   const [redeemingChallenge, setRedeemingChallenge] = useState<{ challenge: Challenge; entry: any; userName: string } | null>(null);
   const [myStickerCards, setMyStickerCards] = useState<StickerCardDoc[]>([]);
   const [openStickerCardId, setOpenStickerCardId] = useState<string | null>(null);
@@ -11905,7 +11935,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
     return () => clearTimeout(t);
   }, [pendingPack]);
   const [pendingRedeemCardId, setPendingRedeemCardId] = useState<string | null>(null);
-  const [celebrationArchiveFn, setCelebrationArchiveFn] = useState<((tierStamps: number, isFinal: boolean) => Promise<void>) | null>(null);
+  const celebrationArchiveFnRef = useRef<((tierStamps: number, isFinal: boolean) => Promise<void>) | null>(null);
   const prevCardStampsRef = useRef<Map<string, number>>(new Map());
   const cardsInitializedRef = useRef(false);
   const prevMembershipVisitsRef = useRef<Map<string, number>>(new Map());
@@ -12018,7 +12048,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
               const _capturedStore = store;
               const _limit = card.stamps_required || store.stamps_required_for_reward || 10;
               const _numTiers = store.rewardTiers?.length || 1;
-              setCelebrationArchiveFn(() => async (tierStamps: number, isFinal: boolean) => {
+              celebrationArchiveFnRef.current = async (tierStamps: number, isFinal: boolean) => {
                 const uid = user.uid;
                 const userName = user.displayName || 'Someone';
                 const userPhoto = user.photoURL || '';
@@ -12052,7 +12082,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                   updateDoc(doc(db, 'users', uid), { totalRedeemed: increment(1) }).catch(console.error);
                   updateDoc(doc(db, 'stores', _capturedCard.store_id), { rewardsGiven: increment(1) }).catch(console.error);
                 }
-              });
+              };
             }
           }
         }
@@ -12867,11 +12897,12 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                         <div className="bg-white divide-y divide-black/5">
                           {joinedProgs.map(prog => {
                             const sc = myStickerCards.find(s => s.programme_id === prog.id)!;
-                            const myRevealedCards = sc.stickers.filter((s: CollectibleSticker) => (sc.revealedIds || []).includes(s.id));
-                            const myProgSets = totalSetsCompleted(myRevealedCards);
                             const unrevealed = sc.stickers.filter((s: CollectibleSticker) => !(sc.revealedIds || []).includes(s.id));
-                            const isComplete = allSetsWon(myRevealedCards);
-                            const pct = Math.round((myProgSets / maxSets) * 100);
+                            // Use ALL collected stickers (not just revealed) so pack opening always shows 100%
+                            const myProgSets = totalSetsCompleted(sc.stickers);
+                            const isComplete = allSetsWon(sc.stickers);
+                            const pct = isComplete ? 100 : Math.min(99, Math.round((myProgSets / maxSets) * 100));
+                            const showSteps = expandedStepsIds.has(prog.id);
                             return (
                               <div key={prog.id}>
                                 {prog.imageUrl && <img src={prog.imageUrl} alt="" className="w-full object-cover h-36" />}
@@ -12903,8 +12934,8 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                                 <div className="flex gap-1 mb-2">
                                   {STICKER_ORDER.map((tier, idx) => {
                                     const cfg = STICKER_CONFIG[tier];
-                                    const sets = tierSetsCompleted(myRevealedCards, tier);
-                                    const firstFound = myRevealedCards.find((s: CollectibleSticker) => s.tier === tier);
+                                    const sets = tierSetsCompleted(sc.stickers, tier);
+                                    const firstFound = sc.stickers.find((s: CollectibleSticker) => s.tier === tier);
                                     return (
                                       <div key={tier} className="flex-1 h-10 rounded-lg relative overflow-hidden"
                                         style={{ background: cfg.solid, opacity: sets > 0 ? 1 : 0.3 }}>
@@ -12942,7 +12973,23 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                                   </div>
                                 </div>
                                 {isComplete && (
-                                  <p className="text-[10px] font-bold text-amber-600 mt-1">🏆 Complete! Claim: {prog.reward}</p>
+                                  <div className="mt-2 space-y-2">
+                                    <button
+                                      onClick={() => setExpandedStepsIds(prev => { const n = new Set(prev); n.has(prog.id) ? n.delete(prog.id) : n.add(prog.id); return n; })}
+                                      className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-amber-50 border border-amber-200 active:scale-[0.98] transition-all"
+                                    >
+                                      <span className="text-[11px] font-bold text-amber-700">🏆 Complete! How to claim your reward</span>
+                                      <ChevronDown size={13} className={cn('text-amber-600 transition-transform', showSteps && 'rotate-180')} />
+                                    </button>
+                                    {showSteps && prog.postCompletionSteps && (
+                                      <div className="px-3 py-3 bg-amber-50 rounded-xl border border-amber-100">
+                                        <p className="text-xs text-amber-800 leading-relaxed whitespace-pre-line">{prog.postCompletionSteps}</p>
+                                      </div>
+                                    )}
+                                    {showSteps && !prog.postCompletionSteps && (
+                                      <p className="text-[11px] text-brand-navy/50 text-center py-1">No claim steps set yet — contact the organiser.</p>
+                                    )}
+                                  </div>
                                 )}
                               </div>
                               </div>
@@ -13424,13 +13471,13 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         {celebrationPages && (
           <StampCelebrationModal
             key={celebrationKey}
-            pages={celebrationPages}
-            onClose={() => { setCelebrationPages(null); setCelebrationArchiveFn(null); }}
-            onArchiveTier={celebrationArchiveFn ?? undefined}
+            pages={celebrationPages!}
+            onClose={() => { setCelebrationPages(null); celebrationArchiveFnRef.current = null; }}
+            onArchiveTier={celebrationArchiveFnRef.current ?? undefined}
             avatarConfig={profile?.avatar}
             userUid={user.uid}
-            pendingPack={pendingPack}
-            pendingPackCardId={pendingPackCardId}
+            pendingPack={pendingPack ?? undefined}
+            pendingPackCardId={pendingPackCardId ?? undefined}
             onPackClosed={() => {
               setPendingPack(null);
               setPendingPackCardId(null);
@@ -15965,7 +16012,7 @@ function StampCelebrationModal({
   userUid?: string;
   pendingPack?: CollectibleSticker[] | null;
   pendingPackCardId?: string | null;
-  onPackClosed?: (cardId: string | null) => void;
+  onPackClosed?: () => void;
 }) {
   const [pageIdx, setPageIdx] = useState(0);
   const [isArchivingTier, setIsArchivingTier] = useState(false);
@@ -16326,7 +16373,7 @@ function StampCelebrationModal({
                     uid={userUid}
                     onClose={() => {
                       setMonopolyPackOpen(false);
-                      onPackClosed?.(pendingPackCardId ?? null);
+                      onPackClosed?.();
                       if (isLast) onClose();
                       else setPageIdx(i => i + 1);
                     }}
@@ -16697,7 +16744,7 @@ function StampCelebrationModal({
                     >
                       {PAGE_ICONS[pageKey]}
                     </motion.div>
-                    {(isUpsell || page.type !== 'stamp') && (
+                    {(isUpsell || page.type === 'challenge') && (
                       <motion.p
                         initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
                         className="text-[10px] font-bold uppercase tracking-widest text-brand-gold"
