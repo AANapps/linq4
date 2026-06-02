@@ -15861,7 +15861,7 @@ function VisitScanSheet({ card, store, onClose, onPackReady, initialQty }: { car
 
 const PAGE_ICONS: Record<string, string> = { stamp: '⭐', challenge: '🏆', challenge_done: '🎉', upsell: '🎯', monopoly_pack: '🎰', challenges_list: '🏃', upsell_list: '🎯', stage_reward: '🎁', collectible_promo: '🎴', visit_points: '🎉' };
 const PAGE_ANIM: Record<string, CelebAnimType> = { stamp: 'confetti', challenge: 'sparkles', challenge_done: 'fireworks', upsell: 'burst', monopoly_pack: 'sparks', challenges_list: 'sparkles', upsell_list: 'burst', stage_reward: 'fireworks', collectible_promo: 'sparks', visit_points: 'confetti' };
-const CTA_LABELS = ["Keep smashing it!", "You're on fire!", 'Unstoppable!', 'Legend!', 'Amazing work!'];
+const CTA_LABELS = ['Continue'];
 
 function getCharityFeedback(type: 'animal' | 'tree', newCount: number): { emoji: string; title: string; detail: string } {
   if (type === 'tree') {
@@ -15997,20 +15997,9 @@ function StampCelebrationModal({
             {isRank ? (
               /* ── Rank reveal with drumroll countdown ── */
               <>
-                {/* Avatar */}
-                <motion.div
-                  initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.05 }}
-                  className="flex justify-center"
-                >
-                  <div className="w-20 h-20 rounded-[1.75rem] bg-gradient-to-b from-indigo-100 to-indigo-50 flex items-center justify-center shadow-md border border-brand-navy/8">
-                    <PixelAvatar config={avatarConfig} uid={userUid ?? 'x'} size={68} view="full" />
-                  </div>
-                </motion.div>
-
                 {/* Drumroll label */}
                 <motion.div
-                  initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                  initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
                   className="text-center"
                 >
                   <motion.p
@@ -16018,30 +16007,21 @@ function StampCelebrationModal({
                     transition={!rankRevealed ? { duration: 0.55, repeat: Infinity } : {}}
                     className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75"
                   >
-                    {rankRevealed ? '🏆 Your rank' : '🥁 Calculating your rank...'}
+                    {rankRevealed ? 'Your rank' : 'Calculating your rank...'}
                   </motion.p>
                 </motion.div>
 
-                {/* Two rank cards */}
+                {/* Two rank cards — blue-purple gradient */}
                 <div className="grid grid-cols-2 gap-3">
-                  {/* Global rank */}
-                  <div className={cn(
-                    'rounded-2xl p-4 text-center space-y-1 border transition-colors duration-300',
-                    rankRevealed
-                      ? rankChange > 0 ? 'bg-emerald-50 border-emerald-200' : rankChange < 0 ? 'bg-red-50/60 border-red-100' : 'bg-brand-navy/4 border-brand-navy/8'
-                      : 'bg-brand-navy/4 border-brand-navy/8'
-                  )}>
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/75">Global</p>
+                  {/* Vendor leaderboard */}
+                  <div className="rounded-2xl p-4 text-center space-y-1 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #4F46E5 50%, #7C3AED 100%)' }}>
+                    <span className="card-shine-ray" aria-hidden="true" />
+                    <p className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-white/70">Vendor</p>
                     <motion.p
                       key={rankRevealed ? 'g-final' : 'g-spin'}
                       animate={rankRevealed ? { scale: [0.7, 1.25, 1], opacity: [0.5, 1, 1] } : {}}
                       transition={{ type: 'spring', stiffness: 380, damping: 14 }}
-                      className={cn(
-                        'font-display font-black text-3xl leading-none tabular-nums',
-                        rankRevealed
-                          ? rankChange > 0 ? 'text-emerald-600' : rankChange < 0 ? 'text-red-500' : 'text-brand-navy'
-                          : 'text-brand-navy/25'
-                      )}
+                      className="relative z-10 font-display font-black text-3xl leading-none tabular-nums text-white"
                     >
                       #{displayRankGlobal || '—'}
                     </motion.p>
@@ -16049,7 +16029,7 @@ function StampCelebrationModal({
                       {rankRevealed && rankChange !== 0 && (
                         <motion.p
                           initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                          className={cn('text-[10px] font-black', rankChange > 0 ? 'text-emerald-500' : 'text-red-400')}
+                          className={cn('relative z-10 text-[10px] font-black', rankChange > 0 ? 'text-emerald-300' : 'text-red-300')}
                         >
                           {rankChange > 0 ? `↑ +${rankChange}` : `↓ ${rankChange}`}
                         </motion.p>
@@ -16057,24 +16037,15 @@ function StampCelebrationModal({
                     </AnimatePresence>
                   </div>
 
-                  {/* Weekly rank */}
-                  <div className={cn(
-                    'rounded-2xl p-4 text-center space-y-1 border transition-colors duration-300',
-                    rankRevealed
-                      ? weeklyRankChange > 0 ? 'bg-emerald-50 border-emerald-200' : weeklyRankChange < 0 ? 'bg-red-50/60 border-red-100' : 'bg-brand-navy/4 border-brand-navy/8'
-                      : 'bg-brand-navy/4 border-brand-navy/8'
-                  )}>
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/75">This Week</p>
+                  {/* Weekly overall */}
+                  <div className="rounded-2xl p-4 text-center space-y-1 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #4F46E5 50%, #7C3AED 100%)' }}>
+                    <span className="card-shine-ray" aria-hidden="true" />
+                    <p className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-white/70">Weekly</p>
                     <motion.p
                       key={rankRevealed ? 'w-final' : 'w-spin'}
                       animate={rankRevealed ? { scale: [0.7, 1.25, 1], opacity: [0.5, 1, 1] } : {}}
                       transition={{ type: 'spring', stiffness: 380, damping: 14, delay: 0.08 }}
-                      className={cn(
-                        'font-display font-black text-3xl leading-none tabular-nums',
-                        rankRevealed
-                          ? weeklyRankChange > 0 ? 'text-emerald-600' : weeklyRankChange < 0 ? 'text-red-500' : 'text-brand-navy'
-                          : 'text-brand-navy/25'
-                      )}
+                      className="relative z-10 font-display font-black text-3xl leading-none tabular-nums text-white"
                     >
                       #{displayRankWeekly || '—'}
                     </motion.p>
@@ -16082,7 +16053,7 @@ function StampCelebrationModal({
                       {rankRevealed && weeklyRankChange !== 0 && (
                         <motion.p
                           initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                          className={cn('text-[10px] font-black', weeklyRankChange > 0 ? 'text-emerald-500' : 'text-red-400')}
+                          className={cn('relative z-10 text-[10px] font-black', weeklyRankChange > 0 ? 'text-emerald-300' : 'text-red-300')}
                         >
                           {weeklyRankChange > 0 ? `↑ +${weeklyRankChange}` : `↓ ${weeklyRankChange}`}
                         </motion.p>
@@ -16102,8 +16073,8 @@ function StampCelebrationModal({
                 <motion.button
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: rankRevealed ? 1 : 0.35, y: 0 }} transition={{ delay: 0.35 }}
                   onClick={rankRevealed ? (isLast ? onClose : () => setPageIdx(i => i + 1)) : undefined}
-                  style={{ pointerEvents: rankRevealed ? 'auto' : 'none' }}
-                  className="w-full py-3.5 rounded-2xl font-bold text-sm text-white active:scale-[0.98] transition-all gradient-logo-blue relative overflow-hidden"
+                  style={{ pointerEvents: rankRevealed ? 'auto' : 'none', background: 'linear-gradient(160deg, #1D4ED8 0%, #4F46E5 40%, #7C3AED 100%)' }}
+                  className="w-full py-3.5 rounded-2xl font-bold text-sm text-white active:scale-[0.98] transition-all relative overflow-hidden"
                 >
                   <span className="card-shine-ray" aria-hidden="true" />
                   <span className="relative z-10">{ctaLabel}</span>
@@ -16798,31 +16769,33 @@ function StampCelebrationModal({
                       transition={!rankRevealed ? { duration: 0.55, repeat: Infinity } : {}}
                       className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/60 text-center"
                     >
-                      {rankRevealed ? '🏆 Your rank' : '🥁 Calculating rank...'}
+                      {rankRevealed ? 'Your rank' : 'Calculating rank...'}
                     </motion.p>
                     <div className="grid grid-cols-2 gap-2">
-                      <div className={cn('rounded-2xl p-3 text-center space-y-0.5 border transition-colors duration-300', rankRevealed ? (rankChange > 0 ? 'bg-emerald-50 border-emerald-200' : rankChange < 0 ? 'bg-red-50/60 border-red-100' : 'bg-brand-navy/4 border-brand-navy/8') : 'bg-brand-navy/4 border-brand-navy/8')}>
-                        <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/60">Global</p>
+                      <div className="rounded-2xl p-3 text-center space-y-0.5 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #4F46E5 50%, #7C3AED 100%)' }}>
+                        <span className="card-shine-ray" aria-hidden="true" />
+                        <p className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-white/70">Vendor</p>
                         <motion.p
                           key={rankRevealed ? 'g-final' : 'g-spin'}
                           animate={rankRevealed ? { scale: [0.7, 1.2, 1] } : {}}
-                          className={cn('font-display font-black text-2xl leading-none tabular-nums', rankRevealed ? (rankChange > 0 ? 'text-emerald-600' : rankChange < 0 ? 'text-red-500' : 'text-brand-navy') : 'text-brand-navy/25')}
+                          className="relative z-10 font-display font-black text-2xl leading-none tabular-nums text-white"
                         >#{displayRankGlobal || '—'}</motion.p>
                         {rankRevealed && rankChange !== 0 && (
-                          <p className={cn('text-[10px] font-black', rankChange > 0 ? 'text-emerald-500' : 'text-red-400')}>
+                          <p className={cn('relative z-10 text-[10px] font-black', rankChange > 0 ? 'text-emerald-300' : 'text-red-300')}>
                             {rankChange > 0 ? `↑ +${rankChange}` : `↓ ${rankChange}`}
                           </p>
                         )}
                       </div>
-                      <div className={cn('rounded-2xl p-3 text-center space-y-0.5 border transition-colors duration-300', rankRevealed ? (weeklyRankChange > 0 ? 'bg-emerald-50 border-emerald-200' : weeklyRankChange < 0 ? 'bg-red-50/60 border-red-100' : 'bg-brand-navy/4 border-brand-navy/8') : 'bg-brand-navy/4 border-brand-navy/8')}>
-                        <p className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/60">This Week</p>
+                      <div className="rounded-2xl p-3 text-center space-y-0.5 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #4F46E5 50%, #7C3AED 100%)' }}>
+                        <span className="card-shine-ray" aria-hidden="true" />
+                        <p className="relative z-10 text-[9px] font-bold uppercase tracking-widest text-white/70">Weekly</p>
                         <motion.p
                           key={rankRevealed ? 'w-final' : 'w-spin'}
                           animate={rankRevealed ? { scale: [0.7, 1.2, 1] } : {}}
-                          className={cn('font-display font-black text-2xl leading-none tabular-nums', rankRevealed ? (weeklyRankChange > 0 ? 'text-emerald-600' : weeklyRankChange < 0 ? 'text-red-500' : 'text-brand-navy') : 'text-brand-navy/25')}
+                          className="relative z-10 font-display font-black text-2xl leading-none tabular-nums text-white"
                         >#{displayRankWeekly || '—'}</motion.p>
                         {rankRevealed && weeklyRankChange !== 0 && (
-                          <p className={cn('text-[10px] font-black', weeklyRankChange > 0 ? 'text-emerald-500' : 'text-red-400')}>
+                          <p className={cn('relative z-10 text-[10px] font-black', weeklyRankChange > 0 ? 'text-emerald-300' : 'text-red-300')}>
                             {weeklyRankChange > 0 ? `↑ +${weeklyRankChange}` : `↓ ${weeklyRankChange}`}
                           </p>
                         )}
@@ -16831,29 +16804,21 @@ function StampCelebrationModal({
                   </motion.div>
                 )}
 
-                {/* Encouragement pill */}
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-                  className={cn('rounded-2xl p-4 text-center', page.done ? 'bg-green-50' : isUpsell ? 'bg-brand-gold/15' : 'bg-brand-gold/10')}
-                >
-                  <p className={cn('font-bold text-sm leading-snug', page.done ? 'text-green-600' : 'text-brand-navy')}>
-                    {page.encouragement}
-                  </p>
-                </motion.div>
-
                 {/* Progress bar (skip for upsell and stamp — card already shows it) */}
                 {!isUpsell && page.type !== 'stamp' && (
                   <motion.div
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
-                    className="space-y-1.5"
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25 }}
+                    className="rounded-2xl p-3 relative overflow-hidden"
+                    style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #4F46E5 50%, #7C3AED 100%)' }}
                   >
-                    <div className="flex justify-between text-[10px] font-bold text-brand-navy/75">
+                    <span className="card-shine-ray" aria-hidden="true" />
+                    <div className="flex justify-between text-[10px] font-bold text-white relative z-10 mb-2">
                       <span className="truncate max-w-[70%]">{page.reward}</span>
                       <span>{pct}%</span>
                     </div>
-                    <div className="h-2 bg-brand-navy/8 rounded-full overflow-hidden">
+                    <div className="h-2 bg-white/20 rounded-full overflow-hidden relative z-10">
                       <motion.div
-                        className={cn('h-full rounded-full', page.done ? 'bg-green-400' : 'bg-brand-gold')}
+                        className="h-full rounded-full bg-white/90"
                         initial={{ width: 0 }}
                         animate={{ width: `${pct}%` }}
                         transition={{ duration: 0.9, ease: 'easeOut' }}
@@ -16875,7 +16840,8 @@ function StampCelebrationModal({
                 <motion.button
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
                   onClick={isLast ? onClose : () => setPageIdx(i => i + 1)}
-                  className="w-full py-3.5 rounded-2xl font-bold text-sm text-white active:scale-[0.98] transition-all gradient-logo-blue relative overflow-hidden"
+                  style={{ background: 'linear-gradient(160deg, #1D4ED8 0%, #4F46E5 40%, #7C3AED 100%)' }}
+                  className="w-full py-3.5 rounded-2xl font-bold text-sm text-white active:scale-[0.98] transition-all relative overflow-hidden"
                 >
                   <span className="card-shine-ray" aria-hidden="true" />
                   <span className="relative z-10">{ctaLabel}</span>
