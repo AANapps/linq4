@@ -5227,7 +5227,22 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
       for (let i = 0; i < N; i++) {
         setTimeout(() => { setDealtCount(i + 1); vibrate(35); }, i * 400);
       }
-      setTimeout(() => setPhase('reveal'), N * 400 + 520);
+      // Mark all stickers revealed in Firestore as soon as dealing completes —
+      // so the collection view never shows them as mystery cards again.
+      setTimeout(() => {
+        setPhase('reveal');
+        setLocalRevealedIds(new Set(displayStickers.map(s => s.id)));
+        if (cardId) {
+          updateDoc(doc(db, 'sticker_cards', cardId), {
+            revealedIds: arrayUnion(...displayStickers.map(s => s.id)),
+          }).catch(console.error);
+        } else if (uid) {
+          updateDoc(doc(db, 'user_stickers', uid), {
+            revealedIds: arrayUnion(...displayStickers.map(s => s.id)),
+            uniqueTiers: arrayUnion(...displayStickers.map(s => s.tier)),
+          }).catch(console.error);
+        }
+      }, N * 400 + 520);
     }, 680);
   };
 
@@ -5247,16 +5262,6 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
     if (allRevealed && phase === 'reveal') {
       const premium = displayStickers.some(s => ['gold', 'blue', 'red'].includes(s.tier));
       vibrate(premium ? [150, 60, 150, 60, 300] : [80, 40, 120]);
-      if (cardId) {
-        updateDoc(doc(db, 'sticker_cards', cardId), {
-          revealedIds: arrayUnion(...displayStickers.map(s => s.id)),
-        }).catch(console.error);
-      } else if (uid) {
-        updateDoc(doc(db, 'user_stickers', uid), {
-          revealedIds: arrayUnion(...displayStickers.map(s => s.id)),
-          uniqueTiers: arrayUnion(...displayStickers.map(s => s.tier)),
-        }).catch(console.error);
-      }
       const t = setTimeout(() => setPhase('done'), 850);
       return () => clearTimeout(t);
     }
