@@ -1727,16 +1727,20 @@ export default function App() {
     const refreshed = auth.currentUser;
     if (refreshed?.emailVerified) {
       setNeedsEmailVerification(false);
-      const userDoc = await getDoc(doc(db, 'users', refreshed.uid));
-      const inUsers = userDoc.exists();
-      const existingDoc = inUsers ? userDoc : await getDoc(doc(db, 'vendors', refreshed.uid));
-      if (!existingDoc.exists()) {
+      try {
+        const userDoc = await getDoc(doc(db, 'users', refreshed.uid));
+        const inUsers = userDoc.exists();
+        const existingDoc = inUsers ? userDoc : await getDoc(doc(db, 'vendors', refreshed.uid));
+        if (!existingDoc.exists()) {
+          setNeedsOnboarding(true);
+        } else {
+          const data = existingDoc.data();
+          setProfileCollection(inUsers ? 'users' : 'vendors');
+          setProfile(data as UserProfile);
+          setNeedsOnboarding(!data.onboardingComplete);
+        }
+      } catch {
         setNeedsOnboarding(true);
-      } else {
-        const data = existingDoc.data();
-        setProfileCollection(inUsers ? 'users' : 'vendors');
-        setProfile(data as UserProfile);
-        setNeedsOnboarding(!data.onboardingComplete);
       }
       return true;
     }
@@ -1978,6 +1982,7 @@ export default function App() {
   }
 
   if (!profile) {
+    setTimeout(() => { if (!profile) setNeedsOnboarding(true); }, 8000);
     return (
       <div className="min-h-screen flex flex-col items-center justify-between gradient-logo-blue py-16 px-6">
         <div className="flex-1 flex items-center justify-center">
