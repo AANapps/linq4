@@ -12027,7 +12027,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                   }).catch(console.error);
                   updateDoc(doc(db, 'users', uid), { totalRedeemed: increment(_numTiers) }).catch(console.error);
                   updateDoc(doc(db, 'stores', _capturedCard.store_id), { rewardsGiven: increment(_numTiers) }).catch(console.error);
-                  postActivity(uid, userName, userPhoto, `${userName} just earned a free ${rewardLabel}!`, '🎁').catch(console.error);
+                  postActivity(uid, userName, userPhoto, `🎉 ${userName} just smashed it — scored a FREE ${rewardLabel}! Who's next? 🔥`, '🎁').catch(console.error);
                 } else {
                   updateDoc(doc(db, 'users', uid), { totalRedeemed: increment(1) }).catch(console.error);
                   updateDoc(doc(db, 'stores', _capturedCard.store_id), { rewardsGiven: increment(1) }).catch(console.error);
@@ -21979,7 +21979,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
       stampsRequired: card.stamps_required || store?.stamps_required_for_reward || 10,
       ...(_cardCreatedMs ? { daysBetweenCardStartAndRedemption: Math.floor((Date.now() - _cardCreatedMs) / 86400000) } : {}),
     });
-    if (isFinalTier) postActivity(uid, userName, userPhoto, `${userName} just earned a free ${rewardLabel}!`, '🎁');
+    if (isFinalTier) postActivity(uid, userName, userPhoto, `🎉 ${userName} just smashed it — scored a FREE ${rewardLabel}! Who's next? 🔥`, '🎁');
   };
 
   const handleLeaveCard = async () => {
@@ -22421,7 +22421,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
       });
       setRedeemSuccess(selectedReward.reward);
       const u = auth.currentUser;
-      if (u) postActivity(u.uid, u.displayName || 'Someone', u.photoURL || '', `${u.displayName || 'Someone'} just earned a free ${selectedReward.reward}!`, '⭐');
+      if (u) postActivity(u.uid, u.displayName || 'Someone', u.photoURL || '', `🎉 ${u.displayName || 'Someone'} just smashed it — scored a FREE ${selectedReward.reward}! Who's next? 🔥`, '⭐');
       setTimeout(() => {
         setRedeemSuccess(null);
         setSelectedReward(null);
