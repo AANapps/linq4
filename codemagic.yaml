@@ -54,7 +54,7 @@ workflows:
     instance_type: linux_x2
     environment:
       android_signing:
-        - Linq Keystore                              # set up in Codemagic UI
+        - linqandroid
       vars:
         PACKAGE_NAME: co.uk.adastranetwork.linq
       node: 20.17.0
