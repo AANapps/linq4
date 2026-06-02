@@ -12903,9 +12903,16 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                             const isComplete = allSetsWon(sc.stickers);
                             const pct = isComplete ? 100 : Math.min(99, Math.round((myProgSets / maxSets) * 100));
                             const showSteps = expandedStepsIds.has(prog.id);
+                            const isEnded = prog.endsAt ? (prog.endsAt.toMillis?.() ?? (prog.endsAt.seconds ?? 0) * 1000) < Date.now() : false;
                             return (
                               <div key={prog.id}>
                                 {prog.imageUrl && <img src={prog.imageUrl} alt="" className="w-full object-cover h-36" />}
+                                {isEnded && (
+                                  <div className="bg-red-500 px-4 py-1.5 flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-white/80" />
+                                    <span className="text-white text-[11px] font-black uppercase tracking-widest">Ended</span>
+                                  </div>
+                                )}
                               <div className="px-4 py-3">
                                 <div className="flex items-center gap-3 mb-2">
                                   <div className="flex-1 min-w-0">
@@ -12917,7 +12924,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                                         </span>
                                       )}
                                     </div>
-                                    {prog.endsAt && (
+                                    {prog.endsAt && !isEnded && (
                                       <div className="flex items-center gap-1 text-brand-navy/75 text-[10px] mt-0.5">
                                         <Clock size={9} /><CountdownTimer endsAt={prog.endsAt} />
                                       </div>
@@ -13107,6 +13114,13 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                         {/* Challenge image — full bleed above info */}
                         {c.imageUrl && (
                           <img src={c.imageUrl} alt="" className="w-full object-cover h-40" />
+                        )}
+                        {/* Ended banner */}
+                        {isEnded && (
+                          <div className="bg-red-500 px-5 py-1.5 flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-white/80" />
+                            <span className="text-white text-[11px] font-black uppercase tracking-widest">Ended</span>
+                          </div>
                         )}
                         {/* Gradient header */}
                         <div className="gradient-logo-blue px-5 py-4 relative overflow-hidden">
