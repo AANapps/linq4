@@ -16711,79 +16711,104 @@ function StampCelebrationModal({
                     const cardTheme = page.storeTheme || '#2563EB';
                     const stampIcon = page.stampIcon || '⭐';
                     const stampIconUrl = (page as any).stampIconUrl || '';
+                    const cardPattern = page.cardPattern || 'solid';
                     const limit = page.rewardTiers?.length
                       ? Math.max(...page.rewardTiers.map((t: any) => t.stamps))
                       : page.totalStamps;
                     const tierStamps = new Set((page.rewardTiers || []).map((t: any) => t.stamps));
-                    const pctFill = limit > 0 ? Math.min(100, Math.round((page.currentStamps / limit) * 100)) : 0;
+                    const nextRewardTier = (page.rewardTiers || []).find((t: any) => t.stamps > page.currentStamps);
                     return (
                       <motion.div
-                        initial={{ opacity: 0, y: 14 }}
-                        animate={{ opacity: 1, y: 0 }}
+                        initial={{ opacity: 0, y: 14, scale: 0.96 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
                         transition={{ delay: 0.1, type: 'spring', stiffness: 280, damping: 22 }}
-                        className="space-y-4"
+                        className="rounded-[2rem] overflow-hidden shadow-xl"
                       >
-                        {/* Progress bar */}
-                        <div className="space-y-1.5">
-                          <div className="flex justify-between text-[11px] font-bold text-brand-navy/60">
-                            <span>{page.currentStamps} / {limit} stamps</span>
-                            <span>{pctFill}%</span>
+                        {/* Card header — vendor colour */}
+                        <div className="relative overflow-hidden flex items-center gap-3 px-4 py-3" style={{ backgroundColor: cardTheme }}>
+                          <span className="card-shine-ray" aria-hidden="true" />
+                          {cardPattern !== 'solid' && <div className="absolute inset-0 pointer-events-none" style={getCardPatternStyle(cardPattern)} />}
+                          <div className="relative z-10 w-10 h-10 rounded-full overflow-hidden border-2 border-white/50 shrink-0 shadow-md">
+                            <img src={page.storeLogoUrl || storeFallbackImg(page.storeName, page.storeTheme)} alt="" className="w-full h-full object-cover" />
                           </div>
-                          <div className="h-3 bg-brand-navy/8 rounded-full overflow-hidden">
-                            <motion.div
-                              className="h-full rounded-full"
-                              style={{ background: 'linear-gradient(90deg, #1D4ED8, #7C3AED)' }}
-                              initial={{ width: '0%' }}
-                              animate={{ width: `${pctFill}%` }}
-                              transition={{ duration: 0.9, ease: 'easeOut', delay: 0.15 }}
-                            />
+                          <div className="relative z-10 flex-1 min-w-0">
+                            <h4 className="font-bold text-white text-sm leading-tight truncate">{page.storeName}</h4>
+                            {page.storeCategory && <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">{page.storeCategory}</p>}
                           </div>
+                          <div className="relative z-10 text-white/70 text-[10px] font-bold">{page.currentStamps}/{limit}</div>
                         </div>
 
-                        {/* Stamp grid with punch animation */}
-                        <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(5, limit)}, 1fr)` }}>
-                          {Array.from({ length: limit }).map((_, i) => {
-                            const filled = i < page.currentStamps;
-                            const isNew = i === page.currentStamps - 1;
-                            const isTier = tierStamps.has(i + 1);
-                            return (
-                              <div key={i} className="aspect-square relative">
-                                {filled ? (
-                                  <motion.div
-                                    initial={isNew ? { scale: 0, y: -16, rotate: -12 } : false}
-                                    animate={{ scale: 1, y: 0, rotate: 0 }}
-                                    transition={isNew ? { type: 'spring', stiffness: 520, damping: 18, delay: 0.35 } : {}}
-                                    className="w-full h-full rounded-full flex items-center justify-center overflow-hidden relative"
-                                    style={{ background: isTier ? 'linear-gradient(135deg,#f5a623,#f59e0b)' : 'linear-gradient(135deg,#1D4ED8,#7C3AED)' }}
-                                  >
-                                    {isNew && (
-                                      <motion.div
-                                        className="absolute inset-0 rounded-full"
-                                        initial={{ opacity: 0.7, scale: 1 }}
-                                        animate={{ opacity: 0, scale: 2 }}
-                                        transition={{ delay: 0.55, duration: 0.45 }}
-                                        style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.6), transparent)' }}
-                                      />
-                                    )}
-                                    {stampIconUrl
-                                      ? <img src={stampIconUrl} alt="" className="w-[62%] h-[62%] object-contain relative z-10" />
-                                      : <span className="relative z-10 leading-none" style={{ fontSize: Math.max(10, Math.min(18, Math.floor(44 / Math.min(5, limit)))) }}>{isTier ? '🎁' : stampIcon}</span>
-                                    }
-                                  </motion.div>
-                                ) : (
-                                  <div
-                                    className="w-full h-full rounded-full flex items-center justify-center"
-                                    style={{ background: 'rgba(0,0,0,0.05)', border: `2px ${isTier ? 'dashed' : 'solid'} rgba(0,0,0,0.1)` }}
-                                  >
-                                    {isTier
-                                      ? <Gift size={11} style={{ color: 'rgba(245,166,35,0.5)' }} />
-                                      : <span className="font-bold text-[10px]" style={{ color: 'rgba(0,0,0,0.2)' }}>{i + 1}</span>
-                                    }
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
+                        {/* Stamp grid — white body */}
+                        <div className="bg-white px-4 pt-4 pb-4">
+                          <div className="grid gap-1.5 mb-3" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
+                            {Array.from({ length: limit }).map((_, i) => {
+                              const filled = i < page.currentStamps;
+                              const isNew = i === page.currentStamps - 1;
+                              const isTier = tierStamps.has(i + 1);
+                              return (
+                                <div key={i} className="aspect-square relative">
+                                  {isTier && (
+                                    <motion.div
+                                      animate={{ opacity: [0.3, 0.65, 0.3] }}
+                                      transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: i * 0.18 }}
+                                      className="absolute inset-0 rounded-full pointer-events-none z-0"
+                                      style={{ boxShadow: '0 0 12px 5px rgba(245,166,35,0.6)' }}
+                                    />
+                                  )}
+                                  {filled ? (
+                                    <motion.div
+                                      initial={isNew ? { scale: 0, y: -14, rotate: ((i * 53 + 7) % 16) - 8 } : { scale: 1, opacity: 1 }}
+                                      animate={{ scale: 1, y: 0, opacity: 1, rotate: ((i * 53 + 7) % 16) - 8 }}
+                                      transition={isNew ? { type: 'spring', stiffness: 520, damping: 18, delay: 0.3 } : {}}
+                                      className="w-full h-full rounded-full flex items-center justify-center overflow-hidden relative z-10"
+                                      style={{ backgroundColor: isTier ? '#f5a623' : (stampIconUrl ? '#ffffff' : cardTheme), border: (!isTier && stampIconUrl) ? '2px solid #000' : undefined }}
+                                    >
+                                      {isNew && (
+                                        <motion.div
+                                          className="absolute inset-0 rounded-full z-20"
+                                          initial={{ opacity: 0.6, scale: 1 }}
+                                          animate={{ opacity: 0, scale: 2.2 }}
+                                          transition={{ delay: 0.5, duration: 0.4 }}
+                                          style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.7), transparent)' }}
+                                        />
+                                      )}
+                                      {isTier
+                                        ? <Gift size={13} className="text-white relative z-10" />
+                                        : stampIconUrl
+                                          ? <img src={stampIconUrl} alt="" className="w-[68%] h-[68%] object-contain relative z-10" style={{ transform: `rotate(${((i * 53 + 7) % 16) - 8}deg)` }} />
+                                          : <span className="leading-none relative z-10" style={{ fontSize: 14, transform: `rotate(${((i * 53 + 7) % 16) - 8}deg)`, display: 'inline-block' }}>{stampIcon}</span>
+                                      }
+                                    </motion.div>
+                                  ) : (
+                                    <div
+                                      className="w-full h-full rounded-full flex items-center justify-center bg-white"
+                                      style={{ borderWidth: 2, borderStyle: isTier ? 'dashed' : 'solid', borderColor: cardTheme }}
+                                    >
+                                      {isTier
+                                        ? <Gift size={10} style={{ color: cardTheme, opacity: 0.4 }} />
+                                        : <span className="font-bold text-[10px]" style={{ color: cardTheme, opacity: 0.35 }}>{i + 1}</span>
+                                      }
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {/* Progress bar */}
+                          <div className="h-1.5 bg-brand-navy/8 rounded-full overflow-hidden">
+                            <motion.div
+                              className="h-full rounded-full"
+                              style={{ backgroundColor: cardTheme }}
+                              initial={{ width: '0%' }}
+                              animate={{ width: `${limit > 0 ? Math.min(100, Math.round((page.currentStamps / limit) * 100)) : 0}%` }}
+                              transition={{ duration: 0.9, ease: 'easeOut', delay: 0.2 }}
+                            />
+                          </div>
+                          {nextRewardTier && (
+                            <p className="text-[10px] text-brand-navy/40 font-bold mt-2 text-right">
+                              {nextRewardTier.stamps - page.currentStamps} more → <span style={{ color: cardTheme }}>{nextRewardTier.reward}</span>
+                            </p>
+                          )}
                         </div>
                       </motion.div>
                     );
