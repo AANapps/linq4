@@ -14,7 +14,7 @@ workflows:
       vars:
         XCODE_WORKSPACE: ios/App/App.xcworkspace
         XCODE_SCHEME: App
-      node: 20.17.0
+      node: 22.13.0
     scripts:
       - name: Install Node dependencies
         script: npm ci
@@ -57,7 +57,7 @@ workflows:
         - linqandroid
       vars:
         PACKAGE_NAME: co.uk.adastranetwork.linq
-      node: 20.17.0
+      node: 22.13.0
     scripts:
       - name: Install Node dependencies
         script: npm ci
