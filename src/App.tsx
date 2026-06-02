@@ -12042,7 +12042,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                   }).catch(console.error);
                   updateDoc(doc(db, 'users', uid), { totalRedeemed: increment(_numTiers) }).catch(console.error);
                   updateDoc(doc(db, 'stores', _capturedCard.store_id), { rewardsGiven: increment(_numTiers) }).catch(console.error);
-                  postActivity(uid, userName, userPhoto, `${userName} earned a free ${rewardLabel}!`, '🎁').catch(console.error);
+                  postActivity(uid, userName, userPhoto, `${userName} just earned a ${rewardLabel}!`, '🎁').catch(console.error);
                 } else {
                   updateDoc(doc(db, 'users', uid), { totalRedeemed: increment(1) }).catch(console.error);
                   updateDoc(doc(db, 'stores', _capturedCard.store_id), { rewardsGiven: increment(1) }).catch(console.error);
@@ -21992,7 +21992,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
       stampsRequired: card.stamps_required || store?.stamps_required_for_reward || 10,
       ...(_cardCreatedMs ? { daysBetweenCardStartAndRedemption: Math.floor((Date.now() - _cardCreatedMs) / 86400000) } : {}),
     });
-    if (isFinalTier) postActivity(uid, userName, userPhoto, `${userName} earned a free ${rewardLabel}!`, '🎁');
+    if (isFinalTier) postActivity(uid, userName, userPhoto, `${userName} just earned a ${rewardLabel}!`, '🎁');
   };
 
   const handleLeaveCard = async () => {
@@ -22434,7 +22434,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
       });
       setRedeemSuccess(selectedReward.reward);
       const u = auth.currentUser;
-      if (u) postActivity(u.uid, u.displayName || 'Someone', u.photoURL || '', `${u.displayName || 'Someone'} earned a free ${selectedReward.reward}!`, '⭐');
+      if (u) postActivity(u.uid, u.displayName || 'Someone', u.photoURL || '', `${u.displayName || 'Someone'} just earned a ${selectedReward.reward}!`, '⭐');
       setTimeout(() => {
         setRedeemSuccess(null);
         setSelectedReward(null);
@@ -29531,9 +29531,25 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                 {post.createdAt?.toDate ? format(post.createdAt.toDate(), 'MMM d · h:mm a') : 'Just now'}
               </p>
             </div>
-            {/* Emoji badge */}
-            <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0 text-xl">
-              {post.activityEmoji}
+            {/* Emoji badge with orbiting sparkles */}
+            <div className="relative w-12 h-12 shrink-0 flex items-center justify-center">
+              {[0, 60, 120, 180, 240, 300].map((startDeg, i) => (
+                <motion.div
+                  key={i}
+                  className="absolute inset-0 flex items-center justify-center"
+                  animate={{ rotate: [startDeg, startDeg + 360] }}
+                  transition={{ duration: 2.8, repeat: Infinity, ease: 'linear', delay: i * 0.12 }}
+                >
+                  <div className="absolute w-1 h-1 rounded-full bg-white/70" style={{ transform: 'translateY(-22px)' }} />
+                </motion.div>
+              ))}
+              <motion.div
+                className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl relative z-10"
+                animate={{ scale: [1, 1.07, 1] }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+              >
+                {post.activityEmoji}
+              </motion.div>
             </div>
           </div>
         </div>
