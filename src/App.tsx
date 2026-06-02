@@ -21807,7 +21807,6 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
     if (hit) {
       haptic([80, 60, 120]); playSound('complete');
       setUnlockedReward(hit.reward);
-      confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 }, zIndex: TOP_Z, colors: ['#f5a623', '#ffffff', '#2563EB'] });
       setTimeout(() => setUnlockedReward(null), 4000);
     } else {
       haptic([40]); playSound('stamp');
