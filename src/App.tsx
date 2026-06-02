@@ -2639,12 +2639,18 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
               ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}><Sparkles size={16} /></motion.div> Please wait…</>
               : 'Continue'}
           </button>
-          {!Capacitor.isNativePlatform() && (<>
           <div className="flex items-center gap-3">
             <div className="flex-1 h-px bg-white/20" />
             <span className="text-white/40 text-xs font-medium">OR</span>
             <div className="flex-1 h-px bg-white/20" />
           </div>
+          <button
+            onClick={() => reset('signin')}
+            className="w-full bg-white/10 border border-white/20 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-white/20 transition-all"
+          >
+            Sign in with Email
+          </button>
+          {!Capacitor.isNativePlatform() && (
           <button
             onClick={handleGoogleLogin}
             disabled={loading}
@@ -2653,7 +2659,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
             <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="" />
             Continue with Google
           </button>
-          </>)}
+          )}
         </div>
       </div>
     );
