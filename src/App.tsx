@@ -5242,11 +5242,22 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
       for (let i = 0; i < N; i++) {
         setTimeout(() => { setDealtCount(i + 1); vibrate(35); }, i * 400);
       }
-      // Mark all stickers revealed in Firestore as soon as dealing completes —
-      // so the collection view never shows them as mystery cards again.
+      const revealStart = N * 400 + 520;
       setTimeout(() => {
         setPhase('reveal');
-        setLocalRevealedIds(new Set(displayStickers.map(s => s.id)));
+        // Auto-reveal cards one after another
+        displayStickers.forEach((s, i) => {
+          setTimeout(() => {
+            setLocalRevealedIds(prev => new Set([...prev, s.id]));
+            vibrate(VIBRATE_PATTERNS[s.tier]);
+            if (['red', 'blue', 'gold'].includes(s.tier)) {
+              setBurstTier(s.tier);
+              setBurstKey(k => k + 1);
+              setTimeout(() => setBurstTier(null), 900);
+            }
+          }, (i + 1) * 750);
+        });
+        // Mark all stickers revealed in Firestore
         if (cardId) {
           updateDoc(doc(db, 'sticker_cards', cardId), {
             revealedIds: arrayUnion(...displayStickers.map(s => s.id)),
@@ -5257,7 +5268,7 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
             uniqueTiers: arrayUnion(...displayStickers.map(s => s.tier)),
           }).catch(console.error);
         }
-      }, N * 400 + 520);
+      }, revealStart);
     }, 680);
   };
 
@@ -5484,7 +5495,7 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
             {phase === 'reveal' && !allRevealed && (
               <motion.p className="text-white/50 text-[11px] font-bold uppercase tracking-[0.2em]"
                 animate={{ opacity: [0.3, 0.85, 0.3] }} transition={{ duration: 1.4, repeat: Infinity }}
-              >Tap a mystery card to reveal</motion.p>
+              >Revealing…</motion.p>
             )}
 
             {phase === 'done' && (
@@ -5510,7 +5521,6 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
                   <MysteryRevealCard
                     sticker={s}
                     isRevealed={localRevealedIds.has(s.id)}
-                    onReveal={() => handleCardReveal(s)}
                   />
                 </motion.div>
               ))}
