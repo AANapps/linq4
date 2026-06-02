@@ -21784,12 +21784,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
     onClose?.();
   };
 
-  // Show completion popup when card is completed
-  useEffect(() => {
-    if (isCompleted && !card.isArchived && !card.isRedeemed) {
-      setShowCompletionPopup(true);
-    }
-  }, [isCompleted, card.isArchived, card.isRedeemed]);
+  // Completion popup is opened explicitly via "Redeem Now" button — not auto-opened.
 
   // Notify + confetti whenever stamps increase (real-time or test)
   useEffect(() => {
@@ -22050,13 +22045,22 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                   ) : null}
                 </div>
                 {claimableTier && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setShowCompletionPopup(true); }}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-white text-sm font-bold active:scale-[0.98] transition-transform"
-                    style={{ backgroundColor: cardTheme }}
-                  >
-                    <Gift size={15} /> Redeem: {claimableTier.reward}
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); }}
+                      className="flex-1 py-3 rounded-2xl text-sm font-bold active:scale-[0.98] transition-transform border-2"
+                      style={{ borderColor: cardTheme, color: cardTheme, backgroundColor: 'white' }}
+                    >
+                      Redeem Later
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setShowCompletionPopup(true); }}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-2xl text-white text-sm font-bold active:scale-[0.98] transition-transform"
+                      style={{ backgroundColor: cardTheme }}
+                    >
+                      <Gift size={14} /> Redeem Now
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
