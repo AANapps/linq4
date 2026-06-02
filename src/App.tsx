@@ -57,6 +57,37 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import { auth, db } from './firebase';
 import { scanNFCTag } from './nfc';
 import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
+import { App as CapApp } from '@capacitor/app';
+
+const openUrl = async (url: string) => {
+  if (Capacitor.isNativePlatform()) {
+    await Browser.open({ url });
+  } else {
+    window.open(url, '_blank');
+  }
+};
+
+const openMaps = async (query: string) => {
+  const encoded = encodeURIComponent(query);
+  if (Capacitor.getPlatform() === 'ios') {
+    await Browser.open({ url: `maps://?q=${encoded}` });
+  } else if (Capacitor.getPlatform() === 'android') {
+    await Browser.open({ url: `geo:0,0?q=${encoded}` });
+  } else {
+    window.open(`https://www.google.com/maps/search/?api=1&query=${encoded}`, '_blank');
+  }
+};
+
+const openMapsDirections = async (destLat: number, destLng: number) => {
+  if (Capacitor.getPlatform() === 'ios') {
+    await Browser.open({ url: `maps://?daddr=${destLat},${destLng}` });
+  } else if (Capacitor.getPlatform() === 'android') {
+    await Browser.open({ url: `google.navigation:q=${destLat},${destLng}` });
+  } else {
+    window.open(`https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}`, '_blank');
+  }
+};
 const functions = getFunctions();
 const storage = getStorage();
 
@@ -15233,7 +15264,18 @@ function VisitQRScannerModal({ storeId, onClose, onPackReady }: { storeId: strin
     startCamera().then(() => { if (scanningRef.current) tick(); });
     const onVisible = () => { if (document.visibilityState === 'visible' && scanningRef.current) startCamera().then(() => { if (scanningRef.current) { cancelAnimationFrame(rafRef.current); tick(); } }); };
     document.addEventListener('visibilitychange', onVisible);
-    return () => { stopCamera(); document.removeEventListener('visibilitychange', onVisible); };
+    let resumeListener: any;
+    let pauseListener: any;
+    if (Capacitor.isNativePlatform()) {
+      resumeListener = CapApp.addListener('resume', () => { if (scanningRef.current) startCamera().then(() => { if (scanningRef.current) { cancelAnimationFrame(rafRef.current); tick(); } }); });
+      pauseListener = CapApp.addListener('pause', () => { stopCamera(); });
+    }
+    return () => {
+      stopCamera();
+      document.removeEventListener('visibilitychange', onVisible);
+      resumeListener?.then((l: any) => l.remove());
+      pauseListener?.then((l: any) => l.remove());
+    };
   }, []);
 
   return createPortal(
@@ -15438,7 +15480,18 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady, initialQty }: {
     startCamera();
     const onVisible = () => { if (document.visibilityState === 'visible' && scanningRef.current) startCamera(); };
     document.addEventListener('visibilitychange', onVisible);
-    return () => { stopCamera(); document.removeEventListener('visibilitychange', onVisible); };
+    let resumeListener: any;
+    let pauseListener: any;
+    if (Capacitor.isNativePlatform()) {
+      resumeListener = CapApp.addListener('resume', () => { if (scanningRef.current) startCamera(); });
+      pauseListener = CapApp.addListener('pause', () => { stopCamera(); });
+    }
+    return () => {
+      stopCamera();
+      document.removeEventListener('visibilitychange', onVisible);
+      resumeListener?.then((l: any) => l.remove());
+      pauseListener?.then((l: any) => l.remove());
+    };
   }, []);
 
   const handleClose = () => { stopCamera(); onClose(); };
@@ -17993,7 +18046,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
     const url = new URL(STRIPE_PAYMENT_LINK);
     url.searchParams.set('client_reference_id', store.id);
     if (profile?.email) url.searchParams.set('prefilled_email', profile.email);
-    window.location.href = url.toString();
+    openUrl(url.toString());
   };
 
   const handleManageBilling = async () => {
@@ -18001,10 +18054,11 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
     setIsLoadingCheckout(true);
     try {
       const fn = httpsCallable(functions, 'createPortalSession');
-      const result = await fn({ storeId: store.id, returnUrl: window.location.href }) as any;
-      if (result.data?.url) window.location.href = result.data.url;
+      const returnUrl = Capacitor.isNativePlatform() ? 'https://mylinq.app' : window.location.href;
+      const result = await fn({ storeId: store.id, returnUrl }) as any;
+      if (result.data?.url) openUrl(result.data.url);
     } catch (e: any) {
-      alert('Could not open billing portal: ' + (e.message || 'Unknown error'));
+      console.error('Billing portal error:', e);
     } finally {
       setIsLoadingCheckout(false);
     }
@@ -20725,7 +20779,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
             onClose={() => setShowNFCOrder(false)}
             onOrder={() => {
               if (!store?.id) return;
-              window.location.href = `${NFC_ORDER_STRIPE_LINK}?client_reference_id=${store.id}`;
+              openUrl(`${NFC_ORDER_STRIPE_LINK}?client_reference_id=${store.id}`);
             }}
           />
         )}
@@ -25952,7 +26006,7 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
               const snap = await getDoc(doc(db, 'app_config', 'settings'));
               const link = snap.data()?.nfcOrderLink || 'https://buy.stripe.com/PLACEHOLDER_NFC_LINK';
               await updateDoc(doc(db, 'stores', store.id), { nfcOrdered: true });
-              window.location.href = `${link}?client_reference_id=${store.id}`;
+              openUrl(`${link}?client_reference_id=${store.id}`);
             }}
           />
         )}
@@ -28677,6 +28731,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
   const [saved, setSaved] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [legalModal, setLegalModal] = useState<'privacy' | 'terms' | null>(null);
 
   useEffect(() => {
@@ -29153,6 +29208,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
                 </div>
                 <h3 className="font-display font-bold text-xl text-brand-navy">Delete Account?</h3>
                 <p className="text-sm text-brand-navy/80">This permanently removes your profile, posts, follow connections, loyalty cards, and all analytics events we hold for you. This cannot be undone.</p>
+                {deleteError && <p className="text-xs text-red-500 font-medium">{deleteError}</p>}
               </div>
               <div className="space-y-3">
                 <button
@@ -29162,7 +29218,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
                       await onDeleteAccount();
                     } catch (err: any) {
                       console.error('Delete account error:', err);
-                      alert('Could not delete account: ' + (err?.message ?? 'Unknown error'));
+                      setDeleteError(err?.message ?? 'Could not delete account');
                       setDeleting(false);
                     }
                   }}
@@ -31844,7 +31900,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
               banners={adminBanners}
               cycleMs={bannerCycleMs}
               onNavigate={dest => {
-                if (dest.startsWith('http')) { window.open(dest, '_blank'); return; }
+                if (dest.startsWith('http')) { openUrl(dest); return; }
                 onNavigate?.(dest);
               }}
             />
@@ -34047,17 +34103,16 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
           const hasCoords = store.lat != null && store.lng != null;
           const handleMapClick = () => {
             if (addrText) {
-              const enc = encodeURIComponent(addrText);
               if (userCoords) {
-                window.open(`https://www.google.com/maps/dir/?api=1&origin=${userCoords.lat},${userCoords.lng}&destination=${enc}`, '_blank');
+                openMapsDirections(userCoords.lat, userCoords.lng).catch(() => openMaps(addrText));
               } else {
-                window.open(`https://www.google.com/maps/search/?api=1&query=${enc}`, '_blank');
+                openMaps(addrText);
               }
             } else if (hasCoords) {
               if (userCoords) {
-                window.open(`https://www.google.com/maps/dir/?api=1&origin=${userCoords.lat},${userCoords.lng}&destination=${store.lat},${store.lng}`, '_blank');
+                openMapsDirections(store.lat!, store.lng!).catch(() => openMaps(`${store.lat},${store.lng}`));
               } else {
-                window.open(`https://www.google.com/maps/search/?api=1&query=${store.lat},${store.lng}`, '_blank');
+                openMaps(`${store.lat},${store.lng}`);
               }
             }
           };
@@ -35083,8 +35138,8 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
               {store.locations.map(loc => {
                 const addr = [loc.line1, loc.town, loc.postcode].filter(Boolean).join(', ');
                 const handleLocMap = () => {
-                  if (addr) window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`, '_blank');
-                  else if (loc.lat && loc.lng) window.open(`https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}`, '_blank');
+                  if (addr) openMaps(addr);
+                  else if (loc.lat && loc.lng) openMaps(`${loc.lat},${loc.lng}`);
                 };
                 return (
                   <button key={loc.id} onClick={handleLocMap} className="w-full flex items-start gap-3 text-left active:opacity-70">
@@ -35107,8 +35162,8 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
               <button
                 onClick={() => {
                   const addr = store.location || (store as any).address || '';
-                  if (addr) window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`, '_blank');
-                  else if (store.lat && store.lng) window.open(`https://www.google.com/maps/search/?api=1&query=${store.lat},${store.lng}`, '_blank');
+                  if (addr) openMaps(addr);
+                  else if (store.lat && store.lng) openMaps(`${store.lat},${store.lng}`);
                 }}
                 className="flex items-start gap-3 text-left active:opacity-70 w-full"
               >
