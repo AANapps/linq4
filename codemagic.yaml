@@ -20,10 +20,6 @@ workflows:
         script: npm run build
       - name: Capacitor sync iOS
         script: npx cap sync ios
-      - name: Set bundle version
-        script: |
-          BUILD=$(( $(app-store-connect get-latest-testflight-build-number "$APP_STORE_APP_ID") + 1 ))
-          xcrun agvtool new-version -all $BUILD
       - name: Build & sign iOS
         script: |
           xcode-project use-profiles
@@ -40,10 +36,6 @@ workflows:
             -exportPath build/ipa
     artifacts:
       - build/ipa/*.ipa
-    publishing:
-      app_store_connect:
-        auth: integration
-        submit_to_testflight: true
 
   # ── Android ──────────────────────────────────────────────────────────────────
   android-release:
