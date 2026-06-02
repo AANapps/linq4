@@ -16315,7 +16315,7 @@ function StampCelebrationModal({
                     initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
                     className="text-[10px] font-bold uppercase tracking-widest text-brand-gold"
                   >
-                    🏃 Challenges
+                    Challenges
                   </motion.p>
                   <motion.h2
                     initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
@@ -16333,33 +16333,29 @@ function StampCelebrationModal({
                         <motion.div
                           key={i}
                           initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 + i * 0.07 }}
-                          className={cn('rounded-2xl p-3.5 space-y-2', c.done ? 'bg-green-50' : 'bg-brand-navy/5')}
+                          className="rounded-2xl p-3.5 space-y-2 relative overflow-hidden"
+                          style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #4F46E5 50%, #7C3AED 100%)' }}
                         >
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="font-bold text-sm text-brand-navy truncate">{c.title}</p>
+                          <span className="card-shine-ray" aria-hidden="true" />
+                          <div className="relative z-10 flex items-center justify-between gap-2">
+                            <p className="font-bold text-sm text-white truncate">{c.title}</p>
                             {c.done
-                              ? <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 400, damping: 14 }} className="text-[10px] font-black text-green-500 shrink-0">✓ DONE!</motion.span>
-                              : <span className="text-[10px] font-bold text-brand-navy/60 shrink-0">{c.currentStamps}/{c.totalStamps}</span>}
+                              ? <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 400, damping: 14 }} className="text-[10px] font-black text-emerald-300 shrink-0">DONE!</motion.span>
+                              : <span className="text-[10px] font-bold text-white/60 shrink-0">{c.currentStamps}/{c.totalStamps}</span>}
                           </div>
-                          <div className="space-y-1.5">
-                            <p className="text-[10px] text-brand-navy/75 truncate">{c.reward}</p>
+                          <div className="relative z-10 space-y-1.5">
+                            <p className="text-[10px] text-white/70 truncate">{c.reward}</p>
                             <div className="flex items-baseline justify-between mb-0.5">
-                              <span className="text-xs font-black text-brand-navy">{c.currentStamps}<span className="text-brand-navy/40 font-bold text-[10px]"> / {c.totalStamps}</span></span>
-                              <span className={cn('text-xs font-black', c.done ? 'text-green-500' : 'text-brand-gold')}>{c.totalStamps > 0 ? Math.min(100, Math.round((c.currentStamps / c.totalStamps) * 100)) : 0}%</span>
+                              <span className="text-xs font-black text-white">{c.currentStamps}<span className="text-white/50 font-bold text-[10px]"> / {c.totalStamps}</span></span>
+                              <span className="text-xs font-black text-white/80">{c.totalStamps > 0 ? Math.min(100, Math.round((c.currentStamps / c.totalStamps) * 100)) : 0}%</span>
                             </div>
-                            <div className="relative h-5 bg-brand-navy/8 rounded-xl overflow-hidden">
+                            <div className="relative h-2 bg-white/20 rounded-full overflow-hidden">
                               <motion.div
-                                className="absolute inset-y-0 left-0 rounded-xl overflow-hidden"
-                                style={{
-                                  background: c.done ? 'linear-gradient(90deg,#34d399,#10b981)' : 'linear-gradient(90deg,#7c3aed,#4f46e5,#2563eb)',
-                                  boxShadow: c.done ? '3px 0 10px rgba(52,211,153,0.5)' : '3px 0 10px rgba(99,102,241,0.5)',
-                                }}
+                                className="absolute inset-y-0 left-0 rounded-full bg-white/90"
                                 initial={{ width: 0 }}
                                 animate={{ width: `${c.totalStamps > 0 ? Math.min(100, Math.round((c.currentStamps / c.totalStamps) * 100)) : 0}%` }}
                                 transition={{ duration: 0.85, ease: [0.34, 1.56, 0.64, 1], delay: 0.2 + i * 0.07 }}
-                              >
-                                {!c.done && <span className="challenge-shimmer" />}
-                              </motion.div>
+                              />
                             </div>
                           </div>
                         </motion.div>
@@ -16369,7 +16365,7 @@ function StampCelebrationModal({
 
                   {/* Divider when both sections present */}
                   {(page.challengesList?.length ?? 0) > 0 && (page.newChallengesList?.length ?? 0) > 0 && (
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 pt-1">✨ Join these</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 pt-1">Join these</p>
                   )}
 
                   {/* 3 new unjoined challenges */}
@@ -16377,13 +16373,15 @@ function StampCelebrationModal({
                     <motion.div
                       key={c.id}
                       initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 + i * 0.07 }}
-                      className="rounded-2xl bg-brand-gold/8 border border-brand-gold/20 p-3.5 flex items-center justify-between gap-3"
+                      className="rounded-2xl p-3.5 flex items-center justify-between gap-3 relative overflow-hidden"
+                      style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #4F46E5 50%, #7C3AED 100%)' }}
                     >
-                      <div className="min-w-0">
-                        <p className="font-bold text-sm text-brand-navy truncate">{c.title}</p>
-                        <p className="text-[10px] text-brand-navy/75 mt-0.5 truncate">🏆 {c.reward}</p>
+                      <span className="card-shine-ray" aria-hidden="true" />
+                      <div className="relative z-10 min-w-0">
+                        <p className="font-bold text-sm text-white truncate">{c.title}</p>
+                        <p className="text-[10px] text-white/60 mt-0.5 truncate">{c.reward}</p>
                       </div>
-                      <p className="text-[10px] font-bold text-brand-navy/60 shrink-0">{c.totalStamps} stamps</p>
+                      <p className="relative z-10 text-[10px] font-bold text-white/60 shrink-0">{c.totalStamps} stamps</p>
                     </motion.div>
                   ))}
                 </div>
@@ -16391,9 +16389,11 @@ function StampCelebrationModal({
                 {(page.newChallengesList?.length ?? 0) > 0 && (
                   <motion.div
                     initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
-                    className="rounded-2xl bg-brand-navy/5 p-3 text-center"
+                    className="rounded-2xl p-3 text-center relative overflow-hidden"
+                    style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #4F46E5 50%, #7C3AED 100%)' }}
                   >
-                    <p className="text-[11px] font-bold text-brand-navy/70">🎯 Join in the Challenges tab — every stamp counts!</p>
+                    <span className="card-shine-ray" aria-hidden="true" />
+                    <p className="relative z-10 text-[11px] font-bold text-white/80">Join in the Challenges tab — every stamp counts!</p>
                   </motion.div>
                 )}
 
