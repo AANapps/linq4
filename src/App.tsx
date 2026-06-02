@@ -11790,28 +11790,11 @@ function buildStampCelebrationPages(
         ? STAMP_ENCOUR[seed % STAMP_ENCOUR.length](stampsLeft, nextTier.reward)
         : `🎁 You've earned: ${hitTier?.reward || store.reward || 'Free Reward'}!`;
 
-  pages.push({
-    type: 'stamp',
-    cardId: card.id,
-    storeName: store.name,
-    storeLogoUrl: store.logoUrl || '',
-    storeTheme: store.theme || '#2563EB',
-    storeCategory: store.category || '',
-    stampIcon: store.stampIcon || '⭐',
-    stampIconUrl: store.stampIconUrl || '',
-    cardPattern: store.cardPattern || 'solid',
-    currentStamps: card.current_stamps,
-    totalStamps: nextTier?.stamps || hitTier?.stamps || store.stamps_required_for_reward || 10,
-    reward: nextTier?.reward || hitTier?.reward || store.reward || 'Free Reward',
-    rewardTiers: tiers,
-    encouragement: enc,
-    done: done || (!!hitTier && !nextStageTier),
-  });
-
-  // 1a. Stage reward page — inserted at index 0 when the current stamp hits a tier
+  // Stage reward page — only page shown when current stamp hits a tier
   if (hitTier) {
-    pages.unshift({
+    pages.push({
       type: 'stage_reward',
+      cardId: card.id,
       currentStamps: card.current_stamps,
       totalStamps: hitTier.stamps,
       reward: hitTier.reward,
@@ -16134,14 +16117,38 @@ function StampCelebrationModal({
                       </div>
                     )}
 
-                    <motion.button
-                      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-                      onClick={() => { setStageRedeemed(true); fireCelebAnimation('fireworks'); }}
-                      className="w-full py-3.5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-all"
-                      style={{ background: 'linear-gradient(135deg, #16A34A, #15803D)', color: 'white' }}
-                    >
-                      Redeem 🎁
-                    </motion.button>
+                    {page.done && page.cardId ? (
+                      <motion.div
+                        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+                        className="flex gap-2"
+                      >
+                        <button
+                          onClick={onClose}
+                          className="flex-1 py-3.5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-all border-2"
+                          style={{ borderColor: '#4F46E5', color: '#4F46E5', backgroundColor: 'white' }}
+                        >
+                          Redeem Later
+                        </button>
+                        <button
+                          onClick={() => onRedeemNow?.(page.cardId!)}
+                          className="flex-1 py-3.5 rounded-2xl font-bold text-sm text-white active:scale-[0.98] transition-all relative overflow-hidden"
+                          style={{ background: 'linear-gradient(160deg, #1D4ED8 0%, #4F46E5 40%, #7C3AED 100%)' }}
+                        >
+                          <span className="card-shine-ray" aria-hidden="true" />
+                          <span className="relative z-10">Redeem Now</span>
+                        </button>
+                      </motion.div>
+                    ) : (
+                      <motion.button
+                        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+                        onClick={() => { setStageRedeemed(true); fireCelebAnimation('fireworks'); }}
+                        className="w-full py-3.5 rounded-2xl font-bold text-sm text-white active:scale-[0.98] transition-all relative overflow-hidden"
+                        style={{ background: 'linear-gradient(160deg, #1D4ED8 0%, #4F46E5 40%, #7C3AED 100%)' }}
+                      >
+                        <span className="card-shine-ray" aria-hidden="true" />
+                        <span className="relative z-10">Continue</span>
+                      </motion.button>
+                    )}
                   </>
                 ) : (
                   /* Step 2: next stage progress */
