@@ -1529,7 +1529,9 @@ export default function App() {
   }, [user, profile]);
 
   useEffect(() => {
+    const loadingTimeout = setTimeout(() => setLoading(false), 10000);
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      clearTimeout(loadingTimeout);
       if (!firebaseUser) {
         setUser(null);
         setProfile(null);
