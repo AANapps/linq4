@@ -1673,6 +1673,9 @@ export default function App() {
   }, [pendingCardId, user?.uid]);
 
   const handleLogin = async (): Promise<string | null> => {
+    if (Capacitor.isNativePlatform()) {
+      return 'Google sign-in is not available on mobile. Please use email and password.';
+    }
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
@@ -2517,6 +2520,11 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
 
   const bg = { background: 'linear-gradient(160deg, var(--brand-g1) 0%, var(--brand-g2) 40%, var(--brand-g3) 70%, var(--brand-g4) 100%)' };
 
+  if (mode === 'home' && Capacitor.isNativePlatform()) {
+    reset('signin');
+    return null;
+  }
+
   if (mode === 'home') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-8 text-center" style={bg}>
@@ -2562,6 +2570,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
               ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}><Sparkles size={16} /></motion.div> Please wait…</>
               : 'Continue'}
           </button>
+          {!Capacitor.isNativePlatform() && (<>
           <div className="flex items-center gap-3">
             <div className="flex-1 h-px bg-white/20" />
             <span className="text-white/40 text-xs font-medium">OR</span>
@@ -2575,6 +2584,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
             <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="" />
             Continue with Google
           </button>
+          </>)}
         </div>
       </div>
     );
@@ -2696,7 +2706,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
     );
   }
 
-  if (mode === 'phone' || mode === 'otp') {
+  if ((mode === 'phone' || mode === 'otp') && !Capacitor.isNativePlatform()) {
     return (
       <div className="min-h-screen flex flex-col px-8" style={bg}>
         <button onClick={() => reset('home')} className="flex items-center gap-2 text-white/70 hover:text-white transition-colors pt-14 mb-8">
@@ -2891,6 +2901,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
             <div className="flex-1 h-px bg-white/20" />
           </div>
 
+          {!Capacitor.isNativePlatform() && (
           <button
             onClick={handleGoogleLogin}
             disabled={loading}
@@ -2899,6 +2910,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
             <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="" />
             Continue with Google
           </button>
+          )}
 
           <button
             onClick={() => reset(mode === 'signup' ? 'signin' : 'signup')}
