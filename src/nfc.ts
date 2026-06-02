@@ -90,9 +90,8 @@ async function nativeScan(alertMessage: string): Promise<NFCScanResult> {
       });
     } catch (err: any) {
       await listener.remove();
+      console.error('[NFC] startScanning error:', err);
       if (!settled) {
-        // Thrown when NFC is disabled or unavailable; user cancellation on iOS
-        // resolves startScanning normally without throwing.
         finish({ ok: false, error: err?.message ?? 'Could not start NFC scan.', cancelled: true });
       }
     }
