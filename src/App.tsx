@@ -21019,6 +21019,9 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
         {/* Colored header — mirrors compact LoyaltyCard header */}
         <div className="relative overflow-hidden flex items-center gap-3 px-4 py-3" style={{ backgroundColor: color }}>
           <span className="card-shine-ray" aria-hidden="true" />
+          {store?.coverUrl && (
+            <img src={store.coverUrl} aria-hidden="true" className="absolute inset-0 w-full h-full object-cover scale-110" style={{ filter: 'blur(14px)', opacity: 0.28 }} />
+          )}
           <div
             className="relative z-10 w-10 h-10 rounded-full overflow-hidden border-2 border-white/50 shrink-0 shadow-md"
             onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}
@@ -21444,6 +21447,9 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
           style={{ background: `linear-gradient(160deg, ${color}ff 0%, ${color}dd 60%, ${color}aa 100%)` }}
         >
           <span className="card-shine-ray" aria-hidden="true" />
+          {store?.coverUrl && (
+            <img src={store.coverUrl} aria-hidden="true" className="absolute inset-0 w-full h-full object-cover scale-110" style={{ filter: 'blur(18px)', opacity: 0.3 }} />
+          )}
           <button
             onClick={e => { e.stopPropagation(); setShowLeaveConfirm(true); }}
             className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/15 flex items-center justify-center active:scale-90 transition-transform"
@@ -22260,6 +22266,9 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
             <div>
               <div className="relative overflow-hidden flex items-center gap-3 px-4 py-3" style={{ backgroundColor: cardTheme }}>
                 <span className="card-shine-ray" aria-hidden="true" />
+                {store?.coverUrl && (
+                  <img src={store.coverUrl} aria-hidden="true" className="absolute inset-0 w-full h-full object-cover scale-110" style={{ filter: 'blur(14px)', opacity: 0.28 }} />
+                )}
                 {cardPattern !== 'solid' && <div className="absolute inset-0 pointer-events-none" style={getCardPatternStyle(cardPattern)} />}
                 <div className="relative z-10 w-10 h-10 rounded-full overflow-hidden border-2 border-white/50 shrink-0 cursor-pointer shadow-md"
                   onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}>
@@ -22293,6 +22302,9 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
               <div className="flex flex-col h-full">
                 <div className="relative overflow-hidden pt-10 pb-8 flex flex-col items-center gap-2" style={{ backgroundColor: cardTheme }}>
                   <span className="card-shine-ray" aria-hidden="true" />
+                  {store?.coverUrl && (
+                    <img src={store.coverUrl} aria-hidden="true" className="absolute inset-0 w-full h-full object-cover scale-110" style={{ filter: 'blur(18px)', opacity: 0.3 }} />
+                  )}
                   {cardPattern !== 'solid' && <div className="absolute inset-0 pointer-events-none" style={getCardPatternStyle(cardPattern)} />}
                   {isCompleted && !card.isRedeemed && (
                     <div className="absolute top-4 left-4 bg-white/25 text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest animate-pulse z-10">Ready!</div>
