@@ -58,6 +58,7 @@ workflows:
       vars:
         PACKAGE_NAME: co.uk.adastranetwork.linq
       node: 22.13.0
+      java: 21
     scripts:
       - name: Install Node dependencies
         script: npm ci
