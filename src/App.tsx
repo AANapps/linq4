@@ -5468,16 +5468,16 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
             )}
 
             {phase === 'done' && (
-              <>
-                <motion.p className="text-white text-3xl font-bold text-center"
+              <motion.div className="text-center space-y-2" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+                <motion.p className="text-white font-black text-3xl leading-tight"
                   initial={{ scale: 0.55, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ type: 'spring', damping: 9, stiffness: 200 }}
                 >{doneTitle}</motion.p>
-                <motion.p className="text-white/60 text-[11px] font-bold text-center uppercase tracking-widest"
-                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
-                >Play daily votes &amp; Linqle to unlock more packs</motion.p>
-              </>
+                <motion.p className="text-white text-sm font-bold"
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
+                >Play Linqle &amp; daily vote to earn more stickers</motion.p>
+              </motion.div>
             )}
 
             <div className="flex gap-3 justify-center items-end">
@@ -5497,16 +5497,18 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
             </div>
 
             {phase === 'done' && (
-              <motion.button
-                className="mt-2 w-full py-4 rounded-2xl font-bold text-base"
-                style={{ background: 'rgba(255,255,255,0.11)', color: 'white',
-                  border: '1.5px solid rgba(255,255,255,0.22)', backdropFilter: 'blur(8px)' }}
-                onClick={onClose}
-                initial={{ opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.55 }}
-                whileTap={{ scale: 0.96 }}
-              >Collect</motion.button>
+              <motion.div className="w-full space-y-2.5" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}>
+                <motion.p className="text-white/50 text-[11px] font-bold text-center uppercase tracking-widest"
+                  whileTap={{ scale: 0.95 }}
+                >View progress in Challenges tab</motion.p>
+                <motion.button
+                  className="w-full py-4 rounded-2xl font-bold text-base"
+                  style={{ background: 'rgba(255,255,255,0.11)', color: 'white',
+                    border: '1.5px solid rgba(255,255,255,0.22)', backdropFilter: 'blur(8px)' }}
+                  onClick={onClose}
+                  whileTap={{ scale: 0.96 }}
+                >Collect</motion.button>
+              </motion.div>
             )}
           </motion.div>
         )}
