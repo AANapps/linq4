@@ -10,7 +10,7 @@ workflows:
         distribution_type: app_store
         bundle_identifier: co.uk.adastranetwork.linq
       vars:
-        XCODE_WORKSPACE: ios/App/App.xcworkspace
+        XCODE_PROJECT: ios/App/App.xcodeproj
         XCODE_SCHEME: App
       node: 22.13.0
     scripts:
@@ -24,7 +24,7 @@ workflows:
         script: |
           xcode-project use-profiles
           xcodebuild \
-            -workspace "$XCODE_WORKSPACE" \
+            -project "$XCODE_PROJECT" \
             -scheme "$XCODE_SCHEME" \
             -configuration Release \
             -archivePath build/App.xcarchive \
