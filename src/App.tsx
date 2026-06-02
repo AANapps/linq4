@@ -14624,8 +14624,17 @@ function VendorQRDisplay({ store, onClose }: { store: StoreProfile; onClose: () 
             </div>
           )}
 
+          <button
+            onClick={rotateToken}
+            disabled={rotating}
+            className="flex items-center gap-2 px-5 py-2 rounded-2xl bg-white/15 text-white text-sm font-bold active:scale-95 transition-all disabled:opacity-40"
+          >
+            <RefreshCw size={14} className={rotating ? 'animate-spin' : ''} />
+            Refresh
+          </button>
+
           {error && (
-            <button onClick={rotateToken} className="px-6 py-2 bg-white/20 rounded-2xl text-white text-sm font-bold">Retry</button>
+            <p className="text-red-300 text-xs text-center">{error}</p>
           )}
 
           <p className="text-white/50 text-xs text-center max-w-[220px]">
@@ -14794,8 +14803,16 @@ function VendorSpendQRDisplay({ store, onClose }: { store: StoreProfile; onClose
                 }
               </div>
             )}
+            <button
+              onClick={() => generateToken(confirmedAmount, true)}
+              disabled={rotating || generating}
+              className="flex items-center gap-2 px-5 py-2 rounded-2xl bg-white/15 text-white text-sm font-bold active:scale-95 transition-all disabled:opacity-40"
+            >
+              <RefreshCw size={14} className={(rotating || generating) ? 'animate-spin' : ''} />
+              Refresh
+            </button>
             {error && (
-              <button onClick={() => generateToken(confirmedAmount)} className="px-6 py-2 bg-white/20 rounded-2xl text-white text-sm font-bold">Retry</button>
+              <p className="text-red-300 text-xs text-center">{error}</p>
             )}
             <button onClick={() => { setPhase('amount'); setTokenId(null); setAmountInput(''); }} className="text-white/60 text-xs font-bold">Change amount</button>
           </div>
