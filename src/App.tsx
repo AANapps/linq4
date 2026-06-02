@@ -16373,15 +16373,16 @@ function StampCelebrationModal({
                     <motion.div
                       key={c.id}
                       initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 + i * 0.07 }}
-                      className="rounded-2xl p-3.5 flex items-center justify-between gap-3 relative overflow-hidden"
-                      style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #4F46E5 50%, #7C3AED 100%)' }}
+                      className="rounded-2xl bg-white border border-brand-navy/8 p-3.5 flex items-center justify-between gap-3 shadow-sm"
                     >
-                      <span className="card-shine-ray" aria-hidden="true" />
-                      <div className="relative z-10 min-w-0">
-                        <p className="font-bold text-sm text-white truncate">{c.title}</p>
-                        <p className="text-[10px] text-white/60 mt-0.5 truncate">{c.reward}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-sm text-brand-navy truncate">{c.title}</p>
+                        <p className="text-[10px] text-brand-navy/50 mt-0.5 truncate">{c.reward}</p>
                       </div>
-                      <p className="relative z-10 text-[10px] font-bold text-white/60 shrink-0">{c.totalStamps} stamps</p>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[9px] font-black text-brand-navy/40 uppercase tracking-widest">{c.totalStamps} stamps</span>
+                        <span className="text-[9px] font-black px-2 py-0.5 rounded-full text-white" style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)' }}>Join</span>
+                      </div>
                     </motion.div>
                   ))}
                 </div>
@@ -16389,11 +16390,9 @@ function StampCelebrationModal({
                 {(page.newChallengesList?.length ?? 0) > 0 && (
                   <motion.div
                     initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
-                    className="rounded-2xl p-3 text-center relative overflow-hidden"
-                    style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #4F46E5 50%, #7C3AED 100%)' }}
+                    className="rounded-2xl bg-brand-navy/4 border border-brand-navy/8 p-3 text-center"
                   >
-                    <span className="card-shine-ray" aria-hidden="true" />
-                    <p className="relative z-10 text-[11px] font-bold text-white/80">Join in the Challenges tab — every stamp counts!</p>
+                    <p className="text-[11px] font-bold text-brand-navy/60">Join in the Challenges tab — every stamp counts!</p>
                   </motion.div>
                 )}
 
