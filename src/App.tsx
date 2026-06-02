@@ -12029,7 +12029,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                   }).catch(console.error);
                   updateDoc(doc(db, 'users', uid), { totalRedeemed: increment(_numTiers) }).catch(console.error);
                   updateDoc(doc(db, 'stores', _capturedCard.store_id), { rewardsGiven: increment(_numTiers) }).catch(console.error);
-                  postActivity(uid, userName, userPhoto, `🎉 ${userName} just smashed it — scored a FREE ${rewardLabel}! Who's next? 🔥`, '🎁').catch(console.error);
+                  postActivity(uid, userName, userPhoto, `${userName} earned a free ${rewardLabel}!`, '🎁').catch(console.error);
                 } else {
                   updateDoc(doc(db, 'users', uid), { totalRedeemed: increment(1) }).catch(console.error);
                   updateDoc(doc(db, 'stores', _capturedCard.store_id), { rewardsGiven: increment(1) }).catch(console.error);
@@ -21982,7 +21982,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
       stampsRequired: card.stamps_required || store?.stamps_required_for_reward || 10,
       ...(_cardCreatedMs ? { daysBetweenCardStartAndRedemption: Math.floor((Date.now() - _cardCreatedMs) / 86400000) } : {}),
     });
-    if (isFinalTier) postActivity(uid, userName, userPhoto, `🎉 ${userName} just smashed it — scored a FREE ${rewardLabel}! Who's next? 🔥`, '🎁');
+    if (isFinalTier) postActivity(uid, userName, userPhoto, `${userName} earned a free ${rewardLabel}!`, '🎁');
   };
 
   const handleLeaveCard = async () => {
@@ -22424,7 +22424,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
       });
       setRedeemSuccess(selectedReward.reward);
       const u = auth.currentUser;
-      if (u) postActivity(u.uid, u.displayName || 'Someone', u.photoURL || '', `🎉 ${u.displayName || 'Someone'} just smashed it — scored a FREE ${selectedReward.reward}! Who's next? 🔥`, '⭐');
+      if (u) postActivity(u.uid, u.displayName || 'Someone', u.photoURL || '', `${u.displayName || 'Someone'} earned a free ${selectedReward.reward}!`, '⭐');
       setTimeout(() => {
         setRedeemSuccess(null);
         setSelectedReward(null);
@@ -29499,28 +29499,33 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
 
   const visibleComments = showAllComments ? comments : comments.slice(0, 2);
 
-  // Activity posts render the same as normal posts
+  // Activity posts — styled reward card
   if (post.postType === 'activity') {
     return (
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="py-4 px-4">
-        <div className="space-y-2.5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full overflow-hidden border border-black/5 shrink-0 bg-blue-50 flex items-center justify-center">
-              <PixelAvatar config={authorProfile?.avatar} uid={post.authorUid} size={40} view="head" />
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="py-2 px-4">
+        <div className="rounded-2xl overflow-hidden relative" style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #4F46E5 50%, #7C3AED 100%)' }}>
+          <span className="card-shine-ray" aria-hidden="true" />
+          <div className="relative z-10 flex items-center gap-3 p-4">
+            {/* Avatar */}
+            <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-white/30 shrink-0 shadow-md bg-white/10 flex items-center justify-center">
+              <PixelAvatar config={authorProfile?.avatar} uid={post.authorUid} size={44} view="head" />
             </div>
+            {/* Text */}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <p className="font-bold text-sm text-brand-navy leading-snug">{authorProfile?.name || post.authorName}</p>
+              <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                <p className="font-bold text-sm text-white leading-snug">{authorProfile?.name || post.authorName}</p>
                 <StreakBadge streak={authorProfile?.streak} />
               </div>
-              <p className="text-[10px] text-brand-navy/50 font-medium">
+              <p className="text-white/80 text-sm font-semibold leading-snug">{post.content}</p>
+              <p className="text-white/40 text-[10px] font-medium mt-0.5">
                 {post.createdAt?.toDate ? format(post.createdAt.toDate(), 'MMM d · h:mm a') : 'Just now'}
               </p>
             </div>
+            {/* Emoji badge */}
+            <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0 text-xl">
+              {post.activityEmoji}
+            </div>
           </div>
-          <p className="text-sm text-brand-navy/80 leading-relaxed">
-            <span className="mr-1">{post.activityEmoji}</span>{post.content}
-          </p>
         </div>
       </motion.div>
     );
