@@ -710,6 +710,7 @@ interface Card {
   storeLogoUrl?: string;
   storeTheme?: string;
   createdAt?: any;
+  redeemedTierStamps?: number[];
 }
 
 interface Notification {
@@ -1092,6 +1093,7 @@ interface RankEntry {
 
 interface CelebrationPage {
   type: 'stamp' | 'challenge' | 'upsell' | 'rank' | 'monopoly_pack' | 'challenges_list' | 'upsell_list' | 'stage_reward' | 'collectible_promo' | 'visit_points';
+  cardId?: string;
   visitPoints?: number;
   membershipColor?: string;
   storeName?: string;
@@ -11790,6 +11792,7 @@ function buildStampCelebrationPages(
 
   pages.push({
     type: 'stamp',
+    cardId: card.id,
     storeName: store.name,
     storeLogoUrl: store.logoUrl || '',
     storeTheme: store.theme || '#2563EB',
@@ -11879,6 +11882,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
 
   // Stamp celebration
   const [celebrationPages, setCelebrationPages] = useState<CelebrationPage[] | null>(null);
+  const [pendingRedeemCardId, setPendingRedeemCardId] = useState<string | null>(null);
   const prevCardStampsRef = useRef<Map<string, number>>(new Map());
   const cardsInitializedRef = useRef(false);
   const prevMembershipVisitsRef = useRef<Map<string, number>>(new Map());
@@ -12729,7 +12733,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                             ? <MembershipCard card={card} store={store} onViewStore={onViewStore} onScan={handleNFCScan} onPackReady={(s) => { setPendingPack(s); setPendingPackCardId(null); }} userHandle={profile?.handle} />
                             : card.card_type === 'sub'
                             ? <SubLoyaltyCard card={card} store={store} onViewStore={onViewStore} onScan={handleNFCScan} />
-                            : <LoyaltyCard card={card} store={store} onViewStore={onViewStore} onScan={handleNFCScan} />}
+                            : <LoyaltyCard card={card} store={store} onViewStore={onViewStore} onScan={handleNFCScan} triggerCompletion={pendingRedeemCardId === card.id} onCompletionTriggered={() => setPendingRedeemCardId(null)} />}
                         </div>
                       );
                     })}
@@ -12744,7 +12748,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                             ? <MembershipCard card={card} store={store} onViewStore={onViewStore} compact onScan={handleNFCScan} onPackReady={(s) => { setPendingPack(s); setPendingPackCardId(null); }} userHandle={profile?.handle} />
                             : card.card_type === 'sub'
                             ? <SubLoyaltyCard card={card} store={store} onViewStore={onViewStore} compact onScan={handleNFCScan} />
-                            : <LoyaltyCard card={card} store={store} onViewStore={onViewStore} compact onScan={handleNFCScan} />}
+                            : <LoyaltyCard card={card} store={store} onViewStore={onViewStore} compact onScan={handleNFCScan} triggerCompletion={pendingRedeemCardId === card.id} onCompletionTriggered={() => setPendingRedeemCardId(null)} />}
                         </div>
                       );
                     })}
@@ -13353,8 +13357,10 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         {celebrationPages && (
           <StampCelebrationModal
             pages={celebrationPages}
-            onClose={() => {
+            onClose={() => setCelebrationPages(null)}
+            onRedeemNow={(cardId) => {
               setCelebrationPages(null);
+              setPendingRedeemCardId(cardId);
             }}
             avatarConfig={profile?.avatar}
             userUid={user.uid}
@@ -15881,6 +15887,7 @@ function getCharityFeedback(type: 'animal' | 'tree', newCount: number): { emoji:
 function StampCelebrationModal({
   pages,
   onClose,
+  onRedeemNow,
   avatarConfig,
   userUid,
   pendingPack,
@@ -15889,6 +15896,7 @@ function StampCelebrationModal({
 }: {
   pages: CelebrationPage[];
   onClose: () => void;
+  onRedeemNow?: (cardId: string) => void;
   avatarConfig?: UserAvatar;
   userUid?: string;
   pendingPack?: CollectibleSticker[] | null;
@@ -16837,15 +16845,38 @@ function StampCelebrationModal({
                 )}
 
                 {/* CTA */}
-                <motion.button
-                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
-                  onClick={isLast ? onClose : () => setPageIdx(i => i + 1)}
-                  style={{ background: 'linear-gradient(160deg, #1D4ED8 0%, #4F46E5 40%, #7C3AED 100%)' }}
-                  className="w-full py-3.5 rounded-2xl font-bold text-sm text-white active:scale-[0.98] transition-all relative overflow-hidden"
-                >
-                  <span className="card-shine-ray" aria-hidden="true" />
-                  <span className="relative z-10">{ctaLabel}</span>
-                </motion.button>
+                {page.type === 'stamp' && page.done && page.cardId ? (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
+                    className="flex gap-2"
+                  >
+                    <button
+                      onClick={onClose}
+                      className="flex-1 py-3.5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-all border-2"
+                      style={{ borderColor: '#4F46E5', color: '#4F46E5', backgroundColor: 'white' }}
+                    >
+                      Redeem Later
+                    </button>
+                    <button
+                      onClick={() => onRedeemNow?.(page.cardId!)}
+                      className="flex-1 py-3.5 rounded-2xl font-bold text-sm text-white active:scale-[0.98] transition-all relative overflow-hidden"
+                      style={{ background: 'linear-gradient(160deg, #1D4ED8 0%, #4F46E5 40%, #7C3AED 100%)' }}
+                    >
+                      <span className="card-shine-ray" aria-hidden="true" />
+                      <span className="relative z-10">Redeem Now</span>
+                    </button>
+                  </motion.div>
+                ) : (
+                  <motion.button
+                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
+                    onClick={isLast ? onClose : () => setPageIdx(i => i + 1)}
+                    style={{ background: 'linear-gradient(160deg, #1D4ED8 0%, #4F46E5 40%, #7C3AED 100%)' }}
+                    className="w-full py-3.5 rounded-2xl font-bold text-sm text-white active:scale-[0.98] transition-all relative overflow-hidden"
+                  >
+                    <span className="card-shine-ray" aria-hidden="true" />
+                    <span className="relative z-10">{ctaLabel}</span>
+                  </motion.button>
+                )}
               </>
             )}
           </motion.div>
@@ -21726,7 +21757,7 @@ function LeaveCardSheet({ storeName, onConfirm, onClose, leaving }: { storeName?
   );
 }
 
-function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = false, onClose, onScan }: { card: Card, store?: StoreProfile, onViewStore?: (s: StoreProfile) => void, compact?: boolean, autoOpen?: boolean, onClose?: () => void, onScan?: () => void, key?: React.Key }) {
+function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = false, onClose, onScan, triggerCompletion = false, onCompletionTriggered }: { card: Card, store?: StoreProfile, onViewStore?: (s: StoreProfile) => void, compact?: boolean, autoOpen?: boolean, onClose?: () => void, onScan?: () => void, triggerCompletion?: boolean, onCompletionTriggered?: () => void, key?: React.Key }) {
   const [showQR, setShowQR] = useState(autoOpen);
   const [showCompletionPopup, setShowCompletionPopup] = useState(false);
   const [showQRScan, setShowQRScan] = useState(false);
@@ -21740,7 +21771,12 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
   const limit = card.stamps_required || store?.stamps_required_for_reward || 10;
   const isCompleted = card.current_stamps >= limit;
   const _rewardTiers = store?.rewardTiers?.length ? store.rewardTiers : [{ stamps: limit, reward: store?.reward || '' }];
-  const claimableTier = !card.isRedeemed ? [..._rewardTiers].reverse().find(t => t.stamps <= card.current_stamps) ?? null : null;
+  const redeemedStamps = new Set(card.redeemedTierStamps || []);
+  // Find the lowest unredeemed tier the user has reached — must redeem in order
+  const claimableTier = [..._rewardTiers]
+    .sort((a, b) => a.stamps - b.stamps)
+    .find(t => t.stamps <= card.current_stamps && !redeemedStamps.has(t.stamps)) ?? null;
+  const isFinalTier = claimableTier ? claimableTier.stamps >= limit : false;
   const [unlockedReward, setUnlockedReward] = useState<string | null>(null);
   const [stampJustAdded, setStampJustAdded] = useState(false);
   const prevStampsRef = useRef(card.current_stamps);
@@ -21750,7 +21786,13 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
     onClose?.();
   };
 
-  // Completion popup is opened explicitly via "Redeem Now" button — not auto-opened.
+  // Open completion popup when triggered externally (e.g. "Redeem Now" from celebration modal)
+  useEffect(() => {
+    if (triggerCompletion && claimableTier) {
+      setShowCompletionPopup(true);
+      onCompletionTriggered?.();
+    }
+  }, [triggerCompletion]);
 
   // Notify + confetti whenever stamps increase (real-time or test)
   useEffect(() => {
@@ -21825,52 +21867,69 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
   };
 
   const handleArchive = async () => {
-    if (!auth.currentUser || !store) return;
+    if (!auth.currentUser || !store || !claimableTier) return;
     setIsArchiving(true);
     const numTiers = store.rewardTiers?.length || 1;
+    const uid = auth.currentUser.uid;
     try {
-      // Reset the active card first — this is the critical write
-      await updateDoc(doc(db, 'cards', card.id), {
-        current_stamps: 0,
-        isRedeemed: false,
-        isArchived: false,
-        stamps_required: store?.stamps_required_for_reward || limit,
-        tiersCompleted: numTiers,
-        last_tap_timestamp: serverTimestamp(),
-      });
+      if (isFinalTier) {
+        // Full set complete — reset the card for a new cycle
+        await updateDoc(doc(db, 'cards', card.id), {
+          current_stamps: 0,
+          isRedeemed: false,
+          isArchived: false,
+          stamps_required: store?.stamps_required_for_reward || limit,
+          tiersCompleted: numTiers,
+          last_tap_timestamp: serverTimestamp(),
+          redeemedTierStamps: [],
+        });
+      } else {
+        // Mid-stage tier — mark as redeemed, do NOT reset stamps
+        await updateDoc(doc(db, 'cards', card.id), {
+          redeemedTierStamps: arrayUnion(claimableTier.stamps),
+          last_tap_timestamp: serverTimestamp(),
+        });
+      }
     } catch (error) {
-      console.error('Card reset failed:', error);
+      console.error('Redemption write failed:', error);
     } finally {
-      // Always close the popup and clear loading state regardless of write outcome
       setShowCompletionPopup(false);
       setIsArchiving(false);
     }
 
-    // Fire-and-forget: archive history + stats updates (non-critical)
-    const uid = auth.currentUser.uid;
-    addDoc(collection(db, 'cards'), {
-      user_id: card.user_id,
-      store_id: card.store_id,
-      current_stamps: limit,
-      total_completed_cycles: card.total_completed_cycles,
-      last_tap_timestamp: serverTimestamp(),
-      isArchived: true,
-      isRedeemed: true,
-      archivedAt: serverTimestamp(),
-      tiersCompleted: numTiers,
-    }).catch(console.error);
-    updateDoc(doc(db, 'users', uid), { totalRedeemed: increment(numTiers) }).catch(console.error);
-    updateDoc(doc(db, 'stores', card.store_id), { rewardsGiven: increment(numTiers) }).catch(console.error);
+    // Fire-and-forget stats (non-critical)
     const userName = auth.currentUser?.displayName || 'Someone';
     const userPhoto = auth.currentUser?.photoURL || '';
-    const rewardLabel = store?.rewardTiers?.length ? store.rewardTiers[store.rewardTiers.length - 1].reward : (store?.reward || 'a reward');
+    const rewardLabel = claimableTier.reward;
+
+    if (isFinalTier) {
+      addDoc(collection(db, 'cards'), {
+        user_id: card.user_id,
+        store_id: card.store_id,
+        current_stamps: limit,
+        total_completed_cycles: card.total_completed_cycles,
+        last_tap_timestamp: serverTimestamp(),
+        isArchived: true,
+        isRedeemed: true,
+        archivedAt: serverTimestamp(),
+        tiersCompleted: numTiers,
+      }).catch(console.error);
+      updateDoc(doc(db, 'users', uid), { totalRedeemed: increment(numTiers) }).catch(console.error);
+      updateDoc(doc(db, 'stores', card.store_id), { rewardsGiven: increment(numTiers) }).catch(console.error);
+    } else {
+      updateDoc(doc(db, 'users', uid), { totalRedeemed: increment(1) }).catch(console.error);
+      updateDoc(doc(db, 'stores', card.store_id), { rewardsGiven: increment(1) }).catch(console.error);
+    }
+
     const _cardCreatedMs = card.createdAt?.toMillis?.() ?? (card.createdAt?.seconds ? card.createdAt.seconds * 1000 : null);
     logEvent('redemption', card.user_id, {
-      cardId: card.id, storeId: card.store_id, rewardLabel, tiersCompleted: numTiers, cardType: 'loyalty', redeemedBy: 'staff',
+      cardId: card.id, storeId: card.store_id, rewardLabel,
+      tiersCompleted: isFinalTier ? numTiers : 1, cardType: 'loyalty', redeemedBy: 'staff',
+      isFinalTier,
       stampsRequired: card.stamps_required || store?.stamps_required_for_reward || 10,
       ...(_cardCreatedMs ? { daysBetweenCardStartAndRedemption: Math.floor((Date.now() - _cardCreatedMs) / 86400000) } : {}),
     });
-    postActivity(uid, userName, userPhoto, `${userName} just earned a free ${rewardLabel}!`, '🎁');
+    if (isFinalTier) postActivity(uid, userName, userPhoto, `${userName} just earned a free ${rewardLabel}!`, '🎁');
   };
 
   const handleLeaveCard = async () => {
@@ -21926,13 +21985,13 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
       <motion.div
         whileTap={{ scale: 0.97 }}
         onClick={() => {
-          if (isCompleted || card.isRedeemed) return;
+          if (isCompleted || card.isRedeemed || claimableTier) return;
           if (store?.scanMethod === 'nfc') { onScan?.(); }
           else { setShowQR(true); }
         }}
         className={cn(
           "relative rounded-[2rem] overflow-hidden shadow-xl w-full select-none h-full flex flex-col",
-          !isCompleted && !card.isRedeemed ? "cursor-pointer" : ""
+          !isCompleted && !card.isRedeemed && !claimableTier ? "cursor-pointer" : ""
         )}
       >
 
@@ -22011,22 +22070,13 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                   ) : null}
                 </div>
                 {claimableTier && (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); }}
-                      className="flex-1 py-3 rounded-2xl text-sm font-bold active:scale-[0.98] transition-transform border-2"
-                      style={{ borderColor: cardTheme, color: cardTheme, backgroundColor: 'white' }}
-                    >
-                      Redeem Later
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setShowCompletionPopup(true); }}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-2xl text-white text-sm font-bold active:scale-[0.98] transition-transform"
-                      style={{ backgroundColor: cardTheme }}
-                    >
-                      <Gift size={14} /> Redeem Now
-                    </button>
-                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowCompletionPopup(true); }}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-white text-sm font-bold active:scale-[0.98] transition-transform"
+                    style={{ backgroundColor: cardTheme }}
+                  >
+                    <Gift size={15} /> Redeem: {claimableTier.reward}
+                  </button>
                 )}
               </div>
             </div>
@@ -22102,7 +22152,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
         })()}
       </motion.div>
 
-      {!isCompleted && !card.isRedeemed && (
+      {!isCompleted && !claimableTier && !card.isRedeemed && (
         <p className="text-center text-brand-navy/40 text-[11px] font-bold mt-2 flex items-center justify-center gap-1">
           {store?.scanMethod === 'nfc'
             ? <><ScanLine size={11} /> Tap to scan</>
