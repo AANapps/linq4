@@ -20809,6 +20809,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
   const [redeemDollars, setRedeemDollars] = useState('');
   const [redeemStage, setRedeemStage] = useState<'input' | 'swipe' | 'success'>('input');
   const [redeeming, setRedeeming] = useState(false);
+  const [redeemSuccessRemaining, setRedeemSuccessRemaining] = useState(0);
   const [redeemingMenuItem, setRedeemingMenuItem] = useState<string | null>(null);
   const [menuConfirm, setMenuConfirm] = useState<{ id: string; name: string; points: number } | null>(null);
 
@@ -20882,6 +20883,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
   const handleRedeem = async () => {
     if (redeeming || !canProceedRedeem) return;
     setRedeeming(true);
+    const capturedRemaining = netAvailablePoints - pointsToDeduct;
     try {
       // Only track the dollar amount redeemed — membership_points stays as total earned.
       // netAvailablePoints = membership_points - (total_value_redeemed * redemptionRate)
@@ -20898,6 +20900,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
         cardId: card.id, storeId: card.store_id, rewardValue: redeemDollarNum, cardType: 'membership_value',
         ...(_memCreatedMs ? { daysBetweenCardStartAndRedemption: Math.floor((Date.now() - _memCreatedMs) / 86400000) } : {}),
       });
+      setRedeemSuccessRemaining(capturedRemaining);
       setRedeemStage('success');
     } catch (err) {
       console.error(err);
@@ -20986,7 +20989,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                     </div>
                     <div className="text-center">
                       <p className="text-brand-navy/75 text-[9px] font-bold uppercase tracking-widest">Remaining</p>
-                      <p className="text-brand-navy font-black text-xl">{netAvailablePoints - pointsToDeduct}</p>
+                      <p className="text-brand-navy font-black text-xl">{redeemSuccessRemaining.toLocaleString()}</p>
                     </div>
                   </div>
                   <button onClick={() => { closeRedeemFlow(); setShowRedeemSheet(false); }} className="w-full bg-brand-navy text-white py-3.5 rounded-2xl font-bold text-sm">Done</button>
@@ -33478,6 +33481,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
   const [redeemDollars, setRedeemDollars] = useState('');
   const [redeemStage, setRedeemStage] = useState<'input' | 'swipe' | 'success'>('input');
   const [redeeming, setRedeeming] = useState(false);
+  const [redeemSuccessRemaining, setRedeemSuccessRemaining] = useState(0);
   const [redeemingMenuItem, setRedeemingMenuItem] = useState<string | null>(null);
   const [menuConfirm, setMenuConfirm] = useState<{ id: string; name: string; points: number } | null>(null);
   const [isFollowingStore, setIsFollowingStore] = useState(false);
@@ -34226,11 +34230,13 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
         const handleRedeem = async () => {
           if (redeeming || !canProceed) return;
           setRedeeming(true);
+          const capturedRemaining = spvNetAvailable - pointsToDeduct;
           try {
             await updateDoc(doc(db, 'cards', mc.id), {
               total_value_redeemed: increment(redeemDollarNum),
               last_redeemed_at: serverTimestamp(),
             });
+            setRedeemSuccessRemaining(capturedRemaining);
             setRedeemStage('success');
           } catch (err) { console.error(err); }
           finally { setRedeeming(false); }
@@ -34455,7 +34461,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                           </div>
                           <div className="text-center">
                             <p className="text-brand-navy/75 text-[9px] font-bold uppercase tracking-widest">Remaining</p>
-                            <p className="text-brand-navy font-black text-xl">{spvNetAvailable - pointsToDeduct}</p>
+                            <p className="text-brand-navy font-black text-xl">{redeemSuccessRemaining.toLocaleString()}</p>
                           </div>
                         </div>
                         <button onClick={() => { closeRedeem(); setShowSpendSheet(false); }} className="w-full bg-brand-navy text-white py-3.5 rounded-2xl font-bold text-sm">Done</button>
