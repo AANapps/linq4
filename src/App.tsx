@@ -2333,6 +2333,20 @@ function toE164(dial: string, local: string): string {
 function composeAddress(line1: string, line2: string, town: string, state: string, postcode: string): string {
   return [line1, line2, town, state, postcode].filter(s => s.trim()).join(', ');
 }
+function timeAgo(ts: any): string {
+  if (!ts) return 'Just now';
+  const date = ts.toDate ? ts.toDate() : new Date(ts);
+  const diffMs = Date.now() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHrs = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  if (diffMin < 1) return 'Just now';
+  if (diffMin < 60) return `${diffMin} min ago`;
+  if (diffHrs < 24) return `${diffHrs}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffDays < 14) return '1w ago';
+  return format(date, 'MMM d');
+}
 
 // --- Shared Components ---
 
@@ -24329,7 +24343,7 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
                 onClick={() => setActiveCategory(cat)}
                 className={cn(
                   "px-6 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all",
-                  activeCategory === cat ? "gradient-red text-white shadow-md" : "glass-card text-brand-navy/80 hover:text-brand-navy"
+                  activeCategory === cat ? "gradient-red text-white shadow-md" : "bg-white/80 border border-brand-navy/10 text-brand-navy/80 hover:text-brand-navy"
                 )}
               >
                 {cat}
@@ -24722,7 +24736,7 @@ function WallPostItem({ post, currentUser, wallOwnerUid, onViewUser }: { post: a
               <StreakBadge streak={post.fromStreak} />
             </div>
             <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest">
-              {post.createdAt ? format(post.createdAt.toDate(), 'MMM d, h:mm a') : 'Just now'}
+              {timeAgo(post.createdAt)}
             </p>
           </div>
         </button>
@@ -24771,7 +24785,7 @@ function WallPostItem({ post, currentUser, wallOwnerUid, onViewUser }: { post: a
                 <div className="flex items-center gap-2 flex-wrap">
                   <button onClick={() => handleViewProfile(reply.fromUid)} className="font-bold text-[10px] text-brand-navy hover:text-brand-gold transition-colors">{reply.fromName}</button>
                   <StreakBadge streak={reply.fromStreak} />
-                  <p className="text-[8px] text-brand-navy/45">{reply.createdAt ? format(reply.createdAt.toDate(), 'h:mm a') : ''}</p>
+                  <p className="text-[8px] text-brand-navy/45">{reply.createdAt ? timeAgo(reply.createdAt) : ''}</p>
                 </div>
                 <p className="text-xs text-brand-navy/70">{reply.content}</p>
               </div>
@@ -27712,7 +27726,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                             <span className="text-brand-navy/40 mx-1">›</span>
                             <span className="font-bold text-brand-gold">{vendorStore?.name || profile.name}</span>
                           </p>
-                          <p className="text-[10px] text-brand-navy/45 font-medium">{item.data.createdAt ? format(item.data.createdAt.toDate(), 'MMM d · h:mm a') : 'Just now'}</p>
+                          <p className="text-[10px] text-brand-navy/45 font-medium">{timeAgo(item.data.createdAt)}</p>
                         </div>
                       </div>
                       <p className="text-sm text-brand-navy/80 leading-relaxed">{item.data.content}</p>
@@ -29629,7 +29643,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
               </div>
               <p className="text-white text-sm font-bold leading-snug">{post.content}</p>
               <p className="text-white/50 text-[10px] font-medium mt-0.5">
-                {post.createdAt?.toDate ? format(post.createdAt.toDate(), 'MMM d · h:mm a') : 'Just now'}
+                {timeAgo(post.createdAt)}
               </p>
             </div>
             {/* Emoji badge */}
@@ -29669,7 +29683,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
               {' '}<span className="text-brand-navy/70">{post.content}</span>{' '}
               <span className="inline-block text-white font-bold px-2 py-0.5 rounded-lg text-[12px] leading-normal" style={{ background: 'var(--color-brand-gold)' }}>{post.achievementText}</span>
             </p>
-            <p className="text-[10px] text-brand-navy/45 mt-0.5">{post.createdAt?.toDate ? format(post.createdAt.toDate(), 'MMM d · h:mm a') : 'Just now'}</p>
+            <p className="text-[10px] text-brand-navy/45 mt-0.5">{timeAgo(post.createdAt)}</p>
           </div>
           <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: 'color-mix(in srgb, var(--color-brand-gold) 12%, transparent)' }}>
             <Trophy size={15} style={{ color: 'var(--color-brand-gold)' }} />
@@ -29845,7 +29859,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
             </div>
             {!isAnonAdmin && (
             <p className="text-[10px] text-brand-navy/75 font-medium">
-              {post.createdAt ? format(post.createdAt.toDate(), 'MMM d · h:mm a') : 'Just now'}
+              {timeAgo(post.createdAt)}
             </p>
             )}
           </div>
@@ -30137,7 +30151,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                       {comment.likesCount > 0 && <span>{comment.likesCount}</span>}
                     </button>
                     <span className="text-[10px] text-brand-navy/32">
-                      {comment.createdAt ? format(comment.createdAt.toDate(), 'MMM d') : ''}
+                      {comment.createdAt ? timeAgo(comment.createdAt) : ''}
                     </span>
                   </div>
                 </div>
@@ -34847,7 +34861,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                         {!isOwnerPost && (
                           <p className="text-[10px] text-brand-navy/75">on <span className="font-bold text-brand-gold">{store.name}</span></p>
                         )}
-                        <p className="text-[10px] text-brand-navy/45 font-medium">{item.data.createdAt ? format(item.data.createdAt.toDate(), 'MMM d · h:mm a') : 'Just now'}</p>
+                        <p className="text-[10px] text-brand-navy/45 font-medium">{timeAgo(item.data.createdAt)}</p>
                       </div>
                     </div>
                     <p className="text-sm text-brand-navy/80 leading-relaxed">{item.data.content}</p>
@@ -34941,7 +34955,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                     ))}
                   </div>
                 </div>
-                <p className="text-[10px] text-brand-navy/45">{review.createdAt ? format(review.createdAt.toDate(), 'MMM d') : ''}</p>
+                <p className="text-[10px] text-brand-navy/45">{review.createdAt ? timeAgo(review.createdAt) : ''}</p>
               </div>
               <p className="text-sm text-brand-navy/70 leading-relaxed">{review.content}</p>
             </div>
