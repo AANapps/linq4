@@ -11848,6 +11848,11 @@ function buildStampCelebrationPages(
     pages.push({ type: 'challenges_list', currentStamps: 0, totalStamps: 0, reward: '', encouragement: '', done: false, challengesList, newChallengesList });
   }
 
+  // Sticker pack — always last if user has joined any collectible programme
+  if (joinedStickerCards.length > 0) {
+    pages.push({ type: 'monopoly_pack', currentStamps: 0, totalStamps: 0, reward: '', encouragement: '', done: false });
+  }
+
   return pages;
 }
 
@@ -11885,6 +11890,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   // Stamp celebration
   const [celebrationPages, setCelebrationPages] = useState<CelebrationPage[] | null>(null);
   const [pendingRedeemCardId, setPendingRedeemCardId] = useState<string | null>(null);
+  const [celebrationArchiveFn, setCelebrationArchiveFn] = useState<((tierStamps: number, isFinal: boolean) => Promise<void>) | null>(null);
   const prevCardStampsRef = useRef<Map<string, number>>(new Map());
   const cardsInitializedRef = useRef(false);
   const prevMembershipVisitsRef = useRef<Map<string, number>>(new Map());
@@ -11986,7 +11992,48 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
               }
             } catch (_) { /* rank page is optional */ }
 
-            if (pages.length > 0) setCelebrationPages(pages);
+            if (pages.length > 0) {
+              setCelebrationPages(pages);
+              const _capturedCard = card;
+              const _capturedStore = store;
+              const _limit = card.stamps_required || store.stamps_required_for_reward || 10;
+              const _numTiers = store.rewardTiers?.length || 1;
+              setCelebrationArchiveFn(() => async (tierStamps: number, isFinal: boolean) => {
+                const uid = user.uid;
+                const userName = user.displayName || 'Someone';
+                const userPhoto = user.photoURL || '';
+                try {
+                  if (isFinal) {
+                    await updateDoc(doc(db, 'cards', _capturedCard.id), {
+                      current_stamps: 0, isRedeemed: false, isArchived: false,
+                      stamps_required: _capturedStore.stamps_required_for_reward || _limit,
+                      tiersCompleted: _numTiers, last_tap_timestamp: serverTimestamp(),
+                      redeemedTierStamps: [],
+                    });
+                  } else {
+                    await updateDoc(doc(db, 'cards', _capturedCard.id), {
+                      redeemedTierStamps: arrayUnion(tierStamps),
+                      last_tap_timestamp: serverTimestamp(),
+                    });
+                  }
+                } catch (e) { console.error('Archive failed:', e); return; }
+                if (isFinal) {
+                  const rewardLabel = _capturedStore.rewardTiers?.length ? _capturedStore.rewardTiers[_capturedStore.rewardTiers.length - 1].reward : (_capturedStore.reward || 'a reward');
+                  addDoc(collection(db, 'cards'), {
+                    user_id: _capturedCard.user_id, store_id: _capturedCard.store_id,
+                    current_stamps: _limit, total_completed_cycles: _capturedCard.total_completed_cycles,
+                    last_tap_timestamp: serverTimestamp(), isArchived: true, isRedeemed: true,
+                    archivedAt: serverTimestamp(), tiersCompleted: _numTiers,
+                  }).catch(console.error);
+                  updateDoc(doc(db, 'users', uid), { totalRedeemed: increment(_numTiers) }).catch(console.error);
+                  updateDoc(doc(db, 'stores', _capturedCard.store_id), { rewardsGiven: increment(_numTiers) }).catch(console.error);
+                  postActivity(uid, userName, userPhoto, `${userName} just earned a free ${rewardLabel}!`, '🎁').catch(console.error);
+                } else {
+                  updateDoc(doc(db, 'users', uid), { totalRedeemed: increment(1) }).catch(console.error);
+                  updateDoc(doc(db, 'stores', _capturedCard.store_id), { rewardsGiven: increment(1) }).catch(console.error);
+                }
+              });
+            }
           }
         }
       }
@@ -12735,7 +12782,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                             ? <MembershipCard card={card} store={store} onViewStore={onViewStore} onScan={handleNFCScan} onPackReady={(s) => { setPendingPack(s); setPendingPackCardId(null); }} userHandle={profile?.handle} />
                             : card.card_type === 'sub'
                             ? <SubLoyaltyCard card={card} store={store} onViewStore={onViewStore} onScan={handleNFCScan} />
-                            : <LoyaltyCard card={card} store={store} onViewStore={onViewStore} onScan={handleNFCScan} triggerCompletion={pendingRedeemCardId === card.id} onCompletionTriggered={() => setPendingRedeemCardId(null)} />}
+                            : <LoyaltyCard card={card} store={store} onViewStore={onViewStore} onScan={handleNFCScan} />}
                         </div>
                       );
                     })}
@@ -12750,7 +12797,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                             ? <MembershipCard card={card} store={store} onViewStore={onViewStore} compact onScan={handleNFCScan} onPackReady={(s) => { setPendingPack(s); setPendingPackCardId(null); }} userHandle={profile?.handle} />
                             : card.card_type === 'sub'
                             ? <SubLoyaltyCard card={card} store={store} onViewStore={onViewStore} compact onScan={handleNFCScan} />
-                            : <LoyaltyCard card={card} store={store} onViewStore={onViewStore} compact onScan={handleNFCScan} triggerCompletion={pendingRedeemCardId === card.id} onCompletionTriggered={() => setPendingRedeemCardId(null)} />}
+                            : <LoyaltyCard card={card} store={store} onViewStore={onViewStore} compact onScan={handleNFCScan} />}
                         </div>
                       );
                     })}
@@ -13359,11 +13406,8 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         {celebrationPages && (
           <StampCelebrationModal
             pages={celebrationPages}
-            onClose={() => setCelebrationPages(null)}
-            onRedeemNow={(cardId) => {
-              setCelebrationPages(null);
-              setPendingRedeemCardId(cardId);
-            }}
+            onClose={() => { setCelebrationPages(null); setCelebrationArchiveFn(null); }}
+            onArchiveTier={celebrationArchiveFn ?? undefined}
             avatarConfig={profile?.avatar}
             userUid={user.uid}
             pendingPack={pendingPack}
@@ -15889,7 +15933,7 @@ function getCharityFeedback(type: 'animal' | 'tree', newCount: number): { emoji:
 function StampCelebrationModal({
   pages,
   onClose,
-  onRedeemNow,
+  onArchiveTier,
   avatarConfig,
   userUid,
   pendingPack,
@@ -15898,7 +15942,7 @@ function StampCelebrationModal({
 }: {
   pages: CelebrationPage[];
   onClose: () => void;
-  onRedeemNow?: (cardId: string) => void;
+  onArchiveTier?: (tierStamps: number, isFinal: boolean) => Promise<void>;
   avatarConfig?: UserAvatar;
   userUid?: string;
   pendingPack?: CollectibleSticker[] | null;
@@ -15906,6 +15950,7 @@ function StampCelebrationModal({
   onPackClosed?: (cardId: string | null) => void;
 }) {
   const [pageIdx, setPageIdx] = useState(0);
+  const [isArchivingTier, setIsArchivingTier] = useState(false);
   const [displayRankGlobal, setDisplayRankGlobal] = useState(0);
   const [displayRankWeekly, setDisplayRankWeekly] = useState(0);
   const [rankRevealed, setRankRevealed] = useState(false);
@@ -16136,38 +16181,30 @@ function StampCelebrationModal({
                       </div>
                     )}
 
-                    {page.done && page.cardId ? (
-                      <motion.div
-                        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-                        className="flex gap-2"
+                    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="space-y-2">
+                      {isArchivingTier ? (
+                        <div className="flex items-center justify-center gap-2 py-4 text-brand-navy/60 font-bold text-sm">
+                          <Loader2 size={16} className="animate-spin" /> Processing…
+                        </div>
+                      ) : (
+                        <SwipeConfirm onConfirm={async () => {
+                          if (!onArchiveTier) return;
+                          setIsArchivingTier(true);
+                          await onArchiveTier(page.currentStamps, page.done);
+                          setIsArchivingTier(false);
+                          setStageRedeemed(true);
+                          fireCelebAnimation('fireworks');
+                          if (isLast) onClose();
+                          else setPageIdx(i => i + 1);
+                        }} />
+                      )}
+                      <button
+                        onClick={() => { if (isLast) onClose(); else setPageIdx(i => i + 1); }}
+                        className="w-full py-2.5 text-brand-navy/60 font-bold text-sm"
                       >
-                        <button
-                          onClick={onClose}
-                          className="flex-1 py-3.5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-all border-2"
-                          style={{ borderColor: '#4F46E5', color: '#4F46E5', backgroundColor: 'white' }}
-                        >
-                          Redeem Later
-                        </button>
-                        <button
-                          onClick={() => onRedeemNow?.(page.cardId!)}
-                          className="flex-1 py-3.5 rounded-2xl font-bold text-sm text-white active:scale-[0.98] transition-all relative overflow-hidden"
-                          style={{ background: 'linear-gradient(160deg, #1D4ED8 0%, #4F46E5 40%, #7C3AED 100%)' }}
-                        >
-                          <span className="card-shine-ray" aria-hidden="true" />
-                          <span className="relative z-10">Redeem Now</span>
-                        </button>
-                      </motion.div>
-                    ) : (
-                      <motion.button
-                        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-                        onClick={() => { setStageRedeemed(true); fireCelebAnimation('fireworks'); }}
-                        className="w-full py-3.5 rounded-2xl font-bold text-sm text-white active:scale-[0.98] transition-all relative overflow-hidden"
-                        style={{ background: 'linear-gradient(160deg, #1D4ED8 0%, #4F46E5 40%, #7C3AED 100%)' }}
-                      >
-                        <span className="card-shine-ray" aria-hidden="true" />
-                        <span className="relative z-10">Continue</span>
-                      </motion.button>
-                    )}
+                        Redeem Later
+                      </button>
+                    </motion.div>
                   </>
                 ) : (
                   /* Step 2: next stage progress */
@@ -16676,94 +16713,83 @@ function StampCelebrationModal({
                     <p className="text-xs text-white/60">Collect {page.totalStamps} stamps to win</p>
                   </motion.div>
                 ) : page.type === 'stamp' ? (
-                  /* Exact replica of the compact wallet loyalty card */
                   (() => {
                     const cardTheme = page.storeTheme || '#2563EB';
                     const stampIcon = page.stampIcon || '⭐';
                     const stampIconUrl = (page as any).stampIconUrl || '';
-                    const cardPattern = page.cardPattern || 'solid';
                     const limit = page.rewardTiers?.length
-                      ? Math.max(...page.rewardTiers.map(t => t.stamps))
+                      ? Math.max(...page.rewardTiers.map((t: any) => t.stamps))
                       : page.totalStamps;
-                    const tierStamps = new Set((page.rewardTiers || []).map(t => t.stamps));
-                    const nextRewardTier = (page.rewardTiers || []).find(t => t.stamps > page.currentStamps);
+                    const tierStamps = new Set((page.rewardTiers || []).map((t: any) => t.stamps));
+                    const pctFill = limit > 0 ? Math.min(100, Math.round((page.currentStamps / limit) * 100)) : 0;
                     return (
                       <motion.div
-                        initial={{ opacity: 0, y: 14, scale: 0.96 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        transition={{ delay: 0.15, type: 'spring', stiffness: 280, damping: 22 }}
-                        className="rounded-[2rem] overflow-hidden shadow-xl"
+                        initial={{ opacity: 0, y: 14 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1, type: 'spring', stiffness: 280, damping: 22 }}
+                        className="space-y-4"
                       >
-                        {/* Card header — mirrors compact LoyaltyCard header */}
-                        <div className="relative overflow-hidden flex items-center gap-3 px-4 py-3" style={{ backgroundColor: cardTheme }}>
-                          <span className="card-shine-ray" aria-hidden="true" />
-                          {cardPattern !== 'solid' && <div className="absolute inset-0 pointer-events-none" style={getCardPatternStyle(cardPattern)} />}
-                          <div className="relative z-10 w-10 h-10 rounded-full overflow-hidden border-2 border-white/50 shrink-0 shadow-md">
-                            <img src={page.storeLogoUrl || storeFallbackImg(page.storeName, page.storeTheme)} alt="" className="w-full h-full object-cover" />
+                        {/* Progress bar */}
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between text-[11px] font-bold text-brand-navy/60">
+                            <span>{page.currentStamps} / {limit} stamps</span>
+                            <span>{pctFill}%</span>
                           </div>
-                          <div className="relative z-10 flex-1 min-w-0">
-                            <h4 className="font-bold text-white text-sm leading-tight truncate">{page.storeName}</h4>
-                            {page.storeCategory && <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">{page.storeCategory}</p>}
+                          <div className="h-3 bg-brand-navy/8 rounded-full overflow-hidden">
+                            <motion.div
+                              className="h-full rounded-full"
+                              style={{ background: 'linear-gradient(90deg, #1D4ED8, #7C3AED)' }}
+                              initial={{ width: '0%' }}
+                              animate={{ width: `${pctFill}%` }}
+                              transition={{ duration: 0.9, ease: 'easeOut', delay: 0.15 }}
+                            />
                           </div>
                         </div>
 
-                        {/* Stamp grid body — mirrors compact LoyaltyCard stampGrid(5, 'gap-1.5', 'px-4 pt-4 pb-4', 15, 'text-[11px]') */}
-                        <div className="bg-white px-4 pt-4 pb-4">
-                          <div className="grid gap-1.5 mb-4" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
-                            {Array.from({ length: limit }).map((_, i) => {
-                              const stampNum = i + 1;
-                              const isFilled = i < page.currentStamps;
-                              const isTier = tierStamps.has(stampNum);
-                              const isNewStamp = i === page.currentStamps - 1;
-                              return (
-                                <div key={i} className="aspect-square relative">
-                                  {isTier && (
-                                    <motion.div
-                                      animate={{ opacity: [0.3, 0.65, 0.3] }}
-                                      transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: i * 0.18 }}
-                                      className="absolute inset-0 rounded-full pointer-events-none z-0"
-                                      style={{ boxShadow: '0 0 12px 5px rgba(245,166,35,0.6)' }}
-                                    />
-                                  )}
-                                  {isFilled ? (
-                                    <motion.div
-                                      initial={isNewStamp ? { scale: 0.4, opacity: 0, rotate: ((i * 53 + 7) % 16) - 8 } : { scale: 1, opacity: 1 }}
-                                      animate={{ scale: 1, opacity: 1 }}
-                                      transition={isNewStamp ? { type: 'spring', stiffness: 420, damping: 22, delay: 0.35 } : {}}
-                                      className="w-full h-full rounded-full flex items-center justify-center overflow-hidden"
-                                      style={{ backgroundColor: isTier ? '#f5a623' : (stampIconUrl ? '#ffffff' : cardTheme), border: (!isTier && stampIconUrl) ? '2px solid #000' : undefined }}
-                                    >
-                                      {isTier
-                                        ? <Gift size={15} className="text-white" />
-                                        : stampIconUrl
-                                          ? <img src={stampIconUrl} alt="" className="w-[68%] h-[68%] object-contain" style={{ transform: `rotate(${((i * 53 + 7) % 16) - 8}deg)` }} />
-                                          : <span className="leading-none" style={{ fontSize: 16, transform: `rotate(${((i * 53 + 7) % 16) - 8}deg)`, display: 'inline-block' }}>{stampIcon}</span>
-                                      }
-                                    </motion.div>
-                                  ) : (
-                                    <div
-                                      className="w-full h-full rounded-full flex items-center justify-center bg-white"
-                                      style={{ borderWidth: 2, borderStyle: isTier ? 'dashed' : 'solid', borderColor: cardTheme }}
-                                    >
-                                      {isTier
-                                        ? <Gift size={12} style={{ color: cardTheme, opacity: 0.4 }} />
-                                        : <span className="font-bold text-[11px]" style={{ color: cardTheme, opacity: 0.35 }}>{stampNum}</span>
-                                      }
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="text-brand-navy/35 text-[11px] font-bold">{page.currentStamps}/{limit} stamps</span>
-                            {nextRewardTier && (
-                              <span className="text-brand-navy/72 text-[10px] text-right leading-snug">
-                                {nextRewardTier.stamps - page.currentStamps} more →{' '}
-                                <span className="font-semibold" style={{ color: cardTheme }}>{nextRewardTier.reward}</span>
-                              </span>
-                            )}
-                          </div>
+                        {/* Stamp grid with punch animation */}
+                        <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(5, limit)}, 1fr)` }}>
+                          {Array.from({ length: limit }).map((_, i) => {
+                            const filled = i < page.currentStamps;
+                            const isNew = i === page.currentStamps - 1;
+                            const isTier = tierStamps.has(i + 1);
+                            return (
+                              <div key={i} className="aspect-square relative">
+                                {filled ? (
+                                  <motion.div
+                                    initial={isNew ? { scale: 0, y: -16, rotate: -12 } : false}
+                                    animate={{ scale: 1, y: 0, rotate: 0 }}
+                                    transition={isNew ? { type: 'spring', stiffness: 520, damping: 18, delay: 0.35 } : {}}
+                                    className="w-full h-full rounded-full flex items-center justify-center overflow-hidden relative"
+                                    style={{ background: isTier ? 'linear-gradient(135deg,#f5a623,#f59e0b)' : 'linear-gradient(135deg,#1D4ED8,#7C3AED)' }}
+                                  >
+                                    {isNew && (
+                                      <motion.div
+                                        className="absolute inset-0 rounded-full"
+                                        initial={{ opacity: 0.7, scale: 1 }}
+                                        animate={{ opacity: 0, scale: 2 }}
+                                        transition={{ delay: 0.55, duration: 0.45 }}
+                                        style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.6), transparent)' }}
+                                      />
+                                    )}
+                                    {stampIconUrl
+                                      ? <img src={stampIconUrl} alt="" className="w-[62%] h-[62%] object-contain relative z-10" />
+                                      : <span className="relative z-10 leading-none" style={{ fontSize: Math.max(10, Math.min(18, Math.floor(44 / Math.min(5, limit)))) }}>{isTier ? '🎁' : stampIcon}</span>
+                                    }
+                                  </motion.div>
+                                ) : (
+                                  <div
+                                    className="w-full h-full rounded-full flex items-center justify-center"
+                                    style={{ background: 'rgba(0,0,0,0.05)', border: `2px ${isTier ? 'dashed' : 'solid'} rgba(0,0,0,0.1)` }}
+                                  >
+                                    {isTier
+                                      ? <Gift size={11} style={{ color: 'rgba(245,166,35,0.5)' }} />
+                                      : <span className="font-bold text-[10px]" style={{ color: 'rgba(0,0,0,0.2)' }}>{i + 1}</span>
+                                    }
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       </motion.div>
                     );
@@ -16874,38 +16900,15 @@ function StampCelebrationModal({
                 )}
 
                 {/* CTA */}
-                {page.type === 'stamp' && page.done && page.cardId ? (
-                  <motion.div
-                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
-                    className="flex gap-2"
-                  >
-                    <button
-                      onClick={onClose}
-                      className="flex-1 py-3.5 rounded-2xl font-bold text-sm active:scale-[0.98] transition-all border-2"
-                      style={{ borderColor: '#4F46E5', color: '#4F46E5', backgroundColor: 'white' }}
-                    >
-                      Redeem Later
-                    </button>
-                    <button
-                      onClick={() => onRedeemNow?.(page.cardId!)}
-                      className="flex-1 py-3.5 rounded-2xl font-bold text-sm text-white active:scale-[0.98] transition-all relative overflow-hidden"
-                      style={{ background: 'linear-gradient(160deg, #1D4ED8 0%, #4F46E5 40%, #7C3AED 100%)' }}
-                    >
-                      <span className="card-shine-ray" aria-hidden="true" />
-                      <span className="relative z-10">Redeem Now</span>
-                    </button>
-                  </motion.div>
-                ) : (
-                  <motion.button
-                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
-                    onClick={isLast ? onClose : () => setPageIdx(i => i + 1)}
-                    style={{ background: 'linear-gradient(160deg, #1D4ED8 0%, #4F46E5 40%, #7C3AED 100%)' }}
-                    className="w-full py-3.5 rounded-2xl font-bold text-sm text-white active:scale-[0.98] transition-all relative overflow-hidden"
-                  >
-                    <span className="card-shine-ray" aria-hidden="true" />
-                    <span className="relative z-10">{ctaLabel}</span>
-                  </motion.button>
-                )}
+                <motion.button
+                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
+                  onClick={isLast ? onClose : () => setPageIdx(i => i + 1)}
+                  style={{ background: 'linear-gradient(160deg, #1D4ED8 0%, #4F46E5 40%, #7C3AED 100%)' }}
+                  className="w-full py-3.5 rounded-2xl font-bold text-sm text-white active:scale-[0.98] transition-all relative overflow-hidden"
+                >
+                  <span className="card-shine-ray" aria-hidden="true" />
+                  <span className="relative z-10">{ctaLabel}</span>
+                </motion.button>
               </>
             )}
           </motion.div>
