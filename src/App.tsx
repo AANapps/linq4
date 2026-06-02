@@ -21985,13 +21985,13 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
       <motion.div
         whileTap={{ scale: 0.97 }}
         onClick={() => {
-          if (isCompleted || card.isRedeemed || claimableTier) return;
+          if (isCompleted || card.isRedeemed) return;
           if (store?.scanMethod === 'nfc') { onScan?.(); }
           else { setShowQR(true); }
         }}
         className={cn(
           "relative rounded-[2rem] overflow-hidden shadow-xl w-full select-none h-full flex flex-col",
-          !isCompleted && !card.isRedeemed && !claimableTier ? "cursor-pointer" : ""
+          !isCompleted && !card.isRedeemed ? "cursor-pointer" : ""
         )}
       >
 
@@ -22152,7 +22152,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
         })()}
       </motion.div>
 
-      {!isCompleted && !claimableTier && !card.isRedeemed && (
+      {!isCompleted && !card.isRedeemed && (
         <p className="text-center text-brand-navy/40 text-[11px] font-bold mt-2 flex items-center justify-center gap-1">
           {store?.scanMethod === 'nfc'
             ? <><ScanLine size={11} /> Tap to scan</>
