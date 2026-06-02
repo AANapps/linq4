@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "453114241783",
+    "project_id": "gen-lang-client-0160052260",
+    "storage_bucket": "gen-lang-client-0160052260.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:453114241783:android:3b90ec6677422dc179a9f2",
+        "android_client_info": {
+          "package_name": "co.uk.adastranetwork.linq"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "453114241783-jlcjgqvf65hmjihgufv7et9g8imc2g7q.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAvU6pn-6vvJGCXPoq6rVsy3Q9_B08TOCs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "453114241783-jlcjgqvf65hmjihgufv7et9g8imc2g7q.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
