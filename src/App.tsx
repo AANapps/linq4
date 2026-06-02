@@ -1258,6 +1258,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [needsEmailVerification, setNeedsEmailVerification] = useState(false);
+  const [profileLoadError, setProfileLoadError] = useState(false);
   const [profileCollection, setProfileCollection] = useState<'users' | 'vendors' | null>(null);
   const intendedRoleRef = useRef<'consumer' | 'vendor' | null>(null);
   const [activeTab, setActiveTab] = useState<string>('home');
@@ -1585,9 +1586,29 @@ export default function App() {
         }
 
         setNeedsEmailVerification(false);
-        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-        const inUsers = userDoc.exists();
-        const existingDoc = inUsers ? userDoc : await getDoc(doc(db, 'vendors', firebaseUser.uid));
+
+        const fetchWithRetry = async (retries = 3): Promise<{ doc: any; inUsers: boolean } | null> => {
+          for (let i = 0; i < retries; i++) {
+            try {
+              const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+              if (userDoc.exists()) return { doc: userDoc, inUsers: true };
+              const vendorDoc = await getDoc(doc(db, 'vendors', firebaseUser.uid));
+              return { doc: vendorDoc, inUsers: false };
+            } catch {
+              if (i < retries - 1) await new Promise(r => setTimeout(r, 1500 * (i + 1)));
+            }
+          }
+          return null;
+        };
+
+        const result = await fetchWithRetry();
+
+        if (!result) {
+          setProfileLoadError(true);
+          return;
+        }
+
+        const { doc: existingDoc, inUsers } = result;
 
         if (!existingDoc.exists()) {
           setNeedsOnboarding(true);
@@ -2012,12 +2033,24 @@ export default function App() {
     return <VendorPendingScreen profile={profile} onLogout={handleLogout} />;
   }
 
-  if (!profile) {
-    setTimeout(() => { if (!profile) setNeedsOnboarding(true); }, 8000);
+  if (profileLoadError || (!profile && !needsOnboarding)) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-between gradient-logo-blue py-16 px-6">
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex-1 flex flex-col items-center justify-center gap-6">
           <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={{ fontFamily: 'Poppins, sans-serif', color: '#ffffff' }}>Linq</span>
+          {profileLoadError ? (
+            <>
+              <p className="text-white/60 text-sm text-center">Could not connect. Please check your internet connection.</p>
+              <button
+                onClick={() => { setProfileLoadError(false); setLoading(true); auth.currentUser?.reload().then(() => { const u = auth.currentUser; if (u) { setLoading(false); } }); window.location.reload(); }}
+                className="px-8 py-3 bg-white/20 rounded-2xl text-white font-bold text-sm"
+              >
+                Retry
+              </button>
+            </>
+          ) : (
+            <p className="text-white/40 text-xs">Loading your profile…</p>
+          )}
         </div>
         <div className="flex flex-col items-center gap-2">
           <img src={adastraLogoUrl || '/app-logo.png'} alt="Ad Astra Network" className="w-14 h-14 rounded-2xl object-contain" />
