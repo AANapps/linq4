@@ -11790,7 +11790,26 @@ function buildStampCelebrationPages(
         ? STAMP_ENCOUR[seed % STAMP_ENCOUR.length](stampsLeft, nextTier.reward)
         : `🎁 You've earned: ${hitTier?.reward || store.reward || 'Free Reward'}!`;
 
-  // Stage reward page — only page shown when current stamp hits a tier
+  // Stamp progress page — always shown so every stamp has a celebration
+  pages.push({
+    type: 'stamp',
+    cardId: card.id,
+    storeName: store.name,
+    storeLogoUrl: store.logoUrl || '',
+    storeTheme: store.theme || '#2563EB',
+    storeCategory: store.category || '',
+    stampIcon: store.stampIcon || '⭐',
+    stampIconUrl: store.stampIconUrl || '',
+    cardPattern: store.cardPattern || 'solid',
+    currentStamps: card.current_stamps,
+    totalStamps: nextTier?.stamps || hitTier?.stamps || store.stamps_required_for_reward || 10,
+    reward: nextTier?.reward || hitTier?.reward || store.reward || 'Free Reward',
+    rewardTiers: tiers,
+    encouragement: enc,
+    done: done || (!!hitTier && !nextStageTier),
+  });
+
+  // Stage reward page — prepended before the stamp page when a tier is hit
   if (hitTier) {
     pages.push({
       type: 'stage_reward',
@@ -16619,30 +16638,32 @@ function StampCelebrationModal({
             ) : (
               /* ── Standard stamp page ── */
               <>
-                {/* Animated icon + label */}
-                <div className="text-center space-y-1">
-                  <motion.div
-                    initial={{ scale: 0, rotate: -20 }} animate={{ scale: 1, rotate: 0 }}
-                    transition={{ type: 'spring', stiffness: 350, damping: 15, delay: 0.05 }}
-                    className="text-5xl mb-2"
-                  >
-                    {PAGE_ICONS[pageKey]}
-                  </motion.div>
-                  {(isUpsell || page.type !== 'stamp') && (
-                    <motion.p
-                      initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-                      className="text-[10px] font-bold uppercase tracking-widest text-brand-gold"
+                {/* Animated icon + label — shown for challenges/upsell, not plain stamp pages */}
+                {page.type !== 'stamp' && (
+                  <div className="text-center space-y-1">
+                    <motion.div
+                      initial={{ scale: 0, rotate: -20 }} animate={{ scale: 1, rotate: 0 }}
+                      transition={{ type: 'spring', stiffness: 350, damping: 15, delay: 0.05 }}
+                      className="text-5xl mb-2"
                     >
-                      {isUpsell ? '✨ Level up your stamps!' : page.done ? '🏆 Challenge Complete!' : '🏃 Challenge Update'}
-                    </motion.p>
-                  )}
-                  <motion.h2
-                    initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-                    className="font-display text-2xl font-bold text-brand-navy leading-tight"
-                  >
-                    {isUpsell ? page.upsellTitle : page.type === 'stamp' ? page.storeName : page.challengeTitle}
-                  </motion.h2>
-                </div>
+                      {PAGE_ICONS[pageKey]}
+                    </motion.div>
+                    {(isUpsell || page.type !== 'stamp') && (
+                      <motion.p
+                        initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+                        className="text-[10px] font-bold uppercase tracking-widest text-brand-gold"
+                      >
+                        {isUpsell ? '✨ Level up your stamps!' : page.done ? '🏆 Challenge Complete!' : '🏃 Challenge Update'}
+                      </motion.p>
+                    )}
+                    <motion.h2
+                      initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                      className="font-display text-2xl font-bold text-brand-navy leading-tight"
+                    >
+                      {isUpsell ? page.upsellTitle : page.challengeTitle}
+                    </motion.h2>
+                  </div>
+                )}
 
                 {isUpsell ? (
                   /* Upsell layout — no ring, just big prize highlight */
