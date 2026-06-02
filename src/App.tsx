@@ -4972,7 +4972,7 @@ function ChallengeRedeemModal({ challenge, entry, userName, uid, onClose }: {
             <div className="text-center relative z-10 space-y-1">
               <p className="text-white/50 text-xs font-medium">Collect stamps &amp; rewards with</p>
               <p className="text-xl font-black tracking-tight leading-none" style={{ fontFamily: 'Poppins, sans-serif' }}><span style={{ color: '#60a5fa' }}>li</span><span style={{ color: '#1d4ed8' }}>nq</span></p>
-              <p className="text-white/30 text-[10px] font-bold tracking-widest">@joinlinq</p>
+              <p className="text-white/30 text-[10px] font-bold tracking-widest">@mylinq.app</p>
             </div>
           </div>
 
@@ -4984,7 +4984,7 @@ function ChallengeRedeemModal({ challenge, entry, userName, uid, onClose }: {
             <div className="space-y-3">
               <div className="rounded-2xl bg-brand-navy/5 p-4 text-center space-y-1">
                 <p className="font-bold text-sm text-brand-navy">📸 Screenshot &amp; share on your story</p>
-                <p className="text-xs text-brand-navy/80">Tag <span className="font-bold">@joinlinq</span> to show off your reward!</p>
+                <p className="text-xs text-brand-navy/80">Tag <span className="font-bold">@mylinq.app</span> to show off your reward!</p>
               </div>
               <button
                 onClick={handleMark}
