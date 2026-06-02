@@ -29511,10 +29511,28 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
 
   // Activity posts — styled reward card
   if (post.postType === 'activity') {
+    const goldSparks = [
+      { x: '18%', delay: 0,    dur: 1.8 },
+      { x: '35%', delay: 0.4,  dur: 2.1 },
+      { x: '52%', delay: 0.15, dur: 1.6 },
+      { x: '68%', delay: 0.7,  dur: 2.3 },
+      { x: '82%', delay: 0.3,  dur: 1.9 },
+      { x: '44%', delay: 0.9,  dur: 2.0 },
+    ];
     return (
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="py-2 px-4">
         <div className="rounded-2xl overflow-hidden relative" style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #4F46E5 50%, #7C3AED 100%)' }}>
           <span className="card-shine-ray" aria-hidden="true" />
+          {/* Gold sparks floating up and down */}
+          {goldSparks.map((s, i) => (
+            <motion.div
+              key={i}
+              className="absolute w-1 h-1 rounded-full pointer-events-none"
+              style={{ left: s.x, bottom: '10%', background: '#F5A623', boxShadow: '0 0 4px 1px #F5A62388' }}
+              animate={{ y: [0, -28, 0], opacity: [0, 1, 0] }}
+              transition={{ duration: s.dur, delay: s.delay, repeat: Infinity, ease: 'easeInOut' }}
+            />
+          ))}
           <div className="relative z-10 flex items-center gap-3 p-4">
             {/* Avatar */}
             <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-white/30 shrink-0 shadow-md bg-white/10 flex items-center justify-center">
@@ -29523,33 +29541,17 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
             {/* Text */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
-                <p className="font-bold text-sm text-white leading-snug">{authorProfile?.name || post.authorName}</p>
+                <p className="font-black text-sm text-white leading-snug">{authorProfile?.name || post.authorName}</p>
                 <StreakBadge streak={authorProfile?.streak} />
               </div>
-              <p className="text-white/80 text-sm font-semibold leading-snug">{post.content}</p>
-              <p className="text-white/40 text-[10px] font-medium mt-0.5">
+              <p className="text-white text-sm font-bold leading-snug">{post.content}</p>
+              <p className="text-white/50 text-[10px] font-medium mt-0.5">
                 {post.createdAt?.toDate ? format(post.createdAt.toDate(), 'MMM d · h:mm a') : 'Just now'}
               </p>
             </div>
-            {/* Emoji badge with orbiting sparkles */}
-            <div className="relative w-12 h-12 shrink-0 flex items-center justify-center">
-              {[0, 60, 120, 180, 240, 300].map((startDeg, i) => (
-                <motion.div
-                  key={i}
-                  className="absolute inset-0 flex items-center justify-center"
-                  animate={{ rotate: [startDeg, startDeg + 360] }}
-                  transition={{ duration: 2.8, repeat: Infinity, ease: 'linear', delay: i * 0.12 }}
-                >
-                  <div className="absolute w-1 h-1 rounded-full bg-white/70" style={{ transform: 'translateY(-22px)' }} />
-                </motion.div>
-              ))}
-              <motion.div
-                className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl relative z-10"
-                animate={{ scale: [1, 1.07, 1] }}
-                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-              >
-                {post.activityEmoji}
-              </motion.div>
+            {/* Emoji badge */}
+            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl shrink-0">
+              {post.activityEmoji}
             </div>
           </div>
         </div>
