@@ -13379,10 +13379,8 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
             cardId={pendingPackCardId}
             uid={user.uid}
             onClose={() => {
-              const cardId = pendingPackCardId;
               setPendingPack(null);
               setPendingPackCardId(null);
-              if (cardId) setOpenStickerCardId(cardId);
             }}
           />
         )}
@@ -13428,10 +13426,9 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
             userUid={user.uid}
             pendingPack={pendingPack}
             pendingPackCardId={pendingPackCardId}
-            onPackClosed={(cardId) => {
+            onPackClosed={() => {
               setPendingPack(null);
               setPendingPackCardId(null);
-              if (cardId) setOpenStickerCardId(cardId);
             }}
           />
         )}
