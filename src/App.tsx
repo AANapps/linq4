@@ -20653,10 +20653,10 @@ function SwipeConfirm({ onConfirm }: { onConfirm: () => void }) {
   };
 
   return (
-    <div ref={trackRef} className="relative h-14 w-full bg-emerald-50 rounded-full overflow-hidden border-2 border-emerald-200 select-none">
-      <motion.div className="absolute inset-y-0 left-0 bg-emerald-200/60 rounded-full" style={{ width: fillPct }} />
+    <div ref={trackRef} className="relative h-14 w-full overflow-hidden select-none rounded-xl" style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #4F46E5 50%, #7C3AED 100%)' }}>
+      <motion.div className="absolute inset-y-0 left-0 bg-white/10" style={{ width: fillPct }} />
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <span className="text-emerald-700/50 text-sm font-bold tracking-wide">Slide to redeem →</span>
+        <span className="text-white/60 text-sm font-bold tracking-wide">Slide to redeem →</span>
       </div>
       <motion.div
         drag={done || maxX === 0 ? false : 'x'}
@@ -20665,7 +20665,7 @@ function SwipeConfirm({ onConfirm }: { onConfirm: () => void }) {
         dragMomentum={false}
         style={{ x }}
         onDragEnd={handleDragEnd}
-        className="absolute left-1 top-1 w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg z-10 touch-none cursor-grab active:cursor-grabbing"
+        className="absolute left-1 top-1 w-12 h-12 rounded-lg bg-black flex items-center justify-center shadow-lg z-10 touch-none cursor-grab active:cursor-grabbing"
         whileTap={{ scale: 0.97 }}
       >
         {done ? <Check size={20} className="text-white" /> : <ChevronRight size={20} className="text-white" />}
