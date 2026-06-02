@@ -16198,12 +16198,6 @@ function StampCelebrationModal({
                           else setPageIdx(i => i + 1);
                         }} />
                       )}
-                      <button
-                        onClick={() => { if (isLast) onClose(); else setPageIdx(i => i + 1); }}
-                        className="w-full py-2.5 text-brand-navy/60 font-bold text-sm"
-                      >
-                        Redeem Later
-                      </button>
                     </motion.div>
                   </>
                 ) : (
