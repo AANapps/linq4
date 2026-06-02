@@ -11890,6 +11890,13 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   // Stamp celebration
   const [celebrationPages, setCelebrationPages] = useState<CelebrationPage[] | null>(null);
   const [celebrationKey, setCelebrationKey] = useState(0);
+  // Delay showing standalone pack modal so the stamp celebration always mounts first
+  const [pendingPackVisible, setPendingPackVisible] = useState(false);
+  useEffect(() => {
+    if (!pendingPack) { setPendingPackVisible(false); return; }
+    const t = setTimeout(() => setPendingPackVisible(true), 600);
+    return () => clearTimeout(t);
+  }, [pendingPack]);
   const [pendingRedeemCardId, setPendingRedeemCardId] = useState<string | null>(null);
   const [celebrationArchiveFn, setCelebrationArchiveFn] = useState<((tierStamps: number, isFinal: boolean) => Promise<void>) | null>(null);
   const prevCardStampsRef = useRef<Map<string, number>>(new Map());
@@ -11925,6 +11932,10 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
     (async () => {
       for (const card of activeCards) {
         const prev = prevCardStampsRef.current.get(card.id) ?? -1;
+        if (card.current_stamps < prev) {
+          // Card was reset (e.g. after redemption) — sync ref so next stamp triggers celebration
+          prevCardStampsRef.current.set(card.id, card.current_stamps);
+        }
         if (card.current_stamps > prev) {
           // Update ref immediately so duplicate Firestore listener fires don't double-count
           prevCardStampsRef.current.set(card.id, card.current_stamps);
@@ -13360,7 +13371,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
 
       {/* Pack Opening Modal — standalone, only when no stamp celebration is running */}
       <AnimatePresence>
-        {pendingPack && !celebrationPages && (
+        {pendingPack && pendingPackVisible && !celebrationPages && (
           <PackOpeningModal
             stickers={pendingPack}
             cardId={pendingPackCardId}
