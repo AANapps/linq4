@@ -2993,6 +2993,24 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
           >
             {mode === 'signup' ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
           </button>
+
+          {Capacitor.isNativePlatform() && mode === 'signin' && (
+            <div className="pt-4 border-t border-white/10 space-y-2">
+              <p className="text-white/30 text-xs text-center">Test accounts</p>
+              <button
+                onClick={() => { setEmail('user@test.linq'); setPassword('TestLinq123!'); }}
+                className="w-full bg-white/5 border border-white/10 text-white/60 text-xs py-3 rounded-2xl"
+              >
+                Consumer — user@test.linq
+              </button>
+              <button
+                onClick={() => { setEmail('vendor@test.linq'); setPassword('TestLinq123!'); }}
+                className="w-full bg-white/5 border border-white/10 text-white/60 text-xs py-3 rounded-2xl"
+              >
+                Vendor — vendor@test.linq
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
