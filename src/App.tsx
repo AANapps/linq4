@@ -685,6 +685,7 @@ interface StoreProfile {
   charityAnimalImageUrl?: string;
   charityTreeImageUrl?: string;
   website?: string;
+  googleReviewUrl?: string;
   businessHours?: {
     mon?: { open: string; close: string } | null;
     tue?: { open: string; close: string } | null;
@@ -28831,6 +28832,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
   const [logoUploading, setLogoUploading] = useState(false);
   const [storeLocation, setStoreLocation] = useState('');
   const [storeLocations, setStoreLocations] = useState<Array<{ id: string; label: string; line1: string; line2: string; town: string; state: string; postcode: string; lat?: number; lng?: number }>>([]);
+  const [googleReviewUrl, setGoogleReviewUrl] = useState('');
   const [visibility, setVisibility] = useState({ members: true, stamps: true, activeCards: true, returnRate: true, followers: true });
   const [privacyMode, setPrivacyMode] = useState(profile.privacyMode ?? false);
   const [saving, setSaving] = useState(false);
@@ -28866,6 +28868,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
         } else {
           setStoreLocations([{ id: 'primary', ...emptyLoc, line1: s.address || s.location || '', lat: s.lat, lng: s.lng }]);
         }
+        setGoogleReviewUrl((s as any).googleReviewUrl || '');
         setVisibility({ members: true, stamps: true, activeCards: true, returnRate: true, followers: true, ...(s.visibilitySettings || {}) });
       }
     });
@@ -28900,6 +28903,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
           location: primaryAddr,
           ...(primary?.lat != null ? { lat: primary.lat, lng: primary.lng } : {}),
           locations: geocoded,
+          googleReviewUrl: googleReviewUrl.trim() || null,
           visibilitySettings: visibility,
         });
       }
@@ -29160,6 +29164,18 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
                 <input value={storeLogo} onChange={e => setStoreLogo(e.target.value)} placeholder="Or paste logo URL directly..."
                   className="w-full px-5 py-4 rounded-2xl bg-white border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30" />
               )}
+            </div>
+
+            {/* Google Review URL */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Google Review Link</label>
+              <input
+                value={googleReviewUrl}
+                onChange={e => setGoogleReviewUrl(e.target.value)}
+                placeholder="https://g.page/r/..."
+                className="w-full px-5 py-4 rounded-2xl bg-white border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+              />
+              <p className="text-[10px] text-brand-navy/72 px-1">Paste your Google review link — a button will appear on your public profile.</p>
             </div>
 
             {/* Public Visibility */}
@@ -34254,6 +34270,12 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                 <a href={(store as any).website} target="_blank" rel="noopener noreferrer" className={pillClass}>
                   <Globe size={12} style={{ color: store.theme || '#2563EB' }} />
                   Website
+                </a>
+              )}
+              {(store as any).googleReviewUrl && (
+                <a href={(store as any).googleReviewUrl} target="_blank" rel="noopener noreferrer" className={pillClass}>
+                  <Star size={12} style={{ color: store.theme || '#2563EB' }} />
+                  Review us
                 </a>
               )}
             </div>
