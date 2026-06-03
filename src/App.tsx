@@ -20063,9 +20063,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                       })
                       .reduce((s, tx) => s + (tx.transaction_amount || 0), 0);
                     return (
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="grid grid-cols-2 gap-3">
                         <StatSquare icon={<DollarSign className="text-emerald-500" />} label="Avg Tx" value={avgTx} sub="per transaction" />
-                        <StatSquare icon={<RefreshCw className="text-purple-500" />} label="Redeemed" value={`${redeemedPct}%`} sub="pts used" />
                         <StatSquare icon={<TrendingUp className="text-blue-500" />} label="This Month" value={thisMonth > 0 ? `£${thisMonth.toFixed(0)}` : '—'} sub="spend tracked" />
                       </div>
                     );
@@ -20245,30 +20244,32 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
 
                   {/* Points Economy */}
                   {(() => {
-                    const issued = spendCards.reduce((s, c) => s + (c.total_points_earned || 0), 0);
-                    const redeemed = spendCards.reduce((s, c) => s + (c.total_points_redeemed || 0), 0);
-                    const outstanding = Math.max(0, issued - redeemed);
-                    if (issued === 0) return null;
+                    const issuedPts = spendCards.reduce((s, c) => s + (c.total_points_earned || 0), 0);
+                    if (issuedPts === 0) return null;
+                    const rate = store?.membershipRedemptionRate || 100;
+                    const issuedMoney = issuedPts / rate;
+                    const redeemedMoney = spendCards.reduce((s, c) => s + (c.total_value_redeemed || 0), 0);
+                    const outstandingMoney = Math.max(0, issuedMoney - redeemedMoney);
                     const items = [
-                      { label: 'Issued', val: issued, color: 'bg-emerald-400' },
-                      { label: 'Redeemed', val: redeemed, color: 'bg-purple-400' },
-                      { label: 'Outstanding', val: outstanding, color: 'bg-amber-400' },
+                      { label: 'Issued', val: issuedMoney, color: 'bg-emerald-400' },
+                      { label: 'Redeemed', val: redeemedMoney, color: 'bg-purple-400' },
+                      { label: 'Outstanding', val: outstandingMoney, color: 'bg-amber-400' },
                     ];
                     return (
                       <div className="glass-card p-5 rounded-[2rem] space-y-3">
                         <div>
                           <p className="font-bold text-brand-navy">Points Economy</p>
-                          <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Lifetime point flow</p>
+                          <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Monetary value of point flow</p>
                         </div>
                         {items.map(({ label, val, color }) => (
                           <div key={label} className="space-y-1">
                             <div className="flex items-center justify-between">
                               <p className="text-[11px] font-bold text-brand-navy/70">{label}</p>
-                              <p className="text-[11px] font-bold text-brand-navy">{fmtK(val)}</p>
+                              <p className="text-[11px] font-bold text-brand-navy">£{val.toFixed(2)}</p>
                             </div>
                             <div className="h-3 bg-brand-navy/5 rounded-full overflow-hidden">
                               <motion.div
-                                initial={{ width: 0 }} animate={{ width: `${Math.round((val / issued) * 100)}%` }}
+                                initial={{ width: 0 }} animate={{ width: `${issuedMoney > 0 ? Math.round((val / issuedMoney) * 100) : 0}%` }}
                                 transition={{ duration: 0.6 }}
                                 className={cn('h-full rounded-full', color)}
                               />
