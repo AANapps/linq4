@@ -20022,7 +20022,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     <StatSquare icon={<Wallet className="text-purple-500" />} label="Active Cards" value={String(spendActiveCards)} info="Spend cards currently held by customers (not archived)." />
                     <StatSquare icon={<RefreshCw className="text-orange-500" />} label="Pts Balance" value={String(totalPointsBalance)} info="Total unspent points sitting in customers' wallets right now." />
                     <StatSquare icon={<DollarSign className="text-green-500" />} label="Total Spend" value={totalSpend > 0 ? `$${totalSpend.toFixed(0)}` : '—'} info="Total revenue recorded through the spend card programme." />
-                    <StatSquare icon={<Gift className="text-rose-500" />} label="Rewards" value={String(spendRewardsGiven)} info="Total reward vouchers earned by customers through spend milestones." />
+                    <StatSquare icon={<Gift className="text-rose-500" />} label="Pts Redeemed" value={String(totalPointsRedeemed)} info="Total points spent by customers redeeming rewards." />
                   </div>
 
                   {/* Advanced spend metrics row */}
