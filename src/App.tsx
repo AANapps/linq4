@@ -16087,14 +16087,6 @@ function VisitScanSheet({ card, store, onClose, onPackReady, initialQty }: { car
                 </div>
               </div>
             )}
-            <div className="mb-5">
-              <p className="text-brand-navy/75 text-[10px] font-bold uppercase tracking-widest text-center mb-3">Points to collect</p>
-              <div className="flex items-center justify-center gap-6">
-                <button onClick={() => setQty(q => Math.max(1, q - 1))} className="w-11 h-11 rounded-full bg-brand-navy/8 flex items-center justify-center text-brand-navy font-bold text-2xl active:scale-95 transition-transform">−</button>
-                <span className="font-black text-5xl text-brand-navy w-14 text-center leading-none">{qty}</span>
-                <button onClick={() => setQty(q => q + 1)} className="w-11 h-11 rounded-full bg-brand-navy/8 flex items-center justify-center text-brand-navy font-bold text-2xl active:scale-95 transition-transform">+</button>
-              </div>
-            </div>
             <div className="grid grid-cols-2 gap-4 mb-4">
               {isIOS ? (
                 <div className="col-span-2 bg-brand-bg rounded-2xl p-4 text-center">
@@ -31722,8 +31714,8 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
     return () => clearInterval(t);
   }, [feedCompletedChallenges.length]);
 
+  // Pre-fetch leaderboard data on mount so it's ready instantly when opened
   useEffect(() => {
-    if (!showLeaderboard) return;
     setLbLoading(true);
     (async () => {
       const [usersResult, pinsResult] = await Promise.allSettled([
@@ -31741,7 +31733,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
       } else { console.error('lb pins fetch failed', pinsResult.reason); }
       setLbLoading(false);
     })();
-  }, [showLeaderboard]);
+  }, []);
 
   useEffect(() => {
     if (!showSavingsLb) return;
@@ -32251,15 +32243,19 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                 lbOpenedAtRef.current = null;
               };
               return (
-                <div
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}
                   className="fixed inset-0 bg-black/60 z-[200] flex items-end max-w-md mx-auto"
                   onClick={closeLb}
                 >
                   <motion.div
-                    initial={{ y: '100%' }}
-                    animate={{ y: 0 }}
-                    exit={{ y: '100%' }}
-                    transition={{ type: 'spring', stiffness: 520, damping: 38 }}
+                    initial={{ y: 24, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: 24, opacity: 0 }}
+                    transition={{ duration: 0.18, ease: [0.25, 1, 0.5, 1] }}
                     className="w-full bg-brand-bg rounded-t-[3rem] p-6 pb-12 space-y-4 max-h-[88vh] overflow-y-auto"
                     onClick={e => e.stopPropagation()}
                   >
@@ -32374,7 +32370,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                       </>
                     )}
                   </motion.div>
-                </div>
+                </motion.div>
               );
             })()}
           </AnimatePresence>
