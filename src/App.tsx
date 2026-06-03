@@ -4381,10 +4381,10 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
     return (
       <div key={key} className="space-y-3">
         <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'rgba(168,85,247,0.8)', textShadow: '0 0 8px rgba(168,85,247,0.4)' }}>{name} · {cards.length} card{cards.length !== 1 ? 's' : ''}</p>
-        <div className="flex flex-wrap gap-3">
+        <div className="grid grid-cols-3 gap-3">
           {deduped.map(({ sticker, count }) => (
             <div key={sticker.cardDefId ?? `${sticker.tier}-${sticker.variant}`} className="relative" onClick={() => setSelected({ sticker, count })}>
-              <StickerCard sticker={sticker} isRevealed={true} size="sm" />
+              <StickerCard sticker={sticker} isRevealed={true} size="md" />
               {count > 1 && (
                 <span className="absolute -top-1.5 -right-1.5 text-white text-[9px] font-black rounded-full w-5 h-5 flex items-center justify-center shadow" style={{ background: '#7c3aed' }}>
                   x{count}
@@ -4398,8 +4398,9 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
   };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] flex flex-col">
+    <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+      transition={{ type: 'spring', stiffness: 520, damping: 38 }}
+      className="fixed inset-0 bg-black/60 z-[110] flex flex-col">
       <div className="flex-1 overflow-y-auto" style={{ background: collectionTab === 'stickers' ? 'radial-gradient(ellipse at 20% 0%, #1a003a 0%, #0a0020 40%, #000510 100%)' : '#000510' }}>
         {/* Arcade scanline overlay */}
         {collectionTab === 'stickers' && (
@@ -4410,7 +4411,7 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
         )}
 
         {/* Header */}
-        <div className="sticky top-0 z-10 px-5 pt-5 pb-3" style={{ background: 'rgba(0,5,16,0.92)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="sticky top-0 z-10 px-5 pb-3" style={{ background: 'rgba(0,5,16,0.92)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.25rem)' }}>
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-display text-xl font-bold" style={{ color: '#fff', textShadow: '0 0 18px #a855f7aa' }}>
               🕹️ My Collection
@@ -28088,8 +28089,8 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
             onClick={() => setSelectedBadge(null)}
           >
             <motion.div
-              initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 540, damping: 40 }}
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 520, damping: 38 }}
               className="w-full bg-brand-bg rounded-t-3xl p-6 pb-10 space-y-4"
               onClick={e => e.stopPropagation()}
             >
@@ -28429,7 +28430,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
             transition={{ type: 'spring', stiffness: 540, damping: 40 }}
             className="fixed top-0 left-0 right-0 bottom-0 z-[9999] bg-brand-bg flex flex-col overflow-hidden"
             onClick={e => e.stopPropagation()}>
-              <div className="px-5 pt-5 pb-4 flex items-center justify-between shrink-0">
+              <div className="px-5 pb-4 flex items-center justify-between shrink-0" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.25rem)' }}>
                 <h3 className="font-bold text-brand-navy text-lg">Badges <span className="text-brand-navy/40 font-normal text-base">({earnedBadges.length})</span></h3>
                 <button onClick={() => setBadgesOpen(false)} className="w-8 h-8 rounded-full bg-brand-navy/8 flex items-center justify-center">
                   <X size={16} className="text-brand-navy" />
@@ -35804,7 +35805,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
             transition={{ type: 'spring', stiffness: 540, damping: 40 }}
             className="fixed top-0 left-0 right-0 bottom-0 z-[9999] bg-brand-bg flex flex-col overflow-hidden max-w-md mx-auto"
             onClick={e => e.stopPropagation()}>
-            <div className="px-5 pt-5 pb-3 flex items-center justify-between shrink-0">
+            <div className="px-5 pb-3 flex items-center justify-between shrink-0" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.25rem)' }}>
               <h3 className="font-bold text-brand-navy text-lg">Badges</h3>
               <button onClick={() => setPubBadgesOpen(false)} className="w-8 h-8 rounded-full bg-brand-navy/8 flex items-center justify-center">
                 <X size={16} className="text-brand-navy" />
@@ -35880,8 +35881,8 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
             onClick={() => setSelectedBadge(null)}
           >
             <motion.div
-              initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 540, damping: 40 }}
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 520, damping: 38 }}
               className="w-full bg-brand-bg rounded-t-3xl p-6 pb-10 space-y-4"
               onClick={e => e.stopPropagation()}
             >
