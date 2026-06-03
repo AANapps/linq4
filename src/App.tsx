@@ -5823,7 +5823,7 @@ function BadgesAdminPanel({ onClose }: { onClose: () => void }) {
       className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex flex-col max-w-md mx-auto"
     >
       <div className="flex-1 overflow-y-auto bg-brand-bg">
-        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm px-5 pt-5 pb-4 border-b border-black/5 z-10">
+        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm safe-top px-5 pb-4 border-b border-black/5 z-10">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-display text-2xl font-bold text-brand-navy">Badges</h2>
@@ -6205,7 +6205,7 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
       transition={{ type: 'spring', damping: 38, stiffness: 520 }}
       className="fixed inset-0 bg-brand-bg z-[200] flex flex-col max-w-md mx-auto"
     >
-      <header className="glass-panel px-5 py-4 flex items-center gap-3">
+      <header className="glass-panel safe-top px-5 pb-4 flex items-center gap-3">
         <button onClick={onClose} className="p-2 -ml-2 text-brand-navy/75"><ArrowLeft size={22} /></button>
         <div className="flex-1">
           <p className="text-[10px] font-bold text-brand-navy/75 uppercase tracking-widest">Admin</p>
@@ -6717,7 +6717,7 @@ function CardSetsAdminPanel({ onClose }: { onClose: () => void }) {
       className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex flex-col max-w-md mx-auto"
     >
       <div className="flex-1 overflow-y-auto bg-brand-bg">
-        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm px-5 pt-5 pb-4 border-b border-black/5 z-10">
+        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm safe-top px-5 pb-4 border-b border-black/5 z-10">
           <div className="flex items-center gap-3">
             <button onClick={selectedSetId ? () => { setSelectedSetId(null); setActiveTier('brown'); setEditingCardId(null); } : onClose}
               className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm active:scale-95 transition-all">
@@ -7013,7 +7013,7 @@ function AppEditPanel({ onClose, onLogoChange }: { onClose: () => void; onLogoCh
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex flex-col max-w-md mx-auto">
       <div className="flex-1 overflow-y-auto bg-brand-bg">
-        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm px-5 pt-5 pb-4 border-b border-black/5 z-10 flex items-center gap-3">
+        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm safe-top px-5 pb-4 border-b border-black/5 z-10 flex items-center gap-3">
           <button onClick={onClose} className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm active:scale-95 transition-all">
             <ArrowLeft size={18} className="text-brand-navy/75" />
           </button>
@@ -7163,7 +7163,7 @@ function PhysicalCardsAdminPanel({ onClose }: { onClose: () => void }) {
       className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex flex-col max-w-md mx-auto"
     >
       <div className="flex-1 overflow-y-auto bg-brand-bg">
-        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm px-5 pt-5 pb-4 border-b border-black/5 z-10">
+        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm safe-top px-5 pb-4 border-b border-black/5 z-10">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-display text-2xl font-bold text-brand-navy">Physical Cards</h2>
@@ -7314,7 +7314,7 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores,
       className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex flex-col max-w-md mx-auto"
     >
       <div className="flex-1 overflow-y-auto bg-brand-bg">
-        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm px-5 pt-5 pb-4 border-b border-black/5 z-10">
+        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm safe-top px-5 pb-4 border-b border-black/5 z-10">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-display text-2xl font-bold text-brand-navy">Admin</h2>
@@ -7707,7 +7707,7 @@ function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColo
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex flex-col max-w-md mx-auto">
       <div className="flex-1 overflow-y-auto bg-brand-bg">
-        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm px-5 pt-5 pb-4 border-b border-black/5 z-10">
+        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm safe-top px-5 pb-4 border-b border-black/5 z-10">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-display text-2xl font-bold text-brand-navy">UI Colours</h2>
@@ -7885,7 +7885,7 @@ function AnnouncementsAdminPanel({ onClose }: { onClose: () => void }) {
       className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex flex-col max-w-md mx-auto"
     >
       <div className="flex-1 overflow-y-auto bg-brand-bg">
-        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm px-5 pt-5 pb-4 border-b border-black/5 z-10">
+        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm safe-top px-5 pb-4 border-b border-black/5 z-10">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-display text-2xl font-bold text-brand-navy">Announcements</h2>
@@ -8783,7 +8783,7 @@ function DailyVoteAdmin({ onClose }: { onClose: () => void }) {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex flex-col max-w-md mx-auto">
       <div className="flex-1 overflow-y-auto bg-brand-bg">
-        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm px-5 pt-5 pb-4 border-b border-black/5 z-10 flex items-center justify-between">
+        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm safe-top px-5 pb-4 border-b border-black/5 z-10 flex items-center justify-between">
           <div>
             <h2 className="font-display text-2xl font-bold text-brand-navy">Daily Vote</h2>
             <p className="text-xs text-brand-navy/80 mt-0.5">{today}</p>
@@ -9144,7 +9144,7 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
       transition={{ type: 'spring', damping: 38, stiffness: 520 }}
       className="fixed inset-0 bg-brand-bg z-[200] flex flex-col max-w-md mx-auto"
     >
-      <header className="glass-panel px-5 py-4 flex items-center gap-3">
+      <header className="glass-panel safe-top px-5 pb-4 flex items-center gap-3">
         <button onClick={onClose} className="p-2 -ml-2 text-brand-navy/75"><ArrowLeft size={22} /></button>
         <div className="flex-1">
           <p className="text-[10px] font-bold text-brand-navy/75 uppercase tracking-widest">Admin</p>
@@ -9332,7 +9332,7 @@ function AdminLeaderboardPanel({ onClose }: { onClose: () => void }) {
       transition={{ type: 'spring', damping: 38, stiffness: 520 }}
       className="fixed inset-0 bg-brand-bg z-[200] flex flex-col max-w-md mx-auto"
     >
-      <header className="glass-panel px-5 py-4 flex items-center gap-3">
+      <header className="glass-panel safe-top px-5 pb-4 flex items-center gap-3">
         <button onClick={onClose} className="p-2 -ml-2 text-brand-navy/75"><ArrowLeft size={22} /></button>
         <div className="flex-1">
           <p className="text-[10px] font-bold text-brand-navy/75 uppercase tracking-widest">Admin</p>
@@ -9534,7 +9534,7 @@ function FraudDetectionPanel({ onClose }: { onClose: () => void }) {
       className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex flex-col max-w-md mx-auto"
     >
       <div className="flex-1 overflow-y-auto bg-brand-bg flex flex-col">
-        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm px-5 pt-5 pb-4 border-b border-black/5 z-10">
+        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm safe-top px-5 pb-4 border-b border-black/5 z-10">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-display text-2xl font-bold text-brand-navy">Fraud Signals</h2>
@@ -9724,7 +9724,7 @@ function AdminOffersPanel({ onClose }: { onClose: () => void }) {
       transition={{ type: 'spring', damping: 38, stiffness: 520 }}
       className="fixed inset-0 bg-brand-bg z-[200] flex flex-col max-w-md mx-auto"
     >
-      <header className="glass-panel px-5 py-4 flex items-center gap-3">
+      <header className="glass-panel safe-top px-5 pb-4 flex items-center gap-3">
         <button onClick={onClose} className="p-2 -ml-2 text-brand-navy/75"><ArrowLeft size={22} /></button>
         <div className="flex-1">
           <p className="text-[10px] font-bold text-brand-navy/75 uppercase tracking-widest">Admin</p>
@@ -10080,7 +10080,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
       transition={{ type: 'spring', damping: 38, stiffness: 520 }}
       className="fixed inset-0 bg-brand-bg z-[200] flex flex-col max-w-md mx-auto"
     >
-      <header className="glass-panel px-5 py-4 flex items-center gap-3">
+      <header className="glass-panel safe-top px-5 pb-4 flex items-center gap-3">
         <button onClick={onClose} className="p-2 -ml-2 text-brand-navy/75"><ArrowLeft size={22} /></button>
         <div className="flex-1">
           <p className="text-[10px] font-bold text-brand-navy/75 uppercase tracking-widest">Admin</p>
@@ -11220,7 +11220,7 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
       className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex flex-col max-w-md mx-auto"
     >
       <div className="flex-1 overflow-y-auto bg-brand-bg">
-        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm px-5 pt-5 pb-4 border-b border-black/5 z-10">
+        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm safe-top px-5 pb-4 border-b border-black/5 z-10">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-display text-2xl font-bold text-brand-navy">Admin Panel</h2>
@@ -12495,11 +12495,13 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       return;
     }
 
-    // Clear the screen immediately — the native sheet is gone.
-    // Small pause lets iOS fully dismiss its NFC sheet before the
-    // celebration animation fires via the Firestore listener.
+    // Clear the native NFC sheet immediately and fire confetti right away —
+    // the confetti plays over the closing iOS sheet which looks great.
+    // Then wait a beat so the sheet is fully gone before the celebration
+    // slider slides up.
     setNfcPhase('idle');
-    await new Promise(r => setTimeout(r, 700));
+    fireCelebAnimation('confetti');
+    await new Promise(r => setTimeout(r, 1100));
 
     await processNFCStamp(scanResult.storeId, user, profile, (state, msg) => {
       // Only surface errors; success is celebrated by StampCelebrationModal via Firestore listener.
@@ -16289,14 +16291,13 @@ function StampCelebrationModal({
     : 'Next';
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-end max-w-md mx-auto"
+    <div
+      className="fixed inset-0 bg-black/60 z-[200] flex items-end max-w-md mx-auto"
       onClick={onClose}
     >
       <motion.div
-        initial={{ y: 120, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 120, opacity: 0 }}
-        transition={{ type: 'spring', stiffness: 360, damping: 30 }}
+        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+        transition={{ type: 'spring', stiffness: 500, damping: 40, delay: 0.25 }}
         className="w-full bg-brand-bg rounded-t-3xl overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
@@ -17192,7 +17193,7 @@ function StampCelebrationModal({
           </motion.div>
         </AnimatePresence>
       </motion.div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -32804,7 +32805,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
         animate={{ opacity: 1, x: 0 }}
         className="fixed inset-0 bg-brand-bg z-[100] flex flex-col max-w-md mx-auto"
       >
-        <header className="glass-panel px-6 py-4 flex items-center gap-4">
+        <header className="glass-panel safe-top px-6 pb-4 flex items-center gap-4">
           <button onClick={() => setActiveChatId(null)} className="p-2 -ml-2 text-brand-navy/75">
             <ArrowLeft size={24} />
           </button>
@@ -32864,7 +32865,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
         animate={{ opacity: 1, x: 0 }}
         className="fixed inset-0 bg-brand-bg z-[100] flex flex-col max-w-md mx-auto"
       >
-        <header className="glass-panel px-6 py-4 flex items-center gap-4">
+        <header className="glass-panel safe-top px-6 pb-4 flex items-center gap-4">
           <button onClick={() => setActiveChatId(null)} className="p-2 -ml-2 text-brand-navy/75">
             <ArrowLeft size={24} />
           </button>
@@ -33421,7 +33422,7 @@ function AdminStoreEditModal({ store, onClose }: { store: StoreProfile; onClose:
       transition={{ type: 'spring', damping: 38, stiffness: 520 }}
       className="fixed inset-0 bg-brand-bg z-[300] flex flex-col max-w-md mx-auto overflow-y-auto"
     >
-      <header className="glass-panel px-5 py-4 flex items-center gap-3 sticky top-0 z-10">
+      <header className="glass-panel safe-top px-5 pb-4 flex items-center gap-3 sticky top-0 z-10">
         <button onClick={onClose} className="p-2 -ml-2 text-brand-navy/75"><ArrowLeft size={22} /></button>
         <div className="flex-1">
           <p className="text-[10px] font-bold text-brand-navy/75 uppercase tracking-widest">Admin</p>
@@ -34132,12 +34133,13 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
         {/* Floating back button */}
         <button
           onClick={onBack}
-          className="absolute top-3 left-4 flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-black/30 backdrop-blur-md text-white font-bold text-sm active:scale-95 transition-all"
+          className="absolute left-4 flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-black/30 backdrop-blur-md text-white font-bold text-sm active:scale-95 transition-all"
+          style={{ top: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}
         >
           <ArrowLeft size={16} /> Back
         </button>
         {/* Floating right actions */}
-        <div className="absolute top-3 right-4 flex items-center gap-2">
+        <div className="absolute right-4 flex items-center gap-2" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}>
           {isAppAdmin(profile, user.email) && (
             <button
               onClick={() => setShowAdminEdit(true)}

@@ -35,6 +35,11 @@
   }
 }
 
+/* Universal safe-area header — matches the main Linq header top padding */
+.safe-top {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 0.875rem) !important;
+}
+
 .card-shadow {
   box-shadow: 0 8px 28px -6px rgba(17, 24, 39, 0.18);
 }
