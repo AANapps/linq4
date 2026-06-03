@@ -16304,8 +16304,8 @@ function StampCelebrationModal({
         <AnimatePresence mode="wait">
           <motion.div
             key={pageIdx}
-            initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -50, opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            initial={{ x: 40, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -40, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 34 }}
             className="relative overflow-hidden p-6 pb-12 space-y-5"
           >
 
@@ -16654,24 +16654,35 @@ function StampCelebrationModal({
                           style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #4F46E5 50%, #7C3AED 100%)' }}
                         >
                           <span className="card-shine-ray" aria-hidden="true" />
-                          <div className="relative z-10 flex items-center justify-between gap-2">
-                            <p className="font-bold text-sm text-white truncate">{c.title}</p>
-                            {c.done
-                              ? <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 400, damping: 14 }} className="text-[10px] font-black text-emerald-300 shrink-0">DONE!</motion.span>
-                              : <span className="text-[10px] font-bold text-white/60 shrink-0">{c.currentStamps}/{c.totalStamps}</span>}
-                          </div>
-                          <div className="relative z-10 space-y-1.5">
-                            <p className="text-[10px] text-white/70 truncate">{c.reward}</p>
-                            <div className="flex items-baseline justify-between mb-0.5">
-                              <span className="text-xs font-black text-white">{c.currentStamps}<span className="text-white/50 font-bold text-[10px]"> / {c.totalStamps}</span></span>
-                              <span className="text-xs font-black text-white/80">{c.totalStamps > 0 ? Math.min(100, Math.round((c.currentStamps / c.totalStamps) * 100)) : 0}%</span>
+                          <div className="relative z-10 flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <p className="font-bold text-sm text-white truncate">{c.title}</p>
+                              <p className="text-[10px] text-white/60 truncate mt-0.5">{c.reward}</p>
                             </div>
-                            <div className="relative h-2 bg-white/20 rounded-full overflow-hidden">
+                            {c.done && (
+                              <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 400, damping: 14 }} className="text-[10px] font-black text-emerald-300 shrink-0 mt-0.5">DONE!</motion.span>
+                            )}
+                          </div>
+                          <div className="relative z-10 space-y-2">
+                            <div className="flex items-end justify-between">
+                              <motion.span
+                                key={c.currentStamps}
+                                initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                                transition={{ type: 'spring', stiffness: 460, damping: 16, delay: 0.28 + i * 0.07 }}
+                                className="font-display font-black text-white leading-none"
+                                style={{ fontSize: 36 }}
+                              >
+                                {c.currentStamps}
+                                <span className="text-white/45 font-bold ml-1" style={{ fontSize: 14 }}>/ {c.totalStamps}</span>
+                              </motion.span>
+                              <span className="text-xs font-black text-white/70 mb-1">{c.totalStamps > 0 ? Math.min(100, Math.round((c.currentStamps / c.totalStamps) * 100)) : 0}%</span>
+                            </div>
+                            <div className="relative h-3 bg-white/20 rounded-full overflow-hidden">
                               <motion.div
                                 className="absolute inset-y-0 left-0 rounded-full bg-white/90"
                                 initial={{ width: 0 }}
                                 animate={{ width: `${c.totalStamps > 0 ? Math.min(100, Math.round((c.currentStamps / c.totalStamps) * 100)) : 0}%` }}
-                                transition={{ duration: 0.85, ease: [0.34, 1.56, 0.64, 1], delay: 0.2 + i * 0.07 }}
+                                transition={{ type: 'spring', stiffness: 120, damping: 18, delay: 0.18 + i * 0.07 }}
                               />
                             </div>
                           </div>
@@ -16967,7 +16978,8 @@ function StampCelebrationModal({
                     <p className="text-xs text-white/60">Collect {page.totalStamps} stamps to win</p>
                   </motion.div>
                 ) : page.type === 'stamp' ? (
-                  (() => {
+                  <>
+                  {(() => {
                     const cardTheme = page.storeTheme || '#2563EB';
                     const stampIcon = page.stampIcon || '⭐';
                     const stampIconUrl = (page as any).stampIconUrl || '';
@@ -17072,7 +17084,17 @@ function StampCelebrationModal({
                         </div>
                       </motion.div>
                     );
-                  })()
+                  })()}
+                  {/* Encouragement text */}
+                  {page.encouragement && (
+                    <motion.p
+                      initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
+                      className="text-center text-sm font-semibold text-brand-navy/70 px-2"
+                    >
+                      {page.encouragement}
+                    </motion.p>
+                  )}
+                  </>
                 ) : (
                   /* Progress ring (challenges) */
                   <motion.div
