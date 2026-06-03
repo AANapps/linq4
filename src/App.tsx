@@ -235,7 +235,9 @@ import {
   MapPin,
   Share2,
   Globe,
-  Info
+  Info,
+  Copy,
+  Check
 } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
@@ -25852,6 +25854,33 @@ function ScanUserPanel({ store, onIssue }: {
   );
 }
 
+function NfcTagUrlRow({ storeId }: { storeId: string }) {
+  const url = `https://linq.app?stamp=${storeId}`;
+  const [copied, setCopied] = React.useState(false);
+  const copy = () => {
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+  return (
+    <div className="bg-brand-navy/4 border border-brand-navy/8 rounded-2xl p-4 space-y-2">
+      <p className="text-xs font-bold text-brand-navy/60 uppercase tracking-widest">NFC tag URL</p>
+      <p className="text-[11px] text-brand-navy/50 leading-relaxed">Write this URL to your NFC tag using an app like NFC Tools.</p>
+      <div className="flex items-center gap-2 bg-white rounded-xl border border-brand-navy/8 px-3 py-2.5">
+        <p className="flex-1 text-xs font-mono text-brand-navy truncate">{url}</p>
+        <button
+          onClick={copy}
+          className="shrink-0 flex items-center gap-1 text-xs font-bold text-brand-gold active:opacity-60 transition-opacity"
+        >
+          {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+          {copied ? 'Copied' : 'Copy'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Vendor Card Section (toggle + builder) ──────────────────────────────────
 function VendorCardSection({ store }: { store: StoreProfile | null }) {
   // Derive active card type from Firestore state — single source of truth
@@ -26007,6 +26036,7 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
                   <p className="text-amber-700 text-xs leading-relaxed">NFC requires a pre-programmed physical tag placed at your counter. Customers tap their phone to it — no scanning needed. Tags must be ordered separately.</p>
                 </div>
               </div>
+              {store?.id && <NfcTagUrlRow storeId={store.id} />}
               {store?.nfcOrdered ? (
                 <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-2xl p-3">
                   <CheckCircle2 size={15} className="text-blue-500 shrink-0" />
