@@ -18903,6 +18903,51 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
       {activeTab === 'home' && (
         paymentVerifying && !isSubscribed ? (
           <PaymentVerifyingScreen />
+        ) : needsPayment ? (
+          /* ── Dashboard paywall ── */
+          <div className="-mx-6 -mt-4">
+            <div className="relative overflow-hidden px-6 pt-14 pb-10 text-white"
+              style={{ background: 'linear-gradient(160deg, #0f172a 0%, #1e1b4b 45%, #4f46e5 100%)' }}>
+              <div className="shine-ray" />
+              <div className="relative z-10">
+                <div className="w-14 h-14 bg-white/15 rounded-[1.25rem] flex items-center justify-center mb-6 border border-white/20">
+                  <BarChart2 size={26} className="text-white" />
+                </div>
+                <h1 className="font-display text-3xl font-bold leading-tight mb-3">Your Loyalty Dashboard</h1>
+                <p className="text-white/75 text-sm leading-relaxed">Subscribe to unlock your full dashboard — member counts, stamps, points, rewards, charts, and more.</p>
+              </div>
+            </div>
+            <div className="px-6 py-5 bg-white space-y-3">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">What's included</p>
+              {[
+                { icon: <Users size={15} className="text-purple-600" />, text: 'Live member counts, active cards and return rate' },
+                { icon: <BarChart2 size={15} className="text-purple-600" />, text: 'Stamps, points and rewards charts by week or day' },
+                { icon: <AlertTriangle size={15} className="text-purple-600" />, text: 'Churn risk alerts and newcomer tracking' },
+                { icon: <Zap size={15} className="text-purple-600" />, text: 'Automated recommendations to grow your programme' },
+              ].map(({ icon, text }) => (
+                <div key={text} className="flex items-start gap-3">
+                  <div className="w-7 h-7 rounded-xl bg-purple-50 flex items-center justify-center shrink-0 mt-0.5">{icon}</div>
+                  <p className="text-sm text-brand-navy/80 leading-snug">{text}</p>
+                </div>
+              ))}
+            </div>
+            <div className="px-6 pb-8 bg-white space-y-3">
+              <button
+                onClick={handleSubscribe}
+                className="w-full font-bold py-4 rounded-2xl active:scale-[0.98] transition-transform text-base text-white"
+                style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' }}
+              >
+                Subscribe Now — $49/month
+              </button>
+              <p className="text-center text-xs text-brand-navy/40">Secure payment via Stripe · Cancel anytime</p>
+              <div className="bg-green-50 border border-green-200 rounded-2xl p-4 flex items-start gap-3">
+                <CheckCircle2 size={15} className="text-green-500 shrink-0 mt-0.5" />
+                <p className="text-green-800 text-xs leading-relaxed">
+                  <span className="font-bold">Instant access.</span> Your dashboard unlocks automatically the moment payment clears — no waiting.
+                </p>
+              </div>
+            </div>
+          </div>
         ) : (
           <div className="space-y-6">
           <header>
