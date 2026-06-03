@@ -1563,7 +1563,7 @@ export default function App() {
   }, [user, profile]);
 
   useEffect(() => {
-    const loadingTimeout = setTimeout(() => setLoading(false), 10000);
+    const loadingTimeout = setTimeout(() => setLoading(false), 5000);
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       clearTimeout(loadingTimeout);
       if (!firebaseUser) {
@@ -1592,12 +1592,15 @@ export default function App() {
         const fetchWithRetry = async (retries = 3): Promise<{ doc: any; inUsers: boolean } | null> => {
           for (let i = 0; i < retries; i++) {
             try {
-              const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+              // Fetch users + vendors in parallel — cuts cold-start latency in half
+              const [userDoc, vendorDoc] = await Promise.all([
+                getDoc(doc(db, 'users', firebaseUser.uid)),
+                getDoc(doc(db, 'vendors', firebaseUser.uid)),
+              ]);
               if (userDoc.exists()) return { doc: userDoc, inUsers: true };
-              const vendorDoc = await getDoc(doc(db, 'vendors', firebaseUser.uid));
               return { doc: vendorDoc, inUsers: false };
             } catch {
-              if (i < retries - 1) await new Promise(r => setTimeout(r, 1500 * (i + 1)));
+              if (i < retries - 1) await new Promise(r => setTimeout(r, 500 * (i + 1)));
             }
           }
           return null;
