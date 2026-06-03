@@ -2599,6 +2599,11 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
   if (mode === 'home') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-8 text-center" style={bg}>
+        {loading && (
+          <div className="fixed top-0 left-0 right-0 h-[3px] z-50 overflow-hidden bg-white/20">
+            <motion.div className="absolute top-0 h-full w-1/3 bg-white rounded-full" animate={{ x: ['-100%', '400%'] }} transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }} />
+          </div>
+        )}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-12">
           <h1 className="text-4xl font-black mb-4 leading-none" style={{ fontFamily: 'Poppins, sans-serif' }}><span style={{ color: '#60a5fa' }}>li</span><span style={{ color: '#1d4ed8' }}>nq</span></h1>
           <p className="text-white/60 text-lg max-w-xs mx-auto">Collect stamps, unlock rewards, and support your favourite local businesses.</p>
@@ -2880,6 +2885,11 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
 
   return (
     <div className="min-h-screen flex flex-col px-8" style={bg}>
+      {loading && (
+        <div className="fixed top-0 left-0 right-0 h-[3px] z-50 overflow-hidden bg-white/20">
+          <motion.div className="absolute top-0 h-full w-1/3 bg-white rounded-full" animate={{ x: ['-100%', '400%'] }} transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }} />
+        </div>
+      )}
       <button onClick={() => reset('home')} className="flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-8" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3.5rem)' }}>
         <ArrowLeft size={18} />
         <span className="text-sm font-medium">Back</span>
