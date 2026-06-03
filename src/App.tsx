@@ -663,7 +663,6 @@ interface StoreProfile {
   subscriptionEnd?: { toMillis: () => number; seconds: number } | null;
   subCardEnabled?: boolean;
   nfcOrdered?: boolean;
-  nfcStampQty?: number;
   pointsEarnMode?: 'spend' | 'visit' | 'both';
   pointsPerDollar?: number;
   pointsPerVisit?: number;
@@ -13804,8 +13803,6 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
     if (!storeSnap.exists()) { onStatus('error', 'Store not found. Please try again.'); return []; }
 
     const store = { id: storeSnap.id, ...storeSnap.data() } as StoreProfile;
-    // For NFC taps (qty=1 default), use the store's configured per-tap count
-    if (qty === 1 && store.nfcStampQty && store.nfcStampQty > 1) qty = store.nfcStampQty;
 
     // Visit-only store: skip stamp card entirely, only add visit points
     if (store.cardEnabled === false && store.membershipEnabled && store.membershipType === 'visit') {
@@ -14685,13 +14682,12 @@ const genToken = () =>
     : Math.random().toString(36).slice(2) + Date.now().toString(36);
 
 // Write a fresh reusable token to Firestore and return its ID
-async function createQRToken(storeId: string, stampQty = 1): Promise<string> {
+async function createQRToken(storeId: string): Promise<string> {
   const tokenId = genToken();
   await setDoc(doc(db, 'qr_tokens', tokenId), {
     storeId,
-    createdAt: Date.now(),
-    claimedBy: [],
-    stampQty,
+    createdAt: Date.now(),  // plain number — avoids serverTimestamp pending-state issues
+    claimedBy: [],          // per-user claim tracking — multiple users can claim, each only once
   });
   return tokenId;
 }
@@ -14710,17 +14706,16 @@ function VendorQRDisplay({ store, onClose }: { store: StoreProfile; onClose: () 
   const [rotating, setRotating] = useState(false);
   const [justScanned, setJustScanned] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [stampCount, setStampCount] = useState(1);
   const cardTheme = store.theme || '#2563EB';
   const rotatingRef = useRef(false);
 
-  const rotateToken = useCallback(async (qty?: number) => {
+  const rotateToken = useCallback(async () => {
     if (rotatingRef.current) return;
     rotatingRef.current = true;
     setRotating(true);
     setError(null);
     try {
-      const id = await createQRToken(store.id, qty ?? stampCount);
+      const id = await createQRToken(store.id);
       setTokenId(id);
     } catch (e: any) {
       console.error('[VendorQRDisplay] createQRToken failed:', e?.code, e?.message, e);
@@ -14781,34 +14776,14 @@ function VendorQRDisplay({ store, onClose }: { store: StoreProfile; onClose: () 
             }
           </div>
 
-          {/* Stamp counter */}
-          <div className="flex flex-col items-center gap-2">
-            <p className="text-white/60 text-[11px] font-bold uppercase tracking-widest">Stamps to award</p>
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => {
-                  const next = Math.max(1, stampCount - 1);
-                  setStampCount(next);
-                  rotateToken(next);
-                }}
-                className="w-9 h-9 rounded-full bg-white/20 text-white text-xl font-bold flex items-center justify-center active:scale-90 transition-all"
-              >−</button>
-              <span className="text-white font-black text-3xl w-8 text-center leading-none">{stampCount}</span>
-              <button
-                onClick={() => {
-                  const next = Math.min(10, stampCount + 1);
-                  setStampCount(next);
-                  rotateToken(next);
-                }}
-                className="w-9 h-9 rounded-full bg-white/20 text-white text-xl font-bold flex items-center justify-center active:scale-90 transition-all"
-              >+</button>
+          {!error && (
+            <div className="flex items-center gap-2">
+              {justScanned
+                ? <><CheckCircle2 size={14} className="text-emerald-300" /><p className="text-emerald-300 text-xs font-bold">Scanned! Refreshing…</p></>
+                : <><div className="w-2 h-2 rounded-full bg-white/60 animate-pulse" /><p className="text-white/60 text-xs font-bold">Ready to scan</p></>
+              }
             </div>
-            {!error && (
-              justScanned
-                ? <div className="flex items-center gap-1.5"><CheckCircle2 size={13} className="text-emerald-300" /><p className="text-emerald-300 text-xs font-bold">Scanned! Refreshing…</p></div>
-                : <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-white/60 animate-pulse" /><p className="text-white/60 text-xs font-bold">Ready to scan</p></div>
-            )}
-          </div>
+          )}
 
           <button
             onClick={rotateToken}
@@ -15469,13 +15444,13 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady, initialQty }: {
     streamRef.current = null;
   };
 
-  const processQR = async (storeId: string, overrideQty?: number) => {
+  const processQR = async (storeId: string) => {
     stopCamera();
     const user = auth.currentUser;
     if (!user) return;
     const stickers = await processNFCStamp(storeId, user, null, (s, m) => {
       setScanState(s as SS); setStatusMsg(m);
-    }, overrideQty ?? qty);
+    }, qty);
     if (stickers.length > 0) onPackReady?.(stickers);
   };
 
@@ -15524,10 +15499,7 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady, initialQty }: {
       setScanState('error'); setStatusMsg(err?.message || 'QR verification failed.');
       return;
     }
-    // Read stampQty from token (set by vendor on their QR display)
-    const tokenSnap2 = await getDoc(doc(db, 'qr_tokens', decoded.tokenId)).catch(() => null);
-    const tokenQty = (tokenSnap2?.data()?.stampQty as number) || 1;
-    await processQR(decoded.storeId, tokenQty);
+    await processQR(decoded.storeId);
   };
 
   const tick = async () => {
@@ -20782,40 +20754,6 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 </button>
               )}
             </div>
-
-            {/* NFC stamp counter — stamp card stores only */}
-            {store?.cardEnabled === true && (
-              <div className="glass-card rounded-[2rem] p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <p className="font-bold text-brand-navy text-sm">Stamps per NFC tap</p>
-                    <p className="text-xs text-brand-navy/50 mt-0.5">How many stamps a customer receives each time they tap NFC</p>
-                  </div>
-                  <div className="w-9 h-9 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0">
-                    <Wifi size={18} className="text-blue-500" />
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <button
-                    onClick={async () => {
-                      if (!store?.id) return;
-                      const next = Math.max(1, (store.nfcStampQty || 1) - 1);
-                      await updateDoc(doc(db, 'stores', store.id), { nfcStampQty: next });
-                    }}
-                    className="w-11 h-11 rounded-2xl bg-brand-navy/8 text-brand-navy text-xl font-bold flex items-center justify-center active:scale-90 transition-all"
-                  >−</button>
-                  <p className="flex-1 text-center font-black text-3xl text-brand-navy">{store.nfcStampQty || 1}</p>
-                  <button
-                    onClick={async () => {
-                      if (!store?.id) return;
-                      const next = Math.min(10, (store.nfcStampQty || 1) + 1);
-                      await updateDoc(doc(db, 'stores', store.id), { nfcStampQty: next });
-                    }}
-                    className="w-11 h-11 rounded-2xl bg-brand-navy/8 text-brand-navy text-xl font-bold flex items-center justify-center active:scale-90 transition-all"
-                  >+</button>
-                </div>
-              </div>
-            )}
           </div>
         ) : (
           <div className="space-y-4 pb-20">
