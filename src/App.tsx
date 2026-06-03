@@ -18044,7 +18044,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
   const [showSpendQRDisplay, setShowSpendQRDisplay] = useState(false);
   const [togglingCard, setTogglingCard] = useState(false);
 
-  const cardIsActive = !!(store?.cardEnabled !== false || store?.membershipEnabled);
+  const cardIsActive = !!(store?.cardEnabled === true || store?.membershipEnabled);
 
   const handleToggleCard = async (active: boolean) => {
     if (!store) return;
@@ -18076,7 +18076,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
   useEffect(() => {
     const isVisitEnabled = store?.membershipEnabled === true && store.membershipType === 'visit';
     const isSpendEnabled = store?.membershipEnabled === true && store.membershipType === 'spend';
-    onVendorQRStatus?.(!!store && (store.cardEnabled !== false || isVisitEnabled || isSpendEnabled));
+    onVendorQRStatus?.(!!store && (store.cardEnabled === true || isVisitEnabled || isSpendEnabled));
   }, [store]);
 
   const trialEndsMs = store?.trialEndsAt
@@ -25961,7 +25961,6 @@ function NfcTagUrlRow({ storeId }: { storeId: string }) {
 function VendorCardSection({ store }: { store: StoreProfile | null }) {
   // Derive active card type from Firestore state — single source of truth
   const activeType: 'stamp' | 'spend' | 'visit' =
-    store?.cardEnabled !== false ? 'stamp' :
     store?.membershipEnabled && store?.membershipType === 'visit' ? 'visit' :
     store?.membershipEnabled && store?.membershipType === 'spend' ? 'spend' :
     'stamp';
