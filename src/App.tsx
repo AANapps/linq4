@@ -13797,16 +13797,15 @@ async function processPhysicalCardScan(
 // --- NFC Stamp Modal ---
 
 async function processNFCStamp(storeId: string, user: FirebaseUser, profile: UserProfile | null,
-  onStatus: (state: 'processing' | 'success' | 'error', msg: string) => void, qty?: number): Promise<CollectibleSticker[]> {
+  onStatus: (state: 'processing' | 'success' | 'error', msg: string) => void, qty = 1): Promise<CollectibleSticker[]> {
   onStatus('processing', 'Verifying stamp...');
   try {
     const storeSnap = await getDoc(doc(db, 'stores', storeId));
     if (!storeSnap.exists()) { onStatus('error', 'Store not found. Please try again.'); return []; }
 
     const store = { id: storeSnap.id, ...storeSnap.data() } as StoreProfile;
-    // qty undefined = real NFC tap → use store's configured per-tap count; explicit number = QR/override, respect it exactly
-    const effectiveQty = qty ?? (store.nfcStampQty || 1);
-    const qtyToUse = effectiveQty;
+    // For NFC taps (qty=1 default), use the store's configured per-tap count
+    if (qty === 1 && store.nfcStampQty && store.nfcStampQty > 1) qty = store.nfcStampQty;
 
     // Visit-only store: skip stamp card entirely, only add visit points
     if (store.cardEnabled === false && store.membershipEnabled && store.membershipType === 'visit') {
@@ -13846,7 +13845,7 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
     let newCycles: number;
 
     if (!cardSnap.exists() || cardSnap.data()?.isArchived) {
-      newStamps = Math.min(qtyToUse, limit); newCycles = 0;
+      newStamps = Math.min(qty, limit); newCycles = 0;
       await setDoc(cardRef, {
         user_id: user.uid, store_id: store.id, current_stamps: newStamps,
         total_completed_cycles: newCycles, stamps_required: limit,
@@ -13858,22 +13857,22 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
     } else {
       const current = cardSnap.data()?.current_stamps || 0;
       newCycles = cardSnap.data()?.total_completed_cycles || 0;
-      newStamps = current + qtyToUse;
+      newStamps = current + qty;
       const cycleComplete = newStamps >= limit;
       if (cycleComplete) {
         newCycles += 1;
         if (newStamps > limit) newStamps = limit;
       }
       const txData1 = cycleComplete
-        ? { user_id: user.uid, store_id: store.id, completed_at: serverTimestamp(), stamp_count: qtyToUse, stamps_at_completion: limit, reward_claimed: false, userName, userPhoto }
-        : { user_id: user.uid, store_id: store.id, completed_at: serverTimestamp(), stamp_count: qtyToUse, userName, userPhoto };
+        ? { user_id: user.uid, store_id: store.id, completed_at: serverTimestamp(), stamp_count: qty, stamps_at_completion: limit, reward_claimed: false, userName, userPhoto }
+        : { user_id: user.uid, store_id: store.id, completed_at: serverTimestamp(), stamp_count: qty, userName, userPhoto };
       await addDoc(collection(db, 'transactions'), txData1);
       await updateDoc(cardRef, { current_stamps: newStamps, total_completed_cycles: newCycles, last_tap_timestamp: serverTimestamp() });
     }
 
-    await updateDoc(doc(db, 'users', user.uid), { totalStamps: increment(qtyToUse), lastStampAt: serverTimestamp() });
+    await updateDoc(doc(db, 'users', user.uid), { totalStamps: increment(qty), lastStampAt: serverTimestamp() });
     bumpStreak(user.uid).catch(console.error);
-    logEvent('stamp_issued', user.uid, { storeId: store.id, cardId, stampCount: qtyToUse, method: 'nfc', ...stampEventMeta(store, prevCardData, newStamps) });
+    logEvent('stamp_issued', user.uid, { storeId: store.id, cardId, stampCount: qty, method: 'nfc', ...stampEventMeta(store, prevCardData, newStamps) });
     if (newStamps >= store.stamps_required_for_reward || 0) {
       logEvent('card_completed', user.uid, { storeId: store.id, cardId, totalStamps: store.stamps_required_for_reward || 10 });
     }
