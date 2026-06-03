@@ -4166,7 +4166,7 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
         className="fixed inset-0 z-[250] flex flex-col"
       >
-        <button onClick={onClose} className="flex-shrink-0 h-16 w-full" />
+        <button onClick={onClose} className="flex-shrink-0 w-full" style={{ height: 'calc(env(safe-area-inset-top, 0px) + 4rem)' }} />
         <div className="flex-1 bg-brand-bg rounded-t-[2.5rem] shadow-2xl flex flex-col overflow-hidden">
           {/* Header lives outside the scroll container so nothing can paint over it */}
           <div className="bg-brand-bg px-5 pt-5 pb-4 border-b border-black/5 flex-shrink-0">
@@ -4252,11 +4252,11 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
                         {collectedCount}/{slotCount}{collectedCount >= slotCount ? ' ✓' : ''}
                       </span>
                     </div>
-                    <div className="flex gap-2 relative z-10" style={{ justifyContent: 'space-evenly' }}>
+                    <div className="grid grid-cols-3 gap-2 relative z-10">
                       {slots.map(sl => {
                         const filled = sl.count > 0;
                         return (
-                          <div key={sl.key} className="relative flex-1" style={{ maxWidth: 72, aspectRatio: '3/4', minWidth: 0 }}>
+                          <div key={sl.key} className="relative" style={{ aspectRatio: '3/4' }}>
                               {filled ? (
                               <div style={{ width: '100%', height: '100%', borderRadius: 7, padding: 2, background: cfg.border }}>
                                 <div style={{ width: '100%', height: '100%', borderRadius: 5, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: '#fff', position: 'relative' }}>
@@ -11767,7 +11767,7 @@ function ProgrammeDetailModal({ prog, sc, onJoin, onView, onClose, joiningProgra
         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
         className="fixed inset-0 z-[150] flex flex-col max-w-md mx-auto"
       >
-        <button onClick={onClose} className="flex-shrink-0 h-16 w-full" />
+        <button onClick={onClose} className="flex-shrink-0 w-full" style={{ height: 'calc(env(safe-area-inset-top, 0px) + 4rem)' }} />
         <div className="flex-1 overflow-y-auto gradient-logo-blue rounded-t-[2.5rem] shadow-2xl">
           <div className="sticky top-0 gradient-logo-blue px-5 pt-5 pb-4 z-10 border-b border-white/5">
             <div className="flex items-start justify-between gap-3">
@@ -12495,9 +12495,10 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
     }
 
     // Clear the screen immediately — the native sheet is gone.
-    // The Firestore listener will detect the stamp increase and fire
-    // the full-screen celebration animation on its own.
+    // Small pause lets iOS fully dismiss its NFC sheet before the
+    // celebration animation fires via the Firestore listener.
     setNfcPhase('idle');
+    await new Promise(r => setTimeout(r, 700));
 
     await processNFCStamp(scanResult.storeId, user, profile, (state, msg) => {
       // Only surface errors; success is celebrated by StampCelebrationModal via Firestore listener.
@@ -13663,14 +13664,15 @@ function BadgeNotifCard({ badge, queueCount, onDismiss }: { badge: AppBadge; que
   useEffect(() => { fireCelebAnimation('fireworks'); }, []);
   return (
     <motion.div
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[300] flex items-end max-w-md mx-auto"
-      onClick={onDismiss}
+      initial={{ y: '100%' }}
+      animate={{ y: 0 }}
+      exit={{ y: '100%' }}
+      transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+      className="fixed bottom-0 left-0 right-0 z-[300] max-w-md mx-auto"
     >
-      <motion.div
-        initial={{ y: 120, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 120, opacity: 0 }}
-        transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-        className="w-full bg-brand-bg rounded-t-3xl px-6 pt-6 pb-12 space-y-4"
+      <div
+        className="w-full bg-brand-bg rounded-t-3xl px-6 pt-6 space-y-4 shadow-2xl"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 2rem)' }}
         onClick={e => e.stopPropagation()}
       >
         <div className="flex justify-center">
@@ -13706,7 +13708,7 @@ function BadgeNotifCard({ badge, queueCount, onDismiss }: { badge: AppBadge; que
         >
           {BADGE_CELEB_LINES[Math.floor(Math.random() * BADGE_CELEB_LINES.length)]}
         </motion.button>
-      </motion.div>
+      </div>
     </motion.div>
   );
 }
@@ -30400,6 +30402,15 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
 function CreatePostModal({ onClose, user, profile, isAdmin }: { onClose: () => void, user: FirebaseUser, profile: UserProfile | null, isAdmin?: boolean }) {
   const [content, setContent] = useState('');
   const [isPoll, setIsPoll] = useState(false);
+  const [kbOffset, setKbOffset] = React.useState(0);
+  React.useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => setKbOffset(Math.max(0, window.innerHeight - vv.height - vv.offsetTop));
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    return () => { vv.removeEventListener('resize', update); vv.removeEventListener('scroll', update); };
+  }, []);
   const [pollOptions, setPollOptions] = useState(['', '']);
   const [pollDurationMins, setPollDurationMins] = useState(60);
   const [pollType, setPollType] = useState<'popularity' | 'correct'>('popularity');
@@ -30481,7 +30492,8 @@ function CreatePostModal({ onClose, user, profile, isAdmin }: { onClose: () => v
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
         onClick={e => e.stopPropagation()}
-        className="relative w-full max-w-md bg-white rounded-t-[2.5rem] p-6 pb-10 space-y-5 shadow-2xl"
+        className="relative w-full max-w-md bg-white rounded-t-[2.5rem] p-6 space-y-5 shadow-2xl"
+        style={{ paddingBottom: Math.max(40, kbOffset) }}
       >
         {/* Handle */}
         <div className="w-10 h-1 bg-brand-navy/10 rounded-full mx-auto" />
