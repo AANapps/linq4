@@ -13793,6 +13793,33 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
     if (!storeSnap.exists()) { onStatus('error', 'Store not found. Please try again.'); return []; }
 
     const store = { id: storeSnap.id, ...storeSnap.data() } as StoreProfile;
+
+    // Visit-only store: skip stamp card entirely, only add visit points
+    if (store.cardEnabled === false && store.membershipEnabled && store.membershipType === 'visit') {
+      onStatus('processing', 'Adding visit...');
+      const membershipId = `${user.uid}_${store.id}_membership`;
+      const memSnap = await getDoc(doc(db, 'cards', membershipId));
+      if (!memSnap.exists() || memSnap.data()?.isArchived) {
+        onStatus('error', 'No visit card found. Join this venue first.');
+        return [];
+      }
+      const stampsPerVisit = store.membershipStampsPerVisit || 1;
+      await updateDoc(doc(db, 'cards', membershipId), {
+        membership_visits: increment(stampsPerVisit),
+        total_points_earned: increment(stampsPerVisit),
+        last_transaction_at: serverTimestamp(),
+      });
+      await addDoc(collection(db, 'transactions'), {
+        user_id: user.uid, store_id: store.id,
+        card_type: 'membership', membership_type: 'visit',
+        type: 'nfc_visit', points_earned: stampsPerVisit, issued_at: serverTimestamp(),
+      });
+      updateChallengeProgress(user.uid, store.id, 1).catch(console.error);
+      logEvent('visit_issued', user.uid, { storeId: store.id, method: 'nfc', points: stampsPerVisit });
+      onStatus('success', `+${stampsPerVisit} visit point${stampsPerVisit !== 1 ? 's' : ''} added!`);
+      return [];
+    }
+
     const limit = store.stamps_required_for_reward || 10;
     const cardId = `${user.uid}_${store.id}`;
     const cardRef = doc(db, 'cards', cardId);
@@ -13858,25 +13885,6 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
 
     const newStickers = await issueUserStickers(user.uid, userName, 3).catch(() => [] as CollectibleSticker[]);
     updateChallengeProgress(user.uid, store.id, 1).catch(console.error);
-
-    // Also issue membership points if store has a visit-type membership card
-    if (store.membershipEnabled && store.membershipType === 'visit') {
-      const membershipId = `${user.uid}_${store.id}_membership`;
-      const memSnap = await getDoc(doc(db, 'cards', membershipId));
-      if (memSnap.exists() && !memSnap.data()?.isArchived) {
-        const stampsPerVisit = store.membershipStampsPerVisit || 1;
-        await updateDoc(doc(db, 'cards', membershipId), {
-          membership_visits: increment(stampsPerVisit),
-          total_points_earned: increment(stampsPerVisit),
-          last_transaction_at: serverTimestamp(),
-        });
-        await addDoc(collection(db, 'transactions'), {
-          user_id: user.uid, store_id: store.id,
-          card_type: 'membership', membership_type: 'visit',
-          type: 'nfc_co_issue', points_earned: stampsPerVisit, issued_at: serverTimestamp(),
-        });
-      }
-    }
 
     // Record scan location for fraud detection (fire-and-forget)
     Promise.all([
