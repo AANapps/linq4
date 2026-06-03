@@ -27785,56 +27785,79 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
       <div className="space-y-6 pb-20 text-brand-navy">
         {settingsModal}
 
-        {/* Business hero banner */}
-        <div className="relative rounded-[2.5rem] overflow-hidden" style={{ background: `linear-gradient(135deg, ${theme}ee, ${theme}88)` }}>
-          <div className="px-6 pt-8 pb-6">
-            <button onClick={() => setShowProfileSettings(true)}
-              className="absolute top-4 right-4 p-2 rounded-2xl bg-white/20 backdrop-blur-sm active:scale-95 transition-all">
-              <Settings size={18} className="text-white" />
-            </button>
-            <div className="flex items-center gap-4">
-              <div className="w-20 h-20 rounded-[1.5rem] overflow-hidden border-4 border-white/30 shadow-xl shrink-0 bg-white/10">
+        {/* Header — mirrors consumer layout */}
+        <header className="relative">
+          <button onClick={() => setShowProfileSettings(true)}
+            className="absolute right-0 top-0 p-2 rounded-2xl bg-white border border-brand-navy/10 shadow-sm active:scale-95 transition-all">
+            <Settings size={18} className="text-brand-navy/75" />
+          </button>
+
+          <div className="flex items-start gap-4">
+            {/* Store logo in avatar position */}
+            <div className="shrink-0">
+              <div className="w-[76px] h-[76px] rounded-full overflow-hidden border-4 border-white shadow-xl bg-white">
                 {vendorStore?.logoUrl
                   ? <img src={vendorStore.logoUrl} alt="" className="w-full h-full object-cover" />
-                  : <div className="w-full h-full flex items-center justify-center"><Building2 size={32} className="text-white/60" /></div>}
-              </div>
-              <div>
-                <h2 className="font-display text-2xl font-bold text-white leading-tight">{vendorStore?.name || profile.name}</h2>
-                <div className="flex items-center gap-2 mt-1 flex-wrap">
-                  {vendorStore?.category && (
-                    <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest bg-white/20 text-white px-2 py-1 rounded-lg">
-                        <StoreCategoryIcon category={vendorStore.category} size={10} />
-                        {vendorStore.category}
-                      </span>
-                  )}
-                  {vendorStore?.location && (
-                    <span className="flex items-center gap-1 text-[10px] text-white/70 font-medium">
-                      <MapPin size={10} />{vendorStore.location}
-                    </span>
-                  )}
-                </div>
+                  : <div className="w-full h-full flex items-center justify-center bg-brand-navy/5"><Building2 size={30} className="text-brand-navy/30" /></div>}
               </div>
             </div>
-            {vendorStore?.description && (
-              <p className="mt-4 text-white/80 text-sm leading-relaxed">{vendorStore.description}</p>
-            )}
-          </div>
-        </div>
 
-        {/* Followers / Following */}
-        {(vis?.followers !== false) && (
-          <div className="flex items-center gap-4 text-sm px-1">
-            <button onClick={() => { setFollowModalTab('following'); setShowFollowModal(true); }} className="flex items-center gap-1 font-bold hover:text-brand-gold transition-colors">
-              <span>{following.length}</span>
-              <span className="text-brand-navy/75 font-normal">Following</span>
-            </button>
-            <span className="text-brand-navy/32">•</span>
-            <button onClick={() => { setFollowModalTab('followers'); setShowFollowModal(true); }} className="flex items-center gap-1 font-bold hover:text-brand-gold transition-colors">
-              <span>{followers.length + storeFollowerCount}</span>
-              <span className="text-brand-navy/75 font-normal">Followers</span>
-            </button>
+            {/* Name, handle, followers — right of logo */}
+            <div className="flex-1 min-w-0 pt-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="font-display text-2xl font-bold">{vendorStore?.name || profile.name}</h2>
+                {vendorStore?.isVerified && <CheckCircle2 size={18} className="text-blue-400" />}
+              </div>
+              <p className="text-brand-gold font-bold text-xs uppercase tracking-[0.2em]">@{profile.handle || profile.email?.split('@')[0]}</p>
+              <div className="flex items-center gap-3 mt-2 text-sm">
+                <button onClick={() => { setFollowModalTab('following'); setShowFollowModal(true); }} className="flex items-center gap-1 font-bold hover:text-brand-gold transition-colors">
+                  <span>{following.length}</span>
+                  <span className="text-brand-navy/75 font-normal">Following</span>
+                </button>
+                <span className="text-brand-navy/32">•</span>
+                <button onClick={() => { setFollowModalTab('followers'); setShowFollowModal(true); }} className="flex items-center gap-1 font-bold hover:text-brand-gold transition-colors">
+                  <span>{followers.length + storeFollowerCount}</span>
+                  <span className="text-brand-navy/75 font-normal">Followers</span>
+                </button>
+              </div>
+            </div>
           </div>
-        )}
+
+          {/* Category + location pills */}
+          {(vendorStore?.category || vendorStore?.location) && (
+            <div className="flex items-center gap-2 mt-3 flex-wrap">
+              {vendorStore.category && (
+                <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest bg-brand-navy/6 text-brand-navy/70 px-2.5 py-1 rounded-full">
+                  <StoreCategoryIcon category={vendorStore.category} size={10} />
+                  {vendorStore.category}
+                </span>
+              )}
+              {vendorStore.location && (
+                <span className="flex items-center gap-1 text-[10px] text-brand-navy/50 font-medium bg-brand-navy/6 px-2.5 py-1 rounded-full">
+                  <MapPin size={10} />{vendorStore.location}
+                </span>
+              )}
+            </div>
+          )}
+
+          {vendorStore?.description && (
+            <p className="mt-3 text-sm text-brand-navy/70 leading-relaxed">{vendorStore.description}</p>
+          )}
+        </header>
+
+        {/* Stats bar — Members | Stamps | Rewards */}
+        <div className="flex items-center divide-x divide-brand-navy/10">
+          {[
+            { val: totalMembers,       label: 'Members' },
+            { val: totalStampsGiven,   label: 'Stamps'  },
+            { val: profileRewardsGiven, label: 'Rewards' },
+          ].map(s => (
+            <div key={s.label} className="flex-1 flex flex-col items-center gap-0.5 py-2">
+              <p className="font-black text-base leading-none text-brand-navy">{s.val}</p>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-brand-navy/50">{s.label}</p>
+            </div>
+          ))}
+        </div>
 
         {/* Recent members — list */}
         {storeCards.length > 0 && (() => {
