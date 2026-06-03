@@ -28917,7 +28917,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
       transition={{ type: 'spring', damping: 38, stiffness: 520 }}
       className="fixed inset-0 bg-brand-bg z-[200] flex flex-col max-w-md mx-auto"
     >
-      <header className="glass-panel px-6 py-4 flex items-center gap-4">
+      <header className="glass-panel px-6 pb-4 flex items-center gap-4" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.875rem)' }}>
         <button onClick={onClose} className="p-2 -ml-2 text-brand-navy/75"><ArrowLeft size={24} /></button>
         <h2 className="font-display text-xl font-bold flex-1">Edit Profile</h2>
         <button onClick={handleSave} disabled={saving} className="px-5 py-2 bg-brand-navy text-white rounded-2xl font-bold text-sm disabled:opacity-50 active:scale-95 transition-all">
@@ -32172,11 +32172,8 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                 lbOpenedAtRef.current = null;
               };
               return (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-end max-w-md mx-auto"
+                <div
+                  className="fixed inset-0 bg-black/60 z-[200] flex items-end max-w-md mx-auto"
                   onClick={closeLb}
                 >
                   <motion.div
@@ -32298,7 +32295,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                       </>
                     )}
                   </motion.div>
-                </motion.div>
+                </div>
               );
             })()}
           </AnimatePresence>
