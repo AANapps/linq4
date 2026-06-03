@@ -3464,7 +3464,7 @@ function OnboardingScreen({ user, onComplete }: {
       </div>
       <h2 className="font-display font-bold text-2xl text-brand-navy mb-1">Business category</h2>
       <p className="text-sm text-brand-navy/75 mb-8">Help customers find you in the right section</p>
-      <div className="w-full grid grid-cols-2 gap-3">
+      <div className="w-full grid grid-cols-2 gap-4">
         {CATEGORIES.map(cat => (
           <button
             key={cat}
@@ -4391,7 +4391,7 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
     return (
       <div key={key} className="space-y-3">
         <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'rgba(168,85,247,0.8)', textShadow: '0 0 8px rgba(168,85,247,0.4)' }}>{name} · {cards.length} card{cards.length !== 1 ? 's' : ''}</p>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-4">
           {deduped.map(({ sticker, count }) => (
             <div key={sticker.cardDefId ?? `${sticker.tier}-${sticker.variant}`} className="relative" onClick={() => setSelected({ sticker, count })}>
               <StickerCard sticker={sticker} isRevealed={true} size="md" />
@@ -7786,7 +7786,7 @@ function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColo
               </div>
             );
           })() : (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-4">
               {UI_COLOR_SLOT_DEFS.map(slot => {
                 const current = colors[slot.key];
                 const textCol = current.textColor ?? (current.dark ? '#ffffff' : '#0f172a');
@@ -16109,7 +16109,7 @@ function VisitScanSheet({ card, store, onClose, onPackReady, initialQty }: { car
                 <button onClick={() => setQty(q => q + 1)} className="w-11 h-11 rounded-full bg-brand-navy/8 flex items-center justify-center text-brand-navy font-bold text-2xl active:scale-95 transition-transform">+</button>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="grid grid-cols-2 gap-4 mb-4">
               {isIOS ? (
                 <div className="col-span-2 bg-brand-bg rounded-2xl p-4 text-center">
                   <Smartphone size={28} className="text-brand-navy mx-auto mb-2" />
@@ -16345,7 +16345,7 @@ function StampCelebrationModal({
                 </motion.div>
 
                 {/* Two rank cards — blue-purple gradient */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-4">
                   {/* Vendor leaderboard */}
                   <div className="rounded-2xl p-4 text-center space-y-1 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #4F46E5 50%, #7C3AED 100%)' }}>
                     <span className="card-shine-ray" aria-hidden="true" />
@@ -18898,7 +18898,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
         paymentVerifying && !isSubscribed ? (
           <PaymentVerifyingScreen />
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-7">
           <header>
             <h2 className="font-display text-3xl font-bold mb-1">Dashboard</h2>
             <p className="text-brand-navy/75">{store?.name || 'Your Store'}</p>
@@ -18998,11 +18998,11 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
               </div>
             )}
           <div className={needsPayment ? 'select-none pointer-events-none' : ''} style={needsPayment ? { filter: 'blur(4px)', opacity: 0.3 } : {}}>
-          <>
+          <div className="space-y-8">
 
           {/* ===== STAMPS TAB ===== */}
           {dashTab === 'stamps' && (
-            <>
+            <div className="space-y-6">
               {/* FREE TIER */}
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
@@ -19010,7 +19010,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 </span>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-4">
                 <div onClick={() => openStatModal('members')} className="cursor-pointer active:scale-95 transition-transform">
                   <StatSquare icon={<Users className="text-blue-500" />} label="Members" value={String(totalMembers)} info="Total customers who have scanned your QR code at least once." />
                 </div>
@@ -19037,7 +19037,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                   .slice(0, 10);
                 if (top10.length === 0) return null;
                 return (
-                  <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                  <div className="glass-card p-6 rounded-[2rem] space-y-3">
                     <div className="flex items-center justify-between">
                       <p className="font-bold text-brand-navy">Top 10 Users</p>
                       <Trophy size={16} className="text-brand-gold" />
@@ -19066,7 +19066,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 const completedCount = uniqueUids.filter(uid => stampCards.filter(c => c.user_id === uid).some(c => (c.total_completed_cycles || 0) > 0)).length;
                 const completionPct = Math.round((completedCount / uniqueUids.length) * 100);
                 return (
-                  <div className="glass-card p-5 rounded-[2rem]">
+                  <div className="glass-card p-6 rounded-[2rem]">
                     <div className="flex items-center justify-between mb-3">
                       <div>
                         <p className="font-bold text-brand-navy">Challenge Performance</p>
@@ -19088,7 +19088,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
               })()}
 
               {/* INTELLIGENCE TIER */}
-              <div className="flex items-center justify-between pt-2">
+              <div className="flex items-center justify-between pt-4">
                 <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-purple-700 bg-purple-50 border border-purple-200 px-2.5 py-1 rounded-full">
                   <Sparkles size={9} /> Intelligence{!isSubscribed && ' — $49/month'}
                 </span>
@@ -19157,7 +19157,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                   </div>
 
                   {/* Locked stat tiles — mirrors the real Intelligence grid */}
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-3 gap-4">
                     {([
                       { icon: <AlertTriangle className="text-rose-500" />, label: 'Churn Risk', sub: '21d+ no stamp' },
                       { icon: <UserPlus className="text-emerald-500" />, label: 'Newcomers', sub: 'joined last 30d' },
@@ -19175,7 +19175,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                   </div>
 
                   {/* Locked stamps chart */}
-                  <div className="glass-card p-5 rounded-[2rem] space-y-4">
+                  <div className="glass-card p-6 rounded-[2rem] space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-bold text-brand-navy">Stamps Chart</p>
@@ -19204,7 +19204,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                   </div>
 
                   {/* Locked growth chart */}
-                  <div className="glass-card p-5 rounded-[2rem] space-y-4">
+                  <div className="glass-card p-6 rounded-[2rem] space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-bold text-brand-navy">Customer Growth</p>
@@ -19263,7 +19263,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     const totalTxStamps = stampTxns.reduce((s, tx) => s + (tx.stamp_count || 1), 0);
                     const avgVisit = stampTxns.length > 0 ? (totalTxStamps / stampTxns.length).toFixed(1) : '—';
                     return (
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="grid grid-cols-3 gap-4">
                         <div onClick={() => openStatModal('churnRisk')} className="cursor-pointer active:scale-95 transition-transform">
                           <StatSquare icon={<AlertTriangle className="text-rose-500" />} label="Churn Risk" value={String(atRisk)} sub="21d+ no stamp" info="Members who haven't collected a stamp in 21+ days — at risk of drifting away. Tap to see the list." />
                         </div>
@@ -19296,7 +19296,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 }
                 const maxVal = Math.max(...periods.map(p => p.count), 1);
                 return (
-                  <div className="glass-card p-5 rounded-[2rem] space-y-4">
+                  <div className="glass-card p-6 rounded-[2rem] space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-bold text-brand-navy">Stamps Chart</p>
@@ -19406,7 +19406,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 const polyPts = points.map((p, i) => `${toX(i)},${toY(p.cumulative)}`).join(' ');
                 const areaPts = `${toX(0)},${svgH} ${polyPts} ${toX(points.length - 1)},${svgH}`;
                 return (
-                  <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                  <div className="glass-card p-6 rounded-[2rem] space-y-3">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-bold text-brand-navy">User Base Growth</p>
@@ -19518,7 +19518,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 const maxVal2 = Math.max(...signupBuckets.map(d => d.count), 1);
                 const totalNew = signupBuckets.reduce((s, d) => s + d.count, 0);
                 return (
-                  <div className="glass-card p-5 rounded-[2rem] space-y-4">
+                  <div className="glass-card p-6 rounded-[2rem] space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-bold text-brand-navy">{isDays2 ? 'New Sign-ups / Day' : 'New Sign-ups / Week'}</p>
@@ -19595,7 +19595,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 const maxVal = Math.max(...counts, 1);
                 if (stampTxns.length === 0) return null;
                 return (
-                  <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                  <div className="glass-card p-6 rounded-[2rem] space-y-3">
                     <div>
                       <p className="font-bold text-brand-navy">Busiest Days</p>
                       <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Stamps by day of week</p>
@@ -19636,7 +19636,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 const maxVal = Math.max(thisWeek, lastWeek, 1);
                 const pct = lastWeek > 0 ? Math.round(((thisWeek - lastWeek) / lastWeek) * 100) : null;
                 return (
-                  <div className="glass-card p-5 rounded-[2rem] space-y-4">
+                  <div className="glass-card p-6 rounded-[2rem] space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-bold text-brand-navy">Weekly Comparison</p>
@@ -19693,7 +19693,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                   { label: 'Completed Card', count: completed, color: 'bg-teal-400' },
                 ];
                 return (
-                  <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                  <div className="glass-card p-6 rounded-[2rem] space-y-3">
                     <div>
                       <p className="font-bold text-brand-navy">Retention Funnel</p>
                       <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Member journey stages</p>
@@ -19727,7 +19727,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     const avgClv = (clvStamps.reduce((s, v) => s + v, 0) / uniqueUids.length).toFixed(1);
                     const topClv = Math.max(...clvStamps);
                     return (
-                      <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                      <div className="glass-card p-6 rounded-[2rem] space-y-3">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="font-bold text-brand-navy">Customer Lifetime Value</p>
@@ -19735,7 +19735,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                           </div>
                           <TrendingUp size={16} className="text-blue-500" />
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-2 gap-4">
                           <div className="bg-blue-50 rounded-2xl p-3 text-center">
                             <p className="font-display text-xl font-bold text-blue-700">{avgClv}</p>
                             <p className="text-[10px] text-blue-600/70 font-bold uppercase tracking-wider mt-0.5">Avg stamps</p>
@@ -19814,7 +19814,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     if (totalMembers < 20) recs.push({ icon: '🚀', text: 'Grow your member base — share your QR code on social media or at your counter' });
                     if (recs.length === 0) recs.push({ icon: '✅', text: 'Great work! Your loyalty programme is performing well — keep the stamps coming' });
                     return (
-                      <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                      <div className="glass-card p-6 rounded-[2rem] space-y-3">
                         <div className="flex items-center justify-between">
                           <p className="font-bold text-brand-navy">Recommendations</p>
                           <Zap size={16} className="text-amber-500" />
@@ -19832,7 +19832,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                   })()}
 
                   {/* Intelligence: Competitor Benchmarking — coming soon */}
-                  <div className="glass-card p-5 rounded-[2rem] opacity-60">
+                  <div className="glass-card p-6 rounded-[2rem] opacity-60">
                     <div className="flex items-center justify-between mb-2">
                       <p className="font-bold text-brand-navy">Competitor Benchmarking</p>
                       <span className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/40 bg-brand-navy/8 px-2 py-0.5 rounded-full">Coming soon</span>
@@ -19998,12 +19998,12 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                   );
                 })()}
               </AnimatePresence>
-            </>
+            </div>
           )}
 
           {/* ===== SPEND POINTS TAB ===== */}
           {dashTab === 'spend' && (
-            <>
+            <div className="space-y-6">
               {spendCards.length === 0 ? (
                 <div className="glass-card p-8 rounded-[2rem] text-center space-y-3">
                   <DollarSign size={32} className="text-emerald-300 mx-auto" />
@@ -20012,7 +20012,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-3 gap-4">
                     <StatSquare icon={<Users className="text-blue-500" />} label="Members" value={String(spendMembers)} info="Customers who have an active spend card with your store." />
                     <StatSquare icon={<TrendingUp className="text-emerald-500" />} label="Pts Issued" value={String(totalPointsIssued)} info="Total points earned by all members across every transaction." />
                     <StatSquare icon={<Wallet className="text-purple-500" />} label="Active Cards" value={String(spendActiveCards)} info="Spend cards currently held by customers (not archived)." />
@@ -20037,7 +20037,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                       })
                       .reduce((s, tx) => s + (tx.transaction_amount || 0), 0);
                     return (
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 gap-4">
                         <StatSquare icon={<DollarSign className="text-emerald-500" />} label="Avg Tx" value={avgTx} sub="per transaction" />
                         <StatSquare icon={<TrendingUp className="text-blue-500" />} label="This Month" value={thisMonth > 0 ? `£${thisMonth.toFixed(0)}` : '—'} sub="spend tracked" />
                       </div>
@@ -20065,7 +20065,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     }
                     const maxVal = Math.max(...periods.map(p => p.count), 1);
                     return (
-                      <div className="glass-card p-5 rounded-[2rem] space-y-4">
+                      <div className="glass-card p-6 rounded-[2rem] space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="font-bold text-brand-navy">Points Issued</p>
@@ -20150,7 +20150,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     }
                     const maxVal = Math.max(...pts.map(p => p.cumulative), 1);
                     return (
-                      <div className="glass-card p-5 rounded-[2rem] space-y-4">
+                      <div className="glass-card p-6 rounded-[2rem] space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="font-bold text-brand-navy">User Base Growth</p>
@@ -20194,7 +20194,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                       .slice(0, 10);
                     if (top10.length === 0) return null;
                     return (
-                      <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                      <div className="glass-card p-6 rounded-[2rem] space-y-3">
                         <div className="flex items-center justify-between">
                           <p className="font-bold text-brand-navy">Top 10 by Points</p>
                           <Trophy size={16} className="text-emerald-500" />
@@ -20230,7 +20230,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                       { label: 'Outstanding', val: outstandingMoney, color: 'bg-amber-400' },
                     ];
                     return (
-                      <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                      <div className="glass-card p-6 rounded-[2rem] space-y-3">
                         <div>
                           <p className="font-bold text-brand-navy">Points Economy</p>
                           <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Monetary value of point flow</p>
@@ -20274,7 +20274,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                       { label: 'New / Low', sub: `Bottom 30% · ${uids.length - midCut} customers`, pts: lowPts, color: 'bg-brand-navy/20' },
                     ];
                     return (
-                      <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                      <div className="glass-card p-6 rounded-[2rem] space-y-3">
                         <div>
                           <p className="font-bold text-brand-navy">Customer Segments</p>
                           <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Points contribution by tier</p>
@@ -20302,12 +20302,12 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                   })()}
                 </>
               )}
-            </>
+            </div>
           )}
 
           {/* ===== VISIT POINTS TAB ===== */}
           {dashTab === 'visit' && (
-            <>
+            <div className="space-y-6">
               {visitCards.length === 0 ? (
                 <div className="glass-card p-8 rounded-[2rem] text-center space-y-3">
                   <MapPin size={32} className="text-blue-300 mx-auto" />
@@ -20316,7 +20316,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-3 gap-4">
                     <StatSquare icon={<Users className="text-blue-500" />} label="Members" value={String(visitMembers)} info="Customers who have an active visit card with your store." />
                     <StatSquare icon={<TrendingUp className="text-blue-500" />} label="Total Points" value={String(visitPointsGiven)} info="Total visit points issued to all members across all check-ins." />
                     <StatSquare icon={<Wallet className="text-purple-500" />} label="Active Cards" value={String(visitActiveCards)} info="Visit cards currently held by customers (not archived)." />
@@ -20350,7 +20350,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     const redeemed = visitCards.reduce((s, c) => s + (c.total_points_redeemed || 0), 0);
                     const redPct = issued > 0 ? Math.round((redeemed / issued) * 100) : 0;
                     return (
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="grid grid-cols-3 gap-4">
                         <StatSquare icon={<AlertTriangle className="text-rose-500" />} label="At-Risk" value={String(atRisk)} sub="14d+ no visit" />
                         <StatSquare icon={<RefreshCw className="text-blue-500" />} label="Avg Interval" value={avgInterval === '—' ? '—' : `${avgInterval}d`} sub="days between visits" />
                         <StatSquare icon={<Gift className="text-purple-500" />} label="Redeemed" value={`${redPct}%`} sub="pts used" />
@@ -20379,7 +20379,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     }
                     const maxVal = Math.max(...periods.map(p => p.count), 1);
                     return (
-                      <div className="glass-card p-5 rounded-[2rem] space-y-4">
+                      <div className="glass-card p-6 rounded-[2rem] space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="font-bold text-brand-navy">Visits Chart</p>
@@ -20449,7 +20449,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     }
                     const maxVal = Math.max(...pts.map(p => p.cumulative), 1);
                     return (
-                      <div className="glass-card p-5 rounded-[2rem] space-y-4">
+                      <div className="glass-card p-6 rounded-[2rem] space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="font-bold text-brand-navy">User Base Growth</p>
@@ -20493,7 +20493,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                       .slice(0, 10);
                     if (top10.length === 0) return null;
                     return (
-                      <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                      <div className="glass-card p-6 rounded-[2rem] space-y-3">
                         <div className="flex items-center justify-between">
                           <p className="font-bold text-brand-navy">Top 10 by Points</p>
                           <Trophy size={16} className="text-blue-400" />
@@ -20537,7 +20537,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     }));
                     const maxCount = Math.max(...counts.map(b => b.count), 1);
                     return (
-                      <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                      <div className="glass-card p-6 rounded-[2rem] space-y-3">
                         <div>
                           <p className="font-bold text-brand-navy">Visit Loyalty Tiers</p>
                           <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Members by visit frequency</p>
@@ -20573,7 +20573,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     const maxVal = Math.max(...counts, 1);
                     if (visitTxns.length === 0) return null;
                     return (
-                      <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                      <div className="glass-card p-6 rounded-[2rem] space-y-3">
                         <div>
                           <p className="font-bold text-brand-navy">Busiest Days</p>
                           <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Visits by day of week</p>
@@ -20607,7 +20607,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                       { label: 'Outstanding', val: outstanding, color: 'bg-amber-400' },
                     ];
                     return (
-                      <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                      <div className="glass-card p-6 rounded-[2rem] space-y-3">
                         <div>
                           <p className="font-bold text-brand-navy">Points Economy</p>
                           <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Lifetime visit point flow</p>
@@ -20632,11 +20632,11 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                   })()}
                 </>
               )}
-            </>
+            </div>
           )}
 
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             <h3 className="font-display text-xl font-bold">Recent Activity</h3>
             {recentTransactions.slice(0, activityVisible).map(tx => {
               const isCompletion = !!tx.stamps_at_completion;
@@ -20645,7 +20645,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
               const name = tx.userName || txProf?.name || 'Customer';
               const photo = tx.userPhoto || txProf?.photoURL || '';
               return (
-                <div key={tx.id} className="glass-card p-3.5 rounded-2xl flex items-center gap-3">
+                <div key={tx.id} className="glass-card p-4 rounded-2xl flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full overflow-hidden bg-brand-navy/5 shrink-0 flex items-center justify-center">
                     {photo
                       ? <img src={photo} alt="" className="w-full h-full object-cover" />
@@ -20686,7 +20686,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
               </div>
             )}
           </div>
-          </>
+          </div>
           </div>
           </div>
           </div>
@@ -21162,7 +21162,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                   </div>
                   <h3 className="font-display text-2xl font-bold mb-1">Redeemed!</h3>
                   <p className="text-brand-navy/75 text-sm mb-6">${redeemDollarNum.toFixed(2)} off applied</p>
-                  <div className="glass-card rounded-2xl p-4 mb-6 grid grid-cols-2 gap-3">
+                  <div className="glass-card rounded-2xl p-4 mb-6 grid grid-cols-2 gap-4">
                     <div className="text-center">
                       <p className="text-brand-navy/75 text-[9px] font-bold uppercase tracking-widest">Points Used</p>
                       <p className="text-brand-navy font-black text-xl">{pointsToDeduct}</p>
@@ -21314,7 +21314,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 <QrCode size={16} className="relative z-10" />
                 <span className="relative z-10">Collect Points</span>
               </button>
-              <div className="grid grid-cols-2 gap-3 mb-6">
+              <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className="glass-card p-5 rounded-2xl">
                   <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-1">Available</p>
                   <p className="text-3xl font-black text-brand-navy">{netAvailablePoints.toLocaleString()}</p>
@@ -21762,7 +21762,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               </button>
 
               {/* Balance row */}
-              <div className="grid grid-cols-2 gap-3 mb-6">
+              <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className="glass-card p-5 rounded-2xl">
                   <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-1">Available</p>
                   <p className="text-3xl font-black text-brand-navy">{netAvailablePoints.toLocaleString()}</p>
@@ -26813,7 +26813,7 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
                 <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Points System</label>
                 <InfoTip text="Controls how customers earn and redeem points. Set both values to activate the programme." />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <div className="flex items-center">
                     <label className="text-[10px] font-bold text-brand-navy/75 uppercase tracking-widest">Points per $1 spent</label>
@@ -26877,7 +26877,7 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
                 <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Milestone Reward (optional)</label>
                 <InfoTip text="A bonus reward given when a customer reaches a total spend amount — on top of their regular points." />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <div className="flex items-center">
                     <label className="text-[10px] font-bold text-brand-navy/75 uppercase tracking-widest">Reward every $</label>
@@ -27219,7 +27219,7 @@ function BadgeSquarePanel({ badges, onSelectBadge }: { badges: AppBadge[]; onSel
   const [showAll, setShowAll] = useState(false);
   return (
     <>
-      <div className="grid grid-cols-2 gap-3 w-full">
+      <div className="grid grid-cols-2 gap-4 w-full">
         {[0, 1, 2].map(i => {
           const b = badges[i];
           if (!b) return (
@@ -30909,7 +30909,7 @@ function DealSliderSection({ title, icon, challenges, onViewStore, onViewChallen
           </button>
         )}
       </div>
-      <div className={cn('pb-2', showAll ? 'grid grid-cols-2 gap-3' : 'flex gap-3 overflow-x-auto')} style={!showAll ? { scrollbarWidth: 'none', msOverflowStyle: 'none' } : {}}>
+      <div className={cn('pb-2', showAll ? 'grid grid-cols-2 gap-4' : 'flex gap-3 overflow-x-auto')} style={!showAll ? { scrollbarWidth: 'none', msOverflowStyle: 'none' } : {}}>
         {visible.map((c, i) => {
           const colors = REWARD_TAG_COLORS[c.rewardTag || 'product'];
           const vendorStore = stores?.find(s => c.vendorIds?.[0] === s.id);
@@ -31215,7 +31215,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
               {searchedChallenges.length > 0 && (
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 px-1">Challenges</p>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-4">
                     {searchedChallenges.map((c, i) => {
                       const colors = REWARD_TAG_COLORS[c.rewardTag || 'product'];
                       return (
@@ -34585,7 +34585,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                     )}
 
                     {/* Balance */}
-                    <div className="grid grid-cols-2 gap-3 mb-4">
+                    <div className="grid grid-cols-2 gap-4 mb-4">
                       <div className="glass-card p-5 rounded-2xl">
                         <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-1">Available</p>
                         <p className="text-3xl font-black text-brand-navy">{spvNetAvailable.toLocaleString()}</p>
@@ -34738,7 +34738,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                         </div>
                         <h3 className="font-display text-2xl font-bold mb-1">Redeemed!</h3>
                         <p className="text-brand-navy/75 text-sm mb-6">£{redeemDollarNum.toFixed(2)} off applied</p>
-                        <div className="glass-card rounded-2xl p-4 mb-6 grid grid-cols-2 gap-3">
+                        <div className="glass-card rounded-2xl p-4 mb-6 grid grid-cols-2 gap-4">
                           <div className="text-center">
                             <p className="text-brand-navy/75 text-[9px] font-bold uppercase tracking-widest">Points Used</p>
                             <p className="text-brand-navy font-black text-xl">{pointsToDeduct}</p>
