@@ -25182,7 +25182,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
     : null;
   const isInTrial = trialEndsMs !== null && trialEndsMs > Date.now();
   const isSubscribed = store?.subscriptionStatus === 'active' || store?.subscriptionStatus === 'trialing' || isInTrial;
-  const offerLimit = isSubscribed ? 3 : 1;
+  const offerLimit = isSubscribed ? 5 : 1;
   const atLimit = offers.length >= offerLimit;
 
   return (
@@ -25194,10 +25194,10 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
             {atLimit
               ? isSubscribed
                 ? `${offerLimit}/${offerLimit} offers used — delete one to add more.`
-                : '1/1 offer used — subscribe to create up to 3 offers.'
+                : '1/1 offer used — subscribe to create up to 5 offers.'
               : isSubscribed
                 ? 'Create deals shown in the Deals section.'
-                : 'Free plan: 1 offer allowed. Subscribe for up to 3.'}
+                : 'Free plan: 1 offer allowed. Subscribe for up to 5.'}
           </p>
         </div>
         {!atLimit && (
