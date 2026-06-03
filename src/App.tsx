@@ -2004,7 +2004,7 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-between gradient-logo-blue py-16 px-6">
+      <div className="min-h-screen flex flex-col items-center justify-between gradient-logo-blue px-6 pb-16" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 4rem)' }}>
         <div className="flex-1 flex items-center justify-center">
           <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={{ fontFamily: 'Poppins, sans-serif', color: '#ffffff' }}>Linq</span>
         </div>
@@ -2035,7 +2035,7 @@ export default function App() {
 
   if (profileLoadError || (!profile && !needsOnboarding)) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-between gradient-logo-blue py-16 px-6">
+      <div className="min-h-screen flex flex-col items-center justify-between gradient-logo-blue px-6 pb-16" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 4rem)' }}>
         <div className="flex-1 flex flex-col items-center justify-center gap-6">
           <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={{ fontFamily: 'Poppins, sans-serif', color: '#ffffff' }}>Linq</span>
           {profileLoadError ? (
@@ -2063,9 +2063,9 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-white md:flex md:justify-center">
-    <div className="w-full md:max-w-sm relative pb-24">
+    <div className="w-full md:max-w-sm relative" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 6rem)' }}>
       {/* Header */}
-      <header className="glass-panel sticky top-0 z-50 px-5 py-3.5 flex items-center justify-between relative">
+      <header className="glass-panel sticky top-0 z-50 px-5 pb-3.5 flex items-center justify-between relative" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.875rem)' }}>
         <button
           onClick={() => setShowCreatePost(true)}
           className="w-9 h-9 gradient-red rounded-xl flex items-center justify-center shadow-md shadow-blue-500/20 active:scale-95 transition-transform"
@@ -2314,7 +2314,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-full md:max-w-sm glass-panel border-t border-black/5 py-3 flex items-end z-50">
+      <nav className="fixed bottom-0 left-0 right-0 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-full md:max-w-sm glass-panel border-t border-black/5 pt-3 flex items-end z-50" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)' }}>
         {['consumer','admin'].includes(profile?.role ?? '') ? (
           <NavButton
             active={activeTab === 'for-you'}
@@ -2668,7 +2668,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
   if (mode === 'forgot' || mode === 'forgot_otp') {
     return (
       <div className="min-h-screen flex flex-col px-8" style={bg}>
-        <button onClick={() => reset('signin')} className="flex items-center gap-2 text-white/70 hover:text-white transition-colors pt-14 mb-8">
+        <button onClick={() => reset('signin')} className="flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-8" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3.5rem)' }}>
           <ArrowLeft size={18} />
           <span className="text-sm font-medium">Back</span>
         </button>
@@ -2784,7 +2784,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
   if ((mode === 'phone' || mode === 'otp') && !Capacitor.isNativePlatform()) {
     return (
       <div className="min-h-screen flex flex-col px-8" style={bg}>
-        <button onClick={() => reset('home')} className="flex items-center gap-2 text-white/70 hover:text-white transition-colors pt-14 mb-8">
+        <button onClick={() => reset('home')} className="flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-8" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3.5rem)' }}>
           <ArrowLeft size={18} />
           <span className="text-sm font-medium">Back</span>
         </button>
@@ -2878,7 +2878,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
 
   return (
     <div className="min-h-screen flex flex-col px-8" style={bg}>
-      <button onClick={() => reset('home')} className="flex items-center gap-2 text-white/70 hover:text-white transition-colors pt-14 mb-8">
+      <button onClick={() => reset('home')} className="flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-8" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3.5rem)' }}>
         <ArrowLeft size={18} />
         <span className="text-sm font-medium">Back</span>
       </button>
@@ -3666,7 +3666,7 @@ function OnboardingScreen({ user, onComplete }: {
 
   return (
     <div className="min-h-screen flex flex-col bg-brand-bg px-8 relative overflow-hidden">
-      <div className="flex items-center justify-center gap-2 pt-14 mb-10">
+      <div className="flex items-center justify-center gap-2 mb-10" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3.5rem)' }}>
         {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
           <div
             key={i}
