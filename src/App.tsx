@@ -3719,7 +3719,7 @@ function OnboardingScreen({ user, onComplete }: {
             initial={{ opacity: 0, y: '100%' }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: '100%' }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            transition={{ type: 'spring', stiffness: 520, damping: 38 }}
             className="absolute inset-0 bg-brand-bg flex flex-col z-10"
           >
             <div className="flex items-center gap-3 px-5 py-4 border-b border-brand-navy/8 shrink-0">
@@ -4163,7 +4163,7 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
         initial={{ opacity: 0, y: '100%' }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: '100%' }}
-        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+        transition={{ type: 'spring', damping: 38, stiffness: 520 }}
         className="fixed inset-0 z-[250] flex flex-col"
       >
         <button onClick={onClose} className="flex-shrink-0 w-full" style={{ height: 'calc(env(safe-area-inset-top, 0px) + 4rem)' }} />
@@ -5033,7 +5033,7 @@ function ChallengeRedeemModal({ challenge, entry, userName, uid, onClose }: {
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <motion.div
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-        transition={{ type: 'spring', damping: 28, stiffness: 260 }}
+        transition={{ type: 'spring', damping: 36, stiffness: 480 }}
         className="relative w-full max-w-md bg-brand-bg rounded-t-[2.5rem] shadow-2xl overflow-hidden"
         style={{ maxHeight: '92vh' }}
       >
@@ -6201,7 +6201,7 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
       initial={{ opacity: 0, y: '100%' }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: '100%' }}
-      transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+      transition={{ type: 'spring', damping: 38, stiffness: 520 }}
       className="fixed inset-0 bg-brand-bg z-[200] flex flex-col max-w-md mx-auto"
     >
       <header className="glass-panel px-5 py-4 flex items-center gap-3">
@@ -9140,7 +9140,7 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
       initial={{ opacity: 0, y: '100%' }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: '100%' }}
-      transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+      transition={{ type: 'spring', damping: 38, stiffness: 520 }}
       className="fixed inset-0 bg-brand-bg z-[200] flex flex-col max-w-md mx-auto"
     >
       <header className="glass-panel px-5 py-4 flex items-center gap-3">
@@ -9328,7 +9328,7 @@ function AdminLeaderboardPanel({ onClose }: { onClose: () => void }) {
       initial={{ opacity: 0, y: '100%' }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: '100%' }}
-      transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+      transition={{ type: 'spring', damping: 38, stiffness: 520 }}
       className="fixed inset-0 bg-brand-bg z-[200] flex flex-col max-w-md mx-auto"
     >
       <header className="glass-panel px-5 py-4 flex items-center gap-3">
@@ -9720,7 +9720,7 @@ function AdminOffersPanel({ onClose }: { onClose: () => void }) {
       initial={{ opacity: 0, y: '100%' }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: '100%' }}
-      transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+      transition={{ type: 'spring', damping: 38, stiffness: 520 }}
       className="fixed inset-0 bg-brand-bg z-[200] flex flex-col max-w-md mx-auto"
     >
       <header className="glass-panel px-5 py-4 flex items-center gap-3">
@@ -10076,7 +10076,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
       initial={{ opacity: 0, y: '100%' }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: '100%' }}
-      transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+      transition={{ type: 'spring', damping: 38, stiffness: 520 }}
       className="fixed inset-0 bg-brand-bg z-[200] flex flex-col max-w-md mx-auto"
     >
       <header className="glass-panel px-5 py-4 flex items-center gap-3">
@@ -11764,7 +11764,7 @@ function ProgrammeDetailModal({ prog, sc, onJoin, onView, onClose, joiningProgra
         initial={{ opacity: 0, y: '100%' }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: '100%' }}
-        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+        transition={{ type: 'spring', damping: 38, stiffness: 520 }}
         className="fixed inset-0 z-[150] flex flex-col max-w-md mx-auto"
       >
         <button onClick={onClose} className="flex-shrink-0 w-full" style={{ height: 'calc(env(safe-area-inset-top, 0px) + 4rem)' }} />
@@ -12799,7 +12799,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           >
             <motion.div
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-              transition={{ type: 'spring', stiffness: 380, damping: 36 }}
+              transition={{ type: 'spring', stiffness: 540, damping: 40 }}
               className="bg-[#0F172A] flex flex-col overflow-hidden flex-1"
             >
               <LinqleMatrixBanner
@@ -13667,7 +13667,7 @@ function BadgeNotifCard({ badge, queueCount, onDismiss }: { badge: AppBadge; que
       initial={{ y: '100%' }}
       animate={{ y: 0 }}
       exit={{ y: '100%' }}
-      transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+      transition={{ type: 'spring', stiffness: 520, damping: 38 }}
       className="fixed bottom-0 left-0 right-0 z-[300] max-w-md mx-auto"
     >
       <div
@@ -13932,7 +13932,7 @@ function NFCOrderModal({ onClose, onOrder }: { onClose: () => void; onOrder: () 
     >
       <motion.div
         initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
-        transition={{ type: 'spring', stiffness: 380, damping: 34 }}
+        transition={{ type: 'spring', stiffness: 540, damping: 40 }}
         className="w-full max-w-md bg-white rounded-[2.5rem] overflow-hidden shadow-2xl"
       >
         <div className="px-7 pt-8 pb-7 space-y-5">
@@ -14176,7 +14176,7 @@ function SlideWelcomeModal({ slides, step, onNext, onDone, renderVisual }: {
     >
       <motion.div
         initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
-        transition={{ type: 'spring', stiffness: 380, damping: 34 }}
+        transition={{ type: 'spring', stiffness: 540, damping: 40 }}
         className="w-full max-w-md bg-white rounded-[2.5rem] overflow-hidden shadow-2xl"
       >
         <div className="flex gap-1 px-6 pt-5">
@@ -14249,7 +14249,7 @@ function AnnouncementModal({ announcement, onDismiss }: { announcement: Announce
         initial={{ y: 80, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 80, opacity: 0 }}
-        transition={{ type: 'spring', stiffness: 380, damping: 34 }}
+        transition={{ type: 'spring', stiffness: 540, damping: 40 }}
         className="w-full max-w-md bg-white rounded-[2.5rem] overflow-hidden shadow-2xl"
       >
         {announcement.imageUrl && (
@@ -14732,7 +14732,7 @@ function VendorQRDisplay({ store, onClose }: { store: StoreProfile; onClose: () 
         initial={{ opacity: 0, y: '100%' }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: '100%' }}
-        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+        transition={{ type: 'spring', damping: 38, stiffness: 520 }}
         className="fixed inset-0 z-[200] flex flex-col items-center justify-center"
         style={{ backgroundColor: cardTheme }}
       >
@@ -14873,7 +14873,7 @@ function VendorSpendQRDisplay({ store, onClose }: { store: StoreProfile; onClose
         initial={{ opacity: 0, y: '100%' }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: '100%' }}
-        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+        transition={{ type: 'spring', damping: 38, stiffness: 520 }}
         className="fixed inset-0 z-[200] flex flex-col items-center justify-center"
         style={{ background: color }}
       >
@@ -15144,7 +15144,7 @@ function SpendQRScannerModal({ onClose, onPackReady }: { onClose: () => void; on
       initial={{ opacity: 0, y: '100%' }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: '100%' }}
-      transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+      transition={{ type: 'spring', damping: 38, stiffness: 520 }}
       className="fixed inset-0 z-[200] bg-black flex flex-col"
     >
       <div className="flex items-center gap-3 px-5 py-4 shrink-0">
@@ -15345,7 +15345,7 @@ function VisitQRScannerModal({ storeId, onClose, onPackReady }: { storeId: strin
   }, []);
 
   return createPortal(
-    <motion.div initial={{ opacity: 0, y: '100%' }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }} className="fixed inset-0 z-[200] bg-black flex flex-col">
+    <motion.div initial={{ opacity: 0, y: '100%' }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: '100%' }} transition={{ type: 'spring', damping: 38, stiffness: 520 }} className="fixed inset-0 z-[200] bg-black flex flex-col">
       <div className="flex items-center gap-3 px-5 py-4 shrink-0">
         <button onClick={() => { stopCamera(); onClose(); }} className="p-2 bg-white/10 rounded-full"><X size={20} className="text-white" /></button>
         <div>
@@ -15600,7 +15600,7 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady, initialQty }: {
       className="fixed inset-0 z-[130] flex items-end justify-center" onClick={handleClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-        transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+        transition={{ type: 'spring', stiffness: 520, damping: 38 }}
         className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-12 shadow-2xl"
         onClick={e => e.stopPropagation()}>
         <div className="bg-brand-navy/20 rounded-full mx-auto mb-6" style={{ width: 40, height: 4 }} />
@@ -15712,7 +15712,7 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
       className="fixed inset-0 z-[130] flex items-end justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-        transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+        transition={{ type: 'spring', stiffness: 520, damping: 38 }}
         className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-12 shadow-2xl"
         onClick={e => e.stopPropagation()}>
         <div className="bg-brand-navy/20 rounded-full mx-auto mb-6" style={{ width: 40, height: 4 }} />
@@ -16050,7 +16050,7 @@ function VisitScanSheet({ card, store, onClose, onPackReady, initialQty }: { car
       className="fixed inset-0 z-[130] flex items-end justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-        transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+        transition={{ type: 'spring', stiffness: 520, damping: 38 }}
         className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-12 shadow-2xl"
         onClick={e => e.stopPropagation()}>
         <div className="bg-brand-navy/20 rounded-full mx-auto mb-6" style={{ width: 40, height: 4 }} />
@@ -17355,7 +17355,7 @@ function AddAutomationModal({ store, onClose }: { store: StoreProfile; onClose: 
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        transition={{ type: 'spring', damping: 30, stiffness: 350 }}
+        transition={{ type: 'spring', damping: 38, stiffness: 520 }}
         className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[160] max-w-sm mx-auto bg-white rounded-[2rem] shadow-2xl p-6 space-y-5"
       >
         <div className="flex items-center justify-between">
@@ -17657,7 +17657,7 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
         initial={{ opacity: 0, y: '100%' }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: '100%' }}
-        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+        transition={{ type: 'spring', damping: 38, stiffness: 520 }}
         className="fixed inset-0 z-[150] flex flex-col max-w-md mx-auto"
       >
         <button onClick={onClose} className="flex-shrink-0 h-8 w-full" />
@@ -21056,7 +21056,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={redeemStage !== 'success' ? closeRedeemFlow : undefined} />
           <motion.div
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-            transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+            transition={{ type: 'spring', stiffness: 520, damping: 38 }}
             className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-10 shadow-2xl"
           >
             {redeemStage === 'input' && (
@@ -21258,7 +21258,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
         {showRedeemSheet && membershipType === 'spend' && (
           <div className="fixed inset-0 z-[120] flex items-end justify-center">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowRedeemSheet(false)} />
-            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 350, damping: 35 }} className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-10 shadow-2xl">
+            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 520, damping: 38 }} className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-10 shadow-2xl">
               <div className="flex items-center justify-between mb-6">
                 <div><h3 className="font-display text-2xl font-bold">{membershipName}</h3><p className="text-brand-navy/75 text-xs mt-0.5">Points & Redemption</p></div>
                 <button onClick={() => setShowRedeemSheet(false)} className="p-2 text-brand-navy/75 hover:text-brand-navy"><X size={20} /></button>
@@ -21334,7 +21334,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowRedeemSheet(false)} />
             <motion.div
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-              transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+              transition={{ type: 'spring', stiffness: 520, damping: 38 }}
               className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] shadow-2xl max-h-[90vh] overflow-y-auto"
             >
               <div className="sticky top-0 bg-white rounded-t-[2.5rem] px-8 pt-8 pb-4 z-10">
@@ -21424,7 +21424,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setShowVisitScanSheet(false)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
             <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-              transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+              transition={{ type: 'spring', stiffness: 520, damping: 38 }}
               className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-10 shadow-2xl"
               onClick={e => e.stopPropagation()}
             >
@@ -21455,7 +21455,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
         {showVisitRedeemSheet && (
           <div className="fixed inset-0 z-[130] flex items-end justify-center">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowVisitRedeemSheet(false)} />
-            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 350, damping: 35 }} className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] px-6 pt-6 pb-10 shadow-2xl max-h-[85vh] overflow-y-auto">
+            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 520, damping: 38 }} className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] px-6 pt-6 pb-10 shadow-2xl max-h-[85vh] overflow-y-auto">
               <div className="bg-brand-navy/20 rounded-full mx-auto mb-5" style={{ width: 40, height: 4 }} />
               <h3 className="font-display text-xl font-bold mb-1">Redeem Points</h3>
               <p className="text-brand-navy/60 text-xs mb-5">{netAvailableVisits} points available</p>
@@ -21495,7 +21495,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
       {/* Vendor swipe confirmation */}
       <AnimatePresence>
         {selectedRedeemItem && (
-          <motion.div initial={{ opacity: 0, y: '100%' }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }} className="fixed inset-0 z-[140] flex flex-col items-center justify-center px-8" style={{ background: color }}>
+          <motion.div initial={{ opacity: 0, y: '100%' }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: '100%' }} transition={{ type: 'spring', damping: 38, stiffness: 520 }} className="fixed inset-0 z-[140] flex flex-col items-center justify-center px-8" style={{ background: color }}>
             <button onClick={() => { setSelectedRedeemItem(null); setRedeemSwipeDone(false); }} className="absolute top-12 right-5 p-2 bg-white/20 rounded-full"><X size={20} className="text-white" /></button>
             {redeemSwipeDone ? (
               <div className="flex flex-col items-center gap-4 text-center">
@@ -21546,7 +21546,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
         {showLeaveConfirm && (
           <div className="fixed inset-0 z-[150] flex items-end justify-center">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowLeaveConfirm(false)} />
-            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 350, damping: 35 }} className="relative z-10 w-full max-w-md bg-white rounded-t-[2rem] px-6 pt-6 pb-10 space-y-4" onClick={e => e.stopPropagation()}>
+            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 520, damping: 38 }} className="relative z-10 w-full max-w-md bg-white rounded-t-[2rem] px-6 pt-6 pb-10 space-y-4" onClick={e => e.stopPropagation()}>
               <div className="w-10 h-1 bg-brand-navy/10 rounded-full mx-auto mb-2" />
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0"><AlertTriangle size={18} className="text-red-500" /></div>
@@ -21698,7 +21698,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowRedeemSheet(false)} />
             <motion.div
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-              transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+              transition={{ type: 'spring', stiffness: 520, damping: 38 }}
               className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-10 shadow-2xl"
             >
               <div className="flex items-center justify-between mb-6">
@@ -21817,7 +21817,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowRedeemSheet(false)} />
             <motion.div
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-              transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+              transition={{ type: 'spring', stiffness: 520, damping: 38 }}
               className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] shadow-2xl max-h-[90vh] overflow-y-auto"
             >
               <div className="sticky top-0 bg-white rounded-t-[2.5rem] px-8 pt-8 pb-4 z-10">
@@ -21916,7 +21916,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setShowVisitScanSheet(false)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
             <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-              transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+              transition={{ type: 'spring', stiffness: 520, damping: 38 }}
               className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-10 shadow-2xl"
               onClick={e => e.stopPropagation()}
             >
@@ -21947,7 +21947,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
         {showVisitRedeemSheet && (
           <div className="fixed inset-0 z-[130] flex items-end justify-center">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowVisitRedeemSheet(false)} />
-            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 350, damping: 35 }} className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] px-6 pt-6 pb-10 shadow-2xl max-h-[85vh] overflow-y-auto">
+            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 520, damping: 38 }} className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] px-6 pt-6 pb-10 shadow-2xl max-h-[85vh] overflow-y-auto">
               <div className="bg-brand-navy/20 rounded-full mx-auto mb-5" style={{ width: 40, height: 4 }} />
               <h3 className="font-display text-xl font-bold mb-1">Redeem Points</h3>
               <p className="text-brand-navy/60 text-xs mb-5">{netAvailableVisits} points available</p>
@@ -21987,7 +21987,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
       {/* Vendor swipe confirmation — non-compact */}
       <AnimatePresence>
         {selectedRedeemItem && (
-          <motion.div initial={{ opacity: 0, y: '100%' }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }} className="fixed inset-0 z-[140] flex flex-col items-center justify-center px-8" style={{ background: color }}>
+          <motion.div initial={{ opacity: 0, y: '100%' }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: '100%' }} transition={{ type: 'spring', damping: 38, stiffness: 520 }} className="fixed inset-0 z-[140] flex flex-col items-center justify-center px-8" style={{ background: color }}>
             <button onClick={() => { setSelectedRedeemItem(null); setRedeemSwipeDone(false); }} className="absolute top-12 right-5 p-2 bg-white/20 rounded-full"><X size={20} className="text-white" /></button>
             {redeemSwipeDone ? (
               <div className="flex flex-col items-center gap-4 text-center">
@@ -22034,7 +22034,7 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
         {showLeaveConfirm && (
           <div className="fixed inset-0 z-[150] flex items-end justify-center">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowLeaveConfirm(false)} />
-            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 350, damping: 35 }} className="relative z-10 w-full max-w-md bg-white rounded-t-[2rem] px-6 pt-6 pb-10 space-y-4" onClick={e => e.stopPropagation()}>
+            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 520, damping: 38 }} className="relative z-10 w-full max-w-md bg-white rounded-t-[2rem] px-6 pt-6 pb-10 space-y-4" onClick={e => e.stopPropagation()}>
               <div className="w-10 h-1 bg-brand-navy/10 rounded-full mx-auto mb-2" />
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0"><AlertTriangle size={18} className="text-red-500" /></div>
@@ -22060,7 +22060,7 @@ function LeaveCardSheet({ storeName, onConfirm, onClose, leaving }: { storeName?
   return (
     <div className="fixed inset-0 z-[150] flex items-end justify-center">
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 350, damping: 35 }} className="relative z-10 w-full max-w-md bg-white rounded-t-[2rem] px-6 pt-6 pb-10 space-y-4" onClick={e => e.stopPropagation()}>
+      <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 520, damping: 38 }} className="relative z-10 w-full max-w-md bg-white rounded-t-[2rem] px-6 pt-6 pb-10 space-y-4" onClick={e => e.stopPropagation()}>
         <div className="w-10 h-1 bg-brand-navy/10 rounded-full mx-auto mb-2" />
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0"><AlertTriangle size={18} className="text-red-500" /></div>
@@ -22546,7 +22546,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
               initial={{ y: 40, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 40, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+              transition={{ type: 'spring', stiffness: 540, damping: 40 }}
               className="w-full max-w-md bg-white rounded-[2rem] p-6 space-y-3 mb-2"
               onClick={e => e.stopPropagation()}
             >
@@ -22569,7 +22569,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
             />
             <motion.div
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-              transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+              transition={{ type: 'spring', stiffness: 520, damping: 38 }}
               className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-10 shadow-2xl"
             >
               <div className="bg-brand-navy/20 rounded-full mx-auto mb-5" style={{ width: 40, height: 4 }} />
@@ -22605,7 +22605,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
             initial={{ opacity: 0, y: -24 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -24 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+            transition={{ type: 'spring', stiffness: 540, damping: 40 }}
             className="fixed top-6 inset-x-0 z-[210] flex justify-center pointer-events-none px-6"
           >
             <div className="flex items-center gap-3 bg-brand-navy text-white px-5 py-3 rounded-2xl shadow-2xl">
@@ -22743,7 +22743,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 onClick={() => setShowScanSheet(false)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
               <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-                transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+                transition={{ type: 'spring', stiffness: 520, damping: 38 }}
                 className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-10 shadow-2xl"
                 onClick={e => e.stopPropagation()}
               >
@@ -22873,7 +22873,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
             />
             <motion.div
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-              transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+              transition={{ type: 'spring', stiffness: 520, damping: 38 }}
               className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] px-6 pt-6 pb-10 shadow-2xl"
             >
               <div className="flex items-center justify-between mb-4">
@@ -22991,7 +22991,7 @@ function SubLoyaltyCard({ card, store, onViewStore, compact = false, onScan }: {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setShowScanSheet(false)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
             <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-              transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+              transition={{ type: 'spring', stiffness: 520, damping: 38 }}
               className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-10 shadow-2xl"
               onClick={e => e.stopPropagation()}
             >
@@ -23311,7 +23311,7 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
       className="fixed inset-0 z-[160] bg-black/70 backdrop-blur-sm flex flex-col max-w-md mx-auto"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-        transition={{ type: 'spring', stiffness: 380, damping: 36 }}
+        transition={{ type: 'spring', stiffness: 540, damping: 40 }}
         className="flex flex-col overflow-hidden flex-1"
         style={{ background: 'linear-gradient(180deg, #0a0a1a 0%, #0d1117 100%)' }}>
 
@@ -25475,7 +25475,7 @@ function OfferDetailSheet({ offer, currentUser, onClose }: { offer: StoreOffer; 
     >
       <motion.div
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-        transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+        transition={{ type: 'spring', stiffness: 520, damping: 38 }}
         className="bg-white rounded-t-[2.5rem] max-h-[92vh] flex flex-col overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
@@ -25484,7 +25484,7 @@ function OfferDetailSheet({ offer, currentUser, onClose }: { offer: StoreOffer; 
           <div className="relative h-52 shrink-0">
             <img src={offer.imageUrl} alt="" className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-            <button onClick={onClose} className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
+            <button onClick={onClose} className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/40 flex items-center justify-center">
               <X size={18} className="text-white" />
             </button>
           </div>
@@ -25597,7 +25597,7 @@ function OffersModal({ offers, currentUser, onClose }: { offers: StoreOffer[]; c
       >
         <motion.div
           initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-          transition={{ type: 'spring', stiffness: 300, damping: 32 }}
+          transition={{ type: 'spring', stiffness: 520, damping: 38 }}
           className="bg-white rounded-t-[2.5rem] max-h-[92vh] flex flex-col"
           onClick={e => e.stopPropagation()}
         >
@@ -25976,7 +25976,7 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/40"
           >
             <div className="glass-card rounded-[2rem] p-6 w-full max-w-sm space-y-4">
               <div className="flex items-center gap-3">
@@ -26062,7 +26062,7 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
       {/* ─── Scan method switch warning ─── */}
       <AnimatePresence>
         {pendingScanMethod && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/40">
             <div className="glass-card rounded-[2rem] p-6 w-full max-w-sm space-y-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
@@ -27190,7 +27190,7 @@ function BadgeSquarePanel({ badges, onSelectBadge }: { badges: AppBadge[]; onSel
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] flex items-end max-w-md mx-auto"
             onClick={() => setShowAll(false)}>
             <motion.div initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+              transition={{ type: 'spring', stiffness: 540, damping: 40 }}
               className="w-full bg-brand-bg rounded-t-3xl p-6 pb-10"
               onClick={e => e.stopPropagation()}>
               <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75 mb-4">All Badges</p>
@@ -27291,7 +27291,7 @@ function StickerListPanel({ uid }: { uid: string }) {
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] flex items-end max-w-md mx-auto"
             onClick={() => setShowAll(false)}>
             <motion.div initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+              transition={{ type: 'spring', stiffness: 540, damping: 40 }}
               className="w-full bg-brand-bg rounded-t-3xl p-6 pb-10"
               onClick={e => e.stopPropagation()}>
               <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75 mb-4">All Stickers</p>
@@ -28089,7 +28089,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           >
             <motion.div
               initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+              transition={{ type: 'spring', stiffness: 540, damping: 40 }}
               className="w-full bg-brand-bg rounded-t-3xl p-6 pb-10 space-y-4"
               onClick={e => e.stopPropagation()}
             >
@@ -28121,7 +28121,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           >
             <motion.div
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-              transition={{ type: 'spring', stiffness: 380, damping: 36 }}
+              transition={{ type: 'spring', stiffness: 540, damping: 40 }}
               className="bg-white rounded-t-[2.5rem] max-h-[80vh] flex flex-col overflow-hidden"
               onClick={e => e.stopPropagation()}
             >
@@ -28343,7 +28343,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         {challengeOpen && (
           <motion.div
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-            transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+            transition={{ type: 'spring', stiffness: 540, damping: 40 }}
             className="fixed top-0 left-0 right-0 bottom-0 z-[9999] bg-brand-bg flex flex-col overflow-hidden"
             onClick={e => e.stopPropagation()}>
               <div className="px-5 pt-5 pb-3 flex items-center justify-between shrink-0">
@@ -28426,7 +28426,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         {badgesOpen && (
           <motion.div
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-            transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+            transition={{ type: 'spring', stiffness: 540, damping: 40 }}
             className="fixed top-0 left-0 right-0 bottom-0 z-[9999] bg-brand-bg flex flex-col overflow-hidden"
             onClick={e => e.stopPropagation()}>
               <div className="px-5 pt-5 pb-4 flex items-center justify-between shrink-0">
@@ -28913,7 +28913,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
       initial={{ opacity: 0, y: '100%' }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: '100%' }}
-      transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+      transition={{ type: 'spring', damping: 38, stiffness: 520 }}
       className="fixed inset-0 bg-brand-bg z-[200] flex flex-col max-w-md mx-auto"
     >
       <header className="glass-panel px-6 py-4 flex items-center gap-4">
@@ -29284,7 +29284,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 z-10 flex items-end justify-center bg-black/40 backdrop-blur-sm pb-8 px-6"
+            className="absolute inset-0 z-10 flex items-end justify-center bg-black/40 pb-8 px-6"
             onClick={() => !deleting && setShowDeleteConfirm(false)}
           >
             <motion.div
@@ -30485,12 +30485,12 @@ function CreatePostModal({ onClose, user, profile, isAdmin }: { onClose: () => v
       className="fixed inset-0 z-[200] flex items-end justify-center"
       onClick={onClose}
     >
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-black/40" />
       <motion.div
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
-        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+        transition={{ type: 'spring', damping: 38, stiffness: 520 }}
         onClick={e => e.stopPropagation()}
         className="relative w-full max-w-md bg-white rounded-t-[2.5rem] p-6 space-y-5 shadow-2xl"
         style={{ paddingBottom: Math.max(40, kbOffset) }}
@@ -30667,7 +30667,7 @@ function NotificationsPanel({ notifications, onClose }: { notifications: Notific
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 z-[60] bg-black/40"
       onClick={onClose}
     >
       <motion.div
@@ -31333,7 +31333,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
         >
           <motion.div
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-            transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+            transition={{ type: 'spring', stiffness: 520, damping: 38 }}
             className="bg-white rounded-t-[2.5rem] max-h-[82vh] flex flex-col overflow-hidden"
             onClick={e => e.stopPropagation()}
           >
@@ -32182,7 +32182,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                     initial={{ y: '100%' }}
                     animate={{ y: 0 }}
                     exit={{ y: '100%' }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                    transition={{ type: 'spring', stiffness: 520, damping: 38 }}
                     className="w-full bg-brand-bg rounded-t-[3rem] p-6 pb-12 space-y-4 max-h-[88vh] overflow-y-auto"
                     onClick={e => e.stopPropagation()}
                   >
@@ -32456,7 +32456,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
         >
           <motion.div
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-            transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+            transition={{ type: 'spring', stiffness: 520, damping: 38 }}
             className="bg-white rounded-t-[2.5rem] max-h-[90vh] flex flex-col"
             onClick={e => e.stopPropagation()}
           >
@@ -33420,7 +33420,7 @@ function AdminStoreEditModal({ store, onClose }: { store: StoreProfile; onClose:
       initial={{ opacity: 0, y: '100%' }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: '100%' }}
-      transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+      transition={{ type: 'spring', damping: 38, stiffness: 520 }}
       className="fixed inset-0 bg-brand-bg z-[300] flex flex-col max-w-md mx-auto overflow-y-auto"
     >
       <header className="glass-panel px-5 py-4 flex items-center gap-3 sticky top-0 z-10">
@@ -33592,7 +33592,7 @@ function ProfileCardRow({ store, card, membershipCard, userId, onJoinLoyalty, on
             >
               <motion.div
                 initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-                transition={{ type: 'spring', stiffness: 380, damping: 36 }}
+                transition={{ type: 'spring', stiffness: 540, damping: 40 }}
                 onClick={e => e.stopPropagation()}
                 className="w-full bg-white rounded-t-[2rem] px-6 py-6 pb-10 space-y-4"
               >
@@ -34470,7 +34470,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowSpendSheet(false)} />
                   <motion.div
                     initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-                    transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+                    transition={{ type: 'spring', stiffness: 520, damping: 38 }}
                     className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-10 shadow-2xl"
                   >
                     <div className="w-10 h-1 bg-brand-navy/15 rounded-full mx-auto mb-6" />
@@ -34583,7 +34583,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={redeemStage !== 'success' ? closeRedeem : undefined} />
                   <motion.div
                     initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-                    transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+                    transition={{ type: 'spring', stiffness: 520, damping: 38 }}
                     className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-10 shadow-2xl"
                   >
                     {redeemStage === 'input' && (
@@ -34738,7 +34738,7 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowVisitSheet(false)} />
                   <motion.div
                     initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-                    transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+                    transition={{ type: 'spring', stiffness: 520, damping: 38 }}
                     className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-10 shadow-2xl max-h-[90vh] overflow-y-auto"
                   >
                     <div className="w-10 h-1 bg-brand-navy/15 rounded-full mx-auto mb-6" />
@@ -35748,7 +35748,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
           const list = pubChallengeTab === 'current' ? activePub : donePub;
           return (
             <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-              transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+              transition={{ type: 'spring', stiffness: 540, damping: 40 }}
               className="fixed top-0 left-0 right-0 bottom-0 z-[9999] bg-brand-bg flex flex-col overflow-hidden max-w-md mx-auto"
               onClick={e => e.stopPropagation()}>
               <div className="px-5 pt-5 pb-3 flex items-center justify-between shrink-0">
@@ -35801,7 +35801,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
       <AnimatePresence>
         {pubBadgesOpen && (
           <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-            transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+            transition={{ type: 'spring', stiffness: 540, damping: 40 }}
             className="fixed top-0 left-0 right-0 bottom-0 z-[9999] bg-brand-bg flex flex-col overflow-hidden max-w-md mx-auto"
             onClick={e => e.stopPropagation()}>
             <div className="px-5 pt-5 pb-3 flex items-center justify-between shrink-0">
@@ -35881,7 +35881,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
           >
             <motion.div
               initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+              transition={{ type: 'spring', stiffness: 540, damping: 40 }}
               className="w-full bg-brand-bg rounded-t-3xl p-6 pb-10 space-y-4"
               onClick={e => e.stopPropagation()}
             >
