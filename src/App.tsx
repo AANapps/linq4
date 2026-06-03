@@ -29434,7 +29434,6 @@ function SettingsMenu({
         <div className="space-y-3">
           <MenuButton icon={<Archive />} label="Archived Cards" sub="View completed programs" onClick={() => setShowArchive(true)} />
           <MenuButton icon={<Clock />} label="Stamp History" sub="Timeline of collections" onClick={() => setShowHistory(true)} />
-          <MenuButton icon={<Settings />} label="Settings" sub="Account preferences" />
           {isAdmin && (
             <MenuButton icon={<Flag />} label="Admin Panel" sub="Challenges, badges & settings" onClick={onOpenAdmin} />
           )}
