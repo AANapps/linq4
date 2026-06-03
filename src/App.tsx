@@ -6430,6 +6430,11 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
                         </button>
                       </div>
 
+                      {/* NFC tag URL — admin only */}
+                      {store.scanMethod === 'nfc' && (
+                        <NfcTagUrlRow storeId={store.id} />
+                      )}
+
                       {/* Guide read indicator + toggle */}
                       {(store as any).ownerUid && vendorIntroMap[(store as any).ownerUid] !== undefined && (
                         <div className="flex items-center justify-between">
@@ -26036,7 +26041,6 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
                   <p className="text-amber-700 text-xs leading-relaxed">NFC requires a pre-programmed physical tag placed at your counter. Customers tap their phone to it — no scanning needed. Tags must be ordered separately.</p>
                 </div>
               </div>
-              {store?.id && <NfcTagUrlRow storeId={store.id} />}
               {store?.nfcOrdered ? (
                 <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-2xl p-3">
                   <CheckCircle2 size={15} className="text-blue-500 shrink-0" />
