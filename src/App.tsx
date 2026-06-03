@@ -15674,7 +15674,6 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
   const [statusMsg, setStatusMsg] = useState('');
   const [testId, setTestId] = useState('');
   const [scannedUID, setScannedUID] = useState('');
-  const [qty, setQty] = useState(1);
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const hasNFC = 'NDEFReader' in window;
   const abortRef = useRef<AbortController | null>(null);
@@ -15692,7 +15691,7 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
     const user = auth.currentUser;
     if (!user) return;
     setScanState('processing');
-    const stickers = await processNFCStamp(storeId, user, null, (s, m) => { setScanState(s); setStatusMsg(m); }, qty);
+    const stickers = await processNFCStamp(storeId, user, null, (s, m) => { setScanState(s); setStatusMsg(m); });
     if (stickers.length > 0) onPackReady?.(stickers);
   };
 
@@ -15759,22 +15758,6 @@ function CardScanSheet({ card, store, onClose, onPackReady }: {
 
         {scanState === 'idle' && (
           <>
-            {/* Qty stepper */}
-            <div className="bg-brand-bg rounded-2xl p-5 mb-5 text-center">
-              <p className="text-brand-navy/75 text-[10px] font-bold uppercase tracking-widest mb-4">How many stamps?</p>
-              <div className="flex items-center justify-center gap-6">
-                <button
-                  onClick={() => setQty(q => Math.max(1, q - 1))}
-                  className="w-12 h-12 rounded-full bg-white shadow font-black text-2xl text-brand-navy flex items-center justify-center active:scale-90 transition-transform"
-                >−</button>
-                <span className="font-black text-6xl text-brand-navy leading-none w-16 text-center">{qty}</span>
-                <button
-                  onClick={() => setQty(q => Math.min(remaining, q + 1))}
-                  className="w-12 h-12 rounded-full bg-white shadow font-black text-2xl text-brand-navy flex items-center justify-center active:scale-90 transition-transform"
-                >+</button>
-              </div>
-              <p className="text-brand-navy/72 text-[10px] font-bold mt-3">{remaining} remaining to reward</p>
-            </div>
             <button
               onClick={startScan}
               className="w-full flex items-center justify-center gap-2.5 text-white py-4 rounded-2xl font-black text-base mb-4 active:scale-[0.98] transition-transform"
