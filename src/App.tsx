@@ -27802,6 +27802,11 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
     : isSpendVendor
       ? { val: storeCards.filter(c => c.card_type === 'membership' && c.membership_type === 'spend').reduce((s, c) => s + (c.total_points_earned || 0), 0), label: 'Points' }
       : { val: totalStampsGiven, label: 'Stamps' };
+  const profileRewardStat = isVisitVendor
+    ? { val: storeCards.filter(c => c.card_type === 'membership' && c.membership_type === 'visit').reduce((s, c) => s + (c.total_visits_redeemed || 0), 0), label: 'Redeemed' }
+    : isSpendVendor
+      ? { val: storeCards.filter(c => c.card_type === 'membership' && c.membership_type === 'spend').reduce((s, c) => s + (c.earned_rewards || 0), 0), label: 'Rewards' }
+      : { val: profileRewardsGiven, label: 'Rewards' };
 
   const settingsModal = (
     <AnimatePresence>
@@ -27883,7 +27888,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           {[
             { val: totalMembers,             label: 'Members' },
             { val: profileMiddleStat.val,    label: profileMiddleStat.label },
-            { val: profileRewardsGiven,      label: 'Rewards' },
+            { val: profileRewardStat.val,    label: profileRewardStat.label },
           ].map(s => (
             <div key={s.label} className="flex-1 flex flex-col items-center gap-0.5 py-2">
               <p className="font-black text-base leading-none text-brand-navy">{s.val}</p>
