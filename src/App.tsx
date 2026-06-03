@@ -14711,16 +14711,20 @@ function VendorQRDisplay({ store, onClose }: { store: StoreProfile; onClose: () 
   const [justScanned, setJustScanned] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stampCount, setStampCount] = useState(1);
+  const stampCountRef = useRef(1);
   const cardTheme = store.theme || '#2563EB';
   const rotatingRef = useRef(false);
 
-  const rotateToken = useCallback(async (qty?: number) => {
-    if (rotatingRef.current) return;
+  const setCount = (n: number) => { stampCountRef.current = n; setStampCount(n); };
+
+  // force=true skips the rotation guard so counter changes always regenerate the QR
+  const rotateToken = useCallback(async (force = false) => {
+    if (rotatingRef.current && !force) return;
     rotatingRef.current = true;
     setRotating(true);
     setError(null);
     try {
-      const id = await createQRToken(store.id, qty ?? stampCount);
+      const id = await createQRToken(store.id, stampCountRef.current);
       setTokenId(id);
     } catch (e: any) {
       console.error('[VendorQRDisplay] createQRToken failed:', e?.code, e?.message, e);
@@ -14786,20 +14790,12 @@ function VendorQRDisplay({ store, onClose }: { store: StoreProfile; onClose: () 
             <p className="text-white/60 text-[11px] font-bold uppercase tracking-widest">Stamps to award</p>
             <div className="flex items-center gap-4">
               <button
-                onClick={() => {
-                  const next = Math.max(1, stampCount - 1);
-                  setStampCount(next);
-                  rotateToken(next);
-                }}
+                onClick={() => { setCount(Math.max(1, stampCount - 1)); rotateToken(true); }}
                 className="w-9 h-9 rounded-full bg-white/20 text-white text-xl font-bold flex items-center justify-center active:scale-90 transition-all"
               >−</button>
               <span className="text-white font-black text-3xl w-8 text-center leading-none">{stampCount}</span>
               <button
-                onClick={() => {
-                  const next = Math.min(10, stampCount + 1);
-                  setStampCount(next);
-                  rotateToken(next);
-                }}
+                onClick={() => { setCount(Math.min(10, stampCount + 1)); rotateToken(true); }}
                 className="w-9 h-9 rounded-full bg-white/20 text-white text-xl font-bold flex items-center justify-center active:scale-90 transition-all"
               >+</button>
             </div>
