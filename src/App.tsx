@@ -29793,7 +29793,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
           ))}
           <div className="relative z-10 flex items-center gap-3 p-4">
             {/* Avatar */}
-            <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-white/30 shrink-0 shadow-md bg-white/10 flex items-center justify-center">
+            <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-white/40 shrink-0 shadow-md bg-white flex items-center justify-center">
               <PixelAvatar config={authorProfile?.avatar} uid={post.authorUid} size={44} view="head" />
             </div>
             {/* Text */}
@@ -29808,7 +29808,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
               </p>
             </div>
             {/* Emoji badge */}
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-xl shrink-0">
               {post.activityEmoji}
             </div>
           </div>
