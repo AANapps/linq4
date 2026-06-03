@@ -22105,9 +22105,6 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
   const [isArchiving, setIsArchiving] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [leaving, setLeaving] = useState(false);
-  const [testQty, setTestQty] = useState(1);
-  const [isTestIssuing, setIsTestIssuing] = useState(false);
-  const [lastTestTime, setLastTestTime] = useState(0);
   const limit = card.stamps_required || store?.stamps_required_for_reward || 10;
   const isCompleted = card.current_stamps >= limit;
   const _rewardTiers = store?.rewardTiers?.length ? store.rewardTiers : [{ stamps: limit, reward: store?.reward || '' }];
@@ -22154,56 +22151,6 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
     setTimeout(() => setStampJustAdded(false), 2500);
   }, [card.current_stamps]);
 
-  const handleTestStamp = async () => {
-    if (!auth.currentUser || !store) return;
-    
-    const now = Date.now();
-    if (now - lastTestTime < 1000) return;
-    setLastTestTime(now);
-
-    setIsTestIssuing(true);
-    try {
-      const qty = Number(testQty);
-      const cardRef = doc(db, 'cards', card.id);
-      
-      let newStamps = card.current_stamps + qty;
-      let newCycles = card.total_completed_cycles;
-
-      const cycleCompleted3 = newStamps >= limit;
-      if (cycleCompleted3) {
-        newCycles += 1;
-        if (newStamps > limit) newStamps = limit;
-      }
-      const txData3 = cycleCompleted3
-        ? { user_id: auth.currentUser.uid, store_id: store.id, completed_at: serverTimestamp(), stamp_count: qty, stamps_at_completion: limit, reward_claimed: false }
-        : { user_id: auth.currentUser.uid, store_id: store.id, completed_at: serverTimestamp(), stamp_count: qty };
-      await addDoc(collection(db, 'transactions'), txData3);
-
-      await updateDoc(cardRef, {
-        current_stamps: newStamps,
-        total_completed_cycles: newCycles,
-        last_tap_timestamp: serverTimestamp()
-      });
-
-      await updateDoc(doc(db, 'users', auth.currentUser.uid), {
-        totalStamps: increment(qty)
-      });
-      bumpStreak(auth.currentUser.uid).catch(console.error);
-      if ('vibrate' in navigator) navigator.vibrate([80, 40, 120]);
-
-      const customerName = auth.currentUser.displayName || auth.currentUser.email?.split('@')[0] || 'Customer';
-      issueUserStickers(auth.currentUser.uid, customerName, qty).catch(console.error);
-      updateChallengeProgress(auth.currentUser.uid, store.id, qty).catch(console.error);
-
-      if (newStamps >= limit) {
-        closeQR();
-      }
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsTestIssuing(false);
-    }
-  };
 
   const handleArchive = async () => {
     if (!auth.currentUser || !store || !claimableTier) return;
@@ -22509,7 +22456,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
 
       <AnimatePresence>
         {showQRScan && (
-          <ConsumerQRScanner card={card} store={store} initialQty={testQty} onClose={() => setShowQRScan(false)} />
+          <ConsumerQRScanner card={card} store={store} onClose={() => setShowQRScan(false)} />
         )}
       </AnimatePresence>
 
