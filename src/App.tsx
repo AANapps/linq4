@@ -26662,7 +26662,7 @@ function InfoTip({ text }: { text: string }) {
       >
         i
       </button>
-      {open && pos && (
+      {open && pos && createPortal(
         <>
           <span className="fixed inset-0 z-[9998]" onClick={() => setOpen(false)} />
           <span
@@ -26671,7 +26671,8 @@ function InfoTip({ text }: { text: string }) {
           >
             {text}
           </span>
-        </>
+        </>,
+        document.body
       )}
     </span>
   );
