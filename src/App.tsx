@@ -28127,59 +28127,60 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         )}
       </AnimatePresence>
 
-      <header className="relative">
-        <button onClick={() => setShowProfileSettings(true)}
-          className="absolute right-0 top-0 p-2 rounded-2xl bg-white border border-brand-navy/10 shadow-sm active:scale-95 transition-all">
-          <Settings size={18} className="text-brand-navy/75" />
+      {/* Cover band */}
+      <div className="-mx-4 -mt-4 h-28 relative overflow-hidden" style={{ background: uiColors.challengesTile.css }}>
+        <span className="shine-ray" aria-hidden="true" />
+      </div>
+
+      {/* Avatar + settings */}
+      <div className="-mt-10 flex items-end justify-between px-1">
+        <button
+          onClick={() => {
+            if (!profile.avatar) {
+              updateDoc(doc(db, 'users', profile.uid), { avatar: deriveAvatarFromUid(profile.uid) }).then(() => setAvatarViewOpen(true));
+            } else {
+              setAvatarViewOpen(true);
+            }
+          }}
+          className="relative active:scale-95 transition-all"
+        >
+          <div className="w-20 h-20 rounded-full border-4 border-white shadow-xl overflow-hidden bg-gradient-to-b from-indigo-50 to-purple-50 flex items-center justify-center">
+            <PixelAvatar config={profile.avatar} uid={profile.uid} size={72} view="head" />
+          </div>
+          <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-brand-gold rounded-full border-2 border-white flex items-center justify-center shadow-sm">
+            <Edit3 size={9} className="text-white" />
+          </div>
         </button>
+        <button onClick={() => setShowProfileSettings(true)}
+          className="mb-1 p-2 rounded-2xl bg-white border border-brand-navy/10 shadow-sm active:scale-95 transition-all">
+          <Settings size={16} className="text-brand-navy/75" />
+        </button>
+      </div>
 
-        <div className="flex items-start gap-4">
-          {/* Photo — top left */}
-          <div className="flex flex-col items-center shrink-0">
-            <button
-              onClick={() => {
-                if (!profile.avatar) {
-                  updateDoc(doc(db, 'users', profile.uid), { avatar: deriveAvatarFromUid(profile.uid) })
-                    .then(() => setAvatarViewOpen(true));
-                } else {
-                  setAvatarViewOpen(true);
-                }
-              }}
-              className="bg-gradient-to-b from-indigo-50 to-purple-50 rounded-full p-2 border-4 border-white shadow-xl active:scale-95 transition-all"
-            >
-              <PixelAvatar config={profile.avatar} uid={profile.uid} size={64} view="head" />
-            </button>
-            <div className="flex items-center gap-1 mt-1.5">
-              <p className="text-[8px] text-brand-navy/75 font-bold uppercase tracking-wider">tap to customise</p>
-            </div>
-          </div>
-
-          {/* Name, handle, followers — right of photo */}
-          <div className="flex-1 min-w-0 pt-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="font-display text-2xl font-bold">{profile.name}</h2>
-              <StreakBadge streak={profile.streak} size="lg" />
-              {profile.privacyMode && (
-                <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full">
-                  <Lock size={7} /> Anonymous
-                </span>
-              )}
-            </div>
-            <p className="text-brand-gold font-bold text-xs uppercase tracking-[0.2em]">@{profile.handle || user.email?.split('@')[0]}</p>
-            <div className="flex items-center gap-3 mt-2 text-sm">
-              <button onClick={() => { setFollowModalTab('following'); setShowFollowModal(true); }} className="flex items-center gap-1 font-bold hover:text-brand-gold transition-colors">
-                <span>{following.length}</span>
-                <span className="text-brand-navy/75 font-normal">Following</span>
-              </button>
-              <span className="text-brand-navy/32">•</span>
-              <button onClick={() => { setFollowModalTab('followers'); setShowFollowModal(true); }} className="flex items-center gap-1 font-bold hover:text-brand-gold transition-colors">
-                <span>{followers.length}</span>
-                <span className="text-brand-navy/75 font-normal">Followers</span>
-              </button>
-            </div>
-          </div>
+      {/* Name + handle + streak */}
+      <div className="space-y-0.5 mt-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <h2 className="font-display text-xl font-bold text-brand-navy">{profile.name}</h2>
+          <StreakBadge streak={profile.streak} size="lg" />
+          {profile.privacyMode && (
+            <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full">
+              <Lock size={7} /> Anonymous
+            </span>
+          )}
         </div>
-      </header>
+        <p className="text-brand-gold font-bold text-[11px] uppercase tracking-[0.2em]">@{profile.handle || user.email?.split('@')[0]}</p>
+        <div className="flex items-center gap-3 text-sm pt-0.5">
+          <button onClick={() => { setFollowModalTab('following'); setShowFollowModal(true); }} className="flex items-center gap-1 hover:text-brand-gold transition-colors">
+            <span className="font-bold text-brand-navy">{following.length}</span>
+            <span className="text-brand-navy/50 text-xs">Following</span>
+          </button>
+          <span className="text-brand-navy/20">·</span>
+          <button onClick={() => { setFollowModalTab('followers'); setShowFollowModal(true); }} className="flex items-center gap-1 hover:text-brand-gold transition-colors">
+            <span className="font-bold text-brand-navy">{followers.length}</span>
+            <span className="text-brand-navy/50 text-xs">Followers</span>
+          </button>
+        </div>
+      </div>
 
       {settingsModal}
 
@@ -28284,99 +28285,49 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         )}
       </AnimatePresence>
 
-      {/* Stamps / Cards / Rewards — clean separator */}
-      <div className="flex items-center divide-x divide-brand-navy/10">
+      {/* Stats */}
+      <div className="grid grid-cols-3 rounded-2xl overflow-hidden divide-x divide-brand-navy/8" style={{ background: 'rgba(var(--color-brand-navy-rgb, 15 23 42) / 0.04)' }}>
         {[
           { val: lifetimeStamps,     label: 'Stamps'  },
           { val: activeCardsCount,   label: 'Cards'   },
           { val: archivedCardsCount, label: 'Rewards' },
         ].map(s => (
-          <div key={s.label} className="flex-1 flex flex-col items-center gap-0.5 py-2">
-            <p className="font-black text-base leading-none text-brand-navy">{s.val}</p>
-            <p className="text-[9px] font-bold uppercase tracking-wider text-brand-navy/50">{s.label}</p>
+          <div key={s.label} className="flex flex-col items-center py-3 gap-0.5">
+            <p className="font-black text-lg leading-none text-brand-navy">{s.val}</p>
+            <p className="text-[9px] font-bold uppercase tracking-wider text-brand-navy/40">{s.label}</p>
           </div>
         ))}
       </div>
 
-      {/* Challenges tile */}
-      <motion.button whileTap={{ scale: 0.97 }} onClick={() => setChallengeOpen(true)}
-        className="w-full rounded-2xl overflow-hidden shadow-sm">
-        <div className="relative flex items-center justify-center gap-2 px-4 py-3 overflow-hidden"
+      {/* Highlights — Challenges · Stickers · Badges */}
+      <div className="grid grid-cols-3 gap-2">
+        <motion.button whileTap={{ scale: 0.97 }} onClick={() => setChallengeOpen(true)}
+          className="flex flex-col items-center gap-1 py-3 rounded-2xl overflow-hidden relative shadow-sm"
           style={{ background: uiColors.challengesTile.css }}>
           <span className="shine-ray" aria-hidden="true" />
-          <p className="relative z-10 text-xl font-black leading-none text-white"
-            style={tileTextStyle(uiColors.challengesTile)}>{activeChallenges.length}</p>
-          <span className="relative z-10 text-[10px] font-bold uppercase tracking-widest text-white/70"
-            style={tileTextStyle(uiColors.challengesTile, 0.7)}>Challenges</span>
-        </div>
-      </motion.button>
+          <p className="relative z-10 text-2xl font-black leading-none text-white" style={tileTextStyle(uiColors.challengesTile)}>{activeChallenges.length}</p>
+          <p className="relative z-10 text-[9px] font-bold uppercase tracking-wider text-white/70" style={tileTextStyle(uiColors.challengesTile, 0.7)}>Challenges</p>
+        </motion.button>
 
-      {/* Sticker slider (75%) + Badge slider (25%) in one row */}
-      <div className="flex gap-2">
-        {/* Sticker slider — 75% */}
-        <div className="relative rounded-2xl px-3 pt-2.5 pb-3 shadow-md min-w-0 overflow-hidden border-2 border-black/25" style={{ flex: '3 1 0%', background: uiColors.stickersTile.css }}>
+        <button onClick={() => stickerData && setShowStickerModal(true)}
+          className="flex flex-col items-center gap-1 py-3 rounded-2xl overflow-hidden relative shadow-sm"
+          style={{ background: uiColors.stickersTile.css }}>
           <span className="shine-ray pointer-events-none" aria-hidden="true" />
-          <div className="relative z-10 flex items-center justify-between mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest" style={tileTextStyle(uiColors.stickersTile, 0.75)}>Stickers</span>
-            <div className="flex items-center gap-1.5">
-              <button onClick={() => setShowStickerScanner(true)} className="active:opacity-70" style={tileTextStyle(uiColors.stickersTile, 0.85)} title="Scan sticker QR">
-                <QrCode size={14} />
-              </button>
-              <button onClick={() => stickerData && setShowStickerModal(true)} className="active:opacity-70" style={tileTextStyle(uiColors.stickersTile, 0.85)}>
-                <Eye size={14} />
-              </button>
-            </div>
-          </div>
-          <div className="relative z-10">
-          {(() => {
-            const universal = (stickerData?.stickers ?? [])
-              .filter(s => !!s.cardDefId && !!s.cardImageUrl && !s.challengeId && (stickerData?.revealedIds ?? []).includes(s.id))
-              .sort((a, b) => {
-                const tierDiff = STICKER_ORDER.indexOf(b.tier) - STICKER_ORDER.indexOf(a.tier);
-                if (tierDiff !== 0) return tierDiff;
-                return new Date(b.earnedAt).getTime() - new Date(a.earnedAt).getTime();
-              });
-            if (universal.length === 0) return (
-              <p className="text-[10px] py-1" style={tileTextStyle(uiColors.stickersTile, 0.5)}>No cards yet</p>
-            );
-            return (
-              <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-                {universal.slice(0, 5).map(s => (
-                  <div key={s.id} className="shrink-0 active:scale-95 transition-transform cursor-pointer"
-                    onClick={() => setExpandedSticker(s)}>
-                    <StickerCard sticker={s} isRevealed={true} size="sm" />
-                  </div>
-                ))}
-              </div>
-            );
-          })()}
-          </div>
-        </div>
+          <p className="relative z-10 text-2xl font-black leading-none text-white" style={tileTextStyle(uiColors.stickersTile)}>{(stickerData?.stickers ?? []).length}</p>
+          <p className="relative z-10 text-[9px] font-bold uppercase tracking-wider text-white/70" style={tileTextStyle(uiColors.stickersTile, 0.7)}>Stickers</p>
+        </button>
 
-        {/* Badge — 25% */}
-        <div className="relative rounded-2xl px-3 pt-2.5 pb-3 shadow-md min-w-0 flex flex-col overflow-hidden border-2 border-black/25" style={{ flex: '1 1 0%', background: uiColors.badgesTile.css }}>
+        <button onClick={() => setBadgesOpen(true)}
+          className="flex flex-col items-center gap-1.5 py-3 rounded-2xl overflow-hidden relative shadow-sm"
+          style={{ background: uiColors.badgesTile.css }}>
           <span className="shine-ray pointer-events-none" aria-hidden="true" />
-          <div className="relative z-10 flex items-center justify-between mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest" style={tileTextStyle(uiColors.badgesTile, 0.75)}>Badges</span>
-            <button onClick={() => setBadgesOpen(true)} className="active:opacity-70" style={tileTextStyle(uiColors.badgesTile, 0.85)}>
-              <Eye size={14} />
-            </button>
+          <div className="relative z-10 flex flex-col items-center gap-1">
+            {earnedBadges.length > 0
+              ? <HexBadge badge={earnedBadges[0]} size={30} />
+              : <p className="text-2xl font-black leading-none text-white" style={tileTextStyle(uiColors.badgesTile)}>0</p>}
+            <p className="text-[9px] font-bold uppercase tracking-wider text-white/70" style={tileTextStyle(uiColors.badgesTile, 0.7)}>Badges</p>
           </div>
-          <div className="relative z-10 flex-1 flex flex-col justify-center">
-          {earnedBadges.length === 0
-            ? <p className="text-[10px] py-1" style={tileTextStyle(uiColors.badgesTile, 0.5)}>No badges</p>
-            : (
-              <div className="flex items-center justify-center">
-                <button onClick={() => { setBadgesOpen(false); setSelectedBadge(earnedBadges[0]); }}
-                  className="active:scale-90 transition-transform"
-                  style={{ filter: 'drop-shadow(0 8px 6px rgba(0,0,0,0.55))' }}>
-                  <HexBadge badge={earnedBadges[0]} size={56} />
-                </button>
-              </div>
-            )
-          }
-          </div>
-        </div>
+        </button>
       </div>
 
       {/* Active cards — slider */}
@@ -35686,157 +35637,108 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="space-y-6 pb-20 text-brand-navy"
+      className="space-y-5 pb-20 text-brand-navy"
     >
-      <div className="flex items-center justify-between">
-        <button onClick={onBack} className="flex items-center gap-2 text-brand-navy/75 font-bold text-sm hover:text-brand-navy transition-colors">
-          <ArrowLeft size={18} />
-          Back
+      {/* Cover band with floating back + actions */}
+      <div className="-mx-4 -mt-4 h-28 relative overflow-hidden" style={{ background: uiColors.challengesTile.css }}>
+        <span className="shine-ray" aria-hidden="true" />
+        <button onClick={onBack}
+          className="absolute left-3 flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-black/25 backdrop-blur-md text-white font-bold text-sm active:scale-95 transition-all"
+          style={{ top: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}>
+          <ArrowLeft size={15} /> Back
         </button>
         {currentUser && currentUser.uid !== targetUser.uid && (
-          <div className="flex gap-2">
-            <button
-              onClick={handleFollowClick}
-              className={cn(
-                "flex items-center gap-1.5 px-4 py-2 rounded-2xl font-bold text-sm transition-all active:scale-95",
-                isFollowing ? "bg-brand-navy/8 text-green-600" : "bg-brand-navy/8 text-brand-gold"
-              )}
-            >
-              {isFollowing ? <><UserCheck size={15} />Following</> : <><UserPlus size={15} />Follow</>}
+          <div className="absolute right-3 flex gap-2" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}>
+            <button onClick={handleFollowClick}
+              className={cn('flex items-center gap-1 px-3 py-1.5 rounded-2xl font-bold text-xs backdrop-blur-md active:scale-95 transition-all',
+                isFollowing ? 'bg-white/20 text-white' : 'bg-white text-brand-navy')}>
+              {isFollowing ? <><UserCheck size={13} />Following</> : <><UserPlus size={13} />Follow</>}
             </button>
-            <button
-              onClick={handleMessageClick}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-brand-navy/8 text-brand-gold font-bold text-sm transition-all active:scale-95"
-            >
-              <MessageCircle size={15} />
-              Message
+            <button onClick={handleMessageClick}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-2xl bg-white/20 backdrop-blur-md text-white font-bold text-xs active:scale-95 transition-all">
+              <MessageCircle size={13} /> Message
             </button>
           </div>
         )}
       </div>
 
-      <header className="relative">
-        <div className="flex items-start gap-4">
-          {targetUser.role !== 'vendor' && (
-            <div className="bg-gradient-to-b from-indigo-50 to-purple-50 rounded-full p-2 border-4 border-white shadow-xl shrink-0">
-              <PixelAvatar config={targetUser.avatar} uid={targetUser.uid} size={64} view="full" />
-            </div>
-          )}
-          <div className="flex-1 min-w-0 pt-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="font-display text-2xl font-bold">{targetUser.name}</h2>
-              <StreakBadge streak={targetUser.streak} size="lg" />
-            </div>
-            <p className="text-brand-gold font-bold text-xs uppercase tracking-[0.2em]">@{targetUser.handle || targetUser.email?.split('@')[0]}</p>
-            <div className="flex items-center gap-3 mt-2 text-sm">
-              <span className="flex items-center gap-1 font-bold">
-                <span>{targetFollowing}</span>
-                <span className="text-brand-navy/90 font-normal">Following</span>
-              </span>
-              <span className="text-brand-navy/50">•</span>
-              <span className="flex items-center gap-1 font-bold">
-                <span>{targetFollowers}</span>
-                <span className="text-brand-navy/90 font-normal">Followers</span>
-              </span>
-            </div>
+      {/* Avatar */}
+      <div className="-mt-10 px-1">
+        {targetUser.role !== 'vendor' && (
+          <div className="w-20 h-20 rounded-full border-4 border-white shadow-xl overflow-hidden bg-gradient-to-b from-indigo-50 to-purple-50 flex items-center justify-center">
+            <PixelAvatar config={targetUser.avatar} uid={targetUser.uid} size={72} view="full" />
           </div>
-        </div>
-      </header>
+        )}
+      </div>
 
-      {/* Stats — clean separator */}
-      <div className="flex items-center divide-x divide-brand-navy/10">
+      {/* Name + handle + streak */}
+      <div className="space-y-0.5 -mt-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <h2 className="font-display text-xl font-bold text-brand-navy">{targetUser.name}</h2>
+          <StreakBadge streak={targetUser.streak} size="lg" />
+        </div>
+        <p className="text-brand-gold font-bold text-[11px] uppercase tracking-[0.2em]">@{targetUser.handle || targetUser.email?.split('@')[0]}</p>
+        <div className="flex items-center gap-3 text-sm pt-0.5">
+          <span className="flex items-center gap-1">
+            <span className="font-bold text-brand-navy">{targetFollowing}</span>
+            <span className="text-brand-navy/50 text-xs">Following</span>
+          </span>
+          <span className="text-brand-navy/20">·</span>
+          <span className="flex items-center gap-1">
+            <span className="font-bold text-brand-navy">{targetFollowers}</span>
+            <span className="text-brand-navy/50 text-xs">Followers</span>
+          </span>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 rounded-2xl overflow-hidden divide-x divide-brand-navy/8" style={{ background: 'rgba(15,23,42,0.04)' }}>
         {[
           { val: publicUserStamps,  label: 'Stamps'  },
           { val: cards.length,      label: 'Cards'   },
           { val: publicUserRewards, label: 'Rewards' },
         ].map(s => (
-          <div key={s.label} className="flex-1 flex flex-col items-center gap-0.5 py-2">
-            <p className="font-black text-base leading-none text-brand-navy">{s.val}</p>
-            <p className="text-[9px] font-bold uppercase tracking-wider text-brand-navy/50">{s.label}</p>
+          <div key={s.label} className="flex flex-col items-center py-3 gap-0.5">
+            <p className="font-black text-lg leading-none text-brand-navy">{s.val}</p>
+            <p className="text-[9px] font-bold uppercase tracking-wider text-brand-navy/40">{s.label}</p>
           </div>
         ))}
       </div>
 
-      {/* Challenges · Stickers · Badges */}
+      {/* Highlights — Challenges · Stickers · Badges */}
       {(() => {
         const theirChallenges = publicChallenges.filter(c => (c.participantUids || []).includes(initialTargetUser.uid));
         const activePub = theirChallenges.filter(c => !publicEntries.get(c.id)?.redeemed);
         return (
-          <>
-            {/* Challenges tile */}
+          <div className="grid grid-cols-3 gap-2">
             <motion.button whileTap={{ scale: 0.97 }} onClick={() => setPubChallengeOpen(true)}
-              className="w-full rounded-2xl overflow-hidden shadow-sm">
-              <div className="relative flex items-center justify-center gap-2 px-4 py-3 overflow-hidden"
-                style={{ background: uiColors.challengesTile.css }}>
-                <span className="shine-ray" aria-hidden="true" />
-                <p className="relative z-10 text-xl font-black leading-none text-white"
-                  style={tileTextStyle(uiColors.challengesTile)}>{activePub.length}</p>
-                <span className="relative z-10 text-[10px] font-bold uppercase tracking-widest text-white/70"
-                  style={tileTextStyle(uiColors.challengesTile, 0.7)}>Challenges</span>
-              </div>
+              className="flex flex-col items-center gap-1 py-3 rounded-2xl overflow-hidden relative shadow-sm"
+              style={{ background: uiColors.challengesTile.css }}>
+              <span className="shine-ray" aria-hidden="true" />
+              <p className="relative z-10 text-2xl font-black leading-none text-white" style={tileTextStyle(uiColors.challengesTile)}>{activePub.length}</p>
+              <p className="relative z-10 text-[9px] font-bold uppercase tracking-wider text-white/70" style={tileTextStyle(uiColors.challengesTile, 0.7)}>Challenges</p>
             </motion.button>
 
-            {/* Sticker + Badge sliders in one row */}
-            <div className="flex gap-2">
-              {/* Sticker slider — 75% */}
-              <div className="relative rounded-2xl px-3 pt-2.5 pb-3 shadow-md min-w-0 overflow-hidden border-2 border-black/25" style={{ flex: '3 1 0%', background: uiColors.stickersTile.css }}>
-                <span className="shine-ray pointer-events-none" aria-hidden="true" />
-                <div className="relative z-10 flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-widest" style={tileTextStyle(uiColors.stickersTile, 0.75)}>Stickers</span>
-                  <button onClick={() => setPubStickerOpen(true)} className="active:opacity-70" style={tileTextStyle(uiColors.stickersTile, 0.85)}>
-                    <Eye size={14} />
-                  </button>
-                </div>
-                <div className="relative z-10">
-                {(() => {
-                  const universal = pubStickers
-                    .filter(s => !!s.cardDefId && !!s.cardImageUrl && !s.challengeId && pubRevealedIds.includes(s.id))
-                    .sort((a, b) => {
-                      const tierDiff = STICKER_ORDER.indexOf(b.tier) - STICKER_ORDER.indexOf(a.tier);
-                      if (tierDiff !== 0) return tierDiff;
-                      return new Date(b.earnedAt).getTime() - new Date(a.earnedAt).getTime();
-                    });
-                  if (universal.length === 0) return <p className="text-[10px] py-1" style={tileTextStyle(uiColors.stickersTile, 0.5)}>No cards yet</p>;
-                  return (
-                    <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-                      {universal.slice(0, 5).map(s => (
-                        <div key={s.id} className="shrink-0 active:scale-95 transition-transform cursor-pointer"
-                          onClick={() => setPubExpandedSticker(s)}>
-                          <StickerCard sticker={s} isRevealed={true} size="sm" />
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
-                </div>
-              </div>
+            <button onClick={() => setPubStickerOpen(true)}
+              className="flex flex-col items-center gap-1 py-3 rounded-2xl overflow-hidden relative shadow-sm"
+              style={{ background: uiColors.stickersTile.css }}>
+              <span className="shine-ray pointer-events-none" aria-hidden="true" />
+              <p className="relative z-10 text-2xl font-black leading-none text-white" style={tileTextStyle(uiColors.stickersTile)}>{pubStickerCount}</p>
+              <p className="relative z-10 text-[9px] font-bold uppercase tracking-wider text-white/70" style={tileTextStyle(uiColors.stickersTile, 0.7)}>Stickers</p>
+            </button>
 
-              {/* Badge — 25% */}
-              <div className="relative rounded-2xl px-3 pt-2.5 pb-3 shadow-md min-w-0 flex flex-col overflow-hidden border-2 border-black/25" style={{ flex: '1 1 0%', background: uiColors.badgesTile.css }}>
-                <span className="shine-ray pointer-events-none" aria-hidden="true" />
-                <div className="relative z-10 flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-widest" style={tileTextStyle(uiColors.badgesTile, 0.75)}>Badges</span>
-                  <button onClick={() => setPubBadgesOpen(true)} className="active:opacity-70" style={tileTextStyle(uiColors.badgesTile, 0.85)}>
-                    <Eye size={14} />
-                  </button>
-                </div>
-                <div className="relative z-10 flex-1 flex flex-col justify-center">
-                {earnedBadges.length === 0
-                  ? <p className="text-[10px] py-1" style={tileTextStyle(uiColors.badgesTile, 0.5)}>No badges</p>
-                  : (
-                    <div className="flex items-center justify-center">
-                      <button onClick={() => { setPubBadgesOpen(false); setSelectedBadge(earnedBadges[0]); }}
-                        className="active:scale-90 transition-transform"
-                        style={{ filter: 'drop-shadow(0 8px 6px rgba(0,0,0,0.55))' }}>
-                        <HexBadge badge={earnedBadges[0]} size={56} />
-                      </button>
-                    </div>
-                  )
-                }
-                </div>
+            <button onClick={() => setPubBadgesOpen(true)}
+              className="flex flex-col items-center gap-1.5 py-3 rounded-2xl overflow-hidden relative shadow-sm"
+              style={{ background: uiColors.badgesTile.css }}>
+              <span className="shine-ray pointer-events-none" aria-hidden="true" />
+              <div className="relative z-10 flex flex-col items-center gap-1">
+                {earnedBadges.length > 0
+                  ? <HexBadge badge={earnedBadges[0]} size={30} />
+                  : <p className="text-2xl font-black leading-none text-white" style={tileTextStyle(uiColors.badgesTile)}>0</p>}
+                <p className="text-[9px] font-bold uppercase tracking-wider text-white/70" style={tileTextStyle(uiColors.badgesTile, 0.7)}>Badges</p>
               </div>
-            </div>
-          </>
+            </button>
+          </div>
         );
       })()}
 
