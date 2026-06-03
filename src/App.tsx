@@ -18002,9 +18002,9 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
   const [statModalVisible, setStatModalVisible] = useState(10);
   const availableDashTabs = (
     [
-      !store?.membershipEnabled && store?.cardEnabled !== false ? 'stamps' : null,
-      store?.membershipEnabled && store?.membershipType === 'spend' ? 'spend' : null,
-      store?.membershipEnabled && store?.membershipType === 'visit' ? 'visit' : null,
+      store?.cardEnabled === true ? 'stamps' : null,
+      (store?.membershipEnabled && store?.membershipType === 'spend') || (store?.subCardEnabled && (store?.pointsEarnMode === 'spend' || store?.pointsEarnMode === 'both')) ? 'spend' : null,
+      (store?.membershipEnabled && store?.membershipType === 'visit') || (store?.subCardEnabled && (store?.pointsEarnMode === 'visit' || store?.pointsEarnMode === 'both')) ? 'visit' : null,
     ] as ('stamps' | 'spend' | 'visit' | null)[]
   ).filter((t): t is 'stamps' | 'spend' | 'visit' => t !== null);
   const [dashTab, setDashTab] = useState<'stamps' | 'spend' | 'visit'>('stamps');
@@ -18012,7 +18012,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
     if (availableDashTabs.length > 0 && !availableDashTabs.includes(dashTab)) {
       setDashTab(availableDashTabs[0]);
     }
-  }, [store?.cardEnabled, store?.membershipEnabled, store?.membershipType]);
+  }, [store?.cardEnabled, store?.membershipEnabled, store?.membershipType, store?.subCardEnabled, store?.pointsEarnMode]);
   const [spendChartMode, setSpendChartMode] = useState<'days' | 'weeks'>('weeks');
   const [spendChartOffset, setSpendChartOffset] = useState(0);
   const [visitChartMode, setVisitChartMode] = useState<'days' | 'weeks'>('weeks');
@@ -19016,17 +19016,17 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
 
               <div className="grid grid-cols-3 gap-3">
                 <div onClick={() => openStatModal('members')} className="cursor-pointer active:scale-95 transition-transform">
-                  <StatSquare icon={<Users className="text-blue-500" />} label="Members" value={String(totalMembers)} />
+                  <StatSquare icon={<Users className="text-blue-500" />} label="Members" value={String(totalMembers)} info="Total customers who have scanned your QR code at least once." />
                 </div>
                 <div onClick={() => openStatModal('stamps')} className="cursor-pointer active:scale-95 transition-transform">
-                  <StatSquare icon={<Stamp className="text-brand-gold" />} label="Stamps Given" value={String(totalStampsGiven)} />
+                  <StatSquare icon={<Stamp className="text-brand-gold" />} label="Stamps Given" value={String(totalStampsGiven)} info="Total stamps issued across all active cards — includes current stamps plus completed cycles." />
                 </div>
                 <div onClick={() => openStatModal('activeCards')} className="cursor-pointer active:scale-95 transition-transform">
-                  <StatSquare icon={<Wallet className="text-purple-500" />} label="Active Cards" value={String(activeStoreCards)} />
+                  <StatSquare icon={<Wallet className="text-purple-500" />} label="Active Cards" value={String(activeStoreCards)} info="Stamp cards currently sitting in customers' wallets (not yet archived)." />
                 </div>
-                <StatSquare icon={<RefreshCw className="text-orange-500" />} label="Return Rate" value={`${returnRate}%`} />
-                <StatSquare icon={<TrendingUp className="text-green-500" />} label="Avg/Wk/User" value={String(avgScansPerWeekPerUser)} />
-                <StatSquare icon={<Gift className="text-rose-500" />} label="Rewards Given" value={String(vendorRewardsGiven)} />
+                <StatSquare icon={<RefreshCw className="text-orange-500" />} label="Return Rate" value={`${returnRate}%`} info="Percentage of members who have completed at least one full stamp card." />
+                <StatSquare icon={<TrendingUp className="text-green-500" />} label="Avg/Wk/User" value={String(avgScansPerWeekPerUser)} info="Average stamps issued per week per active member — shows how often customers visit." />
+                <StatSquare icon={<Gift className="text-rose-500" />} label="Rewards Given" value={String(vendorRewardsGiven)} info="Total reward items that customers have earned and redeemed." />
               </div>
 
               {/* Free: Simple leaderboard view */}
@@ -19269,12 +19269,12 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     return (
                       <div className="grid grid-cols-3 gap-3">
                         <div onClick={() => openStatModal('churnRisk')} className="cursor-pointer active:scale-95 transition-transform">
-                          <StatSquare icon={<AlertTriangle className="text-rose-500" />} label="Churn Risk" value={String(atRisk)} sub="21d+ no stamp" />
+                          <StatSquare icon={<AlertTriangle className="text-rose-500" />} label="Churn Risk" value={String(atRisk)} sub="21d+ no stamp" info="Members who haven't collected a stamp in 21+ days — at risk of drifting away. Tap to see the list." />
                         </div>
                         <div onClick={() => openStatModal('newcomers')} className="cursor-pointer active:scale-95 transition-transform">
-                          <StatSquare icon={<UserPlus className="text-emerald-500" />} label="Newcomers" value={String(newcomers)} sub="joined last 30d" />
+                          <StatSquare icon={<UserPlus className="text-emerald-500" />} label="Newcomers" value={String(newcomers)} sub="joined last 30d" info="Brand new members who collected their first stamp in the last 30 days. Tap to see the list." />
                         </div>
-                        <StatSquare icon={<Zap className="text-amber-500" />} label="Avg/Visit" value={avgVisit} sub="stamps per scan" />
+                        <StatSquare icon={<Zap className="text-amber-500" />} label="Avg/Visit" value={avgVisit} sub="stamps per scan" info="Average number of stamps issued each time a customer scans — useful if you issue multiple stamps per visit." />
                       </div>
                     );
                   })()}
@@ -20017,12 +20017,12 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
               ) : (
                 <>
                   <div className="grid grid-cols-3 gap-3">
-                    <StatSquare icon={<Users className="text-blue-500" />} label="Members" value={String(spendMembers)} />
-                    <StatSquare icon={<TrendingUp className="text-emerald-500" />} label="Pts Issued" value={String(totalPointsIssued)} />
-                    <StatSquare icon={<Wallet className="text-purple-500" />} label="Active Cards" value={String(spendActiveCards)} />
-                    <StatSquare icon={<RefreshCw className="text-orange-500" />} label="Pts Balance" value={String(totalPointsBalance)} />
-                    <StatSquare icon={<DollarSign className="text-green-500" />} label="Total Spend" value={totalSpend > 0 ? `$${totalSpend.toFixed(0)}` : '—'} />
-                    <StatSquare icon={<Gift className="text-rose-500" />} label="Rewards" value={String(spendRewardsGiven)} />
+                    <StatSquare icon={<Users className="text-blue-500" />} label="Members" value={String(spendMembers)} info="Customers who have an active spend card with your store." />
+                    <StatSquare icon={<TrendingUp className="text-emerald-500" />} label="Pts Issued" value={String(totalPointsIssued)} info="Total points earned by all members across every transaction." />
+                    <StatSquare icon={<Wallet className="text-purple-500" />} label="Active Cards" value={String(spendActiveCards)} info="Spend cards currently held by customers (not archived)." />
+                    <StatSquare icon={<RefreshCw className="text-orange-500" />} label="Pts Balance" value={String(totalPointsBalance)} info="Total unspent points sitting in customers' wallets right now." />
+                    <StatSquare icon={<DollarSign className="text-green-500" />} label="Total Spend" value={totalSpend > 0 ? `$${totalSpend.toFixed(0)}` : '—'} info="Total revenue recorded through the spend card programme." />
+                    <StatSquare icon={<Gift className="text-rose-500" />} label="Rewards" value={String(spendRewardsGiven)} info="Total reward vouchers earned by customers through spend milestones." />
                   </div>
 
                   {/* Advanced spend metrics row */}
@@ -20320,12 +20320,12 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
               ) : (
                 <>
                   <div className="grid grid-cols-3 gap-3">
-                    <StatSquare icon={<Users className="text-blue-500" />} label="Members" value={String(visitMembers)} />
-                    <StatSquare icon={<TrendingUp className="text-blue-500" />} label="Total Points" value={String(visitPointsGiven)} />
-                    <StatSquare icon={<Wallet className="text-purple-500" />} label="Active Cards" value={String(visitActiveCards)} />
-                    <StatSquare icon={<RefreshCw className="text-orange-500" />} label="Return Rate" value={`${visitReturnRate}%`} />
-                    <StatSquare icon={<MapPin className="text-blue-500" />} label="Total Visits" value={String(totalVisits)} />
-                    <StatSquare icon={<Gift className="text-rose-500" />} label="Pts Redeemed" value={String(visitPointsRedeemed)} />
+                    <StatSquare icon={<Users className="text-blue-500" />} label="Members" value={String(visitMembers)} info="Customers who have an active visit card with your store." />
+                    <StatSquare icon={<TrendingUp className="text-blue-500" />} label="Total Points" value={String(visitPointsGiven)} info="Total visit points issued to all members across all check-ins." />
+                    <StatSquare icon={<Wallet className="text-purple-500" />} label="Active Cards" value={String(visitActiveCards)} info="Visit cards currently held by customers (not archived)." />
+                    <StatSquare icon={<RefreshCw className="text-orange-500" />} label="Return Rate" value={`${visitReturnRate}%`} info="Percentage of members who have visited more than once." />
+                    <StatSquare icon={<MapPin className="text-blue-500" />} label="Total Visits" value={String(totalVisits)} info="Total number of check-ins recorded across all members." />
+                    <StatSquare icon={<Gift className="text-rose-500" />} label="Pts Redeemed" value={String(visitPointsRedeemed)} info="Total visit points already exchanged for rewards by customers." />
                   </div>
 
                   {/* Advanced visit metrics row */}
@@ -25026,14 +25026,17 @@ function WallPostItem({ post, currentUser, wallOwnerUid, onViewUser }: { post: a
   );
 }
 
-function StatSquare({ icon, label, value, sub }: { icon: React.ReactNode, label: string, value: string, sub?: string }) {
+function StatSquare({ icon, label, value, sub, info }: { icon: React.ReactNode, label: string, value: string, sub?: string, info?: string }) {
   return (
     <div className="glass-card aspect-square rounded-[1.5rem] flex flex-col items-center justify-center p-3 hover:shadow-md transition-all">
       <div className="w-7 h-7 bg-brand-bg rounded-xl flex items-center justify-center mb-1.5">
         {React.cloneElement(icon as React.ReactElement, { size: 15 })}
       </div>
       <p className="font-display text-base font-bold text-brand-navy leading-none mb-0.5">{value}</p>
-      <p className="text-[8px] text-brand-navy/75 font-bold uppercase tracking-wider text-center">{label}</p>
+      <div className="flex items-center justify-center gap-0.5">
+        <p className="text-[8px] text-brand-navy/75 font-bold uppercase tracking-wider text-center">{label}</p>
+        {info && <InfoTip text={info} />}
+      </div>
       {sub && <p className="text-[7px] text-brand-navy/40 font-bold uppercase tracking-wider text-center mt-0.5 leading-tight">{sub}</p>}
     </div>
   );
@@ -27758,7 +27761,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
   // Vendor stats
   const totalMembers = storeCards.length > 0 ? new Set(storeCards.map(c => c.user_id)).size : 0;
   const stampsRequired = vendorStore?.stamps_required_for_reward || 10;
-  const totalStampsGiven = storeCards.reduce((sum, c) => sum + (c.current_stamps || 0) + ((c.total_completed_cycles || 0) * stampsRequired), 0);
+  const totalStampsGiven = storeCards.filter(c => c.card_type === 'stamp' || !c.card_type).reduce((sum, c) => sum + (c.current_stamps || 0) + ((c.total_completed_cycles || 0) * stampsRequired), 0);
   const activeStoreCards = storeCards.filter(c => !c.isArchived).length;
   const returningUsers = storeCards.filter(c => (c.total_completed_cycles || 0) > 0).length;
   const returnRate = totalMembers > 0 ? Math.round((returningUsers / totalMembers) * 100) : 0;
@@ -27769,6 +27772,13 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
     vendorStore?.rewardsGiven || 0
   );
   const vis = vendorStore?.visibilitySettings;
+  const isVisitVendor = vendorStore?.membershipEnabled && vendorStore?.membershipType === 'visit';
+  const isSpendVendor = vendorStore?.membershipEnabled && vendorStore?.membershipType === 'spend';
+  const profileMiddleStat = isVisitVendor
+    ? { val: storeCards.filter(c => c.card_type === 'membership' && c.membership_type === 'visit').reduce((s, c) => s + (c.membership_visits || c.total_points_earned || 0), 0), label: 'Points' }
+    : isSpendVendor
+      ? { val: storeCards.filter(c => c.card_type === 'membership' && c.membership_type === 'spend').reduce((s, c) => s + (c.total_points_earned || 0), 0), label: 'Points' }
+      : { val: totalStampsGiven, label: 'Stamps' };
 
   const settingsModal = (
     <AnimatePresence>
@@ -27845,12 +27855,12 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           )}
         </header>
 
-        {/* Stats bar — Members | Stamps | Rewards */}
+        {/* Stats bar — Members | Stamps or Points | Rewards */}
         <div className="flex items-center divide-x divide-brand-navy/10">
           {[
-            { val: totalMembers,       label: 'Members' },
-            { val: totalStampsGiven,   label: 'Stamps'  },
-            { val: profileRewardsGiven, label: 'Rewards' },
+            { val: totalMembers,             label: 'Members' },
+            { val: profileMiddleStat.val,    label: profileMiddleStat.label },
+            { val: profileRewardsGiven,      label: 'Rewards' },
           ].map(s => (
             <div key={s.label} className="flex-1 flex flex-col items-center gap-0.5 py-2">
               <p className="font-black text-base leading-none text-brand-navy">{s.val}</p>
