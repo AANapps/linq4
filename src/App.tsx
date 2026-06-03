@@ -26640,19 +26640,35 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
 
 function InfoTip({ text }: { text: string }) {
   const [open, setOpen] = React.useState(false);
+  const [pos, setPos] = React.useState<{ top: number; left: number } | null>(null);
+  const btnRef = React.useRef<HTMLButtonElement>(null);
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!open && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setPos({ top: r.bottom + 6, left: Math.min(r.left, window.innerWidth - 244) });
+    }
+    setOpen(v => !v);
+  };
+
   return (
-    <span className="relative inline-flex items-center ml-1 shrink-0">
+    <span className="inline-flex items-center ml-1 shrink-0">
       <button
+        ref={btnRef}
         type="button"
-        onClick={e => { e.stopPropagation(); setOpen(v => !v); }}
+        onClick={handleClick}
         className="w-[15px] h-[15px] rounded-full bg-brand-navy/10 text-brand-navy/50 text-[8px] font-black flex items-center justify-center hover:bg-brand-navy/20 active:scale-90 transition-all"
       >
         i
       </button>
-      {open && (
+      {open && pos && (
         <>
-          <span className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <span className="absolute left-5 top-0 w-56 bg-brand-navy text-white text-[10px] font-medium px-3 py-2.5 rounded-xl z-50 leading-relaxed shadow-xl">
+          <span className="fixed inset-0 z-[9998]" onClick={() => setOpen(false)} />
+          <span
+            className="fixed w-56 bg-brand-navy text-white text-[10px] font-medium px-3 py-2.5 rounded-xl z-[9999] leading-relaxed shadow-xl"
+            style={{ top: pos.top, left: pos.left }}
+          >
             {text}
           </span>
         </>
