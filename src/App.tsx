@@ -18000,19 +18000,13 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
   const [statModal, setStatModal] = useState<null | 'members' | 'stamps' | 'activeCards' | 'churnRisk' | 'newcomers'>(null);
   const [statModalSearch, setStatModalSearch] = useState('');
   const [statModalVisible, setStatModalVisible] = useState(10);
-  const availableDashTabs = (
-    [
-      store?.cardEnabled === true ? 'stamps' : null,
-      (store?.membershipEnabled && store?.membershipType === 'spend') || (store?.subCardEnabled && (store?.pointsEarnMode === 'spend' || store?.pointsEarnMode === 'both')) ? 'spend' : null,
-      (store?.membershipEnabled && store?.membershipType === 'visit') || (store?.subCardEnabled && (store?.pointsEarnMode === 'visit' || store?.pointsEarnMode === 'both')) ? 'visit' : null,
-    ] as ('stamps' | 'spend' | 'visit' | null)[]
-  ).filter((t): t is 'stamps' | 'spend' | 'visit' => t !== null);
-  const [dashTab, setDashTab] = useState<'stamps' | 'spend' | 'visit'>('stamps');
-  useEffect(() => {
-    if (availableDashTabs.length > 0 && !availableDashTabs.includes(dashTab)) {
-      setDashTab(availableDashTabs[0]);
-    }
-  }, [store?.cardEnabled, store?.membershipEnabled, store?.membershipType, store?.subCardEnabled, store?.pointsEarnMode]);
+  // Derive the single active dashboard tab directly from store config — no state needed
+  const dashTab: 'stamps' | 'spend' | 'visit' =
+    store?.membershipEnabled && store?.membershipType === 'spend' ? 'spend' :
+    store?.membershipEnabled && store?.membershipType === 'visit' ? 'visit' :
+    (store?.subCardEnabled && store?.pointsEarnMode === 'spend') ? 'spend' :
+    (store?.subCardEnabled && store?.pointsEarnMode === 'visit') ? 'visit' :
+    'stamps';
   const [spendChartMode, setSpendChartMode] = useState<'days' | 'weeks'>('weeks');
   const [spendChartOffset, setSpendChartOffset] = useState(0);
   const [visitChartMode, setVisitChartMode] = useState<'days' | 'weeks'>('weeks');
@@ -19005,26 +18999,6 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
             )}
           <div className={needsPayment ? 'select-none pointer-events-none' : ''} style={needsPayment ? { filter: 'blur(4px)', opacity: 0.3 } : {}}>
           <>
-
-          {/* Card type tabs — only show tabs relevant to this store's enabled card types */}
-          {availableDashTabs.length > 1 && (
-          <div className="flex p-1 bg-brand-navy/8 rounded-2xl gap-1">
-            {([
-              { key: 'stamps' as const, label: 'Stamps', icon: <Stamp size={13} />, active: 'text-brand-gold' },
-              { key: 'spend' as const, label: 'Spend Pts', icon: <DollarSign size={13} />, active: 'text-emerald-500' },
-              { key: 'visit' as const, label: 'Visit Pts', icon: <MapPin size={13} />, active: 'text-blue-500' },
-            ] as const).filter(({ key }) => availableDashTabs.includes(key)).map(({ key, label, icon, active }) => (
-              <button
-                key={key}
-                onClick={() => { setDashTab(key); setStatModal(null); }}
-                className={cn('flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-[10px] text-[11px] font-bold transition-all', dashTab === key ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/60')}
-              >
-                <span className={dashTab === key ? active : ''}>{icon}</span>
-                {label}
-              </button>
-            ))}
-          </div>
-          )}
 
           {/* ===== STAMPS TAB ===== */}
           {dashTab === 'stamps' && (
