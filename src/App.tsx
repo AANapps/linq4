@@ -28826,8 +28826,6 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
   const [storeTheme, setStoreTheme] = useState('#0F172A');
   const [storeSecondaryColor, setStoreSecondaryColor] = useState('#ffffff');
   const [storeLogo, setStoreLogo] = useState('');
-  const [logoFetchUrl, setLogoFetchUrl] = useState('');
-  const [logoFetching, setLogoFetching] = useState(false);
   const [logoFetchError, setLogoFetchError] = useState('');
   const [logoUploading, setLogoUploading] = useState(false);
   const [storeLocation, setStoreLocation] = useState('');
@@ -29093,43 +29091,6 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
 
             <div className="space-y-2">
               <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Logo</label>
-
-              {/* Fetch from website */}
-              <div className="flex gap-2">
-                <input
-                  value={logoFetchUrl}
-                  onChange={e => { setLogoFetchUrl(e.target.value); setLogoFetchError(''); }}
-                  placeholder="yourwebsite.com"
-                  className="flex-1 px-4 py-3 rounded-2xl bg-white border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
-                />
-                <button
-                  type="button"
-                  disabled={logoFetching || !logoFetchUrl.trim()}
-                  onClick={async () => {
-                    setLogoFetching(true);
-                    setLogoFetchError('');
-                    try {
-                      let raw = logoFetchUrl.trim().replace(/^https?:\/\//i, '').replace(/\/.*$/, '');
-                      const clearbitUrl = `https://logo.clearbit.com/${raw}`;
-                      const res = await fetch(clearbitUrl);
-                      if (res.ok) {
-                        setStoreLogo(clearbitUrl);
-                      } else {
-                        const fallback = `https://www.google.com/s2/favicons?domain=${raw}&sz=128`;
-                        setStoreLogo(fallback);
-                      }
-                    } catch {
-                      setLogoFetchError('Could not fetch logo — paste the URL manually below.');
-                    } finally {
-                      setLogoFetching(false);
-                    }
-                  }}
-                  className="px-4 py-3 rounded-2xl bg-brand-navy text-white text-xs font-bold shrink-0 disabled:opacity-40 active:scale-95 transition-all"
-                >
-                  {logoFetching ? '...' : 'Fetch Logo'}
-                </button>
-              </div>
-              {logoFetchError && <p className="text-[11px] text-red-500 pl-1">{logoFetchError}</p>}
 
               {/* Upload from device */}
               <div className="flex gap-3 items-center">
