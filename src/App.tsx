@@ -2077,41 +2077,43 @@ export default function App() {
     <div className="min-h-screen bg-white md:flex md:justify-center">
     <div className="w-full md:max-w-sm relative" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 6rem)' }}>
       {/* Header */}
-      <header
-        className="sticky top-0 z-50 px-5 pb-3.5 flex items-center justify-between relative"
-        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.875rem)', background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #4f46e5 100%)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}
-      >
+      <header className="glass-panel sticky top-0 z-50 px-5 pb-3.5 flex items-center justify-between relative" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.875rem)' }}>
         <button
           onClick={() => setShowCreatePost(true)}
-          className="w-9 h-9 rounded-xl flex items-center justify-center active:scale-95 transition-transform"
-          style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.18)' }}
+          className="w-9 h-9 gradient-red rounded-xl flex items-center justify-center shadow-md shadow-blue-500/20 active:scale-95 transition-transform"
         >
           <Plus className="w-5 h-5 text-white" />
         </button>
         <button onClick={() => setShowSettings(true)} className="absolute left-1/2 -translate-x-1/2 hover:opacity-80 transition-opacity">
           <svg width="56" height="28" viewBox="0 0 56 28" aria-label="Linq" style={{ userSelect: 'none', display: 'block', overflow: 'visible' }}>
-            <text x="2" y="22" fontFamily="Poppins, sans-serif" fontWeight="900" fontStyle="italic" fontSize="26" fill="white">Linq</text>
+            <defs>
+              <linearGradient id="hdrLinqGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#60a5fa" />
+                <stop offset="100%" stopColor="#a855f7" />
+              </linearGradient>
+            </defs>
+            <text x="2" y="22" fontFamily="Poppins, sans-serif" fontWeight="900" fontStyle="italic" fontSize="26" fill="url(#hdrLinqGrad)">Linq</text>
           </svg>
         </button>
         <div className="flex items-center gap-0.5">
           {['consumer','admin'].includes(profile?.role ?? '') && (
             <button
               onClick={() => setActiveTab('messages')}
-              className="relative w-9 h-9 flex items-center justify-center text-white/70 hover:text-white transition-colors"
+              className="relative w-9 h-9 flex items-center justify-center text-brand-navy/75 hover:text-brand-navy transition-colors"
             >
               <MessageCircle className="w-6 h-6" />
               {unreadMessages > 0 && (
-                <span className="absolute top-1 right-1 w-2 h-2 bg-brand-rose rounded-full border-2 border-white/20" />
+                <span className="absolute top-1 right-1 w-2 h-2 bg-brand-rose rounded-full border-2 border-white" />
               )}
             </button>
           )}
           <button
             onClick={() => setShowNotifications(true)}
-            className="relative w-9 h-9 flex items-center justify-center text-white/70 hover:text-white transition-colors"
+            className="relative w-9 h-9 flex items-center justify-center text-brand-navy/75 hover:text-brand-navy transition-colors"
           >
             <Bell className="w-6 h-6" />
             {notifications.filter(n => !n.isRead).length > 0 && (
-              <span className="absolute top-1 right-1 w-2 h-2 bg-brand-gold rounded-full border-2 border-white/20" />
+              <span className="absolute top-1 right-1 w-2 h-2 bg-brand-gold rounded-full border-2 border-white" />
             )}
           </button>
         </div>
