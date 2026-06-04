@@ -27749,7 +27749,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
               </button>
               <span className="text-xs font-bold text-brand-navy/40 uppercase tracking-widest">Preview — customer view</span>
             </div>
-            <StoreProfileView store={vendorStore} onBack={() => setShowStorePreview(false)} user={user} profile={profile} onViewUser={() => {}} />
+            <StoreProfileView store={vendorStore} onBack={() => setShowStorePreview(false)} user={user} profile={profile} onViewUser={() => {}} isPreview />
           </div>
         </div>
       );
@@ -33718,7 +33718,7 @@ function ProfileCardRow({ store, card, membershipCard, userId, onJoinLoyalty, on
   );
 }
 
-function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser, onMessage }: { store: StoreProfile, onBack: () => void, user: FirebaseUser, profile: UserProfile | null, onViewUser: (u: UserProfile) => void, onMessage?: (chatId: string) => void, key?: React.Key }) {
+function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser, onMessage, isPreview }: { store: StoreProfile, onBack: () => void, user: FirebaseUser, profile: UserProfile | null, onViewUser: (u: UserProfile) => void, onMessage?: (chatId: string) => void, isPreview?: boolean, key?: React.Key }) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [vendorGlobalPosts, setVendorGlobalPosts] = useState<GlobalPost[]>([]);
   const [storeReviews, setStoreReviews] = useState<any[]>([]);
@@ -34162,8 +34162,8 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
     ? [...store.rewardTiers].sort((a, b) => a.stamps - b.stamps)
     : store.reward ? [{ stamps: store.stamps_required_for_reward || 10, reward: store.reward }] : [];
 
-  const isOwnStore = store.ownerUid === user.uid;
-  const isVendorUser = profile?.role === 'vendor';
+  const isOwnStore = isPreview ? false : store.ownerUid === user.uid;
+  const isVendorUser = isPreview ? false : profile?.role === 'vendor';
 
   // Type-aware stats bar values
   const statsMembers = lbActiveType === 'loyalty'
@@ -34420,11 +34420,11 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
       </AnimatePresence>
 
       {/* Join / joined buttons */}
-      {store.ownerUid !== user.uid && (storeCardActive(store) || store.membershipEnabled) && (
+      {(isPreview || store.ownerUid !== user.uid) && (storeCardActive(store) || store.membershipEnabled) && (
         <ProfileCardRow
           store={store}
-          card={card}
-          membershipCard={membershipCard}
+          card={isPreview ? null : card}
+          membershipCard={isPreview ? null : membershipCard}
           userId={user.uid}
           userProfile={profile}
           onJoinLoyalty={handleJoinStore}
@@ -34450,6 +34450,35 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
           Leave us a Google review
         </a>
       )}
+
+      {/* Preview: membership card colour swatch */}
+      {isPreview && store.membershipEnabled && (() => {
+        const color = store.membershipColor || store.theme || '#0f4c81';
+        const label = store.membershipType === 'visit' ? 'Visit Points' : store.membershipType === 'spend' ? 'Spend Points' : 'Membership';
+        return (
+          <div className="w-full rounded-[2rem] overflow-hidden shadow-lg opacity-80">
+            <div className="relative overflow-hidden px-5 py-4 flex items-center gap-3" style={{ backgroundColor: color }}>
+              <span className="card-shine-ray" aria-hidden="true" />
+              <div className="relative z-10 w-10 h-10 rounded-full overflow-hidden border-2 border-white/50 shrink-0">
+                {store.logoUrl
+                  ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
+                  : <div className="w-full h-full bg-white/20 flex items-center justify-center"><Building2 size={20} className="text-white" /></div>}
+              </div>
+              <div className="relative z-10 flex-1 min-w-0">
+                <p className="text-white font-black text-sm">{store.membershipName || 'Membership'}</p>
+                <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">{label}</p>
+              </div>
+              <div className="relative z-10 text-right shrink-0">
+                <p className="text-white font-black text-2xl leading-none">0</p>
+                <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">pts</p>
+              </div>
+            </div>
+            <div className="bg-white px-5 py-2.5 flex items-center justify-center">
+              <span className="text-[10px] font-bold text-brand-navy/30 uppercase tracking-widest">Preview only</span>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Stamp card tile — shown after joining a stamp card (not for visit/spend stores) */}
       {card && storeCardActive(store) && !store.membershipEnabled && store.membershipType !== 'visit' && store.membershipType !== 'spend' && (() => {
@@ -35086,11 +35115,26 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
               </div>
             );
           })}
-          {leaderboard.length === 0 && (
+          {leaderboard.length === 0 && !isPreview && (
             <p className="text-center py-4 text-xs text-brand-navy/75 font-bold uppercase tracking-widest">
               No {lbActiveType === 'loyalty' ? 'collectors' : lbActiveType === 'visit' ? 'visitors' : 'spenders'} yet
             </p>
           )}
+          {leaderboard.length === 0 && isPreview && (['#7c3aed','#0891b2','#16a34a'] as const).map((col, i) => (
+            <div key={i} className="flex items-center justify-between p-3 rounded-2xl opacity-40">
+              <div className="flex items-center gap-3">
+                <div className="w-6 h-6 flex items-center justify-center font-bold text-xs text-brand-navy/75">#{i + 1}</div>
+                <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: col }}>
+                  <UserIcon size={16} className="text-white" />
+                </div>
+                <div>
+                  <p className="font-bold text-sm">Happy Customer</p>
+                  <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest">{(3 - i) * 4} rewards earned</p>
+                </div>
+              </div>
+              <p className="text-sm font-bold text-brand-navy">{(12 - i * 3)} stamps</p>
+            </div>
+          ))}
         </div>
       </div>
 
