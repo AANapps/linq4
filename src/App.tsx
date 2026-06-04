@@ -30736,7 +30736,7 @@ function NotificationsPanel({ notifications, onClose }: { notifications: Notific
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-black/5">
+        <div className="flex items-center justify-between px-6 pb-5 border-b border-black/5" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.25rem)' }}>
           <div>
             <h2 className="font-display text-xl font-bold">Notifications</h2>
             {unreadCount > 0 && (
