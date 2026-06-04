@@ -20000,7 +20000,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                   </div>
 
                   {/* Advanced spend — gated */}
-                  {!isSubscribed ? (
+                  {!isSubscribed && (
                     <div className="rounded-[2rem] overflow-hidden border border-purple-200 shadow-lg">
                       <div className="relative px-6 pt-10 pb-8 text-white" style={{ background: 'linear-gradient(160deg, #0f172a 0%, #1e1b4b 45%, #4f46e5 100%)' }}>
                         <div className="shine-ray" />
@@ -20029,7 +20029,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                         </button>
                       </div>
                     </div>
-                  ) : (<>
+                  )}
+                  <div className={cn("space-y-6", !isSubscribed && "blur-sm pointer-events-none select-none opacity-60")}>
                   {/* Advanced spend metrics row */}
                   {(() => {
                     const totalTx = spendTxns.length;
@@ -20309,7 +20310,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                       </div>
                     );
                   })()}
-                  </>)}
+                  </div>
                 </>
               )}
             </div>
@@ -20336,7 +20337,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                   </div>
 
                   {/* Advanced visit — gated */}
-                  {!isSubscribed ? (
+                  {!isSubscribed && (
                     <div className="rounded-[2rem] overflow-hidden border border-purple-200 shadow-lg">
                       <div className="relative px-6 pt-10 pb-8 text-white" style={{ background: 'linear-gradient(160deg, #0f172a 0%, #1e1b4b 45%, #4f46e5 100%)' }}>
                         <div className="shine-ray" />
@@ -20365,7 +20366,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                         </button>
                       </div>
                     </div>
-                  ) : (<>
+                  )}
+                  <div className={cn("space-y-6", !isSubscribed && "blur-sm pointer-events-none select-none opacity-60")}>
                   {/* Advanced visit metrics row */}
                   {(() => {
                     const now = Date.now();
@@ -20671,7 +20673,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                       </div>
                     );
                   })()}
-                  </>)}
+                  </div>
                 </>
               )}
             </div>
