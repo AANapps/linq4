@@ -20767,6 +20767,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
             if (isSubscribed) openStatModal('members');
           }}
           user={user}
+          profileCollection={profileCollection}
         />
       )}
 
@@ -27378,7 +27379,7 @@ function StoreLeaderboard({ storeId, storeName, logoUrl, type, userId }: {
   );
 }
 
-function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, onViewUser, onViewStore, onGoToDeals, onOpenLinqle, onSeeAllMembers, user, uiColors: uiColorsProp }: { profile: UserProfile | null, userCards: Card[], stores?: StoreProfile[], onLogout: () => void, onDeleteAccount: () => Promise<void>, onViewUser: (u: UserProfile) => void, onViewStore?: (s: StoreProfile) => void, onGoToDeals?: () => void, onOpenLinqle?: () => void, onSeeAllMembers?: () => void, user: FirebaseUser, uiColors?: UiColors }) {
+function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, onViewUser, onViewStore, onGoToDeals, onOpenLinqle, onSeeAllMembers, user, uiColors: uiColorsProp, profileCollection = 'users' }: { profile: UserProfile | null, userCards: Card[], stores?: StoreProfile[], onLogout: () => void, onDeleteAccount: () => Promise<void>, onViewUser: (u: UserProfile) => void, onViewStore?: (s: StoreProfile) => void, onGoToDeals?: () => void, onOpenLinqle?: () => void, onSeeAllMembers?: () => void, user: FirebaseUser, uiColors?: UiColors, profileCollection?: 'users' | 'vendors' }) {
   const uiColors = uiColorsProp ?? UI_COLOR_DEFAULTS;
   const [activeSubTab, setActiveSubTab] = useState<'posts' | 'interactions'>('posts');
   const [profileRedeemingChallenge, setProfileRedeemingChallenge] = useState<{ challenge: Challenge; entry: any; userName: string } | null>(null);
@@ -27728,7 +27729,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
   const settingsModal = (
     <AnimatePresence>
       {showProfileSettings && (
-        <ProfileSettingsModal profile={profile} user={user} onClose={() => setShowProfileSettings(false)} onLogout={onLogout} onDeleteAccount={onDeleteAccount} />
+        <ProfileSettingsModal profile={profile} user={user} onClose={() => setShowProfileSettings(false)} onLogout={onLogout} onDeleteAccount={onDeleteAccount} profileCollection={profileCollection} />
       )}
     </AnimatePresence>
   );
@@ -28821,7 +28822,7 @@ function ToggleSwitch({ on, onChange }: { on: boolean; onChange: (v: boolean) =>
   );
 }
 
-function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccount }: { profile: UserProfile, user: FirebaseUser, onClose: () => void, onLogout: () => void, onDeleteAccount: () => Promise<void> }) {
+function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccount, profileCollection = 'users' }: { profile: UserProfile, user: FirebaseUser, onClose: () => void, onLogout: () => void, onDeleteAccount: () => Promise<void>, profileCollection?: 'users' | 'vendors' }) {
   const [name, setName] = useState(profile.name || '');
   const [handle, setHandle] = useState(profile.handle || user.email?.split('@')[0] || '');
   const [gender, setGender] = useState(profile.gender || '');
@@ -28841,6 +28842,13 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
   const [privacyMode, setPrivacyMode] = useState(profile.privacyMode ?? false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const storeInitializedRef = useRef(false);
+  const initialValuesRef = useRef({
+    name: profile.name || '', gender: profile.gender || '', privacyMode: profile.privacyMode ?? false,
+    storeName: '', storeReward: '', storeCategory: 'Food' as Category,
+    storeTheme: '#2563EB', storeSecondaryColor: '#ffffff', storeLogo: '',
+    googleReviewUrl: '', visibility: '{}', storeLocations: '[]',
+  });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -28853,37 +28861,65 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
       if (!snap.empty) {
         const s = { id: snap.docs[0].id, ...snap.docs[0].data() } as StoreProfile;
         setStore(s);
-        setStoreName(s.name || '');
-        setStoreReward(s.reward || '');
-        setStoreCategory(s.category || 'Food');
-        setStoreTheme(s.theme || '#2563EB');
-        setStoreSecondaryColor(s.stampBorderColor || '#ffffff');
-        setStoreLogo(s.logoUrl || '');
-        setStoreLocation(s.location || s.address || '');
+        if (storeInitializedRef.current) return;
+        storeInitializedRef.current = true;
+        const initName = s.name || '';
+        const initReward = s.reward || '';
+        const initCategory = s.category || 'Food' as Category;
+        const initTheme = s.theme || '#2563EB';
+        const initSecondaryColor = s.stampBorderColor || '#ffffff';
+        const initLogo = s.logoUrl || '';
+        const initGoogleReviewUrl = s.googleReviewUrl || '';
+        const initVisibility = { members: true, stamps: true, activeCards: true, returnRate: true, followers: true, ...(s.visibilitySettings || {}) };
         const emptyLoc = { label: '', line1: '', line2: '', town: '', state: '', postcode: '' };
-        if (s.locations && s.locations.length > 0) {
-          setStoreLocations(s.locations.map(l => ({
-            id: l.id, label: l.label || '',
-            line1: l.line1 || (l as any).address || '',
-            line2: l.line2 || '', town: l.town || '',
-            state: l.state || '', postcode: l.postcode || '',
-            lat: l.lat, lng: l.lng,
-          })));
-        } else {
-          setStoreLocations([{ id: 'primary', ...emptyLoc, line1: s.address || s.location || '', lat: s.lat, lng: s.lng }]);
-        }
-        setGoogleReviewUrl((s as any).googleReviewUrl || '');
-        setVisibility({ members: true, stamps: true, activeCards: true, returnRate: true, followers: true, ...(s.visibilitySettings || {}) });
+        const initLocs = s.locations && s.locations.length > 0
+          ? s.locations.map(l => ({ id: l.id, label: l.label || '', line1: l.line1 || (l as any).address || '', line2: l.line2 || '', town: l.town || '', state: l.state || '', postcode: l.postcode || '', lat: l.lat, lng: l.lng }))
+          : [{ id: 'primary', ...emptyLoc, line1: s.address || s.location || '', lat: s.lat, lng: s.lng }];
+        setStoreName(initName);
+        setStoreReward(initReward);
+        setStoreCategory(initCategory);
+        setStoreTheme(initTheme);
+        setStoreSecondaryColor(initSecondaryColor);
+        setStoreLogo(initLogo);
+        setStoreLocation(s.location || s.address || '');
+        setStoreLocations(initLocs);
+        setGoogleReviewUrl(initGoogleReviewUrl);
+        setVisibility(initVisibility);
+        initialValuesRef.current = {
+          ...initialValuesRef.current,
+          storeName: initName, storeReward: initReward, storeCategory: initCategory,
+          storeTheme: initTheme, storeSecondaryColor: initSecondaryColor, storeLogo: initLogo,
+          googleReviewUrl: initGoogleReviewUrl,
+          visibility: JSON.stringify(initVisibility),
+          storeLocations: JSON.stringify(initLocs.map(l => ({ id: l.id, label: l.label, line1: l.line1, line2: l.line2, town: l.town, state: l.state, postcode: l.postcode }))),
+        };
       }
     });
     return unsub;
   }, [profile.uid, profile.role]);
 
+  const locationsKey = JSON.stringify(storeLocations.map(l => ({ id: l.id, label: l.label, line1: l.line1, line2: l.line2, town: l.town, state: l.state, postcode: l.postcode })));
+  const isDirty =
+    name !== initialValuesRef.current.name ||
+    gender !== initialValuesRef.current.gender ||
+    privacyMode !== initialValuesRef.current.privacyMode ||
+    (profile.role === 'vendor' && (
+      storeName !== initialValuesRef.current.storeName ||
+      storeReward !== initialValuesRef.current.storeReward ||
+      storeCategory !== initialValuesRef.current.storeCategory ||
+      storeTheme !== initialValuesRef.current.storeTheme ||
+      storeSecondaryColor !== initialValuesRef.current.storeSecondaryColor ||
+      storeLogo !== initialValuesRef.current.storeLogo ||
+      googleReviewUrl !== initialValuesRef.current.googleReviewUrl ||
+      JSON.stringify(visibility) !== initialValuesRef.current.visibility ||
+      locationsKey !== initialValuesRef.current.storeLocations
+    ));
+
   const handleSave = async () => {
     setSaving(true);
     try {
       const profileUpdates: any = { name, privacyMode, ...(gender ? { gender } : {}) };
-      await updateDoc(doc(db, 'users', profile.uid), profileUpdates);
+      await updateDoc(doc(db, profileCollection, profile.uid), profileUpdates);
 
       if (profile.role === 'vendor' && store) {
         // Geocode any locations missing coordinates
@@ -28912,6 +28948,13 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
         });
       }
 
+      initialValuesRef.current = {
+        name, gender, privacyMode,
+        storeName, storeReward, storeCategory, storeTheme, storeSecondaryColor, storeLogo,
+        googleReviewUrl,
+        visibility: JSON.stringify(visibility),
+        storeLocations: locationsKey,
+      };
       setSaved(true);
       setTimeout(() => { setSaved(false); onClose(); }, 1000);
     } catch (err) {
@@ -28940,7 +28983,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
       <header className="glass-panel px-6 pb-4 flex items-center gap-4" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.875rem)' }}>
         <button onClick={onClose} className="p-2 -ml-2 text-brand-navy/75"><ArrowLeft size={24} /></button>
         <h2 className="font-display text-xl font-bold flex-1">Edit Profile</h2>
-        <button onClick={handleSave} disabled={saving} className="px-5 py-2 bg-brand-navy text-white rounded-2xl font-bold text-sm disabled:opacity-50 active:scale-95 transition-all">
+        <button onClick={handleSave} disabled={saving || !isDirty} className="px-5 py-2 bg-brand-navy text-white rounded-2xl font-bold text-sm disabled:opacity-40 active:scale-95 transition-all">
           {saved ? 'Saved!' : saving ? 'Saving…' : 'Save'}
         </button>
       </header>
