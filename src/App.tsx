@@ -20366,7 +20366,6 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     <StatSquare icon={<Wallet className="text-purple-500" />} label="Active Cards" value={String(visitActiveCards)} info="Visit cards currently held by customers (not archived)." />
                     <StatSquare icon={<RefreshCw className="text-orange-500" />} label="Return Rate" value={`${visitReturnRate}%`} info="Percentage of members who have visited more than once." />
                     <StatSquare icon={<MapPin className="text-blue-500" />} label="Total Visits" value={String(totalVisits)} info="Total number of check-ins recorded across all members." />
-                    <StatSquare icon={<Gift className="text-rose-500" />} label="Pts Redeemed" value={String(visitPointsRedeemed)} info="Total visit points already exchanged for rewards by customers." />
                   </div>
 
                   {/* Advanced visit — gated */}
