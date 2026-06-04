@@ -18786,7 +18786,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
       {activeTab === 'messages' && (
         paymentVerifying && !isSubscribed ? (
           <PaymentVerifyingScreen />
-        ) : needsPayment && !activeChatId ? (
+        ) : needsPayment && dashTab !== 'stamps' ? (
           /* ── Messages paywall: landing page ── */
           <div className="-mx-6 -mt-4">
             {/* Hero */}
