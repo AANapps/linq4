@@ -20030,7 +20030,35 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                       </div>
                     </div>
                   )}
-                  <div className={cn("space-y-6", !isSubscribed && "pointer-events-none select-none")}>
+                  {!isSubscribed ? (
+                    <div className="space-y-4">
+                      {/* Dummy stat squares */}
+                      <div className="grid grid-cols-2 gap-4">
+                        {['Avg Tx', 'This Month'].map(label => (
+                          <div key={label} className="glass-card p-5 rounded-[1.5rem] flex flex-col items-center gap-2">
+                            <Lock size={16} className="text-brand-navy/30" />
+                            <div className="h-3 w-10 bg-brand-navy/10 rounded-full" />
+                            <p className="text-[10px] font-bold text-brand-navy/30 uppercase tracking-widest">{label}</p>
+                          </div>
+                        ))}
+                      </div>
+                      {/* Dummy bar chart */}
+                      {['Points Issued', 'User Base Growth', 'Top 10 by Points', 'Points Economy', 'Customer Segments'].map((title, ci) => (
+                        <div key={title} className="glass-card p-6 rounded-[2rem] space-y-3">
+                          <div className="flex items-center justify-between">
+                            <p className="font-bold text-brand-navy/30">{title}</p>
+                            <Lock size={14} className="text-brand-navy/20" />
+                          </div>
+                          <div className="flex items-end gap-1.5 h-16">
+                            {[40,65,30,80,55,70,45,90,60,75].map((h, i) => (
+                              <div key={i} className="flex-1 rounded-t-md bg-brand-navy/8" style={{ height: `${ci % 2 === 0 ? h : 100 - h}%` }} />
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                  <div className="space-y-6">
                   {/* Advanced spend metrics row */}
                   {(() => {
                     const totalTx = spendTxns.length;
@@ -20311,6 +20339,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     );
                   })()}
                   </div>
+                  )}
                 </>
               )}
             </div>
@@ -20367,7 +20396,35 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                       </div>
                     </div>
                   )}
-                  <div className={cn("space-y-6", !isSubscribed && "pointer-events-none select-none")}>
+                  {!isSubscribed ? (
+                    <div className="space-y-4">
+                      {/* Dummy stat squares */}
+                      <div className="grid grid-cols-3 gap-4">
+                        {['At-Risk', 'Avg Interval', 'Redeemed'].map(label => (
+                          <div key={label} className="glass-card p-5 rounded-[1.5rem] flex flex-col items-center gap-2">
+                            <Lock size={16} className="text-brand-navy/30" />
+                            <div className="h-3 w-8 bg-brand-navy/10 rounded-full" />
+                            <p className="text-[10px] font-bold text-brand-navy/30 uppercase tracking-widest">{label}</p>
+                          </div>
+                        ))}
+                      </div>
+                      {/* Dummy charts */}
+                      {['Visits Chart', 'User Base Growth', 'Top 10 by Points', 'Visit Loyalty Tiers', 'Busiest Days', 'Points Economy'].map((title, ci) => (
+                        <div key={title} className="glass-card p-6 rounded-[2rem] space-y-3">
+                          <div className="flex items-center justify-between">
+                            <p className="font-bold text-brand-navy/30">{title}</p>
+                            <Lock size={14} className="text-brand-navy/20" />
+                          </div>
+                          <div className="flex items-end gap-1.5 h-16">
+                            {[55,70,40,85,60,75,45,90,50,80].map((h, i) => (
+                              <div key={i} className="flex-1 rounded-t-md bg-brand-navy/8" style={{ height: `${ci % 2 === 0 ? h : 100 - h}%` }} />
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                  <div className="space-y-6">
                   {/* Advanced visit metrics row */}
                   {(() => {
                     const now = Date.now();
@@ -20674,6 +20731,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     );
                   })()}
                   </div>
+                  )}
                 </>
               )}
             </div>
