@@ -1264,6 +1264,7 @@ export default function App() {
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [needsEmailVerification, setNeedsEmailVerification] = useState(false);
   const [profileLoadError, setProfileLoadError] = useState(false);
+  const [browserConsumerBlocked, setBrowserConsumerBlocked] = useState(false);
   const [profileCollection, setProfileCollection] = useState<'users' | 'vendors' | null>(null);
   const intendedRoleRef = useRef<'consumer' | 'vendor' | null>(null);
   const [activeTab, setActiveTab] = useState<string>('home');
@@ -1623,6 +1624,19 @@ export default function App() {
           setProfile(null);
         } else {
           const data = existingDoc.data();
+          // Browser restriction: only vendors and admins can log in on web
+          if (!Capacitor.isNativePlatform()) {
+            const isAdminUser = data.isAdmin === true || data.email === ADMIN_EMAIL || data.role === 'admin';
+            const isVendorUser = data.role === 'vendor';
+            if (!isAdminUser && !isVendorUser) {
+              await signOut(auth);
+              setBrowserConsumerBlocked(true);
+              setUser(null);
+              setProfile(null);
+              setLoading(false);
+              return;
+            }
+          }
           setProfileCollection(inUsers ? 'users' : 'vendors');
           setProfile(data as UserProfile);
           setNeedsOnboarding(!data.onboardingComplete);
@@ -2027,6 +2041,18 @@ export default function App() {
           <p className="text-[10px] text-white/40 font-medium">from</p>
           <p className="text-xs font-bold text-white/60 tracking-wide">Ad Astra Network</p>
         </div>
+      </div>
+    );
+  }
+
+  if (browserConsumerBlocked) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gradient-logo-blue px-6 gap-6 text-center">
+        <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={{ fontFamily: 'Poppins, sans-serif', color: '#ffffff' }}>Linq</span>
+        <p className="text-white font-bold text-xl">Vendor & Admin Access Only</p>
+        <p className="text-white/70 text-sm max-w-xs">The Linq web app is for vendors and admins. Customers should use the Linq mobile app.</p>
+        <a href="https://mylinq.app" className="px-8 py-3 bg-white/20 rounded-2xl text-white font-bold text-sm">Go to mylinq.app</a>
+        <button onClick={() => setBrowserConsumerBlocked(false)} className="text-white/50 text-xs underline">Sign in with a different account</button>
       </div>
     );
   }
