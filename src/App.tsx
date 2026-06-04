@@ -18962,8 +18962,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
           )}
 
           <div className="relative">
-            {/* Blur + lock overlay when not subscribed */}
-            {needsPayment && (
+            {/* Blur + lock overlay — stamps tab only; spend/visit have their own inline gates */}
+            {needsPayment && dashTab === 'stamps' && (
               <div className="absolute inset-0 z-20 flex flex-col items-center justify-start pt-10 pointer-events-none">
                 <div className="pointer-events-auto bg-white rounded-[2rem] px-6 py-5 shadow-2xl text-center space-y-3 mx-4 border border-brand-navy/8 max-w-xs w-full">
                   <div className="w-12 h-12 rounded-[1rem] bg-purple-50 flex items-center justify-center mx-auto">
@@ -18982,7 +18982,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 </div>
               </div>
             )}
-          <div className={needsPayment ? 'select-none pointer-events-none' : ''} style={needsPayment ? { filter: 'blur(4px)', opacity: 0.3 } : {}}>
+          <div className={(needsPayment && dashTab === 'stamps') ? 'select-none pointer-events-none' : ''} style={(needsPayment && dashTab === 'stamps') ? { filter: 'blur(4px)', opacity: 0.3 } : {}}>
           <div className="space-y-8">
 
           {/* ===== STAMPS TAB ===== */}
