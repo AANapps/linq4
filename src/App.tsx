@@ -28915,6 +28915,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
   const [storeLocation, setStoreLocation] = useState('');
   const [storeLocations, setStoreLocations] = useState<Array<{ id: string; label: string; line1: string; line2: string; town: string; state: string; postcode: string; lat?: number; lng?: number }>>([]);
   const [googleReviewUrl, setGoogleReviewUrl] = useState('');
+  const [storeEmail, setStoreEmail] = useState('');
   const [visibility, setVisibility] = useState({ members: true, stamps: true, activeCards: true, returnRate: true, followers: true });
   const [privacyMode, setPrivacyMode] = useState(profile.privacyMode ?? false);
   const [saving, setSaving] = useState(false);
@@ -28924,7 +28925,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
     name: profile.name || '', gender: profile.gender || '', privacyMode: profile.privacyMode ?? false,
     storeName: '', storeReward: '', storeCategory: 'Food' as Category,
     storeTheme: '#2563EB', storeSecondaryColor: '#ffffff', storeLogo: '',
-    googleReviewUrl: '', visibility: '{}', storeLocations: '[]',
+    googleReviewUrl: '', storeEmail: '', visibility: '{}', storeLocations: '[]',
   });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -28961,12 +28962,14 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
         setStoreLocation(s.location || s.address || '');
         setStoreLocations(initLocs);
         setGoogleReviewUrl(initGoogleReviewUrl);
+        setStoreEmail(s.email || '');
         setVisibility(initVisibility);
         initialValuesRef.current = {
           ...initialValuesRef.current,
           storeName: initName, storeReward: initReward, storeCategory: initCategory,
           storeTheme: initTheme, storeSecondaryColor: initSecondaryColor, storeLogo: initLogo,
           googleReviewUrl: initGoogleReviewUrl,
+          storeEmail: s.email || '',
           visibility: JSON.stringify(initVisibility),
           storeLocations: JSON.stringify(initLocs.map(l => ({ id: l.id, label: l.label, line1: l.line1, line2: l.line2, town: l.town, state: l.state, postcode: l.postcode }))),
         };
@@ -28988,6 +28991,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
       storeSecondaryColor !== initialValuesRef.current.storeSecondaryColor ||
       storeLogo !== initialValuesRef.current.storeLogo ||
       googleReviewUrl !== initialValuesRef.current.googleReviewUrl ||
+      storeEmail !== initialValuesRef.current.storeEmail ||
       JSON.stringify(visibility) !== initialValuesRef.current.visibility ||
       locationsKey !== initialValuesRef.current.storeLocations
     ));
@@ -29021,6 +29025,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
           ...(primary?.lat != null ? { lat: primary.lat, lng: primary.lng } : {}),
           locations: geocoded,
           googleReviewUrl: googleReviewUrl.trim(),
+          email: storeEmail.trim(),
           visibilitySettings: visibility,
         });
       }
@@ -29029,6 +29034,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
         name, gender, privacyMode,
         storeName, storeReward, storeCategory, storeTheme, storeSecondaryColor, storeLogo,
         googleReviewUrl,
+        storeEmail,
         visibility: JSON.stringify(visibility),
         storeLocations: locationsKey,
       };
@@ -29251,6 +29257,19 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
                 <input value={storeLogo} onChange={e => setStoreLogo(e.target.value)} placeholder="Or paste logo URL directly..."
                   className="w-full px-5 py-4 rounded-2xl bg-white border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30" />
               )}
+            </div>
+
+            {/* Contact Email */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Contact Email</label>
+              <input
+                type="email"
+                value={storeEmail}
+                onChange={e => setStoreEmail(e.target.value)}
+                placeholder="hello@yourbusiness.com"
+                className="w-full px-5 py-4 rounded-2xl bg-white border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+              />
+              <p className="text-[10px] text-brand-navy/72 px-1">Shown on your public profile so customers can contact you.</p>
             </div>
 
             {/* Google Review URL */}
