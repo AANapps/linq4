@@ -19057,7 +19057,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
           {/* ===== STAMPS TAB ===== */}
           {dashTab === 'stamps' && (
             <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 lg:gap-3">
                 <div onClick={() => openStatModal('members')} className="cursor-pointer active:scale-95 transition-transform">
                   <StatSquare icon={<Users className="text-blue-500" />} label="Members" value={String(totalMembers)} info="Total customers who have scanned your QR code at least once." />
                 </div>
@@ -19191,7 +19191,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     const totalTxStamps = stampTxns.reduce((s, tx) => s + (tx.stamp_count || 1), 0);
                     const avgVisit = stampTxns.length > 0 ? (totalTxStamps / stampTxns.length).toFixed(1) : '—';
                     return (
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className="grid grid-cols-3 gap-4 lg:gap-3">
                         <div onClick={() => openStatModal('churnRisk')} className="cursor-pointer active:scale-95 transition-transform">
                           <StatSquare icon={<AlertTriangle className="text-rose-500" />} label="Churn Risk" value={String(atRisk)} sub="21d+ no stamp" info="Members who haven't collected a stamp in 21+ days — at risk of drifting away. Tap to see the list." />
                         </div>
@@ -19941,7 +19941,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-3">
                     <StatSquare icon={<Users className="text-blue-500" />} label="Members" value={String(spendMembers)} info="Customers who have an active spend card with your store." />
                     <StatSquare icon={<TrendingUp className="text-emerald-500" />} label="Pts Issued" value={String(totalPointsIssued)} info="Total points earned by all members across every transaction." />
                     <StatSquare icon={<DollarSign className="text-green-500" />} label="Total Spend" value={totalSpend > 0 ? `£${totalSpend.toFixed(0)}` : '—'} info="Total revenue recorded through the spend card programme." />
@@ -19982,7 +19982,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                       })
                       .reduce((s, tx) => s + (tx.transaction_amount || 0), 0);
                     return (
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-3">
                         <StatSquare icon={<DollarSign className="text-emerald-500" />} label="Avg Tx" value={avgTx} sub="per transaction" />
                         <StatSquare icon={<TrendingUp className="text-blue-500" />} label="This Month" value={thisMonth > 0 ? `£${thisMonth.toFixed(0)}` : '—'} sub="spend tracked" />
                       </div>
@@ -20263,7 +20263,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 lg:gap-3">
                     <StatSquare icon={<Users className="text-blue-500" />} label="Members" value={String(visitMembers)} info="Customers who have an active visit card with your store." />
                     <StatSquare icon={<MapPin className="text-blue-500" />} label="Total Visits" value={String(totalVisits)} info="Total number of check-ins recorded across all members." />
                     <StatSquare icon={<TrendingUp className="text-blue-500" />} label="Pts Issued" value={String(visitPointsGiven)} info="Total visit points issued to all members across all check-ins." />
@@ -20314,7 +20314,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     const redeemed = visitCards.reduce((s, c) => s + (c.total_points_redeemed || 0), 0);
                     const redPct = issued > 0 ? Math.round((redeemed / issued) * 100) : 0;
                     return (
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className="grid grid-cols-3 gap-4 lg:gap-3">
                         <StatSquare icon={<AlertTriangle className="text-rose-500" />} label="At-Risk" value={String(atRisk)} sub="14d+ no visit" />
                         <StatSquare icon={<RefreshCw className="text-blue-500" />} label="Avg Interval" value={avgInterval === '—' ? '—' : `${avgInterval}d`} sub="days between visits" />
                         <StatSquare icon={<Gift className="text-purple-500" />} label="Redeemed" value={`${redPct}%`} sub="pts used" />
@@ -24935,11 +24935,11 @@ function WallPostItem({ post, currentUser, wallOwnerUid, onViewUser }: { post: a
 
 function StatSquare({ icon, label, value, sub, info }: { icon: React.ReactNode, label: string, value: string, sub?: string, info?: string }) {
   return (
-    <div className="glass-card aspect-square rounded-[1.5rem] flex flex-col items-center justify-center p-3 hover:shadow-md transition-all">
-      <div className="w-7 h-7 bg-brand-bg rounded-xl flex items-center justify-center mb-1.5">
+    <div className="glass-card aspect-square lg:aspect-auto lg:h-24 rounded-[1.5rem] lg:rounded-xl flex flex-col items-center justify-center p-3 lg:p-2.5 hover:shadow-md transition-all">
+      <div className="w-7 h-7 lg:w-6 lg:h-6 bg-brand-bg rounded-xl lg:rounded-lg flex items-center justify-center mb-1.5 lg:mb-1">
         {React.cloneElement(icon as React.ReactElement, { size: 15 })}
       </div>
-      <p className="font-display text-base font-bold text-brand-navy leading-none mb-0.5">{value}</p>
+      <p className="font-display text-base lg:text-sm font-bold text-brand-navy leading-none mb-0.5">{value}</p>
       <div className="flex items-center justify-center gap-0.5">
         <p className="text-[8px] text-brand-navy/75 font-bold uppercase tracking-wider text-center">{label}</p>
         {info && <InfoTip text={info} />}
