@@ -18993,7 +18993,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
           {/* ===== STAMPS TAB ===== */}
           {dashTab === 'stamps' && (
             <div className="space-y-6">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div onClick={() => openStatModal('members')} className="cursor-pointer active:scale-95 transition-transform">
                   <StatSquare icon={<Users className="text-blue-500" />} label="Members" value={String(totalMembers)} info="Total customers who have scanned your QR code at least once." />
                 </div>
