@@ -1265,6 +1265,7 @@ export default function App() {
   const [needsEmailVerification, setNeedsEmailVerification] = useState(false);
   const [profileLoadError, setProfileLoadError] = useState(false);
   const [browserConsumerBlocked, setBrowserConsumerBlocked] = useState(false);
+  const [nativeAdminBlocked, setNativeAdminBlocked] = useState(false);
   const [profileCollection, setProfileCollection] = useState<'users' | 'vendors' | null>(null);
   const intendedRoleRef = useRef<'consumer' | 'vendor' | null>(null);
   const [activeTab, setActiveTab] = useState<string>('home');
@@ -1624,16 +1625,22 @@ export default function App() {
           setProfile(null);
         } else {
           const data = existingDoc.data();
-          // Browser restriction: only vendors and admins can log in on web
+          const isAdminUser = data.isAdmin === true || data.email === ADMIN_EMAIL || data.role === 'admin';
+          const isVendorUser = data.role === 'vendor';
           if (!Capacitor.isNativePlatform()) {
-            const isAdminUser = data.isAdmin === true || data.email === ADMIN_EMAIL || data.role === 'admin';
-            const isVendorUser = data.role === 'vendor';
+            // Browser: only vendors and admins allowed
             if (!isAdminUser && !isVendorUser) {
               await signOut(auth);
               setBrowserConsumerBlocked(true);
-              setUser(null);
-              setProfile(null);
-              setLoading(false);
+              setUser(null); setProfile(null); setLoading(false);
+              return;
+            }
+          } else {
+            // Native app: only consumers and vendors allowed — admins use browser
+            if (isAdminUser && !isVendorUser) {
+              await signOut(auth);
+              setNativeAdminBlocked(true);
+              setUser(null); setProfile(null); setLoading(false);
               return;
             }
           }
@@ -2053,6 +2060,17 @@ export default function App() {
         <p className="text-white/70 text-sm max-w-xs">The Linq web app is for vendors and admins. Customers should use the Linq mobile app.</p>
         <a href="https://mylinq.app" className="px-8 py-3 bg-white/20 rounded-2xl text-white font-bold text-sm">Go to mylinq.app</a>
         <button onClick={() => setBrowserConsumerBlocked(false)} className="text-white/50 text-xs underline">Sign in with a different account</button>
+      </div>
+    );
+  }
+
+  if (nativeAdminBlocked) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gradient-logo-blue px-6 gap-6 text-center" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+        <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={{ fontFamily: 'Poppins, sans-serif', color: '#ffffff' }}>Linq</span>
+        <p className="text-white font-bold text-xl">Browser Access Only</p>
+        <p className="text-white/70 text-sm max-w-xs">Admin accounts can only be used at mylinq.app in a browser.</p>
+        <button onClick={() => setNativeAdminBlocked(false)} className="text-white/50 text-xs underline">Sign in with a different account</button>
       </div>
     );
   }
@@ -3095,7 +3113,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
             {mode === 'signup' ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
           </button>
 
-          {isNativeIOS && (
+          {Capacitor.isNativePlatform() && (
             <button
               onClick={() => openUrl('https://mylinq.app')}
               className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-white/15 bg-white/8 text-white/60 text-sm font-medium active:bg-white/15 transition-all"
