@@ -6858,7 +6858,6 @@ function CardSetsAdminPanel({ onClose }: { onClose: () => void }) {
                         style={{ border: `2px solid ${cfg.border}` }} />
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-sm text-brand-navy truncate">{card.name}</p>
-                        <p className="text-xs text-brand-navy/50 mt-0.5">{card.probability ?? 0}% win probability</p>
                       </div>
                       <div className="flex items-center gap-1.5 flex-shrink-0">
                         {editingCardId !== card.id && (
