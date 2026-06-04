@@ -27384,6 +27384,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
   const [activeSubTab, setActiveSubTab] = useState<'posts' | 'interactions'>('posts');
   const [profileRedeemingChallenge, setProfileRedeemingChallenge] = useState<{ challenge: Challenge; entry: any; userName: string } | null>(null);
   const [showProfileSettings, setShowProfileSettings] = useState(false);
+  const [showStorePreview, setShowStorePreview] = useState(false);
   const [avatarViewOpen, setAvatarViewOpen] = useState(false);
   const [avatarCustomiserOpen, setAvatarCustomiserOpen] = useState(false);
   const profileLastDocRef = useRef<any>(null);
@@ -27737,16 +27738,42 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
   // ── Vendor profile layout ──
   if (profile.role === 'vendor') {
     const theme = vendorStore?.theme || '#2563EB';
+
+    if (showStorePreview && vendorStore) {
+      return (
+        <div className="fixed inset-0 z-[300] bg-brand-bg overflow-y-auto">
+          <div className="max-w-md mx-auto px-6 pt-4 pb-8 space-y-6">
+            <div className="flex items-center gap-3">
+              <button onClick={() => setShowStorePreview(false)} className="p-2 -ml-2 text-brand-navy/75">
+                <ArrowLeft size={24} />
+              </button>
+              <span className="text-xs font-bold text-brand-navy/40 uppercase tracking-widest">Preview — customer view</span>
+            </div>
+            <StoreProfileView store={vendorStore} onBack={() => setShowStorePreview(false)} user={user} profile={profile} onViewUser={() => {}} />
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-6 pb-20 text-brand-navy">
         {settingsModal}
 
         {/* Header — mirrors consumer layout */}
         <header className="relative">
-          <button onClick={() => setShowProfileSettings(true)}
-            className="absolute right-0 top-0 p-2 rounded-2xl bg-white border border-brand-navy/10 shadow-sm active:scale-95 transition-all">
-            <Settings size={18} className="text-brand-navy/75" />
-          </button>
+          <div className="absolute right-0 top-0 flex items-center gap-2">
+            {vendorStore && (
+              <button onClick={() => setShowStorePreview(true)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-white border border-brand-navy/10 shadow-sm active:scale-95 transition-all text-xs font-bold text-brand-navy/60">
+                <Eye size={14} />
+                Preview
+              </button>
+            )}
+            <button onClick={() => setShowProfileSettings(true)}
+              className="p-2 rounded-2xl bg-white border border-brand-navy/10 shadow-sm active:scale-95 transition-all">
+              <Settings size={18} className="text-brand-navy/75" />
+            </button>
+          </div>
 
           <div className="flex items-start gap-4">
             {/* Store logo in avatar position */}
