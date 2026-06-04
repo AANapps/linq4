@@ -27791,7 +27791,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                 <h2 className="font-display text-2xl font-bold">{vendorStore?.name || profile.name}</h2>
                 {vendorStore?.isVerified && <CheckCircle2 size={18} className="text-blue-400" />}
               </div>
-              <p className="text-brand-gold font-bold text-xs uppercase tracking-[0.2em]">@{profile.handle || profile.email?.split('@')[0]}</p>
+
               <div className="flex items-center gap-3 mt-2 text-sm">
                 <button onClick={() => { setFollowModalTab('following'); setShowFollowModal(true); }} className="flex items-center gap-1 font-bold hover:text-brand-gold transition-colors">
                   <span>{following.length}</span>
