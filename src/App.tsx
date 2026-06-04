@@ -20030,7 +20030,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                       </div>
                     </div>
                   )}
-                  <div className={cn("space-y-6", !isSubscribed && "blur-sm pointer-events-none select-none opacity-60")}>
+                  <div className={cn("space-y-6", !isSubscribed && "pointer-events-none select-none")}>
                   {/* Advanced spend metrics row */}
                   {(() => {
                     const totalTx = spendTxns.length;
@@ -20367,7 +20367,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                       </div>
                     </div>
                   )}
-                  <div className={cn("space-y-6", !isSubscribed && "blur-sm pointer-events-none select-none opacity-60")}>
+                  <div className={cn("space-y-6", !isSubscribed && "pointer-events-none select-none")}>
                   {/* Advanced visit metrics row */}
                   {(() => {
                     const now = Date.now();
