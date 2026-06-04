@@ -19161,7 +19161,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     </div>
                   </div>
                 )}
-                <div className={!isSubscribed && !isNativeIOS ? 'blur-sm pointer-events-none select-none opacity-60 space-y-6' : 'space-y-6'}>
+                {(isSubscribed || isNativeIOS) ? (
+                <div className="space-y-6">
                 <>
                   {/* Intelligence: At-risk + Newcomers + Avg/Visit */}
                   {(() => {
@@ -19769,6 +19770,28 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                   </div>
                 </>
                 </div>
+                ) : (
+                <div className="space-y-6 blur-sm pointer-events-none select-none opacity-60">
+                  <div className="grid grid-cols-3 gap-4 lg:gap-3">
+                    <StatSquare icon={<AlertTriangle className="text-rose-500" />} label="Churn Risk" value="3" sub="21d+ no stamp" />
+                    <StatSquare icon={<UserPlus className="text-emerald-500" />} label="Newcomers" value="7" sub="joined last 30d" />
+                    <StatSquare icon={<Zap className="text-amber-500" />} label="Avg/Visit" value="1.4" sub="stamps per scan" />
+                  </div>
+                  <div className="glass-card p-6 rounded-[2rem] space-y-4">
+                    <p className="font-bold text-brand-navy">Stamps Chart</p>
+                    <div className="flex gap-1 items-end h-28 flex-1">
+                      {[35, 60, 45, 75, 55, 80, 40, 65].map((h, i) => (
+                        <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                          <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
+                            <div className="w-full rounded-t-lg bg-brand-gold/70" style={{ height: `${h}%` }} />
+                          </div>
+                          <p className="text-[8px] text-brand-navy/50 font-bold leading-none">—</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                )}
               </div>
 
               <AnimatePresence>
@@ -19964,7 +19987,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                         </div>
                       </div>
                     )}
-                    <div className={!isSubscribed && !isNativeIOS ? 'blur-sm pointer-events-none select-none opacity-60 space-y-6' : 'space-y-6'}>
+                    {(isSubscribed || isNativeIOS) ? (
+                    <div className="space-y-6">
                   {/* Advanced spend metrics row */}
                   {(() => {
                     const txAmounts = spendTxns.map(tx => tx.transaction_amount || 0).filter(a => a > 0);
@@ -20246,6 +20270,27 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     );
                   })()}
                   </div>
+                    ) : (
+                    <div className="space-y-6 blur-sm pointer-events-none select-none opacity-60">
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-3">
+                        <StatSquare icon={<DollarSign className="text-emerald-500" />} label="Avg Tx" value="£14.20" sub="per transaction" />
+                        <StatSquare icon={<TrendingUp className="text-blue-500" />} label="This Month" value="£340" sub="spend tracked" />
+                      </div>
+                      <div className="glass-card p-6 rounded-[2rem] space-y-4">
+                        <p className="font-bold text-brand-navy">Points Issued</p>
+                        <div className="flex gap-1 items-end h-28 flex-1">
+                          {[20, 45, 30, 65, 50, 70, 35, 55].map((h, i) => (
+                            <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                              <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
+                                <div className="w-full rounded-t-lg bg-emerald-400/70" style={{ height: `${h}%` }} />
+                              </div>
+                              <p className="text-[8px] text-brand-navy/50 font-bold leading-none">—</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    )}
                   </div>
                 </>
               )}
@@ -20288,7 +20333,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                         </div>
                       </div>
                     )}
-                    <div className={!isSubscribed && !isNativeIOS ? 'blur-sm pointer-events-none select-none opacity-60 space-y-6' : 'space-y-6'}>
+                    {(isSubscribed || isNativeIOS) ? (
+                    <div className="space-y-6">
                   {/* Advanced visit metrics row */}
                   {(() => {
                     const now = Date.now();
@@ -20595,6 +20641,28 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     );
                   })()}
                   </div>
+                    ) : (
+                    <div className="space-y-6 blur-sm pointer-events-none select-none opacity-60">
+                      <div className="grid grid-cols-3 gap-4 lg:gap-3">
+                        <StatSquare icon={<AlertTriangle className="text-rose-500" />} label="At-Risk" value="2" sub="14d+ no visit" />
+                        <StatSquare icon={<RefreshCw className="text-blue-500" />} label="Avg Interval" value="8.4d" sub="days between visits" />
+                        <StatSquare icon={<Gift className="text-purple-500" />} label="Redeemed" value="22%" sub="pts used" />
+                      </div>
+                      <div className="glass-card p-6 rounded-[2rem] space-y-4">
+                        <p className="font-bold text-brand-navy">Visits Chart</p>
+                        <div className="flex gap-1 items-end h-28 flex-1">
+                          {[30, 55, 40, 70, 45, 60, 35, 50].map((h, i) => (
+                            <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                              <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
+                                <div className="w-full rounded-t-lg bg-blue-400/70" style={{ height: `${h}%` }} />
+                              </div>
+                              <p className="text-[8px] text-brand-navy/50 font-bold leading-none">—</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    )}
                   </div>
                 </>
               )}
