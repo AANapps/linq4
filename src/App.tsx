@@ -19053,150 +19053,31 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
               {/* INTELLIGENCE TIER */}
               <div className="flex items-center justify-between pt-4">
                 <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-purple-700 bg-purple-50 border border-purple-200 px-2.5 py-1 rounded-full">
-                  <Sparkles size={9} /> Intelligence{!isSubscribed && ' — $49/month'}
+                  <Sparkles size={9} /> Intelligence
                 </span>
                 {!isSubscribed && (
                   <button onClick={handleSubscribe} className="text-xs font-bold text-white bg-purple-600 px-3 py-1.5 rounded-xl active:scale-95 transition-transform">
-                    Upgrade
+                    Subscribe
                   </button>
                 )}
               </div>
 
-              {!isSubscribed ? (
-                <>
-                <div className="rounded-[2rem] overflow-hidden" style={{ background: 'linear-gradient(160deg, #1e1b4b 0%, #3730a3 40%, #7c3aed 100%)' }}>
-                  {/* Hero */}
-                  <div className="px-6 pt-7 pb-5 text-center space-y-2">
-                    <div className="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center mx-auto mb-3">
-                      <Sparkles size={24} className="text-purple-200" />
-                    </div>
-                    <p className="text-white font-black text-xl leading-tight">Customer Intelligence</p>
-                    <p className="text-purple-200 text-xs leading-relaxed">Turn raw stamp data into actionable insights that grow your loyal customer base.</p>
-                  </div>
-
-                  {/* Blurred stat preview */}
-                  <div className="px-5 pb-5">
-                    <div className="grid grid-cols-3 gap-2 mb-5 select-none pointer-events-none" style={{ filter: 'blur(4px)', opacity: 0.5 }}>
-                      {[['12', 'Churn Risk'], ['8', 'Newcomers'], ['2.4', 'Avg/Visit']].map(([v, l]) => (
-                        <div key={l} className="bg-white/10 rounded-2xl p-3 text-center">
-                          <p className="text-white font-black text-2xl">{v}</p>
-                          <p className="text-purple-200 text-[9px] font-bold uppercase tracking-widest mt-0.5">{l}</p>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Feature grid */}
-                    <div className="grid grid-cols-2 gap-2 mb-5">
-                      {[
-                        { icon: <AlertTriangle size={14} />, title: 'At-Risk Alerts', desc: 'One-tap win-back for lapsing customers' },
-                        { icon: <TrendingUp size={14} />, title: 'Growth Charts', desc: 'Visit frequency & user base trends' },
-                        { icon: <Clock size={14} />, title: 'Peak Hours', desc: 'Best days & times for promotions' },
-                        { icon: <Star size={14} />, title: 'Lifetime Value', desc: 'Revenue per customer, ranked' },
-                        { icon: <UserPlus size={14} />, title: 'Newcomers', desc: 'New customers joined last 30 days' },
-                        { icon: <BarChart2 size={14} />, title: 'Health Score', desc: 'Monthly business health & tips' },
-                      ].map(f => (
-                        <div key={f.title} className="bg-white/10 rounded-2xl p-3 space-y-1">
-                          <div className="flex items-center gap-1.5 text-purple-200">{f.icon}<p className="text-[10px] font-black text-white">{f.title}</p></div>
-                          <p className="text-[9px] text-purple-300 leading-snug">{f.desc}</p>
-                        </div>
-                      ))}
-                    </div>
-
-                    <button
-                      onClick={handleSubscribe}
-                      className="w-full py-3.5 rounded-2xl text-sm font-black tracking-wide active:scale-95 transition-transform"
-                      style={{ background: 'linear-gradient(135deg, #fbbf24, #f59e0b)' }}
-                    >
-                      <span className="text-amber-900">Unlock Intelligence — $49/month</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* ── Locked stats & chart preview ── */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-1.5 pt-1">
-                    <Lock size={11} className="text-brand-navy/35" />
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/35">Subscribe to unlock</p>
-                  </div>
-
-                  {/* Locked stat tiles — mirrors the real Intelligence grid */}
-                  <div className="grid grid-cols-3 gap-4">
-                    {([
-                      { icon: <AlertTriangle className="text-rose-500" />, label: 'Churn Risk', sub: '21d+ no stamp' },
-                      { icon: <UserPlus className="text-emerald-500" />, label: 'Newcomers', sub: 'joined last 30d' },
-                      { icon: <Zap className="text-amber-500" />, label: 'Avg/Visit', sub: 'stamps/scan' },
-                    ] as { icon: React.ReactElement; label: string; sub: string }[]).map(({ icon, label, sub }) => (
-                      <div key={label} className="glass-card aspect-square rounded-[1.5rem] flex flex-col items-center justify-center p-3 select-none">
-                        <div className="w-7 h-7 bg-brand-bg rounded-xl flex items-center justify-center mb-1.5">
-                          {React.cloneElement(icon, { size: 15 })}
-                        </div>
-                        <Lock size={13} className="text-brand-navy/30 mb-0.5" />
-                        <p className="text-[8px] text-brand-navy/75 font-bold uppercase tracking-wider text-center">{label}</p>
-                        <p className="text-[7px] text-brand-navy/40 font-bold uppercase tracking-wider text-center mt-0.5 leading-tight">{sub}</p>
+              <div className="relative">
+                {!isSubscribed && (
+                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-start pt-16 pointer-events-none">
+                    <div className="pointer-events-auto bg-white rounded-[2rem] px-6 py-5 shadow-2xl text-center space-y-3 mx-4 border border-brand-navy/8 max-w-xs w-full">
+                      <div className="w-10 h-10 rounded-[1rem] bg-purple-50 flex items-center justify-center mx-auto">
+                        <Lock size={20} className="text-purple-600" />
                       </div>
-                    ))}
-                  </div>
-
-                  {/* Locked stamps chart */}
-                  <div className="glass-card p-6 rounded-[2rem] space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-bold text-brand-navy">Stamps Chart</p>
-                        <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">By week</p>
-                      </div>
-                      <Lock size={15} className="text-brand-navy/30" />
-                    </div>
-                    <div className="relative" style={{ height: '96px' }}>
-                      <div className="absolute inset-0 flex gap-1 items-end opacity-20 select-none pointer-events-none">
-                        {[42, 68, 50, 82, 58, 91, 73, 63].map((h, i) => (
-                          <div key={i} className="relative flex-1 flex flex-col items-center gap-1">
-                            <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
-                              <div className="w-full rounded-t-lg bg-brand-gold" style={{ height: `${h}%` }} />
-                            </div>
-                            <div className="w-3 h-1 rounded-full bg-brand-navy/30" />
-                          </div>
-                        ))}
-                      </div>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                        <div className="w-9 h-9 bg-white rounded-full shadow-md flex items-center justify-center">
-                          <Lock size={16} className="text-brand-navy/40" />
-                        </div>
-                        <p className="text-[10px] font-bold text-brand-navy/40">Subscribe to see your data</p>
-                      </div>
+                      <p className="font-bold text-brand-navy text-base leading-tight">Subscribe to Unlock</p>
+                      <p className="text-xs text-brand-navy/60 leading-relaxed">Subscribe to see live analytics, charts, and customer intelligence for your loyalty programme.</p>
+                      <button onClick={handleSubscribe} className="w-full py-3 rounded-2xl font-bold text-white text-sm active:scale-[0.98] transition-transform" style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' }}>
+                        Subscribe Now — $49/month
+                      </button>
                     </div>
                   </div>
-
-                  {/* Locked growth chart */}
-                  <div className="glass-card p-6 rounded-[2rem] space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-bold text-brand-navy">Customer Growth</p>
-                        <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">User base trend</p>
-                      </div>
-                      <Lock size={15} className="text-brand-navy/30" />
-                    </div>
-                    <div className="relative" style={{ height: '96px' }}>
-                      <div className="absolute inset-0 flex gap-1 items-end opacity-20 select-none pointer-events-none">
-                        {[18, 26, 33, 40, 47, 55, 58, 63].map((h, i) => (
-                          <div key={i} className="relative flex-1 flex flex-col items-center gap-1">
-                            <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
-                              <div className="w-full rounded-t-lg bg-blue-400" style={{ height: `${h}%` }} />
-                            </div>
-                            <div className="w-3 h-1 rounded-full bg-brand-navy/30" />
-                          </div>
-                        ))}
-                      </div>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                        <div className="w-9 h-9 bg-white rounded-full shadow-md flex items-center justify-center">
-                          <Lock size={16} className="text-brand-navy/40" />
-                        </div>
-                        <p className="text-[10px] font-bold text-brand-navy/40">Subscribe to see your data</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                </>
-              ) : (
+                )}
+                <div className={!isSubscribed ? 'blur-sm pointer-events-none select-none opacity-60 space-y-6' : 'space-y-6'}>
                 <>
                   {/* Intelligence: At-risk + Newcomers + Avg/Visit */}
                   {(() => {
@@ -19803,7 +19684,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     <p className="text-xs text-brand-navy/50">See how your programme compares to similar local businesses.</p>
                   </div>
                 </>
-              )}
+                </div>
+              </div>
 
               <AnimatePresence>
                 {statModal && (() => {
@@ -19982,66 +19864,23 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     <StatSquare icon={<RefreshCw className="text-orange-500" />} label="Pts Balance" value={String(totalPointsBalance)} info="Total unspent points sitting in customers' wallets right now." />
                   </div>
 
-                  {/* Advanced spend — gated */}
-                  {!isSubscribed && (
-                    <div className="rounded-[2rem] overflow-hidden border border-purple-200 shadow-lg">
-                      <div className="relative px-6 pt-10 pb-8 text-white" style={{ background: 'linear-gradient(160deg, #0f172a 0%, #1e1b4b 45%, #4f46e5 100%)' }}>
-                        <div className="shine-ray" />
-                        <div className="relative z-10">
-                          <div className="w-12 h-12 bg-white/15 rounded-[1.25rem] flex items-center justify-center mb-4 border border-white/20">
-                            <Lock size={22} className="text-white" />
+                  {/* Advanced spend — shown always, locked if not subscribed */}
+                  <div className="relative">
+                    {!isSubscribed && (
+                      <div className="absolute inset-0 z-10 flex flex-col items-center justify-start pt-16 pointer-events-none">
+                        <div className="pointer-events-auto bg-white rounded-[2rem] px-6 py-5 shadow-2xl text-center space-y-3 mx-4 border border-brand-navy/8 max-w-xs w-full">
+                          <div className="w-10 h-10 rounded-[1rem] bg-purple-50 flex items-center justify-center mx-auto">
+                            <Lock size={20} className="text-purple-600" />
                           </div>
-                          <h3 className="font-display text-2xl font-bold mb-2">Advanced Analytics</h3>
-                          <p className="text-white/75 text-sm leading-relaxed">Unlock charts, customer segments, top spenders and growth curves — all the data you need to grow.</p>
+                          <p className="font-bold text-brand-navy text-base leading-tight">Subscribe to Unlock</p>
+                          <p className="text-xs text-brand-navy/60 leading-relaxed">Subscribe to see live charts, segments, and growth analytics for your spend programme.</p>
+                          <button onClick={handleSubscribe} className="w-full py-3 rounded-2xl font-bold text-white text-sm active:scale-[0.98] transition-transform" style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' }}>
+                            Subscribe Now — $49/month
+                          </button>
                         </div>
                       </div>
-                      <div className="bg-white px-6 py-5 space-y-3">
-                        {[
-                          { icon: <TrendingUp size={14} className="text-purple-600" />, text: 'Points issued chart by day or week' },
-                          { icon: <Users size={14} className="text-purple-600" />, text: 'Customer segments — high, mid and low value' },
-                          { icon: <Trophy size={14} className="text-purple-600" />, text: 'Top 10 spenders leaderboard' },
-                          { icon: <BarChart2 size={14} className="text-purple-600" />, text: 'User base growth over time' },
-                        ].map(({ icon, text }) => (
-                          <div key={text} className="flex items-center gap-3">
-                            <div className="w-7 h-7 rounded-xl bg-purple-50 flex items-center justify-center shrink-0">{icon}</div>
-                            <p className="text-sm text-brand-navy/80">{text}</p>
-                          </div>
-                        ))}
-                        <button onClick={handleSubscribe} className="w-full mt-2 font-bold py-3.5 rounded-2xl text-white text-sm active:scale-[0.98] transition-transform" style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' }}>
-                          Subscribe to Unlock
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                  {!isSubscribed ? (
-                    <div className="space-y-4">
-                      {/* Dummy stat squares */}
-                      <div className="grid grid-cols-2 gap-4">
-                        {['Avg Tx', 'This Month'].map(label => (
-                          <div key={label} className="glass-card p-5 rounded-[1.5rem] flex flex-col items-center gap-2">
-                            <Lock size={16} className="text-brand-navy/30" />
-                            <div className="h-3 w-10 bg-brand-navy/10 rounded-full" />
-                            <p className="text-[10px] font-bold text-brand-navy/30 uppercase tracking-widest">{label}</p>
-                          </div>
-                        ))}
-                      </div>
-                      {/* Dummy bar chart */}
-                      {['Points Issued', 'User Base Growth', 'Top 10 by Points', 'Points Economy', 'Customer Segments'].map((title, ci) => (
-                        <div key={title} className="glass-card p-6 rounded-[2rem] space-y-3">
-                          <div className="flex items-center justify-between">
-                            <p className="font-bold text-brand-navy/30">{title}</p>
-                            <Lock size={14} className="text-brand-navy/20" />
-                          </div>
-                          <div className="flex items-end gap-1.5 h-16">
-                            {[40,65,30,80,55,70,45,90,60,75].map((h, i) => (
-                              <div key={i} className="flex-1 rounded-t-md bg-brand-navy/8" style={{ height: `${ci % 2 === 0 ? h : 100 - h}%` }} />
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                  <div className="space-y-6">
+                    )}
+                    <div className={!isSubscribed ? 'blur-sm pointer-events-none select-none opacity-60 space-y-6' : 'space-y-6'}>
                   {/* Advanced spend metrics row */}
                   {(() => {
                     const txAmounts = spendTxns.map(tx => tx.transaction_amount || 0).filter(a => a > 0);
@@ -20323,7 +20162,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     );
                   })()}
                   </div>
-                  )}
+                  </div>
                 </>
               )}
             </div>
@@ -20349,66 +20188,23 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     <StatSquare icon={<Wallet className="text-purple-500" />} label="Active Cards" value={String(visitActiveCards)} info="Visit cards currently held by customers (not archived)." />
                   </div>
 
-                  {/* Advanced visit — gated */}
-                  {!isSubscribed && (
-                    <div className="rounded-[2rem] overflow-hidden border border-purple-200 shadow-lg">
-                      <div className="relative px-6 pt-10 pb-8 text-white" style={{ background: 'linear-gradient(160deg, #0f172a 0%, #1e1b4b 45%, #4f46e5 100%)' }}>
-                        <div className="shine-ray" />
-                        <div className="relative z-10">
-                          <div className="w-12 h-12 bg-white/15 rounded-[1.25rem] flex items-center justify-center mb-4 border border-white/20">
-                            <Lock size={22} className="text-white" />
+                  {/* Advanced visit — shown always, locked if not subscribed */}
+                  <div className="relative">
+                    {!isSubscribed && (
+                      <div className="absolute inset-0 z-10 flex flex-col items-center justify-start pt-16 pointer-events-none">
+                        <div className="pointer-events-auto bg-white rounded-[2rem] px-6 py-5 shadow-2xl text-center space-y-3 mx-4 border border-brand-navy/8 max-w-xs w-full">
+                          <div className="w-10 h-10 rounded-[1rem] bg-purple-50 flex items-center justify-center mx-auto">
+                            <Lock size={20} className="text-purple-600" />
                           </div>
-                          <h3 className="font-display text-2xl font-bold mb-2">Advanced Analytics</h3>
-                          <p className="text-white/75 text-sm leading-relaxed">Unlock charts, visit tiers, busiest days and growth curves — all the data you need to grow.</p>
+                          <p className="font-bold text-brand-navy text-base leading-tight">Subscribe to Unlock</p>
+                          <p className="text-xs text-brand-navy/60 leading-relaxed">Subscribe to see live charts, visit tiers, busiest days, and growth for your visit programme.</p>
+                          <button onClick={handleSubscribe} className="w-full py-3 rounded-2xl font-bold text-white text-sm active:scale-[0.98] transition-transform" style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' }}>
+                            Subscribe Now — $49/month
+                          </button>
                         </div>
                       </div>
-                      <div className="bg-white px-6 py-5 space-y-3">
-                        {[
-                          { icon: <TrendingUp size={14} className="text-purple-600" />, text: 'Visits chart by day or week' },
-                          { icon: <Users size={14} className="text-purple-600" />, text: 'Visit loyalty tiers — 1 visit to 20+' },
-                          { icon: <Trophy size={14} className="text-purple-600" />, text: 'Top 10 visitors leaderboard' },
-                          { icon: <BarChart2 size={14} className="text-purple-600" />, text: 'Busiest days of the week' },
-                        ].map(({ icon, text }) => (
-                          <div key={text} className="flex items-center gap-3">
-                            <div className="w-7 h-7 rounded-xl bg-purple-50 flex items-center justify-center shrink-0">{icon}</div>
-                            <p className="text-sm text-brand-navy/80">{text}</p>
-                          </div>
-                        ))}
-                        <button onClick={handleSubscribe} className="w-full mt-2 font-bold py-3.5 rounded-2xl text-white text-sm active:scale-[0.98] transition-transform" style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' }}>
-                          Subscribe to Unlock
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                  {!isSubscribed ? (
-                    <div className="space-y-4">
-                      {/* Dummy stat squares */}
-                      <div className="grid grid-cols-3 gap-4">
-                        {['At-Risk', 'Avg Interval', 'Redeemed'].map(label => (
-                          <div key={label} className="glass-card p-5 rounded-[1.5rem] flex flex-col items-center gap-2">
-                            <Lock size={16} className="text-brand-navy/30" />
-                            <div className="h-3 w-8 bg-brand-navy/10 rounded-full" />
-                            <p className="text-[10px] font-bold text-brand-navy/30 uppercase tracking-widest">{label}</p>
-                          </div>
-                        ))}
-                      </div>
-                      {/* Dummy charts */}
-                      {['Visits Chart', 'User Base Growth', 'Top 10 by Points', 'Visit Loyalty Tiers', 'Busiest Days', 'Points Economy'].map((title, ci) => (
-                        <div key={title} className="glass-card p-6 rounded-[2rem] space-y-3">
-                          <div className="flex items-center justify-between">
-                            <p className="font-bold text-brand-navy/30">{title}</p>
-                            <Lock size={14} className="text-brand-navy/20" />
-                          </div>
-                          <div className="flex items-end gap-1.5 h-16">
-                            {[55,70,40,85,60,75,45,90,50,80].map((h, i) => (
-                              <div key={i} className="flex-1 rounded-t-md bg-brand-navy/8" style={{ height: `${ci % 2 === 0 ? h : 100 - h}%` }} />
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                  <div className="space-y-6">
+                    )}
+                    <div className={!isSubscribed ? 'blur-sm pointer-events-none select-none opacity-60 space-y-6' : 'space-y-6'}>
                   {/* Advanced visit metrics row */}
                   {(() => {
                     const now = Date.now();
@@ -20715,7 +20511,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     );
                   })()}
                   </div>
-                  )}
+                  </div>
                 </>
               )}
             </div>
