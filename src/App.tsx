@@ -68,6 +68,8 @@ const openUrl = async (url: string) => {
   }
 };
 
+const isNativeIOS = Capacitor.getPlatform() === 'ios';
+
 const openMaps = async (query: string) => {
   const encoded = encodeURIComponent(query);
   if (Capacitor.getPlatform() === 'ios') {
@@ -2351,13 +2353,15 @@ export default function App() {
             label="Deals"
           />
         ) : (
-          <NavButton
-            active={activeTab === 'messages'}
-            onClick={() => { setActiveTab('messages'); setViewingStore(null); setViewingUser(null); }}
-            icon={<MessageCircle />}
-            label="Messages"
-            badgeCount={unreadMessages}
-          />
+          (!isNativeIOS || isSubscribed) ? (
+            <NavButton
+              active={activeTab === 'messages'}
+              onClick={() => { setActiveTab('messages'); setViewingStore(null); setViewingUser(null); }}
+              icon={<MessageCircle />}
+              label="Messages"
+              badgeCount={unreadMessages}
+            />
+          ) : null
         )}
         {['consumer','admin'].includes(profile?.role ?? '') ? (
           <button
@@ -18788,7 +18792,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
         <ForYouScreen onViewUser={onViewUser} currentUser={user} currentProfile={profile} />
       )}
 
-      {activeTab === 'messages' && (
+      {activeTab === 'messages' && !isNativeIOS && (
         paymentVerifying && !isSubscribed ? (
           <PaymentVerifyingScreen />
         ) : needsPayment ? (
@@ -18922,11 +18926,13 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
               <Clock size={20} className="text-amber-500 shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-amber-800 text-sm">Free trial — {trialCountdown} remaining</p>
-                <p className="text-amber-600 text-xs truncate">Subscribe before your trial ends to keep access.</p>
+                <p className="text-amber-600 text-xs truncate">{isNativeIOS ? 'Visit mylinq.app to manage your subscription.' : 'Subscribe before your trial ends to keep access.'}</p>
               </div>
-              <button onClick={handleSubscribe} className="bg-amber-500 text-white text-xs font-bold px-3 py-1.5 rounded-xl shrink-0 active:scale-95 transition-transform">
-                Subscribe
-              </button>
+              {!isNativeIOS && (
+                <button onClick={handleSubscribe} className="bg-amber-500 text-white text-xs font-bold px-3 py-1.5 rounded-xl shrink-0 active:scale-95 transition-transform">
+                  Subscribe
+                </button>
+              )}
             </div>
           )}
           {isSubscribed && (
@@ -19055,7 +19061,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-purple-700 bg-purple-50 border border-purple-200 px-2.5 py-1 rounded-full">
                   <Sparkles size={9} /> Intelligence
                 </span>
-                {!isSubscribed && (
+                {!isSubscribed && !isNativeIOS && (
                   <button onClick={handleSubscribe} className="text-xs font-bold text-white bg-purple-600 px-3 py-1.5 rounded-xl active:scale-95 transition-transform">
                     Subscribe
                   </button>
@@ -19063,7 +19069,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
               </div>
 
               <div className="relative">
-                {!isSubscribed && (
+                {!isSubscribed && !isNativeIOS && (
                   <div className="absolute inset-0 z-10 flex flex-col items-center justify-start pt-16 pointer-events-none">
                     <div className="pointer-events-auto bg-white rounded-[2rem] px-6 py-5 shadow-2xl text-center space-y-3 mx-4 border border-brand-navy/8 max-w-xs w-full">
                       <div className="w-10 h-10 rounded-[1rem] bg-purple-50 flex items-center justify-center mx-auto">
@@ -19077,7 +19083,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     </div>
                   </div>
                 )}
-                <div className={!isSubscribed ? 'blur-sm pointer-events-none select-none opacity-60 space-y-6' : 'space-y-6'}>
+                <div className={!isSubscribed && !isNativeIOS ? 'blur-sm pointer-events-none select-none opacity-60 space-y-6' : 'space-y-6'}>
                 <>
                   {/* Intelligence: At-risk + Newcomers + Avg/Visit */}
                   {(() => {
@@ -19866,7 +19872,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
 
                   {/* Advanced spend — shown always, locked if not subscribed */}
                   <div className="relative">
-                    {!isSubscribed && (
+                    {!isSubscribed && !isNativeIOS && (
                       <div className="absolute inset-0 z-10 flex flex-col items-center justify-start pt-16 pointer-events-none">
                         <div className="pointer-events-auto bg-white rounded-[2rem] px-6 py-5 shadow-2xl text-center space-y-3 mx-4 border border-brand-navy/8 max-w-xs w-full">
                           <div className="w-10 h-10 rounded-[1rem] bg-purple-50 flex items-center justify-center mx-auto">
@@ -19880,7 +19886,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                         </div>
                       </div>
                     )}
-                    <div className={!isSubscribed ? 'blur-sm pointer-events-none select-none opacity-60 space-y-6' : 'space-y-6'}>
+                    <div className={!isSubscribed && !isNativeIOS ? 'blur-sm pointer-events-none select-none opacity-60 space-y-6' : 'space-y-6'}>
                   {/* Advanced spend metrics row */}
                   {(() => {
                     const txAmounts = spendTxns.map(tx => tx.transaction_amount || 0).filter(a => a > 0);
@@ -20190,7 +20196,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
 
                   {/* Advanced visit — shown always, locked if not subscribed */}
                   <div className="relative">
-                    {!isSubscribed && (
+                    {!isSubscribed && !isNativeIOS && (
                       <div className="absolute inset-0 z-10 flex flex-col items-center justify-start pt-16 pointer-events-none">
                         <div className="pointer-events-auto bg-white rounded-[2rem] px-6 py-5 shadow-2xl text-center space-y-3 mx-4 border border-brand-navy/8 max-w-xs w-full">
                           <div className="w-10 h-10 rounded-[1rem] bg-purple-50 flex items-center justify-center mx-auto">
@@ -20204,7 +20210,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                         </div>
                       </div>
                     )}
-                    <div className={!isSubscribed ? 'blur-sm pointer-events-none select-none opacity-60 space-y-6' : 'space-y-6'}>
+                    <div className={!isSubscribed && !isNativeIOS ? 'blur-sm pointer-events-none select-none opacity-60 space-y-6' : 'space-y-6'}>
                   {/* Advanced visit metrics row */}
                   {(() => {
                     const now = Date.now();
@@ -27777,7 +27783,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                         <p className="text-sm font-bold truncate">{c.userName || 'Member'}</p>
                       </div>
                       <div className="shrink-0 flex items-center gap-1 text-brand-navy/40">
-                        {(vendorStore?.subscriptionStatus !== 'active' && vendorStore?.subscriptionStatus !== 'trialing')
+                        {(!isNativeIOS && vendorStore?.subscriptionStatus !== 'active' && vendorStore?.subscriptionStatus !== 'trialing')
                           ? <><Lock size={10} /><span className="text-[11px] font-bold">{metricLabel}</span></>
                           : <span className="text-[11px] font-bold text-brand-gold">{fmtK(metricVal)} <span className="text-brand-navy/40 font-normal">{metricLabel}</span></span>
                         }
