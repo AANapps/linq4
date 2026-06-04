@@ -6089,7 +6089,6 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
       const isActive = store.subscriptionStatus === 'active';
       await updateDoc(doc(db, 'stores', store.id), {
         subscriptionStatus: isActive ? 'cancelled' : 'active',
-        ...(!isActive ? { cardEnabled: true } : { cardEnabled: false }),
       });
     } finally {
       setTogglingId(null);
@@ -6109,7 +6108,6 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
       if (isStoreTrial(store)) {
         await updateDoc(doc(db, 'stores', store.id), {
           trialEndsAt: Timestamp.fromDate(new Date(Date.now() - 1000)),
-          cardEnabled: false,
         });
       } else {
         await updateDoc(doc(db, 'stores', store.id), {
@@ -12716,7 +12714,9 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   }, [badgeDetectionReady, allBadgesGlobal, initialCards, profile, followersCountG, followingCountG, postsCountG, myStandardEntries]);
 
   const handleJoinStore = async (store: StoreProfile) => {
-    if (!user || !storeCardActive(store)) return;
+    const storeHasCard = storeCardActive(store) || store.membershipEnabled === true || store.subCardEnabled === true
+      || (store.stamps_required_for_reward != null && store.stamps_required_for_reward > 0);
+    if (!user || !storeHasCard) return;
     const cardId = `${user.uid}_${store.id}`;
     const cardRef = doc(db, 'cards', cardId);
     const cardSnap = await getDoc(cardRef);
@@ -24262,7 +24262,8 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
       const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase()) ||
                             s.category.toLowerCase().includes(search.toLowerCase());
       const matchesCat = activeCategory === 'All' || s.category === activeCategory;
-      const hasAnyCard = storeCardActive(s) || s.membershipEnabled === true || s.subCardEnabled === true;
+      const hasAnyCard = storeCardActive(s) || s.membershipEnabled === true || s.subCardEnabled === true
+        || (s.stamps_required_for_reward != null && s.stamps_required_for_reward > 0);
       return matchesSearch && matchesCat && hasAnyCard;
     });
     if (!userCoords) return matched;
@@ -34383,7 +34384,7 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
       </AnimatePresence>
 
       {/* Join / joined buttons */}
-      {(isPreview || store.ownerUid !== user.uid) && (storeCardActive(store) || store.membershipEnabled) && (
+      {(isPreview || store.ownerUid !== user.uid) && (storeCardActive(store) || store.membershipEnabled || store.subCardEnabled || (store.stamps_required_for_reward != null && store.stamps_required_for_reward > 0)) && (
         <ProfileCardRow
           store={store}
           card={isPreview ? null : card}
