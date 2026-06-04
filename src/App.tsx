@@ -2075,9 +2075,11 @@ export default function App() {
     );
   }
 
+  const isVendor = profile?.role === 'vendor';
+
   return (
-    <div className="min-h-screen bg-white md:flex md:justify-center">
-    <div className="w-full md:max-w-sm relative" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 6rem)' }}>
+    <div className={cn("min-h-screen bg-white", !isVendor && "md:flex md:justify-center")}>
+    <div className={cn("w-full relative", !isVendor && "md:max-w-sm")} style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 6rem)' }}>
       {/* Header */}
       <header className="glass-panel sticky top-0 z-50 px-5 pb-3.5 flex items-center justify-between relative" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.875rem)' }}>
         <button
@@ -2121,8 +2123,48 @@ export default function App() {
         </div>
       </header>
 
+      {/* Vendor sidebar — desktop only */}
+      {isVendor && (
+        <aside className="hidden lg:flex flex-col fixed top-14 bottom-0 left-0 w-56 border-r border-brand-navy/8 bg-white z-40">
+          <div className="flex-1 flex flex-col gap-0.5 px-3 py-5">
+            {([
+              { tab: 'home',     icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
+              { tab: 'messages', icon: <MessageCircle size={18} />,   label: 'Messages',    badge: unreadMessages },
+              { tab: 'discover', icon: <Plus size={18} />,            label: 'Issue Stamps' },
+              { tab: 'profile',  icon: <UserIcon size={18} />,        label: 'Profile' },
+            ] as const).map(({ tab, icon, label, badge }) => (
+              <button
+                key={tab}
+                onClick={() => { setActiveTab(tab); setViewingStore(null); setViewingUser(null); }}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold w-full text-left transition-all",
+                  activeTab === tab ? "bg-brand-navy text-white" : "text-brand-navy/60 hover:bg-brand-navy/5 hover:text-brand-navy"
+                )}
+              >
+                {icon}
+                <span>{label}</span>
+                {!!(badge && badge > 0) && (
+                  <span className="ml-auto w-5 h-5 rounded-full bg-brand-rose text-white text-[10px] font-bold flex items-center justify-center">{badge}</span>
+                )}
+              </button>
+            ))}
+          </div>
+          {vendorQREnabled && (
+            <div className="px-3 pb-6">
+              <button
+                onClick={() => setShowVendorQR(true)}
+                className="w-full py-3 rounded-2xl gradient-logo-blue text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md active:scale-[0.98] transition-transform"
+              >
+                <QrCode size={18} />
+                Scan QR Code
+              </button>
+            </div>
+          )}
+        </aside>
+      )}
+
       {/* Main Content */}
-      <main className="px-6 pt-4 pb-8">
+      <main className={cn("px-6 pt-4 pb-8", isVendor && "lg:ml-56 lg:px-8 lg:pt-6")}>
         <AnimatePresence mode="popLayout">
           {viewingStore ? (
             <StoreProfileView
@@ -2330,7 +2372,12 @@ export default function App() {
       </AnimatePresence>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-full md:max-w-sm glass-panel border-t border-black/5 pt-3 flex items-end z-50" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)' }}>
+      <nav className={cn(
+        "fixed bottom-0 glass-panel border-t border-black/5 pt-3 flex items-end z-50",
+        isVendor
+          ? "left-0 right-0 lg:hidden"
+          : "left-0 right-0 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-full md:max-w-sm"
+      )} style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)' }}>
         {['consumer','admin'].includes(profile?.role ?? '') ? (
           <NavButton
             active={activeTab === 'for-you'}
