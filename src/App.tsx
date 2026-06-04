@@ -18786,7 +18786,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
       {activeTab === 'messages' && (
         paymentVerifying && !isSubscribed ? (
           <PaymentVerifyingScreen />
-        ) : needsPayment && dashTab !== 'stamps' ? (
+        ) : needsPayment ? (
           /* ── Messages paywall: landing page ── */
           <div className="-mx-6 -mt-4">
             {/* Hero */}
@@ -20000,7 +20000,36 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                   </div>
 
                   {/* Advanced spend — gated */}
-                  <div className={cn("relative space-y-6", !isSubscribed && "pointer-events-none")}>
+                  {!isSubscribed ? (
+                    <div className="rounded-[2rem] overflow-hidden border border-purple-200 shadow-lg">
+                      <div className="relative px-6 pt-10 pb-8 text-white" style={{ background: 'linear-gradient(160deg, #0f172a 0%, #1e1b4b 45%, #4f46e5 100%)' }}>
+                        <div className="shine-ray" />
+                        <div className="relative z-10">
+                          <div className="w-12 h-12 bg-white/15 rounded-[1.25rem] flex items-center justify-center mb-4 border border-white/20">
+                            <Lock size={22} className="text-white" />
+                          </div>
+                          <h3 className="font-display text-2xl font-bold mb-2">Advanced Analytics</h3>
+                          <p className="text-white/75 text-sm leading-relaxed">Unlock charts, customer segments, top spenders and growth curves — all the data you need to grow.</p>
+                        </div>
+                      </div>
+                      <div className="bg-white px-6 py-5 space-y-3">
+                        {[
+                          { icon: <TrendingUp size={14} className="text-purple-600" />, text: 'Points issued chart by day or week' },
+                          { icon: <Users size={14} className="text-purple-600" />, text: 'Customer segments — high, mid and low value' },
+                          { icon: <Trophy size={14} className="text-purple-600" />, text: 'Top 10 spenders leaderboard' },
+                          { icon: <BarChart2 size={14} className="text-purple-600" />, text: 'User base growth over time' },
+                        ].map(({ icon, text }) => (
+                          <div key={text} className="flex items-center gap-3">
+                            <div className="w-7 h-7 rounded-xl bg-purple-50 flex items-center justify-center shrink-0">{icon}</div>
+                            <p className="text-sm text-brand-navy/80">{text}</p>
+                          </div>
+                        ))}
+                        <button onClick={handleSubscribe} className="w-full mt-2 font-bold py-3.5 rounded-2xl text-white text-sm active:scale-[0.98] transition-transform" style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' }}>
+                          Subscribe to Unlock
+                        </button>
+                      </div>
+                    </div>
+                  ) : (<>
                   {/* Advanced spend metrics row */}
                   {(() => {
                     const totalTx = spendTxns.length;
@@ -20280,14 +20309,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                       </div>
                     );
                   })()}
-                  {!isSubscribed && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center bg-white/70 backdrop-blur-sm rounded-[2rem]">
-                      <Lock size={22} className="text-brand-navy/50" />
-                      <p className="font-bold text-brand-navy text-sm">Unlock advanced analytics</p>
-                      <p className="text-xs text-brand-navy/60">Charts, customer segments, top spenders and more — subscribe to access.</p>
-                    </div>
-                  )}
-                  </div>
+                  </>)}
                 </>
               )}
             </div>
@@ -20314,7 +20336,36 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                   </div>
 
                   {/* Advanced visit — gated */}
-                  <div className={cn("relative space-y-6", !isSubscribed && "pointer-events-none")}>
+                  {!isSubscribed ? (
+                    <div className="rounded-[2rem] overflow-hidden border border-purple-200 shadow-lg">
+                      <div className="relative px-6 pt-10 pb-8 text-white" style={{ background: 'linear-gradient(160deg, #0f172a 0%, #1e1b4b 45%, #4f46e5 100%)' }}>
+                        <div className="shine-ray" />
+                        <div className="relative z-10">
+                          <div className="w-12 h-12 bg-white/15 rounded-[1.25rem] flex items-center justify-center mb-4 border border-white/20">
+                            <Lock size={22} className="text-white" />
+                          </div>
+                          <h3 className="font-display text-2xl font-bold mb-2">Advanced Analytics</h3>
+                          <p className="text-white/75 text-sm leading-relaxed">Unlock charts, visit tiers, busiest days and growth curves — all the data you need to grow.</p>
+                        </div>
+                      </div>
+                      <div className="bg-white px-6 py-5 space-y-3">
+                        {[
+                          { icon: <TrendingUp size={14} className="text-purple-600" />, text: 'Visits chart by day or week' },
+                          { icon: <Users size={14} className="text-purple-600" />, text: 'Visit loyalty tiers — 1 visit to 20+' },
+                          { icon: <Trophy size={14} className="text-purple-600" />, text: 'Top 10 visitors leaderboard' },
+                          { icon: <BarChart2 size={14} className="text-purple-600" />, text: 'Busiest days of the week' },
+                        ].map(({ icon, text }) => (
+                          <div key={text} className="flex items-center gap-3">
+                            <div className="w-7 h-7 rounded-xl bg-purple-50 flex items-center justify-center shrink-0">{icon}</div>
+                            <p className="text-sm text-brand-navy/80">{text}</p>
+                          </div>
+                        ))}
+                        <button onClick={handleSubscribe} className="w-full mt-2 font-bold py-3.5 rounded-2xl text-white text-sm active:scale-[0.98] transition-transform" style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' }}>
+                          Subscribe to Unlock
+                        </button>
+                      </div>
+                    </div>
+                  ) : (<>
                   {/* Advanced visit metrics row */}
                   {(() => {
                     const now = Date.now();
@@ -20620,14 +20671,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                       </div>
                     );
                   })()}
-                  {!isSubscribed && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center bg-white/70 backdrop-blur-sm rounded-[2rem]">
-                      <Lock size={22} className="text-brand-navy/50" />
-                      <p className="font-bold text-brand-navy text-sm">Unlock advanced analytics</p>
-                      <p className="text-xs text-brand-navy/60">Charts, visit tiers, busiest days and more — subscribe to access.</p>
-                    </div>
-                  )}
-                  </div>
+                  </>)}
                 </>
               )}
             </div>
