@@ -18967,27 +18967,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
           )}
 
           <div className="relative">
-            {/* Blur + lock overlay — stamps tab only; spend/visit have their own inline gates */}
-            {needsPayment && dashTab === 'stamps' && (
-              <div className="absolute inset-0 z-20 flex flex-col items-center justify-start pt-10 pointer-events-none">
-                <div className="pointer-events-auto bg-white rounded-[2rem] px-6 py-5 shadow-2xl text-center space-y-3 mx-4 border border-brand-navy/8 max-w-xs w-full">
-                  <div className="w-12 h-12 rounded-[1rem] bg-purple-50 flex items-center justify-center mx-auto">
-                    <Lock size={24} className="text-purple-600" />
-                  </div>
-                  <p className="font-bold text-brand-navy text-lg leading-tight">Dashboard Locked</p>
-                  <p className="text-xs text-brand-navy/60 leading-relaxed">Subscribe to see live member stats, charts, and analytics for your loyalty programme.</p>
-                  <button
-                    onClick={handleSubscribe}
-                    className="w-full py-3 rounded-2xl font-bold text-white text-sm active:scale-[0.98] transition-transform"
-                    style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' }}
-                  >
-                    Subscribe Now — $49/month
-                  </button>
-                  <p className="text-[10px] text-brand-navy/40">Secure · Cancel anytime</p>
-                </div>
-              </div>
-            )}
-          <div className={(needsPayment && dashTab === 'stamps') ? 'select-none pointer-events-none' : ''} style={(needsPayment && dashTab === 'stamps') ? { filter: 'blur(4px)', opacity: 0.3 } : {}}>
+          <div>
           <div className="space-y-8">
 
           {/* ===== STAMPS TAB ===== */}
