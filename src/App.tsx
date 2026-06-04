@@ -19993,13 +19993,11 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <StatSquare icon={<Users className="text-blue-500" />} label="Members" value={String(spendMembers)} info="Customers who have an active spend card with your store." />
                     <StatSquare icon={<TrendingUp className="text-emerald-500" />} label="Pts Issued" value={String(totalPointsIssued)} info="Total points earned by all members across every transaction." />
-                    <StatSquare icon={<Wallet className="text-purple-500" />} label="Active Cards" value={String(spendActiveCards)} info="Spend cards currently held by customers (not archived)." />
+                    <StatSquare icon={<DollarSign className="text-green-500" />} label="Total Spend" value={totalSpend > 0 ? `£${totalSpend.toFixed(0)}` : '—'} info="Total revenue recorded through the spend card programme." />
                     <StatSquare icon={<RefreshCw className="text-orange-500" />} label="Pts Balance" value={String(totalPointsBalance)} info="Total unspent points sitting in customers' wallets right now." />
-                    <StatSquare icon={<DollarSign className="text-green-500" />} label="Total Spend" value={totalSpend > 0 ? `$${totalSpend.toFixed(0)}` : '—'} info="Total revenue recorded through the spend card programme." />
-                    <StatSquare icon={<Gift className="text-rose-500" />} label="Pts Redeemed" value={String(totalPointsRedeemed)} info="Total points spent by customers redeeming rewards." />
                   </div>
 
                   {/* Advanced spend — gated */}
@@ -20360,12 +20358,13 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <StatSquare icon={<Users className="text-blue-500" />} label="Members" value={String(visitMembers)} info="Customers who have an active visit card with your store." />
-                    <StatSquare icon={<TrendingUp className="text-blue-500" />} label="Total Points" value={String(visitPointsGiven)} info="Total visit points issued to all members across all check-ins." />
-                    <StatSquare icon={<Wallet className="text-purple-500" />} label="Active Cards" value={String(visitActiveCards)} info="Visit cards currently held by customers (not archived)." />
-                    <StatSquare icon={<RefreshCw className="text-orange-500" />} label="Return Rate" value={`${visitReturnRate}%`} info="Percentage of members who have visited more than once." />
                     <StatSquare icon={<MapPin className="text-blue-500" />} label="Total Visits" value={String(totalVisits)} info="Total number of check-ins recorded across all members." />
+                    <StatSquare icon={<TrendingUp className="text-blue-500" />} label="Pts Issued" value={String(visitPointsGiven)} info="Total visit points issued to all members across all check-ins." />
+                    <StatSquare icon={<Gift className="text-rose-500" />} label="Pts Redeemed" value={String(visitPointsRedeemed)} info="Total visit points already exchanged for rewards by customers." />
+                    <StatSquare icon={<RefreshCw className="text-orange-500" />} label="Return Rate" value={`${visitReturnRate}%`} info="Percentage of members who have visited more than once." />
+                    <StatSquare icon={<Wallet className="text-purple-500" />} label="Active Cards" value={String(visitActiveCards)} info="Visit cards currently held by customers (not archived)." />
                   </div>
 
                   {/* Advanced visit — gated */}
