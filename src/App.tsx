@@ -2178,6 +2178,8 @@ export default function App() {
               uiColors={uiColors}
             />
             </AppErrorBoundary>
+          ) : isNativeIOS ? (
+            <VendorWebRedirectScreen onLogout={handleLogout} />
           ) : (
             <AppErrorBoundary>
             <VendorApp
@@ -3670,19 +3672,21 @@ function OnboardingScreen({ user, onComplete }: {
           </div>
           {role === 'consumer' && <CheckCircle2 className="w-5 h-5 text-brand-gold ml-auto shrink-0" />}
         </button>
-        <button
-          onClick={() => setRole('vendor')}
-          className={`w-full rounded-[2rem] p-6 text-left flex items-center gap-4 transition-all active:scale-[0.98] ${role === 'vendor' ? 'bg-brand-navy opacity-100' : 'bg-brand-navy opacity-80 hover:opacity-100'}`}
-        >
-          <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center shrink-0">
-            <Building2 className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <p className="font-bold text-white text-base">I'm a Business</p>
-            <p className="text-xs text-white/50 mt-0.5">Run a loyalty programme</p>
-          </div>
-          {role === 'vendor' && <CheckCircle2 className="w-5 h-5 text-white ml-auto shrink-0" />}
-        </button>
+        {!isNativeIOS && (
+          <button
+            onClick={() => setRole('vendor')}
+            className={`w-full rounded-[2rem] p-6 text-left flex items-center gap-4 transition-all active:scale-[0.98] ${role === 'vendor' ? 'bg-brand-navy opacity-100' : 'bg-brand-navy opacity-80 hover:opacity-100'}`}
+          >
+            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center shrink-0">
+              <Building2 className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <p className="font-bold text-white text-base">I'm a Business</p>
+              <p className="text-xs text-white/50 mt-0.5">Run a loyalty programme</p>
+            </div>
+            {role === 'vendor' && <CheckCircle2 className="w-5 h-5 text-white ml-auto shrink-0" />}
+          </button>
+        )}
       </div>
     </>
   );
@@ -17958,6 +17962,33 @@ function PaymentVerifyingScreen() {
         <h2 className="font-display text-2xl font-bold text-brand-navy">Activating your subscription…</h2>
         <p className="text-brand-navy/60 text-sm">Payment received. This usually takes just a few seconds.</p>
       </div>
+    </div>
+  );
+}
+
+// --- Vendor Web Redirect (iOS only) ---
+
+function VendorWebRedirectScreen({ onLogout }: { onLogout: () => void }) {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center px-8 gap-6 text-center bg-brand-bg">
+      <div className="w-16 h-16 rounded-3xl gradient-logo-blue flex items-center justify-center shadow-xl">
+        <Store size={28} className="text-white" />
+      </div>
+      <div className="space-y-2">
+        <h1 className="font-display text-2xl font-bold text-brand-navy">Vendor Portal</h1>
+        <p className="text-sm text-brand-navy/60 leading-relaxed">
+          Manage your loyalty programme, analytics, and subscription at our website.
+        </p>
+      </div>
+      <button
+        onClick={() => openUrl('https://mylinq.app')}
+        className="w-full py-4 rounded-2xl font-bold text-white text-sm active:scale-[0.98] transition-transform gradient-logo-blue shadow-lg"
+      >
+        Open mylinq.app
+      </button>
+      <button onClick={onLogout} className="text-sm text-brand-navy/40 font-medium active:opacity-60">
+        Sign out
+      </button>
     </div>
   );
 }
