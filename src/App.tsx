@@ -14878,7 +14878,12 @@ function VendorSpendQRDisplay({ store, onClose }: { store: StoreProfile; onClose
       const claimed: string[] = snap.data().claimedBy ?? [];
       if (claimed.length > 0) {
         setJustScanned(true);
-        setTimeout(() => onClose(), 1200);
+        setTimeout(() => {
+          setJustScanned(false);
+          setPhase('amount');
+          setAmountInput('');
+          setTokenId(null);
+        }, 1500);
       }
     }, () => {});
     return unsub;
