@@ -20064,8 +20064,9 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                   <div className="space-y-6">
                   {/* Advanced spend metrics row */}
                   {(() => {
+                    const txAmounts = spendTxns.map(tx => tx.transaction_amount || 0).filter(a => a > 0);
+                    const avgTx = txAmounts.length > 0 ? `£${(txAmounts.reduce((s, a) => s + a, 0) / txAmounts.length).toFixed(2)}` : '—';
                     const totalTx = spendTxns.length;
-                    const avgTx = totalTx > 0 && totalSpend > 0 ? `£${(totalSpend / totalTx).toFixed(2)}` : '—';
                     const redeemedPts = spendCards.reduce((s, c) => s + (c.total_points_redeemed || 0), 0);
                     const issuedPts = totalPointsIssued || 1;
                     const redeemedPct = issuedPts > 0 ? Math.round((redeemedPts / issuedPts) * 100) : 0;
