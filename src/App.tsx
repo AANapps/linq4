@@ -19998,6 +19998,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     <StatSquare icon={<Gift className="text-rose-500" />} label="Pts Redeemed" value={String(totalPointsRedeemed)} info="Total points spent by customers redeeming rewards." />
                   </div>
 
+                  {/* Advanced spend — gated */}
+                  <div className={cn("relative space-y-6", !isSubscribed && "pointer-events-none")}>
                   {/* Advanced spend metrics row */}
                   {(() => {
                     const totalTx = spendTxns.length;
@@ -20277,6 +20279,14 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                       </div>
                     );
                   })()}
+                  {!isSubscribed && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center bg-white/70 backdrop-blur-sm rounded-[2rem]">
+                      <Lock size={22} className="text-brand-navy/50" />
+                      <p className="font-bold text-brand-navy text-sm">Unlock advanced analytics</p>
+                      <p className="text-xs text-brand-navy/60">Charts, customer segments, top spenders and more — subscribe to access.</p>
+                    </div>
+                  )}
+                  </div>
                 </>
               )}
             </div>
@@ -20302,6 +20312,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     <StatSquare icon={<Gift className="text-rose-500" />} label="Pts Redeemed" value={String(visitPointsRedeemed)} info="Total visit points already exchanged for rewards by customers." />
                   </div>
 
+                  {/* Advanced visit — gated */}
+                  <div className={cn("relative space-y-6", !isSubscribed && "pointer-events-none")}>
                   {/* Advanced visit metrics row */}
                   {(() => {
                     const now = Date.now();
@@ -20607,6 +20619,14 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                       </div>
                     );
                   })()}
+                  {!isSubscribed && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center bg-white/70 backdrop-blur-sm rounded-[2rem]">
+                      <Lock size={22} className="text-brand-navy/50" />
+                      <p className="font-bold text-brand-navy text-sm">Unlock advanced analytics</p>
+                      <p className="text-xs text-brand-navy/60">Charts, visit tiers, busiest days and more — subscribe to access.</p>
+                    </div>
+                  )}
+                  </div>
                 </>
               )}
             </div>
