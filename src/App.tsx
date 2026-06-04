@@ -34200,13 +34200,12 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
         {/* Floating back button */}
         <button
           onClick={onBack}
-          className="absolute left-4 flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-black/30 backdrop-blur-md text-white font-bold text-sm active:scale-95 transition-all"
-          style={{ top: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}
+          className="absolute top-3 left-3 w-9 h-9 rounded-full bg-black/30 backdrop-blur-md text-white flex items-center justify-center active:scale-95 transition-all"
         >
-          <ArrowLeft size={16} /> Back
+          <ArrowLeft size={18} />
         </button>
         {/* Floating right actions */}
-        <div className="absolute right-4 flex items-center gap-2" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}>
+        <div className="absolute top-3 right-3 flex items-center gap-2">
           {isAppAdmin(profile, user.email) && (
             <button
               onClick={() => setShowAdminEdit(true)}
