@@ -12848,6 +12848,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           activeChatId={activeChatId}
           setActiveChatId={setActiveChatId}
           onViewUser={onViewUser}
+          userCards={cards}
         />
       )}
 
@@ -18785,7 +18786,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
       {activeTab === 'messages' && (
         paymentVerifying && !isSubscribed ? (
           <PaymentVerifyingScreen />
-        ) : needsPayment ? (
+        ) : needsPayment && !activeChatId ? (
           /* ── Messages paywall: landing page ── */
           <div className="-mx-6 -mt-4">
             {/* Hero */}
@@ -32620,7 +32621,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
   );
 }
 
-function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveChatId, onViewUser, vendorStore, storeCards = [] }: { currentUser: FirebaseUser, currentProfile: UserProfile | null, activeChatId: string | null, setActiveChatId: (id: string | null) => void, onViewUser: (u: UserProfile) => void, vendorStore?: StoreProfile | null, storeCards?: Card[] }) {
+function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveChatId, onViewUser, vendorStore, storeCards = [], userCards = [] }: { currentUser: FirebaseUser, currentProfile: UserProfile | null, activeChatId: string | null, setActiveChatId: (id: string | null) => void, onViewUser: (u: UserProfile) => void, vendorStore?: StoreProfile | null, storeCards?: Card[], userCards?: Card[] }) {
   const [chats, setChats] = useState<Chat[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [olderMessages, setOlderMessages] = useState<ChatMessage[]>([]);
@@ -32634,6 +32635,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
   const [activeBroadcastChat, setActiveBroadcastChat] = useState<{ storeName: string; storeLogoUrl: string; storeId?: string; broadcastId?: string } | null>(null);
   const [selectedMsgId, setSelectedMsgId] = useState<string | null>(null);
   const [showCustomerPicker, setShowCustomerPicker] = useState(false);
+  const [showNewChatPicker, setShowNewChatPicker] = useState(false);
   const [storeCustomers, setStoreCustomers] = useState<UserProfile[]>([]);
   const [showBroadcast, setShowBroadcast] = useState(false);
   const [partnerUnreadCount, setPartnerUnreadCount] = useState(0);
@@ -32729,7 +32731,11 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
     );
     return onSnapshot(q, (snap) => {
       const latest = snap.docs.map(d => ({ id: d.id, ...d.data() } as ChatMessage)).reverse();
-      setMessages(latest);
+      setMessages(prev => {
+        const serverIds = new Set(latest.map(m => m.id));
+        const pending = prev.filter(m => m.id.startsWith('temp_') && !serverIds.has(m.id));
+        return [...pending, ...latest];
+      });
       // The last doc in desc order is the oldest in this window — cursor for loading older
       if (snap.docs.length === 5) {
         msgLastDocRef.current = snap.docs[snap.docs.length - 1];
@@ -32833,6 +32839,14 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
     const text = newMessage;
     setNewMessage('');
 
+    // Optimistic update — show immediately, snapshot will replace with server version
+    const tempId = `temp_${Date.now()}`;
+    setMessages(prev => [...prev, {
+      id: tempId, chatId: activeChatId, senderUid: currentUser.uid,
+      senderName: currentProfile?.name || currentUser.displayName || 'Me',
+      text, createdAt: { toDate: () => new Date(), toMillis: () => Date.now(), seconds: Math.floor(Date.now() / 1000) },
+    } as ChatMessage]);
+
     try {
       const messageData = {
         chatId: activeChatId,
@@ -32841,7 +32855,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
         text,
         createdAt: serverTimestamp()
       };
-      
+
       await addDoc(collection(db, 'chats', activeChatId, 'messages'), messageData);
 
       const partnerUid = chatPartner?.uid;
@@ -33148,16 +33162,70 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
           <h2 className="font-display text-3xl font-bold mb-1">Messages</h2>
           <p className="text-brand-navy/75 text-sm">Direct conversations with others.</p>
         </div>
-        {vendorStore && (
-          <button
-            onClick={() => setShowCustomerPicker(true)}
-            className="flex items-center gap-2 px-4 py-2.5 gradient-red text-white rounded-2xl text-xs font-bold shadow-lg active:scale-95 transition-all"
-          >
-            <MessageCircle size={14} />
-            New
-          </button>
-        )}
+        <button
+          onClick={() => vendorStore ? setShowCustomerPicker(true) : setShowNewChatPicker(true)}
+          className="flex items-center gap-2 px-4 py-2.5 gradient-red text-white rounded-2xl text-xs font-bold shadow-lg active:scale-95 transition-all"
+        >
+          <Plus size={14} />
+          New
+        </button>
       </header>
+
+      {/* Consumer new-chat store picker */}
+      <AnimatePresence>
+        {showNewChatPicker && !vendorStore && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] bg-black/40"
+            onClick={() => setShowNewChatPicker(false)}
+          >
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 500, damping: 38 }}
+              onClick={e => e.stopPropagation()}
+              className="absolute bottom-0 left-0 right-0 bg-brand-bg rounded-t-[2rem] px-6 pt-5 pb-10 max-h-[70vh] overflow-y-auto max-w-md mx-auto"
+            >
+              <div className="w-10 h-1 bg-brand-navy/10 rounded-full mx-auto mb-5" />
+              <h3 className="font-display text-xl font-bold mb-4">Message a Store</h3>
+              {[...new Map(userCards.filter(c => c.store_id && c.storeName).map(c => [c.store_id, c])).values()].length === 0 ? (
+                <p className="text-sm text-brand-navy/60 text-center py-6">Join a loyalty card to message that store.</p>
+              ) : (
+                <div className="space-y-2">
+                  {[...new Map(userCards.filter(c => c.store_id && c.storeName).map(c => [c.store_id, c])).values()].map(c => (
+                    <button
+                      key={c.store_id}
+                      onClick={async () => {
+                        setShowNewChatPicker(false);
+                        const storeSnap = await getDocs(query(collection(db, 'stores'), where('__name__', '==', c.store_id)));
+                        if (storeSnap.empty) return;
+                        const storeOwnerUid = storeSnap.docs[0].data().ownerUid;
+                        if (!storeOwnerUid) return;
+                        const chatId = [currentUser.uid, storeOwnerUid].sort().join('_');
+                        setActiveChatId(chatId);
+                        const chatRef = doc(db, 'chats', chatId);
+                        const chatSnap = await getDoc(chatRef);
+                        if (!chatSnap.exists()) {
+                          await setDoc(chatRef, { uids: [currentUser.uid, storeOwnerUid], lastActivity: serverTimestamp(), lastMessage: '', createdAt: serverTimestamp(), businessName: c.storeName, businessLogoUrl: c.storeLogoUrl || '' });
+                        }
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-white border border-brand-navy/8 active:scale-[0.98] transition-all text-left"
+                    >
+                      <div className="w-10 h-10 rounded-xl overflow-hidden bg-brand-navy/5 shrink-0">
+                        {c.storeLogoUrl ? <img src={c.storeLogoUrl} alt="" className="w-full h-full object-cover" /> : <Building2 size={18} className="text-brand-navy/30 m-auto mt-2.5" />}
+                      </div>
+                      <p className="font-bold text-sm">{c.storeName}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Broadcast button — vendors only, at the top */}
       {vendorStore && (
