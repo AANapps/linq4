@@ -28901,7 +28901,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
           location: primaryAddr,
           ...(primary?.lat != null ? { lat: primary.lat, lng: primary.lng } : {}),
           locations: geocoded,
-          googleReviewUrl: googleReviewUrl.trim() || null,
+          googleReviewUrl: googleReviewUrl.trim(),
           visibilitySettings: visibility,
         });
       }
@@ -33642,7 +33642,7 @@ function ProfileCardRow({ store, card, membershipCard, userId, onJoinLoyalty, on
   );
 }
 
-function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage }: { store: StoreProfile, onBack: () => void, user: FirebaseUser, profile: UserProfile | null, onViewUser: (u: UserProfile) => void, onMessage?: (chatId: string) => void, key?: React.Key }) {
+function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser, onMessage }: { store: StoreProfile, onBack: () => void, user: FirebaseUser, profile: UserProfile | null, onViewUser: (u: UserProfile) => void, onMessage?: (chatId: string) => void, key?: React.Key }) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [vendorGlobalPosts, setVendorGlobalPosts] = useState<GlobalPost[]>([]);
   const [storeReviews, setStoreReviews] = useState<any[]>([]);
@@ -33678,6 +33678,14 @@ function StoreProfileView({ store, onBack, user, profile, onViewUser, onMessage 
   const [storeFollowerCount, setStoreFollowerCount] = useState(0);
   const [showFullDesc, setShowFullDesc] = useState(false);
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
+  const [liveStore, setLiveStore] = useState<StoreProfile>(storeProp);
+  const store = liveStore;
+
+  useEffect(() => {
+    return onSnapshot(doc(db, 'stores', storeProp.id), (snap) => {
+      if (snap.exists()) setLiveStore({ id: snap.id, ...snap.data() } as StoreProfile);
+    });
+  }, [storeProp.id]);
 
   useEffect(() => {
     if (!navigator.geolocation) return;
