@@ -2712,9 +2712,10 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
             <motion.div className="absolute top-0 h-full w-1/3 bg-white rounded-full" animate={{ x: ['-100%', '400%'] }} transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }} />
           </div>
         )}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-12">
-          <h1 className="text-4xl font-black mb-4 leading-none" style={{ fontFamily: 'Poppins, sans-serif' }}><span style={{ color: '#60a5fa' }}>li</span><span style={{ color: '#1d4ed8' }}>nq</span></h1>
-          <p className="text-white/60 text-lg max-w-xs mx-auto">Collect stamps, unlock rewards, and support your favourite local businesses.</p>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
+          <h1 className="font-black leading-none mb-1" style={{ fontFamily: 'Poppins, sans-serif', fontSize: '3rem', color: '#000000' }}>Linq</h1>
+          <p className="text-white font-bold text-base tracking-wide mb-4">for Businesses</p>
+          <p className="text-white/60 text-sm max-w-xs mx-auto">Sign in to manage your loyalty cards, post updates, and grow your customer base.</p>
         </motion.div>
         <div className="w-full max-w-xs space-y-3">
           {error && (
@@ -2775,6 +2776,16 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
             Continue with Google
           </button>
           )}
+          <div className="pt-4 border-t border-white/15 text-center space-y-2">
+            <p className="text-white/40 text-xs">Not a business owner?</p>
+            <a
+              href="https://mylinq.app"
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl bg-white/10 border border-white/20 text-white font-bold text-sm hover:bg-white/20 transition-all"
+            >
+              <Smartphone size={15} className="text-white/70" />
+              I'm a customer — get the Linq app
+            </a>
+          </div>
         </div>
       </div>
     );
@@ -2998,10 +3009,19 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
           <motion.div className="absolute top-0 h-full w-1/3 bg-white rounded-full" animate={{ x: ['-100%', '400%'] }} transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }} />
         </div>
       )}
-      <button onClick={() => reset('home')} className="flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-8" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3.5rem)' }}>
-        <ArrowLeft size={18} />
-        <span className="text-sm font-medium">Back</span>
-      </button>
+      {!Capacitor.isNativePlatform() && (
+        <button onClick={() => reset('home')} className="flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-8" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3.5rem)' }}>
+          <ArrowLeft size={18} />
+          <span className="text-sm font-medium">Back</span>
+        </button>
+      )}
+
+      {Capacitor.isNativePlatform() && (
+        <div className="text-center pt-16 pb-6">
+          <p className="font-black leading-none mb-1" style={{ fontFamily: 'Poppins, sans-serif', fontSize: '2.5rem', color: '#000000' }}>Linq</p>
+          <p className="text-white font-bold text-sm tracking-wide">for Customers</p>
+        </div>
+      )}
 
       <div className="flex-1 flex flex-col justify-center max-w-xs mx-auto w-full">
         <div className="mb-8">
@@ -30952,22 +30972,44 @@ function NotificationsPanel({ notifications, onClose }: { notifications: Notific
 
 const DEAL_COLORS = ['#EF4444', '#14B8A6', '#3B82F6', '#22C55E', '#F97316', '#A855F7', '#EAB308', '#10B981'];
 
-function FeedVendorPostCard({ item }: { item: any }) {
+function FeedVendorPostCard({ item, store }: { item: any; store?: StoreProfile }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-5 rounded-[2rem] space-y-3">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-navy/5 shrink-0">
-          <img src={item.authorPhoto || storeFallbackImg(item.authorName)} alt="" className="w-full h-full object-cover" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <p className="font-bold text-sm truncate">{item.authorName}</p>
-            <span className="px-2 py-0.5 bg-brand-gold/10 rounded-full text-[9px] font-bold text-brand-gold uppercase shrink-0">Store</span>
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="py-4">
+      <div className="px-4">
+        <div className="flex items-center gap-3 mb-3">
+          {/* Author avatar */}
+          <div className="w-10 h-10 rounded-full overflow-hidden border border-black/5 shrink-0 bg-blue-50 flex items-center justify-center">
+            {item.authorPhoto
+              ? <img src={item.authorPhoto} alt="" className="w-full h-full object-cover" />
+              : <PixelAvatar uid={item.authorUid} size={40} view="head" />}
           </div>
-          <p className="text-[10px] text-brand-navy/45">{item.createdAt ? format(item.createdAt.toDate(), 'MMM d, h:mm a') : 'Just now'}</p>
+          <div className="flex-1 min-w-0">
+            {/* username › store name */}
+            <p className="text-sm leading-snug">
+              <span className="font-bold text-brand-navy">{item.authorName || 'User'}</span>
+              {store && (
+                <>
+                  <span className="text-brand-navy/50 mx-1">›</span>
+                  <span className="font-bold text-brand-gold">{store.name}</span>
+                </>
+              )}
+            </p>
+            <p className="text-[10px] text-brand-navy/50 font-medium">{timeAgo(item.createdAt)}</p>
+          </div>
+          {/* Store logo */}
+          {store?.logoUrl && (
+            <div className="w-8 h-8 rounded-full overflow-hidden border border-brand-navy/10 shrink-0">
+              <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
+            </div>
+          )}
         </div>
+        {item.content && <p className="text-sm text-brand-navy/90 leading-relaxed">{item.content}</p>}
+        {item.postImageUrl && (
+          <div className="mt-2 rounded-2xl overflow-hidden">
+            <LazyImg src={item.postImageUrl} alt="" className="w-full object-cover max-h-72" />
+          </div>
+        )}
       </div>
-      <p className="text-sm text-brand-navy/90 leading-relaxed">{item.content}</p>
     </motion.div>
   );
 }
@@ -32125,7 +32167,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
             {followingFeed.map((item) =>
               !item._type
                 ? <FeedPostCard key={`gp-${item.id}`} post={item as GlobalPost} currentUser={currentUser} currentProfile={currentProfile} onViewUser={onViewUser} onViewStore={onViewStore} onLike={handleLike} onVote={handleVote} onDelete={async (p) => { await deleteStorageImage(p.postImageUrl); await deleteDoc(doc(db, 'global_posts', p.id)); }} />
-                : <React.Fragment key={`vp-${item.id}`}><FeedVendorPostCard item={item} /></React.Fragment>
+                : <React.Fragment key={`vp-${item.id}`}><FeedVendorPostCard item={item} store={allStores.find(s => s.id === item.storeId)} /></React.Fragment>
             )}
             {followingFeed.length === 0 && (
               <div className="py-20 text-center text-brand-navy/32">
@@ -32498,7 +32540,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
               {displayFeed.map((item) =>
                 !item._type
                   ? <FeedPostCard key={`gp-${item.id}`} post={item as GlobalPost} currentUser={currentUser} currentProfile={currentProfile} onViewUser={onViewUser} onViewStore={onViewStore} onLike={handleLike} onVote={handleVote} onDelete={async (p) => { await deleteStorageImage(p.postImageUrl); await deleteDoc(doc(db, 'global_posts', p.id)); }} showPinnedTag />
-                  : <React.Fragment key={`vp-${item.id}`}><FeedVendorPostCard item={item} /></React.Fragment>
+                  : <React.Fragment key={`vp-${item.id}`}><FeedVendorPostCard item={item} store={allStores.find(s => s.id === item.storeId)} /></React.Fragment>
               )}
               {displayFeed.length === 0 && (
                 <div className="py-20 text-center text-brand-navy/32">
