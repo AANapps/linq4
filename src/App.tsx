@@ -28879,18 +28879,16 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
             className="w-full px-5 py-4 rounded-2xl bg-white border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30" />
         </div>
 
-        {/* Handle — read-only, consumers only */}
-        {profile.role === 'consumer' && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Handle</label>
-              <span className="text-[10px] text-brand-navy/72 flex items-center gap-1"><Lock size={9} /> Cannot be changed</span>
-            </div>
-            <div className="w-full px-5 py-4 rounded-2xl bg-brand-navy/5 border border-brand-navy/10 text-sm font-medium text-brand-navy/75 flex items-center gap-1">
-              <span className="text-brand-navy/72">@</span>{handle || profile.handle || '—'}
-            </div>
+        {/* Handle — read-only */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Handle</label>
+            <span className="text-[10px] text-brand-navy/72 flex items-center gap-1"><Lock size={9} /> Cannot be changed</span>
           </div>
-        )}
+          <div className="w-full px-5 py-4 rounded-2xl bg-brand-navy/5 border border-brand-navy/10 text-sm font-medium text-brand-navy/75 flex items-center gap-1">
+            <span className="text-brand-navy/72">@</span>{handle || profile.handle || '—'}
+          </div>
+        </div>
 
         {/* Consumer info fields — read-only */}
         {profile.role === 'consumer' && (
@@ -29089,19 +29087,17 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
           </motion.div>
         )}
 
-        {/* Privacy Mode — consumers only */}
-        {profile.role === 'consumer' && (
-          <div className="space-y-3">
-            <SectionLabel icon={<Lock size={14} className="text-brand-gold" />} label="Privacy" />
-            <div className="flex items-center justify-between bg-white px-5 py-4 rounded-2xl border border-brand-navy/10">
-              <div className="flex-1 min-w-0 pr-4">
-                <p className="text-sm font-bold text-brand-navy">Privacy Mode</p>
-                <p className="text-xs text-brand-navy/50 mt-0.5">Hide your name and avatar from vendor leaderboards and customer lists — shown as Anonymous.</p>
-              </div>
-              <ToggleSwitch on={privacyMode} onChange={setPrivacyMode} />
+        {/* Privacy Mode */}
+        <div className="space-y-3">
+          <SectionLabel icon={<Lock size={14} className="text-brand-gold" />} label="Privacy" />
+          <div className="flex items-center justify-between bg-white px-5 py-4 rounded-2xl border border-brand-navy/10">
+            <div className="flex-1 min-w-0 pr-4">
+              <p className="text-sm font-bold text-brand-navy">Privacy Mode</p>
+              <p className="text-xs text-brand-navy/50 mt-0.5">Hide your name and avatar from vendor leaderboards and customer lists — shown as Anonymous.</p>
             </div>
+            <ToggleSwitch on={privacyMode} onChange={setPrivacyMode} />
           </div>
-        )}
+        </div>
 
         {/* Intro status */}
         <div className="flex items-center justify-between px-5 py-3 rounded-2xl bg-brand-navy/4">
