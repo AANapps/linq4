@@ -2580,24 +2580,17 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
   onEmailSignUp: (email: string, password: string) => Promise<string | null>;
   onEmailSignIn: (email: string, password: string) => Promise<string | null>;
 }) {
-  const [mode, setMode] = React.useState<'home' | 'signin' | 'signup' | 'phone' | 'otp' | 'forgot' | 'forgot_otp'>('home');
-  const [email, setEmail] = React.useState('');
-  const [password, setPassword] = React.useState('');
-  const [confirmPassword, setConfirmPassword] = React.useState('');
-  const [showPassword, setShowPassword] = React.useState(false);
-  const [error, setError] = React.useState('');
-  const [loading, setLoading] = React.useState(false);
+  const [mode, setMode] = React.useState<'phone' | 'otp'>('phone');
   const [dialCode, setDialCode] = React.useState('+61');
   const [phone, setPhone] = React.useState('');
   const [otp, setOtp] = React.useState('');
-  const [newPass, setNewPass] = React.useState('');
-  const [confirmNewPass, setConfirmNewPass] = React.useState('');
+  const [error, setError] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
   const [confirmResult, setConfirmResult] = React.useState<ConfirmationResult | null>(null);
   const recaptchaVerifier = React.useRef<RecaptchaVerifier | null>(null);
 
-  // Initialise + render invisible reCAPTCHA as soon as the phone screen mounts
   React.useEffect(() => {
-    if (mode !== 'home' && mode !== 'phone' && mode !== 'forgot') return;
+    if (mode !== 'phone') return;
     const timer = setTimeout(() => {
       if (recaptchaVerifier.current) return;
       try {
@@ -2609,41 +2602,24 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
     return () => clearTimeout(timer);
   }, [mode]);
 
-  const handleGoogleLogin = async () => {
-    setLoading(true);
-    setError('');
-    const err = await onLogin();
-    setLoading(false);
-    if (err) setError(err);
-  };
-
-  const reset = (next: 'home' | 'signin' | 'signup' | 'phone' | 'otp' | 'forgot' | 'forgot_otp') => {
-    setError(''); setEmail(''); setPassword(''); setConfirmPassword('');
-    setPhone(''); setDialCode('+61'); setOtp(''); setConfirmResult(null);
-    setNewPass(''); setConfirmNewPass('');
-    setMode(next);
-  };
-
   const handleSendOTP = async () => {
     setError('');
-    const cleaned = toE164(dialCode, phone.trim());
     if (!phone.trim()) { setError('Enter your phone number'); return; }
-    // Ensure verifier exists (handles resend after error)
     if (!recaptchaVerifier.current) {
       try {
         const v = new RecaptchaVerifier(auth, 'phone-recaptcha', { size: 'invisible' });
         await v.render();
         recaptchaVerifier.current = v;
-      } catch (e: any) {
+      } catch {
         setError('reCAPTCHA failed to load — refresh and try again.');
         return;
       }
     }
     setLoading(true);
     try {
-      const result = await signInWithPhoneNumber(auth, cleaned, recaptchaVerifier.current);
+      const result = await signInWithPhoneNumber(auth, toE164(dialCode, phone.trim()), recaptchaVerifier.current);
       setConfirmResult(result);
-      setMode(mode === 'forgot' ? 'forgot_otp' : 'otp');
+      setMode('otp');
     } catch (e: any) {
       setError(e.message || 'Failed to send code. Check the number and try again.');
       recaptchaVerifier.current?.clear();
@@ -2667,274 +2643,49 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
     }
   };
 
-  const handleResetVerify = async () => {
-    setError('');
-    if (!otp.trim()) { setError('Enter the 6-digit code'); return; }
-    if (!confirmResult) return;
-    if (newPass.length < 6) { setError('Password must be at least 6 characters'); return; }
-    if (newPass !== confirmNewPass) { setError('Passwords do not match'); return; }
-    setLoading(true);
-    try {
-      const credential = await confirmResult.confirm(otp.trim());
-      await updatePassword(credential.user, newPass);
-    } catch (e: any) {
-      if (e.code === 'auth/invalid-verification-code') setError('Invalid code — please try again.');
-      else setError(e.message || 'Something went wrong.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSubmit = async () => {
-    setError('');
-    if (!email.trim() || !password) { setError('Please fill in all fields'); return; }
-    if (mode === 'signup') {
-      if (password.length < 6) { setError('Password must be at least 6 characters'); return; }
-      if (password !== confirmPassword) { setError('Passwords do not match'); return; }
-    }
-    setLoading(true);
-    const err = mode === 'signup'
-      ? await onEmailSignUp(email.trim(), password)
-      : await onEmailSignIn(email.trim(), password);
-    setLoading(false);
-    if (err) setError(err);
-  };
-
   const bg = { background: 'linear-gradient(160deg, var(--brand-g1) 0%, var(--brand-g2) 40%, var(--brand-g3) 70%, var(--brand-g4) 100%)' };
 
-  if (mode === 'home' && Capacitor.isNativePlatform()) {
-    reset('signin');
-    return null;
-  }
-
-  if (mode === 'home') {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-8 text-center" style={bg}>
-        {loading && (
-          <div className="fixed top-0 left-0 right-0 h-[3px] z-50 overflow-hidden bg-white/20">
-            <motion.div className="absolute top-0 h-full w-1/3 bg-white rounded-full" animate={{ x: ['-100%', '400%'] }} transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }} />
-          </div>
-        )}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
-          <h1 className="font-black italic leading-none mb-1" style={{ fontFamily: 'Poppins, sans-serif', fontSize: '3rem', color: '#ffffff' }}>Linq</h1>
-          <p className="text-white font-bold text-base tracking-wide mb-4">for Businesses</p>
-          <p className="text-white/60 text-sm max-w-xs mx-auto">Sign in to manage your loyalty cards, post updates, and grow your customer base.</p>
-        </motion.div>
-        <div className="w-full max-w-xs space-y-3">
-          {error && (
-            <div className="flex items-center gap-2 bg-white/15 border border-white/25 rounded-2xl px-4 py-3">
-              <AlertCircle size={14} className="text-white/80 shrink-0" />
-              <p className="text-white/80 text-xs">{error}</p>
-            </div>
-          )}
-          <div className="flex gap-2">
-            <select
-              value={dialCode}
-              onChange={e => setDialCode(e.target.value)}
-              className="shrink-0 rounded-2xl bg-white/15 border border-white/20 text-white text-sm px-3 py-4 focus:outline-none focus:border-white/50 appearance-none"
-            >
-              {DIAL_CODES.map(c => (
-                <option key={c.code} value={c.dial} className="text-black">{c.flag} {c.dial}</option>
-              ))}
-            </select>
-            <input
-              type="tel"
-              value={phone}
-              onChange={e => setPhone(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSendOTP()}
-              placeholder="0420 448 995"
-              autoComplete="tel-national"
-              inputMode="numeric"
-              className="flex-1 min-w-0 px-5 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm focus:outline-none focus:border-white/50 focus:bg-white/20"
-            />
-          </div>
-          <div id="phone-recaptcha" />
-          <button
-            onClick={handleSendOTP}
-            disabled={loading}
-            className="w-full bg-white text-brand-navy font-bold py-4 rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg disabled:opacity-60 flex items-center justify-center gap-2"
-          >
-            {loading
-              ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}><Sparkles size={16} /></motion.div> Please wait…</>
-              : 'Continue'}
-          </button>
-          <div className="flex items-center gap-3">
-            <div className="flex-1 h-px bg-white/20" />
-            <span className="text-white/40 text-xs font-medium">OR</span>
-            <div className="flex-1 h-px bg-white/20" />
-          </div>
-          <button
-            onClick={() => reset('signin')}
-            className="w-full bg-white/10 border border-white/20 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-white/20 transition-all"
-          >
-            Sign in with Email
-          </button>
-          {!Capacitor.isNativePlatform() && (
-          <button
-            onClick={handleGoogleLogin}
-            disabled={loading}
-            className="w-full bg-white text-brand-navy font-bold py-4 rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg flex items-center justify-center gap-3 disabled:opacity-60"
-          >
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="" />
-            Continue with Google
-          </button>
-          )}
-          <div className="pt-4 border-t border-white/15 text-center space-y-2">
-            <p className="text-white/40 text-xs">Not a business owner?</p>
-            <a
-              href="https://mylinq.app"
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl bg-white/10 border border-white/20 text-white font-bold text-sm hover:bg-white/20 transition-all"
-            >
-              <Smartphone size={15} className="text-white/70" />
-              I'm a customer — get the Linq app
-            </a>
-          </div>
+  return (
+    <div className="min-h-screen flex flex-col px-8" style={bg}>
+      {loading && (
+        <div className="fixed top-0 left-0 right-0 h-[3px] z-50 overflow-hidden bg-white/20">
+          <motion.div className="absolute top-0 h-full w-1/3 bg-white rounded-full" animate={{ x: ['-100%', '400%'] }} transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }} />
         </div>
-      </div>
-    );
-  }
+      )}
 
-  if (mode === 'forgot' || mode === 'forgot_otp') {
-    return (
-      <div className="min-h-screen flex flex-col px-8" style={bg}>
-        <button onClick={() => reset('signin')} className="flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-8" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3.5rem)' }}>
+      {mode === 'otp' && (
+        <button
+          onClick={() => { setMode('phone'); setOtp(''); setError(''); }}
+          className="flex items-center gap-2 text-white/70 hover:text-white transition-colors"
+          style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3.5rem)', marginBottom: '2rem' }}
+        >
           <ArrowLeft size={18} />
           <span className="text-sm font-medium">Back</span>
         </button>
+      )}
 
-        <div className="flex-1 flex flex-col justify-center max-w-xs mx-auto w-full">
-          <div className="mb-8">
-            <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mb-4">
-              <Phone className="w-7 h-7 text-white" />
-            </div>
-            <h2 className="font-display font-bold text-2xl text-white mb-1">
-              {mode === 'forgot' ? 'Reset your password' : 'Verify your number'}
-            </h2>
-            <p className="text-white/50 text-sm">
-              {mode === 'forgot'
-                ? 'Enter your phone number and choose a new password'
-                : `We sent a 6-digit code to ${toE164(dialCode, phone)}`}
-            </p>
-          </div>
-
-          <div className="space-y-3">
-            {mode === 'forgot' ? (
-              <>
-                <div className="flex gap-2">
-                  <select
-                    value={dialCode}
-                    onChange={e => setDialCode(e.target.value)}
-                    className="shrink-0 rounded-2xl bg-white/15 border border-white/20 text-white text-sm px-3 py-4 focus:outline-none focus:border-white/50 appearance-none"
-                  >
-                    {DIAL_CODES.map(c => (
-                      <option key={c.code} value={c.dial} className="text-black">{c.flag} {c.dial}</option>
-                    ))}
-                  </select>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={e => setPhone(e.target.value)}
-                    placeholder="0420 448 995"
-                    autoComplete="tel-national"
-                    inputMode="numeric"
-                    className="flex-1 min-w-0 px-5 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm focus:outline-none focus:border-white/50 focus:bg-white/20"
-                  />
-                </div>
-                <div className="relative">
-                  <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
-                  <input
-                    type="password"
-                    value={newPass}
-                    onChange={e => setNewPass(e.target.value)}
-                    placeholder="New password"
-                    autoComplete="new-password"
-                    className="w-full pl-10 pr-5 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm focus:outline-none focus:border-white/50 focus:bg-white/20"
-                  />
-                </div>
-                <div className="relative">
-                  <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
-                  <input
-                    type="password"
-                    value={confirmNewPass}
-                    onChange={e => setConfirmNewPass(e.target.value)}
-                    placeholder="Confirm new password"
-                    autoComplete="new-password"
-                    className="w-full pl-10 pr-5 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm focus:outline-none focus:border-white/50 focus:bg-white/20"
-                  />
-                </div>
-              </>
-            ) : (
-              <input
-                type="number"
-                value={otp}
-                onChange={e => setOtp(e.target.value)}
-                placeholder="6-digit code"
-                autoComplete="one-time-code"
-                inputMode="numeric"
-                maxLength={6}
-                className="w-full px-5 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm text-center tracking-[0.5em] font-bold focus:outline-none focus:border-white/50 focus:bg-white/20"
-              />
-            )}
-
-            {error && (
-              <div className="flex items-center gap-2 bg-white/15 border border-white/25 rounded-2xl px-4 py-3">
-                <AlertCircle size={14} className="text-white/80 shrink-0" />
-                <p className="text-white/80 text-xs">{error}</p>
-              </div>
-            )}
-
-            <div id="phone-recaptcha" />
-
-            <button
-              onClick={mode === 'forgot' ? handleSendOTP : handleResetVerify}
-              disabled={loading}
-              className="w-full bg-white text-brand-navy font-bold py-4 rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
-            >
-              {loading
-                ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}><Sparkles size={16} /></motion.div> Please wait…</>
-                : mode === 'forgot' ? 'Send Verification Code' : 'Confirm & Set Password'}
-            </button>
-
-            {mode === 'forgot_otp' && (
-              <button
-                onClick={handleSendOTP}
-                disabled={loading}
-                className="w-full text-white/50 text-sm py-2 hover:text-white/80 transition-colors disabled:opacity-40"
-              >
-                Resend code
-              </button>
-            )}
-          </div>
+      <div className="flex-1 flex flex-col justify-center max-w-xs mx-auto w-full">
+        <div className="mb-10 text-center">
+          <p className="font-black italic leading-none" style={{ fontFamily: 'Poppins, sans-serif', fontSize: '3rem', color: '#ffffff' }}>Linq</p>
         </div>
-      </div>
-    );
-  }
 
-  if ((mode === 'phone' || mode === 'otp') && !Capacitor.isNativePlatform()) {
-    return (
-      <div className="min-h-screen flex flex-col px-8" style={bg}>
-        <button onClick={() => reset('home')} className="flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-8" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3.5rem)' }}>
-          <ArrowLeft size={18} />
-          <span className="text-sm font-medium">Back</span>
-        </button>
-
-        <div className="flex-1 flex flex-col justify-center max-w-xs mx-auto w-full">
-          <div className="mb-8">
-            <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mb-4">
-              <Phone className="w-7 h-7 text-white" />
-            </div>
-            <h2 className="font-display font-bold text-2xl text-white mb-1">
-              {mode === 'phone' ? 'Your phone number' : 'Enter the code'}
-            </h2>
-            <p className="text-white/50 text-sm">
-              {mode === 'phone'
-                ? 'Select your country and enter your number'
-                : `We sent a 6-digit code to ${toE164(dialCode, phone)}`}
-            </p>
+        <div className="mb-8">
+          <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mb-4">
+            <Phone className="w-7 h-7 text-white" />
           </div>
+          <h2 className="font-display font-bold text-2xl text-white mb-1">
+            {mode === 'phone' ? 'Sign in' : 'Enter the code'}
+          </h2>
+          <p className="text-white/50 text-sm">
+            {mode === 'phone'
+              ? 'Enter your phone number to continue'
+              : `We sent a 6-digit code to ${toE164(dialCode, phone)}`}
+          </p>
+        </div>
 
-          <div className="space-y-3">
-            {mode === 'phone' ? (
+        <div className="space-y-3">
+          {mode === 'phone' ? (
+            <>
               <div className="flex gap-2">
                 <select
                   value={dialCode}
@@ -2956,135 +2707,20 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
                   className="flex-1 min-w-0 px-5 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm focus:outline-none focus:border-white/50 focus:bg-white/20"
                 />
               </div>
-            ) : (
-              <input
-                type="number"
-                value={otp}
-                onChange={e => setOtp(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleVerifyOTP()}
-                placeholder="6-digit code"
-                autoComplete="one-time-code"
-                inputMode="numeric"
-                maxLength={6}
-                className="w-full px-5 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm text-center tracking-[0.5em] font-bold focus:outline-none focus:border-white/50 focus:bg-white/20"
-              />
-            )}
-
-            {error && (
-              <div className="flex items-center gap-2 bg-white/15 border border-white/25 rounded-2xl px-4 py-3">
-                <AlertCircle size={14} className="text-white/80 shrink-0" />
-                <p className="text-white/80 text-xs">{error}</p>
-              </div>
-            )}
-
-            {/* invisible reCAPTCHA anchor — must be in DOM before handleSendOTP is called */}
-            <div id="phone-recaptcha" />
-
-            <button
-              onClick={mode === 'phone' ? handleSendOTP : handleVerifyOTP}
-              disabled={loading}
-              className="w-full bg-white text-brand-navy font-bold py-4 rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
-            >
-              {loading
-                ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}><Sparkles size={16} /></motion.div> Please wait…</>
-                : mode === 'phone' ? 'Send Code' : 'Verify'}
-            </button>
-
-            {mode === 'otp' && (
-              <button
-                onClick={handleSendOTP}
-                disabled={loading}
-                className="w-full text-white/50 text-sm py-2 hover:text-white/80 transition-colors disabled:opacity-40"
-              >
-                Resend code
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen flex flex-col px-8" style={bg}>
-      {loading && (
-        <div className="fixed top-0 left-0 right-0 h-[3px] z-50 overflow-hidden bg-white/20">
-          <motion.div className="absolute top-0 h-full w-1/3 bg-white rounded-full" animate={{ x: ['-100%', '400%'] }} transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }} />
-        </div>
-      )}
-      {!Capacitor.isNativePlatform() && (
-        <button onClick={() => reset('home')} className="flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-8" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3.5rem)' }}>
-          <ArrowLeft size={18} />
-          <span className="text-sm font-medium">Back</span>
-        </button>
-      )}
-
-      {Capacitor.isNativePlatform() && (
-        <div className="text-center pt-16 pb-6">
-          <p className="font-black italic leading-none mb-1" style={{ fontFamily: 'Poppins, sans-serif', fontSize: '2.5rem', color: '#ffffff' }}>Linq</p>
-          <p className="text-white font-bold text-sm tracking-wide">for Customers</p>
-        </div>
-      )}
-
-      <div className="flex-1 flex flex-col justify-center max-w-xs mx-auto w-full">
-        <div className="mb-8">
-          <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mb-4">
-            {mode === 'signup' ? <UserCheck className="w-7 h-7 text-white" /> : <Lock className="w-7 h-7 text-white" />}
-          </div>
-          <h2 className="font-display font-bold text-2xl text-white mb-1">
-            {mode === 'signup' ? 'Create your account' : 'Welcome back'}
-          </h2>
-          <p className="text-white/50 text-sm">
-            {mode === 'signup' ? 'We\'ll send a verification email to confirm your address' : 'Sign in to continue to Linq'}
-          </p>
-        </div>
-
-        <div className="space-y-3">
-          <div className="relative">
-            <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
+              <div id="phone-recaptcha" />
+            </>
+          ) : (
             <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="Email address"
-              autoComplete="email"
-              className="w-full pl-10 pr-5 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm focus:outline-none focus:border-white/50 focus:bg-white/20"
+              type="number"
+              value={otp}
+              onChange={e => setOtp(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleVerifyOTP()}
+              placeholder="6-digit code"
+              autoComplete="one-time-code"
+              inputMode="numeric"
+              maxLength={6}
+              className="w-full px-5 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm text-center tracking-[0.5em] font-bold focus:outline-none focus:border-white/50 focus:bg-white/20"
             />
-          </div>
-
-          <div className="relative">
-            <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
-            <input
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder="Password"
-              autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-              onKeyDown={e => e.key === 'Enter' && !confirmPassword && handleSubmit()}
-              className="w-full pl-10 pr-12 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm focus:outline-none focus:border-white/50 focus:bg-white/20"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(v => !v)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors"
-            >
-              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
-          </div>
-
-          {mode === 'signup' && (
-            <div className="relative">
-              <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={confirmPassword}
-                onChange={e => setConfirmPassword(e.target.value)}
-                placeholder="Confirm password"
-                autoComplete="new-password"
-                onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-                className="w-full pl-10 pr-5 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm focus:outline-none focus:border-white/50 focus:bg-white/20"
-              />
-            </div>
           )}
 
           {error && (
@@ -3095,73 +2731,44 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
           )}
 
           <button
-            onClick={handleSubmit}
+            onClick={mode === 'phone' ? handleSendOTP : handleVerifyOTP}
             disabled={loading}
             className="w-full bg-white text-brand-navy font-bold py-4 rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
           >
             {loading
               ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}><Sparkles size={16} /></motion.div> Please wait…</>
-              : mode === 'signup' ? 'Create Account' : 'Sign In'}
+              : mode === 'phone' ? 'Continue' : 'Verify'}
           </button>
 
-          {mode === 'signin' && (
+          {mode === 'otp' && (
             <button
-              onClick={() => reset('forgot')}
-              className="w-full text-white/50 text-xs py-1 hover:text-white/80 transition-colors text-right"
+              onClick={handleSendOTP}
+              disabled={loading}
+              className="w-full text-white/50 text-sm py-2 hover:text-white/80 transition-colors disabled:opacity-40"
             >
-              Forgot password?
+              Resend code
             </button>
           )}
 
-          <div className="flex items-center gap-3 py-2">
-            <div className="flex-1 h-px bg-white/20" />
-            <span className="text-white/30 text-xs">or</span>
-            <div className="flex-1 h-px bg-white/20" />
-          </div>
-
-          {!Capacitor.isNativePlatform() && (
-          <button
-            onClick={handleGoogleLogin}
-            disabled={loading}
-            className="w-full bg-white/10 border border-white/20 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-white/20 transition-all disabled:opacity-60"
-          >
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="" />
-            Continue with Google
-          </button>
-          )}
-
-          <button
-            onClick={() => reset(mode === 'signup' ? 'signin' : 'signup')}
-            className="w-full text-white/50 text-sm py-2 hover:text-white/80 transition-colors"
-          >
-            {mode === 'signup' ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
-          </button>
-
-          {Capacitor.isNativePlatform() && (
-            <button
-              onClick={() => openUrl('https://mylinq.app')}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-white/15 bg-white/8 text-white/60 text-sm font-medium active:bg-white/15 transition-all"
-            >
-              <Store size={15} className="text-white/50" />
-              I'm a business — visit mylinq.app
-            </button>
-          )}
-
-          {Capacitor.isNativePlatform() && mode === 'signin' && (
-            <div className="pt-4 border-t border-white/10 space-y-2">
-              <p className="text-white/30 text-xs text-center">Test accounts</p>
-              <button
-                onClick={() => { setEmail('user@test.linq'); setPassword('TestLinq123!'); }}
-                className="w-full bg-white/5 border border-white/10 text-white/60 text-xs py-3 rounded-2xl"
-              >
-                Consumer — user@test.linq
-              </button>
-              <button
-                onClick={() => { setEmail('vendor@test.linq'); setPassword('TestLinq123!'); }}
-                className="w-full bg-white/5 border border-white/10 text-white/60 text-xs py-3 rounded-2xl"
-              >
-                Vendor — vendor@test.linq
-              </button>
+          {mode === 'phone' && (
+            <div className="pt-4 border-t border-white/15 text-center">
+              {!Capacitor.isNativePlatform() ? (
+                <a
+                  href="https://mylinq.app"
+                  className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl bg-white/10 border border-white/20 text-white font-bold text-sm hover:bg-white/20 transition-all"
+                >
+                  <Smartphone size={15} className="text-white/70" />
+                  I'm a customer — get the Linq app
+                </a>
+              ) : (
+                <button
+                  onClick={() => openUrl('https://mylinq.app')}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-white/15 bg-white/8 text-white/60 text-sm font-medium active:bg-white/15 transition-all"
+                >
+                  <Store size={15} className="text-white/50" />
+                  I'm a business — visit mylinq.app
+                </button>
+              )}
             </div>
           )}
         </div>
