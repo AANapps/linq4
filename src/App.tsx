@@ -31703,7 +31703,6 @@ function AdminBannerCarousel({ banners, cycleMs = 4500, onNavigate }: { banners:
 function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle, onPackReady, onNavigate, currentUser, currentProfile, userCards = [], uiColors: uc }: { onViewUser: (u: UserProfile) => void, onViewStore?: (s: StoreProfile) => void, onViewChallenges?: () => void, onOpenLinqle?: () => void, onPackReady?: (s: CollectibleSticker[]) => void, onNavigate?: (dest: string) => void, currentUser?: FirebaseUser, currentProfile?: UserProfile | null, userCards?: Card[], uiColors?: UiColors }) {
   const uiColors = uc ?? UI_COLOR_DEFAULTS;
   const [globalPosts, setGlobalPosts] = useState<GlobalPost[]>([]);
-  const [vendorPosts, setVendorPosts] = useState<any[]>([]);
   const [followingUids, setFollowingUids] = useState<Set<string>>(new Set());
   const [followingStoreIds, setFollowingStoreIds] = useState<Set<string>>(new Set());
   const [hotStores, setHotStores] = useState<StoreProfile[]>([]);
@@ -31789,15 +31788,6 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
     observer.observe(el);
     return () => observer.disconnect();
   }, [globalPosts.length, hasMore]);
-
-  useEffect(() => {
-    const unsubVendor = onSnapshot(
-      query(collectionGroup(db, 'posts'), orderBy('createdAt', 'desc'), limit(20)),
-      (snap) => setVendorPosts(snap.docs.map(d => ({ id: d.id, _type: 'vendor', storeId: d.ref.parent.parent?.id, ...d.data() }))),
-      (err) => console.error("vendor posts:", err)
-    );
-    return () => unsubVendor();
-  }, []);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -32047,7 +32037,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
   };
 
   const sortedFeed = (() => {
-    const combined = [...globalPosts, ...vendorPosts].sort((a, b) => {
+    const combined = [...globalPosts].sort((a, b) => {
       const tA = a.createdAt?.toMillis?.() || 0;
       const tB = b.createdAt?.toMillis?.() || 0;
       return tB - tA;
