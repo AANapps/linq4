@@ -24093,6 +24093,10 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
   const [searchType, setSearchType] = useState<'stores' | 'users'>('stores');
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [loadingMoreUsers, setLoadingMoreUsers] = useState(false);
+  const [hasMoreUsers, setHasMoreUsers] = useState(true);
+  const lastUserDocRef = React.useRef<any>(null);
+  const USER_PAGE = 15;
   const [activeCategory, setActiveCategory] = useState('All');
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [distancesMap, setDistancesMap] = useState<Map<string, number>>(new Map());
@@ -24157,20 +24161,33 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
   }, [userCoords, stores]);
 
   useEffect(() => {
-    if (searchType === 'users') {
-      setLoadingUsers(true);
-      const q = query(collection(db, 'users'), where('role', '==', 'consumer'), limit(50));
-      getDocs(q).then(snap => {
-        const fetched = snap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile));
-        // Ensure current user appears even if not in query results
-        if (currentProfile && !fetched.some(u => u.uid === currentProfile.uid)) {
-          fetched.unshift(currentProfile);
-        }
-        setUsers(fetched);
-        setLoadingUsers(false);
-      });
-    }
+    if (searchType !== 'users') return;
+    setLoadingUsers(true);
+    lastUserDocRef.current = null;
+    setHasMoreUsers(true);
+    const q = query(collection(db, 'users'), where('role', '==', 'consumer'), orderBy('name'), limit(USER_PAGE));
+    getDocs(q).then(snap => {
+      lastUserDocRef.current = snap.docs[snap.docs.length - 1] ?? null;
+      setHasMoreUsers(snap.docs.length === USER_PAGE);
+      const fetched = snap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile));
+      if (currentProfile && !fetched.some(u => u.uid === currentProfile.uid)) {
+        fetched.unshift(currentProfile);
+      }
+      setUsers(fetched);
+      setLoadingUsers(false);
+    });
   }, [searchType, currentProfile]);
+
+  const loadMoreUsers = async () => {
+    if (loadingMoreUsers || !hasMoreUsers || !lastUserDocRef.current) return;
+    setLoadingMoreUsers(true);
+    const q = query(collection(db, 'users'), where('role', '==', 'consumer'), orderBy('name'), startAfter(lastUserDocRef.current), limit(USER_PAGE));
+    const snap = await getDocs(q);
+    lastUserDocRef.current = snap.docs[snap.docs.length - 1] ?? lastUserDocRef.current;
+    setHasMoreUsers(snap.docs.length === USER_PAGE);
+    setUsers(prev => [...prev, ...snap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile))]);
+    setLoadingMoreUsers(false);
+  };
 
   const filteredStores = (() => {
     const matched = stores.filter(s => {
@@ -24552,6 +24569,17 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
                   <Users size={64} className="mx-auto mb-4 opacity-10" />
                   <p className="font-bold">No users found</p>
                 </div>
+              )}
+              {!search && hasMoreUsers && (
+                <button
+                  onClick={loadMoreUsers}
+                  disabled={loadingMoreUsers}
+                  className="w-full py-3 rounded-2xl bg-white border border-brand-navy/10 text-brand-navy font-bold text-sm hover:bg-brand-bg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {loadingMoreUsers
+                    ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}><Sparkles size={14} className="text-brand-gold" /></motion.div> Loading…</>
+                    : 'Load more'}
+                </button>
               )}
             </>
           )}
