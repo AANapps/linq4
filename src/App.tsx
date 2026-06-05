@@ -2580,17 +2580,20 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
   onEmailSignUp: (email: string, password: string) => Promise<string | null>;
   onEmailSignIn: (email: string, password: string) => Promise<string | null>;
 }) {
-  const [phoneMode, setPhoneMode] = React.useState<'phone' | 'otp'>('phone');
+  const [phoneMode, setPhoneMode] = React.useState<'phone' | 'otp' | 'email' | 'email-signup'>('phone');
   const [dialCode, setDialCode] = React.useState('+61');
   const [phone, setPhone] = React.useState('');
   const [otp, setOtp] = React.useState('');
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [showPassword, setShowPassword] = React.useState(false);
   const [confirmResult, setConfirmResult] = React.useState<ConfirmationResult | null>(null);
   const recaptchaVerifier = React.useRef<RecaptchaVerifier | null>(null);
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(false);
 
   React.useEffect(() => {
-    if (phoneMode !== 'phone') return;
+    if (phoneMode !== 'phone' && phoneMode !== 'email' && phoneMode !== 'email-signup') return;
     const timer = setTimeout(() => {
       if (recaptchaVerifier.current) return;
       try {
@@ -2643,6 +2646,17 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
     }
   };
 
+  const handleEmailSubmit = async () => {
+    setError('');
+    if (!email.trim() || !password) { setError('Please fill in all fields'); return; }
+    setLoading(true);
+    const err = phoneMode === 'email-signup'
+      ? await onEmailSignUp(email.trim(), password)
+      : await onEmailSignIn(email.trim(), password);
+    setLoading(false);
+    if (err) setError(err);
+  };
+
   const bg = { background: 'linear-gradient(160deg, var(--brand-g1) 0%, var(--brand-g2) 40%, var(--brand-g3) 70%, var(--brand-g4) 100%)' };
 
   return (
@@ -2653,9 +2667,9 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
         </div>
       )}
 
-      {phoneMode === 'otp' && (
+      {(phoneMode === 'otp' || phoneMode === 'email' || phoneMode === 'email-signup') && (
         <button
-          onClick={() => { setPhoneMode('phone'); setOtp(''); setError(''); }}
+          onClick={() => { setPhoneMode('phone'); setOtp(''); setEmail(''); setPassword(''); setError(''); }}
           className="flex items-center gap-2 text-white/70 hover:text-white transition-colors"
           style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3.5rem)', marginBottom: '2rem' }}
         >
@@ -2676,15 +2690,16 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
 
         <div className="mb-8">
           <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mb-4">
-            <Phone className="w-7 h-7 text-white" />
+            {phoneMode === 'email' || phoneMode === 'email-signup' ? <Mail className="w-7 h-7 text-white" /> : <Phone className="w-7 h-7 text-white" />}
           </div>
           <h2 className="font-display font-bold text-2xl text-white mb-1">
-            {phoneMode === 'phone' ? 'Sign in' : 'Enter the code'}
+            {phoneMode === 'phone' ? 'Sign in' : phoneMode === 'otp' ? 'Enter the code' : phoneMode === 'email-signup' ? 'Create account' : 'Sign in with email'}
           </h2>
           <p className="text-white/50 text-sm">
-            {phoneMode === 'phone'
-              ? 'Enter your phone number to continue'
-              : `We sent a 6-digit code to ${toE164(dialCode, phone)}`}
+            {phoneMode === 'phone' ? 'Enter your phone number to continue'
+              : phoneMode === 'otp' ? `We sent a 6-digit code to ${toE164(dialCode, phone)}`
+              : phoneMode === 'email-signup' ? 'Create a new account'
+              : 'Enter your email and password'}
           </p>
         </div>
 
@@ -2714,7 +2729,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
               </div>
               <div id="phone-recaptcha" />
             </>
-          ) : (
+          ) : phoneMode === 'otp' ? (
             <input
               type="number"
               value={otp}
@@ -2726,6 +2741,36 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
               maxLength={6}
               className="w-full px-5 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm text-center tracking-[0.5em] font-bold focus:outline-none focus:border-white/50 focus:bg-white/20"
             />
+          ) : (
+            <>
+              <div className="relative">
+                <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleEmailSubmit()}
+                  placeholder="Email address"
+                  autoComplete="email"
+                  className="w-full pl-10 pr-5 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm focus:outline-none focus:border-white/50 focus:bg-white/20"
+                />
+              </div>
+              <div className="relative">
+                <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleEmailSubmit()}
+                  placeholder="Password"
+                  autoComplete={phoneMode === 'email-signup' ? 'new-password' : 'current-password'}
+                  className="w-full pl-10 pr-12 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm focus:outline-none focus:border-white/50 focus:bg-white/20"
+                />
+                <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors">
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </>
           )}
 
           {error && (
@@ -2736,13 +2781,13 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
           )}
 
           <button
-            onClick={phoneMode === 'phone' ? handleSendOTP : handleVerifyOTP}
+            onClick={phoneMode === 'phone' ? handleSendOTP : phoneMode === 'otp' ? handleVerifyOTP : handleEmailSubmit}
             disabled={loading}
             className="w-full bg-white text-brand-navy font-bold py-4 rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
           >
             {loading
               ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}><Sparkles size={16} /></motion.div> Please wait…</>
-              : phoneMode === 'phone' ? 'Continue' : 'Verify'}
+              : phoneMode === 'phone' ? 'Continue' : phoneMode === 'otp' ? 'Verify' : phoneMode === 'email-signup' ? 'Create Account' : 'Sign In'}
           </button>
 
           {phoneMode === 'otp' && (
@@ -2751,8 +2796,26 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
             </button>
           )}
 
+          {(phoneMode === 'email' || phoneMode === 'email-signup') && (
+            <button onClick={() => { setPhoneMode(phoneMode === 'email' ? 'email-signup' : 'email'); setError(''); }} className="w-full text-white/50 text-sm py-2 hover:text-white/80 transition-colors">
+              {phoneMode === 'email' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
+            </button>
+          )}
+
           {phoneMode === 'phone' && (
-            <div className="pt-4 border-t border-white/15">
+            <div className="pt-3">
+              <button
+                onClick={() => { setPhoneMode('email'); setError(''); }}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-white/10 border border-white/20 text-white font-bold text-sm hover:bg-white/20 transition-all"
+              >
+                <Mail size={15} />
+                Sign in with Email
+              </button>
+            </div>
+          )}
+
+          {phoneMode === 'phone' && (
+            <div className="pt-1 border-t border-white/15">
               {Capacitor.isNativePlatform() ? (
                 <button
                   onClick={() => openUrl('https://mylinq.app')}
