@@ -2070,11 +2070,19 @@ export default function App() {
 
   if (nativeVendorBlocked) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gradient-logo-blue px-6 gap-6 text-center" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+      <div className="min-h-screen flex flex-col items-center justify-center gradient-logo-blue px-6 gap-5 text-center" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={{ fontFamily: 'Poppins, sans-serif', color: '#ffffff' }}>Linq</span>
-        <p className="text-white font-bold text-xl">Browser Access Only</p>
-        <p className="text-white/70 text-sm max-w-xs">Vendor accounts can only be used at mylinq.app in a browser.</p>
-        <button onClick={() => setNativeVendorBlocked(false)} className="text-white/50 text-xs underline">Sign in with a different account</button>
+        <div>
+          <p className="text-white font-bold text-xl mb-2">You're a vendor!</p>
+          <p className="text-white/70 text-sm max-w-xs">Vendor accounts are managed in the browser. Visit the link below to sign in.</p>
+        </div>
+        <button
+          onClick={() => openUrl('https://mylinq.app')}
+          className="px-8 py-4 bg-white rounded-2xl text-brand-navy font-bold text-base shadow-lg active:scale-95 transition-transform"
+        >
+          mylinq.app
+        </button>
+        <button onClick={() => setNativeVendorBlocked(false)} className="text-white/40 text-xs">Sign in with a different account</button>
       </div>
     );
   }
