@@ -2580,17 +2580,26 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
   onEmailSignUp: (email: string, password: string) => Promise<string | null>;
   onEmailSignIn: (email: string, password: string) => Promise<string | null>;
 }) {
-  const [mode, setMode] = React.useState<'phone' | 'otp'>('phone');
+  const isNative = Capacitor.isNativePlatform();
+
+  // Phone/OTP state (native only)
+  const [phoneMode, setPhoneMode] = React.useState<'phone' | 'otp'>('phone');
   const [dialCode, setDialCode] = React.useState('+61');
   const [phone, setPhone] = React.useState('');
   const [otp, setOtp] = React.useState('');
-  const [error, setError] = React.useState('');
-  const [loading, setLoading] = React.useState(false);
   const [confirmResult, setConfirmResult] = React.useState<ConfirmationResult | null>(null);
   const recaptchaVerifier = React.useRef<RecaptchaVerifier | null>(null);
 
+  // Email state (web only)
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [showPassword, setShowPassword] = React.useState(false);
+
+  const [error, setError] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+
   React.useEffect(() => {
-    if (mode !== 'phone') return;
+    if (!isNative || phoneMode !== 'phone') return;
     const timer = setTimeout(() => {
       if (recaptchaVerifier.current) return;
       try {
@@ -2600,7 +2609,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
       } catch { /* element not ready yet */ }
     }, 150);
     return () => clearTimeout(timer);
-  }, [mode]);
+  }, [phoneMode, isNative]);
 
   const handleSendOTP = async () => {
     setError('');
@@ -2611,7 +2620,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
         await v.render();
         recaptchaVerifier.current = v;
       } catch {
-        setError('reCAPTCHA failed to load — refresh and try again.');
+        setError('reCAPTCHA failed to load — restart and try again.');
         return;
       }
     }
@@ -2619,7 +2628,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
     try {
       const result = await signInWithPhoneNumber(auth, toE164(dialCode, phone.trim()), recaptchaVerifier.current);
       setConfirmResult(result);
-      setMode('otp');
+      setPhoneMode('otp');
     } catch (e: any) {
       setError(e.message || 'Failed to send code. Check the number and try again.');
       recaptchaVerifier.current?.clear();
@@ -2643,8 +2652,103 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
     }
   };
 
+  const handleEmailSignIn = async () => {
+    setError('');
+    if (!email.trim() || !password) { setError('Please fill in all fields'); return; }
+    setLoading(true);
+    const err = await onEmailSignIn(email.trim(), password);
+    setLoading(false);
+    if (err) setError(err);
+  };
+
   const bg = { background: 'linear-gradient(160deg, var(--brand-g1) 0%, var(--brand-g2) 40%, var(--brand-g3) 70%, var(--brand-g4) 100%)' };
 
+  // ── Web: email login for vendors ─────────────────────────────────────────
+  if (!isNative) {
+    return (
+      <div className="min-h-screen flex flex-col px-8" style={bg}>
+        {loading && (
+          <div className="fixed top-0 left-0 right-0 h-[3px] z-50 overflow-hidden bg-white/20">
+            <motion.div className="absolute top-0 h-full w-1/3 bg-white rounded-full" animate={{ x: ['-100%', '400%'] }} transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }} />
+          </div>
+        )}
+        <div className="flex-1 flex flex-col justify-center max-w-xs mx-auto w-full">
+          <div className="mb-10 text-center">
+            <p className="font-black italic leading-none" style={{ fontFamily: 'Poppins, sans-serif', fontSize: '3rem', color: '#ffffff' }}>Linq</p>
+            <p className="text-white/60 text-sm mt-1">for Businesses</p>
+          </div>
+
+          <div className="mb-8">
+            <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mb-4">
+              <Mail className="w-7 h-7 text-white" />
+            </div>
+            <h2 className="font-display font-bold text-2xl text-white mb-1">Sign in</h2>
+            <p className="text-white/50 text-sm">Enter your email and password to continue</p>
+          </div>
+
+          <div className="space-y-3">
+            <div className="relative">
+              <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleEmailSignIn()}
+                placeholder="Email address"
+                autoComplete="email"
+                className="w-full pl-10 pr-5 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm focus:outline-none focus:border-white/50 focus:bg-white/20"
+              />
+            </div>
+
+            <div className="relative">
+              <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleEmailSignIn()}
+                placeholder="Password"
+                autoComplete="current-password"
+                className="w-full pl-10 pr-12 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm focus:outline-none focus:border-white/50 focus:bg-white/20"
+              />
+              <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors">
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+
+            {error && (
+              <div className="flex items-center gap-2 bg-white/15 border border-white/25 rounded-2xl px-4 py-3">
+                <AlertCircle size={14} className="text-white/80 shrink-0" />
+                <p className="text-white/80 text-xs">{error}</p>
+              </div>
+            )}
+
+            <button
+              onClick={handleEmailSignIn}
+              disabled={loading}
+              className="w-full bg-white text-brand-navy font-bold py-4 rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
+            >
+              {loading
+                ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}><Sparkles size={16} /></motion.div> Please wait…</>
+                : 'Sign In'}
+            </button>
+
+            <div className="pt-4 border-t border-white/15 text-center">
+              <a
+                href="https://mylinq.app"
+                className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl bg-white/10 border border-white/20 text-white font-bold text-sm hover:bg-white/20 transition-all"
+              >
+                <Smartphone size={15} className="text-white/70" />
+                I'm a customer — get the Linq app
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Native: phone/OTP login for consumers ────────────────────────────────
   return (
     <div className="min-h-screen flex flex-col px-8" style={bg}>
       {loading && (
@@ -2653,9 +2757,9 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
         </div>
       )}
 
-      {mode === 'otp' && (
+      {phoneMode === 'otp' && (
         <button
-          onClick={() => { setMode('phone'); setOtp(''); setError(''); }}
+          onClick={() => { setPhoneMode('phone'); setOtp(''); setError(''); }}
           className="flex items-center gap-2 text-white/70 hover:text-white transition-colors"
           style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3.5rem)', marginBottom: '2rem' }}
         >
@@ -2674,17 +2778,17 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
             <Phone className="w-7 h-7 text-white" />
           </div>
           <h2 className="font-display font-bold text-2xl text-white mb-1">
-            {mode === 'phone' ? 'Sign in' : 'Enter the code'}
+            {phoneMode === 'phone' ? 'Sign in' : 'Enter the code'}
           </h2>
           <p className="text-white/50 text-sm">
-            {mode === 'phone'
+            {phoneMode === 'phone'
               ? 'Enter your phone number to continue'
               : `We sent a 6-digit code to ${toE164(dialCode, phone)}`}
           </p>
         </div>
 
         <div className="space-y-3">
-          {mode === 'phone' ? (
+          {phoneMode === 'phone' ? (
             <>
               <div className="flex gap-2">
                 <select
@@ -2731,44 +2835,30 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
           )}
 
           <button
-            onClick={mode === 'phone' ? handleSendOTP : handleVerifyOTP}
+            onClick={phoneMode === 'phone' ? handleSendOTP : handleVerifyOTP}
             disabled={loading}
             className="w-full bg-white text-brand-navy font-bold py-4 rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
           >
             {loading
               ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}><Sparkles size={16} /></motion.div> Please wait…</>
-              : mode === 'phone' ? 'Continue' : 'Verify'}
+              : phoneMode === 'phone' ? 'Continue' : 'Verify'}
           </button>
 
-          {mode === 'otp' && (
-            <button
-              onClick={handleSendOTP}
-              disabled={loading}
-              className="w-full text-white/50 text-sm py-2 hover:text-white/80 transition-colors disabled:opacity-40"
-            >
+          {phoneMode === 'otp' && (
+            <button onClick={handleSendOTP} disabled={loading} className="w-full text-white/50 text-sm py-2 hover:text-white/80 transition-colors disabled:opacity-40">
               Resend code
             </button>
           )}
 
-          {mode === 'phone' && (
-            <div className="pt-4 border-t border-white/15 text-center">
-              {!Capacitor.isNativePlatform() ? (
-                <a
-                  href="https://mylinq.app"
-                  className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl bg-white/10 border border-white/20 text-white font-bold text-sm hover:bg-white/20 transition-all"
-                >
-                  <Smartphone size={15} className="text-white/70" />
-                  I'm a customer — get the Linq app
-                </a>
-              ) : (
-                <button
-                  onClick={() => openUrl('https://mylinq.app')}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-white/15 bg-white/8 text-white/60 text-sm font-medium active:bg-white/15 transition-all"
-                >
-                  <Store size={15} className="text-white/50" />
-                  I'm a business — visit mylinq.app
-                </button>
-              )}
+          {phoneMode === 'phone' && (
+            <div className="pt-4 border-t border-white/15">
+              <button
+                onClick={() => openUrl('https://mylinq.app')}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-white/15 bg-white/8 text-white/60 text-sm font-medium active:bg-white/15 transition-all"
+              >
+                <Store size={15} className="text-white/50" />
+                I'm a business — visit mylinq.app
+              </button>
             </div>
           )}
         </div>
