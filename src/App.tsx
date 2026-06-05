@@ -2766,7 +2766,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
                     href="https://apps.apple.com/app/linq/id6474052885"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-3 w-full py-3 rounded-2xl bg-white/10 border border-white/20 text-white font-bold text-sm hover:bg-white/20 transition-all"
+                    className="flex items-center justify-center gap-3 w-full py-3 rounded-2xl bg-black text-white font-bold text-sm hover:bg-black/80 transition-all"
                   >
                     <svg viewBox="0 0 814 1000" className="w-5 h-5 fill-white shrink-0"><path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 376.6 0 319 0 256.7c0-61.6 21.3-118.2 59.2-159.7C98.6 55.7 152 32 200.3 32c61.6 0 111.6 40.8 149.4 40.8 36.1 0 93.6-43.1 163.9-43.1 26.4 0 108.2 2.6 168.6 81.8zm-225.1-154.4c30.7-36.8 52.7-88.2 52.7-139.5 0-7.1-.6-14.3-1.9-20.1-49.3 1.9-107.9 32.9-142.4 75.3-27.5 32.3-55.1 83.6-55.1 135.7 0 7.8 1.3 15.6 1.9 18.1 3.2.6 8.4 1.3 13.6 1.3 44.4 0 97.1-29.4 131.2-70.8z"/></svg>
                     Download on the App Store
@@ -2775,7 +2775,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
                     href="https://play.google.com/store/apps/details?id=app.mylinq.linq"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-3 w-full py-3 rounded-2xl bg-white/10 border border-white/20 text-white font-bold text-sm hover:bg-white/20 transition-all"
+                    className="flex items-center justify-center gap-3 w-full py-3 rounded-2xl bg-white text-gray-800 font-bold text-sm hover:bg-white/90 transition-all"
                   >
                     <svg viewBox="0 0 488 512" className="w-5 h-5 shrink-0"><path d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z" fill="#4285F4"/><path d="M488 261.8c0 16.5-1.6 28.7-3.9 41.4H248v-85.3h236.1C489.2 233 488 248 488 261.8z" fill="#4285F4"/><path d="M104.8 300.5l-79.9 62C48.5 416.6 138.9 480 248 480c69.9 0 128.5-23.1 171.2-61.3l-76.5-59.3C317.5 381.4 285 392 248 392c-56.3 0-104.3-37.7-121.2-89.4l-22-2.1z" fill="#34A853"/><path d="M24.9 362.5C9 328.7 0 291.3 0 256s9-72.7 24.9-106.5l79.9 62C97.8 232.2 94.3 243.7 94.3 256s3.5 23.8 10.5 38.5l-79.9 68z" fill="#FBBC05"/><path d="M248 120c37.5 0 71.4 12.9 98 34.1l73.3-73.3C374.9 44.5 315.6 16 248 16 138.9 16 48.5 79.4 24.9 149.5l79.9 62C121.7 157.7 169.7 120 248 120z" fill="#EA4335"/></svg>
                     Get it on Google Play
