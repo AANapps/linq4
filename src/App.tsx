@@ -1571,7 +1571,7 @@ export default function App() {
   }, [user, profile]);
 
   useEffect(() => {
-    const loadingTimeout = setTimeout(() => setLoading(false), 5000);
+    const loadingTimeout = setTimeout(() => setLoading(false), 3000);
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       clearTimeout(loadingTimeout);
       if (!firebaseUser) {
@@ -1600,15 +1600,23 @@ export default function App() {
         const fetchWithRetry = async (retries = 3): Promise<{ doc: any; inUsers: boolean } | null> => {
           for (let i = 0; i < retries; i++) {
             try {
-              // Fetch users + vendors in parallel — cuts cold-start latency in half
-              const [userDoc, vendorDoc] = await Promise.all([
-                getDoc(doc(db, 'users', firebaseUser.uid)),
-                getDoc(doc(db, 'vendors', firebaseUser.uid)),
+              const perAttemptTimeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 2500));
+              const fetched = await Promise.race([
+                Promise.all([
+                  getDoc(doc(db, 'users', firebaseUser.uid)),
+                  getDoc(doc(db, 'vendors', firebaseUser.uid)),
+                ]),
+                perAttemptTimeout,
               ]);
+              if (!fetched) {
+                if (i < retries - 1) await new Promise(r => setTimeout(r, 300));
+                continue;
+              }
+              const [userDoc, vendorDoc] = fetched;
               if (userDoc.exists()) return { doc: userDoc, inUsers: true };
               return { doc: vendorDoc, inUsers: false };
             } catch {
-              if (i < retries - 1) await new Promise(r => setTimeout(r, 500 * (i + 1)));
+              if (i < retries - 1) await new Promise(r => setTimeout(r, 300));
             }
           }
           return null;
