@@ -1265,6 +1265,7 @@ export default function App() {
   const [needsEmailVerification, setNeedsEmailVerification] = useState(false);
   const [profileLoadError, setProfileLoadError] = useState(false);
   const [browserConsumerBlocked, setBrowserConsumerBlocked] = useState(false);
+  const [nativeVendorBlocked, setNativeVendorBlocked] = useState(false);
   const [profileCollection, setProfileCollection] = useState<'users' | 'vendors' | null>(null);
   const intendedRoleRef = useRef<'consumer' | 'vendor' | null>(null);
   const [activeTab, setActiveTab] = useState<string>('home');
@@ -1631,6 +1632,14 @@ export default function App() {
             if (!isAdminUser && !isVendorUser) {
               await signOut(auth);
               setBrowserConsumerBlocked(true);
+              setUser(null); setProfile(null); setLoading(false);
+              return;
+            }
+          } else {
+            // Native app: only consumers and admins allowed — vendors use browser
+            if (isVendorUser && !isAdminUser) {
+              await signOut(auth);
+              setNativeVendorBlocked(true);
               setUser(null); setProfile(null); setLoading(false);
               return;
             }
@@ -2055,6 +2064,17 @@ export default function App() {
     );
   }
 
+
+  if (nativeVendorBlocked) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gradient-logo-blue px-6 gap-6 text-center" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+        <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={{ fontFamily: 'Poppins, sans-serif', color: '#ffffff' }}>Linq</span>
+        <p className="text-white font-bold text-xl">Browser Access Only</p>
+        <p className="text-white/70 text-sm max-w-xs">Vendor accounts can only be used at mylinq.app in a browser.</p>
+        <button onClick={() => setNativeVendorBlocked(false)} className="text-white/50 text-xs underline">Sign in with a different account</button>
+      </div>
+    );
+  }
 
   if (!user) {
     return <LandingPage onLogin={handleLogin} onEmailSignUp={handleEmailSignUp} onEmailSignIn={handleEmailSignIn} />;
