@@ -27916,11 +27916,6 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="font-display text-2xl font-bold">{profile.name}</h2>
               <StreakBadge streak={profile.streak} size="lg" />
-              {profile.privacyMode && (
-                <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full">
-                  <Lock size={7} /> Anonymous
-                </span>
-              )}
             </div>
             <p className="text-brand-gold font-bold text-xs uppercase tracking-[0.2em]">@{profile.handle || user.email?.split('@')[0]}</p>
             <div className="flex items-center gap-3 mt-2 text-sm">
