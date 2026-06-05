@@ -2666,10 +2666,12 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
 
       <div className="flex-1 flex flex-col justify-center max-w-xs mx-auto w-full">
         <div className="mb-10 text-center">
-          <p className="font-black italic leading-none" style={{ fontFamily: 'Poppins, sans-serif', fontSize: '3rem', color: '#ffffff' }}>Linq</p>
-          {!Capacitor.isNativePlatform() && phoneMode === 'phone' && (
-            <p className="text-white/60 text-sm mt-1 font-semibold tracking-wide">For Business</p>
-          )}
+          <div className="flex items-baseline justify-center gap-2">
+            <p className="font-black italic leading-none" style={{ fontFamily: 'Poppins, sans-serif', fontSize: '3rem', color: '#ffffff' }}>Linq</p>
+            {!Capacitor.isNativePlatform() && phoneMode === 'phone' && (
+              <span className="text-white/70 text-base font-semibold">Business</span>
+            )}
+          </div>
         </div>
 
         <div className="mb-8">
@@ -2761,7 +2763,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
                 </button>
               ) : (
                 <div className="space-y-3">
-                  <p className="text-white/50 text-xs text-center font-medium">Are you a customer?</p>
+                  <p className="text-white/70 text-sm text-center font-bold">Are you a customer?</p>
                   <a
                     href="https://apps.apple.com/app/linq/id6474052885"
                     target="_blank"
