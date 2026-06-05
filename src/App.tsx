@@ -2716,7 +2716,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
           </div>
         )}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
-          <h1 className="font-black leading-none mb-1" style={{ fontFamily: 'Poppins, sans-serif', fontSize: '3rem', color: '#000000' }}>Linq</h1>
+          <h1 className="font-black italic leading-none mb-1" style={{ fontFamily: 'Poppins, sans-serif', fontSize: '3rem', color: '#ffffff' }}>Linq</h1>
           <p className="text-white font-bold text-base tracking-wide mb-4">for Businesses</p>
           <p className="text-white/60 text-sm max-w-xs mx-auto">Sign in to manage your loyalty cards, post updates, and grow your customer base.</p>
         </motion.div>
@@ -3021,7 +3021,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
 
       {Capacitor.isNativePlatform() && (
         <div className="text-center pt-16 pb-6">
-          <p className="font-black leading-none mb-1" style={{ fontFamily: 'Poppins, sans-serif', fontSize: '2.5rem', color: '#000000' }}>Linq</p>
+          <p className="font-black italic leading-none mb-1" style={{ fontFamily: 'Poppins, sans-serif', fontSize: '2.5rem', color: '#ffffff' }}>Linq</p>
           <p className="text-white font-bold text-sm tracking-wide">for Customers</p>
         </div>
       )}
