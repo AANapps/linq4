@@ -28891,7 +28891,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
         </div>
 
         {/* Consumer info fields — read-only */}
-        {profile.role === 'consumer' && (
+        {profile.role !== 'vendor' && (
           <div className="space-y-4">
             <SectionLabel icon={<UserIcon size={14} className="text-brand-gold" />} label="Your Information" />
             <div className="space-y-3">
