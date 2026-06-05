@@ -29764,7 +29764,11 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                 <p className="font-black text-sm text-white leading-snug">{post.isAnonymous ? 'a User' : (authorProfile?.name || post.authorName)}</p>
                 <StreakBadge streak={authorProfile?.streak} />
               </div>
-              <p className="text-white text-sm font-bold leading-snug">{post.content}</p>
+              <p className="text-white text-sm font-bold leading-snug">
+                {post.isAnonymous && post.authorName && post.authorName !== 'a User'
+                  ? post.content?.replace(post.authorName, 'a User')
+                  : post.content}
+              </p>
               <p className="text-white/50 text-[10px] font-medium mt-0.5">
                 {timeAgo(post.createdAt)}
               </p>
