@@ -936,14 +936,17 @@ function stampEventMeta(
 
 async function postActivity(uid: string, name: string, photo: string, content: string, emoji: string) {
   try {
+    const profileSnap = await getDoc(doc(db, 'users', uid));
+    const isPrivate = profileSnap.exists() && !!profileSnap.data().privacyMode;
     await addDoc(collection(db, 'global_posts'), {
       authorUid: uid,
-      authorName: name,
-      authorPhoto: photo,
+      authorName: isPrivate ? 'a User' : name,
+      authorPhoto: isPrivate ? '' : photo,
       authorRole: 'consumer',
       postType: 'activity',
       activityEmoji: emoji,
-      content,
+      content: isPrivate && name ? content.replace(name, 'a User') : content,
+      isAnonymous: isPrivate,
       likesCount: 0,
       likedBy: [],
       createdAt: serverTimestamp(),
@@ -29874,6 +29877,10 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
         if (snap.exists()) setAuthorProfile({ name: snap.data().name, logoUrl: snap.data().logoUrl || '' });
       }, () => {});
     }
+    if (post.isAnonymous) {
+      setAuthorProfile({ name: 'a User' });
+      return;
+    }
     return onSnapshot(doc(db, 'users', post.authorUid), (snap) => {
       if (snap.exists()) setAuthorProfile({ name: snap.data().name, gender: snap.data().gender, avatar: snap.data().avatar, streak: snap.data().streak });
     }, () => {});
@@ -30038,13 +30045,15 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
           ))}
           <div className="relative z-10 flex items-center gap-3 p-4">
             {/* Avatar */}
-            <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-white/40 shrink-0 shadow-md bg-white flex items-center justify-center">
-              <PixelAvatar config={authorProfile?.avatar} uid={post.authorUid} size={44} view="head" />
+            <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-white/40 shrink-0 shadow-md bg-white/20 flex items-center justify-center">
+              {post.isAnonymous
+                ? <UserIcon size={22} className="text-white/70" />
+                : <PixelAvatar config={authorProfile?.avatar} uid={post.authorUid} size={44} view="head" />}
             </div>
             {/* Text */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
-                <p className="font-black text-sm text-white leading-snug">{authorProfile?.name || post.authorName}</p>
+                <p className="font-black text-sm text-white leading-snug">{post.isAnonymous ? 'a User' : (authorProfile?.name || post.authorName)}</p>
                 <StreakBadge streak={authorProfile?.streak} />
               </div>
               <p className="text-white text-sm font-bold leading-snug">{post.content}</p>
