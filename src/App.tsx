@@ -2580,26 +2580,17 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
   onEmailSignUp: (email: string, password: string) => Promise<string | null>;
   onEmailSignIn: (email: string, password: string) => Promise<string | null>;
 }) {
-  const isNative = Capacitor.isNativePlatform();
-
-  // Phone/OTP state (native only)
   const [phoneMode, setPhoneMode] = React.useState<'phone' | 'otp'>('phone');
   const [dialCode, setDialCode] = React.useState('+61');
   const [phone, setPhone] = React.useState('');
   const [otp, setOtp] = React.useState('');
   const [confirmResult, setConfirmResult] = React.useState<ConfirmationResult | null>(null);
   const recaptchaVerifier = React.useRef<RecaptchaVerifier | null>(null);
-
-  // Email state (web only)
-  const [email, setEmail] = React.useState('');
-  const [password, setPassword] = React.useState('');
-  const [showPassword, setShowPassword] = React.useState(false);
-
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(false);
 
   React.useEffect(() => {
-    if (!isNative || phoneMode !== 'phone') return;
+    if (phoneMode !== 'phone') return;
     const timer = setTimeout(() => {
       if (recaptchaVerifier.current) return;
       try {
@@ -2609,7 +2600,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
       } catch { /* element not ready yet */ }
     }, 150);
     return () => clearTimeout(timer);
-  }, [phoneMode, isNative]);
+  }, [phoneMode]);
 
   const handleSendOTP = async () => {
     setError('');
@@ -2652,103 +2643,8 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
     }
   };
 
-  const handleEmailSignIn = async () => {
-    setError('');
-    if (!email.trim() || !password) { setError('Please fill in all fields'); return; }
-    setLoading(true);
-    const err = await onEmailSignIn(email.trim(), password);
-    setLoading(false);
-    if (err) setError(err);
-  };
-
   const bg = { background: 'linear-gradient(160deg, var(--brand-g1) 0%, var(--brand-g2) 40%, var(--brand-g3) 70%, var(--brand-g4) 100%)' };
 
-  // ── Web: email login for vendors ─────────────────────────────────────────
-  if (!isNative) {
-    return (
-      <div className="min-h-screen flex flex-col px-8" style={bg}>
-        {loading && (
-          <div className="fixed top-0 left-0 right-0 h-[3px] z-50 overflow-hidden bg-white/20">
-            <motion.div className="absolute top-0 h-full w-1/3 bg-white rounded-full" animate={{ x: ['-100%', '400%'] }} transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }} />
-          </div>
-        )}
-        <div className="flex-1 flex flex-col justify-center max-w-xs mx-auto w-full">
-          <div className="mb-10 text-center">
-            <p className="font-black italic leading-none" style={{ fontFamily: 'Poppins, sans-serif', fontSize: '3rem', color: '#ffffff' }}>Linq</p>
-            <p className="text-white/60 text-sm mt-1">for Businesses</p>
-          </div>
-
-          <div className="mb-8">
-            <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mb-4">
-              <Mail className="w-7 h-7 text-white" />
-            </div>
-            <h2 className="font-display font-bold text-2xl text-white mb-1">Sign in</h2>
-            <p className="text-white/50 text-sm">Enter your email and password to continue</p>
-          </div>
-
-          <div className="space-y-3">
-            <div className="relative">
-              <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleEmailSignIn()}
-                placeholder="Email address"
-                autoComplete="email"
-                className="w-full pl-10 pr-5 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm focus:outline-none focus:border-white/50 focus:bg-white/20"
-              />
-            </div>
-
-            <div className="relative">
-              <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleEmailSignIn()}
-                placeholder="Password"
-                autoComplete="current-password"
-                className="w-full pl-10 pr-12 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm focus:outline-none focus:border-white/50 focus:bg-white/20"
-              />
-              <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors">
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </div>
-
-            {error && (
-              <div className="flex items-center gap-2 bg-white/15 border border-white/25 rounded-2xl px-4 py-3">
-                <AlertCircle size={14} className="text-white/80 shrink-0" />
-                <p className="text-white/80 text-xs">{error}</p>
-              </div>
-            )}
-
-            <button
-              onClick={handleEmailSignIn}
-              disabled={loading}
-              className="w-full bg-white text-brand-navy font-bold py-4 rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
-            >
-              {loading
-                ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}><Sparkles size={16} /></motion.div> Please wait…</>
-                : 'Sign In'}
-            </button>
-
-            <div className="pt-4 border-t border-white/15 text-center">
-              <a
-                href="https://mylinq.app"
-                className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl bg-white/10 border border-white/20 text-white font-bold text-sm hover:bg-white/20 transition-all"
-              >
-                <Smartphone size={15} className="text-white/70" />
-                I'm a customer — get the Linq app
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Native: phone/OTP login for consumers ────────────────────────────────
   return (
     <div className="min-h-screen flex flex-col px-8" style={bg}>
       {loading && (
@@ -2771,6 +2667,9 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
       <div className="flex-1 flex flex-col justify-center max-w-xs mx-auto w-full">
         <div className="mb-10 text-center">
           <p className="font-black italic leading-none" style={{ fontFamily: 'Poppins, sans-serif', fontSize: '3rem', color: '#ffffff' }}>Linq</p>
+          {!Capacitor.isNativePlatform() && phoneMode === 'phone' && (
+            <p className="text-white/60 text-sm mt-1 font-semibold tracking-wide">For Business</p>
+          )}
         </div>
 
         <div className="mb-8">
@@ -2852,13 +2751,37 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
 
           {phoneMode === 'phone' && (
             <div className="pt-4 border-t border-white/15">
-              <button
-                onClick={() => openUrl('https://mylinq.app')}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-white/15 bg-white/8 text-white/60 text-sm font-medium active:bg-white/15 transition-all"
-              >
-                <Store size={15} className="text-white/50" />
-                I'm a business — visit mylinq.app
-              </button>
+              {Capacitor.isNativePlatform() ? (
+                <button
+                  onClick={() => openUrl('https://mylinq.app')}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-white/15 bg-white/8 text-white/60 text-sm font-medium active:bg-white/15 transition-all"
+                >
+                  <Store size={15} className="text-white/50" />
+                  I'm a business — visit mylinq.app
+                </button>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-white/50 text-xs text-center font-medium">Are you a customer?</p>
+                  <a
+                    href="https://apps.apple.com/app/linq/id6474052885"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-3 w-full py-3 rounded-2xl bg-white/10 border border-white/20 text-white font-bold text-sm hover:bg-white/20 transition-all"
+                  >
+                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white shrink-0"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                    Download on the App Store
+                  </a>
+                  <a
+                    href="https://play.google.com/store/apps/details?id=app.mylinq.linq"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-3 w-full py-3 rounded-2xl bg-white/10 border border-white/20 text-white font-bold text-sm hover:bg-white/20 transition-all"
+                  >
+                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white shrink-0"><path d="M3.18 23.76c.3.16.64.2.97.12L14.89 12 11 8.1zm16.6-10.97L16.7 11l-3.47 3.47 3.47 3.48 3.12-1.8a1.8 1.8 0 0 0 0-3.36zM3.1.26A1.76 1.76 0 0 0 2 1.9v20.2c0 .63.33 1.2.87 1.53l12-12z"/></svg>
+                    Get it on Google Play
+                  </a>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -28868,16 +28791,18 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
             className="w-full px-5 py-4 rounded-2xl bg-white border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30" />
         </div>
 
-        {/* Handle — read-only */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Handle</label>
-            <span className="text-[10px] text-brand-navy/72 flex items-center gap-1"><Lock size={9} /> Cannot be changed</span>
+        {/* Handle — read-only, consumers only */}
+        {profile.role === 'consumer' && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Handle</label>
+              <span className="text-[10px] text-brand-navy/72 flex items-center gap-1"><Lock size={9} /> Cannot be changed</span>
+            </div>
+            <div className="w-full px-5 py-4 rounded-2xl bg-brand-navy/5 border border-brand-navy/10 text-sm font-medium text-brand-navy/75 flex items-center gap-1">
+              <span className="text-brand-navy/72">@</span>{handle || profile.handle || '—'}
+            </div>
           </div>
-          <div className="w-full px-5 py-4 rounded-2xl bg-brand-navy/5 border border-brand-navy/10 text-sm font-medium text-brand-navy/75 flex items-center gap-1">
-            <span className="text-brand-navy/72">@</span>{handle || profile.handle || '—'}
-          </div>
-        </div>
+        )}
 
         {/* Consumer info fields — read-only */}
         {profile.role === 'consumer' && (
@@ -29076,17 +29001,19 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
           </motion.div>
         )}
 
-        {/* Privacy Mode — visible to all users */}
-        <div className="space-y-3">
-          <SectionLabel icon={<Lock size={14} className="text-brand-gold" />} label="Privacy" />
-          <div className="flex items-center justify-between bg-white px-5 py-4 rounded-2xl border border-brand-navy/10">
-            <div className="flex-1 min-w-0 pr-4">
-              <p className="text-sm font-bold text-brand-navy">Privacy Mode</p>
-              <p className="text-xs text-brand-navy/50 mt-0.5">Hide your name and avatar from vendor leaderboards and customer lists — shown as Anonymous.</p>
+        {/* Privacy Mode — consumers only */}
+        {profile.role === 'consumer' && (
+          <div className="space-y-3">
+            <SectionLabel icon={<Lock size={14} className="text-brand-gold" />} label="Privacy" />
+            <div className="flex items-center justify-between bg-white px-5 py-4 rounded-2xl border border-brand-navy/10">
+              <div className="flex-1 min-w-0 pr-4">
+                <p className="text-sm font-bold text-brand-navy">Privacy Mode</p>
+                <p className="text-xs text-brand-navy/50 mt-0.5">Hide your name and avatar from vendor leaderboards and customer lists — shown as Anonymous.</p>
+              </div>
+              <ToggleSwitch on={privacyMode} onChange={setPrivacyMode} />
             </div>
-            <ToggleSwitch on={privacyMode} onChange={setPrivacyMode} />
           </div>
-        </div>
+        )}
 
         {/* Intro status */}
         <div className="flex items-center justify-between px-5 py-3 rounded-2xl bg-brand-navy/4">
