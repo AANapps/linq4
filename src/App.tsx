@@ -26103,9 +26103,15 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
 
   return (
     <div className="space-y-6 pb-20">
-      <header>
-        <h2 className="font-display text-3xl font-bold mb-1">Card Builder</h2>
-        <p className="text-brand-navy/75">Design your loyalty reward tiers.</p>
+      <header className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="font-display text-3xl font-bold mb-1">Card Builder</h2>
+          <p className="text-brand-navy/75">Design your loyalty reward tiers.</p>
+        </div>
+        <button onClick={handleSave} disabled={saving}
+          className="shrink-0 bg-brand-navy text-white px-4 py-2.5 rounded-xl font-bold text-sm flex items-center gap-1.5 disabled:opacity-50 transition-all">
+          {saved ? <><CheckCircle2 size={15} /> Saved!</> : saving ? 'Saving...' : <><Save size={15} /> Save</>}
+        </button>
       </header>
 
       <div className="glass-card p-6 rounded-[2.5rem] space-y-6">
