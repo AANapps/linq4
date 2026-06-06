@@ -12659,7 +12659,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           activeChatId={activeChatId}
           setActiveChatId={setActiveChatId}
           onViewUser={onViewUser}
-          userCards={cards}
+          userCards={initialCards}
         />
       )}
 
