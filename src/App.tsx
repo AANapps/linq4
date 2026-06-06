@@ -27265,17 +27265,16 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
   const longPressTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTriggeredIdRef = React.useRef<string | null>(null);
   const [visibleStickerCount, setVisibleStickerCount] = useState(9);
-  const stickerSentinelRef = React.useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = stickerSentinelRef.current;
-    if (!el || activeSubTab !== 'stickers') return;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) setVisibleStickerCount(c => c + 9);
-    }, { rootMargin: '200px' });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [activeSubTab, visibleStickerCount]);
+  const stickerObserverRef = React.useRef<IntersectionObserver | null>(null);
+  const stickerSentinelRef = React.useCallback((node: HTMLDivElement | null) => {
+    if (stickerObserverRef.current) { stickerObserverRef.current.disconnect(); stickerObserverRef.current = null; }
+    if (node) {
+      stickerObserverRef.current = new IntersectionObserver(([entry]) => {
+        if (entry.isIntersecting) setVisibleStickerCount(c => c + 9);
+      }, { rootMargin: '200px' });
+      stickerObserverRef.current.observe(node);
+    }
+  }, []);
   const [profileRedeemingChallenge, setProfileRedeemingChallenge] = useState<{ challenge: Challenge; entry: any; userName: string } | null>(null);
   const [showProfileSettings, setShowProfileSettings] = useState(false);
   const [showStorePreview, setShowStorePreview] = useState(false);
@@ -35428,17 +35427,16 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
   const longPressTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTriggeredIdRef = React.useRef<string | null>(null);
   const [visibleStickerCount, setVisibleStickerCount] = useState(9);
-  const stickerSentinelRef = React.useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = stickerSentinelRef.current;
-    if (!el || activeSubTab !== 'stickers') return;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) setVisibleStickerCount(c => c + 9);
-    }, { rootMargin: '200px' });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [activeSubTab, visibleStickerCount]);
+  const stickerObserverRef = React.useRef<IntersectionObserver | null>(null);
+  const stickerSentinelRef = React.useCallback((node: HTMLDivElement | null) => {
+    if (stickerObserverRef.current) { stickerObserverRef.current.disconnect(); stickerObserverRef.current = null; }
+    if (node) {
+      stickerObserverRef.current = new IntersectionObserver(([entry]) => {
+        if (entry.isIntersecting) setVisibleStickerCount(c => c + 9);
+      }, { rootMargin: '200px' });
+      stickerObserverRef.current.observe(node);
+    }
+  }, []);
 
   useEffect(() => {
     return onSnapshot(collection(db, 'badges'), snap =>
