@@ -28490,13 +28490,13 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         return (
           <div className="relative">
             {scanButton}
-            <div className="-mx-6 grid grid-cols-3 gap-2 bg-transparent">
+            <div className="-mx-6 grid grid-cols-3 gap-px bg-transparent">
             {deduped.map(({ sticker, count }) => {
               const cfg = STICKER_CONFIG[sticker.tier];
               const isPressed = pressedSticker === sticker.id;
               return (
                 <div key={sticker.cardDefId ?? `${sticker.tier}-${sticker.variant}`}
-                  className="relative aspect-square overflow-hidden bg-brand-bg cursor-pointer"
+                  className="relative aspect-[4/5] overflow-hidden bg-brand-bg cursor-pointer"
                   onPointerDown={() => startPress(sticker.id)}
                   onPointerUp={cancelPress}
                   onPointerLeave={() => { cancelPress(); }}
@@ -28531,12 +28531,12 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           </div>
         );
         return (
-          <div className="-mx-6 grid grid-cols-3 gap-2 bg-transparent">
+          <div className="-mx-6 grid grid-cols-3 gap-px bg-transparent">
             {earnedBadges.map(b => {
               const fill = b.baseColor || b.color;
               return (
                 <button key={b.id} onClick={() => setSelectedBadge(b)}
-                  className="relative aspect-square overflow-hidden flex items-center justify-center active:opacity-80 transition-opacity"
+                  className="relative aspect-[4/5] overflow-hidden flex items-center justify-center active:opacity-80 transition-opacity"
                   style={{ background: `linear-gradient(135deg, ${fill}26, ${fill}10)` }}
                 >
                   <HexBadge badge={b} size={60} />
