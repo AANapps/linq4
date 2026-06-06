@@ -28490,7 +28490,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         return (
           <div className="relative">
             {scanButton}
-            <div className="-mx-6 grid grid-cols-3 gap-px bg-brand-navy/10">
+            <div className="-mx-6 grid grid-cols-3 gap-2 bg-transparent">
             {deduped.map(({ sticker, count }) => {
               const cfg = STICKER_CONFIG[sticker.tier];
               const isPressed = pressedSticker === sticker.id;
@@ -28506,7 +28506,6 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                   }}
                 >
                   <img src={sticker.cardImageUrl} alt="" className="w-full h-full object-cover pointer-events-none" />
-                  <div className="absolute inset-0 pointer-events-none" style={{ boxShadow: `inset 0 0 0 2px ${cfg.border}` }} />
                   {isPressed && (
                     <span className="sticker-press-shine" aria-hidden="true" onAnimationEnd={() => setPressedSticker(null)} />
                   )}
@@ -28532,7 +28531,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           </div>
         );
         return (
-          <div className="-mx-6 grid grid-cols-3 gap-px bg-brand-navy/10">
+          <div className="-mx-6 grid grid-cols-3 gap-2 bg-transparent">
             {earnedBadges.map(b => {
               const fill = b.baseColor || b.color;
               return (
