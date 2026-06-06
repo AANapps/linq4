@@ -150,6 +150,7 @@ import {
   Store,
   LogOut,
   Plus,
+  Minus,
   CheckCircle2,
   Gift,
   ChevronRight,
@@ -26063,7 +26064,10 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
   }, [numTiers]);
 
   const updateTier = (i: number, field: 'stamps' | 'reward' | 'value', val: string) => {
-    setTiers(prev => prev.map((t, idx) => idx === i ? { ...t, [field]: field === 'stamps' ? Math.max(1, parseInt(val) || 1) : field === 'value' ? (parseFloat(val) || 0) : val } : t));
+    setTiers(prev => {
+      const next = prev.map((t, idx) => idx === i ? { ...t, [field]: field === 'stamps' ? Math.max(1, parseInt(val) || 1) : field === 'value' ? (parseFloat(val) || 0) : val } : t);
+      return field === 'stamps' ? [...next].sort((a, b) => a.stamps - b.stamps) : next;
+    });
   };
 
   const handleSave = async () => {
@@ -26114,13 +26118,23 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-brand-gold/10 flex items-center justify-center">
                 <span className="text-[10px] font-extrabold text-brand-gold">{i + 1}</span>
               </div>
-              <NumberField
-                min={1}
-                value={tier.stamps}
-                onCommit={n => updateTier(i, 'stamps', String(n))}
-                className="w-14 shrink-0 px-2 py-2.5 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm font-bold text-center focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
-                placeholder="Stamps"
-              />
+              <div className="flex items-center gap-1 shrink-0 bg-brand-bg border border-brand-navy/10 rounded-xl px-1 py-1">
+                <button
+                  type="button"
+                  onClick={() => updateTier(i, 'stamps', String(tier.stamps - 1))}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-brand-navy/60 hover:text-brand-navy hover:bg-brand-navy/5 active:scale-90 transition-all"
+                >
+                  <Minus size={13} />
+                </button>
+                <span className="w-7 text-center text-sm font-bold tabular-nums">{tier.stamps}</span>
+                <button
+                  type="button"
+                  onClick={() => updateTier(i, 'stamps', String(tier.stamps + 1))}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-brand-navy/60 hover:text-brand-navy hover:bg-brand-navy/5 active:scale-90 transition-all"
+                >
+                  <Plus size={13} />
+                </button>
+              </div>
               <input
                 value={tier.reward}
                 onChange={e => updateTier(i, 'reward', e.target.value)}
