@@ -2247,7 +2247,7 @@ export default function App() {
             {([
               { tab: 'home',     icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
               { tab: 'messages', icon: <MessageCircle size={18} />,   label: 'Messages',    badge: unreadMessages },
-              { tab: 'discover', icon: <Plus size={18} />,            label: 'Issue Stamps' },
+              { tab: 'discover', icon: <Plus size={18} />,            label: 'Card' },
               { tab: 'profile',  icon: <UserIcon size={18} />,        label: 'Profile' },
             ] as const).map(({ tab, icon, label, badge }) => (
               <button
@@ -2554,7 +2554,7 @@ export default function App() {
           active={activeTab === 'discover'}
           onClick={() => { setActiveTab('discover'); setViewingStore(null); setViewingUser(null); }}
           icon={['consumer','admin'].includes(profile?.role ?? '') ? <Compass /> : <Plus />}
-          label={['consumer','admin'].includes(profile?.role ?? '') ? 'Discovery' : 'Issue'}
+          label={['consumer','admin'].includes(profile?.role ?? '') ? 'Discovery' : 'Card'}
         />
         <NavButton
           active={activeTab === 'profile'}
@@ -20473,7 +20473,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
         vendorIssueMode === null ? (
           <div className="space-y-6 pb-20">
             <header>
-              <h2 className="font-display text-3xl font-bold mb-1">Issue</h2>
+              <h2 className="font-display text-3xl font-bold mb-1">Card</h2>
               <p className="text-brand-navy/80 text-sm">Manage your card or create store offers.</p>
             </header>
             <div className="grid grid-cols-2 gap-4">
