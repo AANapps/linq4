@@ -27264,6 +27264,18 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
   const [pressedSticker, setPressedSticker] = useState<string | null>(null);
   const longPressTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTriggeredIdRef = React.useRef<string | null>(null);
+  const [visibleStickerCount, setVisibleStickerCount] = useState(9);
+  const stickerSentinelRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = stickerSentinelRef.current;
+    if (!el || activeSubTab !== 'stickers') return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) setVisibleStickerCount(c => c + 9);
+    }, { rootMargin: '200px' });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [activeSubTab, visibleStickerCount]);
   const [profileRedeemingChallenge, setProfileRedeemingChallenge] = useState<{ challenge: Challenge; entry: any; userName: string } | null>(null);
   const [showProfileSettings, setShowProfileSettings] = useState(false);
   const [showStorePreview, setShowStorePreview] = useState(false);
@@ -28509,11 +28521,12 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           </div>
         );
 
+        const visible = deduped.slice(0, visibleStickerCount);
         return (
           <div className="relative">
             {scanButton}
             <div className="-mx-6 grid grid-cols-3 gap-px bg-transparent">
-            {deduped.map(({ sticker, count }) => {
+            {visible.map(({ sticker, count }) => {
               const cfg = STICKER_CONFIG[sticker.tier];
               const isPressed = pressedSticker === sticker.id;
               return (
@@ -28540,6 +28553,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
               );
             })}
             </div>
+            {visible.length < deduped.length && <div ref={stickerSentinelRef} className="h-px" />}
           </div>
         );
       })()}
@@ -35413,6 +35427,18 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
   const [pressedSticker, setPressedSticker] = useState<string | null>(null);
   const longPressTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTriggeredIdRef = React.useRef<string | null>(null);
+  const [visibleStickerCount, setVisibleStickerCount] = useState(9);
+  const stickerSentinelRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = stickerSentinelRef.current;
+    if (!el || activeSubTab !== 'stickers') return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) setVisibleStickerCount(c => c + 9);
+    }, { rootMargin: '200px' });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [activeSubTab, visibleStickerCount]);
 
   useEffect(() => {
     return onSnapshot(collection(db, 'badges'), snap =>
@@ -36075,34 +36101,38 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
           </div>
         );
 
+        const visible = deduped.slice(0, visibleStickerCount);
         return (
-          <div className="-mx-6 grid grid-cols-3 gap-px bg-transparent">
-            {deduped.map(({ sticker, count }) => {
-              const cfg = STICKER_CONFIG[sticker.tier];
-              const isPressed = pressedSticker === sticker.id;
-              return (
-                <div key={sticker.cardDefId ?? `${sticker.tier}-${sticker.variant}`}
-                  className="relative aspect-[4/5] overflow-hidden bg-brand-bg cursor-pointer"
-                  onPointerDown={() => startPress(sticker.id)}
-                  onPointerUp={cancelPress}
-                  onPointerLeave={() => { cancelPress(); }}
-                  onClick={() => {
-                    if (longPressTriggeredIdRef.current === sticker.id) { longPressTriggeredIdRef.current = null; return; }
-                    setPubExpandedSticker(sticker);
-                  }}
-                >
-                  <FreezeFrameImg src={sticker.cardImageUrl!} alt="" className="w-full h-full object-cover pointer-events-none" animate={isPressed} />
-                  {isPressed && (
-                    <span className="sticker-press-shine" aria-hidden="true" onAnimationEnd={() => setPressedSticker(null)} />
-                  )}
-                  {count > 1 && (
-                    <span className="absolute bottom-1.5 right-1.5 text-white text-[10px] font-black rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center shadow pointer-events-none" style={{ background: cfg.color }}>
-                      x{count}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
+          <div>
+            <div className="-mx-6 grid grid-cols-3 gap-px bg-transparent">
+              {visible.map(({ sticker, count }) => {
+                const cfg = STICKER_CONFIG[sticker.tier];
+                const isPressed = pressedSticker === sticker.id;
+                return (
+                  <div key={sticker.cardDefId ?? `${sticker.tier}-${sticker.variant}`}
+                    className="relative aspect-[4/5] overflow-hidden bg-brand-bg cursor-pointer"
+                    onPointerDown={() => startPress(sticker.id)}
+                    onPointerUp={cancelPress}
+                    onPointerLeave={() => { cancelPress(); }}
+                    onClick={() => {
+                      if (longPressTriggeredIdRef.current === sticker.id) { longPressTriggeredIdRef.current = null; return; }
+                      setPubExpandedSticker(sticker);
+                    }}
+                  >
+                    <FreezeFrameImg src={sticker.cardImageUrl!} alt="" className="w-full h-full object-cover pointer-events-none" animate={isPressed} />
+                    {isPressed && (
+                      <span className="sticker-press-shine" aria-hidden="true" onAnimationEnd={() => setPressedSticker(null)} />
+                    )}
+                    {count > 1 && (
+                      <span className="absolute bottom-1.5 right-1.5 text-white text-[10px] font-black rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center shadow pointer-events-none" style={{ background: cfg.color }}>
+                        x{count}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {visible.length < deduped.length && <div ref={stickerSentinelRef} className="h-px" />}
           </div>
         );
       })()}
