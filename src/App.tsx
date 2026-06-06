@@ -30673,11 +30673,6 @@ function StoreDealsSection({ stores, onViewStore, storeDistances, onNavigate }: 
   stores: StoreProfile[]; onViewStore?: (s: StoreProfile) => void; storeDistances?: Map<string, number>; onNavigate?: (tab: string) => void;
 }) {
   if (stores.length === 0) return null;
-  const groups = [...new Set(stores.map(s => s.category || 'Other'))].sort().map(label => ({
-    label,
-    color: CATEGORY_COLOR_MAP[label] ?? '#7c3aed',
-    stores: stores.filter(s => (s.category || 'Other') === label),
-  }));
   return (
     <div>
       <div className="flex items-center gap-1.5 mb-3 px-1">
@@ -30689,65 +30684,52 @@ function StoreDealsSection({ stores, onViewStore, storeDistances, onNavigate }: 
           </button>
         )}
       </div>
-      <div className="space-y-4">
-        {groups.map(group => (
-          <div key={group.label}>
-            <div className="flex items-center gap-1.5 px-1 mb-2">
-              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest text-white"
-                style={{ background: group.color }}>
-                <StoreCategoryIcon category={group.label} size={13} className="text-white" />
-                {group.label}
-              </span>
-            </div>
-            <div className="flex gap-4 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-              {group.stores.map((store, i) => {
-                const finalReward = store.rewardTiers?.length
-                  ? [...store.rewardTiers].sort((a, b) => b.stamps - a.stamps)[0]?.reward
-                  : store.reward;
-                const dist = storeDistances?.get(store.id);
-                const distLabel = dist != null
-                  ? dist < 1 ? `${Math.round(dist * 1000)}m` : `${dist.toFixed(1)}km`
-                  : null;
-                const initials = store.name.split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase();
-                return (
-                  <motion.button
-                    key={store.id}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: i * 0.04 }}
-                    className="shrink-0 flex flex-col items-center gap-1.5 active:scale-[0.94] transition-transform"
-                    style={{ width: '76px' }}
-                    onClick={() => onViewStore && onViewStore(store)}
-                  >
-                    {/* Round logo */}
-                    <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white shadow-md bg-brand-navy/5 shrink-0">
-                      {store.logoUrl
-                        ? <img src={store.logoUrl} alt={store.name} className="w-full h-full object-cover" />
-                        : store.coverUrl
-                          ? <img src={store.coverUrl} alt={store.name} className="w-full h-full object-cover" />
-                          : <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-brand-navy/10 to-brand-navy/20">
-                              <span className="text-brand-navy font-black text-base">{initials}</span>
-                            </div>
-                      }
-                    </div>
-                    {/* Blue offer sticker */}
-                    {finalReward && (
-                      <span className="bg-blue-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full text-center line-clamp-1 max-w-full leading-tight">
-                        {finalReward}
-                      </span>
-                    )}
-                    {/* Name */}
-                    <p className="text-[10px] font-semibold text-brand-navy leading-tight text-center line-clamp-1 w-full">{store.name}</p>
-                    {/* Distance */}
-                    {distLabel && (
-                      <p className="text-[9px] text-brand-gold font-bold -mt-1">{distLabel}</p>
-                    )}
-                  </motion.button>
-                );
-              })}
-            </div>
-          </div>
-        ))}
+      <div className="flex gap-4 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        {stores.map((store, i) => {
+          const finalReward = store.rewardTiers?.length
+            ? [...store.rewardTiers].sort((a, b) => b.stamps - a.stamps)[0]?.reward
+            : store.reward;
+          const dist = storeDistances?.get(store.id);
+          const distLabel = dist != null
+            ? dist < 1 ? `${Math.round(dist * 1000)}m` : `${dist.toFixed(1)}km`
+            : null;
+          const initials = store.name.split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase();
+          return (
+            <motion.button
+              key={store.id}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: i * 0.04 }}
+              className="shrink-0 flex flex-col items-center gap-1.5 active:scale-[0.94] transition-transform"
+              style={{ width: '76px' }}
+              onClick={() => onViewStore && onViewStore(store)}
+            >
+              {/* Round logo */}
+              <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white shadow-md bg-brand-navy/5 shrink-0">
+                {store.logoUrl
+                  ? <img src={store.logoUrl} alt={store.name} className="w-full h-full object-cover" />
+                  : store.coverUrl
+                    ? <img src={store.coverUrl} alt={store.name} className="w-full h-full object-cover" />
+                    : <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-brand-navy/10 to-brand-navy/20">
+                        <span className="text-brand-navy font-black text-base">{initials}</span>
+                      </div>
+                }
+              </div>
+              {/* Blue offer sticker */}
+              {finalReward && (
+                <span className="bg-blue-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full text-center line-clamp-1 max-w-full leading-tight">
+                  {finalReward}
+                </span>
+              )}
+              {/* Name */}
+              <p className="text-[10px] font-semibold text-brand-navy leading-tight text-center line-clamp-1 w-full">{store.name}</p>
+              {/* Distance */}
+              {distLabel && (
+                <p className="text-[9px] text-brand-gold font-bold -mt-1">{distLabel}</p>
+              )}
+            </motion.button>
+          );
+        })}
       </div>
     </div>
   );
