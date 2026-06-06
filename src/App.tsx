@@ -220,6 +220,8 @@ import {
   PersonStanding,
   Activity,
   Shirt,
+  Medal,
+  Crown,
   Wifi,
   Smartphone,
   Tag,
@@ -3688,6 +3690,94 @@ async function bumpStreak(uid: string): Promise<number> {
   } catch {
     return 0;
   }
+}
+
+const COLLECTOR_TIERS: { name: string; min: number; max: number; color: string; icon: React.ElementType }[] = [
+  { name: 'Newcomer', min: 0,   max: 25,       color: '#94a3b8', icon: Star },
+  { name: 'Bronze',   min: 25,  max: 100,      color: '#cd7f32', icon: Medal },
+  { name: 'Silver',   min: 100, max: 300,      color: '#9ca3af', icon: Award },
+  { name: 'Gold',     min: 300, max: 700,      color: '#eab308', icon: Trophy },
+  { name: 'Platinum', min: 700, max: Infinity, color: '#a78bfa', icon: Crown },
+];
+
+function getCollectorTier(stamps: number) {
+  const tier = COLLECTOR_TIERS.find(t => stamps < t.max) ?? COLLECTOR_TIERS[COLLECTOR_TIERS.length - 1];
+  const isMax = tier.max === Infinity;
+  const progress = isMax ? 1 : Math.min(1, Math.max(0, (stamps - tier.min) / (tier.max - tier.min)));
+  return { tier, progress, isMax };
+}
+
+function CollectorRing({ stamps, size = 88, onClick, children }: { stamps: number; size?: number; onClick?: () => void; children?: React.ReactNode }) {
+  const { tier, progress } = getCollectorTier(stamps);
+  const stroke = 3;
+  const r = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * r;
+  const Icon = tier.icon;
+  return (
+    <button onClick={onClick} className="relative shrink-0 active:scale-95 transition-transform" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="absolute inset-0 -rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" strokeWidth={stroke} className="text-brand-navy/8" />
+        <motion.circle
+          cx={size / 2} cy={size / 2} r={r} fill="none" stroke={tier.color} strokeWidth={stroke} strokeLinecap="round"
+          strokeDasharray={circumference}
+          initial={{ strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset: circumference * (1 - progress) }}
+          transition={{ duration: 0.9, ease: 'easeOut' }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        {children}
+      </div>
+      <span
+        className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-md"
+        style={{ background: tier.color }}
+      >
+        <Icon size={12} className="text-white" />
+      </span>
+    </button>
+  );
+}
+
+function CollectorTierSheet({ stamps, onClose }: { stamps: number; onClose: () => void }) {
+  const { tier, progress, isMax } = getCollectorTier(stamps);
+  const Icon = tier.icon;
+  const toNext = isMax ? 0 : tier.max - stamps;
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[500] flex items-end max-w-md mx-auto"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+        transition={{ type: 'spring', stiffness: 520, damping: 38 }}
+        className="w-full bg-brand-bg rounded-t-3xl p-6 pb-10 space-y-4"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 rounded-[1.25rem] flex items-center justify-center shadow-lg shrink-0" style={{ background: `linear-gradient(135deg, ${tier.color}ee, ${tier.color}99)` }}>
+            <Icon size={28} className="text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-brand-navy text-lg leading-tight">{tier.name} Collector</p>
+            <p className="text-xs text-brand-navy/80 mt-1">{stamps.toLocaleString()} lifetime stamps</p>
+          </div>
+        </div>
+        {!isMax && (
+          <div>
+            <div className="h-2 rounded-full overflow-hidden bg-brand-navy/8">
+              <motion.div className="h-full rounded-full" style={{ background: tier.color }}
+                initial={{ width: 0 }} animate={{ width: `${progress * 100}%` }}
+                transition={{ duration: 0.6, ease: 'easeOut' }} />
+            </div>
+            <p className="text-xs text-brand-navy/70 mt-2">{toNext.toLocaleString()} more stamp{toNext === 1 ? '' : 's'} to reach the next tier</p>
+          </div>
+        )}
+        {isMax && <p className="text-sm text-brand-navy/70">You've reached the highest collector tier — legendary stamping! 🏆</p>}
+        <button onClick={onClose} className="w-full py-3 rounded-2xl bg-brand-navy/8 text-brand-navy font-bold text-sm active:scale-[0.98] transition-all">Close</button>
+      </motion.div>
+    </motion.div>
+  );
 }
 
 function StreakBadge({ streak, size = 'sm' }: { streak?: number; size?: 'sm' | 'lg' }) {
@@ -27155,6 +27245,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
   const [vendorStore, setVendorStore] = useState<StoreProfile | null>(null);
   const [storeCards, setStoreCards] = useState<Card[]>([]);
   const [selectedBadge, setSelectedBadge] = useState<AppBadge | null>(null);
+  const [showCollectorTier, setShowCollectorTier] = useState(false);
   const [profilePendingPack, setProfilePendingPack] = useState<CollectibleSticker[] | null>(null);
   const [showBirthdayPopup, setShowBirthdayPopup] = useState(false);
   const [birthdayOffers, setBirthdayOffers] = useState<StoreOffer[]>([]);
@@ -27840,21 +27931,24 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         <div className="flex items-start gap-4">
           {/* Photo — top left */}
           <div className="flex flex-col items-center shrink-0">
-            <button
-              onClick={() => {
-                if (!profile.avatar) {
-                  updateDoc(doc(db, 'users', profile.uid), { avatar: deriveAvatarFromUid(profile.uid) })
-                    .then(() => setAvatarViewOpen(true));
-                } else {
-                  setAvatarViewOpen(true);
-                }
-              }}
-              className="bg-gradient-to-b from-indigo-50 to-purple-50 rounded-full p-2 border-4 border-white shadow-xl active:scale-95 transition-all"
-            >
-              <PixelAvatar config={profile.avatar} uid={profile.uid} size={64} view="head" />
-            </button>
+            <CollectorRing stamps={lifetimeStamps} onClick={() => setShowCollectorTier(true)}>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!profile.avatar) {
+                    updateDoc(doc(db, 'users', profile.uid), { avatar: deriveAvatarFromUid(profile.uid) })
+                      .then(() => setAvatarViewOpen(true));
+                  } else {
+                    setAvatarViewOpen(true);
+                  }
+                }}
+                className="bg-gradient-to-b from-indigo-50 to-purple-50 rounded-full p-2 border-4 border-white shadow-xl active:scale-95 transition-all"
+              >
+                <PixelAvatar config={profile.avatar} uid={profile.uid} size={64} view="head" />
+              </button>
+            </CollectorRing>
             <div className="flex items-center gap-1 mt-1.5">
-              <p className="text-[8px] text-brand-navy/75 font-bold uppercase tracking-wider">tap to customise</p>
+              <p className="text-[8px] text-brand-navy/75 font-bold uppercase tracking-wider">{getCollectorTier(lifetimeStamps).tier.name} · tap to customise</p>
             </div>
           </div>
 
@@ -27912,6 +28006,13 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
               <button onClick={() => setSelectedBadge(null)} className="w-full py-3 rounded-2xl bg-brand-navy/8 text-brand-navy font-bold text-sm active:scale-[0.98] transition-all">Close</button>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Collector tier sheet */}
+      <AnimatePresence>
+        {showCollectorTier && (
+          <CollectorTierSheet stamps={lifetimeStamps} onClose={() => setShowCollectorTier(false)} />
         )}
       </AnimatePresence>
 
