@@ -25004,7 +25004,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
     setCreateError('');
     setSaving(true);
     try {
-      const isBirthday = offerType === 'birthday';
+      const noExpiry = offerType === 'birthday' || validDays === 0;
       await addDoc(collection(db, 'store_offers'), {
         storeId: store.id,
         storeName: store.name,
@@ -25019,8 +25019,8 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
         value: parseFloat(value) || 0,
         status: 'active',
         createdAt: serverTimestamp(),
-        // Birthday offers run continuously until the vendor deletes them — no expiry.
-        ...(isBirthday ? {} : { validDays, expiresAt: new Date(Date.now() + validDays * 24 * 60 * 60 * 1000) }),
+        // Birthday offers, and offers set to "Unlimited", run continuously until the vendor deletes them — no expiry.
+        ...(noExpiry ? {} : { validDays, expiresAt: new Date(Date.now() + validDays * 24 * 60 * 60 * 1000) }),
       });
       setTitle(''); setDescription(''); setImageUrl(''); setMaxRedemptions(1); setValue(''); setOfferType('standard'); setValidDays(30);
       setSaved(true); setTimeout(() => setSaved(false), 2000);
@@ -25175,18 +25175,20 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
               <div>
                 <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75 mb-2 block">Valid For</label>
                 <div className="flex gap-2 flex-wrap">
-                  {[7, 14, 30, 60, 90].map(d => (
+                  {[7, 14, 30, 60, 90, 0].map(d => (
                     <button
                       key={d}
                       type="button"
                       onClick={() => setValidDays(d)}
                       className={cn('px-4 py-2 rounded-2xl text-sm font-bold transition-all', validDays === d ? 'gradient-logo-blue text-white shadow' : 'bg-brand-bg border border-brand-navy/10 text-brand-navy/75')}
                     >
-                      {d}d
+                      {d === 0 ? 'Unlimited' : `${d}d`}
                     </button>
                   ))}
                 </div>
-                <p className="text-[11px] text-brand-navy/35 mt-1 px-1">Offer auto-deletes after {validDays} days.</p>
+                <p className="text-[11px] text-brand-navy/35 mt-1 px-1">
+                  {validDays === 0 ? 'Offer stays live until you delete it — no expiry.' : `Offer auto-deletes after ${validDays} days.`}
+                </p>
               </div>
             )}
 
