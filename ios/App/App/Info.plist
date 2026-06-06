@@ -55,5 +55,7 @@
 	<string>Linq uses NFC to collect loyalty stamps from store tags.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Linq uses your location to notify you when you're near a store you have a stamp card with.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Linq uses your location to notify you when you're near a store you have a stamp card with, even when the app is in the background.</string>
 </dict>
 </plist>
