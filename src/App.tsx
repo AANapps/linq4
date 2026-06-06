@@ -3623,7 +3623,7 @@ function OnboardingScreen({ user, onComplete }: {
             transition={{ type: 'spring', stiffness: 520, damping: 38 }}
             className="absolute inset-0 bg-brand-bg flex flex-col z-10"
           >
-            <div className="flex items-center gap-3 px-5 py-4 border-b border-brand-navy/8 shrink-0">
+            <div className="flex items-center gap-3 px-5 pb-4 border-b border-brand-navy/8 shrink-0 safe-top">
               <button onClick={() => setOnboardingLegal(null)} className="w-9 h-9 rounded-full bg-brand-navy/8 flex items-center justify-center active:scale-95 transition-transform">
                 <ArrowLeft size={16} className="text-brand-navy" />
               </button>
@@ -29208,7 +29208,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
             exit={{ opacity: 0 }}
             className="absolute inset-0 z-10 bg-white flex flex-col"
           >
-            <div className="flex items-center gap-3 px-5 py-4 border-b border-brand-navy/8">
+            <div className="flex items-center gap-3 px-5 pb-4 border-b border-brand-navy/8 safe-top">
               <button onClick={() => setLegalModal(null)} className="w-9 h-9 rounded-full bg-brand-navy/8 flex items-center justify-center active:scale-95 transition-transform">
                 <ArrowLeft size={16} className="text-brand-navy" />
               </button>
