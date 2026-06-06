@@ -26131,11 +26131,21 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
         </button>
       </header>
 
+      <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-200 rounded-2xl px-4 py-3">
+        <span className="text-blue-500 text-sm mt-0.5">💳</span>
+        <p className="text-[11px] text-blue-900 leading-relaxed">
+          This is your customer's loyalty stamp card. Decide how many stamps unlock each reward, what those rewards are worth, and how the card looks — then it autosaves and updates in your customers' wallets straight away.
+        </p>
+      </div>
+
       <div className="glass-card p-6 rounded-[2.5rem] space-y-6">
 
         {/* Tier inputs */}
         <div className="space-y-2">
-          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Reward at Each Stage</label>
+          <div className="flex items-center">
+            <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Reward at Each Stage</label>
+            <InfoTip text="Each stage is a milestone your customer unlocks as they collect stamps. Use the +/- to set how many stamps it takes, type what they win, and enter its real-world value below." />
+          </div>
           {tiers.slice(0, numTiers).map((tier, i) => (
             <div key={i} className="flex gap-2 items-center">
               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-brand-gold/10 flex items-center justify-center">
@@ -26166,17 +26176,20 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
                 placeholder={i === numTiers - 1 ? 'e.g. Free coffee' : `Stage ${i + 1} reward`}
                 className="flex-1 min-w-0 px-3 py-2.5 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
               />
-              <div className="relative flex items-center shrink-0">
-                <span className="absolute left-2.5 text-xs font-bold text-emerald-600">{currencySymbol(currency)}</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={tier.value ?? ''}
-                  onChange={e => updateTier(i, 'value', e.target.value)}
-                  className="w-16 pl-6 pr-1.5 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-sm font-bold text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-300"
-                  placeholder="0.00"
-                />
+              <div className="flex flex-col items-center gap-0.5 shrink-0">
+                <span className="text-[7px] font-bold uppercase tracking-wider text-emerald-700/70 leading-none">Value saved</span>
+                <div className="relative flex items-center">
+                  <span className="absolute left-2.5 text-xs font-bold text-emerald-600">{currencySymbol(currency)}</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={tier.value ?? ''}
+                    onChange={e => updateTier(i, 'value', e.target.value)}
+                    className="w-16 pl-6 pr-1.5 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-sm font-bold text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                    placeholder="0.00"
+                  />
+                </div>
               </div>
               {numTiers > 1 && (
                 <button
@@ -26205,12 +26218,15 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
           ) : (
             <p className="text-[11px] font-semibold text-brand-navy/50 text-center py-1">Maximum of 5 stages reached</p>
           )}
-          <p className="text-[11px] text-brand-navy/72 pl-1">Set stamps, reward name, and the {currencySymbol(currency)} value saved at each stage.</p>
+          <p className="text-[11px] text-brand-navy/72 pl-1">Set the stamps needed, what the customer wins, and the <span className="font-semibold text-emerald-700">{currencySymbol(currency)} value saved</span> — e.g. enter {currencySymbol(currency)}4.00 for a free coffee that costs {currencySymbol(currency)}4. This is added to the customer's "Saved with Linq" total when they redeem the reward.</p>
         </div>
 
         {/* Currency */}
         <div className="space-y-2">
-          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Reward Currency</label>
+          <div className="flex items-center">
+            <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Reward Currency</label>
+            <InfoTip text="Used to format prices and the 'value saved' amounts shown to your customers — pick the currency you trade in." />
+          </div>
           <div className="relative">
             <select
               value={currency}
@@ -26225,7 +26241,10 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
 
         {/* Colours — primary & secondary side by side */}
         <div className="space-y-2">
-          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Colours</label>
+          <div className="flex items-center">
+            <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Colours</label>
+            <InfoTip text="Primary sets your card's background gradient. Secondary sets the colour of the stamp circle outlines, so they stand out against your background." />
+          </div>
           <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-2xl px-3 py-2.5 mb-1">
             <span className="text-amber-500 text-xs mt-0.5">💡</span>
             <p className="text-[10px] text-amber-800 leading-relaxed">Use a <strong>light secondary</strong> on a dark card, or <strong>dark secondary</strong> on a light card, for readable stamps.</p>
@@ -26300,7 +26319,10 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
 
         {/* Stamp Icon */}
         <div className="space-y-3">
-          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Stamp Icon</label>
+          <div className="flex items-center">
+            <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Stamp Icon</label>
+            <InfoTip text="Shown inside each circle on the card as your customer collects stamps. Pick an emoji, choose from a group, or upload your own logo/icon image." />
+          </div>
 
           {/* Upload custom image */}
           <div className="flex items-center gap-3">
@@ -26382,7 +26404,10 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
 
         {/* Card Pattern */}
         <div className="space-y-2">
-          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Card Pattern</label>
+          <div className="flex items-center">
+            <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Card Pattern</label>
+            <InfoTip text="A subtle texture overlaid on your card's background — purely decorative, choose whatever suits your brand." />
+          </div>
           <div className="flex gap-2">
             {CARD_PATTERNS.map(({ id, label }) => (
               <button
@@ -26464,7 +26489,10 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
 
         {/* Business Rules / T&Cs */}
         <div className="space-y-2">
-          <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Business Rules &amp; T&amp;Cs</label>
+          <div className="flex items-center">
+            <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75">Business Rules &amp; T&amp;Cs</label>
+            <InfoTip text="Shown to customers on their card — e.g. how stamps are earned and any conditions on redeeming rewards. Tap a suggestion below to add it, or write your own." />
+          </div>
           <textarea
             value={businessRules}
             onChange={e => setBusinessRules(e.target.value)}
