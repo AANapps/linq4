@@ -25400,9 +25400,7 @@ function OfferDetailSheet({ offer, currentUser, currentProfile, onClose }: { off
               {/* Redemption info */}
               <div className="rounded-2xl bg-blue-50 border border-blue-100 px-4 py-3 space-y-1">
                 <p className="font-bold text-blue-800 text-sm">How to redeem</p>
-                <p className="text-blue-600/80 text-sm">
-                  This gift unlocks on your birthday and can be claimed once a year. Show this screen to a staff member at {offer.storeName} — they need to slide the button below to confirm your redemption.
-                </p>
+                <p className="text-blue-600/80 text-sm">Unlocks once a year, on your birthday. Hand your phone to staff at {offer.storeName} to slide and confirm.</p>
               </div>
 
               {/* Slide to redeem — same style as wallet card redemption */}
@@ -25429,12 +25427,12 @@ function OfferDetailSheet({ offer, currentUser, currentProfile, onClose }: { off
               {/* Redemption info */}
               <div className="rounded-2xl bg-blue-50 border border-blue-100 px-4 py-3 space-y-1">
                 <p className="font-bold text-blue-800 text-sm">How to redeem</p>
-                {redemptionsLeft !== null && redemptionsLeft > 0 && (
-                  <p className="text-blue-700 font-semibold text-sm">
-                    You have <span className="font-black">{redemptionsLeft} use{redemptionsLeft !== 1 ? 's' : ''}</span> remaining on this offer.
-                  </p>
-                )}
-                <p className="text-blue-600/80 text-sm">Show this screen to a staff member at {offer.storeName} — they need to slide the button below to confirm your redemption.</p>
+                <p className="text-blue-600/80 text-sm">
+                  {redemptionsLeft !== null && redemptionsLeft > 0 && (
+                    <><span className="font-black text-blue-700">{redemptionsLeft} use{redemptionsLeft !== 1 ? 's' : ''}</span> left. </>
+                  )}
+                  Hand your phone to staff at {offer.storeName} to slide and confirm.
+                </p>
               </div>
 
               {/* Slide to redeem */}
