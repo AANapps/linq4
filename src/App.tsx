@@ -25803,7 +25803,7 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
   };
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="space-y-6 pb-20 lg:max-w-2xl">
       <header>
         <h2 className="font-display text-3xl font-bold mb-1">Cards</h2>
         <p className="text-brand-navy/80 text-sm">Manage your loyalty and membership cards.</p>
@@ -26373,10 +26373,10 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
           </div>
         </div>
 
-        {/* Live preview */}
+        {/* Live preview — sized to match a real stamp card in the wallet */}
         <div>
           <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75 mb-3">Live Preview</p>
-          <div className="rounded-[2rem] p-5 space-y-4 relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${theme} 0%, ${theme}dd 100%)` }}>
+          <div className="w-full max-w-[340px] mx-auto rounded-[2rem] p-5 space-y-4 relative overflow-hidden shadow-xl" style={{ background: `linear-gradient(135deg, ${theme} 0%, ${theme}dd 100%)` }}>
             {cardPattern !== 'solid' && (
               <div className="absolute inset-0 pointer-events-none rounded-[2rem]" style={getCardPatternStyle(cardPattern)} />
             )}
