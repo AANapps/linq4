@@ -25987,7 +25987,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
     return [{ stamps: total, reward: s?.reward || '' }];
   };
 
-  const [numTiers, setNumTiers] = useState(() => store?.rewardTiers?.length || 1);
+  const [numTiers, setNumTiers] = useState(() => Math.min(15, store?.rewardTiers?.length || 1));
   const [tiers, setTiers] = useState<{ stamps: number; reward: string; value?: number }[]>(() => initTiers(store));
   const [currency, setCurrency] = useState(store?.currency || 'AUD');
   const [theme, setTheme] = useState(store?.theme || '#2563EB');
@@ -26006,7 +26006,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
   useEffect(() => {
     if (!store) return;
     const loaded = initTiers(store);
-    setNumTiers(loaded.length);
+    setNumTiers(Math.min(15, loaded.length));
     setTiers(loaded);
     setCurrency(store.currency || 'AUD');
     setTheme(store.theme || '#1a1a2e');
@@ -26150,17 +26150,21 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
               )}
             </div>
           ))}
-          <button
-            type="button"
-            onClick={() => {
-              const lastStamps = tiers[numTiers - 1]?.stamps || 10;
-              setTiers(prev => [...prev, { stamps: lastStamps + 5, reward: '' }]);
-              setNumTiers(n => n + 1);
-            }}
-            className="w-full py-2.5 rounded-xl border-2 border-dashed border-brand-navy/15 text-xs font-bold text-brand-navy/50 flex items-center justify-center gap-1.5 hover:border-brand-gold/40 hover:text-brand-navy/70 active:scale-[0.98] transition-all"
-          >
-            <Plus size={13} /> Add Stage
-          </button>
+          {numTiers < 15 ? (
+            <button
+              type="button"
+              onClick={() => {
+                const lastStamps = tiers[numTiers - 1]?.stamps || 10;
+                setTiers(prev => [...prev, { stamps: lastStamps + 5, reward: '' }]);
+                setNumTiers(n => n + 1);
+              }}
+              className="w-full py-2.5 rounded-xl border-2 border-dashed border-brand-navy/15 text-xs font-bold text-brand-navy/50 flex items-center justify-center gap-1.5 hover:border-brand-gold/40 hover:text-brand-navy/70 active:scale-[0.98] transition-all"
+            >
+              <Plus size={13} /> Add Stage
+            </button>
+          ) : (
+            <p className="text-[11px] font-semibold text-brand-navy/50 text-center py-1">Maximum of 15 stages reached</p>
+          )}
           <p className="text-[11px] text-brand-navy/72 pl-1">Set stamps, reward name, and the {currencySymbol(currency)} value saved at each stage.</p>
         </div>
 
