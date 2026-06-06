@@ -2284,7 +2284,7 @@ export default function App() {
               uiColors={uiColors}
             />
             </AppErrorBoundary>
-          ) : isNativeIOS ? (
+          ) : Capacitor.isNativePlatform() ? (
             <VendorWebRedirectScreen onLogout={handleLogout} />
           ) : (
             <AppErrorBoundary>
@@ -4181,7 +4181,7 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
   onOpenPack?: (s: CollectibleSticker[]) => void;
   onScan?: () => void;
 }) {
-  const [collectionTab, setCollectionTab] = useState<'stickers' | 'trading'>('stickers');
+  const [collectionTab] = useState<'stickers'>('stickers');
   const [selected, setSelected] = useState<{ sticker: CollectibleSticker; count: number } | null>(null);
   const [cardDefs, setCardDefs] = useState<CollectibleCardDef[]>([]);
   const [cardSets, setCardSets] = useState<CollectibleCardSet[]>([]);
@@ -4237,10 +4237,10 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
         <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'rgba(168,85,247,0.8)', textShadow: '0 0 8px rgba(168,85,247,0.4)' }}>{name} · {cards.length} card{cards.length !== 1 ? 's' : ''}</p>
         <div className="grid grid-cols-3 gap-4">
           {deduped.map(({ sticker, count }) => (
-            <div key={sticker.cardDefId ?? `${sticker.tier}-${sticker.variant}`} className="relative" onClick={() => setSelected({ sticker, count })}>
+            <div key={sticker.cardDefId ?? `${sticker.tier}-${sticker.variant}`} className="relative inline-block" onClick={() => setSelected({ sticker, count })}>
               <StickerCard sticker={sticker} isRevealed={true} size="md" />
               {count > 1 && (
-                <span className="absolute -top-1.5 -right-1.5 text-white text-[9px] font-black rounded-full w-5 h-5 flex items-center justify-center shadow" style={{ background: '#7c3aed' }}>
+                <span className="absolute -top-1.5 -right-1.5 text-white text-[9px] font-black rounded-full min-w-5 h-5 px-1 flex items-center justify-center shadow" style={{ background: '#7c3aed' }}>
                   x{count}
                 </span>
               )}
@@ -4281,28 +4281,6 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
               </button>
             </div>
           </div>
-          {/* Tab switcher */}
-          <div className="flex gap-1 p-1 rounded-xl" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-            <button
-              onClick={() => setCollectionTab('stickers')}
-              className="flex-1 py-2 rounded-lg text-sm font-bold transition-all"
-              style={collectionTab === 'stickers'
-                ? { background: 'linear-gradient(135deg, #7c3aed, #4f46e5)', color: '#fff', boxShadow: '0 0 12px rgba(124,58,237,0.5)' }
-                : { color: 'rgba(255,255,255,0.45)' }}
-            >
-              🃏 Stickers
-            </button>
-            <button
-              onClick={() => setCollectionTab('trading')}
-              className="flex-1 py-2 rounded-lg text-sm font-bold transition-all relative overflow-hidden"
-              style={collectionTab === 'trading'
-                ? { background: 'linear-gradient(135deg, #d97706, #f59e0b)', color: '#000', boxShadow: '0 0 14px rgba(245,158,11,0.55)' }
-                : { color: 'rgba(255,255,255,0.45)' }}
-            >
-              🔄 Trading
-              <span className="absolute top-0.5 right-1 text-[7px] font-black px-1 py-0.5 rounded-full leading-none" style={{ background: '#ef4444', color: '#fff' }}>NEW</span>
-            </button>
-          </div>
         </div>
 
         {/* Stickers tab */}
@@ -4332,149 +4310,6 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
             {setOrder.map(set => renderSet(set.id, set.name, bySet.get(set.id)!))}
           </div>
         )}
-
-        {/* Trading tab — Coming Soon */}
-        {collectionTab === 'trading' && (
-          <div className="relative z-[1] flex flex-col items-center px-5 pt-8 pb-10 gap-6" style={{ minHeight: '70vh' }}>
-            {/* Arcade marquee header */}
-            <div className="relative w-full rounded-3xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #1a0030, #0d001a)', border: '2px solid rgba(245,158,11,0.4)', boxShadow: '0 0 30px rgba(245,158,11,0.15)' }}>
-              <div className="flex justify-around px-4 py-2">
-                {['#ef4444','#f59e0b','#22c55e','#3b82f6','#a855f7','#ec4899','#ef4444','#f59e0b','#22c55e'].map((c, i) => (
-                  <motion.div key={i} className="w-2.5 h-2.5 rounded-full"
-                    style={{ background: c, boxShadow: `0 0 8px ${c}` }}
-                    animate={{ opacity: [1, 0.2, 1] }}
-                    transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.09, ease: 'easeInOut' }}
-                  />
-                ))}
-              </div>
-              <div className="px-6 py-5 text-center">
-                <motion.p className="font-display text-3xl font-black mb-1"
-                  style={{ color: '#f59e0b', textShadow: '0 0 20px #f59e0b, 0 0 40px #d97706' }}
-                  animate={{ textShadow: ['0 0 20px #f59e0b, 0 0 40px #d97706', '0 0 30px #fbbf24, 0 0 60px #f59e0b', '0 0 20px #f59e0b, 0 0 40px #d97706'] }}
-                  transition={{ duration: 1.6, repeat: Infinity }}>
-                  TRADING POST
-                </motion.p>
-                <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'rgba(245,158,11,0.6)' }}>Insert coins to continue…</p>
-              </div>
-              <div className="flex justify-around px-4 py-2">
-                {['#a855f7','#ec4899','#ef4444','#f59e0b','#22c55e','#3b82f6','#a855f7','#ec4899','#22c55e'].map((c, i) => (
-                  <motion.div key={i} className="w-2.5 h-2.5 rounded-full"
-                    style={{ background: c, boxShadow: `0 0 8px ${c}` }}
-                    animate={{ opacity: [1, 0.2, 1] }}
-                    transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.09 + 0.4, ease: 'easeInOut' }}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Coming soon badge */}
-            <motion.div className="px-8 py-3 rounded-full font-black text-lg"
-              style={{ background: 'linear-gradient(135deg, #7c3aed, #4f46e5)', color: '#fff', boxShadow: '0 0 24px rgba(124,58,237,0.6)', letterSpacing: '0.12em' }}
-              animate={{ scale: [1, 1.04, 1], boxShadow: ['0 0 18px rgba(124,58,237,0.5)', '0 0 32px rgba(124,58,237,0.8)', '0 0 18px rgba(124,58,237,0.5)'] }}
-              transition={{ duration: 2, repeat: Infinity }}>
-              ✨ COMING SOON ✨
-            </motion.div>
-
-            {/* ── Trade with other players ── */}
-            <div className="w-full rounded-3xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(99,102,241,0.3)' }}>
-              <div className="px-5 py-3" style={{ background: 'linear-gradient(90deg,rgba(99,102,241,0.25),rgba(124,58,237,0.18))', borderBottom: '1px solid rgba(99,102,241,0.2)' }}>
-                <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'rgba(167,139,250,0.8)' }}>Feature spotlight</p>
-                <p className="font-display font-black text-white text-base">🤝 Trade with Other Players</p>
-              </div>
-              <div className="p-5 space-y-4">
-                {/* Player vs Player swap illustration */}
-                <div className="flex items-center gap-3 justify-center">
-                  {/* Player A */}
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl" style={{ background: 'rgba(99,102,241,0.18)', border: '1px solid rgba(99,102,241,0.35)' }}>🧑</div>
-                    <div className="px-2.5 py-1 rounded-xl text-[10px] font-black" style={{ background: 'rgba(59,130,246,0.2)', color: '#93c5fd', border: '1px solid rgba(59,130,246,0.35)' }}>Your card</div>
-                  </div>
-                  {/* Animated swap arrows */}
-                  <div className="flex flex-col items-center gap-1">
-                    <motion.div style={{ color: '#f59e0b', fontSize: 18 }}
-                      animate={{ x: [0, 6, 0] }} transition={{ duration: 1, repeat: Infinity }}>→</motion.div>
-                    <div className="w-8 h-px" style={{ background: 'rgba(245,158,11,0.3)' }} />
-                    <motion.div style={{ color: '#a855f7', fontSize: 18 }}
-                      animate={{ x: [0, -6, 0] }} transition={{ duration: 1, repeat: Infinity, delay: 0.5 }}>←</motion.div>
-                  </div>
-                  {/* Player B */}
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl" style={{ background: 'rgba(168,85,247,0.18)', border: '1px solid rgba(168,85,247,0.35)' }}>👤</div>
-                    <div className="px-2.5 py-1 rounded-xl text-[10px] font-black" style={{ background: 'rgba(168,85,247,0.2)', color: '#c084fc', border: '1px solid rgba(168,85,247,0.35)' }}>Their card</div>
-                  </div>
-                </div>
-
-                {/* Feature bullets */}
-                <div className="space-y-2">
-                  {[
-                    { icon: '🔍', text: 'Browse what other players are offering' },
-                    { icon: '📤', text: 'List your duplicates for trade' },
-                    { icon: '🤝', text: 'Agree a deal — swap instantly' },
-                    { icon: '🏆', text: 'Complete your sets faster together' },
-                  ].map((f, i) => (
-                    <motion.div key={i} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.07 + 0.3 }}
-                      className="flex items-center gap-3 px-4 py-2.5 rounded-2xl"
-                      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                      <span className="text-lg shrink-0">{f.icon}</span>
-                      <p className="text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.75)' }}>{f.text}</p>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Card upgrade trades */}
-            <div className="w-full space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-widest px-1" style={{ color: 'rgba(245,158,11,0.7)' }}>Card upgrade trades</p>
-              {[
-                { from: '5× Rare Cards', arrow: '→', to: '1× Legendary Card', fromColor: '#3b82f6', toColor: '#f59e0b', icon: '🃏', prize: false },
-                { from: '10× Rare Cards', arrow: '→', to: '1× Legendary Card', fromColor: '#a855f7', toColor: '#f59e0b', icon: '👑', prize: false },
-                { from: '5× Legendary Cards', arrow: '→', to: '🏖️ Free Holiday', fromColor: '#f59e0b', toColor: '#22c55e', icon: '✈️', prize: true },
-                { from: '5× Legendary Cards', arrow: '→', to: '📺 Free TV', fromColor: '#f59e0b', toColor: '#ec4899', icon: '🎁', prize: true },
-              ].map((ex, i) => (
-                <motion.div key={i}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.08 + 0.2 }}
-                  className="relative rounded-2xl overflow-hidden flex items-center gap-3 px-4 py-3"
-                  style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${ex.fromColor}33` }}>
-                  {ex.prize && (
-                    <motion.div className="absolute inset-0 pointer-events-none rounded-2xl"
-                      style={{ background: `radial-gradient(ellipse at 80% 50%, ${ex.toColor}18, transparent 60%)` }}
-                      animate={{ opacity: [0.5, 1, 0.5] }}
-                      transition={{ duration: 2, repeat: Infinity, delay: i * 0.3 }}
-                    />
-                  )}
-                  <span className="text-2xl shrink-0">{ex.icon}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-xs font-black px-2 py-0.5 rounded-lg" style={{ background: `${ex.fromColor}22`, color: ex.fromColor, border: `1px solid ${ex.fromColor}44` }}>{ex.from}</span>
-                      <span className="font-bold text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>{ex.arrow}</span>
-                      <span className="text-xs font-black px-2 py-0.5 rounded-lg" style={{ background: `${ex.toColor}22`, color: ex.toColor, border: `1px solid ${ex.toColor}44` }}>{ex.to}</span>
-                    </div>
-                  </div>
-                  {ex.prize && <span className="shrink-0 text-[9px] font-black px-2 py-1 rounded-full" style={{ background: '#22c55e22', color: '#4ade80', border: '1px solid #22c55e44' }}>PRIZE</span>}
-                </motion.div>
-              ))}
-            </div>
-
-            {/* Notify me */}
-            <div className="w-full rounded-2xl px-5 py-4 text-center" style={{ background: 'rgba(245,158,11,0.08)', border: '1px dashed rgba(245,158,11,0.3)' }}>
-              <p className="text-xs font-bold" style={{ color: 'rgba(245,158,11,0.8)' }}>🔔 We'll let you know when trading goes live!</p>
-            </div>
-
-            {/* Pixel decoration */}
-            <div className="flex gap-2 opacity-30">
-              {['#ef4444','#f59e0b','#22c55e','#3b82f6','#a855f7'].map((c, i) => (
-                <motion.div key={i} className="w-3 h-3 rounded-sm"
-                  style={{ background: c }}
-                  animate={{ y: [0, -4, 0], opacity: [0.4, 1, 0.4] }}
-                  transition={{ duration: 1, repeat: Infinity, delay: i * 0.15 }}
-                />
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Card detail overlay */}
@@ -4496,17 +4331,6 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
                 {selected.count > 1 && (
                   <p className="text-sm font-bold text-white/70">You own <span className="text-white">x{selected.count}</span></p>
                 )}
-                <div className="flex gap-3">
-                  <div className="relative inline-flex flex-col items-center">
-                    <button onClick={() => { setSelected(null); setCollectionTab('trading'); }} className="px-8 py-2.5 rounded-2xl font-bold text-sm text-white"
-                      style={{ background: 'linear-gradient(135deg,#d97706,#f59e0b)', boxShadow: '0 0 14px rgba(245,158,11,0.45)' }}>
-                      🔄 Trade
-                    </button>
-                    <span className="absolute -top-2 -right-2 text-[7px] font-black px-1.5 py-0.5 rounded-full leading-none" style={{ background: '#7c3aed', color: '#fff' }}>
-                      Soon
-                    </span>
-                  </div>
-                </div>
                 <button onClick={() => setSelected(null)}
                   className="px-8 py-3 rounded-2xl font-bold text-sm"
                   style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.65)' }}>
@@ -4643,17 +4467,6 @@ function UserStickerPanel({ uid, isOwnProfile = false, onOpenPack }: {
                 {eDef?.description && (
                   <p className="relative z-10 text-center text-sm text-white/80 max-w-[220px] leading-snug">{eDef.description}</p>
                 )}
-                <div className="relative z-10 flex gap-3">
-                  <div className="relative inline-flex flex-col items-center">
-                    <button disabled className="px-8 py-2.5 rounded-2xl font-bold text-sm text-white cursor-not-allowed"
-                      style={{ background: '#3b82f6' }}>
-                      Trade
-                    </button>
-                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full leading-none">
-                      Coming soon
-                    </span>
-                  </div>
-                </div>
                 <button
                   className="relative z-10 px-8 py-3 rounded-2xl font-bold text-sm text-white/70"
                   style={{ background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.16)' }}
@@ -17803,7 +17616,7 @@ function VendorWebRedirectScreen({ onLogout }: { onLogout: () => void }) {
       <div className="space-y-2">
         <h1 className="font-display text-2xl font-bold text-brand-navy">Vendor Portal</h1>
         <p className="text-sm text-brand-navy/60 leading-relaxed">
-          Manage your loyalty programme, analytics, and subscription at our website.
+          Manage your loyalty programme and analytics at our website.
         </p>
       </div>
       <button
@@ -19538,15 +19351,6 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                       </div>
                     );
                   })()}
-
-                  {/* Intelligence: Competitor Benchmarking — coming soon */}
-                  <div className="glass-card p-6 rounded-[2rem] opacity-60">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="font-bold text-brand-navy">Competitor Benchmarking</p>
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/40 bg-brand-navy/8 px-2 py-0.5 rounded-full">Coming soon</span>
-                    </div>
-                    <p className="text-xs text-brand-navy/50">See how your programme compares to similar local businesses.</p>
-                  </div>
                 </>
                 </div>
                 ) : (
@@ -28438,17 +28242,6 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                 {eDef?.description && (
                   <p className="relative z-10 text-center text-sm text-white/80 max-w-[220px] leading-snug">{eDef.description}</p>
                 )}
-                <div className="relative z-10 flex gap-3">
-                  <div className="relative inline-flex flex-col items-center">
-                    <button disabled className="px-8 py-2.5 rounded-2xl font-bold text-sm text-white cursor-not-allowed"
-                      style={{ background: '#3b82f6' }}>
-                      Trade
-                    </button>
-                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full leading-none">
-                      Coming soon
-                    </span>
-                  </div>
-                </div>
                 <button onClick={() => setExpandedSticker(null)}
                   className="relative z-10 px-8 py-3 rounded-2xl font-bold text-sm text-white/70"
                   style={{ background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.16)' }}>Close</button>
@@ -31523,7 +31316,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const lbOpenedAtRef = useRef<number | null>(null);
   const [lbPeriod, setLbPeriod] = useState<'alltime' | 'weekly'>('alltime');
-  const [lbCategory, setLbCategory] = useState<'stamps' | 'rewards' | 'streak' | 'points'>('stamps');
+  const [lbCategory, setLbCategory] = useState<'stamps' | 'rewards' | 'streak'>('stamps');
   const [lbUsers, setLbUsers] = useState<UserProfile[]>([]);
   const [lbPins, setLbPins] = useState<UserProfile[]>([]);
   const [lbLoading, setLbLoading] = useState(false);
@@ -32153,11 +31946,10 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                   case 'stamps': return u.totalStamps || 0;
                   case 'rewards': return u.totalRedeemed || 0;
                   case 'streak': return u.streak || 0;
-                  case 'points': return 0;
                 }
               };
-              const lbCategoryLabel = ({ stamps: 'Stamps', rewards: 'Rewards', streak: 'Streak', points: 'Points' } as Record<string, string>)[lbCategory] ?? '';
-              const lbCategoryUnit = ({ stamps: 'stamps', rewards: 'redeemed', streak: 'day streak', points: '' } as Record<string, string>)[lbCategory] ?? '';
+              const lbCategoryLabel = ({ stamps: 'Stamps', rewards: 'Rewards', streak: 'Streak' } as Record<string, string>)[lbCategory] ?? '';
+              const lbCategoryUnit = ({ stamps: 'stamps', rewards: 'redeemed', streak: 'day streak' } as Record<string, string>)[lbCategory] ?? '';
               const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
               const periodReal = lbPeriod === 'weekly'
                 ? lbUsers.filter(u => u.lastStreakDate && u.lastStreakDate >= sevenDaysAgo)
@@ -32167,7 +31959,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                 const pinnedUids = new Set(lbPins.map(p => p.uid));
                 return [...lbPins, ...periodReal.filter(u => !pinnedUids.has(u.uid))];
               })() : periodReal;
-              const allSorted = lbCategory === 'points' ? [] : [...baseUsers].sort((a, b) => getLbScore(b) - getLbScore(a));
+              const allSorted = [...baseUsers].sort((a, b) => getLbScore(b) - getLbScore(a));
               const sorted = allSorted.slice(0, 10);
               const myRankIdx = allSorted.findIndex(u => u.uid === currentProfile?.uid);
               const myRank = myRankIdx >= 0 ? myRankIdx + 1 : null;
@@ -32235,7 +32027,6 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                         { key: 'stamps', label: 'Stamps', icon: '🏷️' },
                         { key: 'rewards', label: 'Rewards', icon: '🎁' },
                         { key: 'streak', label: 'Streak', icon: '🔥' },
-                        { key: 'points', label: 'Points', icon: '⭐' },
                       ] as const).map(({ key, label, icon }) => (
                         <button key={key} onClick={() => setLbCategory(key)}
                           className={cn('shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold transition-all', lbCategory === key ? 'gradient-red text-white shadow' : 'bg-white border border-brand-navy/10 text-brand-navy/80')}>
@@ -32244,13 +32035,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                       ))}
                     </div>
 
-                    {lbCategory === 'points' ? (
-                      <div className="py-16 text-center text-brand-navy/72">
-                        <span className="text-4xl mb-3 block">⭐</span>
-                        <p className="text-base font-bold text-brand-navy">Coming Soon</p>
-                        <p className="text-xs mt-1 text-brand-navy/50">Points leaderboard is on its way</p>
-                      </div>
-                    ) : lbLoading ? (
+                    {lbLoading ? (
                       <div className="flex justify-center py-8">
                         <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}>
                           <Sparkles className="w-6 h-6 text-brand-gold/60" />
