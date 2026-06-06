@@ -28114,7 +28114,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         )}
       </AnimatePresence>
 
-      {/* Stamps / Cards / Rewards — clean separator */}
+      {/* Stamps / Cards / Rewards / Challenges — clean separator */}
       <div className="flex items-center divide-x divide-brand-navy/10">
         {[
           { val: lifetimeStamps,     label: 'Stamps'  },
@@ -28126,21 +28126,12 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
             <p className="text-[9px] font-bold uppercase tracking-wider text-brand-navy/50">{s.label}</p>
           </div>
         ))}
+        <button onClick={() => setChallengeOpen(true)}
+          className="flex-1 flex flex-col items-center gap-0.5 py-2 active:opacity-60 transition-opacity">
+          <p className="font-black text-base leading-none text-brand-navy">{activeChallenges.length}</p>
+          <p className="text-[9px] font-bold uppercase tracking-wider text-brand-navy/50">Challenges</p>
+        </button>
       </div>
-
-      {/* Challenges tile */}
-      <motion.button whileTap={{ scale: 0.97 }} onClick={() => setChallengeOpen(true)}
-        className="w-full rounded-2xl overflow-hidden shadow-sm">
-        <div className="relative flex items-center justify-center gap-2 px-4 py-3 overflow-hidden"
-          style={{ background: uiColors.challengesTile.css }}>
-          <span className="shine-ray" aria-hidden="true" />
-          <p className="relative z-10 text-xl font-black leading-none text-white"
-            style={tileTextStyle(uiColors.challengesTile)}>{activeChallenges.length}</p>
-          <span className="relative z-10 text-[10px] font-bold uppercase tracking-widest text-white/70"
-            style={tileTextStyle(uiColors.challengesTile, 0.7)}>Challenges</span>
-        </div>
-      </motion.button>
-
 
       {/* Active cards — slider */}
       {(() => {
