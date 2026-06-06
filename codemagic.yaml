@@ -30,7 +30,6 @@ workflows:
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath build/App.xcarchive \
-            CURRENT_PROJECT_VERSION=$BUILD_NUMBER \
             archive
           xcodebuild \
             -exportArchive \
