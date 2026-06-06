@@ -5117,7 +5117,7 @@ function StickerQRScanModal({ onClose, onSticker }: {
       className="fixed inset-0 z-[300] flex flex-col max-w-md mx-auto bg-black overflow-hidden"
     >
       {/* Header */}
-      <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-5 pt-5 pb-4 bg-gradient-to-b from-black/80 to-transparent">
+      <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-5 pb-4 bg-gradient-to-b from-black/80 to-transparent" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.25rem)' }}>
         <div className="flex items-center gap-3">
           <button onClick={() => { stopCamera(); onClose(); }} className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center active:scale-90 transition-transform">
             <X size={18} className="text-white" />
@@ -14460,7 +14460,7 @@ function VendorQRScanner({ store, stampQty, onScanned, onClose, subtitle }: {
       {/* Overlay */}
       <div className="relative z-10 flex flex-col h-full">
         {/* Header */}
-        <div className="flex items-center gap-3 px-5 pt-12 pb-4">
+        <div className="flex items-center gap-3 px-5 pb-4" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3rem)' }}>
           <button onClick={onClose} className="p-2 bg-black/40 rounded-full text-white">
             <X size={20} />
           </button>
@@ -14601,7 +14601,7 @@ function VendorQRDisplay({ store, onClose }: { store: StoreProfile; onClose: () 
         className="fixed inset-0 z-[200] flex flex-col items-center justify-center"
         style={{ backgroundColor: cardTheme }}
       >
-        <button onClick={onClose} className="absolute top-12 right-5 p-2 bg-white/20 rounded-full">
+        <button onClick={onClose} className="absolute right-5 p-2 bg-white/20 rounded-full" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 3rem)' }}>
           <X size={20} className="text-white" />
         </button>
 
@@ -14747,7 +14747,7 @@ function VendorSpendQRDisplay({ store, onClose }: { store: StoreProfile; onClose
         className="fixed inset-0 z-[200] flex flex-col items-center justify-center"
         style={{ background: color }}
       >
-        <button onClick={onClose} className="absolute top-12 right-5 p-2 bg-white/20 rounded-full">
+        <button onClick={onClose} className="absolute right-5 p-2 bg-white/20 rounded-full" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 3rem)' }}>
           <X size={20} className="text-white" />
         </button>
 
@@ -15017,7 +15017,7 @@ function SpendQRScannerModal({ onClose, onPackReady }: { onClose: () => void; on
       transition={{ type: 'spring', damping: 38, stiffness: 520 }}
       className="fixed inset-0 z-[200] bg-black flex flex-col"
     >
-      <div className="flex items-center gap-3 px-5 py-4 shrink-0">
+      <div className="flex items-center gap-3 px-5 pb-4 shrink-0" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}>
         <button onClick={() => { stopCamera(); onClose(); }} className="p-2 bg-white/10 rounded-full"><X size={20} className="text-white" /></button>
         <div>
           <p className="text-white/60 text-xs font-bold uppercase tracking-widest">Scan vendor QR</p>
@@ -15216,7 +15216,7 @@ function VisitQRScannerModal({ storeId, onClose, onPackReady }: { storeId: strin
 
   return createPortal(
     <motion.div initial={{ opacity: 0, y: '100%' }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: '100%' }} transition={{ type: 'spring', damping: 38, stiffness: 520 }} className="fixed inset-0 z-[200] bg-black flex flex-col">
-      <div className="flex items-center gap-3 px-5 py-4 shrink-0">
+      <div className="flex items-center gap-3 px-5 pb-4 shrink-0" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}>
         <button onClick={() => { stopCamera(); onClose(); }} className="p-2 bg-white/10 rounded-full"><X size={20} className="text-white" /></button>
         <div>
           <p className="text-white/60 text-xs font-bold uppercase tracking-widest">Scan store QR</p>
@@ -23585,7 +23585,7 @@ function MatrixRainCanvas({ opacity = 0.35, fadeColor = 'rgba(17,40,110,0.18)' }
 
 function LinqleMatrixBanner({ onClose, dateStr }: { onClose: () => void; dateStr: string }) {
   return (
-    <div className="relative flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/8 shrink-0 overflow-hidden bg-[#0F172A]">
+    <div className="relative flex items-center justify-between px-5 pb-3 border-b border-white/8 shrink-0 overflow-hidden bg-[#0F172A]" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.25rem)' }}>
       <MatrixRainCanvas />
       <div className="relative z-10">
         <h2 className="font-black text-xl tracking-wide"><span className="text-blue-400">Li</span><span className="text-white">nqle</span></h2>
