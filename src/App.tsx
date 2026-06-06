@@ -26114,11 +26114,10 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-brand-gold/10 flex items-center justify-center">
                 <span className="text-[10px] font-extrabold text-brand-gold">{i + 1}</span>
               </div>
-              <input
-                type="number"
-                min="1"
+              <NumberField
+                min={1}
                 value={tier.stamps}
-                onChange={e => updateTier(i, 'stamps', e.target.value)}
+                onCommit={n => updateTier(i, 'stamps', String(n))}
                 className="w-14 shrink-0 px-2 py-2.5 rounded-xl bg-brand-bg border border-brand-navy/10 text-sm font-bold text-center focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
                 placeholder="Stamps"
               />
@@ -26455,6 +26454,34 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
   );
 }
 
+// Number input that lets you freely type/clear digits — the displayed text is
+// independent of the committed numeric value, so clamping on commit doesn't
+// fight the cursor mid-edit (which is what made these fields "stuck").
+function NumberField({ value, onCommit, min = 0, className, placeholder, max, step }: { value: number; onCommit: (n: number) => void; min?: number; max?: number; step?: number | string; className?: string; placeholder?: string }) {
+  const [text, setText] = useState(String(value));
+  const editingRef = React.useRef(false);
+  useEffect(() => { if (!editingRef.current) setText(String(value)); }, [value]);
+  return (
+    <input
+      type="number"
+      min={min}
+      max={max}
+      step={step}
+      placeholder={placeholder}
+      className={className}
+      value={text}
+      onFocus={() => { editingRef.current = true; }}
+      onChange={e => setText(e.target.value)}
+      onBlur={() => {
+        editingRef.current = false;
+        const n = Math.max(min, parseInt(text) || min);
+        setText(String(n));
+        onCommit(n);
+      }}
+    />
+  );
+}
+
 function InfoTip({ text }: { text: string }) {
   const [open, setOpen] = React.useState(false);
   const [pos, setPos] = React.useState<{ top: number; left: number } | null>(null);
@@ -26788,11 +26815,10 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
                         <span className="text-[8px] font-bold text-brand-navy/40 uppercase tracking-widest">Pts cost</span>
                         <InfoTip text="Points the customer must spend to claim this item." />
                       </div>
-                      <input
-                        type="number"
-                        min="1"
+                      <NumberField
+                        min={1}
                         value={item.points}
-                        onChange={e => setMenuItems(prev => prev.map((x, idx) => idx === i ? { ...x, points: Math.max(1, parseInt(e.target.value) || 1) } : x))}
+                        onCommit={n => setMenuItems(prev => prev.map((x, idx) => idx === i ? { ...x, points: n } : x))}
                         className="w-full text-sm font-bold text-brand-navy bg-transparent outline-none"
                         placeholder="50"
                       />
@@ -26916,8 +26942,8 @@ function SubCardBuilder({ store }: { store: StoreProfile | null }) {
         {(earnMode === 'spend' || earnMode === 'both') && (
           <div>
             <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest block mb-1.5">Points per $1 spent</label>
-            <input type="number" min="1" value={pointsPerDollar}
-              onChange={(e) => setPointsPerDollar(Math.max(1, parseInt(e.target.value) || 1))}
+            <NumberField min={1} value={pointsPerDollar}
+              onCommit={setPointsPerDollar}
               className="w-full px-4 py-3 rounded-xl border border-brand-navy/10 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400 text-brand-navy font-bold"
             />
           </div>
@@ -26925,16 +26951,16 @@ function SubCardBuilder({ store }: { store: StoreProfile | null }) {
         {(earnMode === 'visit' || earnMode === 'both') && (
           <div>
             <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest block mb-1.5">Points per visit</label>
-            <input type="number" min="1" value={pointsPerVisit}
-              onChange={(e) => setPointsPerVisit(Math.max(1, parseInt(e.target.value) || 1))}
+            <NumberField min={1} value={pointsPerVisit}
+              onCommit={setPointsPerVisit}
               className="w-full px-4 py-3 rounded-xl border border-brand-navy/10 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400 text-brand-navy font-bold"
             />
           </div>
         )}
         <div className={earnMode === 'both' ? 'col-span-2' : ''}>
           <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest block mb-1.5">Points per $1 off</label>
-          <input type="number" min="1" value={pointsToMoneyRate}
-            onChange={(e) => setPointsToMoneyRate(Math.max(1, parseInt(e.target.value) || 1))}
+          <NumberField min={1} value={pointsToMoneyRate}
+            onCommit={setPointsToMoneyRate}
             className="w-full px-4 py-3 rounded-xl border border-brand-navy/10 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400 text-brand-navy font-bold"
           />
         </div>
@@ -26944,11 +26970,10 @@ function SubCardBuilder({ store }: { store: StoreProfile | null }) {
         <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Reward Tiers</label>
         {rewards.map((r, i) => (
           <div key={i} className="flex gap-2 items-center">
-            <input
-              type="number"
-              min="1"
+            <NumberField
+              min={1}
               value={r.points}
-              onChange={(e) => updateReward(i, 'points', e.target.value)}
+              onCommit={n => updateReward(i, 'points', String(n))}
               className="w-20 shrink-0 px-2 py-2.5 rounded-xl border border-brand-navy/10 bg-white focus:outline-none text-brand-navy font-bold text-sm text-center"
               placeholder="pts"
             />
