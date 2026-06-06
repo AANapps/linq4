@@ -26174,14 +26174,14 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
               <div className="flex flex-col items-center gap-0.5 shrink-0">
                 <span className="text-[7px] font-bold uppercase tracking-wider text-emerald-700/70 leading-none">Value saved</span>
                 <div className="relative flex items-center">
-                  <span className="absolute left-2.5 text-xs font-bold text-emerald-600">{currencySymbol(currency)}</span>
+                  <span className="absolute left-3 text-sm font-bold text-emerald-600">{currencySymbol(currency)}</span>
                   <input
                     type="number"
                     min="0"
                     step="0.01"
                     value={tier.value ?? ''}
                     onChange={e => updateTier(i, 'value', e.target.value)}
-                    className="w-16 pl-6 pr-1.5 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-sm font-bold text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                    className="w-24 pl-7 pr-2 py-3 rounded-xl bg-emerald-50 border border-emerald-200 text-base font-bold text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-300"
                     placeholder="0.00"
                   />
                 </div>
