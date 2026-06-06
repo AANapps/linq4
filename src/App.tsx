@@ -27260,7 +27260,7 @@ function StoreLeaderboard({ storeId, storeName, logoUrl, type, userId }: {
 
 function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, onViewUser, onViewStore, onGoToDeals, onOpenLinqle, onSeeAllMembers, user, uiColors: uiColorsProp, profileCollection = 'users' }: { profile: UserProfile | null, userCards: Card[], stores?: StoreProfile[], onLogout: () => void, onDeleteAccount: () => Promise<void>, onViewUser: (u: UserProfile) => void, onViewStore?: (s: StoreProfile) => void, onGoToDeals?: () => void, onOpenLinqle?: () => void, onSeeAllMembers?: () => void, user: FirebaseUser, uiColors?: UiColors, profileCollection?: 'users' | 'vendors' }) {
   const uiColors = uiColorsProp ?? UI_COLOR_DEFAULTS;
-  const [activeSubTab, setActiveSubTab] = useState<'posts' | 'stickers' | 'badges' | 'interactions'>('posts');
+  const [activeSubTab, setActiveSubTab] = useState<'posts' | 'stickers' | 'badges' | 'interactions'>('stickers');
   const [pressedSticker, setPressedSticker] = useState<string | null>(null);
   const longPressTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTriggeredIdRef = React.useRef<string | null>(null);
@@ -35402,14 +35402,17 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
   const [publicChallenges, setPublicChallenges] = useState<Challenge[]>([]);
   const [publicEntries, setPublicEntries] = useState<Map<string, any>>(new Map());
   const [pubChallengeOpen, setPubChallengeOpen] = useState(false);
-  const [pubBadgesOpen, setPubBadgesOpen] = useState(false);
-  const [pubStickerOpen, setPubStickerOpen] = useState(false);
   const [pubChallengeTab, setPubChallengeTab] = useState<'current' | 'completed'>('current');
-  const [pubStickerCount, setPubStickerCount] = useState(0);
   const [pubStickers, setPubStickers] = useState<CollectibleSticker[]>([]);
   const [pubRevealedIds, setPubRevealedIds] = useState<string[]>([]);
   const [pubExpandedSticker, setPubExpandedSticker] = useState<CollectibleSticker | null>(null);
   const [pubCardDefs, setPubCardDefs] = useState<CollectibleCardDef[]>([]);
+  const [activeSubTab, setActiveSubTab] = useState<'posts' | 'stickers' | 'badges' | 'interactions'>('stickers');
+  const [pubLikedPosts, setPubLikedPosts] = useState<GlobalPost[]>([]);
+  const [pubVotedPolls, setPubVotedPolls] = useState<GlobalPost[]>([]);
+  const [pressedSticker, setPressedSticker] = useState<string | null>(null);
+  const longPressTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressTriggeredIdRef = React.useRef<string | null>(null);
 
   useEffect(() => {
     return onSnapshot(collection(db, 'badges'), snap =>
@@ -35442,7 +35445,6 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
       const data = snap.exists() ? snap.data() : null;
       const s: CollectibleSticker[] = data?.stickers || [];
       const r: string[] = data?.revealedIds || [];
-      setPubStickerCount(s.length);
       setPubStickers(s);
       setPubRevealedIds(r);
     });
@@ -35521,6 +35523,17 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
       setUserPosts(snap.docs.map(d => ({ id: d.id, ...d.data() } as GlobalPost)));
     }, () => {});
 
+    const lq = query(collection(db, 'global_posts'), where('likedBy', 'array-contains', initialTargetUser.uid), orderBy('createdAt', 'desc'));
+    const unsubLiked = onSnapshot(lq, (snap) => {
+      setPubLikedPosts(snap.docs.map(d => ({ id: d.id, ...d.data() } as GlobalPost)));
+    }, () => {});
+
+    const aq = query(collection(db, 'global_posts'), where('postType', '==', 'poll'), orderBy('createdAt', 'desc'), limit(100));
+    const unsubPolls = onSnapshot(aq, (snap) => {
+      setPubVotedPolls(snap.docs.map(d => ({ id: d.id, ...d.data() } as GlobalPost))
+        .filter(p => Object.values(p.pollVotes || {}).some(arr => (arr as string[]).includes(initialTargetUser.uid))));
+    }, () => {});
+
     return () => {
       unsubProfile();
       unsubCards();
@@ -35531,6 +35544,8 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
       unsubTargetFollowing();
       unsubFollow();
       unsubPosts();
+      unsubLiked();
+      unsubPolls();
     };
   }, [initialTargetUser.uid, initialTargetUser.role, currentUser.uid]);
 
@@ -35670,6 +35685,8 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
     challenges_won: targetUser.challengesWon || 0,
   };
   const earnedBadges = allBadges.filter(b => (pubBadgeMetrics[b.metric] ?? 0) >= b.threshold);
+  const theirChallenges = publicChallenges.filter(c => (c.participantUids || []).includes(initialTargetUser.uid));
+  const activePub = theirChallenges.filter(c => !publicEntries.get(c.id)?.redeemed);
 
   return (
     <motion.div
@@ -35734,7 +35751,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
         </div>
       </header>
 
-      {/* Stats — clean separator */}
+      {/* Stats / Cards / Rewards / Challenges — clean separator */}
       <div className="flex items-center divide-x divide-brand-navy/10">
         {[
           { val: publicUserStamps,  label: 'Stamps'  },
@@ -35746,90 +35763,12 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
             <p className="text-[9px] font-bold uppercase tracking-wider text-brand-navy/50">{s.label}</p>
           </div>
         ))}
+        <button onClick={() => setPubChallengeOpen(true)}
+          className="flex-1 flex flex-col items-center gap-0.5 py-2 active:opacity-60 transition-opacity">
+          <p className="font-black text-base leading-none text-brand-navy">{activePub.length}</p>
+          <p className="text-[9px] font-bold uppercase tracking-wider text-brand-navy/50">Challenges</p>
+        </button>
       </div>
-
-      {/* Challenges · Stickers · Badges */}
-      {(() => {
-        const theirChallenges = publicChallenges.filter(c => (c.participantUids || []).includes(initialTargetUser.uid));
-        const activePub = theirChallenges.filter(c => !publicEntries.get(c.id)?.redeemed);
-        return (
-          <>
-            {/* Challenges tile */}
-            <motion.button whileTap={{ scale: 0.97 }} onClick={() => setPubChallengeOpen(true)}
-              className="w-full rounded-2xl overflow-hidden shadow-sm">
-              <div className="relative flex items-center justify-center gap-2 px-4 py-3 overflow-hidden"
-                style={{ background: uiColors.challengesTile.css }}>
-                <span className="shine-ray" aria-hidden="true" />
-                <p className="relative z-10 text-xl font-black leading-none text-white"
-                  style={tileTextStyle(uiColors.challengesTile)}>{activePub.length}</p>
-                <span className="relative z-10 text-[10px] font-bold uppercase tracking-widest text-white/70"
-                  style={tileTextStyle(uiColors.challengesTile, 0.7)}>Challenges</span>
-              </div>
-            </motion.button>
-
-            {/* Sticker + Badge sliders in one row */}
-            <div className="flex gap-2">
-              {/* Sticker slider — 75% */}
-              <div className="relative rounded-2xl px-3 pt-2.5 pb-3 shadow-md min-w-0 overflow-hidden border-2 border-black/25" style={{ flex: '3 1 0%', background: uiColors.stickersTile.css }}>
-                <span className="shine-ray pointer-events-none" aria-hidden="true" />
-                <div className="relative z-10 flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-widest" style={tileTextStyle(uiColors.stickersTile, 0.75)}>Stickers</span>
-                  <button onClick={() => setPubStickerOpen(true)} className="active:opacity-70" style={tileTextStyle(uiColors.stickersTile, 0.85)}>
-                    <Eye size={14} />
-                  </button>
-                </div>
-                <div className="relative z-10">
-                {(() => {
-                  const universal = pubStickers
-                    .filter(s => !!s.cardDefId && !!s.cardImageUrl && !s.challengeId && pubRevealedIds.includes(s.id))
-                    .sort((a, b) => {
-                      const tierDiff = STICKER_ORDER.indexOf(b.tier) - STICKER_ORDER.indexOf(a.tier);
-                      if (tierDiff !== 0) return tierDiff;
-                      return new Date(b.earnedAt).getTime() - new Date(a.earnedAt).getTime();
-                    });
-                  if (universal.length === 0) return <p className="text-[10px] py-1" style={tileTextStyle(uiColors.stickersTile, 0.5)}>No cards yet</p>;
-                  return (
-                    <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-                      {universal.slice(0, 5).map(s => (
-                        <div key={s.id} className="shrink-0 active:scale-95 transition-transform cursor-pointer"
-                          onClick={() => setPubExpandedSticker(s)}>
-                          <StickerCard sticker={s} isRevealed={true} size="sm" />
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
-                </div>
-              </div>
-
-              {/* Badge — 25% */}
-              <div className="relative rounded-2xl px-3 pt-2.5 pb-3 shadow-md min-w-0 flex flex-col overflow-hidden border-2 border-black/25" style={{ flex: '1 1 0%', background: uiColors.badgesTile.css }}>
-                <span className="shine-ray pointer-events-none" aria-hidden="true" />
-                <div className="relative z-10 flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-widest" style={tileTextStyle(uiColors.badgesTile, 0.75)}>Badges</span>
-                  <button onClick={() => setPubBadgesOpen(true)} className="active:opacity-70" style={tileTextStyle(uiColors.badgesTile, 0.85)}>
-                    <Eye size={14} />
-                  </button>
-                </div>
-                <div className="relative z-10 flex-1 flex flex-col justify-center">
-                {earnedBadges.length === 0
-                  ? <p className="text-[10px] py-1" style={tileTextStyle(uiColors.badgesTile, 0.5)}>No badges</p>
-                  : (
-                    <div className="flex items-center justify-center">
-                      <button onClick={() => { setPubBadgesOpen(false); setSelectedBadge(earnedBadges[0]); }}
-                        className="active:scale-90 transition-transform"
-                        style={{ filter: 'drop-shadow(0 8px 6px rgba(0,0,0,0.55))' }}>
-                        <HexBadge badge={earnedBadges[0]} size={56} />
-                      </button>
-                    </div>
-                  )
-                }
-                </div>
-              </div>
-            </div>
-          </>
-        );
-      })()}
 
       {/* Challenges popup */}
       <AnimatePresence>
@@ -35889,37 +35828,6 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
         })()}
       </AnimatePresence>
 
-      {/* Badges popup */}
-      <AnimatePresence>
-        {pubBadgesOpen && (
-          <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-            transition={{ type: 'spring', stiffness: 540, damping: 40 }}
-            className="fixed top-0 left-0 right-0 bottom-0 z-[9999] bg-brand-bg flex flex-col overflow-hidden max-w-md mx-auto"
-            onClick={e => e.stopPropagation()}>
-            <div className="px-5 pb-3 flex items-center justify-between shrink-0" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.25rem)' }}>
-              <h3 className="font-bold text-brand-navy text-lg">Badges</h3>
-              <button onClick={() => setPubBadgesOpen(false)} className="w-8 h-8 rounded-full bg-brand-navy/8 flex items-center justify-center">
-                <X size={16} className="text-brand-navy" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto px-4 pb-6">
-              {earnedBadges.length === 0
-                ? <p className="text-center text-xs text-brand-navy/50 py-10">No badges earned yet</p>
-                : <div className="grid grid-cols-4 gap-3 pt-1">
-                    {earnedBadges.map(b => (
-                      <button key={b.id} onClick={() => setSelectedBadge(b)}
-                        className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform">
-                        <HexBadge badge={b} size={52} />
-                        <span className="text-[10px] font-bold text-brand-navy/80 text-center leading-tight line-clamp-2">{b.name}</span>
-                      </button>
-                    ))}
-                  </div>
-              }
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Expanded sticker card overlay */}
       <AnimatePresence>
         {pubExpandedSticker && (() => {
@@ -35948,20 +35856,6 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
             </motion.div>
           );
         })()}
-      </AnimatePresence>
-
-      {/* Stickers popup */}
-      <AnimatePresence>
-        {pubStickerOpen && (
-          <UserCollectionModal
-            uid={targetUser.uid}
-            isOwnProfile={false}
-            stickers={pubStickers}
-            revealedIds={pubRevealedIds}
-            onReveal={() => {}}
-            onClose={() => setPubStickerOpen(false)}
-          />
-        )}
       </AnimatePresence>
 
       <AnimatePresence>
@@ -36096,37 +35990,194 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
         )}
       </div>
 
-
-      {/* Posts */}
-      <div className="-mx-6 bg-white border-t-[3px] border-gray-200">
-        {userPosts.map((post, idx) => (
-          <React.Fragment key={post.id}>
-            {idx > 0 && <div className="h-[3px] bg-gray-200" />}
-            <FeedPostCard
-              post={post}
-              currentUser={currentUser}
-              currentProfile={currentProfile}
-              onViewUser={onViewUser}
-              onLike={async (p) => {
-                const ref = doc(db, 'global_posts', p.id);
-                const alreadyLiked = (p.likedBy || []).includes(currentUser.uid);
-                await updateDoc(ref, {
-                  likedBy: alreadyLiked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid),
-                  likesCount: alreadyLiked ? Math.max(0, p.likesCount - 1) : p.likesCount + 1,
-                });
-              }}
-              onVote={async (p, optionIndex) => {
-                const votes = p.pollVotes || {};
-                if (Object.keys(votes).some(k => (votes[k] || []).includes(currentUser.uid))) return;
-                await updateDoc(doc(db, 'global_posts', p.id), { [`pollVotes.${optionIndex}`]: arrayUnion(currentUser.uid) });
-              }}
-            />
-          </React.Fragment>
+      {/* Posts / Stickers / Badges / Interactions */}
+      <div className="flex p-1 glass-card rounded-2xl">
+        {([
+          { key: 'posts',        label: 'Posts' },
+          { key: 'stickers',     label: 'Stickers' },
+          { key: 'badges',       label: 'Badges' },
+          { key: 'interactions', label: 'Interactions' },
+        ] as const).map(t => (
+          <button key={t.key}
+            onClick={() => setActiveSubTab(t.key)}
+            className={cn("flex-1 py-3 rounded-xl text-[11px] font-bold transition-all", activeSubTab === t.key ? "text-white shadow-lg" : "text-brand-navy/75")}
+            style={activeSubTab === t.key ? { background: 'var(--color-brand-gold)' } : {}}
+          >
+            {t.label}
+          </button>
         ))}
-        {userPosts.length === 0 && (
-          <p className="text-center py-12 text-xs text-brand-navy/60 italic">this person is too shy to speak</p>
-        )}
       </div>
+
+      {activeSubTab === 'posts' && (
+        <div className="-mx-6 bg-white border-t-[3px] border-gray-200">
+          {userPosts.map((post, idx) => (
+            <React.Fragment key={post.id}>
+              {idx > 0 && <div className="h-[3px] bg-gray-200" />}
+              <FeedPostCard
+                post={post}
+                currentUser={currentUser}
+                currentProfile={currentProfile}
+                onViewUser={onViewUser}
+                onLike={async (p) => {
+                  const ref = doc(db, 'global_posts', p.id);
+                  const alreadyLiked = (p.likedBy || []).includes(currentUser.uid);
+                  await updateDoc(ref, {
+                    likedBy: alreadyLiked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid),
+                    likesCount: alreadyLiked ? Math.max(0, p.likesCount - 1) : p.likesCount + 1,
+                  });
+                }}
+                onVote={async (p, optionIndex) => {
+                  const votes = p.pollVotes || {};
+                  if (Object.keys(votes).some(k => (votes[k] || []).includes(currentUser.uid))) return;
+                  await updateDoc(doc(db, 'global_posts', p.id), { [`pollVotes.${optionIndex}`]: arrayUnion(currentUser.uid) });
+                }}
+              />
+            </React.Fragment>
+          ))}
+          {userPosts.length === 0 && (
+            <p className="text-center py-12 text-xs text-brand-navy/60 italic">this person is too shy to speak</p>
+          )}
+        </div>
+      )}
+
+      {activeSubTab === 'stickers' && (() => {
+        const valid = pubStickers
+          .filter(s => !!s.cardDefId && !!s.cardImageUrl && !s.challengeId
+            && pubRevealedIds.includes(s.id)
+            && pubCardDefs.some(d => d.id === s.cardDefId));
+        const dedupMap = new Map<string, { sticker: CollectibleSticker; count: number }>();
+        [...valid].reverse().forEach(s => {
+          const key = s.cardDefId ?? `${s.tier}-${s.variant ?? 0}`;
+          if (dedupMap.has(key)) dedupMap.get(key)!.count++;
+          else dedupMap.set(key, { sticker: s, count: 1 });
+        });
+        const deduped = [...dedupMap.values()].sort((a, b) => {
+          const tierDiff = STICKER_ORDER.indexOf(b.sticker.tier) - STICKER_ORDER.indexOf(a.sticker.tier);
+          if (tierDiff !== 0) return tierDiff;
+          return new Date(b.sticker.earnedAt).getTime() - new Date(a.sticker.earnedAt).getTime();
+        });
+
+        const startPress = (id: string) => {
+          longPressTimerRef.current = setTimeout(() => {
+            longPressTriggeredIdRef.current = id;
+            setPressedSticker(id);
+          }, 380);
+        };
+        const cancelPress = () => {
+          if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
+        };
+
+        if (deduped.length === 0) return (
+          <div className="py-16 text-center text-brand-navy/32">
+            <Image size={56} className="mx-auto mb-4 opacity-10" />
+            <p className="font-bold">No cards yet</p>
+            <p className="text-xs">Earn stamps to start collecting</p>
+          </div>
+        );
+
+        return (
+          <div className="-mx-6 grid grid-cols-3 gap-px bg-transparent">
+            {deduped.map(({ sticker, count }) => {
+              const cfg = STICKER_CONFIG[sticker.tier];
+              const isPressed = pressedSticker === sticker.id;
+              return (
+                <div key={sticker.cardDefId ?? `${sticker.tier}-${sticker.variant}`}
+                  className="relative aspect-[4/5] overflow-hidden bg-brand-bg cursor-pointer"
+                  onPointerDown={() => startPress(sticker.id)}
+                  onPointerUp={cancelPress}
+                  onPointerLeave={() => { cancelPress(); }}
+                  onClick={() => {
+                    if (longPressTriggeredIdRef.current === sticker.id) { longPressTriggeredIdRef.current = null; return; }
+                    setPubExpandedSticker(sticker);
+                  }}
+                >
+                  <FreezeFrameImg src={sticker.cardImageUrl!} alt="" className="w-full h-full object-cover pointer-events-none" animate={isPressed} />
+                  {isPressed && (
+                    <span className="sticker-press-shine" aria-hidden="true" onAnimationEnd={() => setPressedSticker(null)} />
+                  )}
+                  {count > 1 && (
+                    <span className="absolute bottom-1.5 right-1.5 text-white text-[10px] font-black rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center shadow pointer-events-none" style={{ background: cfg.color }}>
+                      x{count}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
+
+      {activeSubTab === 'badges' && (() => {
+        if (earnedBadges.length === 0) return (
+          <div className="py-16 text-center text-brand-navy/32">
+            <Award size={56} className="mx-auto mb-4 opacity-10" />
+            <p className="font-bold">No badges earned yet</p>
+            <p className="text-xs">Keep stamping to unlock badges</p>
+          </div>
+        );
+        return (
+          <div className="-mx-6 grid grid-cols-3 gap-px bg-transparent">
+            {earnedBadges.map(b => {
+              const fill = b.baseColor || b.color;
+              return (
+                <button key={b.id} onClick={() => setSelectedBadge(b)}
+                  className="relative aspect-[4/5] overflow-hidden flex items-center justify-center active:opacity-80 transition-opacity"
+                  style={{ background: `linear-gradient(135deg, ${fill}26, ${fill}10)` }}
+                >
+                  <HexBadge badge={b} size={60} />
+                </button>
+              );
+            })}
+          </div>
+        );
+      })()}
+
+      {activeSubTab === 'interactions' && (() => {
+        const allItems = [
+          { _kind: 'label' as const, text: `Liked (${pubLikedPosts.length})`, icon: <Heart size={12} fill="currentColor" /> },
+          ...pubLikedPosts.map(p => ({ _kind: 'post' as const, post: p })),
+          { _kind: 'label' as const, text: `Votes Cast (${pubVotedPolls.length})`, icon: <BarChart2 size={12} /> },
+          ...pubVotedPolls.map(p => ({ _kind: 'post' as const, post: p })),
+        ];
+        let pIdx = -1;
+        return (
+          <div className="bg-white -mx-6 border-t-[3px] border-gray-200">
+            {allItems.map((item, i) => {
+              if (item._kind === 'label') return (
+                <p key={`lbl-${i}`} className="text-[10px] font-bold uppercase tracking-widest text-brand-gold px-6 py-3 flex items-center gap-2 bg-gray-50">{item.icon} {item.text}</p>
+              );
+              pIdx++;
+              return (
+                <React.Fragment key={item.post.id}>
+                  {pIdx > 0 && <div className="h-[3px] bg-gray-200" />}
+                  <FeedPostCard
+                    post={item.post}
+                    currentUser={currentUser}
+                    currentProfile={currentProfile}
+                    onViewUser={onViewUser}
+                    onLike={async (p) => {
+                      const ref = doc(db, 'global_posts', p.id);
+                      const alreadyLiked = (p.likedBy || []).includes(currentUser.uid);
+                      await updateDoc(ref, {
+                        likedBy: alreadyLiked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid),
+                        likesCount: alreadyLiked ? Math.max(0, p.likesCount - 1) : p.likesCount + 1,
+                      });
+                    }}
+                    onVote={async (p, optionIndex) => {
+                      const votes = p.pollVotes || {};
+                      if (Object.keys(votes).some(k => (votes[k] || []).includes(currentUser.uid))) return;
+                      await updateDoc(doc(db, 'global_posts', p.id), { [`pollVotes.${optionIndex}`]: arrayUnion(currentUser.uid) });
+                    }}
+                  />
+                </React.Fragment>
+              );
+            })}
+            {pubLikedPosts.length === 0 && pubVotedPolls.length === 0 && (
+              <p className="text-center py-12 text-xs text-brand-navy/60 italic">no interactions yet</p>
+            )}
+          </div>
+        );
+      })()}
     </motion.div>
   );
 }
