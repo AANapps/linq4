@@ -24238,8 +24238,8 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
                               </div>
                         }
                         {store.isVerified && (
-                          <div className="absolute bottom-0 right-0 w-4 h-4 bg-white rounded-full flex items-center justify-center shadow-sm">
-                            <Sparkles size={8} className="text-brand-gold" />
+                          <div className="absolute bottom-0 right-0 w-4 h-4 rounded-full flex items-center justify-center shadow-sm" style={{ background: CATEGORY_COLOR_MAP[store.category] ?? '#7c3aed' }}>
+                            <CheckCircle2 size={9} className="text-white" />
                           </div>
                         )}
                       </div>
@@ -24333,12 +24333,12 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
                             ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
                             : <div className="w-full h-full flex items-center justify-center"><Building2 size={24} className="text-brand-navy/20" /></div>}
                         {store.isVerified && (
-                          <div className="absolute top-1.5 right-1.5 w-4 h-4 bg-white/90 rounded-full flex items-center justify-center shadow-sm">
-                            <Sparkles size={8} className="text-brand-gold" />
+                          <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full flex items-center justify-center shadow-sm" style={{ background: bg }}>
+                            <CheckCircle2 size={9} className="text-white" />
                           </div>
                         )}
                         {topReward && (
-                          <div className="absolute bottom-1.5 left-1.5 right-1.5 bg-white/20 backdrop-blur-sm text-white text-[7px] font-black px-1.5 py-0.5 rounded-full shadow-sm truncate text-center">
+                          <div className="absolute bottom-1.5 left-1.5 right-1.5 text-white text-[7px] font-black px-1.5 py-0.5 rounded-full shadow-sm truncate text-center" style={{ background: bg }}>
                             {topReward}
                           </div>
                         )}
@@ -24410,12 +24410,12 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
                                     ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
                                     : <div className="w-full h-full flex items-center justify-center"><Building2 size={28} className="text-brand-navy/20" /></div>}
                                 {store.isVerified && (
-                                  <div className="absolute top-2 right-2 w-5 h-5 bg-white/90 rounded-full flex items-center justify-center shadow-sm">
-                                    <Sparkles size={9} className="text-brand-gold" />
+                                  <div className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center shadow-sm" style={{ background: bg }}>
+                                    <CheckCircle2 size={10} className="text-white" />
                                   </div>
                                 )}
                                 {topReward && (
-                                  <div className="absolute top-2 left-2 bg-white/20 backdrop-blur-sm text-white text-[7px] font-black px-1.5 py-0.5 rounded-full shadow-sm max-w-[85%] truncate">
+                                  <div className="absolute top-2 left-2 text-white text-[7px] font-black px-1.5 py-0.5 rounded-full shadow-sm max-w-[85%] truncate" style={{ background: bg }}>
                                     {topReward}
                                   </div>
                                 )}
@@ -24458,7 +24458,7 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
                                 : store.logoUrl ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
                                 : <div className="w-full h-full flex items-center justify-center"><Building2 size={28} className="text-brand-navy/20" /></div>}
                               {topReward && (
-                                <div className="absolute top-2 left-2 bg-white/20 backdrop-blur-sm text-white text-[7px] font-black px-1.5 py-0.5 rounded-full shadow-sm max-w-[85%] truncate">
+                                <div className="absolute top-2 left-2 text-white text-[7px] font-black px-1.5 py-0.5 rounded-full shadow-sm max-w-[85%] truncate" style={{ background: bg }}>
                                   {topReward}
                                 </div>
                               )}
@@ -28194,7 +28194,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                 const pct = Math.min(100, Math.round((card.current_stamps / (store.stamps_required_for_reward || 10)) * 100));
                 return (
                   <div key={card.id}
-                    className="snap-start shrink-0 w-52 bg-white rounded-2xl overflow-hidden shadow-md border-2 border-black/20">
+                    className="glass-card snap-start shrink-0 w-52 rounded-2xl overflow-hidden shadow-xl">
                     <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-brand-navy/6">
                       <div className="w-8 h-8 rounded-xl overflow-hidden shrink-0 shadow-sm cursor-pointer active:scale-95 transition-transform"
                         onClick={() => onViewStore?.(store)}>
@@ -32336,7 +32336,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                                     : <div className="w-full h-full flex items-center justify-center"><Building2 size={28} className="text-brand-navy/20" /></div>}
                                 {store.isVerified && (
                                   <div className="absolute top-2 right-2 w-5 h-5 bg-white/90 rounded-full flex items-center justify-center shadow-sm">
-                                    <Sparkles size={9} className="text-brand-gold" />
+                                    <CheckCircle2 size={10} className="text-blue-500" />
                                   </div>
                                 )}
                               </div>
@@ -35677,15 +35677,15 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
             <button
               onClick={handleFollowClick}
               className={cn(
-                "flex items-center gap-1.5 px-4 py-2 rounded-2xl font-bold text-sm transition-all active:scale-95",
-                isFollowing ? "bg-brand-navy/8 text-green-600" : "bg-brand-navy/8 text-brand-gold"
+                "glass-card flex items-center gap-1.5 px-4 py-2 rounded-2xl font-bold text-sm transition-all active:scale-95 shadow-lg",
+                isFollowing ? "text-green-600" : "text-brand-gold"
               )}
             >
               {isFollowing ? <><UserCheck size={15} />Following</> : <><UserPlus size={15} />Follow</>}
             </button>
             <button
               onClick={handleMessageClick}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-brand-navy/8 text-brand-gold font-bold text-sm transition-all active:scale-95"
+              className="glass-card flex items-center gap-1.5 px-4 py-2 rounded-2xl text-brand-gold font-bold text-sm transition-all active:scale-95 shadow-lg"
             >
               <MessageCircle size={15} />
               Message
@@ -36034,7 +36034,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
                 <div
                   key={card.id}
                   onClick={isAnon ? undefined : () => onViewStore(store)}
-                  className={cn("snap-start shrink-0 w-52 bg-white rounded-2xl overflow-hidden shadow-md border border-brand-navy/8 transition-transform", isAnon ? "cursor-default" : "cursor-pointer active:scale-[0.98]")}
+                  className={cn("glass-card snap-start shrink-0 w-52 rounded-2xl overflow-hidden shadow-xl transition-transform", isAnon ? "cursor-default" : "cursor-pointer active:scale-[0.98]")}
                 >
                   <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-brand-navy/6">
                     <div className="w-8 h-8 rounded-xl shrink-0 shadow-sm overflow-hidden flex items-center justify-center bg-purple-100">
