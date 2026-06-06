@@ -28111,18 +28111,17 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         </div>
       </motion.button>
 
-      {/* Sticker slider (75%) + Badge slider (25%) in one row */}
+      {/* Sticker slider (75%) + Badge slider (25%) in one row — frosted glass cards */}
       <div className="flex gap-2">
         {/* Sticker slider — 75% */}
-        <div className="relative rounded-2xl px-3 pt-2.5 pb-3 shadow-md min-w-0 overflow-hidden border-2 border-black/25" style={{ flex: '3 1 0%', background: uiColors.stickersTile.css }}>
-          <span className="shine-ray pointer-events-none" aria-hidden="true" />
+        <div className="glass-card relative rounded-2xl px-3 pt-2.5 pb-3 shadow-xl min-w-0 overflow-hidden" style={{ flex: '3 1 0%' }}>
           <div className="relative z-10 flex items-center justify-between mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest" style={tileTextStyle(uiColors.stickersTile, 0.75)}>Stickers</span>
-            <div className="flex items-center gap-1.5">
-              <button onClick={() => setShowStickerScanner(true)} className="active:opacity-70" style={tileTextStyle(uiColors.stickersTile, 0.85)} title="Scan sticker QR">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/60">Stickers</span>
+            <div className="flex items-center gap-1.5 text-brand-navy/70">
+              <button onClick={() => setShowStickerScanner(true)} className="active:opacity-70" title="Scan sticker QR">
                 <QrCode size={14} />
               </button>
-              <button onClick={() => stickerData && setShowStickerModal(true)} className="active:opacity-70" style={tileTextStyle(uiColors.stickersTile, 0.85)}>
+              <button onClick={() => stickerData && setShowStickerModal(true)} className="active:opacity-70">
                 <Eye size={14} />
               </button>
             </div>
@@ -28137,12 +28136,12 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                 return new Date(b.earnedAt).getTime() - new Date(a.earnedAt).getTime();
               });
             if (universal.length === 0) return (
-              <p className="text-[10px] py-1" style={tileTextStyle(uiColors.stickersTile, 0.5)}>No cards yet</p>
+              <p className="text-[10px] py-1 text-brand-navy/40">No cards yet</p>
             );
             return (
               <div className="flex gap-2 overflow-x-auto scrollbar-hide">
                 {universal.slice(0, 5).map(s => (
-                  <div key={s.id} className="shrink-0 active:scale-95 transition-transform cursor-pointer"
+                  <div key={s.id} className="shrink-0 active:scale-95 transition-transform cursor-pointer drop-shadow-md"
                     onClick={() => setExpandedSticker(s)}>
                     <StickerCard sticker={s} isRevealed={true} size="sm" />
                   </div>
@@ -28154,22 +28153,21 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         </div>
 
         {/* Badge — 25% */}
-        <div className="relative rounded-2xl px-3 pt-2.5 pb-3 shadow-md min-w-0 flex flex-col overflow-hidden border-2 border-black/25" style={{ flex: '1 1 0%', background: uiColors.badgesTile.css }}>
-          <span className="shine-ray pointer-events-none" aria-hidden="true" />
+        <div className="glass-card relative rounded-2xl px-3 pt-2.5 pb-3 shadow-xl min-w-0 flex flex-col overflow-hidden" style={{ flex: '1 1 0%' }}>
           <div className="relative z-10 flex items-center justify-between mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest" style={tileTextStyle(uiColors.badgesTile, 0.75)}>Badges</span>
-            <button onClick={() => setBadgesOpen(true)} className="active:opacity-70" style={tileTextStyle(uiColors.badgesTile, 0.85)}>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/60">Badges</span>
+            <button onClick={() => setBadgesOpen(true)} className="active:opacity-70 text-brand-navy/70">
               <Eye size={14} />
             </button>
           </div>
           <div className="relative z-10 flex-1 flex flex-col justify-center">
           {earnedBadges.length === 0
-            ? <p className="text-[10px] py-1" style={tileTextStyle(uiColors.badgesTile, 0.5)}>No badges</p>
+            ? <p className="text-[10px] py-1 text-brand-navy/40">No badges</p>
             : (
               <div className="flex items-center justify-center">
                 <button onClick={() => { setBadgesOpen(false); setSelectedBadge(earnedBadges[0]); }}
                   className="active:scale-90 transition-transform"
-                  style={{ filter: 'drop-shadow(0 8px 6px rgba(0,0,0,0.55))' }}>
+                  style={{ filter: 'drop-shadow(0 8px 6px rgba(0,0,0,0.35))' }}>
                   <HexBadge badge={earnedBadges[0]} size={56} />
                 </button>
               </div>
@@ -35390,6 +35388,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
   const [targetFollowing, setTargetFollowing] = useState(0);
   const [allBadges, setAllBadges] = useState<AppBadge[]>([]);
   const [selectedBadge, setSelectedBadge] = useState<AppBadge | null>(null);
+  const [showCollectorTier, setShowCollectorTier] = useState(false);
   const [publicChallenges, setPublicChallenges] = useState<Challenge[]>([]);
   const [publicEntries, setPublicEntries] = useState<Map<string, any>>(new Map());
   const [pubChallengeOpen, setPubChallengeOpen] = useState(false);
@@ -35698,9 +35697,11 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
       <header className="relative">
         <div className="flex items-start gap-4">
           {targetUser.role !== 'vendor' && (
-            <div className="bg-gradient-to-b from-indigo-50 to-purple-50 rounded-full p-2 border-4 border-white shadow-xl shrink-0">
-              <PixelAvatar config={targetUser.avatar} uid={targetUser.uid} size={64} view="full" />
-            </div>
+            <CollectorRing stamps={publicUserStamps} onClick={() => setShowCollectorTier(true)}>
+              <div className="bg-gradient-to-b from-indigo-50 to-purple-50 rounded-full p-2 border-4 border-white shadow-xl shrink-0">
+                <PixelAvatar config={targetUser.avatar} uid={targetUser.uid} size={64} view="full" />
+              </div>
+            </CollectorRing>
           )}
           <div className="flex-1 min-w-0 pt-1">
             <div className="flex items-center gap-2 flex-wrap">
@@ -35982,6 +35983,12 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
               <button onClick={() => setSelectedBadge(null)} className="w-full py-3 rounded-2xl bg-brand-navy/8 text-brand-navy font-bold text-sm active:scale-[0.98] transition-all">Close</button>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showCollectorTier && (
+          <CollectorTierSheet stamps={publicUserStamps} onClose={() => setShowCollectorTier(false)} />
         )}
       </AnimatePresence>
 
