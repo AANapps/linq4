@@ -2822,17 +2822,8 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
             </div>
           )}
 
-          {phoneMode === 'phone' && (
+          {phoneMode === 'phone' && !Capacitor.isNativePlatform() && (
             <div className="pt-1 border-t border-white/15">
-              {Capacitor.isNativePlatform() ? (
-                <button
-                  onClick={() => openUrl('https://mylinq.app')}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-white/15 bg-white/8 text-white/60 text-sm font-medium active:bg-white/15 transition-all"
-                >
-                  <Store size={15} className="text-white/50" />
-                  I'm a business — visit mylinq.app
-                </button>
-              ) : (
                 <div className="space-y-3">
                   <p className="text-white/70 text-sm text-center font-bold">Are you a customer?</p>
                   <a
@@ -2854,7 +2845,6 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
                     Get it on Google Play
                   </a>
                 </div>
-              )}
             </div>
           )}
         </div>
