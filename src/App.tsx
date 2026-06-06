@@ -19351,6 +19351,15 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                       </div>
                     );
                   })()}
+
+                  {/* Intelligence: Competitor Benchmarking — coming soon */}
+                  <div className="glass-card p-6 rounded-[2rem] opacity-60">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="font-bold text-brand-navy">Competitor Benchmarking</p>
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/40 bg-brand-navy/8 px-2 py-0.5 rounded-full">Coming soon</span>
+                    </div>
+                    <p className="text-xs text-brand-navy/50">See how your programme compares to similar local businesses.</p>
+                  </div>
                 </>
                 </div>
                 ) : (
