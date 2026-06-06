@@ -2104,14 +2104,9 @@ export default function App() {
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-between gradient-logo-blue px-6 pb-16 relative overflow-hidden" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 4rem)' }}>
-        <motion.div
-          className="absolute top-0 left-0 h-[3px] bg-white/60 rounded-r-full"
-          initial={{ width: '0%' }}
-          animate={{ width: '85%' }}
-          transition={{ duration: 2.5, ease: [0.25, 0.1, 0.25, 1] }}
-        />
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex-1 flex flex-col items-center justify-center gap-7">
           <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={{ fontFamily: 'Poppins, sans-serif', color: '#ffffff' }}>Linq</span>
+          <div className="w-7 h-7 rounded-full border-[3px] border-white/25 border-t-white animate-spin" />
         </div>
         <div className="flex flex-col items-center gap-2">
           <img src={adastraLogoUrl || '/app-logo.png'} alt="Ad Astra Network" className="w-14 h-14 rounded-2xl object-contain" />
