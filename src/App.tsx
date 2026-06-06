@@ -26097,6 +26097,23 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
     }
   };
 
+  // Auto-save shortly after the vendor changes anything — armed a moment after
+  // the store's saved data has finished loading, so we don't immediately
+  // write the just-loaded values straight back to Firestore.
+  const autoSaveReadyRef = React.useRef(false);
+  useEffect(() => {
+    if (!store) return;
+    autoSaveReadyRef.current = false;
+    const armTimer = setTimeout(() => { autoSaveReadyRef.current = true; }, 1000);
+    return () => clearTimeout(armTimer);
+  }, [store?.id]);
+
+  useEffect(() => {
+    if (!store || !autoSaveReadyRef.current) return;
+    const timer = setTimeout(() => { handleSave(); }, 1200);
+    return () => clearTimeout(timer);
+  }, [tiers, currency, theme, stampIcon, stampIconUrl, stampBorderColor, cardPattern, businessRules]);
+
   const DARK_THEMES = ['#2563EB', '#8a4db8', '#2a9b72', '#c4622a', '#2e7fc4', '#b07830'];
   const totalStamps = tiers[tiers.length - 1]?.stamps || 10;
   const tierStampSet = new Set(tiers.map(t => t.stamps));
