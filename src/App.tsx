@@ -25004,7 +25004,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
     setCreateError('');
     setSaving(true);
     try {
-      const expiresAt = new Date(Date.now() + validDays * 24 * 60 * 60 * 1000);
+      const isBirthday = offerType === 'birthday';
       await addDoc(collection(db, 'store_offers'), {
         storeId: store.id,
         storeName: store.name,
@@ -25019,8 +25019,8 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
         value: parseFloat(value) || 0,
         status: 'active',
         createdAt: serverTimestamp(),
-        validDays,
-        expiresAt,
+        // Birthday offers run continuously until the vendor deletes them — no expiry.
+        ...(isBirthday ? {} : { validDays, expiresAt: new Date(Date.now() + validDays * 24 * 60 * 60 * 1000) }),
       });
       setTitle(''); setDescription(''); setImageUrl(''); setMaxRedemptions(1); setValue(''); setOfferType('standard'); setValidDays(30);
       setSaved(true); setTimeout(() => setSaved(false), 2000);
@@ -25147,7 +25147,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
                 ))}
               </div>
               {offerType === 'birthday' && (
-                <p className="text-[11px] text-brand-navy/35 mt-1.5 px-1">This offer is highlighted for customers on their birthday.</p>
+                <p className="text-[11px] text-brand-navy/35 mt-1.5 px-1">Shown to customers only on their birthday, redeemable once a year. Stays live until you delete it — no expiry.</p>
               )}
               {offerType === 'seasonal' && (
                 <p className="text-[11px] text-brand-navy/35 mt-1.5 px-1">Use this for holidays, seasons, or special events.</p>
@@ -25170,23 +25170,25 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
               </div>
             </div>
 
-            {/* Valid for */}
-            <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75 mb-2 block">Valid For</label>
-              <div className="flex gap-2 flex-wrap">
-                {[7, 14, 30, 60, 90].map(d => (
-                  <button
-                    key={d}
-                    type="button"
-                    onClick={() => setValidDays(d)}
-                    className={cn('px-4 py-2 rounded-2xl text-sm font-bold transition-all', validDays === d ? 'gradient-logo-blue text-white shadow' : 'bg-brand-bg border border-brand-navy/10 text-brand-navy/75')}
-                  >
-                    {d}d
-                  </button>
-                ))}
+            {/* Valid for — birthday offers run continuously until deleted, so no expiry */}
+            {offerType !== 'birthday' && (
+              <div>
+                <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75 mb-2 block">Valid For</label>
+                <div className="flex gap-2 flex-wrap">
+                  {[7, 14, 30, 60, 90].map(d => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setValidDays(d)}
+                      className={cn('px-4 py-2 rounded-2xl text-sm font-bold transition-all', validDays === d ? 'gradient-logo-blue text-white shadow' : 'bg-brand-bg border border-brand-navy/10 text-brand-navy/75')}
+                    >
+                      {d}d
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-brand-navy/35 mt-1 px-1">Offer auto-deletes after {validDays} days.</p>
               </div>
-              <p className="text-[11px] text-brand-navy/35 mt-1 px-1">Offer auto-deletes after {validDays} days.</p>
-            </div>
+            )}
 
             {createError && (
               <p className="text-red-500 text-xs font-semibold bg-red-50 rounded-2xl px-4 py-2">{createError}</p>
@@ -25257,18 +25259,30 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
 }
 
 // ─── Offer Detail Sheet ───────────────────────────────────────────────────────
-function OfferDetailSheet({ offer, currentUser, onClose }: { offer: StoreOffer; currentUser?: FirebaseUser; onClose: () => void }) {
-  const [redemptionCount, setRedemptionCount] = useState(0);
+function OfferDetailSheet({ offer, currentUser, currentProfile, onClose }: { offer: StoreOffer; currentUser?: FirebaseUser; currentProfile?: UserProfile | null; onClose: () => void }) {
+  const [redemptions, setRedemptions] = useState<{ id: string; redeemedAt?: any }[]>([]);
   const [redeeming, setRedeeming] = useState(false);
   const [redeemed, setRedeemed] = useState(false);
 
   useEffect(() => {
     if (!currentUser) return;
     const q = query(collection(db, 'offer_redemptions'), where('offerId', '==', offer.id), where('userId', '==', currentUser.uid));
-    return onSnapshot(q, snap => setRedemptionCount(snap.docs.length));
+    return onSnapshot(q, snap => setRedemptions(snap.docs.map(d => ({ id: d.id, ...d.data() } as { id: string; redeemedAt?: any }))));
   }, [offer.id, currentUser?.uid]);
 
-  const canRedeem = offer.maxRedemptionsPerUser === 0 || redemptionCount < offer.maxRedemptionsPerUser;
+  const redemptionCount = redemptions.length;
+  const isBirthdayOffer = offer.offerType === 'birthday';
+  const today = new Date();
+  const userBirthday = currentProfile?.birthday ? new Date(currentProfile.birthday) : null;
+  const isTodayBirthday = !!userBirthday && userBirthday.getMonth() === today.getMonth() && userBirthday.getDate() === today.getDate();
+  const redeemedThisYear = isBirthdayOffer && redemptions.some(r => {
+    const d = r.redeemedAt?.toDate?.() ?? (r.redeemedAt ? new Date(r.redeemedAt) : null);
+    return d && d.getFullYear() === today.getFullYear();
+  });
+
+  const canRedeem = isBirthdayOffer
+    ? (isTodayBirthday && !redeemedThisYear)
+    : (offer.maxRedemptionsPerUser === 0 || redemptionCount < offer.maxRedemptionsPerUser);
 
   const handleRedeem = async () => {
     if (!currentUser || !canRedeem || redeeming) return;
@@ -25370,31 +25384,75 @@ function OfferDetailSheet({ offer, currentUser, onClose }: { offer: StoreOffer; 
             </div>
           )}
 
-          {/* Redemption info */}
-          <div className="rounded-2xl bg-blue-50 border border-blue-100 px-4 py-3 space-y-1">
-            <p className="font-bold text-blue-800 text-sm">How to redeem</p>
-            {redemptionsLeft !== null && redemptionsLeft > 0 && (
-              <p className="text-blue-700 font-semibold text-sm">
-                You have <span className="font-black">{redemptionsLeft} use{redemptionsLeft !== 1 ? 's' : ''}</span> remaining on this offer.
-              </p>
-            )}
-            <p className="text-blue-600/80 text-sm">Show this screen to a staff member at {offer.storeName} — they need to slide the button below to confirm your redemption.</p>
-          </div>
+          {isBirthdayOffer ? (
+            <>
+              {/* Birthday date */}
+              <div className="rounded-2xl bg-pink-50 border border-pink-100 px-4 py-3 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-pink-500 flex items-center justify-center shrink-0 text-lg">🎂</div>
+                <div>
+                  <p className="font-bold text-pink-700 text-sm">Your birthday</p>
+                  <p className="text-pink-600/80 text-sm font-semibold">
+                    {userBirthday ? userBirthday.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' }) : 'Add your birthday in your profile to unlock this gift'}
+                  </p>
+                </div>
+              </div>
 
-          {/* Slide to redeem */}
-          <div>
-            {!canRedeem ? (
-              <div className="h-14 rounded-full bg-brand-navy/8 flex items-center justify-center text-sm font-bold text-brand-navy/75">
-                {offer.maxRedemptionsPerUser === 0 ? 'No redemptions available' : 'Already fully redeemed'}
+              {/* Redemption info */}
+              <div className="rounded-2xl bg-blue-50 border border-blue-100 px-4 py-3 space-y-1">
+                <p className="font-bold text-blue-800 text-sm">How to redeem</p>
+                <p className="text-blue-600/80 text-sm">
+                  This gift unlocks on your birthday and can be claimed once a year. Show this screen to a staff member at {offer.storeName} — they need to slide the button below to confirm your redemption.
+                </p>
               </div>
-            ) : redeemed ? (
-              <div className="h-14 rounded-full bg-emerald-500 flex items-center justify-center text-sm font-bold text-white gap-2">
-                <Check size={18} /> Redeemed!
+
+              {/* Slide to redeem — same style as wallet card redemption */}
+              <div>
+                {redeemed ? (
+                  <div className="h-14 rounded-xl bg-emerald-500 flex items-center justify-center text-sm font-bold text-white gap-2">
+                    <Check size={18} /> Redeemed!
+                  </div>
+                ) : redeemedThisYear ? (
+                  <div className="h-14 rounded-xl bg-brand-navy/8 flex items-center justify-center gap-2 text-sm font-bold text-brand-navy/75 text-center px-4">
+                    <Check size={16} /> Already claimed this year — see you next birthday! 🎉
+                  </div>
+                ) : isTodayBirthday ? (
+                  <SwipeConfirm onConfirm={handleRedeem} />
+                ) : (
+                  <div className="h-14 rounded-xl bg-brand-navy/8 flex items-center justify-center gap-2 text-sm font-bold text-brand-navy/75 text-center px-4">
+                    <Lock size={16} /> Unlocks on your birthday{userBirthday ? ` (${userBirthday.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })})` : ''}
+                  </div>
+                )}
               </div>
-            ) : (
-              <SlideToRedeem onRedeem={handleRedeem} disabled={redeeming} label="← Staff: slide to redeem →" />
-            )}
-          </div>
+            </>
+          ) : (
+            <>
+              {/* Redemption info */}
+              <div className="rounded-2xl bg-blue-50 border border-blue-100 px-4 py-3 space-y-1">
+                <p className="font-bold text-blue-800 text-sm">How to redeem</p>
+                {redemptionsLeft !== null && redemptionsLeft > 0 && (
+                  <p className="text-blue-700 font-semibold text-sm">
+                    You have <span className="font-black">{redemptionsLeft} use{redemptionsLeft !== 1 ? 's' : ''}</span> remaining on this offer.
+                  </p>
+                )}
+                <p className="text-blue-600/80 text-sm">Show this screen to a staff member at {offer.storeName} — they need to slide the button below to confirm your redemption.</p>
+              </div>
+
+              {/* Slide to redeem */}
+              <div>
+                {!canRedeem ? (
+                  <div className="h-14 rounded-full bg-brand-navy/8 flex items-center justify-center text-sm font-bold text-brand-navy/75">
+                    {offer.maxRedemptionsPerUser === 0 ? 'No redemptions available' : 'Already fully redeemed'}
+                  </div>
+                ) : redeemed ? (
+                  <div className="h-14 rounded-full bg-emerald-500 flex items-center justify-center text-sm font-bold text-white gap-2">
+                    <Check size={18} /> Redeemed!
+                  </div>
+                ) : (
+                  <SlideToRedeem onRedeem={handleRedeem} disabled={redeeming} label="← Staff: slide to redeem →" />
+                )}
+              </div>
+            </>
+          )}
         </div>
       </motion.div>
     </motion.div>
@@ -25402,7 +25460,7 @@ function OfferDetailSheet({ offer, currentUser, onClose }: { offer: StoreOffer; 
 }
 
 // ─── Offers Modal ─────────────────────────────────────────────────────────────
-function OffersModal({ offers, currentUser, onClose }: { offers: StoreOffer[]; currentUser?: FirebaseUser; onClose: () => void }) {
+function OffersModal({ offers, currentUser, currentProfile, onClose }: { offers: StoreOffer[]; currentUser?: FirebaseUser; currentProfile?: UserProfile | null; onClose: () => void }) {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [selectedOffer, setSelectedOffer] = useState<StoreOffer | null>(null);
@@ -25497,7 +25555,7 @@ function OffersModal({ offers, currentUser, onClose }: { offers: StoreOffer[]; c
 
       <AnimatePresence>
         {selectedOffer && (
-          <OfferDetailSheet offer={selectedOffer} currentUser={currentUser} onClose={() => setSelectedOffer(null)} />
+          <OfferDetailSheet offer={selectedOffer} currentUser={currentUser} currentProfile={currentProfile} onClose={() => setSelectedOffer(null)} />
         )}
       </AnimatePresence>
     </>
@@ -28076,7 +28134,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
       </AnimatePresence>
       <AnimatePresence>
         {selectedBirthdayOffer && (
-          <OfferDetailSheet offer={selectedBirthdayOffer} currentUser={user} onClose={() => setSelectedBirthdayOffer(null)} />
+          <OfferDetailSheet offer={selectedBirthdayOffer} currentUser={user} currentProfile={profile} onClose={() => setSelectedBirthdayOffer(null)} />
         )}
       </AnimatePresence>
 
@@ -31282,12 +31340,12 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
 
     <AnimatePresence>
       {showOffersModal && (
-        <OffersModal offers={storeOffers} currentUser={currentUser} onClose={() => setShowOffersModal(false)} />
+        <OffersModal offers={storeOffers} currentUser={currentUser} currentProfile={currentProfile} onClose={() => setShowOffersModal(false)} />
       )}
     </AnimatePresence>
     <AnimatePresence>
       {selectedOffer && (
-        <OfferDetailSheet offer={selectedOffer} currentUser={currentUser} onClose={() => setSelectedOffer(null)} />
+        <OfferDetailSheet offer={selectedOffer} currentUser={currentUser} currentProfile={currentProfile} onClose={() => setSelectedOffer(null)} />
       )}
     </AnimatePresence>
 
@@ -35019,7 +35077,7 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
 
       <AnimatePresence>
         {selectedDealOffer && (
-          <OfferDetailSheet offer={selectedDealOffer} currentUser={user} onClose={() => setSelectedDealOffer(null)} />
+          <OfferDetailSheet offer={selectedDealOffer} currentUser={user} currentProfile={profile} onClose={() => setSelectedDealOffer(null)} />
         )}
       </AnimatePresence>
 
