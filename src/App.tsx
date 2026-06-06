@@ -25988,7 +25988,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
     return [{ stamps: total, reward: s?.reward || '' }];
   };
 
-  const [numTiers, setNumTiers] = useState(() => Math.min(15, store?.rewardTiers?.length || 1));
+  const [numTiers, setNumTiers] = useState(() => Math.min(3, store?.rewardTiers?.length || 1));
   const [tiers, setTiers] = useState<{ stamps: number; reward: string; value?: number }[]>(() => initTiers(store));
   const [currency, setCurrency] = useState(store?.currency || 'AUD');
   const [theme, setTheme] = useState(store?.theme || '#2563EB');
@@ -26007,7 +26007,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
   useEffect(() => {
     if (!store) return;
     const loaded = initTiers(store);
-    setNumTiers(Math.min(15, loaded.length));
+    setNumTiers(Math.min(3, loaded.length));
     setTiers(loaded);
     setCurrency(store.currency || 'AUD');
     setTheme(store.theme || '#1a1a2e');
@@ -26058,14 +26058,14 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
       // Auto-space stamp counts evenly if not set
       return next.map((t, i) => ({
         ...t,
-        stamps: t.stamps > 0 ? t.stamps : Math.round((i + 1) * (prev[prev.length - 1]?.stamps || 10) / numTiers),
+        stamps: t.stamps > 0 ? t.stamps : Math.min(15, Math.round((i + 1) * (prev[prev.length - 1]?.stamps || 10) / numTiers)),
       }));
     });
   }, [numTiers]);
 
   const updateTier = (i: number, field: 'stamps' | 'reward' | 'value', val: string) => {
     setTiers(prev => {
-      const next = prev.map((t, idx) => idx === i ? { ...t, [field]: field === 'stamps' ? Math.max(1, parseInt(val) || 1) : field === 'value' ? (parseFloat(val) || 0) : val } : t);
+      const next = prev.map((t, idx) => idx === i ? { ...t, [field]: field === 'stamps' ? Math.min(15, Math.max(1, parseInt(val) || 1)) : field === 'value' ? (parseFloat(val) || 0) : val } : t);
       return field === 'stamps' ? [...next].sort((a, b) => a.stamps - b.stamps) : next;
     });
   };
@@ -26121,16 +26121,18 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
               <div className="flex items-center gap-1 shrink-0 bg-brand-bg border border-brand-navy/10 rounded-xl px-1 py-1">
                 <button
                   type="button"
+                  disabled={tier.stamps <= 1}
                   onClick={() => updateTier(i, 'stamps', String(tier.stamps - 1))}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center text-brand-navy/60 hover:text-brand-navy hover:bg-brand-navy/5 active:scale-90 transition-all"
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-brand-navy/60 hover:text-brand-navy hover:bg-brand-navy/5 active:scale-90 transition-all disabled:opacity-30 disabled:pointer-events-none"
                 >
                   <Minus size={13} />
                 </button>
                 <span className="w-7 text-center text-sm font-bold tabular-nums">{tier.stamps}</span>
                 <button
                   type="button"
+                  disabled={tier.stamps >= 15}
                   onClick={() => updateTier(i, 'stamps', String(tier.stamps + 1))}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center text-brand-navy/60 hover:text-brand-navy hover:bg-brand-navy/5 active:scale-90 transition-all"
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-brand-navy/60 hover:text-brand-navy hover:bg-brand-navy/5 active:scale-90 transition-all disabled:opacity-30 disabled:pointer-events-none"
                 >
                   <Plus size={13} />
                 </button>
@@ -26164,12 +26166,12 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
               )}
             </div>
           ))}
-          {numTiers < 15 ? (
+          {numTiers < 3 ? (
             <button
               type="button"
               onClick={() => {
                 const lastStamps = tiers[numTiers - 1]?.stamps || 10;
-                setTiers(prev => [...prev, { stamps: lastStamps + 5, reward: '' }]);
+                setTiers(prev => [...prev, { stamps: Math.min(15, lastStamps + 5), reward: '' }]);
                 setNumTiers(n => n + 1);
               }}
               className="w-full py-2.5 rounded-xl border-2 border-dashed border-brand-navy/15 text-xs font-bold text-brand-navy/50 flex items-center justify-center gap-1.5 hover:border-brand-gold/40 hover:text-brand-navy/70 active:scale-[0.98] transition-all"
@@ -26177,7 +26179,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
               <Plus size={13} /> Add Stage
             </button>
           ) : (
-            <p className="text-[11px] font-semibold text-brand-navy/50 text-center py-1">Maximum of 15 stages reached</p>
+            <p className="text-[11px] font-semibold text-brand-navy/50 text-center py-1">Maximum of 3 stages reached</p>
           )}
           <p className="text-[11px] text-brand-navy/72 pl-1">Set stamps, reward name, and the {currencySymbol(currency)} value saved at each stage.</p>
         </div>
