@@ -280,3 +280,17 @@
   z-index: 6;
 }
 
+.sticker-press-shine {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.75) 50%,
+    transparent 70%
+  );
+  animation: holo-card-shine 0.85s ease-out 1;
+  pointer-events: none;
+  z-index: 6;
+}
+

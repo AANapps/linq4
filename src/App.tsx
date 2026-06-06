@@ -27231,7 +27231,10 @@ function StoreLeaderboard({ storeId, storeName, logoUrl, type, userId }: {
 
 function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, onViewUser, onViewStore, onGoToDeals, onOpenLinqle, onSeeAllMembers, user, uiColors: uiColorsProp, profileCollection = 'users' }: { profile: UserProfile | null, userCards: Card[], stores?: StoreProfile[], onLogout: () => void, onDeleteAccount: () => Promise<void>, onViewUser: (u: UserProfile) => void, onViewStore?: (s: StoreProfile) => void, onGoToDeals?: () => void, onOpenLinqle?: () => void, onSeeAllMembers?: () => void, user: FirebaseUser, uiColors?: UiColors, profileCollection?: 'users' | 'vendors' }) {
   const uiColors = uiColorsProp ?? UI_COLOR_DEFAULTS;
-  const [activeSubTab, setActiveSubTab] = useState<'posts' | 'interactions'>('posts');
+  const [activeSubTab, setActiveSubTab] = useState<'posts' | 'stickers' | 'badges' | 'interactions'>('posts');
+  const [pressedSticker, setPressedSticker] = useState<string | null>(null);
+  const longPressTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressTriggeredIdRef = React.useRef<string | null>(null);
   const [profileRedeemingChallenge, setProfileRedeemingChallenge] = useState<{ challenge: Challenge; entry: any; userName: string } | null>(null);
   const [showProfileSettings, setShowProfileSettings] = useState(false);
   const [showStorePreview, setShowStorePreview] = useState(false);
@@ -27253,8 +27256,6 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
   const [bdayCountdown, setBdayCountdown] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
   const [challengeOpen, setChallengeOpen] = useState(false);
   const [challengeTab, setChallengeTab] = useState<'current' | 'completed'>('current');
-  const [badgesOpen, setBadgesOpen] = useState(false);
-  const [showStickerModal, setShowStickerModal] = useState(false);
   const [showStickerScanner, setShowStickerScanner] = useState(false);
   const [stickerScanResult, setStickerScanResult] = useState<{ sticker: CollectibleSticker; alreadyClaimed: boolean } | null>(null);
   const [stickerData, setStickerData] = useState<{ stickers: CollectibleSticker[]; revealedIds: string[] } | null>(null);
@@ -28111,71 +28112,6 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         </div>
       </motion.button>
 
-      {/* Sticker slider (75%) + Badge slider (25%) in one row — frosted glass cards */}
-      <div className="flex gap-2">
-        {/* Sticker slider — 75% */}
-        <div className="glass-card relative rounded-2xl px-3 pt-2.5 pb-3 shadow-xl min-w-0 overflow-hidden" style={{ flex: '3 1 0%' }}>
-          <div className="relative z-10 flex items-center justify-between mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/60">Stickers</span>
-            <div className="flex items-center gap-1.5 text-brand-navy/70">
-              <button onClick={() => setShowStickerScanner(true)} className="active:opacity-70" title="Scan sticker QR">
-                <QrCode size={14} />
-              </button>
-              <button onClick={() => stickerData && setShowStickerModal(true)} className="active:opacity-70">
-                <Eye size={14} />
-              </button>
-            </div>
-          </div>
-          <div className="relative z-10">
-          {(() => {
-            const universal = (stickerData?.stickers ?? [])
-              .filter(s => !!s.cardDefId && !!s.cardImageUrl && !s.challengeId && (stickerData?.revealedIds ?? []).includes(s.id))
-              .sort((a, b) => {
-                const tierDiff = STICKER_ORDER.indexOf(b.tier) - STICKER_ORDER.indexOf(a.tier);
-                if (tierDiff !== 0) return tierDiff;
-                return new Date(b.earnedAt).getTime() - new Date(a.earnedAt).getTime();
-              });
-            if (universal.length === 0) return (
-              <p className="text-[10px] py-1 text-brand-navy/40">No cards yet</p>
-            );
-            return (
-              <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-                {universal.slice(0, 5).map(s => (
-                  <div key={s.id} className="shrink-0 active:scale-95 transition-transform cursor-pointer drop-shadow-md"
-                    onClick={() => setExpandedSticker(s)}>
-                    <StickerCard sticker={s} isRevealed={true} size="sm" />
-                  </div>
-                ))}
-              </div>
-            );
-          })()}
-          </div>
-        </div>
-
-        {/* Badge — 25% */}
-        <div className="glass-card relative rounded-2xl px-3 pt-2.5 pb-3 shadow-xl min-w-0 flex flex-col overflow-hidden" style={{ flex: '1 1 0%' }}>
-          <div className="relative z-10 flex items-center justify-between mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/60">Badges</span>
-            <button onClick={() => setBadgesOpen(true)} className="active:opacity-70 text-brand-navy/70">
-              <Eye size={14} />
-            </button>
-          </div>
-          <div className="relative z-10 flex-1 flex flex-col justify-center">
-          {earnedBadges.length === 0
-            ? <p className="text-[10px] py-1 text-brand-navy/40">No badges</p>
-            : (
-              <div className="flex items-center justify-center">
-                <button onClick={() => { setBadgesOpen(false); setSelectedBadge(earnedBadges[0]); }}
-                  className="active:scale-90 transition-transform"
-                  style={{ filter: 'drop-shadow(0 8px 6px rgba(0,0,0,0.35))' }}>
-                  <HexBadge badge={earnedBadges[0]} size={56} />
-                </button>
-              </div>
-            )
-          }
-          </div>
-        </div>
-      </div>
 
       {/* Active cards — slider */}
       {(() => {
@@ -28323,38 +28259,6 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         )}
       </AnimatePresence>
 
-      {/* Badges popup sheet */}
-      <AnimatePresence>
-        {badgesOpen && (
-          <motion.div
-            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-            transition={{ type: 'spring', stiffness: 540, damping: 40 }}
-            className="fixed top-0 left-0 right-0 bottom-0 z-[9999] bg-brand-bg flex flex-col overflow-hidden"
-            onClick={e => e.stopPropagation()}>
-              <div className="px-5 pb-4 flex items-center justify-between shrink-0" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.25rem)' }}>
-                <h3 className="font-bold text-brand-navy text-lg">Badges <span className="text-brand-navy/40 font-normal text-base">({earnedBadges.length})</span></h3>
-                <button onClick={() => setBadgesOpen(false)} className="w-8 h-8 rounded-full bg-brand-navy/8 flex items-center justify-center">
-                  <X size={16} className="text-brand-navy" />
-                </button>
-              </div>
-              <div className="overflow-y-auto flex-1 px-4 pb-8">
-                {earnedBadges.length === 0
-                  ? <p className="text-center text-xs text-brand-navy/50 py-10">No badges earned yet</p>
-                  : <div className="grid grid-cols-4 gap-3 pt-1">
-                      {earnedBadges.map(b => (
-                        <button key={b.id} onClick={() => setSelectedBadge(b)}
-                          className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform">
-                          <HexBadge badge={b} size={52} />
-                          <span className="text-[10px] font-bold text-brand-navy/80 text-center leading-tight line-clamp-2">{b.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                }
-              </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Expanded sticker card overlay */}
       <AnimatePresence>
         {expandedSticker && (() => {
@@ -28385,22 +28289,6 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         })()}
       </AnimatePresence>
 
-      {/* Sticker collection popup */}
-      <AnimatePresence>
-        {showStickerModal && stickerData && (
-          <UserCollectionModal
-            uid={profile.uid}
-            isOwnProfile={true}
-            stickers={stickerData.stickers}
-            revealedIds={stickerData.revealedIds}
-            onReveal={async (id) => { await updateDoc(doc(db, 'user_stickers', profile.uid), { revealedIds: arrayUnion(id) }); }}
-            onClose={() => setShowStickerModal(false)}
-            onOpenPack={stickers => { setShowStickerModal(false); setProfilePendingPack(stickers); }}
-            onScan={() => { setShowStickerModal(false); setShowStickerScanner(true); }}
-          />
-        )}
-      </AnimatePresence>
-
       <AnimatePresence>
         {profileRedeemingChallenge && (
           <ChallengeRedeemModal
@@ -28415,20 +28303,20 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
 
 
       <div className="flex p-1 glass-card rounded-2xl">
-        <button
-          onClick={() => setActiveSubTab('posts')}
-          className={cn("flex-1 py-3 rounded-xl text-xs font-bold transition-all", activeSubTab === 'posts' ? "text-white shadow-lg" : "text-brand-navy/75")}
-          style={activeSubTab === 'posts' ? { background: 'var(--color-brand-gold)' } : {}}
-        >
-          Posts
-        </button>
-        <button
-          onClick={() => setActiveSubTab('interactions')}
-          className={cn("flex-1 py-3 rounded-xl text-xs font-bold transition-all", activeSubTab === 'interactions' ? "text-white shadow-lg" : "text-brand-navy/75")}
-          style={activeSubTab === 'interactions' ? { background: 'var(--color-brand-gold)' } : {}}
-        >
-          Interactions
-        </button>
+        {([
+          { key: 'posts',        label: 'Posts' },
+          { key: 'stickers',     label: 'Stickers' },
+          { key: 'badges',       label: 'Badges' },
+          { key: 'interactions', label: 'Interactions' },
+        ] as const).map(t => (
+          <button key={t.key}
+            onClick={() => setActiveSubTab(t.key)}
+            className={cn("flex-1 py-3 rounded-xl text-[11px] font-bold transition-all", activeSubTab === t.key ? "text-white shadow-lg" : "text-brand-navy/75")}
+            style={activeSubTab === t.key ? { background: 'var(--color-brand-gold)' } : {}}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
       <AnimatePresence>
@@ -28557,6 +28445,108 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           )}
         </div>
       )}
+
+      {activeSubTab === 'stickers' && (() => {
+        const valid = (stickerData?.stickers ?? [])
+          .filter(s => !!s.cardDefId && !!s.cardImageUrl && !s.challengeId && (stickerData?.revealedIds ?? []).includes(s.id));
+        const dedupMap = new Map<string, { sticker: CollectibleSticker; count: number }>();
+        [...valid].reverse().forEach(s => {
+          const key = s.cardDefId ?? `${s.tier}-${s.variant ?? 0}`;
+          if (dedupMap.has(key)) dedupMap.get(key)!.count++;
+          else dedupMap.set(key, { sticker: s, count: 1 });
+        });
+        const deduped = [...dedupMap.values()].sort((a, b) => {
+          const tierDiff = STICKER_ORDER.indexOf(b.sticker.tier) - STICKER_ORDER.indexOf(a.sticker.tier);
+          if (tierDiff !== 0) return tierDiff;
+          return new Date(b.sticker.earnedAt).getTime() - new Date(a.sticker.earnedAt).getTime();
+        });
+
+        const startPress = (id: string) => {
+          longPressTimerRef.current = setTimeout(() => {
+            longPressTriggeredIdRef.current = id;
+            setPressedSticker(id);
+          }, 380);
+        };
+        const cancelPress = () => {
+          if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
+        };
+
+        const scanButton = (
+          <button onClick={() => setShowStickerScanner(true)}
+            className="absolute top-0 right-0 w-9 h-9 rounded-full glass-card flex items-center justify-center text-brand-navy/70 active:scale-95 transition-transform">
+            <QrCode size={16} />
+          </button>
+        );
+
+        if (deduped.length === 0) return (
+          <div className="relative py-16 text-center text-brand-navy/32">
+            {scanButton}
+            <Image size={56} className="mx-auto mb-4 opacity-10" />
+            <p className="font-bold">No cards yet</p>
+            <p className="text-xs">Earn stamps to start collecting</p>
+          </div>
+        );
+
+        return (
+          <div className="relative">
+            {scanButton}
+            <div className="-mx-6 grid grid-cols-3 gap-px bg-brand-navy/10">
+            {deduped.map(({ sticker, count }) => {
+              const cfg = STICKER_CONFIG[sticker.tier];
+              const isPressed = pressedSticker === sticker.id;
+              return (
+                <div key={sticker.cardDefId ?? `${sticker.tier}-${sticker.variant}`}
+                  className="relative aspect-square overflow-hidden bg-brand-bg cursor-pointer"
+                  onPointerDown={() => startPress(sticker.id)}
+                  onPointerUp={cancelPress}
+                  onPointerLeave={() => { cancelPress(); }}
+                  onClick={() => {
+                    if (longPressTriggeredIdRef.current === sticker.id) { longPressTriggeredIdRef.current = null; return; }
+                    setExpandedSticker(sticker);
+                  }}
+                >
+                  <img src={sticker.cardImageUrl} alt="" className="w-full h-full object-cover pointer-events-none" />
+                  <div className="absolute inset-0 pointer-events-none" style={{ boxShadow: `inset 0 0 0 2px ${cfg.border}` }} />
+                  {isPressed && (
+                    <span className="sticker-press-shine" aria-hidden="true" onAnimationEnd={() => setPressedSticker(null)} />
+                  )}
+                  {count > 1 && (
+                    <span className="absolute bottom-1.5 right-1.5 text-white text-[10px] font-black rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center shadow pointer-events-none" style={{ background: cfg.color }}>
+                      x{count}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+            </div>
+          </div>
+        );
+      })()}
+
+      {activeSubTab === 'badges' && (() => {
+        if (earnedBadges.length === 0) return (
+          <div className="py-16 text-center text-brand-navy/32">
+            <Award size={56} className="mx-auto mb-4 opacity-10" />
+            <p className="font-bold">No badges earned yet</p>
+            <p className="text-xs">Keep stamping to unlock badges</p>
+          </div>
+        );
+        return (
+          <div className="-mx-6 grid grid-cols-3 gap-px bg-brand-navy/10">
+            {earnedBadges.map(b => {
+              const fill = b.baseColor || b.color;
+              return (
+                <button key={b.id} onClick={() => setSelectedBadge(b)}
+                  className="relative aspect-square overflow-hidden flex items-center justify-center active:opacity-80 transition-opacity"
+                  style={{ background: `linear-gradient(135deg, ${fill}26, ${fill}10)` }}
+                >
+                  <HexBadge badge={b} size={60} />
+                </button>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {activeSubTab === 'interactions' && (() => {
         const votedPolls = allPostsForVotes.filter(p =>
