@@ -208,6 +208,18 @@ import {
   Dumbbell,
   Car,
   ShoppingBag,
+  Coffee,
+  CupSoda,
+  GlassWater,
+  Citrus,
+  IceCream2,
+  Croissant,
+  Brush,
+  Hand,
+  Flower2,
+  PersonStanding,
+  Activity,
+  Shirt,
   Wifi,
   Smartphone,
   Tag,
@@ -302,24 +314,56 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 }
 
 type UserRole = 'consumer' | 'vendor' | 'admin';
-type Category = 'Food' | 'Beauty' | 'Barber' | 'Gym' | 'Parking' | 'Retail';
+type Category =
+  | 'Food' | 'Bubble Tea' | 'Coffee' | 'Drinks' | 'Juice' | 'Smoothies' | 'Bakery'
+  | 'Beauty' | 'Hair Salon' | 'Nail Salon' | 'Spa'
+  | 'Barber'
+  | 'Gym' | 'Yoga' | 'Personal Training'
+  | 'Retail' | 'Clothing' | 'Bookstore'
+  | 'Parking';
 
 const CATEGORY_ICON_MAP: Record<string, React.ElementType> = {
   Food: Utensils,
+  'Bubble Tea': CupSoda,
+  Coffee: Coffee,
+  Drinks: GlassWater,
+  Juice: Citrus,
+  Smoothies: IceCream2,
+  Bakery: Croissant,
   Beauty: Sparkles,
+  'Hair Salon': Brush,
+  'Nail Salon': Hand,
+  Spa: Flower2,
   Barber: Scissors,
   Gym: Dumbbell,
-  Parking: Car,
+  Yoga: PersonStanding,
+  'Personal Training': Activity,
   Retail: ShoppingBag,
+  Clothing: Shirt,
+  Bookstore: BookOpen,
+  Parking: Car,
 };
 
 const CATEGORY_COLOR_MAP: Record<string, string> = {
-  Food:    '#ef4444',
-  Beauty:  '#ec4899',
-  Barber:  '#3b82f6',
-  Gym:     '#22c55e',
-  Parking: '#6b7280',
-  Retail:  '#111827',
+  Food:               '#ef4444',
+  'Bubble Tea':       '#f97316',
+  Coffee:             '#92400e',
+  Drinks:             '#06b6d4',
+  Juice:              '#f59e0b',
+  Smoothies:          '#db2777',
+  Bakery:             '#d97706',
+  Beauty:             '#ec4899',
+  'Hair Salon':       '#a855f7',
+  'Nail Salon':       '#f472b6',
+  Spa:                '#14b8a6',
+  Barber:             '#3b82f6',
+  Gym:                '#22c55e',
+  Yoga:               '#84cc16',
+  'Personal Training':'#16a34a',
+  Retail:             '#111827',
+  Clothing:           '#6366f1',
+  Bookstore:          '#78716c',
+  Parking:            '#6b7280',
 };
 
 function StoreCategoryIcon({ category, size = 12, className }: { category?: string; size?: number; className?: string }) {
@@ -1105,7 +1149,6 @@ interface StoreOffer {
   title: string;
   description: string;
   imageUrl?: string;
-  category: string;
   offerType?: 'standard' | 'birthday' | 'seasonal';
   maxRedemptionsPerUser: number;
   value?: number;
@@ -3024,7 +3067,14 @@ function OnboardingScreen({ user, onComplete }: {
   const [cardType, setCardType] = React.useState<'stamp' | 'spend' | 'visit' | null>(null);
 
   const GENDERS = ['Male', 'Female', 'Non-binary', 'Prefer not to say'];
-  const CATEGORIES: Category[] = ['Food', 'Beauty', 'Barber', 'Gym', 'Parking', 'Retail'];
+  const CATEGORIES: Category[] = [
+  'Food', 'Bubble Tea', 'Coffee', 'Drinks', 'Juice', 'Smoothies', 'Bakery',
+  'Beauty', 'Hair Salon', 'Nail Salon', 'Spa',
+  'Barber',
+  'Gym', 'Yoga', 'Personal Training',
+  'Retail', 'Clothing', 'Bookstore',
+  'Parking',
+];
 
   const COUNTRY_REG: Record<string, { name: string; flag: string; label: string; placeholder: string }> = {
     GB: { name: 'United Kingdom', flag: '🇬🇧', label: 'Companies House Reg No', placeholder: '12345678' },
@@ -24116,7 +24166,7 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
 
           {/* Category filter pills */}
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-            {(['All', 'Food', 'Beauty', 'Barber', 'Gym', 'Parking', 'Retail'] as const).map(cat => (
+            {(['All', ...CATEGORIES] as const).map(cat => (
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
@@ -24157,15 +24207,7 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
 
           {/* Category sections */}
           {(() => {
-            const CAT_COLOR: Record<string, string> = {
-              Food:    '#ef4444',
-              Barber:  '#3b82f6',
-              Gym:     '#22c55e',
-              Beauty:  '#ec4899',
-              Retail:  '#111827',
-              Parking: '#6b7280',
-            };
-            const catColor = (c: string) => CAT_COLOR[c] ?? '#7c3aed';
+            const catColor = (c: string) => CATEGORY_COLOR_MAP[c] ?? '#7c3aed';
 
             if (filteredStores.length === 0) return (
               <div className="py-12 text-center text-brand-navy/32">
@@ -24232,7 +24274,7 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
             return (
               /* All — grouped by category, sections ordered by nearest store */
               <div className="space-y-6">
-                {(['Food', 'Beauty', 'Barber', 'Gym', 'Parking', 'Retail'] as const)
+                {CATEGORIES
                   .slice()
                   .sort((a, b) => {
                     const minDist = (cat: string) => {
@@ -24304,14 +24346,14 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
                   );
                 })}
                 {/* Any uncategorised stores */}
-                {filteredStores.filter(s => !(['Food', 'Beauty', 'Barber', 'Gym', 'Parking', 'Retail'] as string[]).includes(s.category)).length > 0 && (
+                {filteredStores.filter(s => !(CATEGORIES as string[]).includes(s.category)).length > 0 && (
                   <div>
                     <div className="flex items-center gap-2 mb-3">
                       <Store size={14} className="text-brand-navy/50" />
                       <h3 className="font-extrabold text-brand-navy text-sm tracking-wide">Other</h3>
                     </div>
                     <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                      {filteredStores.filter(s => !(['Food', 'Beauty', 'Barber', 'Gym', 'Parking', 'Retail'] as string[]).includes(s.category)).map((store, i) => {
+                      {filteredStores.filter(s => !(CATEGORIES as string[]).includes(s.category)).map((store, i) => {
                         const dist = distancesMap.get(store.id);
                         const distLabel = dist != null ? dist < 1 ? `${Math.round(dist * 1000)}m away` : `${dist.toFixed(1)}km away` : null;
                         const topReward = store.rewardTiers?.length ? store.rewardTiers[store.rewardTiers.length - 1].reward : store.reward || null;
@@ -24812,7 +24854,6 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
         title: title.trim(),
         description: description.trim(),
         imageUrl,
-        category: store.category || '',
         offerType,
         // Birthday offers are always once per year per user, regardless of the redemptions setting.
         maxRedemptionsPerUser: isBirthday ? 1 : maxRedemptions,
@@ -25155,7 +25196,7 @@ function OfferDetailSheet({ offer, currentUser, currentProfile, onClose }: { off
             <div>
               <p className="font-bold text-brand-navy">{offer.storeName}</p>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <p className="text-xs text-brand-navy/75">{offer.category}</p>
+                <p className="text-xs text-brand-navy/75">{offer.storeCategory}</p>
                 {offer.offerType === 'birthday' && (
                   <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-pink-100 text-pink-600">🎂 Birthday</span>
                 )}
@@ -25268,10 +25309,10 @@ function OffersModal({ offers, currentUser, currentProfile, onClose }: { offers:
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [selectedOffer, setSelectedOffer] = useState<StoreOffer | null>(null);
-  const OFFER_CATEGORIES = ['All', 'Food', 'Beauty', 'Barber', 'Gym', 'Parking', 'Retail', 'Other'];
+  const OFFER_CATEGORIES = ['All', ...new Set(offers.map(o => o.storeCategory || 'Other'))].sort((a, b) => a === 'All' ? -1 : b === 'All' ? 1 : a.localeCompare(b));
 
   const filtered = offers.filter(o => {
-    const matchesCat = activeCategory === 'All' || o.category === activeCategory;
+    const matchesCat = activeCategory === 'All' || o.storeCategory === activeCategory;
     const q = search.toLowerCase();
     const matchesSearch = !q || o.title.toLowerCase().includes(q) || o.storeName.toLowerCase().includes(q) || o.description.toLowerCase().includes(q);
     return matchesCat && matchesSearch;
@@ -25349,7 +25390,7 @@ function OffersModal({ offers, currentUser, currentProfile, onClose }: { offers:
                     <p className="text-xs text-brand-navy/80 mt-0.5">{offer.storeName}</p>
                     <p className="text-xs text-brand-navy/75 mt-1 line-clamp-1">{offer.description}</p>
                   </div>
-                  <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full shrink-0">{offer.category}</span>
+                  <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full shrink-0">{offer.storeCategory}</span>
                 </div>
               </button>
             ))}
@@ -28539,7 +28580,14 @@ const THEME_COLOURS = [
   { label: 'Teal',   value: '#14b8a6' },
 ];
 
-const CATEGORIES: Category[] = ['Food', 'Beauty', 'Barber', 'Gym', 'Parking', 'Retail'];
+const CATEGORIES: Category[] = [
+  'Food', 'Bubble Tea', 'Coffee', 'Drinks', 'Juice', 'Smoothies', 'Bakery',
+  'Beauty', 'Hair Salon', 'Nail Salon', 'Spa',
+  'Barber',
+  'Gym', 'Yoga', 'Personal Training',
+  'Retail', 'Clothing', 'Bookstore',
+  'Parking',
+];
 
 function ToggleSwitch({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -30846,7 +30894,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
     s.name?.toLowerCase().includes(q) || (s.reward ?? '').toLowerCase().includes(q)
   );
   const searchedOffers = offersByDist.filter(o =>
-    o.title?.toLowerCase().includes(q) || o.storeName?.toLowerCase().includes(q) || o.category?.toLowerCase().includes(q)
+    o.title?.toLowerCase().includes(q) || o.storeName?.toLowerCase().includes(q) || o.storeCategory?.toLowerCase().includes(q)
   );
   const searchedChallenges = visibleChallenges.filter(c =>
     c.reward?.toLowerCase().includes(q) || c.title?.toLowerCase().includes(q)
@@ -31023,12 +31071,12 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
 
       {/* Store Offers section */}
       {storeOffers.length > 0 && (() => {
-        const allCats = [...new Set(offersByDist.map(o => o.storeCategory || o.category || 'Other'))].sort();
+        const allCats = [...new Set(offersByDist.map(o => o.storeCategory || 'Other'))].sort();
         const cats = allCats.map(label => ({
           label,
           icon: CATEGORY_ICON_MAP[label] ? <StoreCategoryIcon category={label} size={13} className="text-white" /> : <Ticket size={13} className="text-white" />,
           color: CATEGORY_COLOR_MAP[label] ?? '#7c3aed',
-          offers: offersByDist.filter(o => (o.storeCategory || o.category || 'Other') === label),
+          offers: offersByDist.filter(o => (o.storeCategory || 'Other') === label),
         })).filter(c => c.offers.length > 0);
         return (
           <div className="space-y-4">
@@ -32121,13 +32169,12 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
       {/* All Deals modal */}
       {showAllDeals && (() => {
         const displayStores = hotStores.length > 0 ? hotStores : allStores;
-        const CATEGORY_ORDER: Category[] = ['Food', 'Beauty', 'Barber', 'Gym', 'Parking', 'Retail'];
-        const grouped = CATEGORY_ORDER.reduce<Record<string, StoreProfile[]>>((acc, cat) => {
+        const grouped = CATEGORIES.reduce<Record<string, StoreProfile[]>>((acc, cat) => {
           const stores = displayStores.filter(s => s.category === cat);
           if (stores.length > 0) acc[cat] = stores;
           return acc;
         }, {});
-        const otherStores = displayStores.filter(s => !CATEGORY_ORDER.includes(s.category as Category));
+        const otherStores = displayStores.filter(s => !CATEGORIES.includes(s.category as Category));
         if (otherStores.length > 0) (grouped as Record<string, StoreProfile[]>)['Other'] = otherStores;
 
         return (
@@ -33362,7 +33409,7 @@ function AdminStoreEditModal({ store, onClose }: { store: StoreProfile; onClose:
               onChange={e => setCategory(e.target.value as Category)}
               className="w-full px-4 py-3 rounded-2xl bg-white border border-brand-navy/10 text-sm text-brand-navy outline-none"
             >
-              {(['Food','Beauty','Gym','Barber','Retail','Coffee','Other'] as Category[]).map(c => (
+              {CATEGORIES.map(c => (
                 <option key={c} value={c}>{c}</option>
               ))}
             </select>
@@ -34819,7 +34866,7 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
                   )}
                   <div className="absolute bottom-0 left-0 right-0 px-3 pb-2.5">
                     <p className="font-extrabold text-white text-xs leading-snug line-clamp-1">{offer.title}</p>
-                    <p className="text-white/60 text-[9px] font-medium mt-0.5 uppercase tracking-wide">{offer.category}</p>
+                    <p className="text-white/60 text-[9px] font-medium mt-0.5 uppercase tracking-wide">{offer.storeCategory}</p>
                   </div>
                 </motion.button>
               ))}
