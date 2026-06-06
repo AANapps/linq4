@@ -25004,7 +25004,8 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
     setCreateError('');
     setSaving(true);
     try {
-      const noExpiry = offerType === 'birthday' || validDays === 0;
+      const isBirthday = offerType === 'birthday';
+      const noExpiry = isBirthday || validDays === 0;
       await addDoc(collection(db, 'store_offers'), {
         storeId: store.id,
         storeName: store.name,
@@ -25015,7 +25016,8 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
         imageUrl,
         category: store.category || '',
         offerType,
-        maxRedemptionsPerUser: maxRedemptions,
+        // Birthday offers are always once per year per user, regardless of the redemptions setting.
+        maxRedemptionsPerUser: isBirthday ? 1 : maxRedemptions,
         value: parseFloat(value) || 0,
         status: 'active',
         createdAt: serverTimestamp(),
@@ -25154,21 +25156,23 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
               )}
             </div>
 
-            {/* Max redemptions */}
-            <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75 mb-2 block">Max Redemptions Per User</label>
-              <div className="flex gap-2 flex-wrap">
-                {MAX_OPTIONS.map(opt => (
-                  <button
-                    key={opt.v}
-                    onClick={() => setMaxRedemptions(opt.v)}
-                    className={cn('px-4 py-2 rounded-2xl text-sm font-bold transition-all', maxRedemptions === opt.v ? 'gradient-logo-blue text-white shadow' : 'bg-brand-bg border border-brand-navy/10 text-brand-navy/75')}
-                  >
-                    {opt.l}
-                  </button>
-                ))}
+            {/* Max redemptions — birthday offers are always once per year per user */}
+            {offerType !== 'birthday' && (
+              <div>
+                <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75 mb-2 block">Max Redemptions Per User</label>
+                <div className="flex gap-2 flex-wrap">
+                  {MAX_OPTIONS.map(opt => (
+                    <button
+                      key={opt.v}
+                      onClick={() => setMaxRedemptions(opt.v)}
+                      className={cn('px-4 py-2 rounded-2xl text-sm font-bold transition-all', maxRedemptions === opt.v ? 'gradient-logo-blue text-white shadow' : 'bg-brand-bg border border-brand-navy/10 text-brand-navy/75')}
+                    >
+                      {opt.l}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Valid for — birthday offers run continuously until deleted, so no expiry */}
             {offerType !== 'birthday' && (
@@ -25240,7 +25244,9 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
                     const days = Math.ceil(ms / 86400000);
                     return <span className={cn('text-[10px] font-black px-2 py-0.5 rounded-full', days <= 3 ? 'bg-red-100 text-red-500' : 'bg-amber-100 text-amber-600')}>{days}d left</span>;
                   })()}
-                  <span className="text-[11px] text-brand-navy/75 font-bold">{offer.maxRedemptionsPerUser === 0 ? 'Unlimited' : `${offer.maxRedemptionsPerUser}x`} per user</span>
+                  <span className="text-[11px] text-brand-navy/75 font-bold">
+                    {offer.offerType === 'birthday' ? 'Once a year' : `${offer.maxRedemptionsPerUser === 0 ? 'Unlimited' : `${offer.maxRedemptionsPerUser}x`} per user`}
+                  </span>
                   {(offer.value ?? 0) > 0 && <><span className="text-[11px] text-brand-navy/75 font-bold">•</span><span className="text-[11px] font-bold text-emerald-600">${offer.value!.toFixed(2)} saving</span></>}
                 </div>
                 <div className="flex gap-2 pt-1">
