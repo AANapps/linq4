@@ -13373,6 +13373,8 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
             onDone={() => {
               updateDoc(doc(db, 'users', user.uid), { introComplete: true }).catch(console.error);
               setShowWelcome(false);
+              const userName = profile?.name || user.displayName || user.email?.split('@')[0] || 'Loyal Customer';
+              issueUserStickers(user.uid, userName, 3).then(setPendingPack).catch(console.error);
             }}
           />
         )}
@@ -14009,12 +14011,13 @@ function VendorWelcomeSlideVisual({ step }: { step: number }) {
   );
 }
 
-function SlideWelcomeModal({ slides, step, onNext, onDone, renderVisual }: {
+function SlideWelcomeModal({ slides, step, onNext, onDone, renderVisual, doneLabel }: {
   slides: Array<{ title: string; body: React.ReactNode }>;
   step: number;
   onNext: () => void;
   onDone: () => void;
   renderVisual: (step: number) => React.ReactNode;
+  doneLabel?: string;
 }) {
   const slide = slides[step];
   const isLast = step === slides.length - 1;
@@ -14060,7 +14063,7 @@ function SlideWelcomeModal({ slides, step, onNext, onDone, renderVisual }: {
             onClick={isLast ? onDone : onNext}
             className="w-full py-4 rounded-2xl bg-brand-navy text-white font-black text-sm active:scale-[0.97] transition-transform"
           >
-            {isLast ? "Let's go!" : 'Next'}
+            {isLast ? (doneLabel || "Let's go!") : 'Next'}
           </button>
           {!isLast && (
             <button onClick={onDone} className="w-full py-2 text-xs text-brand-navy/35 font-medium">
@@ -14145,6 +14148,10 @@ const WELCOME_SLIDES: Array<{ title: string; body: React.ReactNode }> = [
   {
     title: 'Win Challenges',
     body: <>Join live <b className="font-bold text-blue-600">challenges</b> from businesses near you. Collect stamps and you'll be in to win <b className="font-bold text-blue-600">prizes</b>. Check the <b className="font-bold text-blue-600">For You</b> feed so you never miss one.</>,
+  },
+  {
+    title: 'Join Sticker Challenges',
+    body: <>Join <b className="font-bold text-blue-600">sticker challenges</b> to win <b className="font-bold text-blue-600">prizes</b> — every stamp you earn gives you a chance at a collectible sticker. Tap below to claim your <b className="font-bold text-blue-600">welcome pack</b> and start your collection!</>,
   },
 ];
 
@@ -14235,11 +14242,24 @@ function WelcomeSlideVisual({ step }: { step: number }) {
     );
   }
 
-  // step 3 — Win Challenges: golden bin chicken
+  if (step === 3) {
+    // Win Challenges: golden bin chicken
+    return (
+      <div className="w-20 h-20 rounded-[1.5rem] bg-amber-50 flex items-center justify-center mx-auto shadow-sm border border-amber-100">
+        <span style={{ fontSize: 42, lineHeight: 1 }}>🦤</span>
+      </div>
+    );
+  }
+
+  // step 4 — Join Sticker Challenges: welcome pack
   return (
-    <div className="w-20 h-20 rounded-[1.5rem] bg-amber-50 flex items-center justify-center mx-auto shadow-sm border border-amber-100">
-      <span style={{ fontSize: 42, lineHeight: 1 }}>🦤</span>
-    </div>
+    <motion.div
+      animate={{ y: [0, -6, 0], rotate: [-2, 2, -2] }}
+      transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+      className="w-20 h-20 rounded-[1.5rem] bg-blue-50 flex items-center justify-center mx-auto shadow-sm border border-blue-100"
+    >
+      <span style={{ fontSize: 42, lineHeight: 1 }}>🎁</span>
+    </motion.div>
   );
 }
 
@@ -14251,6 +14271,7 @@ function WelcomeModal({ uid: _uid, step, onNext, onDone }: { uid: string; step: 
       onNext={onNext}
       onDone={onDone}
       renderVisual={s => <WelcomeSlideVisual step={s} />}
+      doneLabel="Collect welcome pack"
     />
   );
 }
