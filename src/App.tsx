@@ -59,6 +59,7 @@ import { scanNFCTag } from './nfc';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
 import { App as CapApp } from '@capacitor/app';
+import { Geolocation } from '@capacitor/geolocation';
 
 const openUrl = async (url: string) => {
   if (Capacitor.isNativePlatform()) {
@@ -1297,6 +1298,7 @@ export default function App() {
     try { return localStorage.getItem('linq_adastra_logo_url') || ''; } catch { return ''; }
   });
   useEffect(() => {
+    if (!user) return;
     getDoc(doc(db, 'app_config', 'branding')).then(snap => {
       if (!snap.exists()) return;
       const url = snap.data().adastraLogoUrl || '';
@@ -1305,10 +1307,11 @@ export default function App() {
         try { localStorage.setItem('linq_adastra_logo_url', url); } catch {}
       }
     }).catch(() => {});
-  }, []);
+  }, [user]);
 
-  // Load saved brand theme
+  // Load saved brand theme (re-fetches once auth resolves, since app_config requires authentication)
   useEffect(() => {
+    if (!user) return;
     getDoc(doc(db, 'app_config', 'theme')).then(snap => {
       if (!snap.exists()) return;
       const data = snap.data();
@@ -1319,10 +1322,11 @@ export default function App() {
         if (saved) applyBrandTheme(saved);
       }
     }).catch(() => {});
-  }, []);
+  }, [user]);
 
   const [uiColors, setUiColors] = useState<UiColors>(UI_COLOR_DEFAULTS);
   useEffect(() => {
+    if (!user) return;
     getDoc(doc(db, 'app_config', 'ui_colors')).then(snap => {
       if (!snap.exists()) return;
       const data = snap.data();
@@ -1334,7 +1338,7 @@ export default function App() {
         return merged;
       });
     }).catch(() => {});
-  }, []);
+  }, [user]);
 
   // If the target user is a vendor, go straight to their store instead of their user profile
   const handleViewUser = async (targetUser: UserProfile) => {
@@ -1494,8 +1498,8 @@ export default function App() {
   useEffect(() => {
     if (!user || !profile || !['consumer', 'admin'].includes(profile.role)) return;
     const activeCards = userCards.filter(c => !c.isArchived && !c.isHidden && !c.vendorDisabled);
-    if (activeCards.length === 0 || !navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(async pos => {
+    if (activeCards.length === 0) return;
+    getCurrentPositionCompat(async pos => {
       const { latitude: userLat, longitude: userLng } = pos.coords;
       const today = new Date().toISOString().slice(0, 10);
       const storeIds = Array.from(new Set(activeCards.map(c => c.store_id))) as string[];
@@ -3029,7 +3033,7 @@ function OnboardingScreen({ user, onComplete }: {
 
   const requestLocation = () => {
     setLocationStatus('requesting');
-    navigator.geolocation.getCurrentPosition(
+    getCurrentPositionCompat(
       async (pos) => {
         const { latitude: lat, longitude: lng } = pos.coords;
         let city: string | undefined;
@@ -12185,7 +12189,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   }, [user.uid]);
 
   useEffect(() => {
-    navigator.geolocation?.getCurrentPosition(
+    getCurrentPositionCompat(
       pos => setUserGeoCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       () => {}
     );
@@ -22643,10 +22647,29 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// On native platforms, plain navigator.geolocation often fails to trigger the OS permission
+// prompt reliably inside Capacitor's WKWebView, so route through the official plugin there.
+async function getCurrentPositionCompat(
+  onSuccess: (pos: { coords: { latitude: number; longitude: number } }) => void,
+  onError?: (err?: unknown) => void,
+  options?: PositionOptions
+) {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const perm = await Geolocation.requestPermissions();
+      if (perm.location !== 'granted' && perm.coarseLocation !== 'granted') { onError?.(); return; }
+      const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: options?.enableHighAccuracy, timeout: options?.timeout ?? 10000 });
+      onSuccess(pos);
+    } catch (err) { onError?.(err); }
+  } else {
+    if (!navigator.geolocation) { onError?.(); return; }
+    navigator.geolocation.getCurrentPosition(onSuccess, onError, options);
+  }
+}
+
 function getScanLocation(): Promise<{ lat: number; lng: number } | null> {
   return new Promise(resolve => {
-    if (!navigator.geolocation) { resolve(null); return; }
-    navigator.geolocation.getCurrentPosition(
+    getCurrentPositionCompat(
       pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       () => resolve(null),
       { timeout: 5000, maximumAge: 60000 }
@@ -23888,12 +23911,10 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
   const [locationSorting, setLocationSorting] = useState(false);
 
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        pos => setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => {}
-      );
-    }
+    getCurrentPositionCompat(
+      pos => setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => {}
+    );
   }, []);
 
   useEffect(() => {
@@ -30722,7 +30743,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
   const [dealsUserCoords, setDealsUserCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
-    navigator.geolocation?.getCurrentPosition(
+    getCurrentPositionCompat(
       pos => setDealsUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       () => {}
     );
@@ -30763,7 +30784,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
 
   useEffect(() => {
     if (allStores.length === 0) return;
-    navigator.geolocation?.getCurrentPosition(pos => {
+    getCurrentPositionCompat(pos => {
       const { latitude: lat, longitude: lng } = pos.coords;
       const distances = new Map<string, number>();
       allStores.forEach(store => {
@@ -31504,7 +31525,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
   }, [allStores, currentProfile?.location]);
 
   useEffect(() => {
-    navigator.geolocation?.getCurrentPosition(
+    getCurrentPositionCompat(
       pos => setForYouUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       () => {}
     );
@@ -33537,6 +33558,14 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
   }, [storeProp.id]);
 
   useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      Geolocation.checkPermissions().then(perm => {
+        if (perm.location === 'granted' || perm.coarseLocation === 'granted') {
+          getCurrentPositionCompat(pos => setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }), () => {});
+        }
+      }).catch(() => {});
+      return;
+    }
     if (!navigator.geolocation) return;
     navigator.permissions?.query({ name: 'geolocation' }).then(status => {
       if (status.state === 'granted') {
