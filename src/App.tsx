@@ -1647,8 +1647,8 @@ export default function App() {
               return;
             }
           } else {
-            // Native app: only consumers and admins allowed — vendors use browser
-            if (isVendorUser && !isAdminUser) {
+            // Native app: vendor accounts are not supported here — browser/web only
+            if (isVendorUser) {
               await signOut(auth);
               setNativeVendorBlocked(true);
               setUser(null); setProfile(null); setLoading(false);
@@ -2081,16 +2081,10 @@ export default function App() {
       <div className="min-h-screen flex flex-col items-center justify-center gradient-logo-blue px-6 gap-5 text-center" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={{ fontFamily: 'Poppins, sans-serif', color: '#ffffff' }}>Linq</span>
         <div>
-          <p className="text-white font-bold text-xl mb-2">You're a vendor!</p>
-          <p className="text-white/70 text-sm max-w-xs">Vendor accounts are managed in the browser. Visit the link below to sign in.</p>
+          <p className="text-white font-bold text-xl mb-2">Vendor accounts aren't supported here</p>
+          <p className="text-white/70 text-sm max-w-xs">This app is for Linq members. Please sign in with a personal account.</p>
         </div>
-        <button
-          onClick={() => openUrl('https://mylinq.app')}
-          className="px-8 py-4 bg-white rounded-2xl text-brand-navy font-bold text-base shadow-lg active:scale-95 transition-transform"
-        >
-          mylinq.app
-        </button>
-        <button onClick={() => setNativeVendorBlocked(false)} className="text-white/40 text-xs">Sign in with a different account</button>
+        <button onClick={() => setNativeVendorBlocked(false)} className="px-8 py-4 bg-white rounded-2xl text-brand-navy font-bold text-base shadow-lg active:scale-95 transition-transform">Sign in with a different account</button>
       </div>
     );
   }
@@ -2284,8 +2278,6 @@ export default function App() {
               uiColors={uiColors}
             />
             </AppErrorBoundary>
-          ) : Capacitor.isNativePlatform() ? (
-            <VendorWebRedirectScreen onLogout={handleLogout} />
           ) : (
             <AppErrorBoundary>
             <VendorApp
@@ -17601,33 +17593,6 @@ function PaymentVerifyingScreen() {
         <h2 className="font-display text-2xl font-bold text-brand-navy">Activating your subscription…</h2>
         <p className="text-brand-navy/60 text-sm">Payment received. This usually takes just a few seconds.</p>
       </div>
-    </div>
-  );
-}
-
-// --- Vendor Web Redirect (iOS only) ---
-
-function VendorWebRedirectScreen({ onLogout }: { onLogout: () => void }) {
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-8 gap-6 text-center bg-brand-bg">
-      <div className="w-16 h-16 rounded-3xl gradient-logo-blue flex items-center justify-center shadow-xl">
-        <Store size={28} className="text-white" />
-      </div>
-      <div className="space-y-2">
-        <h1 className="font-display text-2xl font-bold text-brand-navy">Vendor Portal</h1>
-        <p className="text-sm text-brand-navy/60 leading-relaxed">
-          Manage your loyalty programme and analytics at our website.
-        </p>
-      </div>
-      <button
-        onClick={() => openUrl('https://mylinq.app')}
-        className="w-full py-4 rounded-2xl font-bold text-white text-sm active:scale-[0.98] transition-transform gradient-logo-blue shadow-lg"
-      >
-        Open mylinq.app
-      </button>
-      <button onClick={onLogout} className="text-sm text-brand-navy/40 font-medium active:opacity-60">
-        Sign out
-      </button>
     </div>
   );
 }
