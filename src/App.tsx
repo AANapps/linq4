@@ -941,12 +941,12 @@ async function postActivity(uid: string, name: string, photo: string, content: s
     const isPrivate = profileSnap.exists() && !!profileSnap.data().privacyMode;
     await addDoc(collection(db, 'global_posts'), {
       authorUid: uid,
-      authorName: isPrivate ? 'a User' : name,
+      authorName: isPrivate ? 'a Linq member' : name,
       authorPhoto: isPrivate ? '' : photo,
       authorRole: 'consumer',
       postType: 'activity',
       activityEmoji: emoji,
-      content: isPrivate && name ? content.replace(name, 'a User') : content,
+      content: isPrivate && name ? content.replace(name, 'a Linq member') : content,
       isAnonymous: isPrivate,
       likesCount: 0,
       likedBy: [],
@@ -29444,7 +29444,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
       }, () => {});
     }
     if (post.isAnonymous) {
-      setAuthorProfile({ name: 'a User' });
+      setAuthorProfile({ name: 'a Linq member' });
       return;
     }
     return onSnapshot(doc(db, 'users', post.authorUid), (snap) => {
@@ -29619,12 +29619,12 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
             {/* Text */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
-                <p className="font-black text-sm text-white leading-snug">{post.isAnonymous ? 'a User' : (authorProfile?.name || post.authorName)}</p>
+                <p className="font-black text-sm text-white leading-snug">{post.isAnonymous ? 'a Linq member' : (authorProfile?.name || post.authorName)}</p>
                 <StreakBadge streak={authorProfile?.streak} />
               </div>
               <p className="text-white text-sm font-bold leading-snug">
-                {post.isAnonymous && post.authorName && post.authorName !== 'a User'
-                  ? post.content?.replace(post.authorName, 'a User')
+                {post.isAnonymous && post.authorName && post.authorName !== 'a Linq member'
+                  ? post.content?.replace(post.authorName, 'a Linq member')
                   : post.content}
               </p>
               <p className="text-white/50 text-[10px] font-medium mt-0.5">
