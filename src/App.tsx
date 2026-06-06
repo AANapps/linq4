@@ -3959,6 +3959,35 @@ async function issueUserStickers(uid: string, userName: string, qty: number): Pr
   return newStickers;
 }
 
+// --- Freeze-frame image: shows a static first frame of a (possibly animated) GIF,
+// only playing the live animation while `animate` is true (e.g. on long-press) ---
+function FreezeFrameImg({ src, alt = '', className, animate }: { src: string; alt?: string; className?: string; animate: boolean }) {
+  const [frozen, setFrozen] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setFrozen(null);
+    const img = new window.Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      if (cancelled) return;
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.drawImage(img, 0, 0);
+        setFrozen(canvas.toDataURL());
+      } catch { /* tainted canvas (CORS) — fall back to live image */ }
+    };
+    img.src = src;
+    return () => { cancelled = true; };
+  }, [src]);
+
+  return <img src={animate || !frozen ? src : frozen} alt={alt} className={className} />;
+}
+
 // --- Sticker Card (flip reveal) ---
 
 function StickerCard({ sticker, isRevealed, onReveal, onExpand, size = 'md' }: {
@@ -28448,7 +28477,9 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
 
       {activeSubTab === 'stickers' && (() => {
         const valid = (stickerData?.stickers ?? [])
-          .filter(s => !!s.cardDefId && !!s.cardImageUrl && !s.challengeId && (stickerData?.revealedIds ?? []).includes(s.id));
+          .filter(s => !!s.cardDefId && !!s.cardImageUrl && !s.challengeId
+            && (stickerData?.revealedIds ?? []).includes(s.id)
+            && stickerCardDefs.some(d => d.id === s.cardDefId));
         const dedupMap = new Map<string, { sticker: CollectibleSticker; count: number }>();
         [...valid].reverse().forEach(s => {
           const key = s.cardDefId ?? `${s.tier}-${s.variant ?? 0}`;
@@ -28505,7 +28536,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                     setExpandedSticker(sticker);
                   }}
                 >
-                  <img src={sticker.cardImageUrl} alt="" className="w-full h-full object-cover pointer-events-none" />
+                  <FreezeFrameImg src={sticker.cardImageUrl!} alt="" className="w-full h-full object-cover pointer-events-none" animate={isPressed} />
                   {isPressed && (
                     <span className="sticker-press-shine" aria-hidden="true" onAnimationEnd={() => setPressedSticker(null)} />
                   )}
