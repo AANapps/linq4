@@ -50,7 +50,8 @@ import {
   startAfter,
   Timestamp,
   runTransaction,
-  writeBatch
+  writeBatch,
+  deleteField
 } from 'firebase/firestore';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { getFunctions, httpsCallable } from 'firebase/functions';
@@ -225,6 +226,8 @@ import {
   Crown,
   Wifi,
   Smartphone,
+  Nfc,
+  SmartphoneNfc,
   Tag,
   Package,
   Pencil,
@@ -740,6 +743,7 @@ interface StoreProfile {
   membershipStampsPerVisit?: number;
   membershipMenuItems?: { id: string; name: string; points: number; value?: number; description?: string }[];
   scanMethod?: 'nfc' | 'qr';
+  activeSpendNFCTokenId?: string;
   businessRules?: string;
   charityAnimalImageUrl?: string;
   charityTreeImageUrl?: string;
@@ -13663,6 +13667,84 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
       return [];
     }
 
+    // Spend membership store via NFC
+    if (store.membershipEnabled && store.membershipType === 'spend') {
+      onStatus('processing', 'Claiming spend...');
+      const tokenId = store.activeSpendNFCTokenId as string | undefined;
+      if (!tokenId) {
+        onStatus('error', 'No transaction ready — ask the vendor to enter an amount first.');
+        return [];
+      }
+      let amount = 0;
+      await runTransaction(db, async tx => {
+        const tokenRef = doc(db, 'qr_tokens', tokenId);
+        const tokenSnap = await tx.get(tokenRef);
+        if (!tokenSnap.exists()) throw new Error('Transaction expired — ask vendor to set a new amount.');
+        const data = tokenSnap.data();
+        if (data.storeId !== store.id) throw new Error('Token mismatch — please try again.');
+        if (data.type !== 'spend') throw new Error('Wrong token type.');
+        const createdMs = typeof data.createdAt === 'number' ? data.createdAt : (data.createdAt?.toMillis?.() ?? null);
+        if (createdMs !== null && Date.now() - createdMs > 300_000) throw new Error('Transaction expired — ask vendor to set a new amount.');
+        const claimedBy: string[] = data.claimedBy || [];
+        if (claimedBy.includes(user.uid)) throw new Error("You've already claimed this transaction.");
+        if (claimedBy.length > 0) throw new Error('This transaction has already been claimed by someone else.');
+        amount = data.amount as number;
+        tx.update(tokenRef, { claimedBy: arrayUnion(user.uid) });
+      });
+
+      const pointsRate = store.membershipPointsRate ?? 0;
+      const pts = Math.round(amount * pointsRate);
+      const threshold = store.membershipSpendThreshold || 0;
+      const cardId = `${user.uid}_${store.id}_membership`;
+      const cardRef = doc(db, 'cards', cardId);
+      const cardSnap = await getDoc(cardRef);
+      const prevSpent = (cardSnap.data()?.total_spent as number) ?? 0;
+      const newSpent = prevSpent + amount;
+      const newRewards = threshold > 0 ? Math.floor(newSpent / threshold) : 0;
+
+      if (cardSnap.exists()) {
+        await updateDoc(cardRef, {
+          total_spent: increment(amount),
+          earned_rewards: newRewards,
+          membership_points: increment(pts),
+          total_points_earned: increment(pts),
+          last_transaction_at: serverTimestamp(),
+        });
+      } else {
+        await setDoc(cardRef, {
+          user_id: user.uid,
+          store_id: store.id,
+          card_type: 'membership',
+          membership_type: 'spend',
+          total_spent: amount,
+          earned_rewards: newRewards,
+          membership_points: pts,
+          total_points_earned: pts,
+          isArchived: false,
+          last_transaction_at: serverTimestamp(),
+        });
+        await updateDoc(doc(db, 'users', user.uid), { total_cards_held: increment(1) });
+      }
+
+      await addDoc(collection(db, 'transactions'), {
+        user_id: user.uid,
+        store_id: store.id,
+        card_type: 'membership',
+        membership_type: 'spend',
+        transaction_amount: amount,
+        points_earned: pts,
+        rewards_earned: newRewards - Math.floor(prevSpent / (threshold || 1)),
+        issued_at: serverTimestamp(),
+        method: 'nfc_spend',
+      });
+
+      await updateDoc(doc(db, 'users', user.uid), { totalStamps: increment(1), lastStampAt: serverTimestamp() });
+      updateChallengeProgress(user.uid, store.id, 1).catch(console.error);
+      haptic([40]); playSound('points');
+      onStatus('success', `+${pts} pts for $${amount.toFixed(2)} at ${store.name}!`);
+      return [];
+    }
+
     const limit = store.stamps_required_for_reward || 10;
     const cardId = `${user.uid}_${store.id}`;
     const cardRef = doc(db, 'cards', cardId);
@@ -14686,7 +14768,8 @@ const decodeSpendQR = (val: string): { storeId: string; tokenId: string } | null
 // ── Vendor-side spend QR display ────────────────────────────────────────────
 
 function VendorSpendQRDisplay({ store, onClose }: { store: StoreProfile; onClose: () => void }) {
-  const [phase, setPhase] = React.useState<'amount' | 'qr'>('amount');
+  const isNFC = store.scanMethod === 'nfc';
+  const [phase, setPhase] = React.useState<'amount' | 'ready'>('amount');
   const [amountInput, setAmountInput] = React.useState('');
   const [confirmedAmount, setConfirmedAmount] = React.useState(0);
   const [tokenId, setTokenId] = React.useState<string | null>(null);
@@ -14697,6 +14780,13 @@ function VendorSpendQRDisplay({ store, onClose }: { store: StoreProfile; onClose
   const color = store.membershipColor || '#0f4c81';
   const rotatingRef = React.useRef(false);
 
+  // Clear active NFC token from store doc when this display is closed
+  const clearNFCToken = React.useCallback(() => {
+    if (isNFC && store.id) {
+      updateDoc(doc(db, 'stores', store.id), { activeSpendNFCTokenId: deleteField() }).catch(console.error);
+    }
+  }, [isNFC, store.id]);
+
   const generateToken = React.useCallback(async (amount: number, silent = false) => {
     if (rotatingRef.current) return;
     rotatingRef.current = true;
@@ -14704,41 +14794,59 @@ function VendorSpendQRDisplay({ store, onClose }: { store: StoreProfile; onClose
     setError(null);
     try {
       const id = await createSpendQRToken(store.id, amount);
+      if (isNFC) {
+        await updateDoc(doc(db, 'stores', store.id), { activeSpendNFCTokenId: id });
+      }
       setTokenId(id);
     } catch (e: any) {
-      setError(`Failed to generate QR — ${e?.code ?? e?.message ?? 'check connection'}`);
+      setError(`Failed — ${e?.code ?? e?.message ?? 'check connection'}`);
     } finally {
       rotatingRef.current = false;
       setGenerating(false);
       setRotating(false);
     }
-  }, [store.id]);
+  }, [store.id, isNFC]);
 
-  // Watch for claims — rotate immediately when customer scans
+  // Watch for claims
   React.useEffect(() => {
-    if (!tokenId || phase !== 'qr') return;
+    if (!tokenId || phase !== 'ready') return;
     const unsub = onSnapshot(doc(db, 'qr_tokens', tokenId), (snap) => {
       if (!snap.exists()) return;
       const claimed: string[] = snap.data().claimedBy ?? [];
       if (claimed.length > 0) {
         setJustScanned(true);
+        if (isNFC) {
+          updateDoc(doc(db, 'stores', store.id), { activeSpendNFCTokenId: deleteField() }).catch(console.error);
+        }
         setTimeout(() => {
           setJustScanned(false);
           setPhase('amount');
           setAmountInput('');
           setTokenId(null);
-        }, 1500);
+        }, 2000);
       }
     }, () => {});
     return unsub;
-  }, [tokenId, phase, onClose]);
+  }, [tokenId, phase, store.id, isNFC]);
 
   const handleConfirmAmount = async () => {
     const parsed = parseFloat(amountInput);
     if (!parsed || parsed <= 0) return;
     setConfirmedAmount(parsed);
-    setPhase('qr');
+    setPhase('ready');
     await generateToken(parsed);
+  };
+
+  const handleClose = () => {
+    clearNFCToken();
+    onClose();
+  };
+
+  const handleChangeAmount = () => {
+    clearNFCToken();
+    setPhase('amount');
+    setTokenId(null);
+    setAmountInput('');
   };
 
   const pointsRate = store.membershipPointsRate ?? 0;
@@ -14755,7 +14863,7 @@ function VendorSpendQRDisplay({ store, onClose }: { store: StoreProfile; onClose
         className="fixed inset-0 z-[200] flex flex-col items-center justify-center"
         style={{ background: color }}
       >
-        <button onClick={onClose} className="absolute right-5 p-2 bg-white/20 rounded-full" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 3rem)' }}>
+        <button onClick={handleClose} className="absolute right-5 p-2 bg-white/20 rounded-full" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 3rem)' }}>
           <X size={20} className="text-white" />
         </button>
 
@@ -14795,11 +14903,52 @@ function VendorSpendQRDisplay({ store, onClose }: { store: StoreProfile; onClose
               style={{ color }}
             >
               {generating
-                ? <><Loader2 size={16} className="animate-spin" /> Generating…</>
-                : <><QrCode size={16} /> Generate QR</>}
+                ? <><Loader2 size={16} className="animate-spin" /> Saving…</>
+                : isNFC
+                  ? <><Nfc size={16} /> Save for NFC Tap</>
+                  : <><QrCode size={16} /> Generate QR</>}
             </button>
           </div>
+        ) : isNFC ? (
+          /* NFC waiting screen */
+          <div className="flex flex-col items-center gap-6 px-8">
+            <div className="text-center">
+              <p className="text-white/70 text-xs font-bold uppercase tracking-widest mb-1">NFC — {store.name}</p>
+              <h2 className="text-white font-bold text-2xl">${confirmedAmount.toFixed(2)}</h2>
+              {pts > 0 && <p className="text-white/70 text-sm mt-0.5">+{pts} pts to customer</p>}
+            </div>
+            <div className="flex flex-col items-center justify-center" style={{ width: 230, height: 230 }}>
+              {justScanned ? (
+                <div className="flex flex-col items-center gap-3">
+                  <CheckCircle2 size={64} className="text-emerald-300" />
+                  <p className="text-emerald-300 font-bold text-lg">Points issued!</p>
+                </div>
+              ) : (generating || !tokenId) ? (
+                <Loader2 size={48} className="animate-spin text-white/50" />
+              ) : (
+                <div className="flex flex-col items-center gap-4">
+                  <div className="relative flex items-center justify-center">
+                    <div className="absolute w-40 h-40 rounded-full bg-white/10 animate-ping" style={{ animationDuration: '2s' }} />
+                    <div className="absolute w-28 h-28 rounded-full bg-white/15 animate-ping" style={{ animationDuration: '2s', animationDelay: '0.5s' }} />
+                    <SmartphoneNfc size={64} className="text-white relative z-10" />
+                  </div>
+                  <p className="text-white font-bold text-base mt-2">Ask customer to tap NFC</p>
+                </div>
+              )}
+            </div>
+            {!justScanned && !generating && tokenId && (
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-white/60 animate-pulse" />
+                <p className="text-white/60 text-xs font-bold">Waiting for tap…</p>
+              </div>
+            )}
+            {error && <p className="text-red-300 text-xs text-center">{error}</p>}
+            {!justScanned && (
+              <button onClick={handleChangeAmount} className="text-white/60 text-xs font-bold">Change amount</button>
+            )}
+          </div>
         ) : (
+          /* QR screen */
           <div className="flex flex-col items-center gap-6 px-8">
             <div className="text-center">
               <p className="text-white/70 text-xs font-bold uppercase tracking-widest mb-1">Ask customer to scan</p>
@@ -14832,7 +14981,7 @@ function VendorSpendQRDisplay({ store, onClose }: { store: StoreProfile; onClose
             {error && (
               <p className="text-red-300 text-xs text-center">{error}</p>
             )}
-            <button onClick={() => { setPhase('amount'); setTokenId(null); setAmountInput(''); }} className="text-white/60 text-xs font-bold">Change amount</button>
+            <button onClick={handleChangeAmount} className="text-white/60 text-xs font-bold">Change amount</button>
           </div>
         )}
       </motion.div>
