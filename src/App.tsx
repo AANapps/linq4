@@ -29818,10 +29818,6 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
             </div>
             {/* Text */}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
-                <p className="font-black text-sm text-white leading-snug">{post.isAnonymous ? 'a Linq member' : (authorProfile?.name || post.authorName)}</p>
-                <StreakBadge streak={authorProfile?.streak} />
-              </div>
               <p className="text-white text-sm font-bold leading-snug">
                 {post.isAnonymous && post.authorName && post.authorName !== 'a Linq member'
                   ? post.content?.replace(post.authorName, 'a Linq member')
