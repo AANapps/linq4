@@ -18509,6 +18509,12 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
 
   const handleIssueMembershipPoints = async (handle: string, amount: string, setStatus: (s: { type: 'success' | 'error'; message: string } | null) => void, setWorking: (b: boolean) => void) => {
     if (!handle || !store?.membershipEnabled) return;
+    const now = Date.now();
+    if (now - lastIssueTime < 5000) {
+      setStatus({ type: 'error', message: 'Just issued — wait a few seconds before issuing again' });
+      return;
+    }
+    setLastIssueTime(now);
     setWorking(true);
     setStatus(null);
     try {
