@@ -32639,6 +32639,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
 
 function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveChatId, onViewUser, vendorStore, storeCards = [], userCards = [] }: { currentUser: FirebaseUser, currentProfile: UserProfile | null, activeChatId: string | null, setActiveChatId: (id: string | null) => void, onViewUser: (u: UserProfile) => void, vendorStore?: StoreProfile | null, storeCards?: Card[], userCards?: Card[] }) {
   const [chats, setChats] = useState<Chat[]>([]);
+  const [blockedUids, setBlockedUids] = useState<Set<string>>(new Set());
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [olderMessages, setOlderMessages] = useState<ChatMessage[]>([]);
   const [msgHasMore, setMsgHasMore] = useState(false);
@@ -32666,6 +32667,13 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
     );
     return onSnapshot(q, (snap) => {
       setChats(snap.docs.map(d => ({ id: d.id, ...d.data() } as Chat)));
+    });
+  }, [currentUser.uid]);
+
+  useEffect(() => {
+    const q = query(collection(db, 'blocks'), where('blockerUid', '==', currentUser.uid));
+    return onSnapshot(q, snap => {
+      setBlockedUids(new Set(snap.docs.map(d => d.data().blockedUid as string)));
     });
   }, [currentUser.uid]);
 
@@ -33262,6 +33270,8 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
 
       <div className="space-y-3">
         {chats.filter(c => {
+          const partnerUid = c.uids.find(id => id !== currentUser.uid);
+          if (partnerUid && blockedUids.has(partnerUid)) return false;
           // Hide vendor's own broadcasts from their inbox
           if (c.isBroadcast && vendorStore && c.storeId === vendorStore.id) return false;
           // Auto-expire broadcast messages after 24 hours
@@ -35557,6 +35567,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
   const [pubRevealedIds, setPubRevealedIds] = useState<string[]>([]);
   const [pubExpandedSticker, setPubExpandedSticker] = useState<CollectibleSticker | null>(null);
   const [pubCardDefs, setPubCardDefs] = useState<CollectibleCardDef[]>([]);
+  const [isBlocked, setIsBlocked] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<'posts' | 'stickers' | 'badges' | 'interactions'>('stickers');
   const [pubLikedPosts, setPubLikedPosts] = useState<GlobalPost[]>([]);
   const [pubVotedPolls, setPubVotedPolls] = useState<GlobalPost[]>([]);
@@ -35646,6 +35657,12 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
       setReviews(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     }, () => {});
 
+    // Block listener
+    const blockId = `${currentUser.uid}_${initialTargetUser.uid}`;
+    const unsubBlock = onSnapshot(doc(db, 'blocks', blockId), (snap) => {
+      setIsBlocked(snap.exists());
+    }, () => {});
+
     // Follow listener
     const followId = `${currentUser.uid}_${initialTargetUser.uid}`;
     const unsubFollow = onSnapshot(doc(db, 'follows', followId), (snap) => {
@@ -35703,6 +35720,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
       unsubReviews();
       unsubTargetFollowers();
       unsubTargetFollowing();
+      unsubBlock();
       unsubFollow();
       unsubPosts();
       unsubLiked();
@@ -35728,6 +35746,23 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
       }
     } catch (err) {
       console.error('Chat create error:', err);
+    }
+  };
+
+  const handleBlockClick = async () => {
+    const blockId = `${currentUser.uid}_${targetUser.uid}`;
+    try {
+      if (isBlocked) {
+        await deleteDoc(doc(db, 'blocks', blockId));
+      } else {
+        await setDoc(doc(db, 'blocks', blockId), {
+          blockerUid: currentUser.uid,
+          blockedUid: targetUser.uid,
+          createdAt: serverTimestamp()
+        });
+      }
+    } catch (err) {
+      console.error("Block error:", err);
     }
   };
 
@@ -35862,21 +35897,35 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
         </button>
         {currentUser && currentUser.uid !== targetUser.uid && (
           <div className="flex gap-2">
+            {!isBlocked && (
+              <button
+                onClick={handleFollowClick}
+                className={cn(
+                  "glass-card flex items-center gap-1.5 px-4 py-2 rounded-2xl font-bold text-sm transition-all active:scale-95 shadow-lg",
+                  isFollowing ? "text-green-600" : "text-brand-gold"
+                )}
+              >
+                {isFollowing ? <><UserCheck size={15} />Following</> : <><UserPlus size={15} />Follow</>}
+              </button>
+            )}
+            {!isBlocked && (
+              <button
+                onClick={handleMessageClick}
+                className="glass-card flex items-center gap-1.5 px-4 py-2 rounded-2xl text-brand-gold font-bold text-sm transition-all active:scale-95 shadow-lg"
+              >
+                <MessageCircle size={15} />
+                Message
+              </button>
+            )}
             <button
-              onClick={handleFollowClick}
+              onClick={handleBlockClick}
               className={cn(
-                "glass-card flex items-center gap-1.5 px-4 py-2 rounded-2xl font-bold text-sm transition-all active:scale-95 shadow-lg",
-                isFollowing ? "text-green-600" : "text-brand-gold"
+                "glass-card flex items-center gap-1.5 px-3 py-2 rounded-2xl font-bold text-sm transition-all active:scale-95 shadow-lg",
+                isBlocked ? "text-red-500" : "text-brand-navy/40"
               )}
             >
-              {isFollowing ? <><UserCheck size={15} />Following</> : <><UserPlus size={15} />Follow</>}
-            </button>
-            <button
-              onClick={handleMessageClick}
-              className="glass-card flex items-center gap-1.5 px-4 py-2 rounded-2xl text-brand-gold font-bold text-sm transition-all active:scale-95 shadow-lg"
-            >
-              <MessageCircle size={15} />
-              Message
+              <ShieldAlert size={15} />
+              {isBlocked ? 'Unblock' : 'Block'}
             </button>
           </div>
         )}
