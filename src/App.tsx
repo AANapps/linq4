@@ -13796,14 +13796,14 @@ function NFCOrderModal({ onClose, onOrder }: { onClose: () => void; onOrder: () 
             <Wifi size={32} className="text-blue-600" />
           </div>
           <div className="text-center space-y-2">
-            <h2 className="font-display text-2xl font-bold text-brand-navy">Order NFC Tags</h2>
-            <p className="text-sm text-brand-navy/65 leading-relaxed">Let customers collect stamps with a single tap. We'll ship you a pre-programmed NFC sticker ready to stick anywhere in your store.</p>
+            <h2 className="font-display text-2xl font-bold text-brand-navy">Order Scanner</h2>
+            <p className="text-sm text-brand-navy/65 leading-relaxed">Let customers collect stamps with a single tap. We'll ship you a pre-programmed scanner ready to stick anywhere in your store.</p>
           </div>
           <div className="bg-brand-bg rounded-2xl p-4 space-y-2.5">
             {[
               'Pre-programmed for your store',
               'Customers tap to stamp — no app needed',
-              'Works on any NFC-enabled phone',
+              'Works on any scanner-enabled phone',
               'Weatherproof sticker, easy to mount',
             ].map(f => (
               <div key={f} className="flex items-center gap-2.5">
@@ -18637,7 +18637,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 <Wifi size={22} className="text-blue-600" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-brand-navy text-sm">Add NFC to your store</p>
+                <p className="font-bold text-brand-navy text-sm">Add Scanner to your store</p>
                 <p className="text-xs text-brand-navy/50 mt-0.5">Let customers tap to collect stamps — $50 one-time</p>
               </div>
               <ChevronRight size={16} className="text-brand-navy/30 shrink-0" />
@@ -18649,7 +18649,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 <Wifi size={22} className="text-blue-600" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-blue-800 text-sm">NFC tag ordered</p>
+                <p className="font-bold text-blue-800 text-sm">Scanner ordered</p>
                 <p className="text-xs text-blue-600/70 mt-0.5">We'll ship your pre-programmed tag shortly</p>
               </div>
               <CheckCircle2 size={18} className="text-blue-500 shrink-0" />
@@ -25444,7 +25444,7 @@ function ScanUserPanel({ store, onIssue, onShowQR }: {
           <div className="flex gap-2 p-1 bg-brand-navy/5 rounded-2xl">
             {([
               { key: 'qr' as const, label: 'QR Code', icon: <QrCode size={14} /> },
-              { key: 'nfc' as const, label: 'NFC Tag', icon: <Wifi size={14} className="-rotate-90" /> },
+              { key: 'nfc' as const, label: 'Scanner', icon: <Wifi size={14} className="-rotate-90" /> },
             ]).map(({ key, label, icon }) => (
               <button
                 key={key}
@@ -25475,7 +25475,7 @@ function ScanUserPanel({ store, onIssue, onShowQR }: {
           ) : (
             <div className="bg-brand-navy/4 border border-brand-navy/8 rounded-2xl p-4 flex items-start gap-3">
               <Wifi size={15} className="-rotate-90 text-brand-navy/50 shrink-0 mt-0.5" />
-              <p className="text-brand-navy/60 text-xs leading-relaxed">Customers tap their phone to your NFC tag — points are issued automatically.</p>
+              <p className="text-brand-navy/60 text-xs leading-relaxed">Customers tap their phone to your scanner — points are issued automatically.</p>
             </div>
           )}
         </div>
@@ -25585,8 +25585,8 @@ function NfcTagUrlRow({ storeId }: { storeId: string }) {
   };
   return (
     <div className="bg-brand-navy/4 border border-brand-navy/8 rounded-2xl p-4 space-y-2">
-      <p className="text-xs font-bold text-brand-navy/60 uppercase tracking-widest">NFC tag URL</p>
-      <p className="text-[11px] text-brand-navy/50 leading-relaxed">Write this URL to your NFC tag using an app like NFC Tools.</p>
+      <p className="text-xs font-bold text-brand-navy/60 uppercase tracking-widest">Scanner URL</p>
+      <p className="text-[11px] text-brand-navy/50 leading-relaxed">Write this URL to your scanner using an app like NFC Tools.</p>
       <div className="flex items-center gap-2 bg-white rounded-xl border border-brand-navy/8 px-3 py-2.5">
         <p className="flex-1 text-xs font-mono text-brand-navy truncate">{url}</p>
         <button
@@ -25731,7 +25731,7 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
           <div className="flex gap-2 p-1 bg-brand-navy/5 rounded-2xl">
             {([
               { key: 'qr' as const, label: 'QR Code', icon: <QrCode size={14} /> },
-              { key: 'nfc' as const, label: 'NFC', icon: <Wifi size={14} className="-rotate-90" /> },
+              { key: 'nfc' as const, label: 'Scanner', icon: <Wifi size={14} className="-rotate-90" /> },
             ]).map(({ key, label, icon }) => (
               <button
                 key={key}
@@ -25751,19 +25751,19 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
               <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
                 <AlertTriangle size={15} className="text-amber-500 shrink-0 mt-0.5" />
                 <div className="space-y-1">
-                  <p className="text-amber-800 text-xs font-bold">NFC device required</p>
-                  <p className="text-amber-700 text-xs leading-relaxed">NFC requires a pre-programmed physical tag placed at your counter. Customers tap their phone to it — no scanning needed. Tags must be ordered separately.</p>
+                  <p className="text-amber-800 text-xs font-bold">Scanner required</p>
+                  <p className="text-amber-700 text-xs leading-relaxed">Scanner requires a pre-programmed physical tag placed at your counter. Customers tap their phone to it — no scanning needed. Tags must be ordered separately.</p>
                 </div>
               </div>
               {store?.nfcOrdered ? (
                 <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-2xl p-3">
                   <CheckCircle2 size={15} className="text-blue-500 shrink-0" />
-                  <p className="text-blue-700 text-xs font-bold flex-1">NFC tag ordered — we'll ship it shortly.</p>
+                  <p className="text-blue-700 text-xs font-bold flex-1">Scanner ordered — we'll ship it shortly.</p>
                   <button onClick={() => setShowNFCReorder(true)} className="text-blue-600 text-xs font-bold underline underline-offset-2 shrink-0">Order another</button>
                 </div>
               ) : (
                 <button onClick={() => setShowNFCReorder(true)} className="w-full py-3 rounded-2xl bg-brand-navy text-white text-sm font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-all">
-                  <Wifi size={15} className="-rotate-90" /> Order NFC Tag — $50
+                  <Wifi size={15} className="-rotate-90" /> Order Scanner — $50
                 </button>
               )}
             </div>
@@ -25783,12 +25783,12 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
                 <h3 className="font-display text-lg font-bold text-brand-navy">Switch scan method?</h3>
               </div>
               <p className="text-sm text-brand-navy/75">
-                Switching to <span className="font-bold text-brand-navy">{pendingScanMethod === 'qr' ? 'QR Code' : 'NFC'}</span> will change how customers earn points.
-                {pendingScanMethod === 'nfc' ? ' Make sure your NFC tag is in place before switching.' : ' The QR button will appear on your customers\' wallet cards immediately.'}
+                Switching to <span className="font-bold text-brand-navy">{pendingScanMethod === 'qr' ? 'QR Code' : 'Scanner'}</span> will change how customers earn points.
+                {pendingScanMethod === 'nfc' ? ' Make sure your scanner is in place before switching.' : ' The QR button will appear on your customers\' wallet cards immediately.'}
               </p>
               {pendingScanMethod === 'nfc' && !store?.nfcOrdered && (
                 <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-xs text-amber-700 leading-relaxed">
-                  You haven't ordered an NFC tag yet. Customers won't be able to earn points until one is installed.
+                  You haven't ordered a scanner yet. Customers won't be able to earn points until one is installed.
                 </div>
               )}
               <div className="flex gap-3">
