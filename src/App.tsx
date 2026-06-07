@@ -3028,12 +3028,13 @@ function OnboardingScreen({ user, onComplete }: {
   user: FirebaseUser;
   onComplete: (data: ConsumerOnboardingData | VendorOnboardingData) => Promise<void>;
 }) {
-  const [role, setRole] = React.useState<'consumer' | 'vendor' | null>(null);
+  const isWeb = !Capacitor.isNativePlatform();
+  const [role, setRole] = React.useState<'consumer' | 'vendor' | null>(isWeb ? 'vendor' : null);
   const isVendor = role === 'vendor';
-  // Step 0 = role selection; vendor steps 1-7; consumer steps 1-5 (privacy is always last)
+  // Step 0 = role selection (native only); vendor steps 1-7; consumer steps 1-5 (privacy is always last)
   const TOTAL_STEPS = isVendor ? 8 : 6;
 
-  const [step, setStep] = React.useState(0);
+  const [step, setStep] = React.useState(isWeb ? 1 : 0);
   const [saving, setSaving] = React.useState(false);
   const [privacyAccepted, setPrivacyAccepted] = React.useState(false);
   const [onboardingLegal, setOnboardingLegal] = React.useState<'privacy' | 'terms' | null>(null);
@@ -3566,12 +3567,15 @@ function OnboardingScreen({ user, onComplete }: {
   return (
     <div className="min-h-screen flex flex-col bg-brand-bg px-8 relative overflow-hidden">
       <div className="flex items-center justify-center gap-2 mb-10" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3.5rem)' }}>
-        {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-          <div
-            key={i}
-            className={`rounded-full transition-all ${i === step ? 'w-8 h-2 bg-brand-navy' : i < step ? 'w-2 h-2 bg-brand-navy/40' : 'w-2 h-2 bg-brand-navy/15'}`}
-          />
-        ))}
+        {Array.from({ length: TOTAL_STEPS }).map((_, i) => {
+          if (isWeb && i === 0) return null;
+          return (
+            <div
+              key={i}
+              className={`rounded-full transition-all ${i === step ? 'w-8 h-2 bg-brand-navy' : i < step ? 'w-2 h-2 bg-brand-navy/40' : 'w-2 h-2 bg-brand-navy/15'}`}
+            />
+          );
+        })}
       </div>
 
       <div className="flex-1 flex flex-col items-center text-center max-w-xs mx-auto w-full">
