@@ -2219,7 +2219,9 @@ export default function App() {
             >
               <MessageCircle className="w-6 h-6" />
               {unreadMessages > 0 && (
-                <span className="absolute top-1 right-1 w-2 h-2 bg-brand-rose rounded-full border-2 border-white" />
+                <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-brand-rose rounded-full border-2 border-white shadow-md shadow-red-500/60 flex items-center justify-center text-white text-[9px] font-black">
+                  {unreadMessages > 9 ? '9+' : unreadMessages}
+                </span>
               )}
             </button>
           )}
@@ -2229,7 +2231,9 @@ export default function App() {
           >
             <Bell className="w-6 h-6" />
             {notifications.filter(n => !n.isRead).length > 0 && (
-              <span className="absolute top-1 right-1 w-2 h-2 bg-brand-gold rounded-full border-2 border-white" />
+              <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-brand-gold rounded-full border-2 border-white shadow-md shadow-yellow-500/60 flex items-center justify-center text-white text-[9px] font-black">
+                {notifications.filter(n => !n.isRead).length > 9 ? '9+' : notifications.filter(n => !n.isRead).length}
+              </span>
             )}
           </button>
         </div>
@@ -3858,7 +3862,7 @@ function NavButton({ active, onClick, icon, label, badgeCount }: { active: boole
       </div>
       <span className={cn("text-[10px] font-bold uppercase tracking-wider", active && "text-brand-gold")}>{label}</span>
       {badgeCount !== undefined && badgeCount > 0 && (
-        <span className="absolute top-0 right-1 min-w-[20px] h-5 bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-md shadow-red-500/50 px-1">
+        <span className="absolute top-0 right-0 min-w-[22px] h-[22px] bg-red-500 text-white text-[11px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-lg shadow-red-500/70 px-1 animate-pulse">
           {badgeCount > 9 ? '9+' : badgeCount}
         </span>
       )}
