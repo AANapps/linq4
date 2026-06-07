@@ -20606,7 +20606,6 @@ function SwipeConfirm({ onConfirm }: { onConfirm: () => void }) {
 
 function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, onScan, onPackReady, userHandle }: { card: Card; store?: StoreProfile; onViewStore?: (s: StoreProfile) => void; compact?: boolean; autoOpen?: 'spend' | 'nfc'; onScan?: () => void; onPackReady?: (s: CollectibleSticker[]) => void; userHandle?: string; key?: React.Key }) {
   const [showRedeemSheet, setShowRedeemSheet] = useState(autoOpen === 'spend' || autoOpen === 'nfc');
-  const [showSpendScanner, setShowSpendScanner] = useState(false);
   const [showVisitScan, setShowVisitScan] = useState(false);
   const [showVisitScanSheet, setShowVisitScanSheet] = useState(false);
   const [showVisitEarnSheet, setShowVisitEarnSheet] = useState(false);
@@ -20937,15 +20936,6 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 <div><h3 className="font-display text-2xl font-bold">{membershipName}</h3><p className="text-brand-navy/75 text-xs mt-0.5">Points & Redemption</p></div>
                 <button onClick={() => setShowRedeemSheet(false)} className="p-2 text-brand-navy/75 hover:text-brand-navy"><X size={20} /></button>
               </div>
-              {/* Customer QR — vendor scans this to issue points */}
-              {auth.currentUser && (
-                <div className="flex flex-col items-center gap-2 mb-6">
-                  <p className="text-brand-navy/60 text-[10px] font-bold uppercase tracking-widest">Show vendor to scan</p>
-                  <div className="bg-white rounded-2xl p-4 border border-brand-navy/8 shadow-sm">
-                    <QRCodeSVG value={`stamp:${auth.currentUser.uid}:${card.store_id}`} size={160} />
-                  </div>
-                </div>
-              )}
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className="glass-card p-5 rounded-2xl">
                   <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-1">Available</p>
@@ -20997,7 +20987,6 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
 
       {/* Spend QR scanner — customer scans vendor's QR */}
       <AnimatePresence>
-        {showSpendScanner && <SpendQRScannerModal onClose={() => setShowSpendScanner(false)} onPackReady={onPackReady} />}
       </AnimatePresence>
 
       {/* Visit detail sheet */}
@@ -21382,16 +21371,6 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                 <button onClick={() => setShowRedeemSheet(false)} className="p-2 text-brand-navy/75 hover:text-brand-navy"><X size={20} /></button>
               </div>
 
-              {/* Customer QR — vendor scans this to issue points */}
-              {auth.currentUser && (
-                <div className="flex flex-col items-center gap-2 mb-6">
-                  <p className="text-brand-navy/60 text-[10px] font-bold uppercase tracking-widest">Show vendor to scan</p>
-                  <div className="bg-white rounded-2xl p-4 border border-brand-navy/8 shadow-sm">
-                    <QRCodeSVG value={`stamp:${auth.currentUser.uid}:${card.store_id}`} size={160} />
-                  </div>
-                </div>
-              )}
-
               {/* Balance row */}
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className="glass-card p-5 rounded-2xl">
@@ -21479,7 +21458,6 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
 
       {/* Spend QR scanner — compact card */}
       <AnimatePresence>
-        {showSpendScanner && <SpendQRScannerModal onClose={() => setShowSpendScanner(false)} onPackReady={onPackReady} />}
       </AnimatePresence>
 
       {/* Visit detail sheet */}
@@ -25431,7 +25409,6 @@ function ScanUserPanel({ store, onIssue, onShowQR }: {
   const [amount, setAmount] = useState('');
   const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [working, setWorking] = useState(false);
-  const [showSpendQRScanner, setShowSpendQRScanner] = useState(false);
 
   const [savingMethod, setSavingMethod] = useState(false);
 
@@ -25522,46 +25499,8 @@ function ScanUserPanel({ store, onIssue, onShowQR }: {
         </div>
       )}
 
-      {!isVisit && (
-        <>
-          <button
-            onClick={() => { setStatus(null); setShowSpendQRScanner(true); }}
-            disabled={working}
-            className="w-full relative overflow-hidden flex items-center justify-center gap-2 py-4 rounded-2xl font-bold text-white text-sm shadow-lg active:scale-[0.98] transition-all disabled:opacity-60"
-            style={{ background: 'linear-gradient(160deg, var(--brand-g1) 0%, var(--brand-g2) 40%, var(--brand-g3) 70%, var(--brand-g4) 100%)' }}
-          >
-            <span className="card-shine-ray" />
-            <QrCode size={16} /> Scan Customer QR
-          </button>
-          <AnimatePresence>
-            {showSpendQRScanner && store && (
-              <VendorQRScanner
-                store={store}
-                stampQty={0}
-                subtitle="Scan customer's QR code to add spend"
-                onScanned={async (userId) => {
-                  setShowSpendQRScanner(false);
-                  setWorking(true); setStatus(null);
-                  try {
-                    const userSnap = await getDoc(doc(db, 'users', userId));
-                    if (!userSnap.exists()) { setStatus({ type: 'error', message: 'User not found' }); setWorking(false); return; }
-                    const h = (userSnap.data() as UserProfile).handle || '';
-                    if (!h) { setStatus({ type: 'error', message: 'Customer has no handle' }); setWorking(false); return; }
-                    setHandle(h);
-                    setLookupMode('handle');
-                    setStatus({ type: 'success', message: `Found @${h} — enter the transaction amount below` });
-                  } catch { setStatus({ type: 'error', message: 'Lookup failed — try again' }); }
-                  setWorking(false);
-                }}
-                onClose={() => setShowSpendQRScanner(false)}
-              />
-            )}
-          </AnimatePresence>
-        </>
-      )}
-
       <div className="glass-card rounded-[2rem] p-6 space-y-4">
-        <p className="text-xs font-bold text-brand-navy/75 uppercase tracking-widest">{isVisit ? 'Or enter manually' : 'Or enter manually'}</p>
+        <p className="text-xs font-bold text-brand-navy/75 uppercase tracking-widest">{isVisit ? 'Or enter manually' : 'Customer details'}</p>
 
         {/* Lookup mode toggle */}
         <div className="flex gap-2 p-1 bg-brand-navy/5 rounded-2xl">
