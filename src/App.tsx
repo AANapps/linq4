@@ -2219,9 +2219,7 @@ export default function App() {
             >
               <MessageCircle className="w-6 h-6" />
               {unreadMessages > 0 && (
-                <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-brand-rose rounded-full border-2 border-white shadow-md shadow-red-500/60 flex items-center justify-center text-white text-[9px] font-black">
-                  {unreadMessages > 9 ? '9+' : unreadMessages}
-                </span>
+                <span className="absolute top-1 right-1 w-3 h-3 bg-brand-rose rounded-full border-2 border-white" />
               )}
             </button>
           )}
@@ -2231,9 +2229,7 @@ export default function App() {
           >
             <Bell className="w-6 h-6" />
             {notifications.filter(n => !n.isRead).length > 0 && (
-              <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-brand-gold rounded-full border-2 border-white shadow-md shadow-yellow-500/60 flex items-center justify-center text-white text-[9px] font-black">
-                {notifications.filter(n => !n.isRead).length > 9 ? '9+' : notifications.filter(n => !n.isRead).length}
-              </span>
+              <span className="absolute top-1 right-1 w-3 h-3 bg-brand-gold rounded-full border-2 border-white" />
             )}
           </button>
         </div>
@@ -3862,9 +3858,7 @@ function NavButton({ active, onClick, icon, label, badgeCount }: { active: boole
       </div>
       <span className={cn("text-[10px] font-bold uppercase tracking-wider", active && "text-brand-gold")}>{label}</span>
       {badgeCount !== undefined && badgeCount > 0 && (
-        <span className="absolute top-0 right-0 min-w-[22px] h-[22px] bg-red-500 text-white text-[11px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-lg shadow-red-500/70 px-1 animate-pulse">
-          {badgeCount > 9 ? '9+' : badgeCount}
-        </span>
+        <span className="absolute top-0.5 right-2 w-3 h-3 bg-red-500 rounded-full border-2 border-white" />
       )}
     </button>
   );
@@ -20564,7 +20558,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
               <ArrowLeft size={16} /> Back
             </button>
             {vendorIssueMode === 'card' ? <VendorCardSection store={store} />
-              : vendorIssueMode === 'scan-user' ? <ScanUserPanel store={store} onIssue={handleIssueMembershipPoints} />
+              : vendorIssueMode === 'scan-user' ? <ScanUserPanel store={store} onIssue={handleIssueMembershipPoints} onShowQR={() => setShowQRScanner(true)} />
               : <VendorOfferPanel store={store} />}
           </div>
         )
@@ -25589,9 +25583,10 @@ function OffersModal({ offers, currentUser, currentProfile, onClose }: { offers:
 }
 
 // ─── Scan User Panel — vendor issues membership points by handle ──────────────
-function ScanUserPanel({ store, onIssue }: {
+function ScanUserPanel({ store, onIssue, onShowQR }: {
   store: StoreProfile | null;
   onIssue: (handle: string, amount: string, setStatus: (s: { type: 'success' | 'error'; message: string } | null) => void, setWorking: (b: boolean) => void) => void;
+  onShowQR?: () => void;
 }) {
   const [handle, setHandle] = useState('');
   const [phoneInput, setPhoneInput] = useState('');
@@ -25601,10 +25596,22 @@ function ScanUserPanel({ store, onIssue }: {
   const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [working, setWorking] = useState(false);
   const [showSpendQRScanner, setShowSpendQRScanner] = useState(false);
+  const [savingMethod, setSavingMethod] = useState(false);
 
   const memType = store?.membershipType ?? 'spend';
   const isVisit = memType === 'visit';
   const pointsPerVisit = store?.membershipStampsPerVisit || 1;
+  const scanMethod = store?.scanMethod ?? 'qr';
+
+  const handleScanMethodSwitch = async (method: 'qr' | 'nfc') => {
+    if (!store?.id || method === scanMethod || savingMethod) return;
+    setSavingMethod(true);
+    try {
+      await updateDoc(doc(db, 'stores', store.id), { scanMethod: method });
+    } finally {
+      setSavingMethod(false);
+    }
+  };
 
   const handlePhoneIssue = async () => {
     const cleaned = toE164(phoneDial, phoneInput.trim());
@@ -25630,15 +25637,51 @@ function ScanUserPanel({ store, onIssue }: {
         <h3 className="font-display text-2xl font-bold mb-1">{isVisit ? 'Issue Points' : 'Issue Spend'}</h3>
         <p className="text-brand-navy/80 text-sm">
           {isVisit
-            ? `Customers scan the store QR or tap NFC to earn ${pointsPerVisit} point${pointsPerVisit !== 1 ? 's' : ''} per visit automatically.`
+            ? `Customers earn ${pointsPerVisit} point${pointsPerVisit !== 1 ? 's' : ''} per visit.`
             : `Add spend to the customer's ${store?.membershipName || 'membership'} card.`}
         </p>
       </div>
 
       {isVisit && (
-        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex items-start gap-3">
-          <Info size={16} className="text-blue-500 shrink-0 mt-0.5" />
-          <p className="text-blue-700 text-xs leading-relaxed">Visit points are issued automatically when the customer taps NFC or scans the store QR from their wallet card — no action needed here.</p>
+        <div className="glass-card rounded-[2rem] p-5 space-y-4">
+          <p className="text-xs font-bold text-brand-navy/75 uppercase tracking-widest">Scan method</p>
+          <div className="flex gap-2 p-1 bg-brand-navy/5 rounded-2xl">
+            {([
+              { key: 'qr' as const, label: 'QR Code', icon: <QrCode size={14} /> },
+              { key: 'nfc' as const, label: 'NFC Tag', icon: <Wifi size={14} className="-rotate-90" /> },
+            ]).map(({ key, label, icon }) => (
+              <button
+                key={key}
+                onClick={() => handleScanMethodSwitch(key)}
+                disabled={savingMethod}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold transition-all disabled:opacity-50',
+                  scanMethod === key ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/50'
+                )}
+              >
+                {icon} {label}
+              </button>
+            ))}
+          </div>
+          {scanMethod === 'qr' ? (
+            <div className="space-y-3">
+              <p className="text-xs text-brand-navy/60 leading-relaxed">Display your QR code — customers scan it from their Linq wallet card to earn points.</p>
+              <button
+                onClick={onShowQR}
+                className="w-full relative overflow-hidden flex items-center justify-center gap-2 py-4 rounded-2xl font-bold text-white text-sm shadow-lg active:scale-[0.98] transition-all"
+                style={{ background: 'linear-gradient(135deg, #1D4ED8, #3B82F6)' }}
+              >
+                <span className="card-shine-ray" />
+                <QrCode size={16} className="relative z-10" />
+                <span className="relative z-10">Show QR Code</span>
+              </button>
+            </div>
+          ) : (
+            <div className="bg-brand-navy/4 border border-brand-navy/8 rounded-2xl p-4 flex items-start gap-3">
+              <Wifi size={15} className="-rotate-90 text-brand-navy/50 shrink-0 mt-0.5" />
+              <p className="text-brand-navy/60 text-xs leading-relaxed">Customers tap their phone to your NFC tag — points are issued automatically.</p>
+            </div>
+          )}
         </div>
       )}
 
