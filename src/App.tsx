@@ -29668,7 +29668,7 @@ function DailyStatsTicker({ stats }: { stats: { stamps: number; points: number; 
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ type: 'spring', stiffness: 160, damping: 22 }}
-            className="flex-1 flex flex-col justify-center"
+            className="flex-1 flex flex-col justify-center items-center text-center"
           >
             <RollingNumber value={cur.value} className="text-[2.4rem] leading-none" color="#4F46E5" />
             <p className="text-xs font-black uppercase tracking-widest mt-2" style={{ color: '#7C3AED' }}>{cur.label}</p>
