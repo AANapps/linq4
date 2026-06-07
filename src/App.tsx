@@ -29683,10 +29683,18 @@ function PollVotedFillDots() {
   );
 }
 
-function RollingDigit({ digit, color }: { digit: number; color?: string }) {
-  const h = 36;
+function RollingDigit({ digit, color, h = 56 }: { digit: number; color?: string; h?: number }) {
   return (
-    <span className="inline-block overflow-hidden relative" style={{ height: h, width: '0.58em' }}>
+    <span
+      className="inline-block relative"
+      style={{
+        height: h,
+        width: '0.62em',
+        overflow: 'hidden',
+        maskImage: 'linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%)',
+        WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%)',
+      }}
+    >
       <motion.span
         className="flex flex-col"
         animate={{ y: -digit * h }}
