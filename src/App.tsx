@@ -29626,7 +29626,7 @@ function ActivityTicker({ posts }: { posts: GlobalPost[] }) {
     : post.content?.replace('a Linq member', 'A user');
 
   return (
-    <div className="px-4 py-2 -mx-0">
+    <div className="py-2 -mx-6 px-0">
       <AnimatePresence mode="wait">
         <motion.div
           key={key}
