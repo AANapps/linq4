@@ -29605,7 +29605,7 @@ function PollVotedFillDots() {
   );
 }
 
-function RollingDigit({ digit }: { digit: number }) {
+function RollingDigit({ digit, color }: { digit: number; color?: string }) {
   const h = 36;
   return (
     <span className="inline-block overflow-hidden relative" style={{ height: h, width: '0.58em' }}>
@@ -29617,7 +29617,7 @@ function RollingDigit({ digit }: { digit: number }) {
         style={{ willChange: 'transform' }}
       >
         {[0,1,2,3,4,5,6,7,8,9].map(d => (
-          <span key={d} className="flex items-center justify-center font-black" style={{ height: h }}>
+          <span key={d} className="flex items-center justify-center font-black" style={{ height: h, color: color || 'inherit' }}>
             {d}
           </span>
         ))}
@@ -29626,12 +29626,12 @@ function RollingDigit({ digit }: { digit: number }) {
   );
 }
 
-function RollingNumber({ value, className, style }: { value: number; className?: string; style?: React.CSSProperties }) {
+function RollingNumber({ value, className, color }: { value: number; className?: string; color?: string }) {
   const str = String(Math.max(0, Math.round(value)));
   return (
-    <span className={cn('inline-flex items-end', className)} style={style}>
+    <span className={cn('inline-flex items-end', className)}>
       {str.split('').map((d, i) => (
-        <RollingDigit key={`${str.length}-${i}`} digit={parseInt(d)} />
+        <RollingDigit key={`${str.length}-${i}`} digit={parseInt(d)} color={color} />
       ))}
     </span>
   );
@@ -29670,8 +29670,8 @@ function DailyStatsTicker({ stats }: { stats: { stamps: number; points: number; 
             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
             className="flex-1 flex flex-col justify-center"
           >
-            <RollingNumber value={cur.value} className="text-[2.4rem] leading-none" style={{ background: 'linear-gradient(135deg, #2563EB, #7C3AED)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }} />
-            <p className="text-xs font-black uppercase tracking-widest mt-2" style={{ background: 'linear-gradient(135deg, #3B82F6, #8B5CF6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{cur.label}</p>
+            <RollingNumber value={cur.value} className="text-[2.4rem] leading-none" color="#4F46E5" />
+            <p className="text-xs font-black uppercase tracking-widest mt-2" style={{ color: '#7C3AED' }}>{cur.label}</p>
           </motion.div>
         </AnimatePresence>
         <div className="flex gap-1 mt-3">
