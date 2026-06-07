@@ -29605,6 +29605,63 @@ function PollVotedFillDots() {
   );
 }
 
+function ActivityTicker({ posts }: { posts: GlobalPost[] }) {
+  const [idx, setIdx] = useState(0);
+  const [key, setKey] = useState(0);
+
+  useEffect(() => {
+    if (posts.length <= 1) return;
+    const id = setInterval(() => {
+      setIdx(i => (i + 1) % posts.length);
+      setKey(k => k + 1);
+    }, 3500);
+    return () => clearInterval(id);
+  }, [posts.length]);
+
+  const post = posts[idx];
+  if (!post) return null;
+
+  const content = post.isAnonymous && post.authorName && post.authorName !== 'a Linq member'
+    ? post.content?.replace(post.authorName, 'A user')
+    : post.content?.replace('a Linq member', 'A user');
+
+  return (
+    <div className="px-4 py-2 -mx-0">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={key}
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -14 }}
+          transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+        >
+          <div className="rounded-2xl overflow-hidden relative" style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #4F46E5 50%, #7C3AED 100%)' }}>
+            <span className="card-shine-ray" aria-hidden="true" />
+            <div className="relative z-10 flex items-center gap-3 px-4 py-3">
+              <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-white/40 shrink-0 bg-white/20 flex items-center justify-center">
+                {post.isAnonymous
+                  ? <UserIcon size={18} className="text-white/70" />
+                  : <PixelAvatar config={undefined} uid={post.authorUid} size={36} view="head" />}
+              </div>
+              <p className="flex-1 text-white text-sm font-bold leading-snug">{content}</p>
+              <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-base shrink-0">
+                {post.activityEmoji}
+              </div>
+            </div>
+            {posts.length > 1 && (
+              <div className="relative z-10 flex gap-1 justify-center pb-2">
+                {posts.slice(0, Math.min(posts.length, 10)).map((_, i) => (
+                  <div key={i} className={cn('rounded-full transition-all', i === idx % Math.min(posts.length, 10) ? 'w-3 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/35')} />
+                ))}
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  );
+}
+
 function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewStore, onLike, onVote, onDelete, showPinnedTag, hideDivider }: {
   key?: React.Key;
   post: GlobalPost;
@@ -31808,7 +31865,8 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
     return [...pinned, ...rest];
   })();
 
-  const displayFeed = sortedFeed;
+  const activityPosts = sortedFeed.filter(p => (p as GlobalPost).postType === 'activity').slice(0, 20) as GlobalPost[];
+  const displayFeed = sortedFeed.filter(p => (p as GlobalPost).postType !== 'activity');
 
   const followingFeed = sortedFeed.filter(item => {
     if (!item._type) return followingUids.has(item.authorUid);
@@ -32276,6 +32334,11 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
               );
             })()}
           </AnimatePresence>
+
+          {/* Activity ticker */}
+          {!loading && activityPosts.length > 0 && (
+            <ActivityTicker posts={activityPosts} />
+          )}
 
           {/* Main mixed feed */}
           {loading ? <FeedLoadingSpinner /> : (
