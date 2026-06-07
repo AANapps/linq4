@@ -24181,7 +24181,7 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
     setLoadingUsers(true);
     lastUserDocRef.current = null;
     setHasMoreUsers(true);
-    const q = query(collection(db, 'users'), where('role', '==', 'consumer'), orderBy('name'), limit(USER_PAGE));
+    const q = query(collection(db, 'users'), orderBy('name'), limit(USER_PAGE));
     getDocs(q).then(snap => {
       lastUserDocRef.current = snap.docs[snap.docs.length - 1] ?? null;
       setHasMoreUsers(snap.docs.length === USER_PAGE);
@@ -24194,10 +24194,35 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
     });
   }, [searchType, currentProfile]);
 
+  const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  useEffect(() => {
+    if (searchType !== 'users' || !search.trim()) { setSearchResults([]); return; }
+    const clean = search.trim().toLowerCase().replace(/^@/, '');
+    setSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const [byHandle, byName] = await Promise.all([
+          getDocs(query(collection(db, 'users'), where('handle', '>=', clean), where('handle', '<=', clean + ''), limit(10))),
+          getDocs(query(collection(db, 'users'), where('name', '>=', clean), where('name', '<=', clean + ''), limit(10))),
+        ]);
+        const seen = new Set<string>();
+        const merged: UserProfile[] = [];
+        [...byHandle.docs, ...byName.docs].forEach(d => {
+          if (!seen.has(d.id)) { seen.add(d.id); merged.push({ uid: d.id, ...d.data() } as UserProfile); }
+        });
+        setSearchResults(merged);
+      } catch { setSearchResults([]); }
+      setSearching(false);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search, searchType]);
+
   const loadMoreUsers = async () => {
     if (loadingMoreUsers || !hasMoreUsers || !lastUserDocRef.current) return;
     setLoadingMoreUsers(true);
-    const q = query(collection(db, 'users'), where('role', '==', 'consumer'), orderBy('name'), startAfter(lastUserDocRef.current), limit(USER_PAGE));
+    const q = query(collection(db, 'users'), orderBy('name'), startAfter(lastUserDocRef.current), limit(USER_PAGE));
     const snap = await getDocs(q);
     lastUserDocRef.current = snap.docs[snap.docs.length - 1] ?? lastUserDocRef.current;
     setHasMoreUsers(snap.docs.length === USER_PAGE);
