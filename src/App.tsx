@@ -3854,7 +3854,7 @@ function NavButton({ active, onClick, icon, label, badgeCount }: { active: boole
       </div>
       <span className={cn("text-[10px] font-bold uppercase tracking-wider", active && "text-brand-gold")}>{label}</span>
       {badgeCount !== undefined && badgeCount > 0 && (
-        <span className="absolute top-0 right-2 w-4 h-4 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center border-2 border-white">
+        <span className="absolute top-0 right-1 min-w-[20px] h-5 bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-md shadow-red-500/50 px-1">
           {badgeCount > 9 ? '9+' : badgeCount}
         </span>
       )}
