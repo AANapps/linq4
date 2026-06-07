@@ -2542,9 +2542,9 @@ export default function App() {
           >
             <div className="relative overflow-hidden w-[58px] h-[58px] rounded-full gradient-logo-blue shadow-lg shadow-blue-500/30 flex items-center justify-center active:scale-95 transition-transform">
               <span className="card-shine-ray" aria-hidden="true" />
-              {vendorIsSpend ? <DollarSign size={26} className="text-white relative z-10" /> : <QrCode size={26} className="text-white relative z-10" />}
+              <DollarSign size={26} className="text-white relative z-10" />
             </div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-brand-navy/75">{vendorIsSpend ? 'Issue Points' : 'QR Code'}</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-brand-navy/75">Issue Points</span>
           </button>
         ) : null}
         <NavButton
@@ -20868,15 +20868,6 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
               {redeemableValue > 0 && (
                 <p className="text-brand-navy/75 font-bold text-xs">≈ ${redeemableValue.toFixed(2)} redeemable</p>
               )}
-              <button
-                onClick={e => { e.stopPropagation(); setShowRedeemSheet(false); setShowSpendScanner(true); }}
-                className="w-full mt-1.5 py-3.5 rounded-2xl text-xs font-black text-white active:scale-95 transition-transform flex items-center justify-center gap-1.5 shadow-lg relative overflow-hidden"
-                style={{ background: `linear-gradient(135deg, ${color}ff 0%, ${color}cc 100%)` }}
-              >
-                <span className="card-shine-ray" aria-hidden="true" />
-                <QrCode size={13} className="relative z-10" />
-                <span className="relative z-10">Collect Points</span>
-              </button>
               {redeemableValue > 0 && (
                 <button
                   onClick={e => { e.stopPropagation(); setShowRedeemSheet(true); }}
@@ -21285,15 +21276,6 @@ function MembershipCard({ card, store, onViewStore, compact = false, autoOpen, o
                   <p className="text-brand-navy text-2xl font-black mt-2 leading-none">≈ ${redeemableValue.toFixed(2)} off</p>
                 )}
               </div>
-              <button
-                onClick={e => { e.stopPropagation(); setShowRedeemSheet(false); setShowSpendScanner(true); }}
-                className="w-full py-4 rounded-2xl text-sm font-black text-white active:scale-[0.98] transition-transform flex items-center justify-center gap-2 shadow-lg mb-2 relative overflow-hidden"
-                style={{ background: `linear-gradient(135deg, ${color}ff 0%, ${color}cc 100%)` }}
-              >
-                <span className="card-shine-ray" aria-hidden="true" />
-                <QrCode size={16} className="relative z-10" />
-                <span className="relative z-10">Collect Points</span>
-              </button>
               {redeemableValue > 0 && (
                 <button
                   onClick={e => { e.stopPropagation(); setShowRedeemSheet(true); }}
