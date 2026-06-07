@@ -29820,8 +29820,8 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
             <div className="flex-1 min-w-0">
               <p className="text-white text-sm font-bold leading-snug">
                 {post.isAnonymous && post.authorName && post.authorName !== 'a Linq member'
-                  ? post.content?.replace(post.authorName, 'a Linq member')
-                  : post.content}
+                  ? post.content?.replace(post.authorName, 'A user')
+                  : post.content?.replace('a Linq member', 'A user')}
               </p>
               <p className="text-white/50 text-[10px] font-medium mt-0.5">
                 {timeAgo(post.createdAt)}
