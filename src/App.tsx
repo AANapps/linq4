@@ -25422,7 +25422,7 @@ function ScanUserPanel({ store, onIssue, onShowQR }: {
   const [amount, setAmount] = useState('');
   const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [working, setWorking] = useState(false);
-  const [showSpendQRScanner, setShowSpendQRScanner] = useState(false);
+
   const [savingMethod, setSavingMethod] = useState(false);
 
   const memType = store?.membershipType ?? 'spend';
@@ -25512,45 +25512,8 @@ function ScanUserPanel({ store, onIssue, onShowQR }: {
         </div>
       )}
 
-      {/* QR scanner button — spend type */}
-      {!isVisit && (
-        <button
-          onClick={() => { setStatus(null); setShowSpendQRScanner(true); }}
-          disabled={working}
-          className="w-full relative overflow-hidden flex items-center justify-center gap-2 py-4 rounded-2xl font-bold text-white text-sm shadow-lg active:scale-[0.98] transition-all disabled:opacity-60"
-          style={{ background: 'linear-gradient(160deg, var(--brand-g1) 0%, var(--brand-g2) 40%, var(--brand-g3) 70%, var(--brand-g4) 100%)' }}
-        >
-          <span className="card-shine-ray" />
-          <QrCode size={16} /> Scan Customer QR
-        </button>
-      )}
-      <AnimatePresence>
-        {showSpendQRScanner && store && (
-          <VendorQRScanner
-            store={store}
-            stampQty={0}
-            subtitle="Scan customer's QR code to add spend"
-            onScanned={async (userId) => {
-              setShowSpendQRScanner(false);
-              setWorking(true); setStatus(null);
-              try {
-                const userSnap = await getDoc(doc(db, 'users', userId));
-                if (!userSnap.exists()) { setStatus({ type: 'error', message: 'User not found' }); setWorking(false); return; }
-                const h = (userSnap.data() as UserProfile).handle || '';
-                if (!h) { setStatus({ type: 'error', message: 'Customer has no handle' }); setWorking(false); return; }
-                setHandle(h);
-                setLookupMode('handle');
-                setStatus({ type: 'success', message: `Found @${h} — enter the transaction amount below` });
-              } catch { setStatus({ type: 'error', message: 'Lookup failed — try again' }); }
-              setWorking(false);
-            }}
-            onClose={() => setShowSpendQRScanner(false)}
-          />
-        )}
-      </AnimatePresence>
-
       <div className="glass-card rounded-[2rem] p-6 space-y-4">
-        <p className="text-xs font-bold text-brand-navy/75 uppercase tracking-widest">{isVisit ? 'Or enter manually' : 'Or enter manually'}</p>
+        <p className="text-xs font-bold text-brand-navy/75 uppercase tracking-widest">{isVisit ? 'Or enter manually' : 'Customer details'}</p>
 
         {/* Lookup mode toggle */}
         <div className="flex gap-2 p-1 bg-brand-navy/5 rounded-2xl">
@@ -25630,7 +25593,7 @@ function ScanUserPanel({ store, onIssue, onShowQR }: {
           className="w-full py-4 rounded-2xl font-bold text-sm text-white disabled:opacity-40 transition-all active:scale-95"
           style={{ background: 'linear-gradient(160deg, #1D4ED8 0%, #2563EB 40%, #3B82F6 70%, #60A5FA 100%)' }}
         >
-          {working ? 'Issuing…' : isVisit ? 'Issue Points' : 'Issue Spend'}
+          {working ? 'Issuing…' : 'Issue Points'}
         </button>
         {status && (
           <p className={`text-sm font-bold text-center ${status.type === 'success' ? 'text-emerald-600' : 'text-red-500'}`}>
