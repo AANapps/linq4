@@ -32652,6 +32652,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
   const [activeBroadcastChat, setActiveBroadcastChat] = useState<{ storeName: string; storeLogoUrl: string; storeId?: string; broadcastId?: string } | null>(null);
   const [selectedMsgId, setSelectedMsgId] = useState<string | null>(null);
   const [showChatMenu, setShowChatMenu] = useState(false);
+  const [chatReportSent, setChatReportSent] = useState(false);
   const [showCustomerPicker, setShowCustomerPicker] = useState(false);
   const [showNewChatPicker, setShowNewChatPicker] = useState(false);
   const [storeCustomers, setStoreCustomers] = useState<UserProfile[]>([]);
@@ -33009,7 +33010,24 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
               <MoreVertical size={20} />
             </button>
             {showChatMenu && chatPartner && (
-              <div className="absolute right-0 top-10 bg-white rounded-2xl shadow-xl border border-brand-navy/8 z-50 min-w-[140px] overflow-hidden">
+              <div className="absolute right-0 top-10 bg-white rounded-2xl shadow-xl border border-brand-navy/8 z-50 min-w-[150px] overflow-hidden">
+                <button
+                  onClick={async () => {
+                    setShowChatMenu(false);
+                    await addDoc(collection(db, 'reports'), {
+                      reportedUid: chatPartner.uid,
+                      reportedBy: currentUser.uid,
+                      reason: 'User report',
+                      createdAt: serverTimestamp(),
+                    });
+                    setChatReportSent(true);
+                    setTimeout(() => setChatReportSent(false), 3000);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold text-brand-navy/75 hover:bg-brand-bg transition-colors text-left"
+                >
+                  <Flag size={15} />
+                  {chatReportSent ? 'Reported!' : 'Report'}
+                </button>
                 <button
                   onClick={async () => {
                     setShowChatMenu(false);
@@ -35596,6 +35614,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
   const [pubCardDefs, setPubCardDefs] = useState<CollectibleCardDef[]>([]);
   const [isBlocked, setIsBlocked] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [profileReportSent, setProfileReportSent] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<'posts' | 'stickers' | 'badges' | 'interactions'>('stickers');
   const [pubLikedPosts, setPubLikedPosts] = useState<GlobalPost[]>([]);
   const [pubVotedPolls, setPubVotedPolls] = useState<GlobalPost[]>([]);
@@ -35953,7 +35972,24 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
                 <MoreVertical size={18} />
               </button>
               {showProfileMenu && (
-                <div className="absolute right-0 top-10 bg-white rounded-2xl shadow-xl border border-brand-navy/8 z-50 min-w-[140px] overflow-hidden">
+                <div className="absolute right-0 top-10 bg-white rounded-2xl shadow-xl border border-brand-navy/8 z-50 min-w-[150px] overflow-hidden">
+                  <button
+                    onClick={async () => {
+                      setShowProfileMenu(false);
+                      await addDoc(collection(db, 'reports'), {
+                        reportedUid: targetUser.uid,
+                        reportedBy: currentUser.uid,
+                        reason: 'User report',
+                        createdAt: serverTimestamp(),
+                      });
+                      setProfileReportSent(true);
+                      setTimeout(() => setProfileReportSent(false), 3000);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold text-brand-navy/75 hover:bg-brand-bg transition-colors text-left"
+                  >
+                    <Flag size={15} />
+                    {profileReportSent ? 'Reported!' : 'Report'}
+                  </button>
                   <button
                     onClick={() => { setShowProfileMenu(false); handleBlockClick(); }}
                     className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold text-red-500 hover:bg-red-50 transition-colors text-left"
