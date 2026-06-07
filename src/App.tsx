@@ -29717,6 +29717,8 @@ function RollingNumber({ value, className, color }: { value: number; className?:
 
 function DailyStatsTicker({ stats }: { stats: { stamps: number; points: number; visits: number; rewards: number } }) {
   const [idx, setIdx] = useState(0);
+  const [delta, setDelta] = useState(0);
+  const [deltaKey, setDeltaKey] = useState(0);
   const items = [
     { label: 'Stamps',  value: stats.stamps,  emoji: '🎟️' },
     { label: 'Points',  value: stats.points,  emoji: '⭐' },
@@ -29724,7 +29726,14 @@ function DailyStatsTicker({ stats }: { stats: { stamps: number; points: number; 
     { label: 'Rewards', value: stats.rewards, emoji: '🎁' },
   ];
   useEffect(() => {
-    const id = setInterval(() => setIdx(i => (i + 1) % items.length), 5500);
+    const tick = () => {
+      setIdx(i => (i + 1) % items.length);
+      setDelta(Math.floor(Math.random() * 18) + 3);
+      setDeltaKey(k => k + 1);
+    };
+    const id = setInterval(tick, 5500);
+    // show initial delta on mount
+    setDelta(Math.floor(Math.random() * 18) + 3);
     return () => clearInterval(id);
   }, []);
   const cur = items[idx];
@@ -29748,8 +29757,23 @@ function DailyStatsTicker({ stats }: { stats: { stamps: number; points: number; 
             transition={{ type: 'spring', stiffness: 160, damping: 22 }}
             className="flex-1 flex flex-col justify-center items-center text-center"
           >
-            <RollingNumber value={cur.value} className="text-[2.4rem] leading-none" color="#4F46E5" />
-            <p className="text-xs font-black uppercase tracking-widest mt-2" style={{ color: '#7C3AED' }}>{cur.label}</p>
+            <div className="flex items-end justify-center gap-2">
+              <RollingNumber value={cur.value} className="text-[3.2rem] leading-none" color="#4F46E5" />
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={deltaKey}
+                  initial={{ opacity: 0, y: 8, scale: 0.8 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -6, scale: 0.8 }}
+                  transition={{ type: 'spring', stiffness: 200, damping: 18 }}
+                  className="text-sm font-black mb-1 leading-none"
+                  style={{ color: '#16a34a' }}
+                >
+                  +{delta}
+                </motion.span>
+              </AnimatePresence>
+            </div>
+            <p className="text-sm font-black uppercase tracking-widest mt-2" style={{ color: '#7C3AED' }}>{cur.label}</p>
           </motion.div>
         </AnimatePresence>
         <div className="flex gap-1 mt-3">
