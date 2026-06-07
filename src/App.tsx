@@ -32786,11 +32786,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
     );
     return onSnapshot(q, (snap) => {
       const latest = snap.docs.map(d => ({ id: d.id, ...d.data() } as ChatMessage)).reverse();
-      setMessages(prev => {
-        const serverIds = new Set(latest.map(m => m.id));
-        const pending = prev.filter(m => m.id.startsWith('temp_') && !serverIds.has(m.id));
-        return [...pending, ...latest];
-      });
+      setMessages(latest);
       // The last doc in desc order is the oldest in this window — cursor for loading older
       if (snap.docs.length === 5) {
         msgLastDocRef.current = snap.docs[snap.docs.length - 1];
@@ -32893,14 +32889,6 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
     if (!newMessage.trim() || !activeChatId) return;
     const text = newMessage;
     setNewMessage('');
-
-    // Optimistic update — show immediately, snapshot will replace with server version
-    const tempId = `temp_${Date.now()}`;
-    setMessages(prev => [...prev, {
-      id: tempId, chatId: activeChatId, senderUid: currentUser.uid,
-      senderName: currentProfile?.name || currentUser.displayName || 'Me',
-      text, createdAt: { toDate: () => new Date(), toMillis: () => Date.now(), seconds: Math.floor(Date.now() / 1000) },
-    } as ChatMessage]);
 
     try {
       const messageData = {
