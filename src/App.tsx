@@ -29652,8 +29652,13 @@ function DailyStatsTicker({ stats }: { stats: { stamps: number; points: number; 
   const cur = items[idx];
   return (
     <div
-      className="flex-1 rounded-[1.5rem] overflow-hidden relative border border-white/30"
-      style={{ minHeight: 148, background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)' }}
+      className="flex-1 rounded-[1.5rem] overflow-hidden relative border border-blue-200/60"
+      style={{
+        minHeight: 148,
+        background: 'linear-gradient(135deg, rgba(219,234,254,0.85) 0%, rgba(237,233,254,0.85) 100%)',
+        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+        boxShadow: '0 8px 32px rgba(99,102,241,0.22), 0 2px 8px rgba(59,130,246,0.15)',
+      }}
     >
       <div className="relative z-10 flex flex-col justify-between p-4" style={{ minHeight: 148 }}>
         <AnimatePresence mode="wait">
@@ -29665,13 +29670,13 @@ function DailyStatsTicker({ stats }: { stats: { stamps: number; points: number; 
             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
             className="flex-1 flex flex-col justify-center"
           >
-            <RollingNumber value={cur.value} className="text-[2.4rem] leading-none" style={{ background: 'linear-gradient(135deg, #3B82F6, #8B5CF6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }} />
-            <p className="text-brand-navy/70 text-xs font-bold uppercase tracking-widest mt-2">{cur.label}</p>
+            <RollingNumber value={cur.value} className="text-[2.4rem] leading-none" style={{ background: 'linear-gradient(135deg, #2563EB, #7C3AED)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }} />
+            <p className="text-xs font-black uppercase tracking-widest mt-2" style={{ background: 'linear-gradient(135deg, #3B82F6, #8B5CF6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{cur.label}</p>
           </motion.div>
         </AnimatePresence>
         <div className="flex gap-1 mt-3">
           {items.map((_, i) => (
-            <div key={i} className={cn('rounded-full transition-all', i === idx ? 'w-3 h-1.5 bg-brand-navy/50' : 'w-1.5 h-1.5 bg-brand-navy/20')} />
+            <div key={i} className={cn('rounded-full transition-all', i === idx ? 'w-3 h-1.5 bg-indigo-400' : 'w-1.5 h-1.5 bg-indigo-200')} />
           ))}
         </div>
       </div>
