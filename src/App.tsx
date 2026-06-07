@@ -29613,7 +29613,7 @@ function RollingDigit({ digit, color }: { digit: number; color?: string }) {
         className="flex flex-col"
         animate={{ y: -digit * h }}
         initial={{ y: 0 }}
-        transition={{ type: 'spring', stiffness: 90, damping: 14 }}
+        transition={{ type: 'spring', stiffness: 30, damping: 10 }}
         style={{ willChange: 'transform' }}
       >
         {[0,1,2,3,4,5,6,7,8,9].map(d => (
@@ -29646,7 +29646,7 @@ function DailyStatsTicker({ stats }: { stats: { stamps: number; points: number; 
     { label: 'Rewards', value: stats.rewards, emoji: '🎁' },
   ];
   useEffect(() => {
-    const id = setInterval(() => setIdx(i => (i + 1) % items.length), 3200);
+    const id = setInterval(() => setIdx(i => (i + 1) % items.length), 5500);
     return () => clearInterval(id);
   }, []);
   const cur = items[idx];
@@ -29667,7 +29667,7 @@ function DailyStatsTicker({ stats }: { stats: { stamps: number; points: number; 
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            transition={{ type: 'spring', stiffness: 160, damping: 22 }}
             className="flex-1 flex flex-col justify-center"
           >
             <RollingNumber value={cur.value} className="text-[2.4rem] leading-none" color="#4F46E5" />
