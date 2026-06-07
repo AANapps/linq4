@@ -14768,7 +14768,7 @@ const decodeSpendQR = (val: string): { storeId: string; tokenId: string } | null
 // ── Vendor-side spend QR display ────────────────────────────────────────────
 
 function VendorSpendQRDisplay({ store, onClose }: { store: StoreProfile; onClose: () => void }) {
-  const isNFC = store.scanMethod === 'nfc';
+  const [mode, setMode] = React.useState<'qr' | 'nfc'>('qr');
   const [phase, setPhase] = React.useState<'amount' | 'ready'>('amount');
   const [amountInput, setAmountInput] = React.useState('');
   const [confirmedAmount, setConfirmedAmount] = React.useState(0);
@@ -14780,21 +14780,18 @@ function VendorSpendQRDisplay({ store, onClose }: { store: StoreProfile; onClose
   const color = store.membershipColor || '#0f4c81';
   const rotatingRef = React.useRef(false);
 
-  // Clear active NFC token from store doc when this display is closed
   const clearNFCToken = React.useCallback(() => {
-    if (isNFC && store.id) {
-      updateDoc(doc(db, 'stores', store.id), { activeSpendNFCTokenId: deleteField() }).catch(console.error);
-    }
-  }, [isNFC, store.id]);
+    updateDoc(doc(db, 'stores', store.id), { activeSpendNFCTokenId: deleteField() }).catch(console.error);
+  }, [store.id]);
 
-  const generateToken = React.useCallback(async (amount: number, silent = false) => {
+  const generateToken = React.useCallback(async (amount: number, currentMode: 'qr' | 'nfc', silent = false) => {
     if (rotatingRef.current) return;
     rotatingRef.current = true;
     if (!silent) setGenerating(true); else setRotating(true);
     setError(null);
     try {
       const id = await createSpendQRToken(store.id, amount);
-      if (isNFC) {
+      if (currentMode === 'nfc') {
         await updateDoc(doc(db, 'stores', store.id), { activeSpendNFCTokenId: id });
       }
       setTokenId(id);
@@ -14805,7 +14802,7 @@ function VendorSpendQRDisplay({ store, onClose }: { store: StoreProfile; onClose
       setGenerating(false);
       setRotating(false);
     }
-  }, [store.id, isNFC]);
+  }, [store.id]);
 
   // Watch for claims
   React.useEffect(() => {
@@ -14815,9 +14812,7 @@ function VendorSpendQRDisplay({ store, onClose }: { store: StoreProfile; onClose
       const claimed: string[] = snap.data().claimedBy ?? [];
       if (claimed.length > 0) {
         setJustScanned(true);
-        if (isNFC) {
-          updateDoc(doc(db, 'stores', store.id), { activeSpendNFCTokenId: deleteField() }).catch(console.error);
-        }
+        if (mode === 'nfc') clearNFCToken();
         setTimeout(() => {
           setJustScanned(false);
           setPhase('amount');
@@ -14827,26 +14822,36 @@ function VendorSpendQRDisplay({ store, onClose }: { store: StoreProfile; onClose
       }
     }, () => {});
     return unsub;
-  }, [tokenId, phase, store.id, isNFC]);
+  }, [tokenId, phase, mode, clearNFCToken]);
 
   const handleConfirmAmount = async () => {
     const parsed = parseFloat(amountInput);
     if (!parsed || parsed <= 0) return;
     setConfirmedAmount(parsed);
     setPhase('ready');
-    await generateToken(parsed);
+    await generateToken(parsed, mode);
   };
 
   const handleClose = () => {
-    clearNFCToken();
+    if (mode === 'nfc' && tokenId) clearNFCToken();
     onClose();
   };
 
   const handleChangeAmount = () => {
-    clearNFCToken();
+    if (mode === 'nfc' && tokenId) clearNFCToken();
     setPhase('amount');
     setTokenId(null);
     setAmountInput('');
+  };
+
+  const switchMode = (m: 'qr' | 'nfc') => {
+    if (m === mode) return;
+    if (mode === 'nfc' && tokenId) clearNFCToken();
+    setMode(m);
+    setPhase('amount');
+    setTokenId(null);
+    setAmountInput('');
+    setError(null);
   };
 
   const pointsRate = store.membershipPointsRate ?? 0;
@@ -14873,6 +14878,23 @@ function VendorSpendQRDisplay({ store, onClose }: { store: StoreProfile; onClose
               <p className="text-white/70 text-xs font-bold uppercase tracking-widest mb-1">Spend Points — {store.name}</p>
               <h2 className="text-white font-bold text-2xl">Enter transaction amount</h2>
               {pointsRate > 0 && <p className="text-white/60 text-xs mt-1">{pointsRate} pts per $1 spent</p>}
+            </div>
+            {/* QR / NFC selector */}
+            <div className="flex rounded-2xl overflow-hidden border border-white/30 w-full">
+              <button
+                onClick={() => switchMode('qr')}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-bold transition-all ${mode === 'qr' ? 'bg-white' : 'bg-white/10 text-white'}`}
+                style={mode === 'qr' ? { color } : {}}
+              >
+                <QrCode size={15} /> QR Code
+              </button>
+              <button
+                onClick={() => switchMode('nfc')}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-bold transition-all ${mode === 'nfc' ? 'bg-white' : 'bg-white/10 text-white'}`}
+                style={mode === 'nfc' ? { color } : {}}
+              >
+                <Nfc size={15} /> NFC
+              </button>
             </div>
             <div className="w-full">
               <div className="relative">
@@ -14904,12 +14926,12 @@ function VendorSpendQRDisplay({ store, onClose }: { store: StoreProfile; onClose
             >
               {generating
                 ? <><Loader2 size={16} className="animate-spin" /> Saving…</>
-                : isNFC
+                : mode === 'nfc'
                   ? <><Nfc size={16} /> Save for NFC Tap</>
                   : <><QrCode size={16} /> Generate QR</>}
             </button>
           </div>
-        ) : isNFC ? (
+        ) : mode === 'nfc' ? (
           /* NFC waiting screen */
           <div className="flex flex-col items-center gap-6 px-8">
             <div className="text-center">
@@ -14971,7 +14993,7 @@ function VendorSpendQRDisplay({ store, onClose }: { store: StoreProfile; onClose
               </div>
             )}
             <button
-              onClick={() => generateToken(confirmedAmount, true)}
+              onClick={() => generateToken(confirmedAmount, 'qr', true)}
               disabled={rotating || generating}
               className="flex items-center gap-2 px-5 py-2 rounded-2xl bg-white/15 text-white text-sm font-bold active:scale-95 transition-all disabled:opacity-40"
             >
