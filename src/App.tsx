@@ -18197,7 +18197,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
   const totalPointsBalance = spendCards.reduce((s, c) => s + (c.current_points || 0) + (c.membership_points || 0), 0);
   const totalPointsRedeemed = spendCards.reduce((s, c) => s + (c.total_points_redeemed || 0), 0);
   const spendActiveCards = spendCards.filter(c => !c.isArchived).length;
-  const totalSpend = spendTxns.reduce((s, tx) => s + (tx.transaction_amount || 0), 0);
+  const totalSpend = spendCards.filter(c => c.membership_type === 'spend').reduce((s, c) => s + (c.total_spent || 0), 0);
   const spendRewardsGiven = spendCards.reduce((s, c) => s + (c.earned_rewards || 0), 0);
 
   const visitMembers = new Set(visitCards.map(c => c.user_id)).size;
@@ -19757,20 +19757,21 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     <div className="space-y-6">
                   {/* Advanced spend metrics row */}
                   {(() => {
-                    const txAmounts = spendTxns.map(tx => tx.transaction_amount || 0).filter(a => a > 0);
+                    const realSpendTxns = spendTxns.filter(tx => (tx.transaction_amount || 0) > 0 && tx.type !== 'menu_redeem' && tx.type !== 'redemption');
+                    const txAmounts = realSpendTxns.map(tx => tx.transaction_amount as number);
                     const avgTx = txAmounts.length > 0 ? `\$${(txAmounts.reduce((s, a) => s + a, 0) / txAmounts.length).toFixed(2)}` : '—';
-                    const totalTx = spendTxns.length;
+                    const totalTx = realSpendTxns.length;
                     const redeemedPts = spendCards.reduce((s, c) => s + (c.total_points_redeemed || 0), 0);
                     const issuedPts = totalPointsIssued || 1;
                     const redeemedPct = issuedPts > 0 ? Math.round((redeemedPts / issuedPts) * 100) : 0;
                     const now = new Date();
                     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-                    const thisMonth = spendTxns
+                    const thisMonth = realSpendTxns
                       .filter(tx => {
                         const ms = (tx.issued_at ?? tx.completed_at)?.toMillis?.() ?? ((tx.issued_at ?? tx.completed_at)?.seconds ?? 0) * 1000;
                         return ms >= monthStart;
                       })
-                      .reduce((s, tx) => s + (tx.transaction_amount || 0), 0);
+                      .reduce((s, tx) => s + (tx.transaction_amount as number), 0);
                     return (
                       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-3">
                         <StatSquare icon={<DollarSign className="text-emerald-500" />} label="Avg Tx" value={avgTx} sub="per transaction" />
