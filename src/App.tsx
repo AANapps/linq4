@@ -29626,10 +29626,10 @@ function RollingDigit({ digit }: { digit: number }) {
   );
 }
 
-function RollingNumber({ value, className }: { value: number; className?: string }) {
+function RollingNumber({ value, className, style }: { value: number; className?: string; style?: React.CSSProperties }) {
   const str = String(Math.max(0, Math.round(value)));
   return (
-    <span className={cn('inline-flex items-end', className)}>
+    <span className={cn('inline-flex items-end', className)} style={style}>
       {str.split('').map((d, i) => (
         <RollingDigit key={`${str.length}-${i}`} digit={parseInt(d)} />
       ))}
@@ -29640,10 +29640,10 @@ function RollingNumber({ value, className }: { value: number; className?: string
 function DailyStatsTicker({ stats }: { stats: { stamps: number; points: number; visits: number; rewards: number } }) {
   const [idx, setIdx] = useState(0);
   const items = [
-    { label: 'Stamps given today', value: stats.stamps, emoji: '🎟️' },
-    { label: 'Points issued today', value: stats.points, emoji: '⭐' },
-    { label: 'Visits today',        value: stats.visits, emoji: '🏪' },
-    { label: 'Free items claimed',  value: stats.rewards, emoji: '🎁' },
+    { label: 'Stamps',  value: stats.stamps,  emoji: '🎟️' },
+    { label: 'Points',  value: stats.points,  emoji: '⭐' },
+    { label: 'Visits',  value: stats.visits,  emoji: '🏪' },
+    { label: 'Rewards', value: stats.rewards, emoji: '🎁' },
   ];
   useEffect(() => {
     const id = setInterval(() => setIdx(i => (i + 1) % items.length), 3200);
@@ -29651,13 +29651,10 @@ function DailyStatsTicker({ stats }: { stats: { stamps: number; points: number; 
   }, []);
   const cur = items[idx];
   return (
-    <div className="flex-1 rounded-[1.5rem] overflow-hidden relative" style={{ minHeight: 148, background: 'linear-gradient(135deg, #0F172A 0%, #1e3a5f 100%)' }}>
-      <span className="card-shine-ray" aria-hidden="true" />
-      {/* subtle grid lines */}
-      <svg className="absolute inset-0 w-full h-full opacity-[0.06] pointer-events-none" xmlns="http://www.w3.org/2000/svg">
-        <defs><pattern id="dsg" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="white" strokeWidth="0.5"/></pattern></defs>
-        <rect width="100%" height="100%" fill="url(#dsg)" />
-      </svg>
+    <div
+      className="flex-1 rounded-[1.5rem] overflow-hidden relative border border-white/30"
+      style={{ minHeight: 148, background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)' }}
+    >
       <div className="relative z-10 flex flex-col justify-between p-4" style={{ minHeight: 148 }}>
         <AnimatePresence mode="wait">
           <motion.div
@@ -29666,18 +29663,15 @@ function DailyStatsTicker({ stats }: { stats: { stamps: number; points: number; 
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-            className="flex-1"
+            className="flex-1 flex flex-col justify-center"
           >
-            <p className="text-white/50 text-[10px] font-bold uppercase tracking-widest mb-1">{cur.label}</p>
-            <div className="flex items-end gap-2">
-              <RollingNumber value={cur.value} className="text-[2.2rem] leading-none text-white" />
-              <span className="text-2xl mb-0.5">{cur.emoji}</span>
-            </div>
+            <RollingNumber value={cur.value} className="text-[2.4rem] leading-none" style={{ background: 'linear-gradient(135deg, #3B82F6, #8B5CF6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }} />
+            <p className="text-brand-navy/70 text-xs font-bold uppercase tracking-widest mt-2">{cur.label}</p>
           </motion.div>
         </AnimatePresence>
         <div className="flex gap-1 mt-3">
           {items.map((_, i) => (
-            <div key={i} className={cn('rounded-full transition-all', i === idx ? 'w-3 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/30')} />
+            <div key={i} className={cn('rounded-full transition-all', i === idx ? 'w-3 h-1.5 bg-brand-navy/50' : 'w-1.5 h-1.5 bg-brand-navy/20')} />
           ))}
         </div>
       </div>
