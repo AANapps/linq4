@@ -28700,6 +28700,9 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
   const [storeLocations, setStoreLocations] = useState<Array<{ id: string; label: string; line1: string; line2: string; town: string; state: string; postcode: string; lat?: number; lng?: number }>>([]);
   const [googleReviewUrl, setGoogleReviewUrl] = useState('');
   const [storeEmail, setStoreEmail] = useState('');
+  const [storePhone, setStorePhone] = useState('');
+  const [storeDescription, setStoreDescription] = useState('');
+  const [storeWebsite, setStoreWebsite] = useState('');
   const [visibility, setVisibility] = useState({ members: true, stamps: true, activeCards: true, returnRate: true, followers: true });
   const [privacyMode, setPrivacyMode] = useState(profile.privacyMode ?? false);
   const [saving, setSaving] = useState(false);
@@ -28709,7 +28712,8 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
     name: profile.name || '', gender: profile.gender || '', privacyMode: profile.privacyMode ?? false,
     storeName: '', storeReward: '', storeCategory: 'Food' as Category,
     storeTheme: '#2563EB', storeSecondaryColor: '#ffffff', storeLogo: '',
-    googleReviewUrl: '', storeEmail: '', visibility: '{}', storeLocations: '[]',
+    googleReviewUrl: '', storeEmail: '', storePhone: '', storeDescription: '', storeWebsite: '',
+    visibility: '{}', storeLocations: '[]',
   });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -28747,13 +28751,16 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
         setStoreLocations(initLocs);
         setGoogleReviewUrl(initGoogleReviewUrl);
         setStoreEmail(s.email || '');
+        setStorePhone(s.phone || '');
+        setStoreDescription(s.description || '');
+        setStoreWebsite((s as any).website || '');
         setVisibility(initVisibility);
         initialValuesRef.current = {
           ...initialValuesRef.current,
           storeName: initName, storeReward: initReward, storeCategory: initCategory,
           storeTheme: initTheme, storeSecondaryColor: initSecondaryColor, storeLogo: initLogo,
           googleReviewUrl: initGoogleReviewUrl,
-          storeEmail: s.email || '',
+          storeEmail: s.email || '', storePhone: s.phone || '', storeDescription: s.description || '', storeWebsite: (s as any).website || '',
           visibility: JSON.stringify(initVisibility),
           storeLocations: JSON.stringify(initLocs.map(l => ({ id: l.id, label: l.label, line1: l.line1, line2: l.line2, town: l.town, state: l.state, postcode: l.postcode }))),
         };
@@ -28776,6 +28783,9 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
       storeLogo !== initialValuesRef.current.storeLogo ||
       googleReviewUrl !== initialValuesRef.current.googleReviewUrl ||
       storeEmail !== initialValuesRef.current.storeEmail ||
+      storePhone !== initialValuesRef.current.storePhone ||
+      storeDescription !== initialValuesRef.current.storeDescription ||
+      storeWebsite !== initialValuesRef.current.storeWebsite ||
       JSON.stringify(visibility) !== initialValuesRef.current.visibility ||
       locationsKey !== initialValuesRef.current.storeLocations
     ));
@@ -28810,6 +28820,9 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
           locations: geocoded,
           googleReviewUrl: googleReviewUrl.trim(),
           email: storeEmail.trim(),
+          phone: storePhone.trim(),
+          description: storeDescription.trim(),
+          website: storeWebsite.trim(),
           visibilitySettings: visibility,
         });
       }
@@ -28818,7 +28831,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
         name, gender, privacyMode,
         storeName, storeReward, storeCategory, storeTheme, storeSecondaryColor, storeLogo,
         googleReviewUrl,
-        storeEmail,
+        storeEmail, storePhone, storeDescription, storeWebsite,
         visibility: JSON.stringify(visibility),
         storeLocations: locationsKey,
       };
@@ -29043,6 +29056,18 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
               )}
             </div>
 
+            {/* Description */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">About / Description</label>
+              <textarea
+                value={storeDescription}
+                onChange={e => setStoreDescription(e.target.value)}
+                placeholder="Tell customers about your business…"
+                rows={3}
+                className="w-full px-5 py-4 rounded-2xl bg-white border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30 resize-none"
+              />
+            </div>
+
             {/* Contact Email */}
             <div className="space-y-2">
               <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Contact Email</label>
@@ -29053,7 +29078,30 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
                 placeholder="hello@yourbusiness.com"
                 className="w-full px-5 py-4 rounded-2xl bg-white border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
               />
-              <p className="text-[10px] text-brand-navy/72 px-1">Shown on your public profile so customers can contact you.</p>
+            </div>
+
+            {/* Phone */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Phone Number</label>
+              <input
+                type="tel"
+                value={storePhone}
+                onChange={e => setStorePhone(e.target.value)}
+                placeholder="+44 7700 000000"
+                className="w-full px-5 py-4 rounded-2xl bg-white border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+              />
+            </div>
+
+            {/* Website */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Website</label>
+              <input
+                type="url"
+                value={storeWebsite}
+                onChange={e => setStoreWebsite(e.target.value)}
+                placeholder="https://yourbusiness.com"
+                className="w-full px-5 py-4 rounded-2xl bg-white border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+              />
             </div>
 
             {/* Google Review URL */}
