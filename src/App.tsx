@@ -1417,7 +1417,7 @@ export default function App() {
   const [scannedPhysicalCard, setScannedPhysicalCard] = useState<{ sticker: CollectibleSticker; alreadyClaimed: boolean } | null>(null);
   const [userCards, setUserCards] = useState<Card[]>([]);
   const [showSettings, setShowSettings] = useState(false);
-  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges' | 'stores' | 'users' | 'posts' | 'offers' | 'linqle' | 'daily-vote' | 'cards' | 'banners' | 'ui-colors' | 'announcements' | 'leaderboard' | 'fraud' | 'physical-cards'>(null);
+  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges' | 'stores' | 'users' | 'posts' | 'offers' | 'linqle' | 'daily-vote' | 'cards' | 'banners' | 'ui-colors' | 'announcements' | 'leaderboard' | 'fraud' | 'physical-cards' | 'stats'>(null);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -2394,7 +2394,11 @@ export default function App() {
             onOpenAnnouncements={() => setAdminView('announcements')}
             onOpenLeaderboard={() => setAdminView('leaderboard')}
             onOpenFraud={() => setAdminView('fraud')}
+            onOpenStats={() => setAdminView('stats')}
           />
+        )}
+        {adminView === 'stats' && (
+          <AdminStatsPanel onClose={() => setAdminView('menu')} />
         )}
         {adminView === 'fraud' && (
           <FraudDetectionPanel onClose={() => setAdminView('menu')} />
@@ -7147,7 +7151,67 @@ function PhysicalCardsAdminPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
-function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts, onOpenOffers, onOpenLinqle, onOpenDailyVote, onOpenCards, onOpenPhysicalCards, onOpenBanners, onOpenUiColors, onOpenAppEdit, onOpenAnnouncements, onOpenLeaderboard, onOpenFraud }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void; onOpenOffers: () => void; onOpenLinqle: () => void; onOpenDailyVote: () => void; onOpenCards: () => void; onOpenPhysicalCards: () => void; onOpenBanners: () => void; onOpenUiColors: () => void; onOpenAppEdit: () => void; onOpenAnnouncements: () => void; onOpenLeaderboard: () => void; onOpenFraud: () => void }) {
+function AdminStatsPanel({ onClose }: { onClose: () => void }) {
+  const [boost, setBoost] = useState({ stamps: 0, points: 0, visits: 0, rewards: 0 });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'app_config', 'daily_stats_boost'), snap => {
+      if (snap.exists()) {
+        const d = snap.data();
+        setBoost({ stamps: d.stamps || 0, points: d.points || 0, visits: d.visits || 0, rewards: d.rewards || 0 });
+      }
+    });
+    return unsub;
+  }, []);
+
+  const save = async () => {
+    setSaving(true);
+    await setDoc(doc(db, 'app_config', 'daily_stats_boost'), boost);
+    setSaving(false);
+  };
+
+  const fields: { key: keyof typeof boost; label: string; emoji: string }[] = [
+    { key: 'stamps',  label: 'Stamps',  emoji: '🎟️' },
+    { key: 'points',  label: 'Points',  emoji: '⭐' },
+    { key: 'visits',  label: 'Visits',  emoji: '🏪' },
+    { key: 'rewards', label: 'Rewards', emoji: '🎁' },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-black text-gray-900">Stats Ticker Boost</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+        </div>
+        <p className="text-xs text-gray-500">Add a boost to the displayed daily stats. These values are added on top of real transaction counts.</p>
+        <div className="flex flex-col gap-3">
+          {fields.map(({ key, label, emoji }) => (
+            <div key={key} className="flex items-center justify-between gap-3">
+              <span className="text-sm font-semibold text-gray-700 flex items-center gap-1">{emoji} {label}</span>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setBoost(b => ({ ...b, [key]: Math.max(0, b[key] - 1) }))}
+                  className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center font-bold text-gray-600">−</button>
+                <input type="number" min={0} value={boost[key]}
+                  onChange={e => setBoost(b => ({ ...b, [key]: Math.max(0, parseInt(e.target.value) || 0) }))}
+                  className="w-16 text-center border border-gray-200 rounded-lg py-1 text-sm font-bold text-indigo-700" />
+                <button onClick={() => setBoost(b => ({ ...b, [key]: b[key] + 1 }))}
+                  className="w-8 h-8 rounded-full bg-indigo-100 hover:bg-indigo-200 flex items-center justify-center font-bold text-indigo-600">+</button>
+              </div>
+            </div>
+          ))}
+        </div>
+        <button onClick={save} disabled={saving}
+          className="mt-2 w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm disabled:opacity-60">
+          {saving ? 'Saving…' : 'Save Boost'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts, onOpenOffers, onOpenLinqle, onOpenDailyVote, onOpenCards, onOpenPhysicalCards, onOpenBanners, onOpenUiColors, onOpenAppEdit, onOpenAnnouncements, onOpenLeaderboard, onOpenFraud, onOpenStats }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void; onOpenOffers: () => void; onOpenLinqle: () => void; onOpenDailyVote: () => void; onOpenCards: () => void; onOpenPhysicalCards: () => void; onOpenBanners: () => void; onOpenUiColors: () => void; onOpenAppEdit: () => void; onOpenAnnouncements: () => void; onOpenLeaderboard: () => void; onOpenFraud: () => void; onOpenStats: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -7388,6 +7452,20 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores,
             <div>
               <p className="font-bold text-brand-navy text-sm">Fraud Signals</p>
               <p className="text-[11px] text-brand-navy/75 mt-0.5">Far-away & rapid scan alerts</p>
+            </div>
+          </motion.button>
+
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={onOpenStats}
+            className="rounded-[2rem] bg-white border border-black/5 shadow-sm p-6 flex flex-col items-start gap-3 text-left active:bg-brand-navy/5 transition-colors"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center">
+              <BarChart2 size={22} className="text-indigo-500" />
+            </div>
+            <div>
+              <p className="font-bold text-brand-navy text-sm">Stats Ticker</p>
+              <p className="text-[11px] text-brand-navy/75 mt-0.5">Boost displayed daily stats</p>
             </div>
           </motion.button>
 
@@ -31628,6 +31706,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
   const [adminBanners, setAdminBanners] = useState<AdminBanner[]>([]);
   const [bannerCycleMs, setBannerCycleMs] = useState(4500);
   const [dailyStats, setDailyStats] = useState({ stamps: 0, points: 0, visits: 0, rewards: 0 });
+  const [statsBoost, setStatsBoost] = useState({ stamps: 0, points: 0, visits: 0, rewards: 0 });
   const lastDocRef = useRef<any>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -31785,7 +31864,18 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
         }));
       }, () => {}
     );
-    return () => { unsub1(); unsub2(); };
+    const unsub3 = onSnapshot(doc(db, 'app_config', 'daily_stats_boost'), snap => {
+      if (snap.exists()) {
+        const d = snap.data();
+        setStatsBoost({
+          stamps: d.stamps || 0,
+          points: d.points || 0,
+          visits: d.visits || 0,
+          rewards: d.rewards || 0,
+        });
+      }
+    }, () => {});
+    return () => { unsub1(); unsub2(); unsub3(); };
   }, []);
 
   // Pre-fetch leaderboard data on mount so it's ready instantly when opened
@@ -32158,7 +32248,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
 
           {/* Daily stats ticker + Leaderboard button — side by side */}
           <div className="flex gap-3 items-stretch">
-              <DailyStatsTicker stats={dailyStats} />
+              <DailyStatsTicker stats={{ stamps: dailyStats.stamps + statsBoost.stamps, points: dailyStats.points + statsBoost.points, visits: dailyStats.visits + statsBoost.visits, rewards: dailyStats.rewards + statsBoost.rewards }} />
 
               {/* Leaderboard square button */}
               <button
