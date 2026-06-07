@@ -50,8 +50,7 @@ import {
   startAfter,
   Timestamp,
   runTransaction,
-  writeBatch,
-  deleteField
+  writeBatch
 } from 'firebase/firestore';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { getFunctions, httpsCallable } from 'firebase/functions';
@@ -226,8 +225,6 @@ import {
   Crown,
   Wifi,
   Smartphone,
-  Nfc,
-  SmartphoneNfc,
   Tag,
   Package,
   Pencil,
@@ -743,7 +740,6 @@ interface StoreProfile {
   membershipStampsPerVisit?: number;
   membershipMenuItems?: { id: string; name: string; points: number; value?: number; description?: string }[];
   scanMethod?: 'nfc' | 'qr';
-  activeSpendNFCTokenId?: string;
   businessRules?: string;
   charityAnimalImageUrl?: string;
   charityTreeImageUrl?: string;
@@ -13667,84 +13663,6 @@ async function processNFCStamp(storeId: string, user: FirebaseUser, profile: Use
       return [];
     }
 
-    // Spend membership store via NFC
-    if (store.membershipEnabled && store.membershipType === 'spend') {
-      onStatus('processing', 'Claiming spend...');
-      const tokenId = store.activeSpendNFCTokenId as string | undefined;
-      if (!tokenId) {
-        onStatus('error', 'No transaction ready — ask the vendor to enter an amount first.');
-        return [];
-      }
-      let amount = 0;
-      await runTransaction(db, async tx => {
-        const tokenRef = doc(db, 'qr_tokens', tokenId);
-        const tokenSnap = await tx.get(tokenRef);
-        if (!tokenSnap.exists()) throw new Error('Transaction expired — ask vendor to set a new amount.');
-        const data = tokenSnap.data();
-        if (data.storeId !== store.id) throw new Error('Token mismatch — please try again.');
-        if (data.type !== 'spend') throw new Error('Wrong token type.');
-        const createdMs = typeof data.createdAt === 'number' ? data.createdAt : (data.createdAt?.toMillis?.() ?? null);
-        if (createdMs !== null && Date.now() - createdMs > 300_000) throw new Error('Transaction expired — ask vendor to set a new amount.');
-        const claimedBy: string[] = data.claimedBy || [];
-        if (claimedBy.includes(user.uid)) throw new Error("You've already claimed this transaction.");
-        if (claimedBy.length > 0) throw new Error('This transaction has already been claimed by someone else.');
-        amount = data.amount as number;
-        tx.update(tokenRef, { claimedBy: arrayUnion(user.uid) });
-      });
-
-      const pointsRate = store.membershipPointsRate ?? 0;
-      const pts = Math.round(amount * pointsRate);
-      const threshold = store.membershipSpendThreshold || 0;
-      const cardId = `${user.uid}_${store.id}_membership`;
-      const cardRef = doc(db, 'cards', cardId);
-      const cardSnap = await getDoc(cardRef);
-      const prevSpent = (cardSnap.data()?.total_spent as number) ?? 0;
-      const newSpent = prevSpent + amount;
-      const newRewards = threshold > 0 ? Math.floor(newSpent / threshold) : 0;
-
-      if (cardSnap.exists()) {
-        await updateDoc(cardRef, {
-          total_spent: increment(amount),
-          earned_rewards: newRewards,
-          membership_points: increment(pts),
-          total_points_earned: increment(pts),
-          last_transaction_at: serverTimestamp(),
-        });
-      } else {
-        await setDoc(cardRef, {
-          user_id: user.uid,
-          store_id: store.id,
-          card_type: 'membership',
-          membership_type: 'spend',
-          total_spent: amount,
-          earned_rewards: newRewards,
-          membership_points: pts,
-          total_points_earned: pts,
-          isArchived: false,
-          last_transaction_at: serverTimestamp(),
-        });
-        await updateDoc(doc(db, 'users', user.uid), { total_cards_held: increment(1) });
-      }
-
-      await addDoc(collection(db, 'transactions'), {
-        user_id: user.uid,
-        store_id: store.id,
-        card_type: 'membership',
-        membership_type: 'spend',
-        transaction_amount: amount,
-        points_earned: pts,
-        rewards_earned: newRewards - Math.floor(prevSpent / (threshold || 1)),
-        issued_at: serverTimestamp(),
-        method: 'nfc_spend',
-      });
-
-      await updateDoc(doc(db, 'users', user.uid), { totalStamps: increment(1), lastStampAt: serverTimestamp() });
-      updateChallengeProgress(user.uid, store.id, 1).catch(console.error);
-      haptic([40]); playSound('points');
-      onStatus('success', `+${pts} pts for $${amount.toFixed(2)} at ${store.name}!`);
-      return [];
-    }
-
     const limit = store.stamps_required_for_reward || 10;
     const cardId = `${user.uid}_${store.id}`;
     const cardRef = doc(db, 'cards', cardId);
@@ -14742,21 +14660,8 @@ function VendorQRDisplay({ store, onClose }: { store: StoreProfile; onClose: () 
   );
 }
 
-// ── Spend QR token helpers ──────────────────────────────────────────────────
+// ── Consumer-side spend QR scanner ──────────────────────────────────────────
 
-async function createSpendQRToken(storeId: string, amount: number): Promise<string> {
-  const tokenId = genToken();
-  await setDoc(doc(db, 'qr_tokens', tokenId), {
-    type: 'spend',
-    storeId,
-    amount,
-    createdAt: Date.now(),
-    claimedBy: [],
-  });
-  return tokenId;
-}
-
-const encodeSpendQR = (storeId: string, tokenId: string) => `linq4:spend:${storeId}:${tokenId}`;
 const decodeSpendQR = (val: string): { storeId: string; tokenId: string } | null => {
   if (!val.startsWith('linq4:spend:')) return null;
   const rest = val.slice('linq4:spend:'.length);
@@ -14765,252 +14670,6 @@ const decodeSpendQR = (val: string): { storeId: string; tokenId: string } | null
   return { storeId: rest.slice(0, sep), tokenId: rest.slice(sep + 1) };
 };
 
-// ── Vendor-side spend QR display ────────────────────────────────────────────
-
-function VendorSpendQRDisplay({ store, onClose }: { store: StoreProfile; onClose: () => void }) {
-  const [mode, setMode] = React.useState<'qr' | 'nfc'>('qr');
-  const [phase, setPhase] = React.useState<'amount' | 'ready'>('amount');
-  const [amountInput, setAmountInput] = React.useState('');
-  const [confirmedAmount, setConfirmedAmount] = React.useState(0);
-  const [tokenId, setTokenId] = React.useState<string | null>(null);
-  const [rotating, setRotating] = React.useState(false);
-  const [justScanned, setJustScanned] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-  const [generating, setGenerating] = React.useState(false);
-  const color = store.membershipColor || '#0f4c81';
-  const rotatingRef = React.useRef(false);
-
-  const clearNFCToken = React.useCallback(() => {
-    updateDoc(doc(db, 'stores', store.id), { activeSpendNFCTokenId: deleteField() }).catch(console.error);
-  }, [store.id]);
-
-  const generateToken = React.useCallback(async (amount: number, currentMode: 'qr' | 'nfc', silent = false) => {
-    if (rotatingRef.current) return;
-    rotatingRef.current = true;
-    if (!silent) setGenerating(true); else setRotating(true);
-    setError(null);
-    try {
-      const id = await createSpendQRToken(store.id, amount);
-      if (currentMode === 'nfc') {
-        await updateDoc(doc(db, 'stores', store.id), { activeSpendNFCTokenId: id });
-      }
-      setTokenId(id);
-    } catch (e: any) {
-      setError(`Failed — ${e?.code ?? e?.message ?? 'check connection'}`);
-    } finally {
-      rotatingRef.current = false;
-      setGenerating(false);
-      setRotating(false);
-    }
-  }, [store.id]);
-
-  // Watch for claims
-  React.useEffect(() => {
-    if (!tokenId || phase !== 'ready') return;
-    const unsub = onSnapshot(doc(db, 'qr_tokens', tokenId), (snap) => {
-      if (!snap.exists()) return;
-      const claimed: string[] = snap.data().claimedBy ?? [];
-      if (claimed.length > 0) {
-        setJustScanned(true);
-        if (mode === 'nfc') clearNFCToken();
-        setTimeout(() => {
-          setJustScanned(false);
-          setPhase('amount');
-          setAmountInput('');
-          setTokenId(null);
-        }, 2000);
-      }
-    }, () => {});
-    return unsub;
-  }, [tokenId, phase, mode, clearNFCToken]);
-
-  const handleConfirmAmount = async () => {
-    const parsed = parseFloat(amountInput);
-    if (!parsed || parsed <= 0) return;
-    setConfirmedAmount(parsed);
-    setPhase('ready');
-    await generateToken(parsed, mode);
-  };
-
-  const handleClose = () => {
-    if (mode === 'nfc' && tokenId) clearNFCToken();
-    onClose();
-  };
-
-  const handleChangeAmount = () => {
-    if (mode === 'nfc' && tokenId) clearNFCToken();
-    setPhase('amount');
-    setTokenId(null);
-    setAmountInput('');
-  };
-
-  const switchMode = (m: 'qr' | 'nfc') => {
-    if (m === mode) return;
-    if (mode === 'nfc' && tokenId) clearNFCToken();
-    setMode(m);
-    setPhase('amount');
-    setTokenId(null);
-    setAmountInput('');
-    setError(null);
-  };
-
-  const pointsRate = store.membershipPointsRate ?? 0;
-  const pts = Math.round(confirmedAmount * pointsRate);
-
-  return createPortal(
-    <AnimatePresence>
-      <motion.div
-        key="vendor-spend-qr"
-        initial={{ opacity: 0, y: '100%' }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: '100%' }}
-        transition={{ type: 'spring', damping: 38, stiffness: 520 }}
-        className="fixed inset-0 z-[200] flex flex-col items-center justify-center"
-        style={{ background: color }}
-      >
-        <button onClick={handleClose} className="absolute right-5 p-2 bg-white/20 rounded-full" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 3rem)' }}>
-          <X size={20} className="text-white" />
-        </button>
-
-        {phase === 'amount' ? (
-          <div className="flex flex-col items-center gap-6 px-8 w-full max-w-xs">
-            <div className="text-center">
-              <p className="text-white/70 text-xs font-bold uppercase tracking-widest mb-1">Spend Points — {store.name}</p>
-              <h2 className="text-white font-bold text-2xl">Enter transaction amount</h2>
-              {pointsRate > 0 && <p className="text-white/60 text-xs mt-1">{pointsRate} pts per $1 spent</p>}
-            </div>
-            {/* QR / NFC selector */}
-            <div className="flex rounded-2xl overflow-hidden border border-white/30 w-full">
-              <button
-                onClick={() => switchMode('qr')}
-                className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-bold transition-all ${mode === 'qr' ? 'bg-white' : 'bg-white/10 text-white'}`}
-                style={mode === 'qr' ? { color } : {}}
-              >
-                <QrCode size={15} /> QR Code
-              </button>
-              <button
-                onClick={() => switchMode('nfc')}
-                className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-bold transition-all ${mode === 'nfc' ? 'bg-white' : 'bg-white/10 text-white'}`}
-                style={mode === 'nfc' ? { color } : {}}
-              >
-                <Nfc size={15} /> NFC
-              </button>
-            </div>
-            <div className="w-full">
-              <div className="relative">
-                <span className="absolute left-5 top-1/2 -translate-y-1/2 text-2xl font-black text-white/60">$</span>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  min="0.01"
-                  step="0.01"
-                  value={amountInput}
-                  onChange={e => setAmountInput(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') handleConfirmAmount(); }}
-                  placeholder="0.00"
-                  autoFocus
-                  className="w-full pl-10 pr-5 py-5 rounded-2xl bg-white/20 text-white font-black text-3xl text-center placeholder:text-white/30 outline-none border-2 border-white/30 focus:border-white/70"
-                />
-              </div>
-              {amountInput && parseFloat(amountInput) > 0 && pointsRate > 0 && (
-                <p className="text-white/70 text-center text-sm font-bold mt-2">
-                  = {Math.round(parseFloat(amountInput) * pointsRate)} pts
-                </p>
-              )}
-            </div>
-            <button
-              onClick={handleConfirmAmount}
-              disabled={!amountInput || parseFloat(amountInput) <= 0 || generating}
-              className="w-full py-4 rounded-2xl bg-white font-bold text-sm disabled:opacity-40 flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
-              style={{ color }}
-            >
-              {generating
-                ? <><Loader2 size={16} className="animate-spin" /> Saving…</>
-                : mode === 'nfc'
-                  ? <><Nfc size={16} /> Save for NFC Tap</>
-                  : <><QrCode size={16} /> Generate QR</>}
-            </button>
-          </div>
-        ) : mode === 'nfc' ? (
-          /* NFC waiting screen */
-          <div className="flex flex-col items-center gap-6 px-8">
-            <div className="text-center">
-              <p className="text-white/70 text-xs font-bold uppercase tracking-widest mb-1">NFC — {store.name}</p>
-              <h2 className="text-white font-bold text-2xl">${confirmedAmount.toFixed(2)}</h2>
-              {pts > 0 && <p className="text-white/70 text-sm mt-0.5">+{pts} pts to customer</p>}
-            </div>
-            <div className="flex flex-col items-center justify-center" style={{ width: 230, height: 230 }}>
-              {justScanned ? (
-                <div className="flex flex-col items-center gap-3">
-                  <CheckCircle2 size={64} className="text-emerald-300" />
-                  <p className="text-emerald-300 font-bold text-lg">Points issued!</p>
-                </div>
-              ) : (generating || !tokenId) ? (
-                <Loader2 size={48} className="animate-spin text-white/50" />
-              ) : (
-                <div className="flex flex-col items-center gap-4">
-                  <div className="relative flex items-center justify-center">
-                    <div className="absolute w-40 h-40 rounded-full bg-white/10 animate-ping" style={{ animationDuration: '2s' }} />
-                    <div className="absolute w-28 h-28 rounded-full bg-white/15 animate-ping" style={{ animationDuration: '2s', animationDelay: '0.5s' }} />
-                    <SmartphoneNfc size={64} className="text-white relative z-10" />
-                  </div>
-                  <p className="text-white font-bold text-base mt-2">Ask customer to tap NFC</p>
-                </div>
-              )}
-            </div>
-            {!justScanned && !generating && tokenId && (
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-white/60 animate-pulse" />
-                <p className="text-white/60 text-xs font-bold">Waiting for tap…</p>
-              </div>
-            )}
-            {error && <p className="text-red-300 text-xs text-center">{error}</p>}
-            {!justScanned && (
-              <button onClick={handleChangeAmount} className="text-white/60 text-xs font-bold">Change amount</button>
-            )}
-          </div>
-        ) : (
-          /* QR screen */
-          <div className="flex flex-col items-center gap-6 px-8">
-            <div className="text-center">
-              <p className="text-white/70 text-xs font-bold uppercase tracking-widest mb-1">Ask customer to scan</p>
-              <h2 className="text-white font-bold text-2xl">${confirmedAmount.toFixed(2)}</h2>
-              {pts > 0 && <p className="text-white/70 text-sm mt-0.5">+{pts} pts to customer</p>}
-            </div>
-            <div className="bg-white rounded-3xl p-5 shadow-2xl flex items-center justify-center" style={{ width: 230, height: 230 }}>
-              {error
-                ? <p className="text-xs text-red-500 text-center px-2">{error}</p>
-                : (rotating || generating || !tokenId)
-                  ? <Loader2 size={32} className="animate-spin text-brand-navy/30" />
-                  : <QRCodeSVG key={tokenId} value={encodeSpendQR(store.id, tokenId)} size={200} />}
-            </div>
-            {!error && (
-              <div className="flex items-center gap-2">
-                {justScanned
-                  ? <><CheckCircle2 size={14} className="text-emerald-300" /><p className="text-emerald-300 text-xs font-bold">Scanned! Refreshing…</p></>
-                  : <><div className="w-2 h-2 rounded-full bg-white/60 animate-pulse" /><p className="text-white/60 text-xs font-bold">Ready to scan</p></>
-                }
-              </div>
-            )}
-            <button
-              onClick={() => generateToken(confirmedAmount, 'qr', true)}
-              disabled={rotating || generating}
-              className="flex items-center gap-2 px-5 py-2 rounded-2xl bg-white/15 text-white text-sm font-bold active:scale-95 transition-all disabled:opacity-40"
-            >
-              <RefreshCw size={14} className={(rotating || generating) ? 'animate-spin' : ''} />
-              Refresh
-            </button>
-            {error && (
-              <p className="text-red-300 text-xs text-center">{error}</p>
-            )}
-            <button onClick={handleChangeAmount} className="text-white/60 text-xs font-bold">Change amount</button>
-          </div>
-        )}
-      </motion.div>
-    </AnimatePresence>,
-    document.body
-  );
-}
 
 // ── Consumer-side spend QR scanner ──────────────────────────────────────────
 
@@ -18038,7 +17697,6 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
   useEffect(() => { vendorSeenAnnouncementIdsRef.current = profile?.seenAnnouncementIds ?? []; }, [profile?.seenAnnouncementIds]);
   const [showNFCOrder, setShowNFCOrder] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
-  const [showSpendQRDisplay, setShowSpendQRDisplay] = useState(false);
   const [togglingCard, setTogglingCard] = useState(false);
 
   const cardIsActive = !!(store?.cardEnabled === true || store?.membershipEnabled);
@@ -20699,15 +20357,15 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
               </button>
               {store?.membershipEnabled && store.membershipType === 'spend' && (
                 <button
-                  onClick={() => setShowSpendQRDisplay(true)}
+                  onClick={() => setVendorIssueMode('scan-user')}
                   className="glass-card rounded-[2rem] p-6 flex flex-col items-center gap-4 active:scale-95 transition-transform text-center col-span-2"
                 >
                   <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(135deg, #1D4ED8, #3B82F6)' }}>
-                    <QrCode size={28} className="text-white" />
+                    <DollarSign size={28} className="text-white" />
                   </div>
                   <div>
                     <p className="font-bold text-brand-navy">Issue Spend Points</p>
-                    <p className="text-xs text-brand-navy/80 mt-0.5">Enter amount → show QR → customer scans</p>
+                    <p className="text-xs text-brand-navy/80 mt-0.5">Scan customer QR or enter handle + amount</p>
                   </div>
                 </button>
               )}
@@ -20803,19 +20461,10 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
         )}
       </AnimatePresence>
 
-      {/* QR Display — vendor shows this, customer scans it */}
+      {/* QR Display — vendor shows this for stamp/visit cards */}
       <AnimatePresence>
         {showQRScanner && store && (
-          store.membershipEnabled && store.membershipType === 'spend'
-            ? <VendorSpendQRDisplay store={store} onClose={() => setShowQRScanner(false)} />
-            : <VendorQRDisplay store={store} onClose={() => setShowQRScanner(false)} />
-        )}
-      </AnimatePresence>
-
-      {/* Spend QR Display — vendor enters amount, customer scans */}
-      <AnimatePresence>
-        {showSpendQRDisplay && store && (
-          <VendorSpendQRDisplay store={store} onClose={() => setShowSpendQRDisplay(false)} />
+          <VendorQRDisplay store={store} onClose={() => setShowQRScanner(false)} />
         )}
       </AnimatePresence>
 
