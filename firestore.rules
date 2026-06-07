@@ -203,7 +203,7 @@ service cloud.firestore {
     }
 
     match /blocks/{blockId} {
-      allow read: if isAuthenticated() && (resource.data.blockerUid == request.auth.uid || resource.data.blockedUid == request.auth.uid);
+      allow read: if isAuthenticated() && (resource == null || resource.data.blockerUid == request.auth.uid || resource.data.blockedUid == request.auth.uid);
       allow create: if isAuthenticated() && request.resource.data.blockerUid == request.auth.uid;
       allow delete: if isAuthenticated() && resource.data.blockerUid == request.auth.uid;
     }

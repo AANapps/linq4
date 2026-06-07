@@ -32651,6 +32651,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
   const [activeChatBusinessInfo, setActiveChatBusinessInfo] = useState<{ businessName: string; businessLogoUrl: string } | null>(null);
   const [activeBroadcastChat, setActiveBroadcastChat] = useState<{ storeName: string; storeLogoUrl: string; storeId?: string; broadcastId?: string } | null>(null);
   const [selectedMsgId, setSelectedMsgId] = useState<string | null>(null);
+  const [showChatMenu, setShowChatMenu] = useState(false);
   const [showCustomerPicker, setShowCustomerPicker] = useState(false);
   const [showNewChatPicker, setShowNewChatPicker] = useState(false);
   const [storeCustomers, setStoreCustomers] = useState<UserProfile[]>([]);
@@ -33003,12 +33004,38 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
               <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest">{activeChatBusinessInfo ? 'Business' : 'Online'}</p>
             </div>
           </div>
-          <button className="p-2 text-brand-navy/75">
-            <MoreVertical size={20} />
-          </button>
+          <div className="relative">
+            <button onClick={() => setShowChatMenu(v => !v)} className="p-2 text-brand-navy/75">
+              <MoreVertical size={20} />
+            </button>
+            {showChatMenu && chatPartner && (
+              <div className="absolute right-0 top-10 bg-white rounded-2xl shadow-xl border border-brand-navy/8 z-50 min-w-[140px] overflow-hidden">
+                <button
+                  onClick={async () => {
+                    setShowChatMenu(false);
+                    const blockId = `${currentUser.uid}_${chatPartner.uid}`;
+                    const isCurrentlyBlocked = blockedUids.has(chatPartner.uid);
+                    if (isCurrentlyBlocked) {
+                      await deleteDoc(doc(db, 'blocks', blockId)).catch(console.error);
+                    } else {
+                      await setDoc(doc(db, 'blocks', blockId), {
+                        blockerUid: currentUser.uid,
+                        blockedUid: chatPartner.uid,
+                        createdAt: serverTimestamp()
+                      }).catch(console.error);
+                    }
+                  }}
+                  className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold text-red-500 hover:bg-red-50 transition-colors text-left"
+                >
+                  <ShieldAlert size={15} />
+                  {blockedUids.has(chatPartner.uid) ? 'Unblock' : 'Block'}
+                </button>
+              </div>
+            )}
+          </div>
         </header>
 
-        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto py-4 space-y-2" onClick={() => setSelectedMsgId(null)}>
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto py-4 space-y-2" onClick={() => { setSelectedMsgId(null); setShowChatMenu(false); }}>
           {msgHasMore && (
             <div className="flex justify-center py-2">
               <button
@@ -35568,6 +35595,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
   const [pubExpandedSticker, setPubExpandedSticker] = useState<CollectibleSticker | null>(null);
   const [pubCardDefs, setPubCardDefs] = useState<CollectibleCardDef[]>([]);
   const [isBlocked, setIsBlocked] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<'posts' | 'stickers' | 'badges' | 'interactions'>('stickers');
   const [pubLikedPosts, setPubLikedPosts] = useState<GlobalPost[]>([]);
   const [pubVotedPolls, setPubVotedPolls] = useState<GlobalPost[]>([]);
@@ -35896,7 +35924,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
           Back
         </button>
         {currentUser && currentUser.uid !== targetUser.uid && (
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
             {!isBlocked && (
               <button
                 onClick={handleFollowClick}
@@ -35917,16 +35945,25 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
                 Message
               </button>
             )}
-            <button
-              onClick={handleBlockClick}
-              className={cn(
-                "glass-card flex items-center gap-1.5 px-3 py-2 rounded-2xl font-bold text-sm transition-all active:scale-95 shadow-lg",
-                isBlocked ? "text-red-500" : "text-brand-navy/40"
+            <div className="relative">
+              <button
+                onClick={() => setShowProfileMenu(v => !v)}
+                className="glass-card p-2 rounded-2xl text-brand-navy/50 active:scale-95 transition-all shadow-lg"
+              >
+                <MoreVertical size={18} />
+              </button>
+              {showProfileMenu && (
+                <div className="absolute right-0 top-10 bg-white rounded-2xl shadow-xl border border-brand-navy/8 z-50 min-w-[140px] overflow-hidden">
+                  <button
+                    onClick={() => { setShowProfileMenu(false); handleBlockClick(); }}
+                    className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold text-red-500 hover:bg-red-50 transition-colors text-left"
+                  >
+                    <ShieldAlert size={15} />
+                    {isBlocked ? 'Unblock' : 'Block'}
+                  </button>
+                </div>
               )}
-            >
-              <ShieldAlert size={15} />
-              {isBlocked ? 'Unblock' : 'Block'}
-            </button>
+            </div>
           </div>
         )}
       </div>
