@@ -2268,8 +2268,8 @@ export default function App() {
                 onClick={() => setShowVendorQR(true)}
                 className="w-full py-3 rounded-2xl gradient-logo-blue text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md active:scale-[0.98] transition-transform"
               >
-                <QrCode size={18} />
-                Scan QR Code
+                <DollarSign size={18} />
+                Issue Points
               </button>
             </div>
           )}
