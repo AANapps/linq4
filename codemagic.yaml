@@ -21,9 +21,6 @@ workflows:
         script: npm run build
       - name: Capacitor sync iOS
         script: npx cap sync ios
-      - name: Set build number
-        script: |
-          agvtool new-version -all $BUILD_NUMBER
       - name: Build & sign iOS
         script: |
           xcode-project use-profiles
