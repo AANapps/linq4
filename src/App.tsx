@@ -29607,13 +29607,11 @@ function PollVotedFillDots() {
 
 function ActivityTicker({ posts }: { posts: GlobalPost[] }) {
   const [idx, setIdx] = useState(0);
-  const [key, setKey] = useState(0);
 
   useEffect(() => {
     if (posts.length <= 1) return;
     const id = setInterval(() => {
       setIdx(i => (i + 1) % posts.length);
-      setKey(k => k + 1);
     }, 3500);
     return () => clearInterval(id);
   }, [posts.length]);
@@ -29629,7 +29627,7 @@ function ActivityTicker({ posts }: { posts: GlobalPost[] }) {
     <div className="py-2 -mx-6 px-3">
       <AnimatePresence mode="wait">
         <motion.div
-          key={key}
+          key={idx}
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -14 }}
