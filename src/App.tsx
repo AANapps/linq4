@@ -29605,6 +29605,86 @@ function PollVotedFillDots() {
   );
 }
 
+function RollingDigit({ digit }: { digit: number }) {
+  const h = 36;
+  return (
+    <span className="inline-block overflow-hidden relative" style={{ height: h, width: '0.58em' }}>
+      <motion.span
+        className="flex flex-col"
+        animate={{ y: -digit * h }}
+        initial={{ y: 0 }}
+        transition={{ type: 'spring', stiffness: 90, damping: 14 }}
+        style={{ willChange: 'transform' }}
+      >
+        {[0,1,2,3,4,5,6,7,8,9].map(d => (
+          <span key={d} className="flex items-center justify-center font-black" style={{ height: h }}>
+            {d}
+          </span>
+        ))}
+      </motion.span>
+    </span>
+  );
+}
+
+function RollingNumber({ value, className }: { value: number; className?: string }) {
+  const str = String(Math.max(0, Math.round(value)));
+  return (
+    <span className={cn('inline-flex items-end', className)}>
+      {str.split('').map((d, i) => (
+        <RollingDigit key={`${str.length}-${i}`} digit={parseInt(d)} />
+      ))}
+    </span>
+  );
+}
+
+function DailyStatsTicker({ stats }: { stats: { stamps: number; points: number; visits: number; rewards: number } }) {
+  const [idx, setIdx] = useState(0);
+  const items = [
+    { label: 'Stamps given today', value: stats.stamps, emoji: '🎟️' },
+    { label: 'Points issued today', value: stats.points, emoji: '⭐' },
+    { label: 'Visits today',        value: stats.visits, emoji: '🏪' },
+    { label: 'Free items claimed',  value: stats.rewards, emoji: '🎁' },
+  ];
+  useEffect(() => {
+    const id = setInterval(() => setIdx(i => (i + 1) % items.length), 3200);
+    return () => clearInterval(id);
+  }, []);
+  const cur = items[idx];
+  return (
+    <div className="flex-1 rounded-[1.5rem] overflow-hidden relative" style={{ minHeight: 148, background: 'linear-gradient(135deg, #0F172A 0%, #1e3a5f 100%)' }}>
+      <span className="card-shine-ray" aria-hidden="true" />
+      {/* subtle grid lines */}
+      <svg className="absolute inset-0 w-full h-full opacity-[0.06] pointer-events-none" xmlns="http://www.w3.org/2000/svg">
+        <defs><pattern id="dsg" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="white" strokeWidth="0.5"/></pattern></defs>
+        <rect width="100%" height="100%" fill="url(#dsg)" />
+      </svg>
+      <div className="relative z-10 flex flex-col justify-between p-4" style={{ minHeight: 148 }}>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={idx}
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            className="flex-1"
+          >
+            <p className="text-white/50 text-[10px] font-bold uppercase tracking-widest mb-1">{cur.label}</p>
+            <div className="flex items-end gap-2">
+              <RollingNumber value={cur.value} className="text-[2.2rem] leading-none text-white" />
+              <span className="text-2xl mb-0.5">{cur.emoji}</span>
+            </div>
+          </motion.div>
+        </AnimatePresence>
+        <div className="flex gap-1 mt-3">
+          {items.map((_, i) => (
+            <div key={i} className={cn('rounded-full transition-all', i === idx ? 'w-3 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/30')} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ActivityTicker({ posts }: { posts: GlobalPost[] }) {
   const [idx, setIdx] = useState(0);
 
@@ -31548,6 +31628,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
   const [challengeIdx, setChallengeIdx] = useState(0);
   const [adminBanners, setAdminBanners] = useState<AdminBanner[]>([]);
   const [bannerCycleMs, setBannerCycleMs] = useState(4500);
+  const [dailyStats, setDailyStats] = useState({ stamps: 0, points: 0, visits: 0, rewards: 0 });
   const lastDocRef = useRef<any>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -31678,6 +31759,35 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
     const t = setInterval(() => setCompletedIdx(i => (i + 1) % feedCompletedChallenges.length), 2800);
     return () => clearInterval(t);
   }, [feedCompletedChallenges.length]);
+
+  // Daily stats for ticker
+  useEffect(() => {
+    const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+    const start = Timestamp.fromDate(startOfToday);
+    const unsub1 = onSnapshot(
+      query(collection(db, 'transactions'), where('issued_at', '>=', start)),
+      snap => {
+        const docs = snap.docs.map(d => d.data());
+        setDailyStats(prev => ({
+          ...prev,
+          points: docs.reduce((s, d) => s + (d.points_earned || d.points_issued || 0), 0),
+          visits: docs.filter(d => d.membership_type === 'visit').length,
+        }));
+      }, () => {}
+    );
+    const unsub2 = onSnapshot(
+      query(collection(db, 'transactions'), where('completed_at', '>=', start)),
+      snap => {
+        const docs = snap.docs.map(d => d.data());
+        setDailyStats(prev => ({
+          ...prev,
+          stamps: docs.reduce((s, d) => s + (d.stamp_count || 0), 0),
+          rewards: docs.filter(d => d.stamps_at_completion != null).length,
+        }));
+      }, () => {}
+    );
+    return () => { unsub1(); unsub2(); };
+  }, []);
 
   // Pre-fetch leaderboard data on mount so it's ready instantly when opened
   useEffect(() => {
@@ -32047,67 +32157,9 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
             />
           )}
 
-          {/* Challenges card + Leaderboard button — side by side */}
-          {(visibleFeedChallenges.length > 0 || visibleFeedCompletedChallenges.length > 0 || true) && (
-            <div className="flex gap-3 items-stretch">
-
-              {/* Cycling challenges card */}
-              {visibleFeedChallenges.length > 0 && (() => {
-                const list = visibleFeedChallenges;
-                const idx = challengeIdx;
-                const current = list[idx % Math.max(list.length, 1)];
-                return (
-                  <div
-                    className="flex-1 relative rounded-[1.5rem] overflow-hidden cursor-pointer active:scale-[0.97] transition-transform bg-brand-navy/10"
-                    style={{ minHeight: '148px' }}
-                    onClick={() => onViewChallenges?.()}
-                  >
-                    {/* Full-bleed image */}
-                    <AnimatePresence mode="wait">
-                      {current?.imageUrl ? (
-                        <motion.img
-                          key={`img-${idx}`}
-                          src={current.imageUrl}
-                          alt=""
-                          className="absolute inset-0 w-full h-full object-cover"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          transition={{ duration: 0.4 }}
-                        />
-                      ) : (
-                        <div className="absolute inset-0 bg-gradient-to-br from-purple-600 to-indigo-700" />
-                      )}
-                    </AnimatePresence>
-
-                    {/* Bottom shadow fading up — only over text area */}
-                    <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />
-
-                    {/* Text pinned to bottom */}
-                    <div className="absolute inset-x-0 bottom-0 z-10 px-3.5 pb-3">
-                      <AnimatePresence mode="wait">
-                        <motion.div
-                          key={idx}
-                          initial={{ opacity: 0, y: 6 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -6 }}
-                          transition={{ duration: 0.3 }}
-                        >
-                          <p className="text-white font-black text-sm leading-snug line-clamp-1">{current?.title}</p>
-                          <p className="text-white/70 text-[10px] font-semibold mt-0.5 line-clamp-1">{current?.reward}</p>
-                        </motion.div>
-                      </AnimatePresence>
-                      {list.length > 1 && (
-                        <div className="flex gap-1 items-center mt-2">
-                          {list.slice(0, Math.min(list.length, 5)).map((_, i) => (
-                            <div key={i} className={cn('rounded-full transition-all duration-300', i === (idx % list.length) ? 'w-3 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/35')} />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })()}
+          {/* Daily stats ticker + Leaderboard button — side by side */}
+          <div className="flex gap-3 items-stretch">
+              <DailyStatsTicker stats={dailyStats} />
 
               {/* Leaderboard square button */}
               <button
@@ -32117,7 +32169,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                   confetti({ particleCount: 80, spread: 60, startVelocity: 30, gravity: 0.8, scalar: 0.9, origin: { y: 0.6 }, zIndex: 9999, colors: ['#FFD700', '#FFC200', '#FFE566', '#FFAA00', '#FFF8DC'] });
                 }}
                 className="relative rounded-[1.5rem] overflow-hidden active:scale-[0.97] transition-transform shrink-0 shadow-lg"
-                style={{ background: uiColors.leaderboardTile.css, width: (visibleFeedChallenges.length > 0 || visibleFeedCompletedChallenges.length > 0) ? '136px' : '100%', minHeight: '148px' }}
+                style={{ background: uiColors.leaderboardTile.css, width: '136px', minHeight: '148px' }}
               >
                 <div className="absolute top-3 left-3 text-lg leading-none">🥇</div>
                 <motion.div
@@ -32158,7 +32210,6 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                 </div>
               </button>
             </div>
-          )}
 
           {/* Leaderboard popup modal */}
           <AnimatePresence>
