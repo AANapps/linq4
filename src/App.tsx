@@ -4106,7 +4106,7 @@ const CURRENCIES = [
 ];
 function currencySymbol(code?: string) { return CURRENCY_SYMBOLS[code || 'AUD'] ?? (code || 'A$'); }
 
-function CountUpValue({ value, prefix = '£', className = '', style }: { value: number; prefix?: string; className?: string; style?: React.CSSProperties }) {
+function CountUpValue({ value, prefix = '\$', className = '', style }: { value: number; prefix?: string; className?: string; style?: React.CSSProperties }) {
   const [display, setDisplay] = useState(0);
   useEffect(() => {
     const duration = 1200;
@@ -11284,7 +11284,7 @@ function ChallengesAdminPanel({ onClose }: { onClose: () => void }) {
               Platform-wide collectible game — 5 tiers (Brown → Gold). Every stamp issued awards 1 random sticker.
             </p>
             <input value={colTitle} onChange={e => setColTitle(e.target.value)} placeholder="Programme name (e.g. Season 1)" className={inputCls} />
-            <input value={colReward} onChange={e => setColReward(e.target.value)} placeholder="Full-set reward (e.g. £50 voucher)" className={inputCls} />
+            <input value={colReward} onChange={e => setColReward(e.target.value)} placeholder="Full-set reward (e.g. \$50 voucher)" className={inputCls} />
             <div className="flex items-center gap-2">
               <label className="text-xs text-amber-700/60 flex-shrink-0">End date</label>
               <input type="datetime-local" value={colEndsAt} onChange={e => setColEndsAt(e.target.value)} className={cn(inputCls, 'flex-1 text-xs')} />
@@ -18197,7 +18197,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
   const totalPointsBalance = spendCards.reduce((s, c) => s + (c.current_points || 0) + (c.membership_points || 0), 0);
   const totalPointsRedeemed = spendCards.reduce((s, c) => s + (c.total_points_redeemed || 0), 0);
   const spendActiveCards = spendCards.filter(c => !c.isArchived).length;
-  const totalSpend = spendCards.filter(c => c.membership_type === 'spend').reduce((s, c) => s + (c.total_spent || 0), 0);
+  const totalSpend = spendTxns.reduce((s, tx) => s + (tx.transaction_amount || 0), 0);
   const spendRewardsGiven = spendCards.reduce((s, c) => s + (c.earned_rewards || 0), 0);
 
   const visitMembers = new Set(visitCards.map(c => c.user_id)).size;
@@ -19727,7 +19727,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-3">
                     <StatSquare icon={<Users className="text-blue-500" />} label="Members" value={String(spendMembers)} info="Customers who have an active spend card with your store." />
                     <StatSquare icon={<TrendingUp className="text-emerald-500" />} label="Pts Issued" value={String(totalPointsIssued)} info="Total points earned by all members across every transaction." />
-                    <StatSquare icon={<DollarSign className="text-green-500" />} label="Total Spend" value={totalSpend > 0 ? `£${totalSpend.toFixed(0)}` : '—'} info="Total revenue recorded through the spend card programme." />
+                    <StatSquare icon={<DollarSign className="text-green-500" />} label="Total Spend" value={totalSpend > 0 ? `\$${totalSpend.toFixed(0)}` : '—'} info="Total revenue recorded through the spend card programme." />
                     <StatSquare icon={<RefreshCw className="text-orange-500" />} label="Pts Balance" value={String(totalPointsBalance)} info="Total unspent points sitting in customers' wallets right now." />
                   </div>
 
@@ -19752,7 +19752,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                   {/* Advanced spend metrics row */}
                   {(() => {
                     const txAmounts = spendTxns.map(tx => tx.transaction_amount || 0).filter(a => a > 0);
-                    const avgTx = txAmounts.length > 0 ? `£${(txAmounts.reduce((s, a) => s + a, 0) / txAmounts.length).toFixed(2)}` : '—';
+                    const avgTx = txAmounts.length > 0 ? `\$${(txAmounts.reduce((s, a) => s + a, 0) / txAmounts.length).toFixed(2)}` : '—';
                     const totalTx = spendTxns.length;
                     const redeemedPts = spendCards.reduce((s, c) => s + (c.total_points_redeemed || 0), 0);
                     const issuedPts = totalPointsIssued || 1;
@@ -19768,7 +19768,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     return (
                       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-3">
                         <StatSquare icon={<DollarSign className="text-emerald-500" />} label="Avg Tx" value={avgTx} sub="per transaction" />
-                        <StatSquare icon={<TrendingUp className="text-blue-500" />} label="This Month" value={thisMonth > 0 ? `£${thisMonth.toFixed(0)}` : '—'} sub="spend tracked" />
+                        <StatSquare icon={<TrendingUp className="text-blue-500" />} label="This Month" value={thisMonth > 0 ? `\$${thisMonth.toFixed(0)}` : '—'} sub="spend tracked" />
                       </div>
                     );
                   })()}
@@ -19968,7 +19968,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                           <div key={label} className="space-y-1">
                             <div className="flex items-center justify-between">
                               <p className="text-[11px] font-bold text-brand-navy/70">{label}</p>
-                              <p className="text-[11px] font-bold text-brand-navy">£{val.toFixed(2)}</p>
+                              <p className="text-[11px] font-bold text-brand-navy">\${val.toFixed(2)}</p>
                             </div>
                             <div className="h-3 bg-brand-navy/5 rounded-full overflow-hidden">
                               <motion.div
@@ -20033,8 +20033,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     ) : (
                     <div className="space-y-6 blur-sm pointer-events-none select-none opacity-60">
                       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-3">
-                        <StatSquare icon={<DollarSign className="text-emerald-500" />} label="Avg Tx" value="£14.20" sub="per transaction" />
-                        <StatSquare icon={<TrendingUp className="text-blue-500" />} label="This Month" value="£340" sub="spend tracked" />
+                        <StatSquare icon={<DollarSign className="text-emerald-500" />} label="Avg Tx" value="\$14.20" sub="per transaction" />
+                        <StatSquare icon={<TrendingUp className="text-blue-500" />} label="This Month" value="\$340" sub="spend tracked" />
                       </div>
                       <div className="glass-card p-6 rounded-[2rem] space-y-4">
                         <p className="font-bold text-brand-navy">Points Issued</p>
@@ -20449,7 +20449,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     <p className="font-bold text-sm truncate">{name}</p>
                     <p className="text-[11px] text-brand-navy/75">
                       {tx.card_type === 'membership' && tx.membership_type === 'spend'
-                        ? `£${(tx.transaction_amount || 0).toFixed(2)} spend · ${tx.points_earned || 0} pts`
+                        ? `\$${(tx.transaction_amount || 0).toFixed(2)} spend · ${tx.points_earned || 0} pts`
                         : tx.card_type === 'membership' && tx.membership_type === 'visit'
                           ? `Visit · ${tx.stamps_per_visit || tx.points_earned || 0} pts`
                           : tx.card_type === 'sub'
@@ -28383,7 +28383,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                         ) : (
                           <>
                             <span className="text-[10px] font-bold" style={{ color: primary }}>{(card.membership_points ?? 0).toLocaleString()} pts</span>
-                            {(card.total_spent ?? 0) > 0 && <span className="text-[10px] font-bold text-brand-navy/50">£{(card.total_spent ?? 0).toFixed(2)}</span>}
+                            {(card.total_spent ?? 0) > 0 && <span className="text-[10px] font-bold text-brand-navy/50">\${(card.total_spent ?? 0).toFixed(2)}</span>}
                           </>
                         )}
                       </div>
@@ -34348,8 +34348,8 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
       metric: spendMemberCardsAll.reduce((s, c) => s + (c.total_points_earned || c.membership_points || 0), 0),
       metricLabel: 'Points Earned',
       rewards: spendMemberCardsAll.reduce((s, c) => s + (c.total_value_redeemed || 0), 0),
-      rewardsLabel: '£ Redeemed',
-      rewardsPrefix: '£',
+      rewardsLabel: '\$ Redeemed',
+      rewardsPrefix: '\$',
     });
   }
   const [tierSlideIdx, setTierSlideIdx] = React.useState(0);
@@ -34799,9 +34799,9 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
                 </div>
               </div>
               <div className="bg-white px-5 py-3 flex items-center justify-between">
-                <span className="text-brand-navy/75 text-[10px] font-bold">£{spent.toFixed(2)} spent{rewards > 0 ? ` · ${rewards} rewards` : ''}</span>
+                <span className="text-brand-navy/75 text-[10px] font-bold">\${spent.toFixed(2)} spent{rewards > 0 ? ` · ${rewards} rewards` : ''}</span>
                 {redeemableValue > 0
-                  ? <span className="text-emerald-600 font-black text-xs">≈ £{redeemableValue.toFixed(2)} off</span>
+                  ? <span className="text-emerald-600 font-black text-xs">≈ \${redeemableValue.toFixed(2)} off</span>
                   : <span className="text-brand-navy/72 text-[10px] font-bold">Tap for details</span>}
               </div>
             </button>
@@ -34841,12 +34841,12 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
                       <div className="glass-card p-5 rounded-2xl">
                         <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-1">Available</p>
                         <p className="text-3xl font-black text-brand-navy">{spvNetAvailable.toLocaleString()}</p>
-                        {pointsRate > 0 && <p className="text-[10px] text-brand-navy/75 mt-1">{pointsRate} pts per £1</p>}
+                        {pointsRate > 0 && <p className="text-[10px] text-brand-navy/75 mt-1">{pointsRate} pts per \$1</p>}
                       </div>
                       <div className="glass-card p-5 rounded-2xl">
                         <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest mb-1">Value</p>
-                        <p className="text-3xl font-black text-emerald-600">£{redeemableValue.toFixed(2)}</p>
-                        {redemptionRate > 0 && <p className="text-[10px] text-brand-navy/75 mt-1">{redemptionRate} pts = £1</p>}
+                        <p className="text-3xl font-black text-emerald-600">\${redeemableValue.toFixed(2)}</p>
+                        {redemptionRate > 0 && <p className="text-[10px] text-brand-navy/75 mt-1">{redemptionRate} pts = \$1</p>}
                       </div>
                     </div>
 
@@ -34854,7 +34854,7 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
                     <div className="glass-card p-4 rounded-2xl mb-4 space-y-2">
                       <div className="flex items-center justify-between">
                         <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Total Spent</p>
-                        <p className="font-black text-brand-navy">£{spent.toFixed(2)}</p>
+                        <p className="font-black text-brand-navy">\${spent.toFixed(2)}</p>
                       </div>
                       <div className="flex items-center justify-between">
                         <p className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Points Earned</p>
@@ -34883,7 +34883,7 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
                             <div className="w-8 h-8 rounded-xl bg-brand-navy/8 flex items-center justify-center shrink-0">
                               <Star size={14} className="text-brand-navy/75" />
                             </div>
-                            <p className="text-sm text-brand-navy/70">Earn <span className="font-bold text-brand-navy">{pointsRate} points</span> for every £1 spent</p>
+                            <p className="text-sm text-brand-navy/70">Earn <span className="font-bold text-brand-navy">{pointsRate} points</span> for every \$1 spent</p>
                           </div>
                         )}
                         {redemptionRate > 0 && (
@@ -34891,7 +34891,7 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
                             <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
                               <Gift size={14} className="text-emerald-600" />
                             </div>
-                            <p className="text-sm text-brand-navy/70">Redeem <span className="font-bold text-brand-navy">{redemptionRate} points</span> for £1 off</p>
+                            <p className="text-sm text-brand-navy/70">Redeem <span className="font-bold text-brand-navy">{redemptionRate} points</span> for \$1 off</p>
                           </div>
                         )}
                         {store.membershipSpendThreshold && store.membershipSpendReward && (
@@ -34899,7 +34899,7 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
                             <div className="w-8 h-8 rounded-xl bg-brand-gold/10 flex items-center justify-center shrink-0">
                               <Trophy size={14} className="text-brand-gold" />
                             </div>
-                            <p className="text-sm text-brand-navy/70">Get <span className="font-bold text-brand-navy">{store.membershipSpendReward}</span> every £{store.membershipSpendThreshold} spent</p>
+                            <p className="text-sm text-brand-navy/70">Get <span className="font-bold text-brand-navy">{store.membershipSpendReward}</span> every \${store.membershipSpendThreshold} spent</p>
                           </div>
                         )}
                       </div>
@@ -34934,12 +34934,12 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
                         <div className="flex items-center justify-between mb-6">
                           <div>
                             <h3 className="font-display text-2xl font-bold">Redeem Points</h3>
-                            <p className="text-brand-navy/75 text-xs mt-0.5">{pts.toLocaleString()} pts · up to £{maxRedeemDollars.toFixed(2)} off</p>
+                            <p className="text-brand-navy/75 text-xs mt-0.5">{pts.toLocaleString()} pts · up to \${maxRedeemDollars.toFixed(2)} off</p>
                           </div>
                           <button onClick={closeRedeem} className="p-2 text-brand-navy/75"><X size={20} /></button>
                         </div>
                         <div className="flex items-center gap-2 bg-brand-bg rounded-2xl px-5 py-4 mb-3">
-                          <span className="text-brand-navy font-black text-3xl">£</span>
+                          <span className="text-brand-navy font-black text-3xl">\$</span>
                           <input
                             type="number" min="0" step="0.50"
                             value={redeemDollars}
@@ -34954,7 +34954,7 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
                             <p className={`font-bold text-sm ${canProceed ? 'text-emerald-600' : 'text-red-500'}`}>
                               {canProceed
                                 ? `= ${pointsToDeduct} pts · ${spvNetAvailable - pointsToDeduct} remaining`
-                                : `Not enough points (max £${maxRedeemDollars.toFixed(2)})`}
+                                : `Not enough points (max \$${maxRedeemDollars.toFixed(2)})`}
                             </p>
                           </div>
                         )}
@@ -34976,7 +34976,7 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
                         </div>
                         <div className="bg-emerald-50 rounded-3xl p-6 text-center mb-6 border border-emerald-100">
                           <p className="text-emerald-600/60 text-[10px] font-bold uppercase tracking-widest mb-1">Redeeming</p>
-                          <p className="text-emerald-600 font-black text-5xl">£{redeemDollarNum.toFixed(2)}</p>
+                          <p className="text-emerald-600 font-black text-5xl">\${redeemDollarNum.toFixed(2)}</p>
                           <p className="text-emerald-600/60 text-sm mt-1 font-bold">{pointsToDeduct} points</p>
                         </div>
                         <SwipeConfirm onConfirm={handleRedeem} />
@@ -34989,7 +34989,7 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
                           <Check size={28} className="text-emerald-500" />
                         </div>
                         <h3 className="font-display text-2xl font-bold mb-1">Redeemed!</h3>
-                        <p className="text-brand-navy/75 text-sm mb-6">£{redeemDollarNum.toFixed(2)} off applied</p>
+                        <p className="text-brand-navy/75 text-sm mb-6">\${redeemDollarNum.toFixed(2)} off applied</p>
                         <div className="glass-card rounded-2xl p-4 mb-6 grid grid-cols-2 gap-4">
                           <div className="text-center">
                             <p className="text-brand-navy/75 text-[9px] font-bold uppercase tracking-widest">Points Used</p>
@@ -35308,7 +35308,7 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
               ? `${entry.total_completed_cycles || 0} rewards earned`
               : lbActiveType === 'visit'
                 ? `${entry.membership_visits || 0} total visits`
-                : `£${(entry.total_spent || 0).toFixed(2)} spent`;
+                : `\$${(entry.total_spent || 0).toFixed(2)} spent`;
             return (
               <div
                 key={`lb-${entry.id}`}
@@ -36309,7 +36309,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
                       ) : (
                         <>
                           <span className="text-[10px] font-bold" style={{ color: primary }}>{(card.membership_points ?? 0).toLocaleString()} pts</span>
-                          {(card.total_spent ?? 0) > 0 && <span className="text-[10px] font-bold text-brand-navy/50">£{(card.total_spent ?? 0).toFixed(2)}</span>}
+                          {(card.total_spent ?? 0) > 0 && <span className="text-[10px] font-bold text-brand-navy/50">\${(card.total_spent ?? 0).toFixed(2)}</span>}
                         </>
                       )}
                     </div>
