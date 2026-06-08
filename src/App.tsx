@@ -32979,7 +32979,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
         senderUid: currentUser.uid,
         senderName: currentProfile?.name || currentUser.displayName || 'Me',
         text,
-        createdAt: serverTimestamp()
+        createdAt: Timestamp.fromDate(new Date())
       };
 
       await addDoc(collection(db, 'chats', activeChatId, 'messages'), messageData);
