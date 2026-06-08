@@ -2191,8 +2191,8 @@ export default function App() {
   const isVendor = profile?.role === 'vendor';
 
   return (
-    <div className="min-h-screen bg-white">
-    <div className="w-full relative" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 6rem)' }}>
+    <div className={cn("min-h-screen bg-white", !isVendor && !isNativeIOS && "md:flex md:justify-center")}>
+    <div className={cn("w-full relative", !isVendor && !isNativeIOS && "md:max-w-sm")} style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 6rem)' }}>
       {/* Header */}
       <header className="glass-panel sticky top-0 z-50 px-5 pb-3.5 flex items-center justify-between relative" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.875rem)' }}>
         <button
@@ -2276,8 +2276,8 @@ export default function App() {
         </aside>
       )}
 
-      {/* Consumer sidebar — iPad / tablet (md+) */}
-      {!isVendor && (
+      {/* Consumer sidebar — native iOS iPad only (md+) */}
+      {!isVendor && isNativeIOS && (
         <aside className="hidden md:flex flex-col fixed top-14 bottom-0 left-0 w-56 border-r border-brand-navy/8 bg-white z-40">
           <div className="flex-1 flex flex-col gap-0.5 px-3 py-5">
             {([
@@ -2308,7 +2308,7 @@ export default function App() {
       )}
 
       {/* Main Content */}
-      <main className={cn("px-6 pt-4 pb-8", isVendor ? "lg:ml-56 lg:px-8 lg:pt-6" : "md:ml-56 md:px-8 md:pt-6")}>
+      <main className={cn("px-6 pt-4 pb-8", isVendor ? "lg:ml-56 lg:px-8 lg:pt-6" : isNativeIOS && "md:ml-56 md:px-8 md:pt-6")}>
         <AnimatePresence mode="popLayout">
           {viewingStore ? (
             <StoreProfileView
@@ -2523,7 +2523,7 @@ export default function App() {
         "fixed bottom-0 glass-panel border-t border-black/5 pt-3 flex items-end z-50",
         isVendor
           ? "left-0 right-0 lg:hidden"
-          : "left-0 right-0 md:hidden"
+          : isNativeIOS ? "left-0 right-0 md:hidden" : "left-0 right-0 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-full md:max-w-sm"
       )} style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)' }}>
         {['consumer','admin'].includes(profile?.role ?? '') ? (
           <NavButton
