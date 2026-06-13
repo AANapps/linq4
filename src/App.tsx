@@ -18905,11 +18905,17 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
 
                     {/* Preview — stats locked, charts visible */}
                     <div className="space-y-4">
-                      {/* Intelligence stat squares — blurred/locked */}
-                      <div className="grid grid-cols-3 gap-3 blur-sm pointer-events-none select-none opacity-50">
-                        <StatSquare icon={<AlertTriangle className="text-rose-500" />} label="Churn Risk" value="8" sub="21d+ no stamp" />
-                        <StatSquare icon={<UserPlus className="text-emerald-500" />} label="Newcomers" value="14" sub="joined last 30d" />
-                        <StatSquare icon={<Zap className="text-amber-500" />} label="Avg/Visit" value="2.3" sub="stamps per scan" />
+                      {/* Intelligence stat squares — locked */}
+                      <div className="relative">
+                        <div className="grid grid-cols-3 gap-3 pointer-events-none select-none" style={{ filter: 'blur(6px)', opacity: 0.4 }}>
+                          <StatSquare icon={<AlertTriangle className="text-rose-500" />} label="Churn Risk" value="8" sub="21d+ no stamp" />
+                          <StatSquare icon={<UserPlus className="text-emerald-500" />} label="Newcomers" value="14" sub="joined last 30d" />
+                          <StatSquare icon={<Zap className="text-amber-500" />} label="Avg/Visit" value="2.3" sub="stamps per scan" />
+                        </div>
+                        <div className="absolute inset-0 flex items-center justify-center gap-2 pointer-events-none">
+                          <Lock size={14} className="text-brand-navy/50" />
+                          <p className="text-xs font-bold text-brand-navy/50">Subscribe to unlock</p>
+                        </div>
                       </div>
 
                       {/* Weekly stamps bar chart */}
