@@ -18903,132 +18903,117 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                       </button>
                     </div>
 
-                    {/* Preview — stats locked, charts visible */}
-                    <div className="space-y-4">
-                      {/* Intelligence stat squares — locked */}
-                      <div className="relative">
-                        <div className="grid grid-cols-3 gap-3 pointer-events-none select-none" style={{ filter: 'blur(6px)', opacity: 0.4 }}>
-                          <StatSquare icon={<AlertTriangle className="text-rose-500" />} label="Churn Risk" value="8" sub="21d+ no stamp" />
-                          <StatSquare icon={<UserPlus className="text-emerald-500" />} label="Newcomers" value="14" sub="joined last 30d" />
-                          <StatSquare icon={<Zap className="text-amber-500" />} label="Avg/Visit" value="2.3" sub="stamps per scan" />
-                        </div>
-                        <div className="absolute inset-0 flex items-center justify-center gap-2 pointer-events-none">
-                          <Lock size={14} className="text-brand-navy/50" />
-                          <p className="text-xs font-bold text-brand-navy/50">Subscribe to unlock</p>
-                        </div>
-                      </div>
+                    {/* Preview — example data */}
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/30 text-center">Example data — your real insights unlock on subscribe</p>
 
-                      {/* Weekly stamps bar chart */}
-                      <div className="glass-card p-5 rounded-[2rem] space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-bold text-brand-navy text-sm">Weekly Stamps</p>
-                            <p className="text-[10px] text-brand-navy/50">Last 8 weeks</p>
-                          </div>
-                          <div className="flex gap-1 p-0.5 bg-brand-navy/8 rounded-xl">
-                            <span className="px-2.5 py-1 rounded-[9px] text-[10px] font-bold text-brand-navy/50">Days</span>
-                            <span className="px-2.5 py-1 rounded-[9px] text-[10px] font-bold bg-white text-brand-navy shadow-sm">Weeks</span>
-                          </div>
-                        </div>
-                        <div style={{ filter: 'blur(4px)', pointerEvents: 'none', userSelect: 'none' }}>
-                          <div className="flex gap-1.5 items-end" style={{ height: '90px' }}>
-                            {[42, 58, 71, 45, 83, 67, 55, 79].map((h, i) => (
-                              <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                                <div className="w-full flex items-end" style={{ height: '72px' }}>
-                                  <div className="w-full rounded-t-md" style={{ height: `${h}%`, background: 'linear-gradient(180deg, #3B82F6 0%, #1D4ED8 100%)' }} />
-                                </div>
-                                <p className="text-[8px] text-brand-navy/40 font-bold">W{i + 1}</p>
-                              </div>
-                            ))}
-                          </div>
-                          <div className="flex justify-between text-[8px] text-brand-navy/30 font-bold px-1 mt-1">
-                            <span>0</span><span>20</span><span>40</span><span>60</span><span>80+</span>
-                          </div>
-                        </div>
-                      </div>
+                    {/* Stat squares */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <StatSquare icon={<AlertTriangle className="text-rose-500" />} label="Churn Risk" value="8" sub="21d+ no stamp" />
+                      <StatSquare icon={<UserPlus className="text-emerald-500" />} label="Newcomers" value="14" sub="joined last 30d" />
+                      <StatSquare icon={<Zap className="text-amber-500" />} label="Avg/Visit" value="2.3" sub="stamps per scan" />
+                    </div>
 
-                      {/* Visit frequency breakdown */}
-                      <div className="glass-card p-5 rounded-[2rem] space-y-3">
-                        <p className="font-bold text-brand-navy text-sm">Visit Frequency</p>
-                        <div style={{ filter: 'blur(4px)', pointerEvents: 'none', userSelect: 'none' }}>
-                          {[
-                            { label: '3+ / week', pct: 18, color: '#1D4ED8' },
-                            { label: '1–2 / week', pct: 34, color: '#3B82F6' },
-                            { label: 'Monthly',    pct: 31, color: '#60A5FA' },
-                            { label: 'Occasional', pct: 17, color: '#BFDBFE' },
-                          ].map(({ label, pct, color }) => (
-                            <div key={label} className="flex items-center gap-3 mb-2">
-                              <p className="text-[10px] text-brand-navy/50 font-bold w-20 shrink-0">{label}</p>
-                              <div className="flex-1 h-2 bg-brand-navy/8 rounded-full overflow-hidden">
-                                <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
-                              </div>
-                              <p className="text-[10px] text-brand-navy/50 font-bold w-7 text-right">{pct}%</p>
+                    {/* Weekly stamps bar chart */}
+                    <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-bold text-brand-navy text-sm">Weekly Stamps</p>
+                          <p className="text-[10px] text-brand-navy/50">Last 8 weeks</p>
+                        </div>
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">Example</span>
+                      </div>
+                      <div className="flex gap-1.5 items-end" style={{ height: '80px' }}>
+                        {[42, 58, 71, 45, 83, 67, 55, 79].map((h, i) => (
+                          <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                            <div className="w-full flex items-end" style={{ height: '64px' }}>
+                              <div className="w-full rounded-t-md" style={{ height: `${h}%`, background: 'linear-gradient(180deg, #3B82F6 0%, #1D4ED8 100%)' }} />
                             </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Daily heatmap */}
-                      <div className="glass-card p-5 rounded-[2rem] space-y-3">
-                        <p className="font-bold text-brand-navy text-sm">Busiest Days</p>
-                        <div style={{ filter: 'blur(4px)', pointerEvents: 'none', userSelect: 'none' }}>
-                          <div className="flex gap-1.5">
-                            {[
-                              { day: 'Mon', h: 55 }, { day: 'Tue', h: 40 }, { day: 'Wed', h: 70 },
-                              { day: 'Thu', h: 95 }, { day: 'Fri', h: 88 }, { day: 'Sat', h: 62 }, { day: 'Sun', h: 30 },
-                            ].map(({ day, h }) => (
-                              <div key={day} className="flex-1 flex flex-col items-center gap-1.5">
-                                <div className="w-full flex items-end" style={{ height: '60px' }}>
-                                  <div className="w-full rounded-t-md" style={{ height: `${h}%`, background: h > 80 ? 'linear-gradient(180deg,#7C3AED,#4F46E5)' : 'linear-gradient(180deg,#A78BFA,#818CF8)' }} />
-                                </div>
-                                <p className="text-[8px] text-brand-navy/40 font-bold">{day}</p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* AI Recommendations */}
-                      <div className="glass-card p-5 rounded-[2rem] space-y-3">
-                        <div className="flex items-center justify-between">
-                          <p className="font-bold text-brand-navy text-sm">AI Recommendations</p>
-                          <Zap size={14} className="text-amber-500" />
-                        </div>
-                        <div style={{ filter: 'blur(4px)', pointerEvents: 'none', userSelect: 'none' }}>
-                          {[
-                            { icon: '🔥', text: '8 customers haven\'t visited in 21+ days — send a boost offer to bring them back' },
-                            { icon: '📅', text: 'Your busiest day is Thursday — consider running a double-stamp promo' },
-                            { icon: '📈', text: '14 new members this month — your programme is growing 18% month-on-month' },
-                          ].map(({ icon, text }) => (
-                            <div key={text} className="flex items-start gap-3 p-3 bg-brand-bg rounded-2xl mb-2">
-                              <span className="text-sm leading-none mt-0.5">{icon}</span>
-                              <p className="text-xs text-brand-navy/80 leading-snug">{text}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Competitor benchmarking */}
-                      <div className="glass-card p-5 rounded-[2rem] space-y-3">
-                        <div className="flex items-center justify-between">
-                          <p className="font-bold text-brand-navy text-sm">Competitor Benchmarking</p>
-                          <span className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/40 bg-brand-navy/8 px-2 py-0.5 rounded-full">Coming soon</span>
-                        </div>
-                        <div style={{ filter: 'blur(4px)', pointerEvents: 'none', userSelect: 'none' }}>
-                        {[
-                          { label: 'Your return rate', value: '42%', vs: 'Area avg 31%', up: true },
-                          { label: 'Avg stamps / week', value: '67', vs: 'Area avg 54', up: true },
-                          { label: 'Completion rate', value: '28%', vs: 'Area avg 35%', up: false },
-                        ].map(({ label, value, vs, up }) => (
-                          <div key={label} className="flex items-center gap-3 p-2.5 bg-brand-bg rounded-xl mb-2">
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-bold text-brand-navy">{label}</p>
-                              <p className="text-[10px] text-brand-navy/40">{vs}</p>
-                            </div>
-                            <p className={`text-sm font-black ${up ? 'text-emerald-600' : 'text-rose-500'}`}>{value}</p>
+                            <p className="text-[8px] text-brand-navy/40 font-bold">W{i + 1}</p>
                           </div>
                         ))}
                       </div>
+                    </div>
+
+                    {/* Visit frequency */}
+                    <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="font-bold text-brand-navy text-sm">Visit Frequency</p>
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">Example</span>
+                      </div>
+                      {[
+                        { label: '3+ / week', pct: 18, color: '#1D4ED8' },
+                        { label: '1–2 / week', pct: 34, color: '#3B82F6' },
+                        { label: 'Monthly',    pct: 31, color: '#60A5FA' },
+                        { label: 'Occasional', pct: 17, color: '#BFDBFE' },
+                      ].map(({ label, pct, color }) => (
+                        <div key={label} className="flex items-center gap-3">
+                          <p className="text-[10px] text-brand-navy/50 font-bold w-20 shrink-0">{label}</p>
+                          <div className="flex-1 h-2 bg-brand-navy/8 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+                          </div>
+                          <p className="text-[10px] text-brand-navy/50 font-bold w-7 text-right">{pct}%</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Busiest days */}
+                    <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="font-bold text-brand-navy text-sm">Busiest Days</p>
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">Example</span>
+                      </div>
+                      <div className="flex gap-1.5">
+                        {[
+                          { day: 'Mon', h: 55 }, { day: 'Tue', h: 40 }, { day: 'Wed', h: 70 },
+                          { day: 'Thu', h: 95 }, { day: 'Fri', h: 88 }, { day: 'Sat', h: 62 }, { day: 'Sun', h: 30 },
+                        ].map(({ day, h }) => (
+                          <div key={day} className="flex-1 flex flex-col items-center gap-1.5">
+                            <div className="w-full flex items-end" style={{ height: '60px' }}>
+                              <div className="w-full rounded-t-md" style={{ height: `${h}%`, background: h > 80 ? 'linear-gradient(180deg,#7C3AED,#4F46E5)' : 'linear-gradient(180deg,#A78BFA,#818CF8)' }} />
+                            </div>
+                            <p className="text-[8px] text-brand-navy/40 font-bold">{day}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* AI Recommendations */}
+                    <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="font-bold text-brand-navy text-sm">AI Recommendations</p>
+                        <Zap size={14} className="text-amber-500" />
+                      </div>
+                      {[
+                        { icon: '🔥', text: '8 customers haven\'t visited in 21+ days — send a boost offer to bring them back' },
+                        { icon: '📅', text: 'Your busiest day is Thursday — consider running a double-stamp promo' },
+                        { icon: '📈', text: '14 new members this month — your programme is growing 18% month-on-month' },
+                      ].map(({ icon, text }) => (
+                        <div key={text} className="flex items-start gap-3 p-3 bg-brand-bg rounded-2xl">
+                          <span className="text-sm leading-none mt-0.5">{icon}</span>
+                          <p className="text-xs text-brand-navy/80 leading-snug">{text}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Competitor benchmarking */}
+                    <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="font-bold text-brand-navy text-sm">Competitor Benchmarking</p>
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/40 bg-brand-navy/8 px-2 py-0.5 rounded-full">Coming soon</span>
+                      </div>
+                      {[
+                        { label: 'Your return rate', value: '42%', vs: 'Area avg 31%', up: true },
+                        { label: 'Avg stamps / week', value: '67', vs: 'Area avg 54', up: true },
+                        { label: 'Completion rate', value: '28%', vs: 'Area avg 35%', up: false },
+                      ].map(({ label, value, vs, up }) => (
+                        <div key={label} className="flex items-center gap-3 p-2.5 bg-brand-bg rounded-xl">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-brand-navy">{label}</p>
+                            <p className="text-[10px] text-brand-navy/40">{vs}</p>
+                          </div>
+                          <p className={`text-sm font-black ${up ? 'text-emerald-600' : 'text-rose-500'}`}>{value}</p>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ) : null}
