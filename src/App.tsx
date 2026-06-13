@@ -18904,7 +18904,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     </div>
 
                     {/* Hyper-detailed blurred preview */}
-                    <div className="space-y-4 blur-sm pointer-events-none select-none opacity-70">
+                    <div className="space-y-4 pointer-events-none select-none opacity-80">
                       {/* Intelligence stat squares */}
                       <div className="grid grid-cols-3 gap-3">
                         <StatSquare icon={<AlertTriangle className="text-rose-500" />} label="Churn Risk" value="8" sub="21d+ no stamp" />
