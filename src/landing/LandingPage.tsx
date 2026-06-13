@@ -9,7 +9,7 @@ export default function LandingPage() {
         href="/portal"
         className="mt-8 px-6 py-3 bg-black text-white rounded-lg text-sm font-medium"
       >
-        Vendor Portal
+        Vendor Login
       </a>
     </div>
   );
