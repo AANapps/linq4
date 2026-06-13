@@ -18903,10 +18903,10 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                       </button>
                     </div>
 
-                    {/* Hyper-detailed blurred preview */}
-                    <div className="space-y-4 pointer-events-none select-none opacity-80">
-                      {/* Intelligence stat squares */}
-                      <div className="grid grid-cols-3 gap-3">
+                    {/* Preview — stats locked, charts visible */}
+                    <div className="space-y-4">
+                      {/* Intelligence stat squares — blurred/locked */}
+                      <div className="grid grid-cols-3 gap-3 blur-sm pointer-events-none select-none opacity-50">
                         <StatSquare icon={<AlertTriangle className="text-rose-500" />} label="Churn Risk" value="8" sub="21d+ no stamp" />
                         <StatSquare icon={<UserPlus className="text-emerald-500" />} label="Newcomers" value="14" sub="joined last 30d" />
                         <StatSquare icon={<Zap className="text-amber-500" />} label="Avg/Visit" value="2.3" sub="stamps per scan" />
