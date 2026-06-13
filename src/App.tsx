@@ -17883,6 +17883,14 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
   const isSubscribed = store?.subscriptionStatus === 'active' || store?.subscriptionStatus === 'trialing';
   const needsPayment = store !== null && !isInTrial && !isSubscribed;
 
+  // If vendor loses subscription and was on NFC, silently revert to QR
+  useEffect(() => {
+    if (!store?.id || isSubscribed || isInTrial) return;
+    if (store.scanMethod === 'nfc') {
+      updateDoc(doc(db, 'stores', store.id), { scanMethod: 'qr' }).catch(() => {});
+    }
+  }, [isSubscribed, isInTrial, store?.id, store?.scanMethod]);
+
 
   const [STRIPE_PAYMENT_LINK, setStripePaymentLink] = useState(
     import.meta.env.VITE_STRIPE_PAYMENT_LINK || 'https://buy.stripe.com/test_aFa5kF5JZh193yT6OEd7q00'
@@ -18863,13 +18871,31 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
 
               <div className="relative">
                 {!isSubscribed && !isNativeIOS && (
-                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-start pt-16 pointer-events-none">
-                    <div className="pointer-events-auto bg-white rounded-[2rem] px-6 py-5 shadow-2xl text-center space-y-3 mx-4 border border-brand-navy/8 max-w-xs w-full">
-                      <div className="w-10 h-10 rounded-[1rem] bg-purple-50 flex items-center justify-center mx-auto">
-                        <Lock size={20} className="text-purple-600" />
+                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-start pt-4 pointer-events-none">
+                    <div className="pointer-events-auto bg-white rounded-[2rem] px-5 py-5 shadow-2xl mx-4 border border-brand-navy/8 max-w-sm w-full space-y-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-[1rem] bg-purple-50 flex items-center justify-center shrink-0">
+                          <Lock size={18} className="text-purple-600" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-brand-navy text-sm leading-tight">Unlock Intelligence</p>
+                          <p className="text-[10px] text-brand-navy/50">Included in your subscription</p>
+                        </div>
                       </div>
-                      <p className="font-bold text-brand-navy text-base leading-tight">Subscribe to Unlock</p>
-                      <p className="text-xs text-brand-navy/60 leading-relaxed">Subscribe to see live analytics, charts, and customer intelligence for your loyalty programme.</p>
+                      <div className="space-y-2">
+                        {[
+                          { icon: <AlertTriangle size={12} className="text-rose-500" />, text: 'Churn risk — spot customers drifting away' },
+                          { icon: <UserPlus size={12} className="text-emerald-500" />, text: 'Newcomers — track new members each month' },
+                          { icon: <TrendingUp size={12} className="text-blue-500" />, text: 'Stamps chart — weekly & daily trends' },
+                          { icon: <Zap size={12} className="text-amber-500" />, text: 'AI recommendations — actionable growth tips' },
+                          { icon: <Sparkles size={12} className="text-purple-500" />, text: 'Competitor benchmarking — coming soon' },
+                        ].map(({ icon, text }) => (
+                          <div key={text} className="flex items-center gap-2.5">
+                            <div className="w-5 h-5 rounded-lg bg-brand-navy/5 flex items-center justify-center shrink-0">{icon}</div>
+                            <p className="text-xs text-brand-navy/70 leading-snug">{text}</p>
+                          </div>
+                        ))}
+                      </div>
                       <button onClick={handleSubscribe} className="w-full py-3 rounded-2xl font-bold text-white text-sm active:scale-[0.98] transition-transform" style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' }}>
                         Subscribe Now — $49/month
                       </button>
@@ -20513,8 +20539,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
             >
               <ArrowLeft size={16} /> Back
             </button>
-            {vendorIssueMode === 'card' ? <VendorCardSection store={store} />
-              : vendorIssueMode === 'scan-user' ? <ScanUserPanel store={store} onIssue={handleIssueMembershipPoints} onShowQR={() => setShowQRScanner(true)} />
+            {vendorIssueMode === 'card' ? <VendorCardSection store={store} isSubscribed={isSubscribed || isInTrial} />
+              : vendorIssueMode === 'scan-user' ? <ScanUserPanel store={store} onIssue={handleIssueMembershipPoints} onShowQR={() => setShowQRScanner(true)} isSubscribed={isSubscribed || isInTrial} />
               : <VendorOfferPanel store={store} />}
           </div>
         )
@@ -24730,11 +24756,11 @@ function WallPostItem({ post, currentUser, wallOwnerUid, onViewUser }: { post: a
 
 function StatSquare({ icon, label, value, sub, info }: { icon: React.ReactNode, label: string, value: string, sub?: string, info?: string }) {
   return (
-    <div className="glass-card aspect-square lg:aspect-auto lg:h-24 rounded-[1.5rem] lg:rounded-xl flex flex-col items-center justify-center p-3 lg:p-2.5 hover:shadow-md transition-all">
-      <div className="w-7 h-7 lg:w-6 lg:h-6 bg-brand-bg rounded-xl lg:rounded-lg flex items-center justify-center mb-1.5 lg:mb-1">
-        {React.cloneElement(icon as React.ReactElement, { size: 15 })}
+    <div className="glass-card aspect-square lg:aspect-auto lg:h-20 rounded-[1.5rem] lg:rounded-xl flex flex-col items-center justify-center p-3 lg:p-2 hover:shadow-md transition-all">
+      <div className="w-7 h-7 lg:w-5 lg:h-5 bg-brand-bg rounded-xl lg:rounded-lg flex items-center justify-center mb-1.5 lg:mb-1">
+        {React.cloneElement(icon as React.ReactElement, { size: 13 })}
       </div>
-      <p className="font-display text-base lg:text-sm font-bold text-brand-navy leading-none mb-0.5">{value}</p>
+      <p className="font-display text-base lg:text-xs font-bold text-brand-navy leading-none mb-0.5">{value}</p>
       <div className="flex items-center justify-center gap-0.5">
         <p className="text-[8px] text-brand-navy/75 font-bold uppercase tracking-wider text-center">{label}</p>
         {info && <InfoTip text={info} />}
@@ -25488,10 +25514,11 @@ function OffersModal({ offers, currentUser, currentProfile, onClose }: { offers:
 }
 
 // ─── Scan User Panel — vendor issues membership points by handle ──────────────
-function ScanUserPanel({ store, onIssue, onShowQR }: {
+function ScanUserPanel({ store, onIssue, onShowQR, isSubscribed }: {
   store: StoreProfile | null;
   onIssue: (handle: string, amount: string, setStatus: (s: { type: 'success' | 'error'; message: string } | null) => void, setWorking: (b: boolean) => void) => void;
   onShowQR?: () => void;
+  isSubscribed?: boolean;
 }) {
   const [handle, setHandle] = useState('');
   const [phoneInput, setPhoneInput] = useState('');
@@ -25554,20 +25581,27 @@ function ScanUserPanel({ store, onIssue, onShowQR }: {
             {([
               { key: 'qr' as const, label: 'QR Code', icon: <QrCode size={14} /> },
               { key: 'nfc' as const, label: 'Scanner', icon: <Wifi size={14} className="-rotate-90" /> },
-            ]).map(({ key, label, icon }) => (
+            ]).map(({ key, label, icon }) => {
+              const nfcLocked = key === 'nfc' && !isSubscribed;
+              return (
               <button
                 key={key}
-                onClick={() => handleScanMethodSwitch(key)}
-                disabled={savingMethod}
+                onClick={() => !nfcLocked && handleScanMethodSwitch(key)}
+                disabled={savingMethod || nfcLocked}
                 className={cn(
-                  'flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold transition-all disabled:opacity-50',
-                  scanMethod === key ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/50'
+                  'flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold transition-all',
+                  scanMethod === key ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/50',
+                  nfcLocked && 'opacity-40 cursor-not-allowed'
                 )}
               >
                 {icon} {label}
+                {nfcLocked && <Lock size={10} className="opacity-60" />}
               </button>
-            ))}
+            );})}
           </div>
+          {!isSubscribed && (
+            <p className="text-[10px] text-brand-navy/40 text-center">Subscribe to unlock Scanner (NFC) mode</p>
+          )}
           {scanMethod === 'qr' ? (
             <div className="space-y-3">
               <p className="text-xs text-brand-navy/60 leading-relaxed">Display your QR code — customers scan it from their Linq wallet card to earn points.</p>
@@ -25711,7 +25745,7 @@ function NfcTagUrlRow({ storeId }: { storeId: string }) {
 }
 
 // ─── Vendor Card Section (toggle + builder) ──────────────────────────────────
-function VendorCardSection({ store }: { store: StoreProfile | null }) {
+function VendorCardSection({ store, isSubscribed }: { store: StoreProfile | null; isSubscribed?: boolean }) {
   // Derive active card type from Firestore state — single source of truth
   const activeType: 'stamp' | 'spend' | 'visit' =
     store?.membershipEnabled && store?.membershipType === 'visit' ? 'visit' :
@@ -25841,18 +25875,27 @@ function VendorCardSection({ store }: { store: StoreProfile | null }) {
             {([
               { key: 'qr' as const, label: 'QR Code', icon: <QrCode size={14} /> },
               { key: 'nfc' as const, label: 'Scanner', icon: <Wifi size={14} className="-rotate-90" /> },
-            ]).map(({ key, label, icon }) => (
+            ]).map(({ key, label, icon }) => {
+              const nfcLocked = key === 'nfc' && !isSubscribed;
+              return (
               <button
                 key={key}
-                onClick={() => handleScanMethodClick(key)}
+                onClick={() => !nfcLocked && handleScanMethodClick(key)}
+                disabled={nfcLocked}
                 className={cn(
                   'flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold transition-all',
-                  currentScanMethod === key ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/50'
+                  currentScanMethod === key ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/50',
+                  nfcLocked && 'opacity-40 cursor-not-allowed'
                 )}
               >
                 {icon} {label}
+                {nfcLocked && <Lock size={10} className="opacity-60" />}
               </button>
-            ))}
+            );})}
+          </div>
+          {!isSubscribed && (
+            <p className="text-[10px] text-brand-navy/40 text-center">Subscribe to unlock Scanner (NFC) mode</p>
+          )}
           </div>
 
           {currentScanMethod === 'nfc' && (
