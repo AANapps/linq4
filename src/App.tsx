@@ -25896,7 +25896,6 @@ function VendorCardSection({ store, isSubscribed }: { store: StoreProfile | null
           {!isSubscribed && (
             <p className="text-[10px] text-brand-navy/40 text-center">Subscribe to unlock Scanner (NFC) mode</p>
           )}
-          </div>
 
           {currentScanMethod === 'nfc' && (
             <div className="space-y-3">
