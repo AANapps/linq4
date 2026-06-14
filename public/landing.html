@@ -122,16 +122,17 @@
       display: flex;
       align-items: center;
       gap: 0.375rem;
-      background: var(--navy);
+      background: var(--blue2);
       color: var(--white);
       text-decoration: none;
-      padding: 0.4rem 1rem;
+      padding: 0.55rem 1.25rem;
       border-radius: 100px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      transition: opacity 0.2s;
+      font-size: 0.925rem;
+      font-weight: 700;
+      transition: background 0.2s, transform 0.15s;
+      white-space: nowrap;
     }
-    .nav-cta:hover { opacity: 0.8; }
+    .nav-cta:hover { background: var(--blue1); transform: translateY(-1px); }
 
     /* ── TAB PANELS ── */
     .tab-panel { display: none; }
@@ -1055,8 +1056,8 @@
       <button class="tab-pill active" onclick="switchTab('customer', this)">Customers</button>
       <button class="tab-pill" onclick="switchTab('business', this)">Businesses</button>
     </div>
-    <a href="https://linq4.vercel.app" target="_blank" rel="noopener noreferrer" class="nav-cta" id="nav-cta">
-      <span id="nav-cta-label">Download</span>
+    <a href="https://linq4.vercel.app" target="_blank" rel="noopener noreferrer" class="nav-cta">
+      Vendor Login
     </a>
   </nav>
 
@@ -1489,8 +1490,7 @@
       document.querySelectorAll('.tab-pill').forEach(b => b.classList.remove('active'));
       document.getElementById('tab-' + tab).classList.add('active');
       btn.classList.add('active');
-      document.getElementById('nav-cta-label').textContent = tab === 'business' ? 'Vendor Login' : 'Download';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+window.scrollTo({ top: 0, behavior: 'smooth' });
       setTimeout(observeReveals, 50);
     }
 
