@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Linq — Loyalty Made Simple</title>
+  <meta name="description" content="Linq is the digital loyalty stamp card app for local businesses and their customers." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,600;0,700;0,800;1,800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy: #0F172A;
+      --navy-mid: #1E3050;
+      --gold: #F5C842;
+      --white: #ffffff;
+    }
+
+    body {
+      font-family: 'Poppins', system-ui, sans-serif;
+      background: var(--navy);
+      color: var(--white);
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .hero {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 3rem 1.5rem 2rem;
+      background: linear-gradient(160deg, #1E3050 0%, #162540 35%, #0F172A 70%, #0A1020 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 70% 50% at 50% 20%, rgba(245,200,66,0.10) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .logo {
+      font-size: 4rem;
+      font-weight: 800;
+      font-style: italic;
+      letter-spacing: -1px;
+      line-height: 1;
+      color: #fff;
+      margin-bottom: 0.5rem;
+    }
+
+    .tagline {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: rgba(255,255,255,0.55);
+      margin-bottom: 2.5rem;
+      letter-spacing: 0.01em;
+    }
+
+    .headline {
+      font-size: clamp(1.75rem, 5vw, 2.75rem);
+      font-weight: 800;
+      line-height: 1.15;
+      color: #fff;
+      max-width: 560px;
+      margin-bottom: 1rem;
+    }
+
+    .headline span {
+      color: var(--gold);
+    }
+
+    .sub {
+      font-size: 1rem;
+      color: rgba(255,255,255,0.55);
+      max-width: 400px;
+      line-height: 1.7;
+      margin-bottom: 2.75rem;
+    }
+
+    .store-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      width: 100%;
+      max-width: 320px;
+      margin-bottom: 1rem;
+    }
+
+    .btn-store {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.65rem;
+      width: 100%;
+      padding: 0.875rem 1.25rem;
+      border-radius: 14px;
+      font-family: inherit;
+      font-size: 0.9375rem;
+      font-weight: 700;
+      text-decoration: none;
+      transition: transform 0.15s, opacity 0.15s;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-store:active { transform: scale(0.97); }
+    .btn-store:hover { opacity: 0.9; }
+
+    .btn-apple {
+      background: #000;
+      color: #fff;
+    }
+
+    .btn-google {
+      background: #fff;
+      color: #1a1a1a;
+    }
+
+    .divider {
+      width: 100%;
+      max-width: 320px;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin: 1.25rem 0;
+      color: rgba(255,255,255,0.25);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(255,255,255,0.12);
+    }
+
+    .vendor-section {
+      width: 100%;
+      max-width: 320px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .vendor-label {
+      font-size: 0.8125rem;
+      color: rgba(255,255,255,0.45);
+      font-weight: 600;
+    }
+
+    .btn-vendor {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      width: 100%;
+      padding: 0.875rem 1.25rem;
+      border-radius: 14px;
+      font-family: inherit;
+      font-size: 0.9375rem;
+      font-weight: 700;
+      text-decoration: none;
+      color: #fff;
+      background: rgba(255,255,255,0.08);
+      border: 1.5px solid rgba(255,255,255,0.18);
+      transition: background 0.15s, transform 0.15s;
+      cursor: pointer;
+    }
+
+    .btn-vendor:hover { background: rgba(255,255,255,0.14); }
+    .btn-vendor:active { transform: scale(0.97); }
+
+    .btn-vendor svg { flex-shrink: 0; }
+
+    footer {
+      text-align: center;
+      padding: 1.25rem 1rem;
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.2);
+      background: var(--navy);
+    }
+  </style>
+</head>
+<body>
+  <section class="hero">
+    <div class="logo">Linq</div>
+    <p class="tagline">Loyalty Made Simple</p>
+
+    <h1 class="headline">Stamp cards for the<br /><span>digital age</span></h1>
+    <p class="sub">Collect stamps, earn rewards, and support your favourite local businesses — all in one app.</p>
+
+    <div class="store-buttons">
+      <a
+        href="https://apps.apple.com/app/linq/id6474052885"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="btn-store btn-apple"
+      >
+        <svg width="18" height="22" viewBox="0 0 384 512" fill="white"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-16.9 76.5-16.9 32.4 0 49.2 16.9 76.4 16.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.8-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>
+        Download on the App Store
+      </a>
+      <a
+        href="https://play.google.com/store/apps/details?id=app.mylinq.linq"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="btn-store btn-google"
+      >
+        <svg width="20" height="20" viewBox="0 0 488 512"><path d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z" fill="#4285F4"/><path d="M104.8 300.5l-79.9 62C48.5 416.6 138.9 480 248 480c69.9 0 128.5-23.1 171.2-61.3l-76.5-59.3C317.5 381.4 285 392 248 392c-56.3 0-104.3-37.7-121.2-89.4l-22-2.1z" fill="#34A853"/><path d="M24.9 362.5C9 328.7 0 291.3 0 256s9-72.7 24.9-106.5l79.9 62C97.8 232.2 94.3 243.7 94.3 256s3.5 23.8 10.5 38.5l-79.9 68z" fill="#FBBC05"/><path d="M248 120c37.5 0 71.4 12.9 98 34.1l73.3-73.3C374.9 44.5 315.6 16 248 16 138.9 16 48.5 79.4 24.9 149.5l79.9 62C121.7 157.7 169.7 120 248 120z" fill="#EA4335"/></svg>
+        Get it on Google Play
+      </a>
+    </div>
+
+    <div class="divider">For businesses</div>
+
+    <div class="vendor-section">
+      <p class="vendor-label">Are you a vendor? Sign in to your business portal.</p>
+      <a
+        href="https://linq4.vercel.app"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="btn-vendor"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        Vendor Login
+      </a>
+    </div>
+  </section>
+
+  <footer>&copy; 2026 Linq. All rights reserved.</footer>
+</body>
+</html>
