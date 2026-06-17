@@ -62,5 +62,14 @@
 	<string>Linq uses your location to notify you when you're near a store you have a stamp card with.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Linq uses your location to notify you when you're near a store you have a stamp card with, even when the app is in the background.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.453114241783-ncpg7hf3kpstlj86h2jkehr0epvrevp6</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>
