@@ -36328,7 +36328,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
               transition={{ type: 'spring', stiffness: 540, damping: 40 }}
               className="fixed top-0 left-0 right-0 bottom-0 z-[9999] bg-brand-bg flex flex-col overflow-hidden max-w-md mx-auto"
               onClick={e => e.stopPropagation()}>
-              <div className="px-5 pt-5 pb-3 flex items-center justify-between shrink-0">
+              <div className="px-5 pb-3 flex items-center justify-between shrink-0" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.25rem)' }}>
                 <h3 className="font-bold text-brand-navy text-lg">Challenges</h3>
                 <button onClick={() => setPubChallengeOpen(false)} className="w-8 h-8 rounded-full bg-brand-navy/8 flex items-center justify-center">
                   <X size={16} className="text-brand-navy" />
