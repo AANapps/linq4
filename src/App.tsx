@@ -2679,7 +2679,9 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
   onEmailSignUp: (email: string, password: string) => Promise<string | null>;
   onEmailSignIn: (email: string, password: string) => Promise<string | null>;
 }) {
-  const [phoneMode, setPhoneMode] = React.useState<'phone' | 'otp' | 'email' | 'email-signup'>('phone');
+  const [phoneMode, setPhoneMode] = React.useState<'phone' | 'otp' | 'email' | 'email-signup'>(
+    Capacitor.getPlatform() === 'ios' ? 'email' : 'phone'
+  );
   const [dialCode, setDialCode] = React.useState('+61');
   const [phone, setPhone] = React.useState('');
   const [otp, setOtp] = React.useState('');
@@ -2766,9 +2768,12 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
         </div>
       )}
 
-      {(phoneMode === 'otp' || phoneMode === 'email' || phoneMode === 'email-signup') && (
+      {(phoneMode === 'otp' || (phoneMode === 'email' && Capacitor.getPlatform() !== 'ios') || phoneMode === 'email-signup') && (
         <button
-          onClick={() => { setPhoneMode('phone'); setOtp(''); setEmail(''); setPassword(''); setError(''); }}
+          onClick={() => {
+            if (phoneMode === 'email-signup') { setPhoneMode('email'); setPassword(''); setError(''); }
+            else { setPhoneMode(Capacitor.getPlatform() === 'ios' ? 'email' : 'phone'); setOtp(''); setEmail(''); setPassword(''); setError(''); }
+          }}
           className="flex items-center gap-2 text-white/70 hover:text-white transition-colors"
           style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3.5rem)', marginBottom: '2rem' }}
         >
@@ -2792,7 +2797,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
             {phoneMode === 'email' || phoneMode === 'email-signup' ? <Mail className="w-7 h-7 text-white" /> : <Phone className="w-7 h-7 text-white" />}
           </div>
           <h2 className="font-display font-bold text-2xl text-white mb-1">
-            {phoneMode === 'phone' ? 'Sign in' : phoneMode === 'otp' ? 'Enter the code' : phoneMode === 'email-signup' ? 'Create account' : 'Sign in with email'}
+            {phoneMode === 'phone' ? 'Sign in' : phoneMode === 'otp' ? 'Enter the code' : phoneMode === 'email-signup' ? 'Create account' : 'Sign in'}
           </h2>
           <p className="text-white/50 text-sm">
             {phoneMode === 'phone' ? 'Enter your phone number to continue'
