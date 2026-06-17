@@ -12,7 +12,6 @@ workflows:
         bundle_identifier: co.uk.adastranetwork.linq
       groups:
         - firebase IOS
-        - app_store_connect
       vars:
         XCODE_PROJECT: ios/App/App.xcodeproj
         XCODE_SCHEME: App
@@ -48,12 +47,6 @@ workflows:
       cache_paths:
         - $HOME/Library/Caches/org.swift.swiftpm
         - $HOME/Library/Developer/Xcode/DerivedData
-    publishing:
-      app_store_connect:
-        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
-        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
-        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
-        submit_to_testflight: true
     artifacts:
       - build/ipa/*.ipa
 
