@@ -2715,10 +2715,25 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
     setLoading(true);
     try {
       if (Capacitor.getPlatform() === 'ios') {
-        const result = await FirebaseAuthentication.signInWithPhoneNumber({
-          phoneNumber: toE164(dialCode, phone.trim()),
+        // On iOS the native plugin resolves signInWithPhoneNumber() with no value —
+        // the verification ID is delivered separately via the phoneCodeSent event.
+        const verificationId = await new Promise<string>((resolve, reject) => {
+          const cleanup = () => { codeSentHandle?.remove(); failedHandle?.remove(); };
+          let codeSentHandle: { remove: () => void } | undefined;
+          let failedHandle: { remove: () => void } | undefined;
+          FirebaseAuthentication.addListener('phoneCodeSent', (event) => {
+            cleanup();
+            resolve(event.verificationId);
+          }).then((h) => { codeSentHandle = h; });
+          FirebaseAuthentication.addListener('phoneVerificationFailed', (event) => {
+            cleanup();
+            reject(new Error(event.message));
+          }).then((h) => { failedHandle = h; });
+          FirebaseAuthentication.signInWithPhoneNumber({
+            phoneNumber: toE164(dialCode, phone.trim()),
+          }).catch((e) => { cleanup(); reject(e); });
         });
-        setNativeVerificationId(result.verificationId ?? null);
+        setNativeVerificationId(verificationId);
         setPhoneMode('otp');
       } else {
         if (!recaptchaVerifier.current) {
