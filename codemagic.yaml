@@ -27,6 +27,7 @@ workflows:
         script: npx cap sync ios
       - name: Build & sign iOS
         script: |
+          set -e
           xcode-project use-profiles
           xcodebuild \
             -project "$XCODE_PROJECT" \
@@ -34,7 +35,8 @@ workflows:
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath build/App.xcarchive \
-            archive
+            -allowProvisioningUpdates \
+            archive | xcpretty && exit ${PIPESTATUS[0]}
           xcodebuild \
             -exportArchive \
             -archivePath build/App.xcarchive \
