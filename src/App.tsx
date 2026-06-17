@@ -22223,7 +22223,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                 <div className="relative z-10 flex-1 min-w-0 cursor-pointer"
                   onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}>
                   <h4 className="font-bold text-white text-sm leading-tight truncate">{store?.name || 'Store'}</h4>
-                  <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">{store?.category || 'Retail'}</p>
+                  <p className="text-white/70 text-[9px] font-medium">Tap card to collect points</p>
                 </div>
                 <div className="relative z-10 flex items-center gap-1.5 shrink-0">
                   {claimableTier && !card.isRedeemed && <div className="bg-white/25 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest animate-pulse">Redeem!</div>}
@@ -22269,7 +22269,7 @@ function LoyaltyCard({ card, store, onViewStore, compact = false, autoOpen = fal
                   <div className="relative z-10 text-center cursor-pointer"
                     onClick={(e) => { if (store && onViewStore) { e.stopPropagation(); onViewStore(store); } }}>
                     <h4 className="font-bold text-white text-lg leading-tight">{store?.name || 'Store'}</h4>
-                    <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mt-0.5">{store?.category || 'Retail'}</p>
+                    <p className="text-white/70 text-[11px] font-medium mt-0.5">Tap card to collect points</p>
                   </div>
                 </div>
                 {stampGrid(3, 'gap-3', 'px-8 pt-7 pb-6', 22, 'text-[15px]')}
