@@ -43,6 +43,10 @@ workflows:
             -archivePath build/App.xcarchive \
             -exportOptionsPlist /Users/builder/export_options.plist \
             -exportPath build/ipa
+    cache:
+      cache_paths:
+        - $HOME/Library/Caches/org.swift.swiftpm
+        - $HOME/Library/Developer/Xcode/DerivedData
     artifacts:
       - build/ipa/*.ipa
 
