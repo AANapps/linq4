@@ -761,7 +761,7 @@ interface StoreProfile {
 }
 
 function storeCardActive(store: StoreProfile): boolean {
-  return store.cardEnabled !== false;
+  return store.cardEnabled !== false || store.membershipEnabled === true;
 }
 
 function fmtK(n: number): string {
@@ -17830,32 +17830,6 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
   useEffect(() => { vendorSeenAnnouncementIdsRef.current = profile?.seenAnnouncementIds ?? []; }, [profile?.seenAnnouncementIds]);
   const [showNFCOrder, setShowNFCOrder] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
-  const [togglingCard, setTogglingCard] = useState(false);
-
-  const cardIsActive = !!(store?.cardEnabled === true || store?.membershipEnabled);
-
-  const handleToggleCard = async (active: boolean) => {
-    if (!store) return;
-    setTogglingCard(true);
-    try {
-      const allCards = [...storeCards];
-      if (active) {
-        const hasMembership = store.membershipType === 'visit' || store.membershipType === 'spend';
-        await updateDoc(doc(db, 'stores', store.id), hasMembership
-          ? { cardEnabled: false, membershipEnabled: true }
-          : { cardEnabled: true, membershipEnabled: false });
-      } else {
-        await updateDoc(doc(db, 'stores', store.id), { cardEnabled: false, membershipEnabled: false });
-      }
-      for (let i = 0; i < allCards.length; i += 500) {
-        const batch = writeBatch(db);
-        allCards.slice(i, i + 500).forEach(c => batch.update(doc(db, 'cards', c.id), { vendorDisabled: !active }));
-        await batch.commit();
-      }
-    } finally {
-      setTogglingCard(false);
-    }
-  };
 
   useEffect(() => {
     if (showVendorQR) {
