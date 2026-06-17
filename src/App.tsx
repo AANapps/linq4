@@ -23,10 +23,13 @@ import {
   applyActionCode,
   signInWithPhoneNumber,
   RecaptchaVerifier,
+  PhoneAuthProvider,
+  signInWithCredential,
   ConfirmationResult,
   updatePassword,
   User as FirebaseUser
 } from 'firebase/auth';
+import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import {
   collection,
   doc,
@@ -2679,9 +2682,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
   onEmailSignUp: (email: string, password: string) => Promise<string | null>;
   onEmailSignIn: (email: string, password: string) => Promise<string | null>;
 }) {
-  const [phoneMode, setPhoneMode] = React.useState<'phone' | 'otp' | 'email' | 'email-signup'>(
-    Capacitor.getPlatform() === 'ios' ? 'email' : 'phone'
-  );
+  const [phoneMode, setPhoneMode] = React.useState<'phone' | 'otp' | 'email' | 'email-signup'>('phone');
   const [dialCode, setDialCode] = React.useState('+61');
   const [phone, setPhone] = React.useState('');
   const [otp, setOtp] = React.useState('');
@@ -2689,11 +2690,13 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
   const [password, setPassword] = React.useState('');
   const [showPassword, setShowPassword] = React.useState(false);
   const [confirmResult, setConfirmResult] = React.useState<ConfirmationResult | null>(null);
+  const [nativeVerificationId, setNativeVerificationId] = React.useState<string | null>(null);
   const recaptchaVerifier = React.useRef<RecaptchaVerifier | null>(null);
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(false);
 
   React.useEffect(() => {
+    if (Capacitor.getPlatform() === 'ios') return;
     if (phoneMode !== 'phone' && phoneMode !== 'email' && phoneMode !== 'email-signup') return;
     const timer = setTimeout(() => {
       if (recaptchaVerifier.current) return;
@@ -2709,25 +2712,36 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
   const handleSendOTP = async () => {
     setError('');
     if (!phone.trim()) { setError('Enter your phone number'); return; }
-    if (!recaptchaVerifier.current) {
-      try {
-        const v = new RecaptchaVerifier(auth, 'phone-recaptcha', { size: 'invisible' });
-        await v.render();
-        recaptchaVerifier.current = v;
-      } catch {
-        setError('reCAPTCHA failed to load — restart and try again.');
-        return;
-      }
-    }
     setLoading(true);
     try {
-      const result = await signInWithPhoneNumber(auth, toE164(dialCode, phone.trim()), recaptchaVerifier.current);
-      setConfirmResult(result);
-      setPhoneMode('otp');
+      if (Capacitor.getPlatform() === 'ios') {
+        const result = await FirebaseAuthentication.signInWithPhoneNumber({
+          phoneNumber: toE164(dialCode, phone.trim()),
+        });
+        setNativeVerificationId(result.verificationId ?? null);
+        setPhoneMode('otp');
+      } else {
+        if (!recaptchaVerifier.current) {
+          try {
+            const v = new RecaptchaVerifier(auth, 'phone-recaptcha', { size: 'invisible' });
+            await v.render();
+            recaptchaVerifier.current = v;
+          } catch {
+            setError('reCAPTCHA failed to load — restart and try again.');
+            setLoading(false);
+            return;
+          }
+        }
+        const result = await signInWithPhoneNumber(auth, toE164(dialCode, phone.trim()), recaptchaVerifier.current!);
+        setConfirmResult(result);
+        setPhoneMode('otp');
+      }
     } catch (e: any) {
       setError(e.message || 'Failed to send code. Check the number and try again.');
-      recaptchaVerifier.current?.clear();
-      recaptchaVerifier.current = null;
+      if (Capacitor.getPlatform() !== 'ios') {
+        recaptchaVerifier.current?.clear();
+        recaptchaVerifier.current = null;
+      }
     } finally {
       setLoading(false);
     }
@@ -2736,10 +2750,16 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
   const handleVerifyOTP = async () => {
     setError('');
     if (!otp.trim()) { setError('Enter the 6-digit code'); return; }
-    if (!confirmResult) return;
     setLoading(true);
     try {
-      await confirmResult.confirm(otp.trim());
+      if (Capacitor.getPlatform() === 'ios') {
+        if (!nativeVerificationId) { setError('Session expired — go back and try again.'); return; }
+        const credential = PhoneAuthProvider.credential(nativeVerificationId, otp.trim());
+        await signInWithCredential(auth, credential);
+      } else {
+        if (!confirmResult) return;
+        await confirmResult.confirm(otp.trim());
+      }
     } catch {
       setError('Invalid code — please try again.');
     } finally {
@@ -2768,12 +2788,9 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
         </div>
       )}
 
-      {(phoneMode === 'otp' || (phoneMode === 'email' && Capacitor.getPlatform() !== 'ios') || phoneMode === 'email-signup') && (
+      {(phoneMode === 'otp' || phoneMode === 'email' || phoneMode === 'email-signup') && (
         <button
-          onClick={() => {
-            if (phoneMode === 'email-signup') { setPhoneMode('email'); setPassword(''); setError(''); }
-            else { setPhoneMode(Capacitor.getPlatform() === 'ios' ? 'email' : 'phone'); setOtp(''); setEmail(''); setPassword(''); setError(''); }
-          }}
+          onClick={() => { setPhoneMode('phone'); setOtp(''); setEmail(''); setPassword(''); setError(''); }}
           className="flex items-center gap-2 text-white/70 hover:text-white transition-colors"
           style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3.5rem)', marginBottom: '2rem' }}
         >
@@ -2797,7 +2814,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
             {phoneMode === 'email' || phoneMode === 'email-signup' ? <Mail className="w-7 h-7 text-white" /> : <Phone className="w-7 h-7 text-white" />}
           </div>
           <h2 className="font-display font-bold text-2xl text-white mb-1">
-            {phoneMode === 'phone' ? 'Sign in' : phoneMode === 'otp' ? 'Enter the code' : phoneMode === 'email-signup' ? 'Create account' : 'Sign in'}
+            {phoneMode === 'phone' ? 'Sign in' : phoneMode === 'otp' ? 'Enter the code' : phoneMode === 'email-signup' ? 'Create account' : 'Sign in with email'}
           </h2>
           <p className="text-white/50 text-sm">
             {phoneMode === 'phone' ? 'Enter your phone number to continue'
