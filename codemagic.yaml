@@ -28,6 +28,7 @@ workflows:
       - name: Build & sign iOS
         script: |
           set -e
+          set -o pipefail
           xcode-project use-profiles
           xcodebuild \
             -project "$XCODE_PROJECT" \
@@ -36,7 +37,7 @@ workflows:
             -destination 'generic/platform=iOS' \
             -archivePath build/App.xcarchive \
             -allowProvisioningUpdates \
-            archive | xcpretty && exit ${PIPESTATUS[0]}
+            archive | xcpretty
           xcodebuild \
             -exportArchive \
             -archivePath build/App.xcarchive \
