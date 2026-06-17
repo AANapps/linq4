@@ -21,8 +21,6 @@ workflows:
         script: npm ci
       - name: Build web app
         script: npm run build
-      - name: Inject GoogleService-Info.plist
-        script: echo $GOOGLE_SERVICES_IOS | base64 --decode > ios/App/App/GoogleService-Info.plist
       - name: Capacitor sync iOS
         script: npx cap sync ios
       - name: Build & sign iOS
