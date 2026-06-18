@@ -74,6 +74,11 @@ const openUrl = async (url: string) => {
 
 const isNativeIOS = Capacitor.getPlatform() === 'ios';
 
+// App launch timestamp, used to give the iOS silent-push APNs token time to register
+// before attempting phone auth — otherwise Firebase falls back to the reCAPTCHA webview.
+const APP_LAUNCH_TIME = Date.now();
+const IOS_APNS_WARMUP_MS = 3000;
+
 const openMaps = async (query: string) => {
   const encoded = encodeURIComponent(query);
   if (Capacitor.getPlatform() === 'ios') {
@@ -2715,6 +2720,10 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
     setLoading(true);
     try {
       if (Capacitor.getPlatform() === 'ios') {
+        const sinceLaunch = Date.now() - APP_LAUNCH_TIME;
+        if (sinceLaunch < IOS_APNS_WARMUP_MS) {
+          await new Promise(r => setTimeout(r, IOS_APNS_WARMUP_MS - sinceLaunch));
+        }
         // On iOS the native plugin resolves signInWithPhoneNumber() with no value —
         // the verification ID is delivered separately via the phoneCodeSent event.
         const verificationId = await new Promise<string>((resolve, reject) => {
