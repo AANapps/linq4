@@ -74,6 +74,14 @@ const openUrl = async (url: string) => {
 
 const isNativeIOS = Capacitor.getPlatform() === 'ios';
 
+// Routes the email verification link to our own app (instead of Firebase's generic hosted
+// page) so we can show a "go back to Linq" confirmation. Requires linq4.vercel.app to be
+// added under Firebase Console → Authentication → Settings → Authorized domains.
+const emailVerificationActionCodeSettings = {
+  url: 'https://linq4.vercel.app/app',
+  handleCodeInApp: true,
+};
+
 // App launch timestamp, used to give the iOS silent-push APNs token time to register
 // before attempting phone auth — otherwise Firebase falls back to the reCAPTCHA webview.
 const APP_LAUNCH_TIME = Date.now();
@@ -1333,6 +1341,7 @@ export default function App() {
   const [profileLoadError, setProfileLoadError] = useState(false);
   const [browserConsumerBlocked, setBrowserConsumerBlocked] = useState(false);
   const [nativeVendorBlocked, setNativeVendorBlocked] = useState(false);
+  const [emailVerifiedStandalone, setEmailVerifiedStandalone] = useState(false);
   const [profileCollection, setProfileCollection] = useState<'users' | 'vendors' | null>(null);
   const intendedRoleRef = useRef<'consumer' | 'vendor' | null>(null);
   const [activeTab, setActiveTab] = useState<string>('home');
@@ -1768,7 +1777,13 @@ export default function App() {
         if (currentUser) await currentUser.reload();
         setNeedsEmailVerification(false);
         const refreshed = auth.currentUser;
-        if (!refreshed) return;
+        if (!refreshed) {
+          // Link was opened in a browser tab with no signed-in session (e.g. tapped from the
+          // verification email on a different device, or while the native app holds the session).
+          // The email is still verified server-side — just let the user know to go back to the app.
+          setEmailVerifiedStandalone(true);
+          return;
+        }
         const userDoc = await getDoc(doc(db, 'users', refreshed.uid));
         const inUsers = userDoc.exists();
         const existingDoc = inUsers ? userDoc : await getDoc(doc(db, 'vendors', refreshed.uid));
@@ -1855,7 +1870,7 @@ export default function App() {
   const handleEmailSignUp = async (email: string, password: string): Promise<string | null> => {
     try {
       const credential = await createUserWithEmailAndPassword(auth, email, password);
-      sendEmailVerification(credential.user).catch(console.error);
+      sendEmailVerification(credential.user, emailVerificationActionCodeSettings).catch(console.error);
       setNeedsEmailVerification(true);
       return null;
     } catch (err: any) {
@@ -1877,7 +1892,7 @@ export default function App() {
 
   const handleResendVerification = async () => {
     if (user && !user.emailVerified) {
-      sendEmailVerification(user).catch(console.error);
+      sendEmailVerification(user, emailVerificationActionCodeSettings).catch(console.error);
     }
   };
 
@@ -2121,6 +2136,19 @@ export default function App() {
           <img src={adastraLogoUrl || '/app-logo.png'} alt="Ad Astra Network" className="w-14 h-14 rounded-2xl object-contain" />
           <p className="text-[10px] text-white/40 font-medium">from</p>
           <p className="text-xs font-bold text-white/60 tracking-wide">Ad Astra Network</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (emailVerifiedStandalone) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gradient-logo-blue px-6 gap-6 text-center">
+        <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={{ fontFamily: 'Poppins, sans-serif', color: '#ffffff' }}>Linq</span>
+        <CheckCircle2 className="w-12 h-12 text-white" />
+        <div>
+          <p className="text-white font-bold text-xl mb-2">Email verified!</p>
+          <p className="text-white/70 text-sm max-w-xs">Go back to the Linq app to continue.</p>
         </div>
       </div>
     );
