@@ -2652,6 +2652,17 @@ const DIAL_CODES = [
 function toE164(dial: string, local: string): string {
   return dial + local.replace(/\D/g, '').replace(/^0+/, '');
 }
+// Defaults the phone country-code picker to the device's region instead of always Australia —
+// a reviewer/user outside AU entering a number without noticing the flag dropdown previously
+// produced an invalid E.164 number (no error surfaced until the SMS silently never arrived).
+function guessDefaultDialCode(): string {
+  try {
+    const region = (navigator.language || '').split('-')[1]?.toUpperCase();
+    return DIAL_CODES.find(c => c.code === region)?.dial ?? '+61';
+  } catch {
+    return '+61';
+  }
+}
 function composeAddress(line1: string, line2: string, town: string, state: string, postcode: string): string {
   return [line1, line2, town, state, postcode].filter(s => s.trim()).join(', ');
 }
@@ -2716,7 +2727,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
   onEmailSignIn: (email: string, password: string) => Promise<string | null>;
 }) {
   const [phoneMode, setPhoneMode] = React.useState<'phone' | 'otp' | 'email' | 'email-signup'>('phone');
-  const [dialCode, setDialCode] = React.useState('+61');
+  const [dialCode, setDialCode] = React.useState(guessDefaultDialCode);
   const [phone, setPhone] = React.useState('');
   const [otp, setOtp] = React.useState('');
   const [email, setEmail] = React.useState('');
@@ -2894,7 +2905,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
                   value={phone}
                   onChange={e => setPhone(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleSendOTP()}
-                  placeholder="0420 448 995"
+                  placeholder="Phone number"
                   autoComplete="tel-national"
                   inputMode="numeric"
                   className="flex-1 min-w-0 px-5 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm focus:outline-none focus:border-white/50 focus:bg-white/20"
