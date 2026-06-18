@@ -3744,7 +3744,7 @@ function OnboardingScreen({ user, onComplete }: {
                 {onboardingLegal === 'privacy' ? 'Privacy Policy' : 'Terms of Service'}
               </h2>
             </div>
-            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4 text-sm text-brand-navy/75 leading-relaxed">
+            <div className={cn("flex-1 overflow-y-auto px-6 py-5 space-y-4 text-sm text-brand-navy/75 leading-relaxed", isNativeIOS && "md:max-w-2xl md:mx-auto md:w-full")}>
               {onboardingLegal === 'privacy' ? (
                 <>
                   <p className="font-bold text-brand-navy">Last updated: June 2026</p>
@@ -4305,10 +4305,10 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: '100%' }}
         transition={{ type: 'spring', damping: 38, stiffness: 520 }}
-        className="fixed inset-0 z-[250] flex flex-col"
+        className={cn("fixed inset-0 z-[250] flex flex-col", isNativeIOS && "md:items-center md:justify-center md:bg-black/40")}
       >
-        <button onClick={onClose} className="flex-shrink-0 w-full" style={{ height: 'calc(env(safe-area-inset-top, 0px) + 4rem)' }} />
-        <div className="flex-1 bg-brand-bg rounded-t-[2.5rem] shadow-2xl flex flex-col overflow-hidden">
+        <button onClick={onClose} className={cn("flex-shrink-0 w-full", isNativeIOS && "md:hidden")} style={{ height: 'calc(env(safe-area-inset-top, 0px) + 4rem)' }} />
+        <div className={cn("flex-1 bg-brand-bg rounded-t-[2.5rem] shadow-2xl flex flex-col overflow-hidden", isNativeIOS && "md:flex-none md:w-full md:max-w-lg md:max-h-[85vh] md:rounded-[2.5rem]")}>
           {/* Header lives outside the scroll container so nothing can paint over it */}
           <div className="bg-brand-bg px-5 pt-5 pb-4 border-b border-black/5 flex-shrink-0">
             <div className="flex items-start justify-between gap-3">
@@ -13008,7 +13008,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                     })}
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className={cn("space-y-3", isNativeIOS && "md:grid md:grid-cols-2 md:gap-4 md:space-y-0 lg:grid-cols-3")}>
                     {activeCards.map(card => {
                       const store = stores.find(s => s.id === card.store_id);
                       return (
@@ -24469,7 +24469,7 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
 
             if (activeCategory !== 'All') return (
               /* Single category — vertical list */
-              <div className="space-y-3">
+              <div className={cn("space-y-3", isNativeIOS && "md:grid md:grid-cols-2 md:gap-3 md:space-y-0 lg:grid-cols-3")}>
                 {filteredStores.map((store, i) => {
                   const dist = distancesMap.get(store.id);
                   const distLabel = dist != null
@@ -28189,7 +28189,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
 
   // ── Consumer profile layout ──
   return (
-    <div className="space-y-6 pb-20 text-brand-navy">
+    <div className={cn("space-y-6 pb-20 text-brand-navy", isNativeIOS && "md:max-w-2xl md:mx-auto")}>
       {/* Avatar customiser modal */}
       <AnimatePresence>
         {avatarViewOpen && (
@@ -31283,7 +31283,7 @@ function DealSliderSection({ title, icon, challenges, onViewStore, onViewChallen
           </button>
         )}
       </div>
-      <div className={cn('pb-2', showAll ? 'grid grid-cols-2 gap-4' : 'flex gap-3 overflow-x-auto')} style={!showAll ? { scrollbarWidth: 'none', msOverflowStyle: 'none' } : {}}>
+      <div className={cn('pb-2', showAll ? cn('grid grid-cols-2 gap-4', isNativeIOS && 'md:grid-cols-3 lg:grid-cols-4') : 'flex gap-3 overflow-x-auto')} style={!showAll ? { scrollbarWidth: 'none', msOverflowStyle: 'none' } : {}}>
         {visible.map((c, i) => {
           const colors = REWARD_TAG_COLORS[c.rewardTag || 'product'];
           const vendorStore = stores?.find(s => c.vendorIds?.[0] === s.id);
@@ -31589,7 +31589,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
               {searchedChallenges.length > 0 && (
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-2.5 px-1">Challenges</p>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className={cn("grid grid-cols-2 gap-4", isNativeIOS && "md:grid-cols-3 lg:grid-cols-4")}>
                     {searchedChallenges.map((c, i) => {
                       const colors = REWARD_TAG_COLORS[c.rewardTag || 'product'];
                       return (
@@ -32333,7 +32333,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
 
   return (
     <>
-    <div className="space-y-5 pb-20">
+    <div className={cn("space-y-5 pb-20", isNativeIOS && "md:max-w-2xl md:mx-auto")}>
       {/* Tab bar */}
       <div className="relative flex justify-center items-center gap-6">
         {(['discovery', 'following', 'polls'] as const).map(tab => (
@@ -32767,8 +32767,8 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
         if (otherStores.length > 0) (grouped as Record<string, StoreProfile[]>)['Other'] = otherStores;
 
         return (
-          <div className="fixed inset-0 z-[100] flex flex-col" style={{ background: 'rgba(0,0,0,0.7)' }}>
-            <div className="flex-1 overflow-y-auto bg-[#f8f9fc] rounded-t-3xl mt-12">
+          <div className={cn("fixed inset-0 z-[100] flex flex-col", isNativeIOS && "md:items-center md:justify-center")} style={{ background: 'rgba(0,0,0,0.7)' }}>
+            <div className={cn("flex-1 overflow-y-auto bg-[#f8f9fc] rounded-t-3xl mt-12", isNativeIOS && "md:flex-none md:mt-0 md:w-full md:max-w-lg md:max-h-[85vh] md:rounded-[1.875rem]")}>
               <div className="sticky top-0 bg-[#f8f9fc] z-10 px-5 pt-5 pb-3 flex items-center justify-between border-b border-brand-navy/5">
                 <div>
                   <h2 className="font-extrabold text-brand-navy text-lg">All Deals Near You</h2>
@@ -33535,7 +33535,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
   }
 
   return (
-    <div className="space-y-6">
+    <div className={cn("space-y-6", isNativeIOS && "md:max-w-2xl md:mx-auto")}>
       {/* Broadcast panel */}
       <AnimatePresence>
         {showBroadcast && vendorStore && (
