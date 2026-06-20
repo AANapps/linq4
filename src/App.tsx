@@ -9231,11 +9231,25 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
   const [confirmDeleteUid, setConfirmDeleteUid] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [togglingUid, setTogglingUid] = useState<string | null>(null);
+  const [userReportReasons, setUserReportReasons] = useState<Map<string, string[]>>(new Map());
 
   useEffect(() => {
     return onSnapshot(collection(db, 'users'), snap =>
       setUsers(snap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile)).sort((a, b) => (a.name || '').localeCompare(b.name || '')))
     , () => {});
+  }, []);
+
+  useEffect(() => {
+    return onSnapshot(collection(db, 'reports'), snap => {
+      const reasonsMap = new Map<string, string[]>();
+      snap.docs.forEach(d => {
+        const reportedUid = d.data().reportedUid as string | undefined;
+        if (!reportedUid) return;
+        const reason = d.data().reason || 'No reason given';
+        reasonsMap.set(reportedUid, [...(reasonsMap.get(reportedUid) || []), reason]);
+      });
+      setUserReportReasons(reasonsMap);
+    }, () => {});
   }, []);
 
   const filtered = search.trim()
@@ -9331,6 +9345,11 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
                   <div className="flex items-center gap-1.5 min-w-0">
                     <p className="font-bold text-sm text-brand-navy truncate">{u.name || '—'}</p>
                     <span className={cn('text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0', roleColor[u.role] || 'bg-brand-navy/10 text-brand-navy/75')}>{u.role}</span>
+                    {userReportReasons.has(u.uid) && (
+                      <span className="text-[9px] font-bold text-rose-500 bg-rose-50 px-1.5 py-0.5 rounded-full shrink-0">
+                        {userReportReasons.get(u.uid)!.length} report{userReportReasons.get(u.uid)!.length > 1 ? 's' : ''}
+                      </span>
+                    )}
                   </div>
                   <p className="text-[10px] text-brand-navy/75 truncate">{u.handle ? `@${u.handle}` : u.email}</p>
                 </div>
@@ -9360,6 +9379,15 @@ function AdminUsersPanel({ onClose }: { onClose: () => void }) {
                       </div>
                     ) : (
                       <div className="px-4 pb-3 pt-1 border-t border-brand-navy/5 grid grid-cols-2 gap-2">
+                        {userReportReasons.has(u.uid) && (
+                          <div className="col-span-2 flex items-center gap-1 flex-wrap pb-1">
+                            {[...new Set(userReportReasons.get(u.uid) || [])].map((reason, i) => (
+                              <span key={i} className="text-[9px] font-bold text-rose-600 bg-rose-50 border border-rose-100 px-1.5 py-0.5 rounded-full">
+                                {reason}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                         <button onClick={() => toggleIntro(u)} disabled={togglingUid === u.uid}
                           className={cn('flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all',
                             u.introComplete ? 'bg-emerald-100 text-emerald-700' : 'bg-brand-navy/8 text-brand-navy/50',
@@ -9951,6 +9979,7 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
   const [posts, setPosts] = useState<GlobalPost[]>([]);
   const [flaggedPosts, setFlaggedPosts] = useState<GlobalPost[]>([]);
   const [reportedPostIds, setReportedPostIds] = useState<Set<string>>(new Set());
+  const [reportReasonsByPost, setReportReasonsByPost] = useState<Map<string, string[]>>(new Map());
   const [tab, setTab] = useState<'create' | 'all' | 'flagged'>('create');
   const [search, setSearch] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -10012,8 +10041,16 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
       () => {}
     );
     const unsub2 = onSnapshot(collection(db, 'reports'), async snap => {
-      const ids = [...new Set(snap.docs.map(d => d.data().postId).filter(Boolean))] as string[];
+      const postReports = snap.docs.filter(d => d.data().postId);
+      const ids = [...new Set(postReports.map(d => d.data().postId as string))];
       setReportedPostIds(new Set(ids));
+      const reasonsMap = new Map<string, string[]>();
+      postReports.forEach(d => {
+        const postId = d.data().postId as string;
+        const reason = d.data().reason || 'No reason given';
+        reasonsMap.set(postId, [...(reasonsMap.get(postId) || []), reason]);
+      });
+      setReportReasonsByPost(reasonsMap);
       if (ids.length === 0) { setFlaggedPosts([]); return; }
       const fetched: GlobalPost[] = [];
       for (const id of ids) {
@@ -10795,6 +10832,15 @@ function AdminPostsPanel({ onClose }: { onClose: () => void }) {
                         <p className="text-xs text-brand-navy/70 mt-0.5 line-clamp-2">
                           {post.postType === 'reward' ? `${post.content} ${post.achievementText}` : post.content}
                         </p>
+                        {reportedPostIds.has(post.id) && (
+                          <div className="flex items-center gap-1 flex-wrap mt-1">
+                            {[...new Set(reportReasonsByPost.get(post.id) || [])].map((reason, i) => (
+                              <span key={i} className="text-[9px] font-bold text-rose-600 bg-rose-50 border border-rose-100 px-1.5 py-0.5 rounded-full">
+                                {reason}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <div className="flex flex-col gap-1 shrink-0">
                         <button
@@ -30200,6 +30246,57 @@ function ActivityTicker({ posts }: { posts: GlobalPost[] }) {
   );
 }
 
+const REPORT_REASONS = [
+  'Spam',
+  'Harassment or bullying',
+  'Hate speech or discrimination',
+  'Inappropriate or explicit content',
+  'Fake account or impersonation',
+  'Other',
+];
+
+function ReasonPickerSheet({ title, onConfirm, onClose }: { title: string; onConfirm: (reason: string) => void; onClose: () => void }) {
+  const [selected, setSelected] = useState<string | null>(null);
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[300] flex items-end justify-center bg-black/40"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 32, stiffness: 460 }}
+        className="w-full max-w-md bg-white rounded-t-3xl p-5 pb-8 space-y-3"
+        onClick={e => e.stopPropagation()}
+      >
+        <h3 className="font-bold text-base text-brand-navy">{title}</h3>
+        <div className="space-y-1.5">
+          {REPORT_REASONS.map(r => (
+            <button
+              key={r}
+              onClick={() => setSelected(r)}
+              className={cn(
+                "w-full flex items-center justify-between px-4 py-3 rounded-2xl text-sm font-bold text-left transition-colors",
+                selected === r ? "bg-brand-navy text-white" : "bg-brand-bg text-brand-navy/75"
+              )}
+            >
+              {r}
+              {selected === r && <CheckCircle2 size={16} />}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={() => selected && onConfirm(selected)}
+          disabled={!selected}
+          className="w-full py-3.5 rounded-2xl bg-red-500 text-white font-bold text-sm disabled:opacity-40 active:scale-95 transition-transform mt-2"
+        >
+          Submit
+        </button>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewStore, onLike, onVote, onDelete, showPinnedTag, hideDivider, blockedUids }: {
   key?: React.Key;
   post: GlobalPost;
@@ -30221,6 +30318,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
   const [isCommenting, setIsCommenting] = useState(false);
   const [reportSent, setReportSent] = useState(false);
   const [reportDocId, setReportDocId] = useState<string | null>(null);
+  const [showReportReasons, setShowReportReasons] = useState(false);
   const [authorProfile, setAuthorProfile] = useState<{ name: string; logoUrl?: string; gender?: string; avatar?: UserAvatar; streak?: number } | null>(null);
   const [localLiked, setLocalLiked] = useState(() => currentUser ? (post.likedBy || []).includes(currentUser.uid) : false);
   const [localCount, setLocalCount] = useState(post.likesCount || 0);
@@ -30715,14 +30813,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                           setReportDocId(null);
                           return;
                         }
-                        const ref = await addDoc(collection(db, 'reports'), {
-                          postId: post.id,
-                          reportedBy: currentUser.uid,
-                          reason: 'User report',
-                          createdAt: serverTimestamp(),
-                        });
-                        setReportDocId(ref.id);
-                        setReportSent(true);
+                        setShowReportReasons(true);
                       }}
                       className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold text-brand-navy/75 hover:bg-brand-bg transition-colors"
                     >
@@ -30731,6 +30822,24 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                   </motion.div>
                 )}
               </AnimatePresence>
+              {showReportReasons && currentUser && createPortal(
+                <ReasonPickerSheet
+                  title="Why are you reporting this post?"
+                  onClose={() => setShowReportReasons(false)}
+                  onConfirm={async (reason) => {
+                    const ref = await addDoc(collection(db, 'reports'), {
+                      postId: post.id,
+                      reportedBy: currentUser.uid,
+                      reason,
+                      createdAt: serverTimestamp(),
+                    });
+                    setReportDocId(ref.id);
+                    setReportSent(true);
+                    setShowReportReasons(false);
+                  }}
+                />,
+                document.body
+              )}
             </div>
           </div>
         </div>
@@ -33157,6 +33266,8 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
   const [selectedMsgId, setSelectedMsgId] = useState<string | null>(null);
   const [showChatMenu, setShowChatMenu] = useState(false);
   const [chatReportSent, setChatReportSent] = useState(false);
+  const [showChatReportReasons, setShowChatReportReasons] = useState(false);
+  const [showChatBlockReasons, setShowChatBlockReasons] = useState(false);
   const [showCustomerPicker, setShowCustomerPicker] = useState(false);
   const [showNewChatPicker, setShowNewChatPicker] = useState(false);
   const [storeCustomers, setStoreCustomers] = useState<UserProfile[]>([]);
@@ -33504,17 +33615,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
             {showChatMenu && chatPartner && (
               <div className="absolute right-0 top-10 bg-white rounded-2xl shadow-xl border border-brand-navy/8 z-50 min-w-[150px] overflow-hidden">
                 <button
-                  onClick={async () => {
-                    setShowChatMenu(false);
-                    await addDoc(collection(db, 'reports'), {
-                      reportedUid: chatPartner.uid,
-                      reportedBy: currentUser.uid,
-                      reason: 'User report',
-                      createdAt: serverTimestamp(),
-                    });
-                    setChatReportSent(true);
-                    setTimeout(() => setChatReportSent(false), 3000);
-                  }}
+                  onClick={() => { setShowChatMenu(false); setShowChatReportReasons(true); }}
                   className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold text-brand-navy/75 hover:bg-brand-bg transition-colors text-left"
                 >
                   <Flag size={15} />
@@ -33523,22 +33624,12 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
                 <button
                   onClick={async () => {
                     setShowChatMenu(false);
-                    const blockId = `${currentUser.uid}_${chatPartner.uid}`;
                     const isCurrentlyBlocked = blockedUids.has(chatPartner.uid);
                     if (isCurrentlyBlocked) {
+                      const blockId = `${currentUser.uid}_${chatPartner.uid}`;
                       await deleteDoc(doc(db, 'blocks', blockId)).catch(console.error);
                     } else {
-                      await setDoc(doc(db, 'blocks', blockId), {
-                        blockerUid: currentUser.uid,
-                        blockedUid: chatPartner.uid,
-                        createdAt: serverTimestamp()
-                      }).catch(console.error);
-                      await addDoc(collection(db, 'reports'), {
-                        reportedUid: chatPartner.uid,
-                        reportedBy: currentUser.uid,
-                        reason: 'Blocked by user',
-                        createdAt: serverTimestamp(),
-                      }).catch(console.error);
+                      setShowChatBlockReasons(true);
                     }
                   }}
                   className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold text-red-500 hover:bg-red-50 transition-colors text-left"
@@ -33547,6 +33638,46 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
                   {blockedUids.has(chatPartner.uid) ? 'Unblock' : 'Block'}
                 </button>
               </div>
+            )}
+            {showChatReportReasons && chatPartner && createPortal(
+              <ReasonPickerSheet
+                title={`Why are you reporting ${chatPartner.name}?`}
+                onClose={() => setShowChatReportReasons(false)}
+                onConfirm={async (reason) => {
+                  await addDoc(collection(db, 'reports'), {
+                    reportedUid: chatPartner.uid,
+                    reportedBy: currentUser.uid,
+                    reason,
+                    createdAt: serverTimestamp(),
+                  });
+                  setChatReportSent(true);
+                  setTimeout(() => setChatReportSent(false), 3000);
+                  setShowChatReportReasons(false);
+                }}
+              />,
+              document.body
+            )}
+            {showChatBlockReasons && chatPartner && createPortal(
+              <ReasonPickerSheet
+                title={`Why are you blocking ${chatPartner.name}?`}
+                onClose={() => setShowChatBlockReasons(false)}
+                onConfirm={async (reason) => {
+                  const blockId = `${currentUser.uid}_${chatPartner.uid}`;
+                  await setDoc(doc(db, 'blocks', blockId), {
+                    blockerUid: currentUser.uid,
+                    blockedUid: chatPartner.uid,
+                    createdAt: serverTimestamp()
+                  }).catch(console.error);
+                  await addDoc(collection(db, 'reports'), {
+                    reportedUid: chatPartner.uid,
+                    reportedBy: currentUser.uid,
+                    reason,
+                    createdAt: serverTimestamp(),
+                  }).catch(console.error);
+                  setShowChatBlockReasons(false);
+                }}
+              />,
+              document.body
             )}
           </div>
         </header>
@@ -36131,6 +36262,8 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
   const [isBlocked, setIsBlocked] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [profileReportSent, setProfileReportSent] = useState(false);
+  const [showProfileReportReasons, setShowProfileReportReasons] = useState(false);
+  const [showProfileBlockReasons, setShowProfileBlockReasons] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<'posts' | 'stickers' | 'badges' | 'interactions'>('stickers');
   const [pubLikedPosts, setPubLikedPosts] = useState<GlobalPost[]>([]);
   const [pubVotedPolls, setPubVotedPolls] = useState<GlobalPost[]>([]);
@@ -36312,7 +36445,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
     }
   };
 
-  const handleBlockClick = async () => {
+  const handleBlockClick = async (reason?: string) => {
     const blockId = `${currentUser.uid}_${targetUser.uid}`;
     try {
       if (isBlocked) {
@@ -36326,7 +36459,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
         await addDoc(collection(db, 'reports'), {
           reportedUid: targetUser.uid,
           reportedBy: currentUser.uid,
-          reason: 'Blocked by user',
+          reason: reason || 'Blocked by user',
           createdAt: serverTimestamp(),
         });
       }
@@ -36529,30 +36662,49 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
               {showProfileMenu && (
                 <div className="absolute right-0 top-10 bg-white rounded-2xl shadow-xl border border-brand-navy/8 z-50 min-w-[150px] overflow-hidden">
                   <button
-                    onClick={async () => {
-                      setShowProfileMenu(false);
-                      await addDoc(collection(db, 'reports'), {
-                        reportedUid: targetUser.uid,
-                        reportedBy: currentUser.uid,
-                        reason: 'User report',
-                        createdAt: serverTimestamp(),
-                      });
-                      setProfileReportSent(true);
-                      setTimeout(() => setProfileReportSent(false), 3000);
-                    }}
+                    onClick={() => { setShowProfileMenu(false); setShowProfileReportReasons(true); }}
                     className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold text-brand-navy/75 hover:bg-brand-bg transition-colors text-left"
                   >
                     <Flag size={15} />
                     {profileReportSent ? 'Reported!' : 'Report'}
                   </button>
                   <button
-                    onClick={() => { setShowProfileMenu(false); handleBlockClick(); }}
+                    onClick={() => { setShowProfileMenu(false); if (isBlocked) { handleBlockClick(); } else { setShowProfileBlockReasons(true); } }}
                     className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold text-red-500 hover:bg-red-50 transition-colors text-left"
                   >
                     <ShieldAlert size={15} />
                     {isBlocked ? 'Unblock' : 'Block'}
                   </button>
                 </div>
+              )}
+              {showProfileReportReasons && createPortal(
+                <ReasonPickerSheet
+                  title={`Why are you reporting ${targetUser.name}?`}
+                  onClose={() => setShowProfileReportReasons(false)}
+                  onConfirm={async (reason) => {
+                    await addDoc(collection(db, 'reports'), {
+                      reportedUid: targetUser.uid,
+                      reportedBy: currentUser.uid,
+                      reason,
+                      createdAt: serverTimestamp(),
+                    });
+                    setProfileReportSent(true);
+                    setTimeout(() => setProfileReportSent(false), 3000);
+                    setShowProfileReportReasons(false);
+                  }}
+                />,
+                document.body
+              )}
+              {showProfileBlockReasons && createPortal(
+                <ReasonPickerSheet
+                  title={`Why are you blocking ${targetUser.name}?`}
+                  onClose={() => setShowProfileBlockReasons(false)}
+                  onConfirm={async (reason) => {
+                    await handleBlockClick(reason);
+                    setShowProfileBlockReasons(false);
+                  }}
+                />,
+                document.body
               )}
             </div>
           </div>
