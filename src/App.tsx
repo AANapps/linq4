@@ -30698,7 +30698,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                     <button
                       onClick={async () => {
                         setShowMenu(false);
-                        if (!currentUser) return;
+                        if (!currentUser || reportSent) return;
                         await addDoc(collection(db, 'reports'), {
                           postId: post.id,
                           reportedBy: currentUser.uid,
@@ -30706,11 +30706,11 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                           createdAt: serverTimestamp(),
                         });
                         setReportSent(true);
-                        setTimeout(() => setReportSent(false), 3000);
                       }}
-                      className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold text-brand-navy/75 hover:bg-brand-bg transition-colors"
+                      disabled={reportSent}
+                      className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold text-brand-navy/75 hover:bg-brand-bg transition-colors disabled:opacity-60"
                     >
-                      <Flag size={15} /> {reportSent ? 'Reported!' : 'Report'}
+                      <Flag size={15} /> {reportSent ? 'Reported' : 'Report'}
                     </button>
                   </motion.div>
                 )}
@@ -30719,6 +30719,15 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
           </div>
         </div>
       </div>
+      <div className="relative">
+      {reportSent && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-[1px]">
+          <div className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-brand-navy text-white text-xs font-bold shadow-lg">
+            <Flag size={13} /> Reported
+          </div>
+        </div>
+      )}
+      <div className={cn(reportSent && "blur-md select-none pointer-events-none")}>
       {showImage && (
         <div className="overflow-hidden max-h-72 mb-3">
           <LazyImg
@@ -30853,6 +30862,8 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
             )}
           </div>
         )}
+      </div>
+      </div>
       </div>
 
       {/* Interactions bar — hidden for anonymous admin posts */}
@@ -33617,22 +33628,29 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
         </div>
 
         <div className="p-6 bg-white border-t border-brand-navy/5">
-          <div className="flex gap-2">
-            <input 
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-              placeholder="Type a message..."
-              className="flex-1 px-6 py-4 rounded-2xl bg-brand-bg border-none focus:ring-2 focus:ring-brand-gold/20 text-sm"
-            />
-            <button 
-              onClick={handleSendMessage}
-              disabled={!newMessage.trim()}
-              className="p-4 gradient-red text-white rounded-2xl shadow-lg shadow-blue-500/20 active:scale-95 transition-all disabled:opacity-50"
-            >
-              <Send size={20} />
-            </button>
-          </div>
+          {chatPartner && blockedUids.has(chatPartner.uid) ? (
+            <div className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-brand-bg text-brand-navy/50 text-sm font-bold">
+              <ShieldAlert size={16} />
+              Messaging is now blocked
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <input
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                placeholder="Type a message..."
+                className="flex-1 px-6 py-4 rounded-2xl bg-brand-bg border-none focus:ring-2 focus:ring-brand-gold/20 text-sm"
+              />
+              <button
+                onClick={handleSendMessage}
+                disabled={!newMessage.trim()}
+                className="p-4 gradient-red text-white rounded-2xl shadow-lg shadow-blue-500/20 active:scale-95 transition-all disabled:opacity-50"
+              >
+                <Send size={20} />
+              </button>
+            </div>
+          )}
         </div>
       </motion.div>
     );
@@ -36408,6 +36426,32 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
   const earnedBadges = allBadges.filter(b => (pubBadgeMetrics[b.metric] ?? 0) >= b.threshold);
   const theirChallenges = publicChallenges.filter(c => (c.participantUids || []).includes(initialTargetUser.uid));
   const activePub = theirChallenges.filter(c => !publicEntries.get(c.id)?.redeemed);
+
+  if (isBlocked) {
+    return (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 pb-20 text-brand-navy">
+        <div className="flex items-center justify-between">
+          <button onClick={onBack} className="flex items-center gap-2 text-brand-navy/75 font-bold text-sm hover:text-brand-navy transition-colors">
+            <ArrowLeft size={18} />
+            Back
+          </button>
+        </div>
+        <div className="flex flex-col items-center justify-center gap-4 py-24 text-center px-6">
+          <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center">
+            <ShieldAlert size={28} className="text-red-500" />
+          </div>
+          <h2 className="font-display font-bold text-lg text-brand-navy">User blocked</h2>
+          <p className="text-sm text-brand-navy/60 max-w-xs">You won't see posts, messages, or activity from this user, and they can't contact you.</p>
+          <button
+            onClick={handleBlockClick}
+            className="px-6 py-3 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-95 transition-transform"
+          >
+            Unblock
+          </button>
+        </div>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
