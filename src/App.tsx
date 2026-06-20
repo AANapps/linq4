@@ -3119,21 +3119,36 @@ function GuestApp({ viewingStore, setViewingStore, onRequireAuth }: {
           Sign up
         </button>
       </div>
-      <div className="flex-1 px-4 max-w-2xl mx-auto w-full pb-6">
+      <div className="flex-1 px-4 max-w-2xl mx-auto w-full pb-28">
         {activeTab === 'deals' ? (
           <DealsScreen onViewStore={setViewingStore} onNavigate={tab => setActiveTab(tab === 'discover' ? 'discover' : 'deals')} onRequireAuth={onRequireAuth} />
         ) : (
           <DiscoveryScreen stores={stores} cards={[]} onJoin={onRequireAuth} onViewStore={setViewingStore} onViewUser={onRequireAuth} currentProfile={null} />
         )}
       </div>
-      <div className="flex items-center justify-around border-t border-brand-navy/10 bg-white py-3" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.5rem)' }}>
-        <button onClick={() => setActiveTab('deals')} className={`flex flex-col items-center gap-1 px-6 ${activeTab === 'deals' ? 'text-brand-gold' : 'text-brand-navy/40'}`}>
+      <div
+        className="fixed bottom-0 left-0 right-0 z-50 max-w-2xl mx-auto flex items-center justify-around border-t border-brand-navy/10 bg-white py-3"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.5rem)' }}
+      >
+        <button onClick={() => setActiveTab('deals')} className={`flex flex-col items-center gap-1 px-4 ${activeTab === 'deals' ? 'text-brand-gold' : 'text-brand-navy/40'}`}>
           <Tag size={20} />
           <span className="text-[11px] font-bold">Deals</span>
         </button>
-        <button onClick={() => setActiveTab('discover')} className={`flex flex-col items-center gap-1 px-6 ${activeTab === 'discover' ? 'text-brand-gold' : 'text-brand-navy/40'}`}>
+        <button onClick={() => setActiveTab('discover')} className={`flex flex-col items-center gap-1 px-4 ${activeTab === 'discover' ? 'text-brand-gold' : 'text-brand-navy/40'}`}>
           <Compass size={20} />
           <span className="text-[11px] font-bold">Discovery</span>
+        </button>
+        <button onClick={onRequireAuth} className="flex flex-col items-center gap-1 px-4 text-brand-navy/40">
+          <Wallet size={20} />
+          <span className="text-[11px] font-bold">Wallet</span>
+        </button>
+        <button onClick={onRequireAuth} className="flex flex-col items-center gap-1 px-4 text-brand-navy/40">
+          <Trophy size={20} />
+          <span className="text-[11px] font-bold">Challenges</span>
+        </button>
+        <button onClick={onRequireAuth} className="flex flex-col items-center gap-1 px-4 text-brand-navy/40">
+          <UserIcon size={20} />
+          <span className="text-[11px] font-bold">Profile</span>
         </button>
       </div>
     </div>
