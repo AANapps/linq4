@@ -3001,9 +3001,9 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
             </div>
             <span className="text-white/70 text-xs leading-relaxed" onClick={() => setAgreedToTerms(v => !v)}>
               I agree to the{' '}
-              <button type="button" onClick={(e) => { e.stopPropagation(); openUrl('https://mylinq.app/privacy.html'); }} className="underline underline-offset-2 text-white/90 hover:text-white">Privacy Policy</button>
+              <button type="button" onClick={(e) => { e.stopPropagation(); openUrl('https://www.joinlinq.app/privacy.html'); }} className="underline underline-offset-2 text-white/90 hover:text-white">Privacy Policy</button>
               {' '}and{' '}
-              <button type="button" onClick={(e) => { e.stopPropagation(); openUrl('https://mylinq.app/terms.html'); }} className="underline underline-offset-2 text-white/90 hover:text-white">Terms of Service</button>
+              <button type="button" onClick={(e) => { e.stopPropagation(); openUrl('https://www.joinlinq.app/terms.html'); }} className="underline underline-offset-2 text-white/90 hover:text-white">Terms of Service</button>
             </span>
           </label>
 
