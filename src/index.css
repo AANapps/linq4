@@ -67,6 +67,18 @@
   background: linear-gradient(160deg, var(--brand-g1) 0%, var(--brand-g2) 40%, var(--brand-g3) 70%, var(--brand-g4) 100%);
 }
 
+@keyframes gradient-cycle-shift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.gradient-cycle {
+  background: linear-gradient(120deg, var(--brand-g1), var(--brand-g2), var(--brand-g3), var(--brand-g4), var(--brand-g2));
+  background-size: 300% 300%;
+  animation: gradient-cycle-shift 8s ease infinite;
+}
+
 .qr-scanner-bg {
   background: #0F172A;
 }
