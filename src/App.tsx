@@ -2992,7 +2992,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
             </div>
           )}
 
-          <label className="flex items-start gap-2.5 cursor-pointer group pt-1">
+          <div className="flex items-start gap-2.5 cursor-pointer group pt-1">
             <div
               className={`w-5 h-5 rounded-md border-2 shrink-0 mt-0.5 flex items-center justify-center transition-all ${agreedToTerms ? 'bg-white border-white' : 'border-white/40 group-hover:border-white/70'}`}
               onClick={() => setAgreedToTerms(v => !v)}
@@ -3005,7 +3005,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
               {' '}and{' '}
               <button type="button" onClick={(e) => { e.stopPropagation(); openUrl('https://www.joinlinq.app/terms.html'); }} className="underline underline-offset-2 text-white/90 hover:text-white">Terms of Service</button>
             </span>
-          </label>
+          </div>
 
           <button
             onClick={phoneMode === 'phone' ? handleSendOTP : phoneMode === 'otp' ? handleVerifyOTP : handleEmailSubmit}
