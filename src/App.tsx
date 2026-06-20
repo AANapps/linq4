@@ -30225,6 +30225,15 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
   const [localCount, setLocalCount] = useState(post.likesCount || 0);
 
   useEffect(() => {
+    if (!currentUser || !post.id) return;
+    let active = true;
+    getDocs(query(collection(db, 'reports'), where('reportedBy', '==', currentUser.uid), where('postId', '==', post.id), limit(1)))
+      .then(snap => { if (active && !snap.empty) setReportSent(true); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [post.id, currentUser?.uid]);
+
+  useEffect(() => {
     setLocalLiked(currentUser ? (post.likedBy || []).includes(currentUser.uid) : false);
     setLocalCount(post.likesCount || 0);
   }, [post.likedBy, post.likesCount, currentUser]);
@@ -36436,11 +36445,18 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
             Back
           </button>
         </div>
-        <div className="flex flex-col items-center justify-center gap-4 py-24 text-center px-6">
-          <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center">
-            <ShieldAlert size={28} className="text-red-500" />
+        <div className="flex flex-col items-center justify-center gap-4 py-16 text-center px-6">
+          <div className="bg-gradient-to-b from-indigo-50 to-purple-50 rounded-full p-2 border-4 border-white shadow-xl shrink-0 opacity-60">
+            <PixelAvatar config={targetUser.avatar} uid={targetUser.uid} size={64} view="full" />
           </div>
-          <h2 className="font-display font-bold text-lg text-brand-navy">User blocked</h2>
+          <div>
+            <h2 className="font-display text-xl font-bold text-brand-navy">{targetUser.name}</h2>
+            <p className="text-brand-navy/40 font-bold text-xs uppercase tracking-[0.2em]">@{targetUser.handle || targetUser.email?.split('@')[0]}</p>
+          </div>
+          <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mt-2">
+            <ShieldAlert size={22} className="text-red-500" />
+          </div>
+          <h3 className="font-display font-bold text-lg text-brand-navy">User blocked</h3>
           <p className="text-sm text-brand-navy/60 max-w-xs">You won't see posts, messages, or activity from this user, and they can't contact you.</p>
           <button
             onClick={handleBlockClick}

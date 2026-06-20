@@ -198,7 +198,7 @@ service cloud.firestore {
     }
 
     match /reports/{reportId} {
-      allow read: if isAdmin();
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.reportedBy == request.auth.uid);
       allow create: if isAuthenticated();
     }
 
