@@ -1,0 +1,1569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Linq — Collect. Compete. Win.</title>
+  <meta name="description" content="Collect stamps, win prizes, and compete with friends at your favourite local spots. Download Linq free." />
+  <meta property="og:title" content="Linq — Collect. Compete. Win." />
+  <meta property="og:description" content="Earn rewards at local businesses, compete with friends, and win thousands in prizes." />
+  <meta property="og:type" content="website" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── RESET & TOKENS ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:   #0F172A;
+      --blue1:  #1D4ED8;
+      --blue2:  #2563EB;
+      --blue3:  #3B82F6;
+      --blue4:  #60A5FA;
+      --light:  #EFF6FF;
+      --light2: #DBEAFE;
+      --white:  #FFFFFF;
+      --gold:   #FFD700;
+
+      --space-xs:  0.5rem;
+      --space-sm:  1rem;
+      --space-md:  1.5rem;
+      --space-lg:  3rem;
+      --space-xl:  5rem;
+      --space-2xl: 7rem;
+
+      --radius-sm:  12px;
+      --radius-md:  20px;
+      --radius-lg:  28px;
+
+      --max-w: 960px;
+
+      --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--white);
+      color: var(--navy);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* ── SCROLL REVEAL ── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(36px);
+      transition: opacity 0.75s var(--ease-out), transform 0.75s var(--ease-out);
+    }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+    .reveal-delay-4 { transition-delay: 0.4s; }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      height: 56px;
+      background: rgba(255,255,255,0.88);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(15,23,42,0.07);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 var(--space-md);
+    }
+
+    .nav-logo {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 900;
+      font-size: 1.5rem;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, var(--blue1), var(--blue3));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .tab-pills {
+      display: flex;
+      background: var(--light);
+      border-radius: 100px;
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .tab-pill {
+      padding: 0.35rem 1rem;
+      border-radius: 100px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: rgba(15,23,42,0.45);
+      transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+    }
+
+    .tab-pill.active {
+      background: var(--white);
+      color: var(--navy);
+      box-shadow: 0 1px 5px rgba(15,23,42,0.12);
+    }
+
+    .nav-cta {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      background: var(--blue2);
+      color: var(--white);
+      text-decoration: none;
+      padding: 0.55rem 1.25rem;
+      border-radius: 100px;
+      font-size: 0.925rem;
+      font-weight: 700;
+      transition: background 0.2s, transform 0.15s;
+      white-space: nowrap;
+    }
+    .nav-cta:hover { background: var(--blue1); transform: translateY(-1px); }
+
+    /* ── TAB PANELS ── */
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ════════════════════════════════════
+       SHARED SECTION PRIMITIVES
+    ════════════════════════════════════ */
+    .section-wrap {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      padding: var(--space-xl) var(--space-md);
+    }
+
+    .eyebrow {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      color: var(--blue2);
+      margin-bottom: 0.625rem;
+    }
+
+    .section-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(2rem, 5vw, 2.75rem);
+      font-weight: 800;
+      color: var(--navy);
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      margin-bottom: 1rem;
+    }
+
+    .section-title em { font-style: normal; color: var(--blue2); }
+
+    .section-body {
+      font-size: 1.05rem;
+      color: rgba(15,23,42,0.58);
+      line-height: 1.7;
+      max-width: 520px;
+      margin-bottom: var(--space-lg);
+    }
+
+    /* ── CARD GRID ── */
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+
+    .card {
+      background: var(--light);
+      border-radius: var(--radius-md);
+      padding: 1.625rem;
+    }
+
+    .card-dark {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-md);
+      padding: 1.625rem;
+    }
+
+    .card-outline {
+      border: 1.5px solid rgba(15,23,42,0.09);
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+    }
+
+    .card-blue {
+      background: linear-gradient(135deg, var(--blue1), var(--blue2));
+      border-radius: var(--radius-md);
+      padding: 1.625rem;
+    }
+
+    .card .icon,
+    .card-dark .icon,
+    .card-outline .icon,
+    .card-blue .icon {
+      font-size: 1.875rem;
+      display: block;
+      margin-bottom: 0.875rem;
+    }
+
+    .card h3, .card-blue h3 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 0.375rem;
+    }
+
+    .card h3 { color: var(--navy); }
+    .card-blue h3 { color: var(--white); }
+
+    .card p { font-size: 0.9rem; color: rgba(15,23,42,0.58); line-height: 1.6; }
+    .card-dark p, .card-blue p { font-size: 0.9rem; color: rgba(255,255,255,0.55); line-height: 1.6; }
+    .card-dark h3 { font-family: 'Outfit', sans-serif; font-size: 1.05rem; font-weight: 700; color: var(--white); margin-bottom: 0.375rem; }
+
+    .card-outline h4 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 0.3rem;
+    }
+    .card-outline p { font-size: 0.85rem; color: rgba(15,23,42,0.55); line-height: 1.55; }
+
+    hr.divider {
+      border: none;
+      border-top: 1px solid rgba(15,23,42,0.07);
+    }
+
+    /* ════════════════════════════════════
+       CUSTOMER — HERO
+    ════════════════════════════════════ */
+    .hero {
+      min-height: 100svh;
+      background: linear-gradient(160deg, var(--blue1) 0%, var(--blue2) 45%, var(--blue3) 72%, var(--blue4) 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 4rem var(--space-md) 6rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 65% 15%, rgba(255,255,255,0.1) 0%, transparent 55%);
+      pointer-events: none;
+    }
+
+    /* Sticker */
+    .sticker-wrap {
+      position: relative;
+      display: inline-block;
+      margin-bottom: 2rem;
+    }
+
+    .sticker-glow {
+      position: absolute;
+      inset: -8px;
+      border-radius: 50%;
+      background: conic-gradient(#ff0040,#ff8c00,#ffe600,#00ff59,#00b3ff,#9000ff,#ff0040);
+      filter: blur(12px);
+      opacity: 0.5;
+      animation: spin 4s linear infinite;
+    }
+
+    .sticker {
+      position: relative;
+      width: 108px;
+      height: 108px;
+      border-radius: 50%;
+      background: conic-gradient(#ff0040,#ff8c00,#ffe600,#00ff59,#00b3ff,#9000ff,#ff0040);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: spin 4s linear infinite;
+    }
+
+    .sticker-inner {
+      width: 86px;
+      height: 86px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #1e3a8a, var(--blue1), var(--blue2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.4rem;
+      animation: spin 4s linear infinite reverse;
+      z-index: 2;
+    }
+
+    .sticker-badge {
+      position: absolute;
+      top: -4px;
+      right: -10px;
+      background: var(--gold);
+      color: #78400a;
+      font-size: 0.58rem;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 100px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      z-index: 3;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      animation: badge-pulse 1.2s ease-in-out infinite alternate;
+    }
+
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @keyframes badge-pulse { from { transform: scale(1); } to { transform: scale(1.1); } }
+
+    /* Hero text */
+    .linq-wordmark {
+      display: block;
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(4.5rem, 16vw, 8rem);
+      font-weight: 900;
+      color: var(--white);
+      letter-spacing: -0.04em;
+      line-height: 0.95;
+      margin-bottom: 0.25rem;
+    }
+
+    .hero-headline {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(1.5rem, 5vw, 2.25rem);
+      font-weight: 700;
+      color: rgba(255,255,255,0.85);
+      letter-spacing: -0.01em;
+      line-height: 1.2;
+      margin-bottom: 1.25rem;
+    }
+
+    .hero-sub {
+      font-size: clamp(0.95rem, 2.5vw, 1.1rem);
+      color: rgba(255,255,255,0.65);
+      max-width: 400px;
+      line-height: 1.65;
+      margin-bottom: 2.5rem;
+    }
+
+    /* Store badges */
+    .store-badges {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .store-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      background: rgba(255,255,255,0.14);
+      border: 1.5px solid rgba(255,255,255,0.28);
+      color: var(--white);
+      text-decoration: none;
+      padding: 0.75rem 1.375rem;
+      border-radius: var(--radius-sm);
+      backdrop-filter: blur(8px);
+      transition: background 0.2s, transform 0.2s var(--ease-out);
+    }
+
+    .store-badge:hover { background: rgba(255,255,255,0.24); transform: translateY(-3px); }
+
+    .store-badge svg { width: 22px; height: 22px; flex-shrink: 0; }
+
+    .badge-text small {
+      display: block;
+      font-size: 0.62rem;
+      opacity: 0.7;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .badge-text strong { display: block; font-size: 1rem; font-weight: 700; }
+
+    /* ════════════════════════════════════
+       CUSTOMER — STAMP CARDS
+    ════════════════════════════════════ */
+
+    /* ════════════════════════════════════
+       CUSTOMER — ECOSYSTEM
+    ════════════════════════════════════ */
+    .ecosystem-bg {
+      background: var(--navy);
+      padding: var(--space-xl) var(--space-md);
+    }
+
+    .ecosystem-inner {
+      max-width: var(--max-w);
+      margin: 0 auto;
+    }
+
+    .ecosystem-flow {
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin: var(--space-lg) 0 var(--space-md);
+    }
+
+    .eco-step {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius-sm);
+      padding: 1.5rem 1.25rem;
+      text-align: center;
+      flex: 1;
+      min-width: 110px;
+      max-width: 160px;
+    }
+
+    .eco-icon { font-size: 2rem; display: block; margin-bottom: 0.5rem; }
+
+    .eco-label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: rgba(255,255,255,0.75);
+    }
+
+    .eco-arrow {
+      font-size: 1.25rem;
+      color: var(--blue3);
+      display: flex;
+      align-items: center;
+      padding-top: 0.25rem;
+    }
+
+    .eco-note {
+      font-size: 0.95rem;
+      color: rgba(255,255,255,0.5);
+      line-height: 1.7;
+      max-width: 540px;
+      border-left: 3px solid var(--blue2);
+      padding: 1rem 1.25rem;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      background: rgba(255,255,255,0.04);
+    }
+
+    /* ════════════════════════════════════
+       CUSTOMER — PRIZE BANNER
+    ════════════════════════════════════ */
+    .prize-section { padding: var(--space-xl) var(--space-md); }
+
+    .prize-banner {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      background: linear-gradient(135deg, #0F172A 0%, #1e3a8a 60%, var(--blue1) 100%);
+      border-radius: var(--radius-lg);
+      padding: 4rem 2rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .prize-banner::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% -20%, rgba(96,165,250,0.22) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .prize-amount {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(4rem, 14vw, 6.5rem);
+      font-weight: 900;
+      color: var(--gold);
+      letter-spacing: -0.04em;
+      line-height: 1;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 0 48px rgba(255,215,0,0.35);
+    }
+
+    .prize-banner h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(1.4rem, 4vw, 2rem);
+      font-weight: 800;
+      color: var(--white);
+      margin-bottom: 0.75rem;
+    }
+
+    .prize-banner p {
+      font-size: 1rem;
+      color: rgba(255,255,255,0.55);
+      max-width: 400px;
+      margin: 0 auto 2rem;
+      line-height: 1.65;
+    }
+
+    .prize-pills {
+      display: flex;
+      gap: 0.625rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .prize-pill {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: var(--white);
+      padding: 0.45rem 1rem;
+      border-radius: 100px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    /* ════════════════════════════════════
+       CUSTOMER — CHALLENGES
+    ════════════════════════════════════ */
+
+    /* ════════════════════════════════════
+       CUSTOMER — VENDOR STRIP
+    ════════════════════════════════════ */
+    .vendor-strip {
+      background: var(--light);
+      padding: var(--space-xl) var(--space-md);
+      text-align: center;
+    }
+
+    .vendor-strip h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(1.6rem, 4vw, 2.25rem);
+      font-weight: 800;
+      color: var(--navy);
+      margin-bottom: 0.75rem;
+    }
+
+    .vendor-strip > p {
+      font-size: 1rem;
+      color: rgba(15,23,42,0.55);
+      max-width: 460px;
+      margin: 0 auto 2rem;
+      line-height: 1.65;
+    }
+
+    .vendor-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.625rem;
+      justify-content: center;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    .vendor-tag {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: var(--white);
+      border: 1px solid rgba(15,23,42,0.09);
+      border-radius: 100px;
+      padding: 0.45rem 1rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--navy);
+      box-shadow: 0 1px 4px rgba(15,23,42,0.06);
+      transition: transform 0.2s var(--ease-out), box-shadow 0.2s;
+    }
+
+    .vendor-tag:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(15,23,42,0.1);
+    }
+
+    /* ════════════════════════════════════
+       CUSTOMER — LEADERBOARD
+    ════════════════════════════════════ */
+    .friends-bg {
+      background: var(--navy);
+      padding: var(--space-xl) var(--space-md);
+      text-align: center;
+    }
+
+    .friends-inner { max-width: var(--max-w); margin: 0 auto; }
+
+    .leaderboard {
+      max-width: 420px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.625rem;
+    }
+
+    .lb-row {
+      display: flex;
+      align-items: center;
+      gap: 0.875rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: var(--radius-sm);
+      padding: 0.875rem 1rem;
+      transition: background 0.2s;
+    }
+
+    .lb-row.you {
+      background: rgba(37,99,235,0.22);
+      border-color: rgba(96,165,250,0.28);
+    }
+
+    .lb-rank { font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 800; width: 26px; text-align: center; flex-shrink: 0; }
+    .lb-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; }
+    .lb-name { flex: 1; font-weight: 600; font-size: 0.9rem; color: var(--white); text-align: left; }
+    .lb-name small { display: block; font-size: 0.75rem; font-weight: 400; color: rgba(255,255,255,0.4); }
+    .lb-stamps { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 0.95rem; color: var(--blue4); }
+
+    /* ════════════════════════════════════
+       BUSINESS — HERO
+    ════════════════════════════════════ */
+    .biz-hero {
+      min-height: 80svh;
+      background: var(--navy);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 5rem var(--space-md) 6rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .biz-hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% 0%, rgba(37,99,235,0.28) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .free-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: rgba(255,215,0,0.1);
+      border: 1.5px solid rgba(255,215,0,0.35);
+      color: var(--gold);
+      padding: 0.35rem 1rem;
+      border-radius: 100px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: var(--space-md);
+    }
+
+    .biz-hero h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(2.2rem, 7vw, 4rem);
+      font-weight: 900;
+      color: var(--white);
+      letter-spacing: -0.03em;
+      line-height: 1.05;
+      margin-bottom: 1.25rem;
+      max-width: 680px;
+    }
+
+    .biz-hero h1 em { font-style: normal; color: var(--gold); }
+
+    .biz-hero p {
+      font-size: 1.05rem;
+      color: rgba(255,255,255,0.55);
+      max-width: 460px;
+      margin: 0 auto 0.75rem;
+      line-height: 1.65;
+    }
+
+    .biz-hero .no-cc {
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.3);
+      margin-bottom: var(--space-lg);
+    }
+
+    .cta-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--blue2);
+      color: var(--white);
+      text-decoration: none;
+      padding: 0.9rem 2rem;
+      border-radius: var(--radius-sm);
+      font-size: 1rem;
+      font-weight: 700;
+      transition: background 0.2s, transform 0.2s var(--ease-out);
+    }
+    .cta-btn:hover { background: var(--blue1); transform: translateY(-2px); }
+
+    /* ════════════════════════════════════
+       BUSINESS — FREE FEATURES
+    ════════════════════════════════════ */
+    .free-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+
+    .free-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      background: var(--light);
+      border-radius: var(--radius-sm);
+      padding: 1.25rem;
+    }
+
+    .check {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--blue2);
+      color: var(--white);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .free-item h4 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 0.2rem;
+    }
+
+    .free-item p { font-size: 0.82rem; color: rgba(15,23,42,0.55); line-height: 1.5; }
+
+    /* ════════════════════════════════════
+       BUSINESS — RETENTION
+    ════════════════════════════════════ */
+    .retention-bg {
+      background: linear-gradient(160deg, var(--blue1) 0%, var(--navy) 60%);
+      padding: var(--space-xl) var(--space-md);
+    }
+
+    .retention-inner { max-width: var(--max-w); margin: 0 auto; }
+
+    /* ════════════════════════════════════
+       BUSINESS — STATISTICS
+    ════════════════════════════════════ */
+    .stats-bg {
+      background: var(--navy);
+      padding: var(--space-xl) var(--space-md);
+    }
+
+    .stats-inner { max-width: var(--max-w); margin: 0 auto; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 1rem;
+    }
+
+    .stat-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-md);
+      padding: 2rem 1.5rem;
+      text-align: center;
+    }
+
+    .stat-number {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2.75rem;
+      font-weight: 900;
+      color: var(--gold);
+      letter-spacing: -0.03em;
+      line-height: 1;
+      margin-bottom: 0.75rem;
+    }
+
+    .stat-label { font-size: 0.85rem; color: rgba(255,255,255,0.5); line-height: 1.55; }
+
+    /* ════════════════════════════════════
+       BUSINESS — POS
+    ════════════════════════════════════ */
+    .pos-section { padding: var(--space-xl) var(--space-md); }
+
+    .pos-inner {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      background: var(--light);
+      border-radius: var(--radius-lg);
+      padding: 3.5rem 2rem;
+      text-align: center;
+      border: 1.5px solid rgba(37,99,235,0.1);
+    }
+
+    .coming-soon-chip {
+      display: inline-block;
+      background: var(--blue2);
+      color: var(--white);
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 0.28rem 0.875rem;
+      border-radius: 100px;
+      margin-bottom: 1.25rem;
+    }
+
+    .pos-inner h3 {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(1.5rem, 4vw, 2.1rem);
+      font-weight: 800;
+      color: var(--navy);
+      margin-bottom: 0.875rem;
+    }
+
+    .pos-inner > p {
+      font-size: 0.975rem;
+      color: rgba(15,23,42,0.58);
+      max-width: 460px;
+      margin: 0 auto 2rem;
+      line-height: 1.65;
+    }
+
+    .pos-logos {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.625rem;
+      justify-content: center;
+    }
+
+    .pos-logo {
+      background: var(--white);
+      border: 1.5px solid rgba(15,23,42,0.09);
+      border-radius: 10px;
+      padding: 0.5rem 1.125rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--navy);
+      box-shadow: 0 1px 4px rgba(15,23,42,0.06);
+    }
+
+    /* ════════════════════════════════════
+       BUSINESS — ADD-ONS
+    ════════════════════════════════════ */
+    .addons-section { padding: 0 var(--space-md) var(--space-xl); }
+
+    .addons-inner { max-width: var(--max-w); margin: 0 auto; }
+
+    .addons-inner h3 {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(1.4rem, 4vw, 1.8rem);
+      font-weight: 800;
+      color: var(--navy);
+      margin-bottom: 0.5rem;
+    }
+
+    .addons-inner > p {
+      font-size: 0.975rem;
+      color: rgba(15,23,42,0.55);
+      margin-bottom: 1.5rem;
+      line-height: 1.65;
+    }
+
+    /* ════════════════════════════════════
+       SHARED DARK SECTION TEXT
+    ════════════════════════════════════ */
+    .eyebrow-light { color: var(--blue4); }
+
+    .title-light {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(2rem, 5vw, 2.75rem);
+      font-weight: 800;
+      color: var(--white);
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      margin-bottom: 1rem;
+    }
+
+    .title-light em { font-style: normal; color: var(--gold); }
+
+    .body-light {
+      font-size: 1.05rem;
+      color: rgba(255,255,255,0.55);
+      line-height: 1.7;
+      max-width: 520px;
+      margin-bottom: var(--space-lg);
+    }
+
+    /* ── STAMP CARD PREVIEW ── */
+    .stamp-card-preview {
+      background: var(--white);
+      border-radius: var(--radius-md);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+      max-width: 340px;
+      width: 100%;
+      text-align: left;
+    }
+
+    .stamp-card-dark { /* same white card on dark bg — shadow handles contrast */ }
+
+    .scp-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 1rem;
+    }
+
+    .scp-stamps {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.875rem;
+    }
+
+    .stamp-dot {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 2px solid rgba(15,23,42,0.18);
+      background: transparent;
+      transition: background 0.3s, border-color 0.3s, transform 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      flex-shrink: 0;
+    }
+
+    .stamp-dot.filled {
+      background: var(--blue2);
+      border-color: var(--blue2);
+      color: white;
+      font-size: 0.65rem;
+      font-weight: 800;
+    }
+
+    .stamp-dot.gift {
+      background: var(--gold);
+      border-color: var(--gold);
+    }
+
+    .stamp-dot.pop { transform: scale(1.35); }
+
+    .scp-label {
+      font-size: 0.75rem;
+      color: rgba(15,23,42,0.45);
+    }
+
+    /* ── ALWAYS FREE STAMP ── */
+    .always-free-stamp {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(3rem, 10vw, 6rem);
+      font-weight: 900;
+      color: var(--navy);
+      letter-spacing: -0.04em;
+      line-height: 1;
+      margin-bottom: 1.25rem;
+    }
+
+    /* ── BOTTOM DOWNLOAD CTA ── */
+    .bottom-cta {
+      background: var(--light);
+      padding: var(--space-xl) var(--space-md);
+      text-align: center;
+    }
+
+    .bottom-cta h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(1.75rem, 5vw, 2.5rem);
+      font-weight: 800;
+      color: var(--navy);
+      letter-spacing: -0.02em;
+      margin-bottom: 0.75rem;
+    }
+
+    .bottom-cta p {
+      font-size: 1rem;
+      color: rgba(15,23,42,0.55);
+      margin-bottom: 2rem;
+      line-height: 1.65;
+    }
+
+    .store-badge-dark {
+      background: var(--navy);
+      border-color: var(--navy);
+    }
+
+    .store-badge-dark:hover {
+      background: #1e293b;
+    }
+
+    /* ════════════════════════════════════
+       FOOTER
+    ════════════════════════════════════ */
+    footer {
+      text-align: center;
+      padding: 2.5rem var(--space-md);
+      font-size: 0.82rem;
+      color: rgba(15,23,42,0.35);
+      border-top: 1px solid rgba(15,23,42,0.07);
+    }
+
+    /* ════════════════════════════════════
+       RESPONSIVE
+    ════════════════════════════════════ */
+    @media (max-width: 600px) {
+      .eco-arrow { display: none; }
+      .eco-step { max-width: 140px; }
+      .prize-banner { padding: 2.75rem 1.25rem; }
+      .pos-inner { padding: 2.5rem 1.25rem; }
+      .nav-cta span { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <div class="nav-logo">Linq</div>
+    <div class="tab-pills">
+      <button class="tab-pill active" onclick="switchTab('customer', this)">Customers</button>
+      <button class="tab-pill" onclick="switchTab('business', this)">Businesses</button>
+    </div>
+    <a href="https://linq4.vercel.app/app" target="_blank" rel="noopener noreferrer" class="nav-cta">
+      Vendor Login
+    </a>
+  </nav>
+
+  <!-- ══════════════════════════════════
+       CUSTOMER TAB
+  ══════════════════════════════════ -->
+  <div id="tab-customer" class="tab-panel active">
+
+    <!-- HERO -->
+    <header class="hero" id="download">
+      <div class="sticker-wrap reveal">
+        <div class="sticker-glow"></div>
+        <div class="sticker"><div class="sticker-inner">☕</div></div>
+        <div class="sticker-badge">Legendary</div>
+      </div>
+
+      <span class="linq-wordmark reveal reveal-delay-1">Linq</span>
+      <h1 class="hero-headline reveal reveal-delay-2">Loyalty like never before.</h1>
+      <p class="hero-sub reveal reveal-delay-3">Collect stamps at your local favourites, win prizes, and compete with your friends — all in one app.</p>
+
+      <!-- Animated stamp card -->
+      <div class="stamp-card-preview reveal reveal-delay-4">
+        <div class="scp-title">☕ Brew &amp; Co. — Loyalty Card</div>
+        <div class="scp-stamps" id="stamp-dots"></div>
+        <div class="scp-label">Collect 10 stamps for a free coffee</div>
+      </div>
+
+      <div class="store-badges reveal" style="transition-delay:0.5s">
+        <a class="store-badge" href="#" id="ios-badge">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+          <div class="badge-text"><small>Download on the</small><strong>App Store</strong></div>
+        </a>
+        <a class="store-badge" href="#" id="android-badge">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.18 23.76c.3.17.64.24.99.2l.11-.06 9.5-9.5-2.1-2.1-8.5 11.46zM20.36 10.4l-2.6-1.46-2.35 2.35 2.35 2.35 2.63-1.48c.75-.42.75-1.34-.03-1.76zM2.42 1.04C2.16 1.31 2 1.74 2 2.28v19.44c0 .54.16.97.43 1.24l.07.06 10.88-10.88v-.25L2.49.98l-.07.06zM13.53 8.53l-2.1-2.1L2.42 1.04l10.01 9.64 1.1-2.15z"/></svg>
+          <div class="badge-text"><small>Get it on</small><strong>Google Play</strong></div>
+        </a>
+      </div>
+    </header>
+
+    <!-- STAMP CARDS -->
+    <section class="section-wrap">
+      <p class="eyebrow reveal">Stamp cards</p>
+      <h2 class="section-title reveal">Your free coffee is<br/><em>closer than you think.</em></h2>
+      <p class="section-body reveal">Every visit earns you a stamp. Fill the card, claim the reward. No paper, no faff — just tap and go.</p>
+
+      <div class="grid-3">
+        <div class="card reveal reveal-delay-1">
+          <span class="icon">☕</span>
+          <h3>Free coffee, on us</h3>
+          <p>Collect 10 stamps at your local café and your next coffee is free. Every time.</p>
+        </div>
+        <div class="card reveal reveal-delay-2">
+          <span class="icon">💈</span>
+          <h3>Free haircuts</h3>
+          <p>Your barber's on Linq too. Rack up visits and get rewarded for being a regular.</p>
+        </div>
+        <div class="card reveal reveal-delay-3">
+          <span class="icon">🛍️</span>
+          <h3>Discounts everywhere</h3>
+          <p>Restaurants, gyms, boutiques — hundreds of local businesses, one loyalty app.</p>
+        </div>
+        <div class="card reveal reveal-delay-1">
+          <span class="icon">📱</span>
+          <h3>Tap or scan</h3>
+          <p>Stamp via NFC tap or QR code. Done in a second. No extra app needed at the counter.</p>
+        </div>
+        <div class="card-blue reveal reveal-delay-2">
+          <span class="icon">🎁</span>
+          <h3>Reward tiers</h3>
+          <p>Some businesses unlock bigger rewards the more stamps you collect. Keep going.</p>
+        </div>
+        <div class="card reveal reveal-delay-3">
+          <span class="icon">🎂</span>
+          <h3>Birthday perks</h3>
+          <p>Your favourite spots send you exclusive rewards on your birthday. You're welcome.</p>
+        </div>
+      </div>
+    </section>
+
+    <hr class="divider" />
+
+    <!-- ECOSYSTEM -->
+    <div class="ecosystem-bg">
+      <div class="ecosystem-inner">
+        <p class="eyebrow eyebrow-light reveal">The Linq ecosystem</p>
+        <h2 class="title-light reveal">Every stamp is<br/><em>more than a stamp.</em></h2>
+        <p class="body-light reveal">Each stamp and challenge you complete drops a collectible sticker into your collection. Fill sets, open packs, and win prizes — without ever leaving your local high street.</p>
+
+        <div class="ecosystem-flow">
+          <div class="eco-step reveal reveal-delay-1">
+            <span class="eco-icon">☕</span>
+            <div class="eco-label">Visit a business</div>
+          </div>
+          <div class="eco-arrow reveal reveal-delay-1">→</div>
+          <div class="eco-step reveal reveal-delay-2">
+            <span class="eco-icon">🎟️</span>
+            <div class="eco-label">Earn a stamp</div>
+          </div>
+          <div class="eco-arrow reveal reveal-delay-2">→</div>
+          <div class="eco-step reveal reveal-delay-3">
+            <span class="eco-icon">✨</span>
+            <div class="eco-label">Get a sticker</div>
+          </div>
+          <div class="eco-arrow reveal reveal-delay-3">→</div>
+          <div class="eco-step reveal reveal-delay-4">
+            <span class="eco-icon">🏆</span>
+            <div class="eco-label">Win prizes</div>
+          </div>
+        </div>
+
+        <p class="eco-note reveal">Stickers drop from stamps, challenges, and daily activities. Collect rare and legendary stickers to complete sets — complete a set and you're in the draw for that month's prize pool.</p>
+      </div>
+    </div>
+
+    <!-- PRIZES -->
+    <div class="prize-section">
+      <div class="prize-banner reveal">
+        <div class="prize-amount">£1,000s</div>
+        <h2>in prizes. Every month.</h2>
+        <p>Complete challenges across local businesses for your shot at cash, vouchers, and experiences worth thousands.</p>
+        <div class="prize-pills">
+          <div class="prize-pill">🏆 Monthly leagues</div>
+          <div class="prize-pill">⚡ Flash challenges</div>
+          <div class="prize-pill">🎟️ Exclusive prizes</div>
+          <div class="prize-pill">🔥 Bonus stamp events</div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <!-- CHALLENGES -->
+    <section class="section-wrap">
+      <p class="eyebrow reveal">Challenges</p>
+      <h2 class="section-title reveal">Not just stamps.<br/><em>Epic challenges.</em></h2>
+      <p class="section-body reveal">Daily and monthly challenges reward you with sticker packs, bonus stamps, and prize entries. The more you play, the more you win.</p>
+
+      <div class="grid-2">
+        <div class="card-blue reveal reveal-delay-1">
+          <span class="icon">🟦</span>
+          <h3>Linqle</h3>
+          <p>Linq's daily word game. Solve it, earn a sticker pack. Come back tomorrow — the streak bonuses are real.</p>
+        </div>
+        <div class="card reveal reveal-delay-2">
+          <span class="icon">🗳️</span>
+          <h3>Daily Vote</h3>
+          <p>One question. One vote. Win a sticker pack just for having an opinion. Opens every day at midnight.</p>
+        </div>
+        <div class="card reveal reveal-delay-3">
+          <span class="icon">🗺️</span>
+          <h3>City Explorer</h3>
+          <p>Visit 5 different local businesses this month and unlock a bonus prize drop.</p>
+        </div>
+        <div class="card reveal reveal-delay-4">
+          <span class="icon">🔥</span>
+          <h3>Streak Master</h3>
+          <p>7 days in a row. Keep your streak alive and climb the weekly leaderboard.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- VENDOR STRIP -->
+    <div class="vendor-strip">
+      <p class="eyebrow reveal" style="text-align:center;">On Linq</p>
+      <h2 class="reveal">Your whole high street, in one app.</h2>
+      <p class="reveal">From your morning coffee to your Friday night takeaway — the businesses you love are waiting.</p>
+      <div class="vendor-tags">
+        <div class="vendor-tag reveal reveal-delay-1">☕ Coffee shops</div>
+        <div class="vendor-tag reveal reveal-delay-1">💈 Barbers</div>
+        <div class="vendor-tag reveal reveal-delay-2">🍕 Restaurants</div>
+        <div class="vendor-tag reveal reveal-delay-2">🥐 Bakeries</div>
+        <div class="vendor-tag reveal reveal-delay-3">💪 Gyms</div>
+        <div class="vendor-tag reveal reveal-delay-3">🛍️ Boutiques</div>
+        <div class="vendor-tag reveal reveal-delay-1">🍺 Bars &amp; pubs</div>
+        <div class="vendor-tag reveal reveal-delay-1">💅 Salons &amp; spas</div>
+        <div class="vendor-tag reveal reveal-delay-2">🥗 Healthy eats</div>
+        <div class="vendor-tag reveal reveal-delay-2">🎮 Entertainment</div>
+        <div class="vendor-tag reveal reveal-delay-3">🌮 Street food</div>
+        <div class="vendor-tag reveal reveal-delay-3">📚 Bookshops</div>
+      </div>
+    </div>
+
+    <!-- LEADERBOARD -->
+    <div class="friends-bg">
+      <div class="friends-inner">
+        <p class="eyebrow eyebrow-light reveal" style="text-align:center;">Leaderboards</p>
+        <h2 class="title-light reveal" style="text-align:center;">Who's got more stamps?<br/>Prove it.</h2>
+        <p class="body-light reveal" style="text-align:center;margin-left:auto;margin-right:auto;">Challenge your friends, compete on weekly leaderboards, and hold the top spot at your favourite spot.</p>
+
+        <div class="leaderboard">
+          <div class="lb-row reveal reveal-delay-1">
+            <div class="lb-rank" style="color:var(--gold)">🥇</div>
+            <div class="lb-avatar">😎</div>
+            <div class="lb-name">Jordan K. <small>The Usual at Brew &amp; Co.</small></div>
+            <div class="lb-stamps">142 ⭐</div>
+          </div>
+          <div class="lb-row reveal reveal-delay-2">
+            <div class="lb-rank" style="color:#C0C0C0">🥈</div>
+            <div class="lb-avatar">🤩</div>
+            <div class="lb-name">Priya M. <small>3 challenges completed</small></div>
+            <div class="lb-stamps">119 ⭐</div>
+          </div>
+          <div class="lb-row you reveal reveal-delay-3">
+            <div class="lb-rank" style="color:var(--blue4)">3</div>
+            <div class="lb-avatar">🫵</div>
+            <div class="lb-name">You <small>Keep going — you're close</small></div>
+            <div class="lb-stamps">98 ⭐</div>
+          </div>
+          <div class="lb-row reveal reveal-delay-4">
+            <div class="lb-rank" style="color:rgba(255,255,255,0.3)">4</div>
+            <div class="lb-avatar">😤</div>
+            <div class="lb-name">Sam T. <small>On a 5-day streak</small></div>
+            <div class="lb-stamps">87 ⭐</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOTTOM DOWNLOAD CTA -->
+    <div class="bottom-cta">
+      <h2 class="reveal">Ready to start collecting?</h2>
+      <p class="reveal">Download Linq free and find your first stamp card today.</p>
+      <div class="store-badges reveal">
+        <a class="store-badge store-badge-dark" href="#" id="ios-badge-bottom-c">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+          <div class="badge-text"><small>Download on the</small><strong>App Store</strong></div>
+        </a>
+        <a class="store-badge store-badge-dark" href="#" id="android-badge-bottom-c">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.18 23.76c.3.17.64.24.99.2l.11-.06 9.5-9.5-2.1-2.1-8.5 11.46zM20.36 10.4l-2.6-1.46-2.35 2.35 2.35 2.35 2.63-1.48c.75-.42.75-1.34-.03-1.76zM2.42 1.04C2.16 1.31 2 1.74 2 2.28v19.44c0 .54.16.97.43 1.24l.07.06 10.88-10.88v-.25L2.49.98l-.07.06zM13.53 8.53l-2.1-2.1L2.42 1.04l10.01 9.64 1.1-2.15z"/></svg>
+          <div class="badge-text"><small>Get it on</small><strong>Google Play</strong></div>
+        </a>
+      </div>
+    </div>
+
+  </div><!-- /customer tab -->
+
+  <!-- ══════════════════════════════════
+       BUSINESS TAB
+  ══════════════════════════════════ -->
+  <div id="tab-business" class="tab-panel">
+
+    <!-- HERO -->
+    <header class="biz-hero">
+      <!-- Animated stamp card -->
+      <div class="stamp-card-preview stamp-card-dark reveal">
+        <div class="scp-title">💈 The Barber Club — Loyalty Card</div>
+        <div class="scp-stamps" id="stamp-dots-biz"></div>
+        <div class="scp-label">Collect 8 stamps for a free cut</div>
+      </div>
+
+      <div class="free-badge reveal">★ Free for life</div>
+      <h1 class="reveal">The loyalty app your<br/>customers will <em>actually use.</em></h1>
+      <p class="reveal">Loyalty cards and membership cards — completely free, forever. Set up in minutes. No hardware needed.</p>
+      <p class="no-cc reveal">No credit card required &nbsp;·&nbsp; No contracts &nbsp;·&nbsp; Cancel anytime</p>
+      <a href="https://linq4.vercel.app/app" target="_blank" rel="noopener noreferrer" class="cta-btn reveal">
+        Get started free →
+      </a>
+    </header>
+
+    <!-- WHAT'S FREE -->
+    <section class="section-wrap">
+      <div class="always-free-stamp reveal">Always Free.</div>
+      <p class="eyebrow reveal">Core features</p>
+      <h2 class="section-title reveal">Everything you need<br/>to get started.</h2>
+      <p class="section-body reveal">Loyalty cards and membership cards are free for life. Not a trial. Not a limited plan. Free.</p>
+
+      <div class="free-grid">
+        <div class="free-item reveal reveal-delay-1">
+          <div class="check">✓</div>
+          <div><h4>Digital loyalty cards</h4><p>Create unlimited stamp card programmes for your customers.</p></div>
+        </div>
+        <div class="free-item reveal reveal-delay-2">
+          <div class="check">✓</div>
+          <div><h4>Membership cards</h4><p>Run recurring memberships with visit-based rewards and perks.</p></div>
+        </div>
+        <div class="free-item reveal reveal-delay-3">
+          <div class="check">✓</div>
+          <div><h4>NFC &amp; QR stamping</h4><p>Issue stamps via a tap or QR scan — works on any phone, no extra hardware.</p></div>
+        </div>
+        <div class="free-item reveal reveal-delay-1">
+          <div class="check">✓</div>
+          <div><h4>Customer dashboard</h4><p>See your regulars, total visits, and rewards redeemed at a glance.</p></div>
+        </div>
+        <div class="free-item reveal reveal-delay-2">
+          <div class="check">✓</div>
+          <div><h4>Custom branding</h4><p>Your logo, your colours, your card. Looks like it was made just for you.</p></div>
+        </div>
+        <div class="free-item reveal reveal-delay-3">
+          <div class="check">✓</div>
+          <div><h4>Listed on Linq</h4><p>Your business appears in the Linq discovery feed for customers near you.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <hr class="divider" />
+
+    <!-- RETENTION -->
+    <div class="retention-bg">
+      <div class="retention-inner">
+        <p class="eyebrow eyebrow-light reveal">Customer retention</p>
+        <h2 class="title-light reveal">We keep your customers<br/><em>coming back.</em></h2>
+        <p class="body-light reveal">Linq isn't just a stamp card. It's a behaviour engine. We use proven retention techniques — daily challenges, streak rewards, and collectible sticker ecosystems — that make customers feel pulled back to your store, not pushed.</p>
+
+        <div class="grid-4">
+          <div class="card-dark reveal reveal-delay-1">
+            <span class="icon">🔥</span>
+            <h3>Streaks &amp; habits</h3>
+            <p>Daily challenges build visiting habits. Customers don't want to break their streak — so they come back.</p>
+          </div>
+          <div class="card-dark reveal reveal-delay-2">
+            <span class="icon">🎁</span>
+            <h3>Sticker drops</h3>
+            <p>Every stamp at your store drops a collectible sticker. Customers need more stickers to complete sets — which means more visits to you.</p>
+          </div>
+          <div class="card-dark reveal reveal-delay-3">
+            <span class="icon">🏆</span>
+            <h3>Prize-driven urgency</h3>
+            <p>Monthly prize pools create real urgency. Customers close to completing a set will prioritise your store over a competitor's.</p>
+          </div>
+          <div class="card-dark reveal reveal-delay-4">
+            <span class="icon">🧩</span>
+            <h3>Cross-business challenges</h3>
+            <p>Linq challenges send new customers through your door who've never visited before — discovering you because of a challenge.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATISTICS -->
+    <div class="stats-bg">
+      <div class="stats-inner">
+        <p class="eyebrow eyebrow-light reveal" style="text-align:center;">By the numbers</p>
+        <h2 class="title-light reveal" style="text-align:center;margin-bottom:2.5rem;">Real results for real businesses.</h2>
+
+        <div class="stats-grid">
+          <div class="stat-card reveal reveal-delay-1">
+            <div class="stat-number">68%</div>
+            <div class="stat-label">of customers return more often after joining a loyalty programme</div>
+          </div>
+          <div class="stat-card reveal reveal-delay-2">
+            <div class="stat-number">3×</div>
+            <div class="stat-label">more spend from loyalty members vs. non-members on average</div>
+          </div>
+          <div class="stat-card reveal reveal-delay-3">
+            <div class="stat-number">£0</div>
+            <div class="stat-label">to get started — no setup fees, no monthly costs for core features</div>
+          </div>
+          <div class="stat-card reveal reveal-delay-4">
+            <div class="stat-number">2 min</div>
+            <div class="stat-label">average setup time from download to your first loyalty card live</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- POS INTEGRATION -->
+    <div class="pos-section">
+      <div class="pos-inner reveal">
+        <div class="coming-soon-chip">Coming soon</div>
+        <h3>POS Integration</h3>
+        <p>Connect Linq directly to your point-of-sale system. Stamps issued automatically at checkout — no staff action needed. Works with the tools you already use.</p>
+        <div class="pos-logos">
+          <div class="pos-logo">Square</div>
+          <div class="pos-logo">Lightspeed</div>
+          <div class="pos-logo">Shopify</div>
+          <div class="pos-logo">Epos Now</div>
+          <div class="pos-logo">+ more</div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <!-- ADD-ONS -->
+    <div class="addons-section">
+      <div class="addons-inner">
+        <h3 class="reveal">Supercharge with add-ons</h3>
+        <p class="reveal">When you're ready to go further, unlock powerful tools to grow your customer base.</p>
+
+        <div class="grid-4">
+          <div class="card-outline reveal reveal-delay-1">
+            <span class="icon">📣</span>
+            <h4>Offers &amp; promotions</h4>
+            <p>Push exclusive deals directly to your loyal customers' phones.</p>
+          </div>
+          <div class="card-outline reveal reveal-delay-2">
+            <span class="icon">🏆</span>
+            <h4>Challenges</h4>
+            <p>Join city-wide challenges and get featured to thousands of Linq users.</p>
+          </div>
+          <div class="card-outline reveal reveal-delay-3">
+            <span class="icon">📊</span>
+            <h4>Advanced analytics</h4>
+            <p>Deep visit trends, peak times, and customer retention insights.</p>
+          </div>
+          <div class="card-outline reveal reveal-delay-4">
+            <span class="icon">🎟️</span>
+            <h4>Subscription cards</h4>
+            <p>Sell recurring monthly subscriptions with perks — coffees, discounts, and more.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOTTOM DOWNLOAD CTA -->
+    <div class="bottom-cta">
+      <h2 class="reveal">Ready to grow your regulars?</h2>
+      <p class="reveal">Launch your loyalty programme in minutes — free, forever.</p>
+      <a href="https://linq4.vercel.app/app" target="_blank" rel="noopener noreferrer" class="cta-btn reveal">
+        Get started free →
+      </a>
+    </div>
+
+  </div><!-- /business tab -->
+
+  <footer>
+    <p>&copy; 2026 Linq. All rights reserved. &nbsp;·&nbsp; <a href="/privacy.html" style="color:inherit;text-decoration:underline;">Privacy Policy</a> &nbsp;·&nbsp; <a href="/terms.html" style="color:inherit;text-decoration:underline;">Terms of Service</a></p>
+  </footer>
+
+  <script>
+    if (history.scrollRestoration) history.scrollRestoration = 'manual';
+    window.scrollTo(0, 0);
+
+    const APP_STORE_URL = 'https://apps.apple.com/app/linq/id6474052885';
+    const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=app.mylinq.linq';
+
+    /* ── TAB SWITCHING ── */
+    function switchTab(tab, btn) {
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-pill').forEach(b => b.classList.remove('active'));
+      document.getElementById('tab-' + tab).classList.add('active');
+      btn.classList.add('active');
+window.scrollTo({ top: 0, behavior: 'smooth' });
+      setTimeout(observeReveals, 50);
+    }
+
+    /* ── SCROLL REVEAL ── */
+    function observeReveals() {
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+          if (e.isIntersecting) {
+            e.target.classList.add('visible');
+            io.unobserve(e.target);
+          }
+        });
+      }, { threshold: 0.12 });
+
+      document.querySelectorAll('#tab-' + currentTab() + ' .reveal:not(.visible)').forEach(el => io.observe(el));
+    }
+
+    function currentTab() {
+      return document.querySelector('.tab-panel.active').id.replace('tab-', '');
+    }
+
+    observeReveals();
+
+    /* ── STAMP CARD ANIMATION ── */
+    function initStampCard(containerId, total) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      const dots = [];
+      for (let i = 0; i < total; i++) {
+        const d = document.createElement('div');
+        d.className = 'stamp-dot';
+        if (i === total - 1) d.textContent = '🎁';
+        container.appendChild(d);
+        dots.push(d);
+      }
+      let filled = 0;
+      function fillNext() {
+        if (filled >= total) {
+          setTimeout(() => {
+            dots.forEach((d, i) => {
+              d.classList.remove('filled', 'gift', 'pop');
+              if (i === total - 1) d.textContent = '🎁';
+              else d.textContent = '';
+            });
+            filled = 0;
+            setTimeout(fillNext, 800);
+          }, 2000);
+          return;
+        }
+        const dot = dots[filled];
+        const isLast = filled === total - 1;
+        dot.classList.add('filled', 'pop');
+        if (isLast) { dot.classList.add('gift'); dot.textContent = '🎁'; }
+        else dot.textContent = '✓';
+        setTimeout(() => dot.classList.remove('pop'), 300);
+        filled++;
+        setTimeout(fillNext, 480);
+      }
+      setTimeout(fillNext, 1200);
+    }
+
+    initStampCard('stamp-dots', 10);
+    initStampCard('stamp-dots-biz', 8);
+
+    /* ── STORE LINKS ── */
+    function activateBadge(id, url) {
+      if (!url) return;
+      const el = document.getElementById(id);
+      if (el) el.href = url;
+    }
+
+    ['ios-badge','ios-badge-biz','ios-badge-bottom-c','ios-badge-bottom-b'].forEach(id => activateBadge(id, APP_STORE_URL));
+    ['android-badge','android-badge-biz','android-badge-bottom-c','android-badge-bottom-b'].forEach(id => activateBadge(id, PLAY_STORE_URL));
+  </script>
+</body>
+</html>

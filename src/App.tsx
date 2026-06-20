@@ -1343,6 +1343,7 @@ export default function App() {
   const [nativeVendorBlocked, setNativeVendorBlocked] = useState(false);
   const [emailVerifiedStandalone, setEmailVerifiedStandalone] = useState(false);
   const [profileCollection, setProfileCollection] = useState<'users' | 'vendors' | null>(null);
+  const [browsingAsGuest, setBrowsingAsGuest] = useState(false);
   const intendedRoleRef = useRef<'consumer' | 'vendor' | null>(null);
   const [activeTab, setActiveTab] = useState<string>('home');
   const [viewingStore, setViewingStore] = useState<StoreProfile | null>(null);
@@ -1450,6 +1451,19 @@ export default function App() {
     return onSnapshot(q, (snap) => {
       setUserCards(snap.docs.map(d => ({ id: d.id, ...d.data() } as Card)));
     }, (error) => console.error("Global cards listener:", error));
+  }, [user]);
+
+  // Listen to who the current user has blocked, so UGC feeds can hide their content instantly
+  const [blockedUids, setBlockedUids] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (!user) {
+      setBlockedUids(new Set());
+      return;
+    }
+    const q = query(collection(db, 'blocks'), where('blockerUid', '==', user.uid));
+    return onSnapshot(q, (snap) => {
+      setBlockedUids(new Set(snap.docs.map(d => d.data().blockedUid as string)));
+    }, (error) => console.error("Blocked users listener:", error));
   }, [user]);
 
   // Listen to ALL notifications (shown in feed); badge count tracks unread separately
@@ -2181,7 +2195,16 @@ export default function App() {
   }
 
   if (!user) {
-    return <LandingPage onLogin={handleLogin} onEmailSignUp={handleEmailSignUp} onEmailSignIn={handleEmailSignIn} />;
+    if (browsingAsGuest) {
+      return (
+        <GuestApp
+          viewingStore={viewingStore}
+          setViewingStore={setViewingStore}
+          onRequireAuth={() => setBrowsingAsGuest(false)}
+        />
+      );
+    }
+    return <LandingPage onLogin={handleLogin} onEmailSignUp={handleEmailSignUp} onEmailSignIn={handleEmailSignIn} onBrowseAsGuest={() => setBrowsingAsGuest(true)} />;
   }
 
   if (needsEmailVerification) {
@@ -2354,6 +2377,7 @@ export default function App() {
               user={user}
               profile={profile}
               onViewUser={handleViewUser}
+              blockedUids={blockedUids}
               onMessage={(chatId) => {
                 setActiveChatId(chatId);
                 setActiveTab('messages');
@@ -2390,6 +2414,7 @@ export default function App() {
               onViewStore={setViewingStore}
               onViewUser={handleViewUser}
               cards={userCards}
+              blockedUids={blockedUids}
               notifications={notifications}
               activeChatId={activeChatId}
               setActiveChatId={setActiveChatId}
@@ -2419,6 +2444,7 @@ export default function App() {
               setShowVendorQR={setShowVendorQR}
               onVendorQRStatus={setVendorQREnabled}
               onVendorIsSpend={setVendorIsSpend}
+              blockedUids={blockedUids}
             />
             </AppErrorBoundary>
           )}
@@ -2721,10 +2747,11 @@ function VendorPendingScreen({ profile, onLogout }: { profile: UserProfile; onLo
   );
 }
 
-function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
+function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }: {
   onLogin: () => Promise<string | null>;
   onEmailSignUp: (email: string, password: string) => Promise<string | null>;
   onEmailSignIn: (email: string, password: string) => Promise<string | null>;
+  onBrowseAsGuest: () => void;
 }) {
   const [phoneMode, setPhoneMode] = React.useState<'phone' | 'otp' | 'email' | 'email-signup'>('phone');
   const [dialCode, setDialCode] = React.useState(guessDefaultDialCode);
@@ -2738,6 +2765,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
   const recaptchaVerifier = React.useRef<RecaptchaVerifier | null>(null);
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(false);
+  const [agreedToTerms, setAgreedToTerms] = React.useState(false);
 
   React.useEffect(() => {
     if (Capacitor.getPlatform() === 'ios') return;
@@ -2964,9 +2992,24 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
             </div>
           )}
 
+          <label className="flex items-start gap-2.5 cursor-pointer group pt-1">
+            <div
+              className={`w-5 h-5 rounded-md border-2 shrink-0 mt-0.5 flex items-center justify-center transition-all ${agreedToTerms ? 'bg-white border-white' : 'border-white/40 group-hover:border-white/70'}`}
+              onClick={() => setAgreedToTerms(v => !v)}
+            >
+              {agreedToTerms && <CheckCircle2 size={13} className="text-brand-navy" />}
+            </div>
+            <span className="text-white/70 text-xs leading-relaxed" onClick={() => setAgreedToTerms(v => !v)}>
+              I agree to the{' '}
+              <button type="button" onClick={(e) => { e.stopPropagation(); openUrl('https://mylinq.app/privacy.html'); }} className="underline underline-offset-2 text-white/90 hover:text-white">Privacy Policy</button>
+              {' '}and{' '}
+              <button type="button" onClick={(e) => { e.stopPropagation(); openUrl('https://mylinq.app/terms.html'); }} className="underline underline-offset-2 text-white/90 hover:text-white">Terms of Service</button>
+            </span>
+          </label>
+
           <button
             onClick={phoneMode === 'phone' ? handleSendOTP : phoneMode === 'otp' ? handleVerifyOTP : handleEmailSubmit}
-            disabled={loading}
+            disabled={loading || !agreedToTerms}
             className="w-full bg-white text-brand-navy font-bold py-4 rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
           >
             {loading
@@ -2994,6 +3037,12 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
               >
                 <Mail size={15} />
                 Sign in with Email
+              </button>
+              <button
+                onClick={onBrowseAsGuest}
+                className="w-full text-white/50 text-sm py-3 hover:text-white/80 transition-colors underline underline-offset-2"
+              >
+                Browse deals without an account
               </button>
             </div>
           )}
@@ -3024,6 +3073,68 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn }: {
             </div>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Read-only browsing shell for unauthenticated visitors — Deals + Discovery only,
+// per Apple 5.1.1(v): public store/offer info shouldn't require an account.
+function GuestApp({ viewingStore, setViewingStore, onRequireAuth }: {
+  viewingStore: StoreProfile | null;
+  setViewingStore: (s: StoreProfile | null) => void;
+  onRequireAuth: () => void;
+}) {
+  const [activeTab, setActiveTab] = useState<'deals' | 'discover'>('deals');
+  const [stores, setStores] = useState<StoreProfile[]>([]);
+
+  useEffect(() => {
+    return onSnapshot(collection(db, 'stores'), snap =>
+      setStores(snap.docs.map(d => ({ id: d.id, ...d.data() } as StoreProfile)))
+    , () => {});
+  }, []);
+
+  if (viewingStore) {
+    return (
+      <div className="min-h-screen bg-brand-bg" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+        <div className="max-w-2xl mx-auto px-4 pt-6 pb-10">
+          <StoreProfileView
+            store={viewingStore}
+            onBack={() => setViewingStore(null)}
+            user={undefined}
+            profile={null}
+            onViewUser={onRequireAuth}
+            onRequireAuth={onRequireAuth}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-brand-bg flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+      <div className="flex items-center justify-between px-5 py-4 max-w-2xl mx-auto w-full">
+        <span className="font-black italic text-2xl text-brand-navy" style={{ fontFamily: 'Poppins, sans-serif' }}>Linq</span>
+        <button onClick={onRequireAuth} className="px-4 py-2 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-95 transition-transform">
+          Sign up
+        </button>
+      </div>
+      <div className="flex-1 px-4 max-w-2xl mx-auto w-full pb-6">
+        {activeTab === 'deals' ? (
+          <DealsScreen onViewStore={setViewingStore} onNavigate={tab => setActiveTab(tab === 'discover' ? 'discover' : 'deals')} onRequireAuth={onRequireAuth} />
+        ) : (
+          <DiscoveryScreen stores={stores} cards={[]} onJoin={onRequireAuth} onViewStore={setViewingStore} onViewUser={onRequireAuth} currentProfile={null} />
+        )}
+      </div>
+      <div className="flex items-center justify-around border-t border-brand-navy/10 bg-white py-3" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.5rem)' }}>
+        <button onClick={() => setActiveTab('deals')} className={`flex flex-col items-center gap-1 px-6 ${activeTab === 'deals' ? 'text-brand-gold' : 'text-brand-navy/40'}`}>
+          <Tag size={20} />
+          <span className="text-[11px] font-bold">Deals</span>
+        </button>
+        <button onClick={() => setActiveTab('discover')} className={`flex flex-col items-center gap-1 px-6 ${activeTab === 'discover' ? 'text-brand-gold' : 'text-brand-navy/40'}`}>
+          <Compass size={20} />
+          <span className="text-[11px] font-bold">Discovery</span>
+        </button>
       </div>
     </div>
   );
@@ -12069,7 +12180,7 @@ function buildStampCelebrationPages(
 
 // --- Consumer App ---
 
-function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onViewUser, cards: initialCards, notifications, activeChatId, setActiveChatId, onLogout, onDeleteAccount, pendingNFCStoreId, onClearPendingNFC, uiColors: uiColorsProp }: { activeTab: string, setActiveTab: (tab: string) => void, profile: UserProfile | null, user: FirebaseUser, onViewStore: (s: StoreProfile) => void, onViewUser: (u: UserProfile) => void, cards: Card[], notifications: Notification[], activeChatId: string | null, setActiveChatId: (id: string | null) => void, onLogout: () => void, onDeleteAccount: () => Promise<void>, pendingNFCStoreId?: string | null, onClearPendingNFC?: () => void, uiColors?: UiColors, key?: React.Key }) {
+function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onViewUser, cards: initialCards, notifications, activeChatId, setActiveChatId, onLogout, onDeleteAccount, pendingNFCStoreId, onClearPendingNFC, uiColors: uiColorsProp, blockedUids }: { activeTab: string, setActiveTab: (tab: string) => void, profile: UserProfile | null, user: FirebaseUser, onViewStore: (s: StoreProfile) => void, onViewUser: (u: UserProfile) => void, cards: Card[], notifications: Notification[], activeChatId: string | null, setActiveChatId: (id: string | null) => void, onLogout: () => void, onDeleteAccount: () => Promise<void>, pendingNFCStoreId?: string | null, onClearPendingNFC?: () => void, uiColors?: UiColors, blockedUids?: Set<string>, key?: React.Key }) {
   const uiColors = uiColorsProp ?? UI_COLOR_DEFAULTS;
   const [stores, setStores] = useState<StoreProfile[]>([]);
   const [walletSubTab, setWalletSubTab] = useState<'stamps' | 'challenges'>('stamps');
@@ -12828,6 +12939,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           currentProfile={profile}
           userCards={initialCards}
           uiColors={uiColors}
+          blockedUids={blockedUids}
         />
       )}
 
@@ -17830,7 +17942,7 @@ function PaymentVerifyingScreen() {
 
 // --- Vendor App ---
 
-function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, onViewUser, notifications, activeChatId, setActiveChatId, onLogout, onDeleteAccount, showVendorQR, setShowVendorQR, onVendorQRStatus, onVendorIsSpend }: { activeTab: string, setActiveTab: (tab: string) => void, profile: UserProfile | null, user: FirebaseUser, profileCollection: 'users' | 'vendors', onViewUser: (u: UserProfile) => void, notifications: Notification[], activeChatId: string | null, setActiveChatId: (id: string | null) => void, onLogout: () => void, onDeleteAccount: () => Promise<void>, showVendorQR?: boolean, setShowVendorQR?: (v: boolean) => void, onVendorQRStatus?: (enabled: boolean) => void, onVendorIsSpend?: (v: boolean) => void, key?: React.Key }) {
+function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, onViewUser, notifications, activeChatId, setActiveChatId, onLogout, onDeleteAccount, showVendorQR, setShowVendorQR, onVendorQRStatus, onVendorIsSpend, blockedUids }: { activeTab: string, setActiveTab: (tab: string) => void, profile: UserProfile | null, user: FirebaseUser, profileCollection: 'users' | 'vendors', onViewUser: (u: UserProfile) => void, notifications: Notification[], activeChatId: string | null, setActiveChatId: (id: string | null) => void, onLogout: () => void, onDeleteAccount: () => Promise<void>, showVendorQR?: boolean, setShowVendorQR?: (v: boolean) => void, onVendorQRStatus?: (enabled: boolean) => void, onVendorIsSpend?: (v: boolean) => void, blockedUids?: Set<string>, key?: React.Key }) {
   const [store, setStore] = useState<StoreProfile | null>(null);
   const [userCards, setUserCards] = useState<Card[]>([]);
 
@@ -18651,7 +18763,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
       exit={{ opacity: 0, x: -20 }}
     >
       {activeTab === 'for-you' && (
-        <ForYouScreen onViewUser={onViewUser} currentUser={user} currentProfile={profile} />
+        <ForYouScreen onViewUser={onViewUser} currentUser={user} currentProfile={profile} blockedUids={blockedUids} />
       )}
 
       {activeTab === 'messages' && !isNativeIOS && (
@@ -24188,8 +24300,8 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
   onJoin: (s: StoreProfile) => void;
   onViewStore: (s: StoreProfile) => void;
   onViewUser: (u: UserProfile) => void;
-  currentUser: FirebaseUser;
-  currentProfile: UserProfile | null;
+  currentUser?: FirebaseUser;
+  currentProfile?: UserProfile | null;
 }) {
   const [search, setSearch] = useState('');
   const [searchType, setSearchType] = useState<'stores' | 'users'>('stores');
@@ -25367,7 +25479,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
 }
 
 // ─── Offer Detail Sheet ───────────────────────────────────────────────────────
-function OfferDetailSheet({ offer, currentUser, currentProfile, onClose }: { offer: StoreOffer; currentUser?: FirebaseUser; currentProfile?: UserProfile | null; onClose: () => void }) {
+function OfferDetailSheet({ offer, currentUser, currentProfile, onClose, onRequireAuth }: { offer: StoreOffer; currentUser?: FirebaseUser; currentProfile?: UserProfile | null; onClose: () => void; onRequireAuth?: () => void }) {
   const [redemptions, setRedemptions] = useState<{ id: string; redeemedAt?: any }[]>([]);
   const [redeeming, setRedeeming] = useState(false);
   const [redeemed, setRedeemed] = useState(false);
@@ -25513,7 +25625,11 @@ function OfferDetailSheet({ offer, currentUser, currentProfile, onClose }: { off
 
               {/* Slide to redeem — same style as wallet card redemption */}
               <div>
-                {redeemed ? (
+                {!currentUser ? (
+                  <button onClick={onRequireAuth} className="w-full h-14 rounded-xl bg-brand-navy flex items-center justify-center text-sm font-bold text-white gap-2 active:scale-[0.98] transition-transform">
+                    Sign up to claim this deal
+                  </button>
+                ) : redeemed ? (
                   <div className="h-14 rounded-xl bg-emerald-500 flex items-center justify-center text-sm font-bold text-white gap-2">
                     <Check size={18} /> Redeemed!
                   </div>
@@ -25545,7 +25661,11 @@ function OfferDetailSheet({ offer, currentUser, currentProfile, onClose }: { off
 
               {/* Slide to redeem */}
               <div>
-                {!canRedeem ? (
+                {!currentUser ? (
+                  <button onClick={onRequireAuth} className="w-full h-14 rounded-full bg-brand-navy flex items-center justify-center text-sm font-bold text-white gap-2 active:scale-[0.98] transition-transform">
+                    Sign up to claim this deal
+                  </button>
+                ) : !canRedeem ? (
                   <div className="h-14 rounded-full bg-brand-navy/8 flex items-center justify-center text-sm font-bold text-brand-navy/75">
                     {offer.maxRedemptionsPerUser === 0 ? 'No redemptions available' : 'Already fully redeemed'}
                   </div>
@@ -25566,7 +25686,7 @@ function OfferDetailSheet({ offer, currentUser, currentProfile, onClose }: { off
 }
 
 // ─── Offers Modal ─────────────────────────────────────────────────────────────
-function OffersModal({ offers, currentUser, currentProfile, onClose }: { offers: StoreOffer[]; currentUser?: FirebaseUser; currentProfile?: UserProfile | null; onClose: () => void }) {
+function OffersModal({ offers, currentUser, currentProfile, onClose, onRequireAuth }: { offers: StoreOffer[]; currentUser?: FirebaseUser; currentProfile?: UserProfile | null; onClose: () => void; onRequireAuth?: () => void }) {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [selectedOffer, setSelectedOffer] = useState<StoreOffer | null>(null);
@@ -25661,7 +25781,7 @@ function OffersModal({ offers, currentUser, currentProfile, onClose }: { offers:
 
       <AnimatePresence>
         {selectedOffer && (
-          <OfferDetailSheet offer={selectedOffer} currentUser={currentUser} currentProfile={currentProfile} onClose={() => setSelectedOffer(null)} />
+          <OfferDetailSheet offer={selectedOffer} currentUser={currentUser} currentProfile={currentProfile} onClose={() => setSelectedOffer(null)} onRequireAuth={onRequireAuth} />
         )}
       </AnimatePresence>
     </>
@@ -30077,7 +30197,7 @@ function ActivityTicker({ posts }: { posts: GlobalPost[] }) {
   );
 }
 
-function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewStore, onLike, onVote, onDelete, showPinnedTag, hideDivider }: {
+function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewStore, onLike, onVote, onDelete, showPinnedTag, hideDivider, blockedUids }: {
   key?: React.Key;
   post: GlobalPost;
   currentUser?: FirebaseUser;
@@ -30089,6 +30209,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
   onDelete?: (post: GlobalPost) => void | Promise<void>;
   showPinnedTag?: boolean;
   hideDivider?: boolean;
+  blockedUids?: Set<string>;
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const [comments, setComments] = useState<any[]>([]);
@@ -30255,7 +30376,8 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
     });
   };
 
-  const visibleComments = showAllComments ? comments : comments.slice(0, 2);
+  const nonBlockedComments = comments.filter(c => !blockedUids?.has(c.fromUid));
+  const visibleComments = showAllComments ? nonBlockedComments : nonBlockedComments.slice(0, 2);
 
   // Activity posts — styled reward card
   if (post.postType === 'activity') {
@@ -30757,7 +30879,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
             className="flex items-center gap-1.5 text-sm font-bold text-brand-navy hover:text-brand-navy/70 transition-colors"
           >
             <MessageCircle size={17} />
-            <span>{comments.length}</span>
+            <span>{nonBlockedComments.length}</span>
           </button>
 
           {post.postType === 'poll' && (
@@ -31394,8 +31516,8 @@ function StoreDealsSection({ stores, onViewStore, storeDistances, onNavigate }: 
   );
 }
 
-function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge, onNavigate, userCards = [] }: {
-  currentUser?: FirebaseUser; currentProfile?: UserProfile | null; onViewStore?: (s: StoreProfile) => void; onViewChallenge?: (c: Challenge) => void; onNavigate?: (tab: string) => void; userCards?: Card[];
+function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge, onNavigate, userCards = [], onRequireAuth }: {
+  currentUser?: FirebaseUser; currentProfile?: UserProfile | null; onViewStore?: (s: StoreProfile) => void; onViewChallenge?: (c: Challenge) => void; onNavigate?: (tab: string) => void; userCards?: Card[]; onRequireAuth?: () => void;
 }) {
   const [allStores, setAllStores] = useState<StoreProfile[]>([]);
   const [challenges, setChallenges] = useState<Challenge[]>([]);
@@ -31778,12 +31900,12 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
 
     <AnimatePresence>
       {showOffersModal && (
-        <OffersModal offers={storeOffers} currentUser={currentUser} currentProfile={currentProfile} onClose={() => setShowOffersModal(false)} />
+        <OffersModal offers={storeOffers} currentUser={currentUser} currentProfile={currentProfile} onClose={() => setShowOffersModal(false)} onRequireAuth={onRequireAuth} />
       )}
     </AnimatePresence>
     <AnimatePresence>
       {selectedOffer && (
-        <OfferDetailSheet offer={selectedOffer} currentUser={currentUser} currentProfile={currentProfile} onClose={() => setSelectedOffer(null)} />
+        <OfferDetailSheet offer={selectedOffer} currentUser={currentUser} currentProfile={currentProfile} onClose={() => setSelectedOffer(null)} onRequireAuth={onRequireAuth} />
       )}
     </AnimatePresence>
 
@@ -31933,7 +32055,7 @@ function AdminBannerCarousel({ banners, cycleMs = 4500, onNavigate }: { banners:
   );
 }
 
-function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle, onPackReady, onNavigate, currentUser, currentProfile, userCards = [], uiColors: uc }: { onViewUser: (u: UserProfile) => void, onViewStore?: (s: StoreProfile) => void, onViewChallenges?: () => void, onOpenLinqle?: () => void, onPackReady?: (s: CollectibleSticker[]) => void, onNavigate?: (dest: string) => void, currentUser?: FirebaseUser, currentProfile?: UserProfile | null, userCards?: Card[], uiColors?: UiColors }) {
+function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle, onPackReady, onNavigate, currentUser, currentProfile, userCards = [], uiColors: uc, blockedUids }: { onViewUser: (u: UserProfile) => void, onViewStore?: (s: StoreProfile) => void, onViewChallenges?: () => void, onOpenLinqle?: () => void, onPackReady?: (s: CollectibleSticker[]) => void, onNavigate?: (dest: string) => void, currentUser?: FirebaseUser, currentProfile?: UserProfile | null, userCards?: Card[], uiColors?: UiColors, blockedUids?: Set<string> }) {
   const uiColors = uc ?? UI_COLOR_DEFAULTS;
   const [globalPosts, setGlobalPosts] = useState<GlobalPost[]>([]);
   const [followingUids, setFollowingUids] = useState<Set<string>>(new Set());
@@ -32311,8 +32433,10 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
     await updateDoc(doc(db, 'global_posts', post.id), { [`pollVotes.${optionIndex}`]: arrayUnion(currentUser.uid) });
   };
 
+  const visiblePolls = polls.filter(p => !blockedUids?.has(p.authorUid));
+
   const sortedFeed = (() => {
-    const combined = [...globalPosts].sort((a, b) => {
+    const combined = globalPosts.filter(p => !blockedUids?.has(p.authorUid)).sort((a, b) => {
       const tA = a.createdAt?.toMillis?.() || 0;
       const tB = b.createdAt?.toMillis?.() || 0;
       return tB - tA;
@@ -32401,13 +32525,13 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
               </div>
             </div>
           )}
-          {polls.length > 0 && (
+          {visiblePolls.length > 0 && (
             <div className="px-4 mb-2">
               <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/50">Community Polls</p>
             </div>
           )}
           <div className="bg-white divide-y-[2px] divide-gray-300 border-t-[2px] border-gray-300">
-            {polls.map(post => (
+            {visiblePolls.map(post => (
               <FeedPostCard
                 key={post.id}
                 post={post}
@@ -33369,6 +33493,12 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
                         blockedUid: chatPartner.uid,
                         createdAt: serverTimestamp()
                       }).catch(console.error);
+                      await addDoc(collection(db, 'reports'), {
+                        reportedUid: chatPartner.uid,
+                        reportedBy: currentUser.uid,
+                        reason: 'Blocked by user',
+                        createdAt: serverTimestamp(),
+                      }).catch(console.error);
                     }
                   }}
                   className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold text-red-500 hover:bg-red-50 transition-colors text-left"
@@ -34089,7 +34219,7 @@ function ProfileCardRow({ store, card, membershipCard, userId, onJoinLoyalty, on
   store: StoreProfile;
   card: Card | null;
   membershipCard: Card | null;
-  userId: string;
+  userId?: string;
   userProfile: UserProfile | null;
   onJoinLoyalty: () => void;
   onJoinMembership: () => void;
@@ -34197,7 +34327,7 @@ function ProfileCardRow({ store, card, membershipCard, userId, onJoinLoyalty, on
   );
 }
 
-function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser, onMessage, isPreview }: { store: StoreProfile, onBack: () => void, user: FirebaseUser, profile: UserProfile | null, onViewUser: (u: UserProfile) => void, onMessage?: (chatId: string) => void, isPreview?: boolean, key?: React.Key }) {
+function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser, onMessage, isPreview, onRequireAuth, blockedUids }: { store: StoreProfile, onBack: () => void, user?: FirebaseUser, profile: UserProfile | null, onViewUser: (u: UserProfile) => void, onMessage?: (chatId: string) => void, isPreview?: boolean, onRequireAuth?: () => void, blockedUids?: Set<string>, key?: React.Key }) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [vendorGlobalPosts, setVendorGlobalPosts] = useState<GlobalPost[]>([]);
   const [storeReviews, setStoreReviews] = useState<any[]>([]);
@@ -34292,6 +34422,7 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
   }, [store.id]);
 
   useEffect(() => {
+    if (!user) { setCard(null); return; }
     const cardId = `${user.uid}_${store.id}`;
     return onSnapshot(doc(db, 'cards', cardId), (snap) => {
       if (snap.exists() && !snap.data()?.isArchived) {
@@ -34300,9 +34431,10 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
         setCard(null);
       }
     }, (err) => console.error("Card detail listener:", err));
-  }, [user.uid, store.id]);
+  }, [user?.uid, store.id]);
 
   useEffect(() => {
+    if (!user) { setMembershipCard(null); return; }
     const membershipId = `${user.uid}_${store.id}_membership`;
     return onSnapshot(doc(db, 'cards', membershipId), (snap) => {
       if (snap.exists() && !snap.data()?.isArchived) {
@@ -34311,7 +34443,7 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
         setMembershipCard(null);
       }
     }, (err) => console.error("Membership card listener:", err));
-  }, [user.uid, store.id]);
+  }, [user?.uid, store.id]);
 
   useEffect(() => {
     const q = query(collection(db, 'cards'), where('store_id', '==', store.id));
@@ -34355,19 +34487,21 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
   }, [store.id]);
 
   useEffect(() => {
+    if (!user) { setIsFollowingStore(false); return; }
     const followId = `${user.uid}_${store.id}`;
     return onSnapshot(doc(db, 'store_follows', followId), (snap) => {
       setIsFollowingStore(snap.exists());
     }, () => {});
-  }, [user.uid, store.id]);
+  }, [user?.uid, store.id]);
 
   const handleFollowStore = async () => {
+    if (!user) { onRequireAuth?.(); return; }
     const followId = `${user.uid}_${store.id}`;
     if (isFollowingStore) {
       await deleteDoc(doc(db, 'store_follows', followId));
     } else {
       await setDoc(doc(db, 'store_follows', followId), {
-        followerUid: user.uid,
+        followerUid: user?.uid,
         storeId: store.id,
         createdAt: serverTimestamp(),
       });
@@ -34381,6 +34515,7 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
   }, [store.id, isFollowingStore]);
 
   const handleMessageStore = async () => {
+    if (!user) { onRequireAuth?.(); return; }
     if (!onMessage || !store.ownerUid || store.ownerUid === user.uid) return;
     const chatId = [user.uid, store.ownerUid].sort().join('_');
     // Navigate immediately — don't block on Firestore
@@ -34407,6 +34542,7 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
   };
 
   const handleJoinStore = async () => {
+    if (!user) { onRequireAuth?.(); return; }
     const cardId = `${user.uid}_${store.id}`;
     const userName = profile?.name || user.displayName || user.email?.split('@')[0] || 'Loyal Customer';
     const userPhoto = profile?.photoURL || user.photoURL || '';
@@ -34440,6 +34576,7 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
   };
 
   const handleJoinMembership = async () => {
+    if (!user) { onRequireAuth?.(); return; }
     const membershipId = `${user.uid}_${store.id}_membership`;
     const userName = profile?.name || user.displayName || user.email?.split('@')[0] || 'Member';
     const userPhoto = profile?.photoURL || user.photoURL || '';
@@ -34461,6 +34598,7 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
   };
 
   const handleLeaveMembership = async () => {
+    if (!user) { onRequireAuth?.(); return; }
     const membershipId = `${user.uid}_${store.id}_membership`;
     try {
       await updateDoc(doc(db, 'cards', membershipId), { isArchived: true });
@@ -34469,6 +34607,7 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
   };
 
   const handleCreatePost = async () => {
+    if (!user) { onRequireAuth?.(); return; }
     if (!newPost.trim() || !profile) return;
     setIsPosting(true);
     try {
@@ -34513,9 +34652,10 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
     }
   };
 
-  const myReview = storeReviews.find(r => r.authorUid === user.uid);
-  const avgRating = storeReviews.length ? storeReviews.reduce((s, r) => s + (r.rating || 5), 0) / storeReviews.length : null;
-  const visibleReviews = storeReviews.slice(0, visibleReviewCount);
+  const myReview = storeReviews.find(r => r.authorUid === user?.uid);
+  const nonBlockedReviews = storeReviews.filter(r => !blockedUids?.has(r.authorUid));
+  const avgRating = nonBlockedReviews.length ? nonBlockedReviews.reduce((s, r) => s + (r.rating || 5), 0) / nonBlockedReviews.length : null;
+  const visibleReviews = nonBlockedReviews.slice(0, visibleReviewCount);
 
   useEffect(() => {
     const el = reviewSentinelRef.current;
@@ -34528,6 +34668,7 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
   }, [storeReviews.length]);
 
   const handleSubmitReview = async () => {
+    if (!user) { onRequireAuth?.(); return; }
     if (!reviewText.trim() || myReview) return;
     setIsSubmittingReview(true);
     try {
@@ -34649,7 +34790,7 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
     ? [...store.rewardTiers].sort((a, b) => a.stamps - b.stamps)
     : store.reward ? [{ stamps: store.stamps_required_for_reward || 10, reward: store.reward }] : [];
 
-  const isOwnStore = isPreview ? false : store.ownerUid === user.uid;
+  const isOwnStore = isPreview ? false : store.ownerUid === user?.uid;
   const isVendorUser = isPreview ? false : profile?.role === 'vendor';
 
   // Type-aware stats bar values
@@ -34701,7 +34842,7 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
         </button>
         {/* Floating right actions */}
         <div className="absolute top-3 right-3 flex items-center gap-2">
-          {isAppAdmin(profile, user.email) && (
+          {isAppAdmin(profile, user?.email) && (
             <button
               onClick={() => setShowAdminEdit(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-black/30 backdrop-blur-md text-white text-xs font-bold active:scale-95 transition-all"
@@ -34829,7 +34970,7 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
         )}
 
         {/* Action strip — consumers only */}
-        {store.ownerUid !== user.uid && (
+        {store.ownerUid !== user?.uid && (
           <div className="flex gap-2">
             <button
               onClick={handleFollowStore}
@@ -34923,12 +35064,12 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
       </AnimatePresence>
 
       {/* Join / joined buttons */}
-      {(isPreview || store.ownerUid !== user.uid) && (storeCardActive(store) || store.membershipEnabled || store.subCardEnabled || (store.stamps_required_for_reward != null && store.stamps_required_for_reward > 0)) && (
+      {(isPreview || store.ownerUid !== user?.uid) && (storeCardActive(store) || store.membershipEnabled || store.subCardEnabled || (store.stamps_required_for_reward != null && store.stamps_required_for_reward > 0)) && (
         <ProfileCardRow
           store={store}
           card={isPreview ? null : card}
           membershipCard={isPreview ? null : membershipCard}
-          userId={user.uid}
+          userId={user?.uid}
           userProfile={profile}
           onJoinLoyalty={handleJoinStore}
           onJoinMembership={handleJoinMembership}
@@ -35650,7 +35791,7 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
         return (
           <div className="space-y-4">
             {/* Post box for consumers */}
-            {store.ownerUid !== user.uid && (
+            {store.ownerUid !== user?.uid && (
               <div className="glass-card p-4 rounded-3xl space-y-4">
                 <textarea
                   value={newPost}
@@ -35672,8 +35813,8 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
             {merged.map(item =>
               item._type === 'global' ? (
                 <FeedPostCard key={item.data.id} post={item.data} currentUser={user} onViewUser={onViewUser}
-                  onLike={async (p) => { const ref = doc(db, 'global_posts', p.id); const liked = (p.likedBy || []).includes(user.uid); await updateDoc(ref, { likedBy: liked ? arrayRemove(user.uid) : arrayUnion(user.uid), likesCount: liked ? Math.max(0, p.likesCount - 1) : p.likesCount + 1 }); }}
-                  onVote={async (p, idx) => { const votes = p.pollVotes || {}; if (Object.keys(votes).some(k => (votes[k] || []).includes(user.uid))) return; await updateDoc(doc(db, 'global_posts', p.id), { [`pollVotes.${idx}`]: arrayUnion(user.uid) }); }}
+                  onLike={async (p) => { if (!user) { onRequireAuth?.(); return; } const ref = doc(db, 'global_posts', p.id); const liked = (p.likedBy || []).includes(user.uid); await updateDoc(ref, { likedBy: liked ? arrayRemove(user.uid) : arrayUnion(user.uid), likesCount: liked ? Math.max(0, p.likesCount - 1) : p.likesCount + 1 }); }}
+                  onVote={async (p, idx) => { if (!user) { onRequireAuth?.(); return; } const votes = p.pollVotes || {}; if (Object.keys(votes).some(k => (votes[k] || []).includes(user.uid))) return; await updateDoc(doc(db, 'global_posts', p.id), { [`pollVotes.${idx}`]: arrayUnion(user.uid) }); }}
                   hideDivider
                 />
               ) : (() => {
@@ -35708,7 +35849,7 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
       {activeStoreTab === 'reviews' && (
         <div className="space-y-4">
           {/* Leave a review — only if not already reviewed */}
-          {store.ownerUid !== user.uid && (
+          {store.ownerUid !== user?.uid && (
             myReview ? (
               <div className="glass-card p-4 rounded-3xl text-center text-sm text-brand-navy/75 font-medium">
                 You've already left a review
@@ -36134,6 +36275,12 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
           blockerUid: currentUser.uid,
           blockedUid: targetUser.uid,
           createdAt: serverTimestamp()
+        });
+        await addDoc(collection(db, 'reports'), {
+          reportedUid: targetUser.uid,
+          reportedBy: currentUser.uid,
+          reason: 'Blocked by user',
+          createdAt: serverTimestamp(),
         });
       }
     } catch (err) {
