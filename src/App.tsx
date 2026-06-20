@@ -30220,6 +30220,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
   const [newComment, setNewComment] = useState('');
   const [isCommenting, setIsCommenting] = useState(false);
   const [reportSent, setReportSent] = useState(false);
+  const [reportDocId, setReportDocId] = useState<string | null>(null);
   const [authorProfile, setAuthorProfile] = useState<{ name: string; logoUrl?: string; gender?: string; avatar?: UserAvatar; streak?: number } | null>(null);
   const [localLiked, setLocalLiked] = useState(() => currentUser ? (post.likedBy || []).includes(currentUser.uid) : false);
   const [localCount, setLocalCount] = useState(post.likesCount || 0);
@@ -30228,7 +30229,7 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
     if (!currentUser || !post.id) return;
     let active = true;
     getDocs(query(collection(db, 'reports'), where('reportedBy', '==', currentUser.uid), where('postId', '==', post.id), limit(1)))
-      .then(snap => { if (active && !snap.empty) setReportSent(true); })
+      .then(snap => { if (active && !snap.empty) { setReportSent(true); setReportDocId(snap.docs[0].id); } })
       .catch(() => {});
     return () => { active = false; };
   }, [post.id, currentUser?.uid]);
@@ -30707,19 +30708,25 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
                     <button
                       onClick={async () => {
                         setShowMenu(false);
-                        if (!currentUser || reportSent) return;
-                        await addDoc(collection(db, 'reports'), {
+                        if (!currentUser) return;
+                        if (reportSent) {
+                          if (reportDocId) await deleteDoc(doc(db, 'reports', reportDocId)).catch(() => {});
+                          setReportSent(false);
+                          setReportDocId(null);
+                          return;
+                        }
+                        const ref = await addDoc(collection(db, 'reports'), {
                           postId: post.id,
                           reportedBy: currentUser.uid,
                           reason: 'User report',
                           createdAt: serverTimestamp(),
                         });
+                        setReportDocId(ref.id);
                         setReportSent(true);
                       }}
-                      disabled={reportSent}
-                      className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold text-brand-navy/75 hover:bg-brand-bg transition-colors disabled:opacity-60"
+                      className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold text-brand-navy/75 hover:bg-brand-bg transition-colors"
                     >
-                      <Flag size={15} /> {reportSent ? 'Reported' : 'Report'}
+                      <Flag size={15} /> {reportSent ? 'Unreport' : 'Report'}
                     </button>
                   </motion.div>
                 )}
@@ -30730,10 +30737,20 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
       </div>
       <div className="relative">
       {reportSent && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-[1px]">
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-white/60 backdrop-blur-[1px]">
           <div className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-brand-navy text-white text-xs font-bold shadow-lg">
             <Flag size={13} /> Reported
           </div>
+          <button
+            onClick={async () => {
+              if (reportDocId) await deleteDoc(doc(db, 'reports', reportDocId)).catch(() => {});
+              setReportSent(false);
+              setReportDocId(null);
+            }}
+            className="text-xs font-bold text-brand-navy/70 underline underline-offset-2"
+          >
+            Undo
+          </button>
         </div>
       )}
       <div className={cn(reportSent && "blur-md select-none pointer-events-none")}>
