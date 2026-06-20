@@ -3080,83 +3080,12 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
 
 // Read-only browsing shell for unauthenticated visitors — Deals + Discovery only,
 // per Apple 5.1.1(v): public store/offer info shouldn't require an account.
-function GuestLandingScreen({ onRequireAuth }: { onRequireAuth: () => void }) {
-  return (
-    <div className="space-y-6">
-      <div className="gradient-cycle rounded-3xl px-6 py-10 text-center relative overflow-hidden">
-        <span className="card-shine-ray" aria-hidden="true" />
-        <h1 className="relative z-10 font-black italic text-3xl text-white mb-2" style={{ fontFamily: 'Poppins, sans-serif' }}>Linq</h1>
-        <p className="relative z-10 text-white/85 text-sm font-medium mb-6 max-w-xs mx-auto">Loyalty cards, deals, polls, and daily challenges from your favourite local businesses — all in one place.</p>
-        <button onClick={onRequireAuth} className="relative z-10 px-8 py-3 rounded-2xl bg-white text-brand-navy font-bold text-sm active:scale-95 transition-transform">
-          Sign up free
-        </button>
-      </div>
-
-      <div>
-        <h2 className="font-display font-bold text-lg text-brand-navy mb-3">See what's inside</h2>
-        <div className="space-y-4">
-          <button onClick={onRequireAuth} className="w-full text-left rounded-3xl p-4 active:scale-[0.98] transition-transform" style={{ background: 'linear-gradient(135deg, #3730a3 0%, #6d28d9 50%, #1d4ed8 100%)' }}>
-            <div className="flex items-center gap-2 mb-3">
-              <BarChart2 size={16} className="text-white/80" />
-              <span className="text-white/80 text-xs font-bold uppercase tracking-wider">Community Poll</span>
-            </div>
-            <p className="text-white font-semibold text-sm mb-3">What's your go-to coffee order?</p>
-            <div className="space-y-2">
-              {[{ label: 'Flat white', pct: 54 }, { label: 'Oat latte', pct: 31 }, { label: 'Long black', pct: 15 }].map(o => (
-                <div key={o.label} className="relative rounded-xl overflow-hidden bg-white/10 border border-white/25 px-4 py-2.5">
-                  <div className="absolute left-0 top-0 bottom-0 bg-white/25" style={{ width: `${o.pct}%`, borderRadius: '10px' }} />
-                  <div className="relative flex items-center justify-between text-white text-xs font-semibold">
-                    <span>{o.label}</span>
-                    <span>{o.pct}%</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </button>
-
-          <button onClick={onRequireAuth} className="w-full text-left rounded-3xl p-4 bg-[#0F172A] active:scale-[0.98] transition-transform">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-black text-base"><span className="text-blue-400">Li</span><span className="text-white">nqle</span></h3>
-              <span className="text-blue-400/70 text-[10px] font-bold uppercase tracking-wider">Today's word</span>
-            </div>
-            <div className="flex gap-1.5">
-              {[{ l: 'L', s: 'bg-emerald-500' }, { l: 'I', s: 'bg-emerald-500' }, { l: 'N', s: 'bg-amber-500' }, { l: 'Q', s: 'bg-white/10 border border-white/20' }, { l: '?', s: 'bg-white/10 border border-white/20' }].map((t, i) => (
-                <div key={i} className={cn('w-9 h-9 rounded-lg flex items-center justify-center text-white font-black text-sm', t.s)}>{t.l}</div>
-              ))}
-            </div>
-            <p className="text-white/50 text-xs mt-3">Guess the word in 6 tries — win stickers when you do.</p>
-          </button>
-
-          <button onClick={onRequireAuth} className="w-full text-left rounded-3xl p-4 bg-brand-navy active:scale-[0.98] transition-transform">
-            <div className="flex items-center gap-2 mb-3">
-              <Flame size={16} className="text-brand-gold" />
-              <span className="text-white/70 text-xs font-bold uppercase tracking-wider">Daily Vote</span>
-            </div>
-            <p className="text-white font-semibold text-sm mb-3">Which deal deserves to win today?</p>
-            <div className="flex gap-2">
-              <div className="flex-1 rounded-xl bg-white/10 border border-white/25 px-3 py-3 text-center">
-                <p className="text-white text-xs font-bold mb-1">Café Lumen</p>
-                <p className="text-white/60 text-[11px]">62%</p>
-              </div>
-              <div className="flex-1 rounded-xl bg-white/10 border border-white/25 px-3 py-3 text-center">
-                <p className="text-white text-xs font-bold mb-1">The Daily Grind</p>
-                <p className="text-white/60 text-[11px]">38%</p>
-              </div>
-            </div>
-            <p className="text-white/50 text-xs mt-3">Vote daily, win stickers when your pick is on top.</p>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function GuestApp({ viewingStore, setViewingStore, onRequireAuth }: {
   viewingStore: StoreProfile | null;
   setViewingStore: (s: StoreProfile | null) => void;
   onRequireAuth: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState<'landing' | 'deals' | 'discover'>('landing');
+  const [activeTab, setActiveTab] = useState<'deals' | 'discover'>('deals');
   const [stores, setStores] = useState<StoreProfile[]>([]);
 
   useEffect(() => {
@@ -3191,9 +3120,7 @@ function GuestApp({ viewingStore, setViewingStore, onRequireAuth }: {
         </button>
       </div>
       <div className="flex-1 px-4 max-w-2xl mx-auto w-full pb-28">
-        {activeTab === 'landing' ? (
-          <GuestLandingScreen onRequireAuth={onRequireAuth} />
-        ) : activeTab === 'deals' ? (
+        {activeTab === 'deals' ? (
           <DealsScreen onViewStore={setViewingStore} onNavigate={tab => setActiveTab(tab === 'discover' ? 'discover' : 'deals')} onRequireAuth={onRequireAuth} />
         ) : (
           <DiscoveryScreen stores={stores} cards={[]} onJoin={onRequireAuth} onViewStore={setViewingStore} onViewUser={onRequireAuth} currentProfile={null} />
@@ -3203,10 +3130,6 @@ function GuestApp({ viewingStore, setViewingStore, onRequireAuth }: {
         className="fixed bottom-0 left-0 right-0 z-50 max-w-2xl mx-auto flex items-center justify-around border-t border-brand-navy/10 bg-white py-3"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.5rem)' }}
       >
-        <button onClick={() => setActiveTab('landing')} className={`flex flex-col items-center gap-1 px-4 ${activeTab === 'landing' ? 'text-brand-gold' : 'text-brand-navy/40'}`}>
-          <Sparkles size={20} />
-          <span className="text-[11px] font-bold">Linq</span>
-        </button>
         <button onClick={() => setActiveTab('deals')} className={`flex flex-col items-center gap-1 px-4 ${activeTab === 'deals' ? 'text-brand-gold' : 'text-brand-navy/40'}`}>
           <Tag size={20} />
           <span className="text-[11px] font-bold">Deals</span>
