@@ -81,6 +81,25 @@
       padding: 0 var(--space-md);
     }
 
+    /* ── FLOATING TAB SWITCHER ── */
+    .tab-float {
+      position: sticky;
+      top: 56px;
+      z-index: 99;
+      display: flex;
+      justify-content: center;
+      padding: 0.75rem 1rem;
+      pointer-events: none;
+    }
+
+    .tab-float .tab-pills {
+      pointer-events: all;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 4px 24px rgba(15,23,42,0.13), 0 1px 4px rgba(15,23,42,0.08);
+    }
+
     .nav-logo {
       font-family: 'Outfit', sans-serif;
       font-weight: 900;
@@ -1043,7 +1062,7 @@
       .eco-step { max-width: 140px; }
       .prize-banner { padding: 2.75rem 1.25rem; }
       .pos-inner { padding: 2.5rem 1.25rem; }
-      .nav-cta span { display: none; }
+      .tab-float { top: 56px; padding: 0.625rem 1rem; }
     }
   </style>
 </head>
@@ -1052,14 +1071,18 @@
   <!-- NAV -->
   <nav>
     <div class="nav-logo">Linq</div>
-    <div class="tab-pills">
-      <button class="tab-pill active" onclick="switchTab('customer', this)">Customers</button>
-      <button class="tab-pill" onclick="switchTab('business', this)">Businesses</button>
-    </div>
     <a href="https://linq4.vercel.app/app" target="_blank" rel="noopener noreferrer" class="nav-cta">
       Vendor Login
     </a>
   </nav>
+
+  <!-- FLOATING TAB SWITCHER -->
+  <div class="tab-float">
+    <div class="tab-pills">
+      <button class="tab-pill active" onclick="switchTab('customer', this)">Customers</button>
+      <button class="tab-pill" onclick="switchTab('business', this)">Businesses</button>
+    </div>
+  </div>
 
   <!-- ══════════════════════════════════
        CUSTOMER TAB
@@ -1086,11 +1109,11 @@
       </div>
 
       <div class="store-badges reveal" style="transition-delay:0.5s">
-        <a class="store-badge" href="#" id="ios-badge">
+        <a class="store-badge" href="https://apps.apple.com/us/app/linq-member/id6775899108" target="_blank" rel="noopener noreferrer">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
           <div class="badge-text"><small>Download on the</small><strong>App Store</strong></div>
         </a>
-        <a class="store-badge" href="#" id="android-badge">
+        <a class="store-badge" href="https://play.google.com/store/apps/details?id=co.uk.adastranetwork.linq" target="_blank" rel="noopener noreferrer">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.18 23.76c.3.17.64.24.99.2l.11-.06 9.5-9.5-2.1-2.1-8.5 11.46zM20.36 10.4l-2.6-1.46-2.35 2.35 2.35 2.35 2.63-1.48c.75-.42.75-1.34-.03-1.76zM2.42 1.04C2.16 1.31 2 1.74 2 2.28v19.44c0 .54.16.97.43 1.24l.07.06 10.88-10.88v-.25L2.49.98l-.07.06zM13.53 8.53l-2.1-2.1L2.42 1.04l10.01 9.64 1.1-2.15z"/></svg>
           <div class="badge-text"><small>Get it on</small><strong>Google Play</strong></div>
         </a>
@@ -1281,11 +1304,11 @@
       <h2 class="reveal">Ready to start collecting?</h2>
       <p class="reveal">Download Linq free and find your first stamp card today.</p>
       <div class="store-badges reveal">
-        <a class="store-badge store-badge-dark" href="#" id="ios-badge-bottom-c">
+        <a class="store-badge store-badge-dark" href="https://apps.apple.com/us/app/linq-member/id6775899108" target="_blank" rel="noopener noreferrer">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
           <div class="badge-text"><small>Download on the</small><strong>App Store</strong></div>
         </a>
-        <a class="store-badge store-badge-dark" href="#" id="android-badge-bottom-c">
+        <a class="store-badge store-badge-dark" href="https://play.google.com/store/apps/details?id=co.uk.adastranetwork.linq" target="_blank" rel="noopener noreferrer">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.18 23.76c.3.17.64.24.99.2l.11-.06 9.5-9.5-2.1-2.1-8.5 11.46zM20.36 10.4l-2.6-1.46-2.35 2.35 2.35 2.35 2.63-1.48c.75-.42.75-1.34-.03-1.76zM2.42 1.04C2.16 1.31 2 1.74 2 2.28v19.44c0 .54.16.97.43 1.24l.07.06 10.88-10.88v-.25L2.49.98l-.07.06zM13.53 8.53l-2.1-2.1L2.42 1.04l10.01 9.64 1.1-2.15z"/></svg>
           <div class="badge-text"><small>Get it on</small><strong>Google Play</strong></div>
         </a>
@@ -1481,8 +1504,8 @@
     if (history.scrollRestoration) history.scrollRestoration = 'manual';
     window.scrollTo(0, 0);
 
-    const APP_STORE_URL = 'https://apps.apple.com/app/linq/id6474052885';
-    const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=app.mylinq.linq';
+    const APP_STORE_URL = 'https://apps.apple.com/us/app/linq-member/id6775899108';
+    const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=co.uk.adastranetwork.linq&pcampaignid=web_share';
 
     /* ── TAB SWITCHING ── */
     function switchTab(tab, btn) {
