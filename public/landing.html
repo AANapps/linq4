@@ -8,6 +8,7 @@
   <meta property="og:title" content="Linq — Collect. Compete. Win." />
   <meta property="og:description" content="Earn rewards at local businesses, compete with friends, and win thousands in prizes." />
   <meta property="og:type" content="website" />
+  <meta name="theme-color" content="#070B14" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -18,39 +19,88 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --navy:   #0F172A;
-      --blue1:  #1D4ED8;
-      --blue2:  #2563EB;
-      --blue3:  #3B82F6;
-      --blue4:  #60A5FA;
-      --light:  #EFF6FF;
-      --light2: #DBEAFE;
-      --white:  #FFFFFF;
-      --gold:   #FFD700;
+      --bg:      #070B14;
+      --bg-soft: #0B1120;
+      --navy:    #0F172A;
+      --blue1:   #1D4ED8;
+      --blue2:   #2563EB;
+      --blue3:   #3B82F6;
+      --blue4:   #60A5FA;
+      --gold:    #FBBF24;
+
+      --ink:       rgba(255,255,255,0.92);
+      --ink-mid:   rgba(255,255,255,0.60);
+      --ink-dim:   rgba(255,255,255,0.38);
+
+      --glass-bg:     linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+      --glass-border: rgba(255,255,255,0.12);
+      --glass-edge:   inset 0 1px 0 rgba(255,255,255,0.14);
 
       --space-xs:  0.5rem;
       --space-sm:  1rem;
       --space-md:  1.5rem;
       --space-lg:  3rem;
-      --space-xl:  5rem;
-      --space-2xl: 7rem;
+      --space-xl:  5.5rem;
 
-      --radius-sm:  12px;
-      --radius-md:  20px;
-      --radius-lg:  28px;
+      --radius-sm:  14px;
+      --radius-md:  22px;
+      --radius-lg:  30px;
 
       --max-w: 960px;
 
       --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
     }
 
+    html { background: var(--bg); }
+
     body {
       font-family: 'Inter', sans-serif;
-      background: var(--white);
-      color: var(--navy);
+      background: var(--bg);
+      color: var(--ink);
       -webkit-font-smoothing: antialiased;
       overflow-x: hidden;
     }
+
+    ::selection { background: rgba(59,130,246,0.4); }
+
+    /* ── AURORA BACKDROP ── */
+    .aurora {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      overflow: hidden;
+      pointer-events: none;
+      background:
+        radial-gradient(560px 420px at 82% -6%, rgba(37,99,235,0.30), transparent 65%),
+        radial-gradient(640px 480px at -12% 28%, rgba(29,78,216,0.22), transparent 65%),
+        radial-gradient(520px 440px at 68% 88%, rgba(96,165,250,0.12), transparent 65%),
+        var(--bg);
+    }
+
+    .aurora::before, .aurora::after {
+      content: '';
+      position: absolute;
+      width: 46vw; height: 46vw;
+      min-width: 380px; min-height: 380px;
+      border-radius: 50%;
+      filter: blur(90px);
+      opacity: 0.5;
+    }
+
+    .aurora::before {
+      background: radial-gradient(circle, rgba(37,99,235,0.5), transparent 70%);
+      top: -14%; right: -10%;
+      animation: drift-a 26s ease-in-out infinite alternate;
+    }
+
+    .aurora::after {
+      background: radial-gradient(circle, rgba(103,232,249,0.18), transparent 70%);
+      bottom: -18%; left: -12%;
+      animation: drift-b 32s ease-in-out infinite alternate;
+    }
+
+    @keyframes drift-a { to { transform: translate(-9vw, 12vh) scale(1.12); } }
+    @keyframes drift-b { to { transform: translate(10vw, -10vh) scale(1.08); } }
 
     /* ── SCROLL REVEAL ── */
     .reveal {
@@ -65,37 +115,103 @@
     .reveal-delay-3 { transition-delay: 0.3s; }
     .reveal-delay-4 { transition-delay: 0.4s; }
 
+    /* ── GLASS PRIMITIVE ── */
+    .glass {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(24px) saturate(160%);
+      -webkit-backdrop-filter: blur(24px) saturate(160%);
+      box-shadow: var(--glass-edge), 0 8px 32px rgba(2,6,23,0.35);
+    }
+
+    /* ── HOLOGRAPHIC TEXT ── */
+    .holo-text {
+      background: linear-gradient(115deg,
+        #dbeafe 0%, #93c5fd 16%, #67e8f9 32%, #c4b5fd 48%,
+        #f0abfc 60%, #93c5fd 76%, #dbeafe 100%);
+      background-size: 240% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+      animation: holo-shift 8s linear infinite;
+    }
+
+    .holo-gold {
+      background: linear-gradient(115deg,
+        #fef3c7 0%, #fbbf24 22%, #fde68a 40%, #f59e0b 55%,
+        #fef3c7 72%, #fbbf24 90%);
+      background-size: 240% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+      animation: holo-shift 8s linear infinite;
+    }
+
+    @keyframes holo-shift { to { background-position: 240% center; } }
+
+    /* ── HOLOGRAPHIC SHEEN (cards) ── */
+    .holo-sheen { position: relative; overflow: hidden; }
+
+    .holo-sheen::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: linear-gradient(115deg,
+        transparent 32%,
+        rgba(147,197,253,0.10) 42%,
+        rgba(240,171,252,0.10) 50%,
+        rgba(103,232,249,0.10) 58%,
+        transparent 68%);
+      background-size: 260% 100%;
+      animation: sheen-slide 7s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes sheen-slide {
+      0%, 12%  { background-position: 130% 0; }
+      55%, 100% { background-position: -130% 0; }
+    }
+
+    /* ── ICONS ── */
+    .ic { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+    .icon-chip {
+      width: 42px; height: 42px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--blue4);
+      background: linear-gradient(145deg, rgba(59,130,246,0.22), rgba(37,99,235,0.08));
+      border: 1px solid rgba(96,165,250,0.25);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
+      margin-bottom: 1rem;
+    }
+
+    .icon-chip-gold {
+      color: var(--gold);
+      background: linear-gradient(145deg, rgba(251,191,36,0.20), rgba(251,191,36,0.06));
+      border-color: rgba(251,191,36,0.28);
+    }
+
     /* ── NAV ── */
     nav {
       position: sticky;
       top: 0;
       z-index: 100;
-      height: 56px;
-      background: rgba(255,255,255,0.88);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-bottom: 1px solid rgba(15,23,42,0.07);
+      height: 60px;
+      background: rgba(7,11,20,0.62);
+      backdrop-filter: blur(24px) saturate(160%);
+      -webkit-backdrop-filter: blur(24px) saturate(160%);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
       display: flex;
       align-items: center;
       justify-content: space-between;
       padding: 0 var(--space-md);
-    }
-
-    /* ── FLOATING TAB SWITCHER ── */
-    .tab-float {
-      position: sticky;
-      top: 56px;
-      z-index: 99;
-      display: flex;
-      justify-content: center;
-      padding: 0.75rem 1rem;
-      pointer-events: none;
-    }
-
-    .tab-float .tab-pills {
-      pointer-events: all;
-      background: transparent;
-      box-shadow: 0 4px 24px rgba(15,23,42,0.18), 0 1px 4px rgba(15,23,42,0.1);
     }
 
     .nav-logo {
@@ -103,53 +219,70 @@
       font-weight: 900;
       font-size: 1.5rem;
       letter-spacing: -0.03em;
-      background: linear-gradient(135deg, var(--blue1), var(--blue3));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .tab-pills {
-      display: flex;
-      background: var(--light);
-      border-radius: 100px;
-      padding: 3px;
-      gap: 2px;
-    }
-
-    .tab-pill {
-      padding: 0.35rem 1rem;
-      border-radius: 100px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      cursor: pointer;
-      border: none;
-      background: transparent;
-      color: rgba(15,23,42,0.45);
-      transition: background 0.2s, color 0.2s, box-shadow 0.2s;
-    }
-
-    .tab-pill.active {
-      background: var(--white);
-      color: var(--navy);
-      box-shadow: 0 1px 5px rgba(15,23,42,0.12);
     }
 
     .nav-cta {
       display: flex;
       align-items: center;
       gap: 0.375rem;
-      background: var(--blue2);
-      color: var(--white);
+      background: linear-gradient(145deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06));
+      border: 1px solid rgba(255,255,255,0.16);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.16);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      color: var(--ink);
       text-decoration: none;
       padding: 0.55rem 1.25rem;
       border-radius: 100px;
       font-size: 0.925rem;
-      font-weight: 700;
-      transition: background 0.2s, transform 0.15s;
+      font-weight: 600;
+      transition: background 0.2s, transform 0.15s, border-color 0.2s;
       white-space: nowrap;
     }
-    .nav-cta:hover { background: var(--blue1); transform: translateY(-1px); }
+    .nav-cta:hover { border-color: rgba(96,165,250,0.5); transform: translateY(-1px); }
+
+    /* ── FLOATING TAB SWITCHER ── */
+    .tab-float {
+      position: sticky;
+      top: 60px;
+      z-index: 99;
+      display: flex;
+      justify-content: center;
+      padding: 0.75rem 1rem;
+      pointer-events: none;
+    }
+
+    .tab-pills {
+      pointer-events: all;
+      display: flex;
+      background: rgba(11,17,32,0.55);
+      border: 1px solid rgba(255,255,255,0.12);
+      backdrop-filter: blur(24px) saturate(160%);
+      -webkit-backdrop-filter: blur(24px) saturate(160%);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.10), 0 8px 28px rgba(2,6,23,0.5);
+      border-radius: 100px;
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .tab-pill {
+      font-family: 'Inter', sans-serif;
+      padding: 0.4rem 1.1rem;
+      border-radius: 100px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: var(--ink-dim);
+      transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+    }
+
+    .tab-pill.active {
+      background: linear-gradient(145deg, var(--blue2), var(--blue1));
+      color: var(--ink);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 2px 10px rgba(37,99,235,0.45);
+    }
 
     /* ── TAB PANELS ── */
     .tab-panel { display: none; }
@@ -167,9 +300,9 @@
     .eyebrow {
       font-size: 0.72rem;
       font-weight: 700;
-      letter-spacing: 0.13em;
+      letter-spacing: 0.14em;
       text-transform: uppercase;
-      color: var(--blue2);
+      color: var(--blue4);
       margin-bottom: 0.625rem;
     }
 
@@ -177,109 +310,74 @@
       font-family: 'Outfit', sans-serif;
       font-size: clamp(2rem, 5vw, 2.75rem);
       font-weight: 800;
-      color: var(--navy);
+      color: var(--ink);
       line-height: 1.1;
       letter-spacing: -0.02em;
       margin-bottom: 1rem;
     }
 
-    .section-title em { font-style: normal; color: var(--blue2); }
+    .section-title em { font-style: normal; }
 
     .section-body {
       font-size: 1.05rem;
-      color: rgba(15,23,42,0.58);
+      color: var(--ink-mid);
       line-height: 1.7;
       max-width: 520px;
       margin-bottom: var(--space-lg);
     }
 
-    /* ── CARD GRID ── */
-    .grid-3 {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 1rem;
-    }
-
-    .grid-2 {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 1rem;
-    }
-
-    .grid-4 {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem;
-    }
+    /* ── CARD GRIDS ── */
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+    .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
 
     .card {
-      background: var(--light);
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(24px) saturate(160%);
+      -webkit-backdrop-filter: blur(24px) saturate(160%);
+      box-shadow: var(--glass-edge), 0 8px 32px rgba(2,6,23,0.35);
       border-radius: var(--radius-md);
       padding: 1.625rem;
+      transition: transform 0.25s var(--ease-out), border-color 0.25s;
     }
 
-    .card-dark {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: var(--radius-md);
-      padding: 1.625rem;
-    }
+    .card:hover { transform: translateY(-3px); border-color: rgba(96,165,250,0.30); }
 
-    .card-outline {
-      border: 1.5px solid rgba(15,23,42,0.09);
-      border-radius: var(--radius-md);
-      padding: 1.5rem;
-    }
-
-    .card-blue {
-      background: linear-gradient(135deg, var(--blue1), var(--blue2));
-      border-radius: var(--radius-md);
-      padding: 1.625rem;
-    }
-
-    .card .icon,
-    .card-dark .icon,
-    .card-outline .icon,
-    .card-blue .icon {
-      font-size: 1.875rem;
-      display: block;
-      margin-bottom: 0.875rem;
-    }
-
-    .card h3, .card-blue h3 {
+    .card h3 {
       font-family: 'Outfit', sans-serif;
       font-size: 1.05rem;
       font-weight: 700;
+      color: var(--ink);
       margin-bottom: 0.375rem;
     }
 
-    .card h3 { color: var(--navy); }
-    .card-blue h3 { color: var(--white); }
+    .card p { font-size: 0.9rem; color: var(--ink-mid); line-height: 1.6; }
 
-    .card p { font-size: 0.9rem; color: rgba(15,23,42,0.58); line-height: 1.6; }
-    .card-dark p, .card-blue p { font-size: 0.9rem; color: rgba(255,255,255,0.55); line-height: 1.6; }
-    .card-dark h3 { font-family: 'Outfit', sans-serif; font-size: 1.05rem; font-weight: 700; color: var(--white); margin-bottom: 0.375rem; }
+    .card-feature {
+      background: linear-gradient(145deg, rgba(37,99,235,0.32), rgba(29,78,216,0.14));
+      border-color: rgba(96,165,250,0.35);
+    }
+
+    .card-outline {
+      background: rgba(255,255,255,0.02);
+      box-shadow: none;
+    }
 
     .card-outline h4 {
       font-family: 'Outfit', sans-serif;
       font-size: 0.95rem;
       font-weight: 700;
-      color: var(--navy);
+      color: var(--ink);
       margin-bottom: 0.3rem;
     }
-    .card-outline p { font-size: 0.85rem; color: rgba(15,23,42,0.55); line-height: 1.55; }
-
-    hr.divider {
-      border: none;
-      border-top: 1px solid rgba(15,23,42,0.07);
-    }
+    .card-outline p { font-size: 0.85rem; color: var(--ink-mid); line-height: 1.55; }
 
     /* ════════════════════════════════════
        CUSTOMER — HERO
     ════════════════════════════════════ */
     .hero {
       min-height: 100svh;
-      background: linear-gradient(160deg, var(--blue1) 0%, var(--blue2) 45%, var(--blue3) 72%, var(--blue4) 100%);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -287,18 +385,9 @@
       text-align: center;
       padding: 4rem var(--space-md) 6rem;
       position: relative;
-      overflow: hidden;
     }
 
-    .hero::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(ellipse at 65% 15%, rgba(255,255,255,0.1) 0%, transparent 55%);
-      pointer-events: none;
-    }
-
-    /* Sticker */
+    /* Holographic collectible sticker */
     .sticker-wrap {
       position: relative;
       display: inline-block;
@@ -307,58 +396,64 @@
 
     .sticker-glow {
       position: absolute;
-      inset: -8px;
+      inset: -14px;
       border-radius: 50%;
-      background: conic-gradient(#ff0040,#ff8c00,#ffe600,#00ff59,#00b3ff,#9000ff,#ff0040);
-      filter: blur(12px);
-      opacity: 0.5;
-      animation: spin 4s linear infinite;
+      background: conic-gradient(from 0deg,
+        rgba(147,197,253,0.55), rgba(103,232,249,0.4), rgba(196,181,253,0.5),
+        rgba(240,171,252,0.4), rgba(147,197,253,0.55));
+      filter: blur(18px);
+      opacity: 0.55;
+      animation: spin 9s linear infinite;
     }
 
     .sticker {
       position: relative;
-      width: 108px;
-      height: 108px;
+      width: 110px;
+      height: 110px;
       border-radius: 50%;
-      background: conic-gradient(#ff0040,#ff8c00,#ffe600,#00ff59,#00b3ff,#9000ff,#ff0040);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      animation: spin 4s linear infinite;
+      padding: 4px;
+      background: conic-gradient(from 0deg,
+        #93c5fd, #67e8f9, #c4b5fd, #f0abfc, #93c5fd);
+      animation: spin 9s linear infinite;
+      box-shadow: 0 10px 40px rgba(2,6,23,0.6);
     }
 
     .sticker-inner {
-      width: 86px;
-      height: 86px;
+      width: 100%;
+      height: 100%;
       border-radius: 50%;
-      background: linear-gradient(135deg, #1e3a8a, var(--blue1), var(--blue2));
+      background:
+        radial-gradient(circle at 32% 26%, rgba(255,255,255,0.22), transparent 42%),
+        linear-gradient(145deg, #101b36, #0b1224);
+      border: 1px solid rgba(255,255,255,0.14);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 2.4rem;
-      animation: spin 4s linear infinite reverse;
-      z-index: 2;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 900;
+      font-size: 2.6rem;
+      letter-spacing: -0.04em;
+      animation: spin 9s linear infinite reverse;
     }
 
     .sticker-badge {
       position: absolute;
-      top: -4px;
-      right: -10px;
-      background: var(--gold);
-      color: #78400a;
+      top: -6px;
+      right: -14px;
+      background: linear-gradient(145deg, rgba(251,191,36,0.95), rgba(217,119,6,0.95));
+      color: #451a03;
       font-size: 0.58rem;
       font-weight: 800;
-      padding: 2px 8px;
+      padding: 3px 9px;
       border-radius: 100px;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.07em;
       text-transform: uppercase;
       z-index: 3;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-      animation: badge-pulse 1.2s ease-in-out infinite alternate;
+      border: 1px solid rgba(255,255,255,0.35);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 2px 10px rgba(0,0,0,0.35);
     }
 
     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-    @keyframes badge-pulse { from { transform: scale(1); } to { transform: scale(1.1); } }
 
     /* Hero text */
     .linq-wordmark {
@@ -366,7 +461,6 @@
       font-family: 'Outfit', sans-serif;
       font-size: clamp(4.5rem, 16vw, 8rem);
       font-weight: 900;
-      color: var(--white);
       letter-spacing: -0.04em;
       line-height: 0.95;
       margin-bottom: 0.25rem;
@@ -384,7 +478,7 @@
 
     .hero-sub {
       font-size: clamp(0.95rem, 2.5vw, 1.1rem);
-      color: rgba(255,255,255,0.65);
+      color: var(--ink-mid);
       max-width: 400px;
       line-height: 1.65;
       margin-bottom: 2.5rem;
@@ -402,24 +496,26 @@
       display: flex;
       align-items: center;
       gap: 0.625rem;
-      background: rgba(255,255,255,0.14);
-      border: 1.5px solid rgba(255,255,255,0.28);
-      color: var(--white);
+      background: linear-gradient(145deg, rgba(255,255,255,0.12), rgba(255,255,255,0.05));
+      border: 1px solid rgba(255,255,255,0.18);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.16), 0 8px 24px rgba(2,6,23,0.4);
+      color: var(--ink);
       text-decoration: none;
       padding: 0.75rem 1.375rem;
       border-radius: var(--radius-sm);
-      backdrop-filter: blur(8px);
-      transition: background 0.2s, transform 0.2s var(--ease-out);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      transition: border-color 0.2s, transform 0.2s var(--ease-out);
     }
 
-    .store-badge:hover { background: rgba(255,255,255,0.24); transform: translateY(-3px); }
+    .store-badge:hover { border-color: rgba(96,165,250,0.5); transform: translateY(-3px); }
 
     .store-badge svg { width: 22px; height: 22px; flex-shrink: 0; }
 
     .badge-text small {
       display: block;
       font-size: 0.62rem;
-      opacity: 0.7;
+      opacity: 0.65;
       letter-spacing: 0.05em;
       text-transform: uppercase;
     }
@@ -427,21 +523,16 @@
     .badge-text strong { display: block; font-size: 1rem; font-weight: 700; }
 
     /* ════════════════════════════════════
-       CUSTOMER — STAMP CARDS
-    ════════════════════════════════════ */
-
-    /* ════════════════════════════════════
        CUSTOMER — ECOSYSTEM
     ════════════════════════════════════ */
     .ecosystem-bg {
-      background: var(--navy);
+      background: rgba(11,17,32,0.55);
+      border-top: 1px solid rgba(255,255,255,0.06);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
       padding: var(--space-xl) var(--space-md);
     }
 
-    .ecosystem-inner {
-      max-width: var(--max-w);
-      margin: 0 auto;
-    }
+    .ecosystem-inner { max-width: var(--max-w); margin: 0 auto; }
 
     .ecosystem-flow {
       display: flex;
@@ -453,8 +544,11 @@
     }
 
     .eco-step {
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.1);
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(20px) saturate(160%);
+      -webkit-backdrop-filter: blur(20px) saturate(160%);
+      box-shadow: var(--glass-edge);
       border-radius: var(--radius-sm);
       padding: 1.5rem 1.25rem;
       text-align: center;
@@ -463,7 +557,13 @@
       max-width: 160px;
     }
 
-    .eco-icon { font-size: 2rem; display: block; margin-bottom: 0.5rem; }
+    .eco-icon {
+      display: flex;
+      justify-content: center;
+      color: var(--blue4);
+      margin-bottom: 0.625rem;
+    }
+    .eco-icon .ic { width: 26px; height: 26px; }
 
     .eco-label {
       font-size: 0.82rem;
@@ -472,16 +572,15 @@
     }
 
     .eco-arrow {
-      font-size: 1.25rem;
-      color: var(--blue3);
       display: flex;
       align-items: center;
+      color: var(--blue3);
       padding-top: 0.25rem;
     }
 
     .eco-note {
       font-size: 0.95rem;
-      color: rgba(255,255,255,0.5);
+      color: var(--ink-mid);
       line-height: 1.7;
       max-width: 540px;
       border-left: 3px solid var(--blue2);
@@ -498,7 +597,11 @@
     .prize-banner {
       max-width: var(--max-w);
       margin: 0 auto;
-      background: linear-gradient(135deg, #0F172A 0%, #1e3a8a 60%, var(--blue1) 100%);
+      background: linear-gradient(150deg, rgba(30,58,138,0.5), rgba(11,17,32,0.7));
+      border: 1px solid rgba(255,255,255,0.12);
+      backdrop-filter: blur(24px) saturate(160%);
+      -webkit-backdrop-filter: blur(24px) saturate(160%);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), 0 20px 60px rgba(2,6,23,0.55);
       border-radius: var(--radius-lg);
       padding: 4rem 2rem;
       text-align: center;
@@ -518,24 +621,23 @@
       font-family: 'Outfit', sans-serif;
       font-size: clamp(4rem, 14vw, 6.5rem);
       font-weight: 900;
-      color: var(--gold);
       letter-spacing: -0.04em;
       line-height: 1;
       margin-bottom: 0.5rem;
-      text-shadow: 0 0 48px rgba(255,215,0,0.35);
+      filter: drop-shadow(0 0 32px rgba(251,191,36,0.28));
     }
 
     .prize-banner h2 {
       font-family: 'Outfit', sans-serif;
       font-size: clamp(1.4rem, 4vw, 2rem);
       font-weight: 800;
-      color: var(--white);
+      color: var(--ink);
       margin-bottom: 0.75rem;
     }
 
     .prize-banner p {
       font-size: 1rem;
-      color: rgba(255,255,255,0.55);
+      color: var(--ink-mid);
       max-width: 400px;
       margin: 0 auto 2rem;
       line-height: 1.65;
@@ -549,24 +651,28 @@
     }
 
     .prize-pill {
-      background: rgba(255,255,255,0.1);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      background: rgba(255,255,255,0.08);
       border: 1px solid rgba(255,255,255,0.15);
-      color: var(--white);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
+      color: var(--ink);
       padding: 0.45rem 1rem;
       border-radius: 100px;
       font-size: 0.85rem;
       font-weight: 600;
     }
 
-    /* ════════════════════════════════════
-       CUSTOMER — CHALLENGES
-    ════════════════════════════════════ */
+    .prize-pill .ic { width: 15px; height: 15px; color: var(--blue4); }
 
     /* ════════════════════════════════════
        CUSTOMER — VENDOR STRIP
     ════════════════════════════════════ */
     .vendor-strip {
-      background: var(--light);
+      background: rgba(11,17,32,0.55);
+      border-top: 1px solid rgba(255,255,255,0.06);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
       padding: var(--space-xl) var(--space-md);
       text-align: center;
     }
@@ -575,13 +681,13 @@
       font-family: 'Outfit', sans-serif;
       font-size: clamp(1.6rem, 4vw, 2.25rem);
       font-weight: 800;
-      color: var(--navy);
+      color: var(--ink);
       margin-bottom: 0.75rem;
     }
 
     .vendor-strip > p {
       font-size: 1rem;
-      color: rgba(15,23,42,0.55);
+      color: var(--ink-mid);
       max-width: 460px;
       margin: 0 auto 2rem;
       line-height: 1.65;
@@ -599,31 +705,37 @@
     .vendor-tag {
       display: flex;
       align-items: center;
-      gap: 0.35rem;
-      background: var(--white);
-      border: 1px solid rgba(15,23,42,0.09);
+      gap: 0.45rem;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
       border-radius: 100px;
       padding: 0.45rem 1rem;
       font-size: 0.875rem;
       font-weight: 500;
-      color: var(--navy);
-      box-shadow: 0 1px 4px rgba(15,23,42,0.06);
-      transition: transform 0.2s var(--ease-out), box-shadow 0.2s;
+      color: var(--ink);
+      transition: transform 0.2s var(--ease-out), border-color 0.2s;
+    }
+
+    .vendor-tag::before {
+      content: '';
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, var(--blue4), var(--blue2));
+      box-shadow: 0 0 8px rgba(96,165,250,0.6);
     }
 
     .vendor-tag:hover {
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(15,23,42,0.1);
+      border-color: rgba(96,165,250,0.45);
     }
 
     /* ════════════════════════════════════
        CUSTOMER — LEADERBOARD
     ════════════════════════════════════ */
-    .friends-bg {
-      background: var(--navy);
-      padding: var(--space-xl) var(--space-md);
-      text-align: center;
-    }
+    .friends-bg { padding: var(--space-xl) var(--space-md); text-align: center; }
 
     .friends-inner { max-width: var(--max-w); margin: 0 auto; }
 
@@ -639,30 +751,51 @@
       display: flex;
       align-items: center;
       gap: 0.875rem;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.07);
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(20px) saturate(160%);
+      -webkit-backdrop-filter: blur(20px) saturate(160%);
+      box-shadow: var(--glass-edge);
       border-radius: var(--radius-sm);
       padding: 0.875rem 1rem;
-      transition: background 0.2s;
     }
 
     .lb-row.you {
-      background: rgba(37,99,235,0.22);
-      border-color: rgba(96,165,250,0.28);
+      background: linear-gradient(145deg, rgba(37,99,235,0.35), rgba(29,78,216,0.18));
+      border-color: rgba(96,165,250,0.4);
     }
 
-    .lb-rank { font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 800; width: 26px; text-align: center; flex-shrink: 0; }
-    .lb-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; }
-    .lb-name { flex: 1; font-weight: 600; font-size: 0.9rem; color: var(--white); text-align: left; }
-    .lb-name small { display: block; font-size: 0.75rem; font-weight: 400; color: rgba(255,255,255,0.4); }
-    .lb-stamps { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 0.95rem; color: var(--blue4); }
+    .lb-rank { font-family: 'Outfit', sans-serif; font-size: 1rem; font-weight: 800; width: 26px; text-align: center; flex-shrink: 0; }
+
+    .lb-avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 800;
+      color: var(--ink);
+      flex-shrink: 0;
+      border: 1px solid rgba(255,255,255,0.22);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.25);
+    }
+
+    .av-1 { background: linear-gradient(145deg, #6366f1, #312e81); }
+    .av-2 { background: linear-gradient(145deg, #06b6d4, #164e63); }
+    .av-3 { background: linear-gradient(145deg, #3b82f6, #1e3a8a); }
+    .av-4 { background: linear-gradient(145deg, #8b5cf6, #4c1d95); }
+
+    .lb-name { flex: 1; font-weight: 600; font-size: 0.9rem; color: var(--ink); text-align: left; }
+    .lb-name small { display: block; font-size: 0.75rem; font-weight: 400; color: var(--ink-dim); }
+    .lb-stamps { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 0.95rem; color: var(--blue4); white-space: nowrap; }
 
     /* ════════════════════════════════════
        BUSINESS — HERO
     ════════════════════════════════════ */
     .biz-hero {
       min-height: 80svh;
-      background: var(--navy);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -670,25 +803,19 @@
       text-align: center;
       padding: 5rem var(--space-md) 6rem;
       position: relative;
-      overflow: hidden;
-    }
-
-    .biz-hero::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(ellipse at 50% 0%, rgba(37,99,235,0.28) 0%, transparent 60%);
-      pointer-events: none;
     }
 
     .free-badge {
       display: inline-flex;
       align-items: center;
-      gap: 0.4rem;
-      background: rgba(255,215,0,0.1);
-      border: 1.5px solid rgba(255,215,0,0.35);
+      gap: 0.45rem;
+      background: rgba(251,191,36,0.10);
+      border: 1px solid rgba(251,191,36,0.35);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       color: var(--gold);
-      padding: 0.35rem 1rem;
+      padding: 0.4rem 1rem;
       border-radius: 100px;
       font-size: 0.78rem;
       font-weight: 700;
@@ -697,22 +824,24 @@
       margin-bottom: var(--space-md);
     }
 
+    .free-badge .ic { width: 14px; height: 14px; }
+
     .biz-hero h1 {
       font-family: 'Outfit', sans-serif;
       font-size: clamp(2.2rem, 7vw, 4rem);
       font-weight: 900;
-      color: var(--white);
+      color: var(--ink);
       letter-spacing: -0.03em;
       line-height: 1.05;
       margin-bottom: 1.25rem;
       max-width: 680px;
     }
 
-    .biz-hero h1 em { font-style: normal; color: var(--gold); }
+    .biz-hero h1 em { font-style: normal; }
 
     .biz-hero p {
       font-size: 1.05rem;
-      color: rgba(255,255,255,0.55);
+      color: var(--ink-mid);
       max-width: 460px;
       margin: 0 auto 0.75rem;
       line-height: 1.65;
@@ -720,7 +849,7 @@
 
     .biz-hero .no-cc {
       font-size: 0.8rem;
-      color: rgba(255,255,255,0.3);
+      color: var(--ink-dim);
       margin-bottom: var(--space-lg);
     }
 
@@ -728,16 +857,18 @@
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
-      background: var(--blue2);
-      color: var(--white);
+      background: linear-gradient(145deg, var(--blue3), var(--blue1));
+      border: 1px solid rgba(147,197,253,0.4);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.28), 0 8px 28px rgba(37,99,235,0.4);
+      color: var(--ink);
       text-decoration: none;
       padding: 0.9rem 2rem;
       border-radius: var(--radius-sm);
       font-size: 1rem;
       font-weight: 700;
-      transition: background 0.2s, transform 0.2s var(--ease-out);
+      transition: box-shadow 0.2s, transform 0.2s var(--ease-out);
     }
-    .cta-btn:hover { background: var(--blue1); transform: translateY(-2px); }
+    .cta-btn:hover { transform: translateY(-2px); box-shadow: inset 0 1px 0 rgba(255,255,255,0.28), 0 12px 36px rgba(37,99,235,0.55); }
 
     /* ════════════════════════════════════
        BUSINESS — FREE FEATURES
@@ -752,7 +883,11 @@
       display: flex;
       align-items: flex-start;
       gap: 0.75rem;
-      background: var(--light);
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(20px) saturate(160%);
+      -webkit-backdrop-filter: blur(20px) saturate(160%);
+      box-shadow: var(--glass-edge);
       border-radius: var(--radius-sm);
       padding: 1.25rem;
     }
@@ -761,43 +896,41 @@
       width: 22px;
       height: 22px;
       border-radius: 50%;
-      background: var(--blue2);
-      color: var(--white);
+      background: linear-gradient(145deg, var(--blue3), var(--blue1));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
+      color: var(--ink);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.7rem;
       flex-shrink: 0;
       margin-top: 2px;
     }
+
+    .check .ic { width: 12px; height: 12px; stroke-width: 2.5; }
 
     .free-item h4 {
       font-family: 'Outfit', sans-serif;
       font-size: 0.95rem;
       font-weight: 700;
-      color: var(--navy);
+      color: var(--ink);
       margin-bottom: 0.2rem;
     }
 
-    .free-item p { font-size: 0.82rem; color: rgba(15,23,42,0.55); line-height: 1.5; }
+    .free-item p { font-size: 0.82rem; color: var(--ink-mid); line-height: 1.5; }
 
     /* ════════════════════════════════════
-       BUSINESS — RETENTION
+       BUSINESS — RETENTION / STATS
     ════════════════════════════════════ */
     .retention-bg {
-      background: linear-gradient(160deg, var(--blue1) 0%, var(--navy) 60%);
+      background: rgba(11,17,32,0.55);
+      border-top: 1px solid rgba(255,255,255,0.06);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
       padding: var(--space-xl) var(--space-md);
     }
 
     .retention-inner { max-width: var(--max-w); margin: 0 auto; }
 
-    /* ════════════════════════════════════
-       BUSINESS — STATISTICS
-    ════════════════════════════════════ */
-    .stats-bg {
-      background: var(--navy);
-      padding: var(--space-xl) var(--space-md);
-    }
+    .stats-bg { padding: var(--space-xl) var(--space-md); }
 
     .stats-inner { max-width: var(--max-w); margin: 0 auto; }
 
@@ -808,8 +941,11 @@
     }
 
     .stat-card {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.08);
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(24px) saturate(160%);
+      -webkit-backdrop-filter: blur(24px) saturate(160%);
+      box-shadow: var(--glass-edge), 0 8px 32px rgba(2,6,23,0.35);
       border-radius: var(--radius-md);
       padding: 2rem 1.5rem;
       text-align: center;
@@ -819,13 +955,12 @@
       font-family: 'Outfit', sans-serif;
       font-size: 2.75rem;
       font-weight: 900;
-      color: var(--gold);
       letter-spacing: -0.03em;
       line-height: 1;
       margin-bottom: 0.75rem;
     }
 
-    .stat-label { font-size: 0.85rem; color: rgba(255,255,255,0.5); line-height: 1.55; }
+    .stat-label { font-size: 0.85rem; color: var(--ink-mid); line-height: 1.55; }
 
     /* ════════════════════════════════════
        BUSINESS — POS
@@ -835,22 +970,26 @@
     .pos-inner {
       max-width: var(--max-w);
       margin: 0 auto;
-      background: var(--light);
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(24px) saturate(160%);
+      -webkit-backdrop-filter: blur(24px) saturate(160%);
+      box-shadow: var(--glass-edge), 0 20px 60px rgba(2,6,23,0.5);
       border-radius: var(--radius-lg);
       padding: 3.5rem 2rem;
       text-align: center;
-      border: 1.5px solid rgba(37,99,235,0.1);
     }
 
     .coming-soon-chip {
       display: inline-block;
-      background: var(--blue2);
-      color: var(--white);
+      background: linear-gradient(145deg, var(--blue2), var(--blue1));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.25);
+      color: var(--ink);
       font-size: 0.68rem;
       font-weight: 700;
       letter-spacing: 0.1em;
       text-transform: uppercase;
-      padding: 0.28rem 0.875rem;
+      padding: 0.32rem 0.875rem;
       border-radius: 100px;
       margin-bottom: 1.25rem;
     }
@@ -859,13 +998,13 @@
       font-family: 'Outfit', sans-serif;
       font-size: clamp(1.5rem, 4vw, 2.1rem);
       font-weight: 800;
-      color: var(--navy);
+      color: var(--ink);
       margin-bottom: 0.875rem;
     }
 
     .pos-inner > p {
       font-size: 0.975rem;
-      color: rgba(15,23,42,0.58);
+      color: var(--ink-mid);
       max-width: 460px;
       margin: 0 auto 2rem;
       line-height: 1.65;
@@ -879,14 +1018,14 @@
     }
 
     .pos-logo {
-      background: var(--white);
-      border: 1.5px solid rgba(15,23,42,0.09);
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.14);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
       border-radius: 10px;
       padding: 0.5rem 1.125rem;
       font-size: 0.875rem;
       font-weight: 600;
-      color: var(--navy);
-      box-shadow: 0 1px 4px rgba(15,23,42,0.06);
+      color: var(--ink);
     }
 
     /* ════════════════════════════════════
@@ -900,63 +1039,45 @@
       font-family: 'Outfit', sans-serif;
       font-size: clamp(1.4rem, 4vw, 1.8rem);
       font-weight: 800;
-      color: var(--navy);
+      color: var(--ink);
       margin-bottom: 0.5rem;
     }
 
     .addons-inner > p {
       font-size: 0.975rem;
-      color: rgba(15,23,42,0.55);
+      color: var(--ink-mid);
       margin-bottom: 1.5rem;
       line-height: 1.65;
     }
 
-    /* ════════════════════════════════════
-       SHARED DARK SECTION TEXT
-    ════════════════════════════════════ */
-    .eyebrow-light { color: var(--blue4); }
-
-    .title-light {
-      font-family: 'Outfit', sans-serif;
-      font-size: clamp(2rem, 5vw, 2.75rem);
-      font-weight: 800;
-      color: var(--white);
-      line-height: 1.1;
-      letter-spacing: -0.02em;
-      margin-bottom: 1rem;
-    }
-
-    .title-light em { font-style: normal; color: var(--gold); }
-
-    .body-light {
-      font-size: 1.05rem;
-      color: rgba(255,255,255,0.55);
-      line-height: 1.7;
-      max-width: 520px;
-      margin-bottom: var(--space-lg);
-    }
-
     /* ── STAMP CARD PREVIEW ── */
     .stamp-card-preview {
-      background: var(--white);
+      background: linear-gradient(150deg, rgba(255,255,255,0.13), rgba(255,255,255,0.05));
+      border: 1px solid rgba(255,255,255,0.20);
+      backdrop-filter: blur(24px) saturate(170%);
+      -webkit-backdrop-filter: blur(24px) saturate(170%);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 20px 50px rgba(2,6,23,0.55);
       border-radius: var(--radius-md);
       padding: 1.25rem 1.5rem;
       margin-bottom: 2rem;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
       max-width: 340px;
       width: 100%;
       text-align: left;
+      will-change: transform;
     }
 
-    .stamp-card-dark { /* same white card on dark bg — shadow handles contrast */ }
-
     .scp-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
       font-family: 'Outfit', sans-serif;
       font-size: 0.85rem;
       font-weight: 700;
-      color: var(--navy);
+      color: var(--ink);
       margin-bottom: 1rem;
     }
+
+    .scp-title .ic { width: 16px; height: 16px; color: var(--blue4); flex-shrink: 0; }
 
     .scp-stamps {
       display: flex;
@@ -968,42 +1089,42 @@
       width: 28px;
       height: 28px;
       border-radius: 50%;
-      border: 2px solid rgba(15,23,42,0.18);
+      border: 2px solid rgba(255,255,255,0.22);
       background: transparent;
-      transition: background 0.3s, border-color 0.3s, transform 0.2s;
+      transition: background 0.3s, border-color 0.3s, transform 0.2s, color 0.3s;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 0.7rem;
+      color: rgba(255,255,255,0.3);
       flex-shrink: 0;
     }
 
     .stamp-dot.filled {
-      background: var(--blue2);
-      border-color: var(--blue2);
+      background: linear-gradient(145deg, var(--blue3), var(--blue1));
+      border-color: rgba(147,197,253,0.6);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 0 10px rgba(59,130,246,0.5);
       color: white;
       font-size: 0.65rem;
       font-weight: 800;
     }
 
     .stamp-dot.gift {
-      background: var(--gold);
-      border-color: var(--gold);
+      background: linear-gradient(145deg, #fbbf24, #d97706);
+      border-color: rgba(253,230,138,0.7);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 0 12px rgba(251,191,36,0.55);
+      color: #451a03;
     }
 
     .stamp-dot.pop { transform: scale(1.35); }
 
-    .scp-label {
-      font-size: 0.75rem;
-      color: rgba(15,23,42,0.45);
-    }
+    .scp-label { font-size: 0.75rem; color: var(--ink-dim); }
 
     /* ── ALWAYS FREE STAMP ── */
     .always-free-stamp {
       font-family: 'Outfit', sans-serif;
       font-size: clamp(3rem, 10vw, 6rem);
       font-weight: 900;
-      color: var(--navy);
       letter-spacing: -0.04em;
       line-height: 1;
       margin-bottom: 1.25rem;
@@ -1011,7 +1132,8 @@
 
     /* ── BOTTOM DOWNLOAD CTA ── */
     .bottom-cta {
-      background: var(--light);
+      background: rgba(11,17,32,0.55);
+      border-top: 1px solid rgba(255,255,255,0.06);
       padding: var(--space-xl) var(--space-md);
       text-align: center;
     }
@@ -1020,25 +1142,16 @@
       font-family: 'Outfit', sans-serif;
       font-size: clamp(1.75rem, 5vw, 2.5rem);
       font-weight: 800;
-      color: var(--navy);
+      color: var(--ink);
       letter-spacing: -0.02em;
       margin-bottom: 0.75rem;
     }
 
     .bottom-cta p {
       font-size: 1rem;
-      color: rgba(15,23,42,0.55);
+      color: var(--ink-mid);
       margin-bottom: 2rem;
       line-height: 1.65;
-    }
-
-    .store-badge-dark {
-      background: var(--navy);
-      border-color: var(--navy);
-    }
-
-    .store-badge-dark:hover {
-      background: #1e293b;
     }
 
     /* ════════════════════════════════════
@@ -1048,8 +1161,18 @@
       text-align: center;
       padding: 2.5rem var(--space-md);
       font-size: 0.82rem;
-      color: rgba(15,23,42,0.35);
-      border-top: 1px solid rgba(15,23,42,0.07);
+      color: var(--ink-dim);
+      border-top: 1px solid rgba(255,255,255,0.07);
+    }
+
+    /* ════════════════════════════════════
+       REDUCED MOTION
+    ════════════════════════════════════ */
+    @media (prefers-reduced-motion: reduce) {
+      .aurora::before, .aurora::after,
+      .sticker, .sticker-inner, .sticker-glow,
+      .holo-text, .holo-gold, .holo-sheen::after { animation: none !important; }
+      .reveal { transition: none; opacity: 1; transform: none; }
     }
 
     /* ════════════════════════════════════
@@ -1060,15 +1183,47 @@
       .eco-step { max-width: 140px; }
       .prize-banner { padding: 2.75rem 1.25rem; }
       .pos-inner { padding: 2.5rem 1.25rem; }
-      .tab-float { top: 56px; padding: 0.625rem 1rem; }
+      .tab-float { top: 60px; padding: 0.625rem 1rem; }
     }
   </style>
 </head>
 <body>
 
+  <div class="aurora" aria-hidden="true"></div>
+
+  <!-- SVG ICON LIBRARY -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-coffee" viewBox="0 0 24 24"><path d="M17 8h1a3 3 0 0 1 0 6h-1M3 8h14v7a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V8zM7 2v2M11 2v2M15 2v2"/></symbol>
+      <symbol id="i-scissors" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.12 8.12 20 20M14.47 14.48 20 4M8.12 15.88 12 12"/></symbol>
+      <symbol id="i-bag" viewBox="0 0 24 24"><path d="M6 7h12l1 13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1L6 7z"/><path d="M9 10V6a3 3 0 0 1 6 0v4"/></symbol>
+      <symbol id="i-tap" viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M11 18h2"/><path d="M20 8c1 1.3 1 4.7 0 6M4 8c-1 1.3-1 4.7 0 6"/></symbol>
+      <symbol id="i-gift" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4"/><path d="M5 12v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8M12 8v13"/><path d="M12 8s-4 0-5.5-1.5a2.1 2.1 0 0 1 3-3C11 5 12 8 12 8zM12 8s4 0 5.5-1.5a2.1 2.1 0 0 0-3-3C13 5 12 8 12 8z"/></symbol>
+      <symbol id="i-cake" viewBox="0 0 24 24"><path d="M4 21h16M5 21v-6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v6"/><path d="M5 17c1.5 1 2.5-1 4 0s2.5-1 4 0 2.5-1 4 0M12 9v4M12 5.5a1.2 1.2 0 0 0 1.2-1.2c0-.9-1.2-2.3-1.2-2.3s-1.2 1.4-1.2 2.3A1.2 1.2 0 0 0 12 5.5z"/></symbol>
+      <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></symbol>
+      <symbol id="i-vote" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+      <symbol id="i-map" viewBox="0 0 24 24"><path d="M12 21s7-5.5 7-11a7 7 0 0 0-14 0c0 5.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+      <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 22c4.4 0 7-2.8 7-6.5 0-4-3.5-6.2-4.5-9.5-1.7 1.2-2.6 2.8-2.5 5C10.7 9.6 9.5 6.5 10 3c-3.5 2.5-5 6.5-5 9.5C5 19.2 7.6 22 12 22z"/></symbol>
+      <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v6a5 5 0 0 1-10 0V4z"/><path d="M7 6H4a1 1 0 0 0-1 1c0 2.2 1.6 4 4 4M17 6h3a1 1 0 0 1 1 1c0 2.2-1.6 4-4 4"/></symbol>
+      <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M3 9V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a3 3 0 0 0 0 6v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a3 3 0 0 0 0-6z"/><path d="M13 5v2M13 11v2M13 17v2"/></symbol>
+      <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z"/></symbol>
+      <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V4"/><path d="M4 20h16"/><path d="M8 16v-5M12 16V8M16 16v-3M20 16V6"/></symbol>
+      <symbol id="i-megaphone" viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h2l4 5h1a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-1L6 10H4a1 1 0 0 0-1 1z"/><path d="M15 9a4 4 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11"/></symbol>
+      <symbol id="i-puzzle" viewBox="0 0 24 24"><path d="M9 4a2 2 0 1 1 4 0h4a1 1 0 0 1 1 1v4a2 2 0 1 1 0 4v4a1 1 0 0 1-1 1h-4a2 2 0 1 0-4 0H5a1 1 0 0 1-1-1v-4a2 2 0 1 0 0-4V5a1 1 0 0 1 1-1h4z"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7"/></symbol>
+      <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3 2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 16.4l-5.2 2.8 1-5.9L3.5 9.2l5.9-.8L12 3z"/></symbol>
+      <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h16M14 6l6 6-6 6"/></symbol>
+      <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></symbol>
+      <symbol id="i-store" viewBox="0 0 24 24"><path d="M4 9 5.5 4h13L20 9M4 9v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9M4 9h16M9 21v-6h6v6"/></symbol>
+      <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M16 5a3.5 3.5 0 0 1 0 6.8M17.5 14.7c2.1.7 3.5 2.4 3.5 4.8"/></symbol>
+      <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5z"/><path d="m3 13 9 5 9-5"/><path d="m3 17.5 9 5 9-5" opacity="0.5"/></symbol>
+      <symbol id="i-crown" viewBox="0 0 24 24"><path d="m3 8 4.5 3L12 5l4.5 6L21 8l-1.5 10h-15L3 8z"/></symbol>
+    </defs>
+  </svg>
+
   <!-- NAV -->
   <nav>
-    <div class="nav-logo">Linq</div>
+    <div class="nav-logo holo-text">Linq</div>
     <a href="https://linq4.vercel.app/app" target="_blank" rel="noopener noreferrer" class="nav-cta">
       Vendor Login
     </a>
@@ -1091,17 +1246,17 @@
     <header class="hero" id="download">
       <div class="sticker-wrap reveal">
         <div class="sticker-glow"></div>
-        <div class="sticker"><div class="sticker-inner">☕</div></div>
+        <div class="sticker"><div class="sticker-inner"><span class="holo-text">L</span></div></div>
         <div class="sticker-badge">Legendary</div>
       </div>
 
-      <span class="linq-wordmark reveal reveal-delay-1">Linq</span>
+      <span class="linq-wordmark holo-text reveal reveal-delay-1">Linq</span>
       <h1 class="hero-headline reveal reveal-delay-2">Loyalty like never before.</h1>
       <p class="hero-sub reveal reveal-delay-3">Collect stamps at your local favourites, win prizes, and compete with your friends — all in one app.</p>
 
       <!-- Animated stamp card -->
-      <div class="stamp-card-preview reveal reveal-delay-4">
-        <div class="scp-title">☕ Brew &amp; Co. — Loyalty Card</div>
+      <div class="stamp-card-preview holo-sheen tilt reveal reveal-delay-4">
+        <div class="scp-title"><svg class="ic"><use href="#i-coffee"/></svg>Brew &amp; Co. — Loyalty Card</div>
         <div class="scp-stamps" id="stamp-dots"></div>
         <div class="scp-label">Collect 10 stamps for a free coffee</div>
       </div>
@@ -1121,70 +1276,68 @@
     <!-- STAMP CARDS -->
     <section class="section-wrap">
       <p class="eyebrow reveal">Stamp cards</p>
-      <h2 class="section-title reveal">Your free coffee is<br/><em>closer than you think.</em></h2>
+      <h2 class="section-title reveal">Your free coffee is<br/><em class="holo-text">closer than you think.</em></h2>
       <p class="section-body reveal">Every visit earns you a stamp. Fill the card, claim the reward. No paper, no faff — just tap and go.</p>
 
       <div class="grid-3">
         <div class="card reveal reveal-delay-1">
-          <span class="icon">☕</span>
+          <div class="icon-chip"><svg class="ic"><use href="#i-coffee"/></svg></div>
           <h3>Free coffee, on us</h3>
           <p>Collect 10 stamps at your local café and your next coffee is free. Every time.</p>
         </div>
         <div class="card reveal reveal-delay-2">
-          <span class="icon">💈</span>
+          <div class="icon-chip"><svg class="ic"><use href="#i-scissors"/></svg></div>
           <h3>Free haircuts</h3>
           <p>Your barber's on Linq too. Rack up visits and get rewarded for being a regular.</p>
         </div>
         <div class="card reveal reveal-delay-3">
-          <span class="icon">🛍️</span>
+          <div class="icon-chip"><svg class="ic"><use href="#i-bag"/></svg></div>
           <h3>Discounts everywhere</h3>
           <p>Restaurants, gyms, boutiques — hundreds of local businesses, one loyalty app.</p>
         </div>
         <div class="card reveal reveal-delay-1">
-          <span class="icon">📱</span>
+          <div class="icon-chip"><svg class="ic"><use href="#i-tap"/></svg></div>
           <h3>Tap or scan</h3>
           <p>Stamp via NFC tap or QR code. Done in a second. No extra app needed at the counter.</p>
         </div>
-        <div class="card-blue reveal reveal-delay-2">
-          <span class="icon">🎁</span>
+        <div class="card card-feature holo-sheen reveal reveal-delay-2">
+          <div class="icon-chip"><svg class="ic"><use href="#i-gift"/></svg></div>
           <h3>Reward tiers</h3>
           <p>Some businesses unlock bigger rewards the more stamps you collect. Keep going.</p>
         </div>
         <div class="card reveal reveal-delay-3">
-          <span class="icon">🎂</span>
+          <div class="icon-chip"><svg class="ic"><use href="#i-cake"/></svg></div>
           <h3>Birthday perks</h3>
           <p>Your favourite spots send you exclusive rewards on your birthday. You're welcome.</p>
         </div>
       </div>
     </section>
 
-    <hr class="divider" />
-
     <!-- ECOSYSTEM -->
     <div class="ecosystem-bg">
       <div class="ecosystem-inner">
-        <p class="eyebrow eyebrow-light reveal">The Linq ecosystem</p>
-        <h2 class="title-light reveal">Every stamp is<br/><em>more than a stamp.</em></h2>
-        <p class="body-light reveal">Each stamp and challenge you complete drops a collectible sticker into your collection. Fill sets, open packs, and win prizes — without ever leaving your local high street.</p>
+        <p class="eyebrow reveal">The Linq ecosystem</p>
+        <h2 class="section-title reveal">Every stamp is<br/><em class="holo-text">more than a stamp.</em></h2>
+        <p class="section-body reveal">Each stamp and challenge you complete drops a collectible sticker into your collection. Fill sets, open packs, and win prizes — without ever leaving your local high street.</p>
 
         <div class="ecosystem-flow">
           <div class="eco-step reveal reveal-delay-1">
-            <span class="eco-icon">☕</span>
+            <span class="eco-icon"><svg class="ic"><use href="#i-store"/></svg></span>
             <div class="eco-label">Visit a business</div>
           </div>
-          <div class="eco-arrow reveal reveal-delay-1">→</div>
+          <div class="eco-arrow reveal reveal-delay-1"><svg class="ic"><use href="#i-arrow"/></svg></div>
           <div class="eco-step reveal reveal-delay-2">
-            <span class="eco-icon">🎟️</span>
+            <span class="eco-icon"><svg class="ic"><use href="#i-ticket"/></svg></span>
             <div class="eco-label">Earn a stamp</div>
           </div>
-          <div class="eco-arrow reveal reveal-delay-2">→</div>
+          <div class="eco-arrow reveal reveal-delay-2"><svg class="ic"><use href="#i-arrow"/></svg></div>
           <div class="eco-step reveal reveal-delay-3">
-            <span class="eco-icon">✨</span>
+            <span class="eco-icon"><svg class="ic"><use href="#i-sparkle"/></svg></span>
             <div class="eco-label">Get a sticker</div>
           </div>
-          <div class="eco-arrow reveal reveal-delay-3">→</div>
+          <div class="eco-arrow reveal reveal-delay-3"><svg class="ic"><use href="#i-arrow"/></svg></div>
           <div class="eco-step reveal reveal-delay-4">
-            <span class="eco-icon">🏆</span>
+            <span class="eco-icon"><svg class="ic"><use href="#i-trophy"/></svg></span>
             <div class="eco-label">Win prizes</div>
           </div>
         </div>
@@ -1195,45 +1348,43 @@
 
     <!-- PRIZES -->
     <div class="prize-section">
-      <div class="prize-banner reveal">
-        <div class="prize-amount">£1,000s</div>
+      <div class="prize-banner holo-sheen reveal">
+        <div class="prize-amount holo-gold">£1,000s</div>
         <h2>in prizes. Every month.</h2>
         <p>Complete challenges across local businesses for your shot at cash, vouchers, and experiences worth thousands.</p>
         <div class="prize-pills">
-          <div class="prize-pill">🏆 Monthly leagues</div>
-          <div class="prize-pill">⚡ Flash challenges</div>
-          <div class="prize-pill">🎟️ Exclusive prizes</div>
-          <div class="prize-pill">🔥 Bonus stamp events</div>
+          <div class="prize-pill"><svg class="ic"><use href="#i-trophy"/></svg>Monthly leagues</div>
+          <div class="prize-pill"><svg class="ic"><use href="#i-bolt"/></svg>Flash challenges</div>
+          <div class="prize-pill"><svg class="ic"><use href="#i-ticket"/></svg>Exclusive prizes</div>
+          <div class="prize-pill"><svg class="ic"><use href="#i-flame"/></svg>Bonus stamp events</div>
         </div>
       </div>
     </div>
 
-    <hr class="divider" />
-
     <!-- CHALLENGES -->
     <section class="section-wrap">
       <p class="eyebrow reveal">Challenges</p>
-      <h2 class="section-title reveal">Not just stamps.<br/><em>Epic challenges.</em></h2>
+      <h2 class="section-title reveal">Not just stamps.<br/><em class="holo-text">Epic challenges.</em></h2>
       <p class="section-body reveal">Daily and monthly challenges reward you with sticker packs, bonus stamps, and prize entries. The more you play, the more you win.</p>
 
       <div class="grid-2">
-        <div class="card-blue reveal reveal-delay-1">
-          <span class="icon">🟦</span>
+        <div class="card card-feature holo-sheen reveal reveal-delay-1">
+          <div class="icon-chip"><svg class="ic"><use href="#i-grid"/></svg></div>
           <h3>Linqle</h3>
           <p>Linq's daily word game. Solve it, earn a sticker pack. Come back tomorrow — the streak bonuses are real.</p>
         </div>
         <div class="card reveal reveal-delay-2">
-          <span class="icon">🗳️</span>
+          <div class="icon-chip"><svg class="ic"><use href="#i-vote"/></svg></div>
           <h3>Daily Vote</h3>
           <p>One question. One vote. Win a sticker pack just for having an opinion. Opens every day at midnight.</p>
         </div>
         <div class="card reveal reveal-delay-3">
-          <span class="icon">🗺️</span>
+          <div class="icon-chip"><svg class="ic"><use href="#i-map"/></svg></div>
           <h3>City Explorer</h3>
           <p>Visit 5 different local businesses this month and unlock a bonus prize drop.</p>
         </div>
         <div class="card reveal reveal-delay-4">
-          <span class="icon">🔥</span>
+          <div class="icon-chip"><svg class="ic"><use href="#i-flame"/></svg></div>
           <h3>Streak Master</h3>
           <p>7 days in a row. Keep your streak alive and climb the weekly leaderboard.</p>
         </div>
@@ -1246,52 +1397,52 @@
       <h2 class="reveal">Your whole high street, in one app.</h2>
       <p class="reveal">From your morning coffee to your Friday night takeaway — the businesses you love are waiting.</p>
       <div class="vendor-tags">
-        <div class="vendor-tag reveal reveal-delay-1">☕ Coffee shops</div>
-        <div class="vendor-tag reveal reveal-delay-1">💈 Barbers</div>
-        <div class="vendor-tag reveal reveal-delay-2">🍕 Restaurants</div>
-        <div class="vendor-tag reveal reveal-delay-2">🥐 Bakeries</div>
-        <div class="vendor-tag reveal reveal-delay-3">💪 Gyms</div>
-        <div class="vendor-tag reveal reveal-delay-3">🛍️ Boutiques</div>
-        <div class="vendor-tag reveal reveal-delay-1">🍺 Bars &amp; pubs</div>
-        <div class="vendor-tag reveal reveal-delay-1">💅 Salons &amp; spas</div>
-        <div class="vendor-tag reveal reveal-delay-2">🥗 Healthy eats</div>
-        <div class="vendor-tag reveal reveal-delay-2">🎮 Entertainment</div>
-        <div class="vendor-tag reveal reveal-delay-3">🌮 Street food</div>
-        <div class="vendor-tag reveal reveal-delay-3">📚 Bookshops</div>
+        <div class="vendor-tag reveal reveal-delay-1">Coffee shops</div>
+        <div class="vendor-tag reveal reveal-delay-1">Barbers</div>
+        <div class="vendor-tag reveal reveal-delay-2">Restaurants</div>
+        <div class="vendor-tag reveal reveal-delay-2">Bakeries</div>
+        <div class="vendor-tag reveal reveal-delay-3">Gyms</div>
+        <div class="vendor-tag reveal reveal-delay-3">Boutiques</div>
+        <div class="vendor-tag reveal reveal-delay-1">Bars &amp; pubs</div>
+        <div class="vendor-tag reveal reveal-delay-1">Salons &amp; spas</div>
+        <div class="vendor-tag reveal reveal-delay-2">Healthy eats</div>
+        <div class="vendor-tag reveal reveal-delay-2">Entertainment</div>
+        <div class="vendor-tag reveal reveal-delay-3">Street food</div>
+        <div class="vendor-tag reveal reveal-delay-3">Bookshops</div>
       </div>
     </div>
 
     <!-- LEADERBOARD -->
     <div class="friends-bg">
       <div class="friends-inner">
-        <p class="eyebrow eyebrow-light reveal" style="text-align:center;">Leaderboards</p>
-        <h2 class="title-light reveal" style="text-align:center;">Who's got more stamps?<br/>Prove it.</h2>
-        <p class="body-light reveal" style="text-align:center;margin-left:auto;margin-right:auto;">Challenge your friends, compete on weekly leaderboards, and hold the top spot at your favourite spot.</p>
+        <p class="eyebrow reveal" style="text-align:center;">Leaderboards</p>
+        <h2 class="section-title reveal" style="text-align:center;">Who's got more stamps?<br/>Prove it.</h2>
+        <p class="section-body reveal" style="text-align:center;margin-left:auto;margin-right:auto;">Challenge your friends, compete on weekly leaderboards, and hold the top spot at your favourite spot.</p>
 
         <div class="leaderboard">
           <div class="lb-row reveal reveal-delay-1">
-            <div class="lb-rank" style="color:var(--gold)">🥇</div>
-            <div class="lb-avatar">😎</div>
+            <div class="lb-rank" style="color:var(--gold)"><svg class="ic" style="width:18px;height:18px"><use href="#i-crown"/></svg></div>
+            <div class="lb-avatar av-1">JK</div>
             <div class="lb-name">Jordan K. <small>The Usual at Brew &amp; Co.</small></div>
-            <div class="lb-stamps">142 ⭐</div>
+            <div class="lb-stamps">142</div>
           </div>
           <div class="lb-row reveal reveal-delay-2">
-            <div class="lb-rank" style="color:#C0C0C0">🥈</div>
-            <div class="lb-avatar">🤩</div>
+            <div class="lb-rank" style="color:#C0C0C0">2</div>
+            <div class="lb-avatar av-2">PM</div>
             <div class="lb-name">Priya M. <small>3 challenges completed</small></div>
-            <div class="lb-stamps">119 ⭐</div>
+            <div class="lb-stamps">119</div>
           </div>
           <div class="lb-row you reveal reveal-delay-3">
             <div class="lb-rank" style="color:var(--blue4)">3</div>
-            <div class="lb-avatar">🫵</div>
+            <div class="lb-avatar av-3">You</div>
             <div class="lb-name">You <small>Keep going — you're close</small></div>
-            <div class="lb-stamps">98 ⭐</div>
+            <div class="lb-stamps">98</div>
           </div>
           <div class="lb-row reveal reveal-delay-4">
             <div class="lb-rank" style="color:rgba(255,255,255,0.3)">4</div>
-            <div class="lb-avatar">😤</div>
+            <div class="lb-avatar av-4">ST</div>
             <div class="lb-name">Sam T. <small>On a 5-day streak</small></div>
-            <div class="lb-stamps">87 ⭐</div>
+            <div class="lb-stamps">87</div>
           </div>
         </div>
       </div>
@@ -1302,11 +1453,11 @@
       <h2 class="reveal">Ready to start collecting?</h2>
       <p class="reveal">Download Linq free and find your first stamp card today.</p>
       <div class="store-badges reveal">
-        <a class="store-badge store-badge-dark" href="https://apps.apple.com/us/app/linq-member/id6775899108" target="_blank" rel="noopener noreferrer">
+        <a class="store-badge" href="https://apps.apple.com/us/app/linq-member/id6775899108" target="_blank" rel="noopener noreferrer">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
           <div class="badge-text"><small>Download on the</small><strong>App Store</strong></div>
         </a>
-        <a class="store-badge store-badge-dark" href="https://play.google.com/store/apps/details?id=co.uk.adastranetwork.linq" target="_blank" rel="noopener noreferrer">
+        <a class="store-badge" href="https://play.google.com/store/apps/details?id=co.uk.adastranetwork.linq" target="_blank" rel="noopener noreferrer">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.18 23.76c.3.17.64.24.99.2l.11-.06 9.5-9.5-2.1-2.1-8.5 11.46zM20.36 10.4l-2.6-1.46-2.35 2.35 2.35 2.35 2.63-1.48c.75-.42.75-1.34-.03-1.76zM2.42 1.04C2.16 1.31 2 1.74 2 2.28v19.44c0 .54.16.97.43 1.24l.07.06 10.88-10.88v-.25L2.49.98l-.07.06zM13.53 8.53l-2.1-2.1L2.42 1.04l10.01 9.64 1.1-2.15z"/></svg>
           <div class="badge-text"><small>Get it on</small><strong>Google Play</strong></div>
         </a>
@@ -1323,83 +1474,81 @@
     <!-- HERO -->
     <header class="biz-hero">
       <!-- Animated stamp card -->
-      <div class="stamp-card-preview stamp-card-dark reveal">
-        <div class="scp-title">💈 The Barber Club — Loyalty Card</div>
+      <div class="stamp-card-preview holo-sheen tilt reveal">
+        <div class="scp-title"><svg class="ic"><use href="#i-scissors"/></svg>The Barber Club — Loyalty Card</div>
         <div class="scp-stamps" id="stamp-dots-biz"></div>
         <div class="scp-label">Collect 8 stamps for a free cut</div>
       </div>
 
-      <div class="free-badge reveal">★ Free for life</div>
-      <h1 class="reveal">The loyalty app your<br/>customers will <em>actually use.</em></h1>
+      <div class="free-badge reveal"><svg class="ic"><use href="#i-star"/></svg>Free for life</div>
+      <h1 class="reveal">The loyalty app your<br/>customers will <em class="holo-text">actually use.</em></h1>
       <p class="reveal">Loyalty cards and membership cards — completely free, forever. Set up in minutes. No hardware needed.</p>
       <p class="no-cc reveal">No credit card required &nbsp;·&nbsp; No contracts &nbsp;·&nbsp; Cancel anytime</p>
       <a href="https://linq4.vercel.app/app" target="_blank" rel="noopener noreferrer" class="cta-btn reveal">
-        Get started free →
+        Get started free <svg class="ic" style="width:16px;height:16px"><use href="#i-arrow"/></svg>
       </a>
     </header>
 
     <!-- WHAT'S FREE -->
     <section class="section-wrap">
-      <div class="always-free-stamp reveal">Always Free.</div>
+      <div class="always-free-stamp holo-text reveal">Always Free.</div>
       <p class="eyebrow reveal">Core features</p>
       <h2 class="section-title reveal">Everything you need<br/>to get started.</h2>
       <p class="section-body reveal">Loyalty cards and membership cards are free for life. Not a trial. Not a limited plan. Free.</p>
 
       <div class="free-grid">
         <div class="free-item reveal reveal-delay-1">
-          <div class="check">✓</div>
+          <div class="check"><svg class="ic"><use href="#i-check"/></svg></div>
           <div><h4>Digital loyalty cards</h4><p>Create unlimited stamp card programmes for your customers.</p></div>
         </div>
         <div class="free-item reveal reveal-delay-2">
-          <div class="check">✓</div>
+          <div class="check"><svg class="ic"><use href="#i-check"/></svg></div>
           <div><h4>Membership cards</h4><p>Run recurring memberships with visit-based rewards and perks.</p></div>
         </div>
         <div class="free-item reveal reveal-delay-3">
-          <div class="check">✓</div>
+          <div class="check"><svg class="ic"><use href="#i-check"/></svg></div>
           <div><h4>NFC &amp; QR stamping</h4><p>Issue stamps via a tap or QR scan — works on any phone, no extra hardware.</p></div>
         </div>
         <div class="free-item reveal reveal-delay-1">
-          <div class="check">✓</div>
+          <div class="check"><svg class="ic"><use href="#i-check"/></svg></div>
           <div><h4>Customer dashboard</h4><p>See your regulars, total visits, and rewards redeemed at a glance.</p></div>
         </div>
         <div class="free-item reveal reveal-delay-2">
-          <div class="check">✓</div>
+          <div class="check"><svg class="ic"><use href="#i-check"/></svg></div>
           <div><h4>Custom branding</h4><p>Your logo, your colours, your card. Looks like it was made just for you.</p></div>
         </div>
         <div class="free-item reveal reveal-delay-3">
-          <div class="check">✓</div>
+          <div class="check"><svg class="ic"><use href="#i-check"/></svg></div>
           <div><h4>Listed on Linq</h4><p>Your business appears in the Linq discovery feed for customers near you.</p></div>
         </div>
       </div>
     </section>
 
-    <hr class="divider" />
-
     <!-- RETENTION -->
     <div class="retention-bg">
       <div class="retention-inner">
-        <p class="eyebrow eyebrow-light reveal">Customer retention</p>
-        <h2 class="title-light reveal">We keep your customers<br/><em>coming back.</em></h2>
-        <p class="body-light reveal">Linq isn't just a stamp card. It's a behaviour engine. We use proven retention techniques — daily challenges, streak rewards, and collectible sticker ecosystems — that make customers feel pulled back to your store, not pushed.</p>
+        <p class="eyebrow reveal">Customer retention</p>
+        <h2 class="section-title reveal">We keep your customers<br/><em class="holo-text">coming back.</em></h2>
+        <p class="section-body reveal">Linq isn't just a stamp card. It's a behaviour engine. We use proven retention techniques — daily challenges, streak rewards, and collectible sticker ecosystems — that make customers feel pulled back to your store, not pushed.</p>
 
         <div class="grid-4">
-          <div class="card-dark reveal reveal-delay-1">
-            <span class="icon">🔥</span>
+          <div class="card reveal reveal-delay-1">
+            <div class="icon-chip"><svg class="ic"><use href="#i-flame"/></svg></div>
             <h3>Streaks &amp; habits</h3>
             <p>Daily challenges build visiting habits. Customers don't want to break their streak — so they come back.</p>
           </div>
-          <div class="card-dark reveal reveal-delay-2">
-            <span class="icon">🎁</span>
+          <div class="card reveal reveal-delay-2">
+            <div class="icon-chip"><svg class="ic"><use href="#i-layers"/></svg></div>
             <h3>Sticker drops</h3>
             <p>Every stamp at your store drops a collectible sticker. Customers need more stickers to complete sets — which means more visits to you.</p>
           </div>
-          <div class="card-dark reveal reveal-delay-3">
-            <span class="icon">🏆</span>
+          <div class="card reveal reveal-delay-3">
+            <div class="icon-chip"><svg class="ic"><use href="#i-trophy"/></svg></div>
             <h3>Prize-driven urgency</h3>
             <p>Monthly prize pools create real urgency. Customers close to completing a set will prioritise your store over a competitor's.</p>
           </div>
-          <div class="card-dark reveal reveal-delay-4">
-            <span class="icon">🧩</span>
+          <div class="card reveal reveal-delay-4">
+            <div class="icon-chip"><svg class="ic"><use href="#i-puzzle"/></svg></div>
             <h3>Cross-business challenges</h3>
             <p>Linq challenges send new customers through your door who've never visited before — discovering you because of a challenge.</p>
           </div>
@@ -1410,24 +1559,24 @@
     <!-- STATISTICS -->
     <div class="stats-bg">
       <div class="stats-inner">
-        <p class="eyebrow eyebrow-light reveal" style="text-align:center;">By the numbers</p>
-        <h2 class="title-light reveal" style="text-align:center;margin-bottom:2.5rem;">Real results for real businesses.</h2>
+        <p class="eyebrow reveal" style="text-align:center;">By the numbers</p>
+        <h2 class="section-title reveal" style="text-align:center;margin-bottom:2.5rem;">Real results for real businesses.</h2>
 
         <div class="stats-grid">
           <div class="stat-card reveal reveal-delay-1">
-            <div class="stat-number">68%</div>
+            <div class="stat-number holo-gold">68%</div>
             <div class="stat-label">of customers return more often after joining a loyalty programme</div>
           </div>
           <div class="stat-card reveal reveal-delay-2">
-            <div class="stat-number">3×</div>
+            <div class="stat-number holo-gold">3×</div>
             <div class="stat-label">more spend from loyalty members vs. non-members on average</div>
           </div>
           <div class="stat-card reveal reveal-delay-3">
-            <div class="stat-number">£0</div>
+            <div class="stat-number holo-gold">£0</div>
             <div class="stat-label">to get started — no setup fees, no monthly costs for core features</div>
           </div>
           <div class="stat-card reveal reveal-delay-4">
-            <div class="stat-number">2 min</div>
+            <div class="stat-number holo-gold">2 min</div>
             <div class="stat-label">average setup time from download to your first loyalty card live</div>
           </div>
         </div>
@@ -1436,7 +1585,7 @@
 
     <!-- POS INTEGRATION -->
     <div class="pos-section">
-      <div class="pos-inner reveal">
+      <div class="pos-inner holo-sheen reveal">
         <div class="coming-soon-chip">Coming soon</div>
         <h3>POS Integration</h3>
         <p>Connect Linq directly to your point-of-sale system. Stamps issued automatically at checkout — no staff action needed. Works with the tools you already use.</p>
@@ -1450,8 +1599,6 @@
       </div>
     </div>
 
-    <hr class="divider" />
-
     <!-- ADD-ONS -->
     <div class="addons-section">
       <div class="addons-inner">
@@ -1459,23 +1606,23 @@
         <p class="reveal">When you're ready to go further, unlock powerful tools to grow your customer base.</p>
 
         <div class="grid-4">
-          <div class="card-outline reveal reveal-delay-1">
-            <span class="icon">📣</span>
+          <div class="card card-outline reveal reveal-delay-1">
+            <div class="icon-chip"><svg class="ic"><use href="#i-megaphone"/></svg></div>
             <h4>Offers &amp; promotions</h4>
             <p>Push exclusive deals directly to your loyal customers' phones.</p>
           </div>
-          <div class="card-outline reveal reveal-delay-2">
-            <span class="icon">🏆</span>
+          <div class="card card-outline reveal reveal-delay-2">
+            <div class="icon-chip"><svg class="ic"><use href="#i-trophy"/></svg></div>
             <h4>Challenges</h4>
             <p>Join city-wide challenges and get featured to thousands of Linq users.</p>
           </div>
-          <div class="card-outline reveal reveal-delay-3">
-            <span class="icon">📊</span>
+          <div class="card card-outline reveal reveal-delay-3">
+            <div class="icon-chip"><svg class="ic"><use href="#i-chart"/></svg></div>
             <h4>Advanced analytics</h4>
             <p>Deep visit trends, peak times, and customer retention insights.</p>
           </div>
-          <div class="card-outline reveal reveal-delay-4">
-            <span class="icon">🎟️</span>
+          <div class="card card-outline reveal reveal-delay-4">
+            <div class="icon-chip"><svg class="ic"><use href="#i-ticket"/></svg></div>
             <h4>Subscription cards</h4>
             <p>Sell recurring monthly subscriptions with perks — coffees, discounts, and more.</p>
           </div>
@@ -1488,7 +1635,7 @@
       <h2 class="reveal">Ready to grow your regulars?</h2>
       <p class="reveal">Launch your loyalty programme in minutes — free, forever.</p>
       <a href="https://linq4.vercel.app/app" target="_blank" rel="noopener noreferrer" class="cta-btn reveal">
-        Get started free →
+        Get started free <svg class="ic" style="width:16px;height:16px"><use href="#i-arrow"/></svg>
       </a>
     </div>
 
@@ -1502,16 +1649,13 @@
     if (history.scrollRestoration) history.scrollRestoration = 'manual';
     window.scrollTo(0, 0);
 
-    const APP_STORE_URL = 'https://apps.apple.com/us/app/linq-member/id6775899108';
-    const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=co.uk.adastranetwork.linq&pcampaignid=web_share';
-
     /* ── TAB SWITCHING ── */
     function switchTab(tab, btn) {
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
       document.querySelectorAll('.tab-pill').forEach(b => b.classList.remove('active'));
       document.getElementById('tab-' + tab).classList.add('active');
       btn.classList.add('active');
-window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       setTimeout(observeReveals, 50);
     }
 
@@ -1543,7 +1687,7 @@ window.scrollTo({ top: 0, behavior: 'smooth' });
       for (let i = 0; i < total; i++) {
         const d = document.createElement('div');
         d.className = 'stamp-dot';
-        if (i === total - 1) d.textContent = '🎁';
+        if (i === total - 1) d.textContent = '★';
         container.appendChild(d);
         dots.push(d);
       }
@@ -1553,8 +1697,7 @@ window.scrollTo({ top: 0, behavior: 'smooth' });
           setTimeout(() => {
             dots.forEach((d, i) => {
               d.classList.remove('filled', 'gift', 'pop');
-              if (i === total - 1) d.textContent = '🎁';
-              else d.textContent = '';
+              d.textContent = i === total - 1 ? '★' : '';
             });
             filled = 0;
             setTimeout(fillNext, 800);
@@ -1564,7 +1707,7 @@ window.scrollTo({ top: 0, behavior: 'smooth' });
         const dot = dots[filled];
         const isLast = filled === total - 1;
         dot.classList.add('filled', 'pop');
-        if (isLast) { dot.classList.add('gift'); dot.textContent = '🎁'; }
+        if (isLast) { dot.classList.add('gift'); dot.textContent = '★'; }
         else dot.textContent = '✓';
         setTimeout(() => dot.classList.remove('pop'), 300);
         filled++;
@@ -1576,15 +1719,21 @@ window.scrollTo({ top: 0, behavior: 'smooth' });
     initStampCard('stamp-dots', 10);
     initStampCard('stamp-dots-biz', 8);
 
-    /* ── STORE LINKS ── */
-    function activateBadge(id, url) {
-      if (!url) return;
-      const el = document.getElementById(id);
-      if (el) el.href = url;
+    /* ── HOLOGRAPHIC TILT (pointer devices only) ── */
+    if (window.matchMedia('(hover: hover)').matches &&
+        !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      document.querySelectorAll('.tilt').forEach(card => {
+        card.addEventListener('pointermove', e => {
+          const r = card.getBoundingClientRect();
+          const x = (e.clientX - r.left) / r.width - 0.5;
+          const y = (e.clientY - r.top) / r.height - 0.5;
+          card.style.transform = 'perspective(700px) rotateY(' + (x * 10) + 'deg) rotateX(' + (-y * 10) + 'deg)';
+        });
+        card.addEventListener('pointerleave', () => {
+          card.style.transform = '';
+        });
+      });
     }
-
-    ['ios-badge','ios-badge-biz','ios-badge-bottom-c','ios-badge-bottom-b'].forEach(id => activateBadge(id, APP_STORE_URL));
-    ['android-badge','android-badge-biz','android-badge-bottom-c','android-badge-bottom-b'].forEach(id => activateBadge(id, PLAY_STORE_URL));
   </script>
 </body>
 </html>
