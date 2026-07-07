@@ -2817,7 +2817,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
   onEmailSignIn: (email: string, password: string) => Promise<string | null>;
   onBrowseAsGuest: () => void;
 }) {
-  const [phoneMode, setPhoneMode] = React.useState<'phone' | 'otp' | 'email' | 'email-signup'>('phone');
+  const [phoneMode, setPhoneMode] = React.useState<'phone' | 'otp' | 'email' | 'email-signup' | 'forgot-password'>('phone');
   const [dialCode, setDialCode] = React.useState(guessDefaultDialCode);
   const [phone, setPhone] = React.useState('');
   const [otp, setOtp] = React.useState('');
@@ -2830,15 +2830,16 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(false);
   const [agreedToTerms, setAgreedToTerms] = React.useState(false);
+  const [resetEmail, setResetEmail] = React.useState('');
   const [resetSent, setResetSent] = React.useState(false);
   const [resetLoading, setResetLoading] = React.useState(false);
 
   const handleForgotPassword = async () => {
     setError('');
-    if (!email.trim()) { setError('Enter your email address above first'); return; }
+    if (!resetEmail.trim()) { setError('Enter your email address'); return; }
     setResetLoading(true);
     try {
-      await sendPasswordResetEmail(auth, email.trim());
+      await sendPasswordResetEmail(auth, resetEmail.trim());
       setResetSent(true);
     } catch (err: any) {
       setError(err?.code === 'auth/invalid-email' ? 'Enter a valid email address' : 'Could not send reset email — check the address and try again');
@@ -2959,9 +2960,15 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
         </div>
       )}
 
-      {(phoneMode === 'otp' || phoneMode === 'email' || phoneMode === 'email-signup') && (
+      {(phoneMode === 'otp' || phoneMode === 'email' || phoneMode === 'email-signup' || phoneMode === 'forgot-password') && (
         <button
-          onClick={() => { setPhoneMode('phone'); setOtp(''); setEmail(''); setPassword(''); setError(''); }}
+          onClick={() => {
+            if (phoneMode === 'forgot-password') {
+              setPhoneMode('email'); setResetEmail(''); setResetSent(false); setError('');
+            } else {
+              setPhoneMode('phone'); setOtp(''); setEmail(''); setPassword(''); setError('');
+            }
+          }}
           className="flex items-center gap-2 text-white/70 hover:text-white transition-colors"
           style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3.5rem)', marginBottom: '2rem' }}
         >
@@ -2982,15 +2989,16 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
 
         <div className="mb-8">
           <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mb-4">
-            {phoneMode === 'email' || phoneMode === 'email-signup' ? <Mail className="w-7 h-7 text-white" /> : <Phone className="w-7 h-7 text-white" />}
+            {phoneMode === 'email' || phoneMode === 'email-signup' || phoneMode === 'forgot-password' ? <Mail className="w-7 h-7 text-white" /> : <Phone className="w-7 h-7 text-white" />}
           </div>
           <h2 className="font-display font-bold text-2xl text-white mb-1">
-            {phoneMode === 'phone' ? 'Sign in' : phoneMode === 'otp' ? 'Enter the code' : phoneMode === 'email-signup' ? 'Create account' : 'Sign in with email'}
+            {phoneMode === 'phone' ? 'Sign in' : phoneMode === 'otp' ? 'Enter the code' : phoneMode === 'email-signup' ? 'Create account' : phoneMode === 'forgot-password' ? 'Reset password' : 'Sign in with email'}
           </h2>
           <p className="text-white/50 text-sm">
             {phoneMode === 'phone' ? 'Enter your phone number to continue'
               : phoneMode === 'otp' ? `We sent a 6-digit code to ${toE164(dialCode, phone)}`
               : phoneMode === 'email-signup' ? 'Create a new account'
+              : phoneMode === 'forgot-password' ? (resetSent ? 'Check your inbox for the reset link' : "Enter your account's email and we'll send you a reset link")
               : 'Enter your email and password'}
           </p>
         </div>
@@ -3033,6 +3041,38 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
               maxLength={6}
               className="w-full px-5 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm text-center tracking-[0.5em] font-bold focus:outline-none focus:border-white/50 focus:bg-white/20"
             />
+          ) : phoneMode === 'forgot-password' ? (
+            resetSent ? (
+              <div className="flex flex-col items-center text-center gap-3 py-2">
+                <div className="w-12 h-12 rounded-full bg-white/15 flex items-center justify-center">
+                  <CheckCircle2 size={22} className="text-white" />
+                </div>
+                <p className="text-white/80 text-sm">
+                  We've sent a password reset link to<br /><span className="font-bold text-white">{resetEmail}</span>
+                </p>
+                <button
+                  type="button"
+                  onClick={() => { setPhoneMode('email'); setResetEmail(''); setResetSent(false); }}
+                  className="text-white/70 text-sm font-medium underline underline-offset-2 hover:text-white transition-colors mt-1"
+                >
+                  Back to sign in
+                </button>
+              </div>
+            ) : (
+              <div className="relative">
+                <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
+                <input
+                  type="email"
+                  value={resetEmail}
+                  onChange={e => setResetEmail(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleForgotPassword()}
+                  placeholder="Email address"
+                  autoComplete="email"
+                  autoFocus
+                  className="w-full pl-10 pr-5 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm focus:outline-none focus:border-white/50 focus:bg-white/20"
+                />
+              </div>
+            )
           ) : (
             <>
               <div className="relative">
@@ -3066,22 +3106,14 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
                 <div className="flex justify-end -mt-1">
                   <button
                     type="button"
-                    onClick={handleForgotPassword}
-                    disabled={resetLoading}
-                    className="text-white/60 text-xs font-medium hover:text-white/90 transition-colors disabled:opacity-40"
+                    onClick={() => { setPhoneMode('forgot-password'); setResetEmail(email); setError(''); setResetSent(false); }}
+                    className="text-white/60 text-xs font-medium hover:text-white/90 transition-colors"
                   >
-                    {resetLoading ? 'Sending…' : 'Forgot password?'}
+                    Forgot password?
                   </button>
                 </div>
               )}
             </>
-          )}
-
-          {resetSent && (
-            <div className="flex items-center gap-2 bg-white/15 border border-white/25 rounded-2xl px-4 py-3">
-              <CheckCircle2 size={14} className="text-white/80 shrink-0" />
-              <p className="text-white/80 text-xs">Password reset email sent — check your inbox.</p>
-            </div>
           )}
 
           {error && (
@@ -3091,30 +3123,34 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
             </div>
           )}
 
-          <div className="flex items-start gap-2.5 cursor-pointer group pt-1">
-            <div
-              className={`w-5 h-5 rounded-md border-2 shrink-0 mt-0.5 flex items-center justify-center transition-all ${agreedToTerms ? 'bg-white border-white' : 'border-white/40 group-hover:border-white/70'}`}
-              onClick={() => setAgreedToTerms(v => !v)}
-            >
-              {agreedToTerms && <CheckCircle2 size={13} className="text-brand-navy" />}
+          {phoneMode !== 'forgot-password' && (
+            <div className="flex items-start gap-2.5 cursor-pointer group pt-1">
+              <div
+                className={`w-5 h-5 rounded-md border-2 shrink-0 mt-0.5 flex items-center justify-center transition-all ${agreedToTerms ? 'bg-white border-white' : 'border-white/40 group-hover:border-white/70'}`}
+                onClick={() => setAgreedToTerms(v => !v)}
+              >
+                {agreedToTerms && <CheckCircle2 size={13} className="text-brand-navy" />}
+              </div>
+              <span className="text-white/70 text-xs leading-relaxed" onClick={() => setAgreedToTerms(v => !v)}>
+                I agree to the{' '}
+                <button type="button" onClick={(e) => { e.stopPropagation(); openUrl('https://www.joinlinq.app/privacy.html'); }} className="underline underline-offset-2 text-white/90 hover:text-white">Privacy Policy</button>
+                {' '}and{' '}
+                <button type="button" onClick={(e) => { e.stopPropagation(); openUrl('https://www.joinlinq.app/terms.html'); }} className="underline underline-offset-2 text-white/90 hover:text-white">Terms of Service</button>
+              </span>
             </div>
-            <span className="text-white/70 text-xs leading-relaxed" onClick={() => setAgreedToTerms(v => !v)}>
-              I agree to the{' '}
-              <button type="button" onClick={(e) => { e.stopPropagation(); openUrl('https://www.joinlinq.app/privacy.html'); }} className="underline underline-offset-2 text-white/90 hover:text-white">Privacy Policy</button>
-              {' '}and{' '}
-              <button type="button" onClick={(e) => { e.stopPropagation(); openUrl('https://www.joinlinq.app/terms.html'); }} className="underline underline-offset-2 text-white/90 hover:text-white">Terms of Service</button>
-            </span>
-          </div>
+          )}
 
-          <button
-            onClick={phoneMode === 'phone' ? handleSendOTP : phoneMode === 'otp' ? handleVerifyOTP : handleEmailSubmit}
-            disabled={loading || !agreedToTerms}
-            className="w-full bg-white text-brand-navy font-bold py-4 rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
-          >
-            {loading
-              ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}><Sparkles size={16} /></motion.div> Please wait…</>
-              : phoneMode === 'phone' ? 'Continue' : phoneMode === 'otp' ? 'Verify' : phoneMode === 'email-signup' ? 'Create Account' : 'Sign In'}
-          </button>
+          {!(phoneMode === 'forgot-password' && resetSent) && (
+            <button
+              onClick={phoneMode === 'phone' ? handleSendOTP : phoneMode === 'otp' ? handleVerifyOTP : phoneMode === 'forgot-password' ? handleForgotPassword : handleEmailSubmit}
+              disabled={phoneMode === 'forgot-password' ? (loading || resetLoading) : (loading || !agreedToTerms)}
+              className="w-full bg-white text-brand-navy font-bold py-4 rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
+            >
+              {loading || resetLoading
+                ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}><Sparkles size={16} /></motion.div> {phoneMode === 'forgot-password' ? 'Sending…' : 'Please wait…'}</>
+                : phoneMode === 'phone' ? 'Continue' : phoneMode === 'otp' ? 'Verify' : phoneMode === 'email-signup' ? 'Create Account' : phoneMode === 'forgot-password' ? 'Send reset link' : 'Sign In'}
+            </button>
+          )}
 
           {phoneMode === 'otp' && (
             <button onClick={handleSendOTP} disabled={loading} className="w-full text-white/50 text-sm py-2 hover:text-white/80 transition-colors disabled:opacity-40">
