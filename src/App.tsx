@@ -19,6 +19,7 @@ import {
   signOut,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  sendPasswordResetEmail,
   sendEmailVerification,
   applyActionCode,
   signInWithPhoneNumber,
@@ -2829,6 +2830,22 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(false);
   const [agreedToTerms, setAgreedToTerms] = React.useState(false);
+  const [resetSent, setResetSent] = React.useState(false);
+  const [resetLoading, setResetLoading] = React.useState(false);
+
+  const handleForgotPassword = async () => {
+    setError('');
+    if (!email.trim()) { setError('Enter your email address above first'); return; }
+    setResetLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+      setResetSent(true);
+    } catch (err: any) {
+      setError(err?.code === 'auth/invalid-email' ? 'Enter a valid email address' : 'Could not send reset email — check the address and try again');
+    } finally {
+      setResetLoading(false);
+    }
+  };
 
   React.useEffect(() => {
     if (Capacitor.getPlatform() === 'ios') return;
@@ -3045,7 +3062,26 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
+              {phoneMode === 'email' && (
+                <div className="flex justify-end -mt-1">
+                  <button
+                    type="button"
+                    onClick={handleForgotPassword}
+                    disabled={resetLoading}
+                    className="text-white/60 text-xs font-medium hover:text-white/90 transition-colors disabled:opacity-40"
+                  >
+                    {resetLoading ? 'Sending…' : 'Forgot password?'}
+                  </button>
+                </div>
+              )}
             </>
+          )}
+
+          {resetSent && (
+            <div className="flex items-center gap-2 bg-white/15 border border-white/25 rounded-2xl px-4 py-3">
+              <CheckCircle2 size={14} className="text-white/80 shrink-0" />
+              <p className="text-white/80 text-xs">Password reset email sent — check your inbox.</p>
+            </div>
           )}
 
           {error && (
@@ -3087,7 +3123,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
           )}
 
           {(phoneMode === 'email' || phoneMode === 'email-signup') && (
-            <button onClick={() => { setPhoneMode(phoneMode === 'email' ? 'email-signup' : 'email'); setError(''); }} className="w-full text-white/50 text-sm py-2 hover:text-white/80 transition-colors">
+            <button onClick={() => { setPhoneMode(phoneMode === 'email' ? 'email-signup' : 'email'); setError(''); setResetSent(false); }} className="w-full text-white/50 text-sm py-2 hover:text-white/80 transition-colors">
               {phoneMode === 'email' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
             </button>
           )}
@@ -3095,7 +3131,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
           {phoneMode === 'phone' && (
             <div className="pt-3">
               <button
-                onClick={() => { setPhoneMode('email'); setError(''); }}
+                onClick={() => { setPhoneMode('email'); setError(''); setResetSent(false); }}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-white/10 border border-white/20 text-white font-bold text-sm hover:bg-white/20 transition-all"
               >
                 <Mail size={15} />
