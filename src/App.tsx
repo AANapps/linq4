@@ -2251,9 +2251,11 @@ export default function App() {
 
   return (
     <div className={cn("min-h-screen bg-white", !isVendor && !isNativeIOS && "md:flex md:justify-center")}>
+    <div className="holo-ambient" aria-hidden="true" />
     <div className={cn("w-full relative", !isVendor && !isNativeIOS && "md:max-w-sm")} style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 6rem)' }}>
       {/* Header */}
       <header className="glass-panel sticky top-0 z-50 px-5 pb-3.5 flex items-center justify-between relative" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.875rem)' }}>
+        <span className="holo-hairline bottom-0" aria-hidden="true" />
         <button
           onClick={() => setShowCreatePost(true)}
           className="w-9 h-9 gradient-red rounded-xl flex items-center justify-center shadow-md shadow-blue-500/20 active:scale-95 transition-transform"
@@ -2582,11 +2584,12 @@ export default function App() {
 
       {/* Bottom Navigation */}
       <nav className={cn(
-        "fixed bottom-0 glass-panel border-t border-black/5 pt-3 flex items-end z-50",
+        "fixed bottom-0 glass-panel pt-3 flex items-end z-50",
         isVendor
           ? "left-0 right-0 lg:hidden"
           : isNativeIOS ? "left-0 right-0 md:hidden" : "left-0 right-0 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-full md:max-w-sm"
       )} style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)' }}>
+        <span className="holo-hairline top-0" aria-hidden="true" />
         {['consumer','admin'].includes(profile?.role ?? '') ? (
           <NavButton
             active={activeTab === 'for-you'}
@@ -2626,10 +2629,12 @@ export default function App() {
             onClick={() => { setActiveTab('home'); setViewingStore(null); setViewingUser(null); }}
             className="flex-1 flex flex-col items-center gap-1 -mb-1 -mt-7 transition-all"
           >
-            <div className="relative overflow-hidden w-[58px] h-[58px] rounded-full gradient-logo-blue shadow-lg shadow-blue-500/30 flex items-center justify-center active:scale-95 transition-transform">
-              <span className="card-shine-ray" aria-hidden="true" />
-              <Wallet size={26} className="text-white relative z-10" />
-            </div>
+            <span className="holo-border-soft inline-flex rounded-full p-[2px] shadow-lg shadow-blue-500/30 active:scale-95 transition-transform">
+              <div className="relative overflow-hidden w-[58px] h-[58px] rounded-full gradient-logo-blue flex items-center justify-center">
+                <span className="card-shine-ray" aria-hidden="true" />
+                <Wallet size={26} className="text-white relative z-10" />
+              </div>
+            </span>
             <span className={cn("text-[10px] font-bold uppercase tracking-wider", activeTab === 'home' ? "text-brand-gold" : "text-brand-navy/75")}>Wallet</span>
           </button>
         ) : vendorQREnabled ? (
@@ -2637,10 +2642,12 @@ export default function App() {
             onClick={() => setShowVendorQR(true)}
             className="flex-1 flex flex-col items-center gap-1 -mb-1 -mt-7 transition-all"
           >
-            <div className="relative overflow-hidden w-[58px] h-[58px] rounded-full gradient-logo-blue shadow-lg shadow-blue-500/30 flex items-center justify-center active:scale-95 transition-transform">
-              <span className="card-shine-ray" aria-hidden="true" />
-              <DollarSign size={26} className="text-white relative z-10" />
-            </div>
+            <span className="holo-border-soft inline-flex rounded-full p-[2px] shadow-lg shadow-blue-500/30 active:scale-95 transition-transform">
+              <div className="relative overflow-hidden w-[58px] h-[58px] rounded-full gradient-logo-blue flex items-center justify-center">
+                <span className="card-shine-ray" aria-hidden="true" />
+                <DollarSign size={26} className="text-white relative z-10" />
+              </div>
+            </span>
             <span className="text-[10px] font-bold uppercase tracking-wider text-brand-navy/75">Issue Points</span>
           </button>
         ) : null}
@@ -4090,7 +4097,7 @@ function NavButton({ active, onClick, icon, label, badgeCount }: { active: boole
     >
       <div className={cn(
         "p-2 rounded-xl transition-all",
-        active ? "gradient-red shadow-md shadow-blue-500/20" : ""
+        active ? "gradient-red nav-pill-holo" : ""
       )}>
         {React.cloneElement(icon as React.ReactElement, { size: 24 })}
       </div>
