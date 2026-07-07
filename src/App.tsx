@@ -27,6 +27,10 @@ import {
   signInWithCredential,
   ConfirmationResult,
   updatePassword,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  reauthenticateWithPopup,
+  verifyBeforeUpdateEmail,
   User as FirebaseUser
 } from 'firebase/auth';
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
@@ -1342,6 +1346,7 @@ export default function App() {
   const [browserConsumerBlocked, setBrowserConsumerBlocked] = useState(false);
   const [nativeVendorBlocked, setNativeVendorBlocked] = useState(false);
   const [emailVerifiedStandalone, setEmailVerifiedStandalone] = useState(false);
+  const [emailChangedStandalone, setEmailChangedStandalone] = useState(false);
   const [profileCollection, setProfileCollection] = useState<'users' | 'vendors' | null>(null);
   const [browsingAsGuest, setBrowsingAsGuest] = useState(false);
   const intendedRoleRef = useRef<'consumer' | 'vendor' | null>(null);
@@ -1815,6 +1820,45 @@ export default function App() {
       });
   }, []);
 
+  // Handle "confirm new email" link opened in-app (from verifyBeforeUpdateEmail)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const mode = params.get('mode');
+    const oobCode = params.get('oobCode');
+    if (mode !== 'verifyAndChangeEmail' || !oobCode) return;
+
+    window.history.replaceState({}, document.title, window.location.pathname);
+
+    applyActionCode(auth, oobCode)
+      .then(async () => {
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          // Link opened on a different device/tab with no active session — the email
+          // is already updated server-side; the signed-in session will pick it up
+          // and sync Firestore next time the app loads (see sync effect below).
+          setEmailChangedStandalone(true);
+          return;
+        }
+        await currentUser.reload();
+        const refreshed = auth.currentUser;
+        if (refreshed && profileCollection) {
+          await updateDoc(doc(db, profileCollection, refreshed.uid), { email: refreshed.email || '' }).catch(() => {});
+        }
+        setEmailChangedStandalone(true);
+      })
+      .catch((err) => {
+        console.error('Email change confirmation failed:', err);
+      });
+  }, [profileCollection]);
+
+  // Keep the Firestore profile's email in sync in case it was changed via a
+  // verification link clicked on a different device/session than this one.
+  useEffect(() => {
+    if (!user || !profile || !profileCollection) return;
+    if (!user.email || user.email === profile.email) return;
+    updateDoc(doc(db, profileCollection, user.uid), { email: user.email }).catch(() => {});
+  }, [user, profile, profileCollection]);
+
   // Handle ?stamp=STORE_ID URL opened by iOS NFC banner or shared link
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -2163,6 +2207,19 @@ export default function App() {
         <div>
           <p className="text-white font-bold text-xl mb-2">Email verified!</p>
           <p className="text-white/70 text-sm max-w-xs">Go back to the Linq app to continue.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (emailChangedStandalone) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gradient-logo-blue px-6 gap-6 text-center">
+        <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={{ fontFamily: 'Poppins, sans-serif', color: '#ffffff' }}>Linq</span>
+        <CheckCircle2 className="w-12 h-12 text-white" />
+        <div>
+          <p className="text-white font-bold text-xl mb-2">Email updated!</p>
+          <p className="text-white/70 text-sm max-w-xs">Sign in with your new email next time. Go back to the Linq app to continue.</p>
         </div>
       </div>
     );
@@ -29171,6 +29228,48 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [legalModal, setLegalModal] = useState<'privacy' | 'terms' | null>(null);
+  const [showChangeEmail, setShowChangeEmail] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [currentPasswordForEmail, setCurrentPasswordForEmail] = useState('');
+  const [changeEmailSaving, setChangeEmailSaving] = useState(false);
+  const [changeEmailError, setChangeEmailError] = useState('');
+  const [changeEmailSent, setChangeEmailSent] = useState(false);
+  const usesPasswordAuth = user.providerData.some(p => p.providerId === 'password');
+
+  const handleChangeEmail = async () => {
+    setChangeEmailError('');
+    if (!newEmail.trim() || !/^\S+@\S+\.\S+$/.test(newEmail.trim())) {
+      setChangeEmailError('Enter a valid email address');
+      return;
+    }
+    setChangeEmailSaving(true);
+    try {
+      if (usesPasswordAuth) {
+        if (!currentPasswordForEmail) {
+          setChangeEmailError('Enter your current password to confirm');
+          setChangeEmailSaving(false);
+          return;
+        }
+        const credential = EmailAuthProvider.credential(user.email || '', currentPasswordForEmail);
+        await reauthenticateWithCredential(user, credential);
+      } else {
+        await reauthenticateWithPopup(user, new GoogleAuthProvider());
+      }
+      await verifyBeforeUpdateEmail(user, newEmail.trim(), emailVerificationActionCodeSettings);
+      setChangeEmailSent(true);
+    } catch (err: any) {
+      const code = err?.code;
+      setChangeEmailError(
+        code === 'auth/wrong-password' ? 'Incorrect password'
+        : code === 'auth/email-already-in-use' ? 'That email is already in use by another account'
+        : code === 'auth/invalid-email' ? 'Enter a valid email address'
+        : code === 'auth/requires-recent-login' ? 'Please log out and back in, then try again'
+        : 'Could not change email — please try again'
+      );
+    } finally {
+      setChangeEmailSaving(false);
+    }
+  };
 
   useEffect(() => {
     if (profile.role !== 'vendor') return;
@@ -29354,19 +29453,64 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
           </div>
         </div>
 
+        {/* Account email — used to sign in, applies to both roles */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Account Email</label>
+            {!showChangeEmail && (
+              <button
+                onClick={() => { setShowChangeEmail(true); setNewEmail(''); setCurrentPasswordForEmail(''); setChangeEmailError(''); setChangeEmailSent(false); }}
+                className="text-[11px] font-bold text-brand-gold"
+              >
+                Change
+              </button>
+            )}
+          </div>
+          {!showChangeEmail ? (
+            <div className="w-full px-5 py-4 rounded-2xl bg-white border border-brand-navy/10 text-sm font-medium text-brand-navy/75 flex items-center gap-2">
+              <Mail size={15} className="text-brand-navy/72 shrink-0" />
+              <span className="truncate">{profile.email}</span>
+            </div>
+          ) : changeEmailSent ? (
+            <div className="w-full px-5 py-4 rounded-2xl bg-green-50 border border-green-200 text-sm text-green-700 space-y-2">
+              <p className="font-bold">Check {newEmail}</p>
+              <p className="text-xs leading-relaxed">Click the verification link we sent to confirm the change. Your login email updates once you do.</p>
+              <button onClick={() => setShowChangeEmail(false)} className="text-xs font-bold text-green-700 underline">Done</button>
+            </div>
+          ) : (
+            <div className="space-y-2 bg-white p-4 rounded-2xl border border-brand-navy/10">
+              <input
+                type="email"
+                value={newEmail}
+                onChange={e => setNewEmail(e.target.value)}
+                placeholder="New email address"
+                className="w-full px-4 py-3 rounded-xl bg-brand-navy/5 border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+              />
+              {usesPasswordAuth && (
+                <input
+                  type="password"
+                  value={currentPasswordForEmail}
+                  onChange={e => setCurrentPasswordForEmail(e.target.value)}
+                  placeholder="Current password"
+                  className="w-full px-4 py-3 rounded-xl bg-brand-navy/5 border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+                />
+              )}
+              {changeEmailError && <p className="text-xs text-red-500 font-medium">{changeEmailError}</p>}
+              <div className="flex gap-2">
+                <button onClick={handleChangeEmail} disabled={changeEmailSaving} className="flex-1 py-3 rounded-xl bg-brand-navy text-white font-bold text-sm disabled:opacity-50 active:scale-[0.98] transition-all">
+                  {changeEmailSaving ? 'Sending…' : 'Send verification link'}
+                </button>
+                <button onClick={() => setShowChangeEmail(false)} className="px-4 py-3 rounded-xl text-brand-navy/75 font-bold text-sm">Cancel</button>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Consumer info fields — read-only */}
         {profile.role !== 'vendor' && (
           <div className="space-y-4">
             <SectionLabel icon={<UserIcon size={14} className="text-brand-gold" />} label="Your Information" />
             <div className="space-y-3">
-              {/* Email */}
-              <div className="flex items-center justify-between bg-white px-5 py-4 rounded-2xl border border-brand-navy/10">
-                <div className="flex items-center gap-3">
-                  <Mail size={15} className="text-brand-navy/72 shrink-0" />
-                  <span className="text-xs font-bold text-brand-navy/75 uppercase tracking-widest">Email</span>
-                </div>
-                <span className="text-sm text-brand-navy/70 font-medium truncate max-w-[160px]">{profile.email}</span>
-              </div>
               {/* Gender */}
               <div className="flex items-center justify-between bg-white px-5 py-4 rounded-2xl border border-brand-navy/10">
                 <div className="flex items-center gap-3">
