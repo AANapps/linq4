@@ -1342,7 +1342,6 @@ export default function App() {
   const [browserConsumerBlocked, setBrowserConsumerBlocked] = useState(false);
   const [nativeVendorBlocked, setNativeVendorBlocked] = useState(false);
   const [emailVerifiedStandalone, setEmailVerifiedStandalone] = useState(false);
-  const [accountDeleted, setAccountDeleted] = useState(false);
   const [profileCollection, setProfileCollection] = useState<'users' | 'vendors' | null>(null);
   const [browsingAsGuest, setBrowsingAsGuest] = useState(false);
   const intendedRoleRef = useRef<'consumer' | 'vendor' | null>(null);
@@ -1943,10 +1942,6 @@ export default function App() {
     if (!user) return;
     const uid = user.uid;
 
-    // Cascading deletes across many collections can take a while — show the
-    // user confirmation immediately and let cleanup finish in the background.
-    setAccountDeleted(true);
-
     const tryDelete = async (fn: () => Promise<void>) => { try { await fn(); } catch (e) { console.warn('Delete step skipped:', e); } };
 
     // Global posts authored by user (+ their comments subcollections)
@@ -2143,25 +2138,6 @@ export default function App() {
     }
     setNeedsOnboarding(false);
   };
-
-  if (accountDeleted) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gradient-logo-blue px-6 gap-6 text-center">
-        <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={{ fontFamily: 'Poppins, sans-serif', color: '#ffffff' }}>Linq</span>
-        <CheckCircle2 className="w-12 h-12 text-white" />
-        <div>
-          <p className="text-white font-bold text-xl mb-2">Account deleted</p>
-          <p className="text-white/70 text-sm max-w-xs">Your account and data have been permanently removed. Thanks for using Linq.</p>
-        </div>
-        <button
-          onClick={() => window.location.reload()}
-          className="mt-2 px-6 py-3 bg-white/15 rounded-2xl text-white font-bold text-sm active:scale-95 transition-transform"
-        >
-          Done
-        </button>
-      </div>
-    );
-  }
 
   if (loading) {
     return (
