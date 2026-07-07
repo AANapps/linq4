@@ -3275,8 +3275,8 @@ function OnboardingScreen({ user, onComplete }: {
   const skipRoleStep = isWeb || isNativeIOS;
   const [role, setRole] = React.useState<'consumer' | 'vendor' | null>(isWeb ? 'vendor' : isNativeIOS ? 'consumer' : null);
   const isVendor = role === 'vendor';
-  // Step 0 = role selection (Android native only); vendor steps 1-7; consumer steps 1-5 (privacy is always last)
-  const TOTAL_STEPS = isVendor ? 8 : 6;
+  // Step 0 = role selection (Android native only); vendor steps 1-7; consumer steps 1-3 (name+handle, location, privacy — always last)
+  const TOTAL_STEPS = isVendor ? 8 : 4;
 
   const [step, setStep] = React.useState(skipRoleStep ? 1 : 0);
   const [saving, setSaving] = React.useState(false);
@@ -3288,8 +3288,6 @@ function OnboardingScreen({ user, onComplete }: {
   const [handle, setHandle] = React.useState('');
   const [handleError, setHandleError] = React.useState('');
   const [handleChecking, setHandleChecking] = React.useState(false);
-  const [gender, setGender] = React.useState('');
-  const [birthday, setBirthday] = React.useState('');
 
   // Vendor fields
   const [businessName, setBusinessName] = React.useState('');
@@ -3309,7 +3307,6 @@ function OnboardingScreen({ user, onComplete }: {
   const [locationStatus, setLocationStatus] = React.useState<'idle' | 'requesting' | 'granted' | 'denied'>('idle');
   const [cardType, setCardType] = React.useState<'stamp' | 'spend' | 'visit' | null>(null);
 
-  const GENDERS = ['Male', 'Female', 'Non-binary', 'Prefer not to say'];
   const CATEGORIES: Category[] = [
   'Food', 'Bubble Tea', 'Coffee', 'Drinks', 'Juice', 'Smoothies', 'Bakery',
   'Beauty', 'Hair Salon', 'Nail Salon', 'Spa',
@@ -3363,8 +3360,6 @@ function OnboardingScreen({ user, onComplete }: {
       : step === 5 ? addrLine1.trim().length > 0 && addrTown.trim().length > 0 && phone.trim().length > 0
       : locationStatus === 'granted' || locationStatus === 'denied'
     : step === 1 ? fullName.trim().length > 0 && handle.trim().length >= 3 && !handleError && !handleChecking
-      : step === 2 ? !!gender
-      : step === 3 ? !!birthday
       : locationStatus === 'granted' || locationStatus === 'denied';
 
   const validateHandle = (val: string) => {
@@ -3394,7 +3389,7 @@ function OnboardingScreen({ user, onComplete }: {
     if (isVendor) {
       await onComplete({ type: 'vendor', businessName, country, companyNumber, category, cardType: cardType ?? 'stamp', addrLine1, addrLine2, addrTown, addrState, addrPostcode, phone, description, location: locationData });
     } else {
-      await onComplete({ type: 'consumer', name: fullName.trim(), handle, gender, birthday, location: locationData });
+      await onComplete({ type: 'consumer', name: fullName.trim(), handle, gender: '', birthday: '', location: locationData });
     }
   };
 
@@ -3447,46 +3442,7 @@ function OnboardingScreen({ user, onComplete }: {
         </div>
       </div>
     </>,
-    // Step 1 — Gender
-    <>
-      <div className="w-14 h-14 bg-brand-gold/10 rounded-full flex items-center justify-center mx-auto mb-4">
-        <UserCheck className="w-7 h-7 text-brand-gold" />
-      </div>
-      <h2 className="font-display font-bold text-2xl text-brand-navy mb-1">What's your gender?</h2>
-      <p className="text-sm text-brand-navy/75 mb-8">Help us personalise your experience</p>
-      <div className="w-full space-y-3">
-        {GENDERS.map(g => (
-          <button
-            key={g}
-            onClick={() => setGender(g)}
-            className={`w-full py-4 px-5 rounded-2xl font-bold text-sm flex items-center justify-between transition-all active:scale-[0.98] ${
-              gender === g ? 'bg-brand-navy text-white shadow-lg shadow-brand-navy/20' : 'bg-white border-2 border-brand-navy/10 text-brand-navy hover:border-brand-gold/40'
-            }`}
-          >
-            {g}
-            {gender === g && <Sparkles size={16} className="text-brand-gold" />}
-          </button>
-        ))}
-      </div>
-    </>,
-    // Step 1 — Birthday
-    <>
-      <div className="w-14 h-14 bg-brand-gold/10 rounded-full flex items-center justify-center mx-auto mb-4">
-        <Calendar className="w-7 h-7 text-brand-gold" />
-      </div>
-      <h2 className="font-display font-bold text-2xl text-brand-navy mb-1">When's your birthday?</h2>
-      <p className="text-sm text-brand-navy/75 mb-8">Get exclusive birthday rewards from businesses</p>
-      <div className="w-full">
-        <input
-          type="date"
-          value={birthday}
-          onChange={e => setBirthday(e.target.value)}
-          max={new Date().toISOString().split('T')[0]}
-          className="w-full px-5 py-4 rounded-2xl bg-white border-2 border-brand-navy/10 text-brand-navy font-bold text-base focus:outline-none focus:border-brand-gold/60 text-center"
-        />
-      </div>
-    </>,
-    // Step 2 — Location
+    // Step 1 — Location
     <>
       <div className="w-14 h-14 bg-brand-gold/10 rounded-full flex items-center justify-center mx-auto mb-4">
         <MapPin className="w-7 h-7 text-brand-gold" />
@@ -3495,7 +3451,7 @@ function OnboardingScreen({ user, onComplete }: {
       <p className="text-sm text-brand-navy/75 mb-8">Allow location access to discover businesses around you</p>
       <LocationStep locationData={locationData} locationStatus={locationStatus} onRequest={requestLocation} />
     </>,
-    // Step 3 — Privacy consent
+    // Step 2 — Privacy consent
     <div className="w-full text-left space-y-4">
       <div className="w-14 h-14 bg-brand-navy/8 rounded-full flex items-center justify-center mx-auto mb-4">
         <ShieldCheck className="w-7 h-7 text-brand-navy" />
