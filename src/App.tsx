@@ -29205,6 +29205,9 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
   const [storeLogo, setStoreLogo] = useState('');
   const [logoFetchError, setLogoFetchError] = useState('');
   const [logoUploading, setLogoUploading] = useState(false);
+  const [storeCover, setStoreCover] = useState('');
+  const [coverFetchError, setCoverFetchError] = useState('');
+  const [coverUploading, setCoverUploading] = useState(false);
   const [storeLocation, setStoreLocation] = useState('');
   const [storeLocations, setStoreLocations] = useState<Array<{ id: string; label: string; line1: string; line2: string; town: string; state: string; postcode: string; lat?: number; lng?: number }>>([]);
   const [googleReviewUrl, setGoogleReviewUrl] = useState('');
@@ -29220,7 +29223,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
   const initialValuesRef = useRef({
     name: profile.name || '', gender: profile.gender || '', birthday: profile.birthday || '', privacyMode: profile.privacyMode ?? false,
     storeName: '', storeReward: '', storeCategory: 'Food' as Category,
-    storeTheme: '#2563EB', storeSecondaryColor: '#ffffff', storeLogo: '',
+    storeTheme: '#2563EB', storeSecondaryColor: '#ffffff', storeLogo: '', storeCover: '',
     googleReviewUrl: '', storeEmail: '', storePhone: '', storeDescription: '', storeWebsite: '',
     visibility: '{}', storeLocations: '[]',
   });
@@ -29286,6 +29289,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
         const initTheme = s.theme || '#2563EB';
         const initSecondaryColor = s.stampBorderColor || '#ffffff';
         const initLogo = s.logoUrl || '';
+        const initCover = s.coverUrl || '';
         const initGoogleReviewUrl = s.googleReviewUrl || '';
         const initVisibility = { members: true, stamps: true, activeCards: true, returnRate: true, followers: true, ...(s.visibilitySettings || {}) };
         const emptyLoc = { label: '', line1: '', line2: '', town: '', state: '', postcode: '' };
@@ -29298,6 +29302,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
         setStoreTheme(initTheme);
         setStoreSecondaryColor(initSecondaryColor);
         setStoreLogo(initLogo);
+        setStoreCover(initCover);
         setStoreLocation(s.location || s.address || '');
         setStoreLocations(initLocs);
         setGoogleReviewUrl(initGoogleReviewUrl);
@@ -29309,7 +29314,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
         initialValuesRef.current = {
           ...initialValuesRef.current,
           storeName: initName, storeReward: initReward, storeCategory: initCategory,
-          storeTheme: initTheme, storeSecondaryColor: initSecondaryColor, storeLogo: initLogo,
+          storeTheme: initTheme, storeSecondaryColor: initSecondaryColor, storeLogo: initLogo, storeCover: initCover,
           googleReviewUrl: initGoogleReviewUrl,
           storeEmail: s.email || '', storePhone: s.phone || '', storeDescription: s.description || '', storeWebsite: (s as any).website || '',
           visibility: JSON.stringify(initVisibility),
@@ -29333,6 +29338,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
       storeTheme !== initialValuesRef.current.storeTheme ||
       storeSecondaryColor !== initialValuesRef.current.storeSecondaryColor ||
       storeLogo !== initialValuesRef.current.storeLogo ||
+      storeCover !== initialValuesRef.current.storeCover ||
       googleReviewUrl !== initialValuesRef.current.googleReviewUrl ||
       storeEmail !== initialValuesRef.current.storeEmail ||
       storePhone !== initialValuesRef.current.storePhone ||
@@ -29366,6 +29372,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
         await updateDoc(doc(db, 'stores', store.id), {
           name: storeName, reward: storeReward, category: storeCategory, theme: storeTheme, stampBorderColor: storeSecondaryColor,
           logoUrl: storeLogo,
+          coverUrl: storeCover,
           address: primaryAddr,
           location: primaryAddr,
           ...(primary?.lat != null ? { lat: primary.lat, lng: primary.lng } : {}),
@@ -29381,7 +29388,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
 
       initialValuesRef.current = {
         name, gender, birthday, privacyMode,
-        storeName, storeReward, storeCategory, storeTheme, storeSecondaryColor, storeLogo,
+        storeName, storeReward, storeCategory, storeTheme, storeSecondaryColor, storeLogo, storeCover,
         googleReviewUrl,
         storeEmail, storePhone, storeDescription, storeWebsite,
         visibility: JSON.stringify(visibility),
@@ -29657,6 +29664,44 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
               {!storeLogo && (
                 <input value={storeLogo} onChange={e => setStoreLogo(e.target.value)} placeholder="Or paste logo URL directly..."
                   className="w-full px-5 py-4 rounded-2xl bg-white border border-brand-navy/10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold/30" />
+              )}
+            </div>
+
+            {/* Cover image */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-brand-navy/80 uppercase tracking-widest">Cover Image</label>
+              <p className="text-[11px] text-brand-navy/60 -mt-1">Shown behind your loyalty card and store profile</p>
+
+              <div className="relative w-full h-28 rounded-2xl overflow-hidden bg-brand-navy/5 border border-brand-navy/10">
+                {storeCover && (
+                  <img src={storeCover} alt="" className="w-full h-full object-cover" onError={e => (e.currentTarget.style.display = 'none')} />
+                )}
+                <label className={cn('absolute inset-0 flex items-center justify-center bg-black/25 cursor-pointer transition-all', coverUploading ? 'opacity-50 pointer-events-none' : 'hover:bg-black/35 active:scale-[0.98]')}>
+                  <span className="text-white text-xs font-bold">
+                    {coverUploading ? 'Uploading...' : storeCover ? '📁 Replace cover' : '📁 Upload cover image'}
+                  </span>
+                  <input type="file" accept="image/*" className="hidden" onChange={async e => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setCoverUploading(true);
+                    setCoverFetchError('');
+                    try {
+                      const blob = await compressImage(file, 1200);
+                      const path = `store_logos/${user.uid}/cover_${Date.now()}.webp`;
+                      const snap = await uploadBytes(storageRef(storage, path), blob, { contentType: 'image/webp' });
+                      const url = await getDownloadURL(snap.ref);
+                      setStoreCover(url);
+                    } catch {
+                      setCoverFetchError('Upload failed — check your connection and try again.');
+                    } finally {
+                      setCoverUploading(false);
+                    }
+                  }} />
+                </label>
+              </div>
+              {coverFetchError && <p className="text-xs text-red-500 font-medium">{coverFetchError}</p>}
+              {storeCover && (
+                <button onClick={() => setStoreCover('')} className="text-[11px] font-bold text-red-500">Remove cover image</button>
               )}
             </div>
 
