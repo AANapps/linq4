@@ -2255,7 +2255,6 @@ export default function App() {
     <div className={cn("w-full relative", !isVendor && !isNativeIOS && "md:max-w-sm")} style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 6rem)' }}>
       {/* Header */}
       <header className="glass-panel sticky top-0 z-50 px-5 pb-3.5 flex items-center justify-between relative" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.875rem)' }}>
-        <span className="holo-hairline bottom-0" aria-hidden="true" />
         <button
           onClick={() => setShowCreatePost(true)}
           className="w-9 h-9 gradient-red rounded-xl flex items-center justify-center shadow-md shadow-blue-500/20 active:scale-95 transition-transform"
