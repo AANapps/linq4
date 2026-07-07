@@ -28412,6 +28412,20 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         </div>
       </header>
 
+      {!profile.birthday && (
+        <button
+          onClick={() => setShowProfileSettings(true)}
+          className="w-full flex items-center gap-3 px-5 py-3.5 rounded-2xl bg-brand-gold/10 border border-brand-gold/20 active:scale-[0.98] transition-transform text-left"
+        >
+          <span className="w-9 h-9 rounded-full bg-brand-gold/15 flex items-center justify-center shrink-0 text-lg leading-none">🎂</span>
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-brand-navy text-sm">Complete your profile</p>
+            <p className="text-xs text-brand-navy/75">Add your birthday to unlock free rewards</p>
+          </div>
+          <ChevronRight size={16} className="text-brand-navy/40 shrink-0" />
+        </button>
+      )}
+
       {settingsModal}
 
       {/* Badge detail sheet */}
@@ -29124,6 +29138,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
   const [name, setName] = useState(profile.name || '');
   const [handle, setHandle] = useState(profile.handle || user.email?.split('@')[0] || '');
   const [gender, setGender] = useState(profile.gender || '');
+  const [birthday, setBirthday] = useState(profile.birthday || '');
   const [store, setStore] = useState<StoreProfile | null>(null);
   const [storeName, setStoreName] = useState('');
   const [storeReward, setStoreReward] = useState('');
@@ -29146,7 +29161,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
   const [saved, setSaved] = useState(false);
   const storeInitializedRef = useRef(false);
   const initialValuesRef = useRef({
-    name: profile.name || '', gender: profile.gender || '', privacyMode: profile.privacyMode ?? false,
+    name: profile.name || '', gender: profile.gender || '', birthday: profile.birthday || '', privacyMode: profile.privacyMode ?? false,
     storeName: '', storeReward: '', storeCategory: 'Food' as Category,
     storeTheme: '#2563EB', storeSecondaryColor: '#ffffff', storeLogo: '',
     googleReviewUrl: '', storeEmail: '', storePhone: '', storeDescription: '', storeWebsite: '',
@@ -29210,6 +29225,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
   const isDirty =
     name !== initialValuesRef.current.name ||
     gender !== initialValuesRef.current.gender ||
+    birthday !== initialValuesRef.current.birthday ||
     privacyMode !== initialValuesRef.current.privacyMode ||
     (profile.role === 'vendor' && (
       storeName !== initialValuesRef.current.storeName ||
@@ -29230,7 +29246,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
   const handleSave = async () => {
     setSaving(true);
     try {
-      const profileUpdates: any = { name, privacyMode, ...(gender ? { gender } : {}) };
+      const profileUpdates: any = { name, privacyMode, ...(gender ? { gender } : {}), ...(birthday ? { birthday } : {}) };
       await updateDoc(doc(db, profileCollection, profile.uid), profileUpdates);
 
       if (profile.role === 'vendor' && store) {
@@ -29265,7 +29281,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
       }
 
       initialValuesRef.current = {
-        name, gender, privacyMode,
+        name, gender, birthday, privacyMode,
         storeName, storeReward, storeCategory, storeTheme, storeSecondaryColor, storeLogo,
         googleReviewUrl,
         storeEmail, storePhone, storeDescription, storeWebsite,
@@ -29360,14 +29376,21 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
                 <span className="text-sm text-brand-navy/70 font-medium">{profile.gender || '—'}</span>
               </div>
               {/* Birthday */}
-              <div className="flex items-center justify-between bg-white px-5 py-4 rounded-2xl border border-brand-navy/10">
-                <div className="flex items-center gap-3">
+              <div className="flex items-center justify-between bg-white px-5 py-4 rounded-2xl border border-brand-navy/10 gap-3">
+                <div className="flex items-center gap-3 shrink-0">
                   <Calendar size={15} className="text-brand-navy/72 shrink-0" />
-                  <span className="text-xs font-bold text-brand-navy/75 uppercase tracking-widest">Birthday</span>
+                  <div>
+                    <span className="text-xs font-bold text-brand-navy/75 uppercase tracking-widest">Birthday</span>
+                    {!birthday && <p className="text-[10px] text-brand-gold font-semibold mt-0.5">Add it to unlock free birthday gifts</p>}
+                  </div>
                 </div>
-                <span className="text-sm text-brand-navy/70 font-medium">
-                  {profile.birthday ? new Date(profile.birthday).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
-                </span>
+                <input
+                  type="date"
+                  value={birthday}
+                  onChange={e => setBirthday(e.target.value)}
+                  max={new Date().toISOString().split('T')[0]}
+                  className="text-sm text-brand-navy/70 font-medium text-right bg-transparent focus:outline-none min-w-0"
+                />
               </div>
               {/* Location */}
               <div className="flex items-center justify-between bg-white px-5 py-4 rounded-2xl border border-brand-navy/10">
@@ -31638,6 +31661,9 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
   const [showAllProd, setShowAllProd] = useState(false);
   const [showOffersModal, setShowOffersModal] = useState(false);
   const [showBirthdaySheet, setShowBirthdaySheet] = useState(false);
+  const [showBirthdayEntry, setShowBirthdayEntry] = useState(false);
+  const [birthdayEntryValue, setBirthdayEntryValue] = useState('');
+  const [savingBirthdayEntry, setSavingBirthdayEntry] = useState(false);
   const [selectedOffer, setSelectedOffer] = useState<StoreOffer | null>(null);
   const [dealsBdayCountdown, setDealsBdayCountdown] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
   const [storeDistances, setStoreDistances] = useState<Map<string, number>>(new Map());
@@ -31866,7 +31892,11 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
 
       {/* Birthday gifts banner */}
       <button
-        onClick={() => setShowBirthdaySheet(true)}
+        onClick={() => {
+          if (!currentUser) { onRequireAuth?.(); return; }
+          if (!currentProfile?.birthday) { setBirthdayEntryValue(''); setShowBirthdayEntry(true); return; }
+          setShowBirthdaySheet(true);
+        }}
         className="w-full flex items-center gap-4 px-5 py-4 rounded-[1.5rem] active:scale-[0.98] transition-transform relative overflow-hidden"
         style={{ background: 'linear-gradient(135deg, var(--brand-g1) 0%, var(--brand-g2) 55%, var(--brand-g3) 100%)' }}
       >
@@ -31898,9 +31928,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
               {dealsBdayCountdown.days}d {dealsBdayCountdown.hours}h {dealsBdayCountdown.mins}m {dealsBdayCountdown.secs}s
             </p>
           ) : (
-            <p className="text-white/70 text-xs mt-0.5">
-              {birthdayOffers.length > 0 ? `${birthdayOffers.length} vendor${birthdayOffers.length !== 1 ? 's' : ''} with free birthday gifts` : 'Free gifts from local vendors on your birthday'}
-            </p>
+            <p className="text-white/70 text-xs mt-0.5">Enter your birthday to get free rewards</p>
           )}
         </div>
         <ChevronRight size={18} className="text-white/60 shrink-0" />
@@ -32084,6 +32112,56 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
                   </div>
                 </button>
               ))}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+
+    {/* Enter birthday prompt — shown when tapping the birthday banner with no birthday saved */}
+    <AnimatePresence>
+      {showBirthdayEntry && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[300] bg-black/50 backdrop-blur-sm flex flex-col justify-end max-w-md mx-auto"
+          onClick={() => setShowBirthdayEntry(false)}
+        >
+          <motion.div
+            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+            transition={{ type: 'spring', stiffness: 520, damping: 38 }}
+            className="bg-white rounded-t-[2.5rem] flex flex-col overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="px-6 pt-8 pb-8 space-y-5">
+              <div className="text-center">
+                <span className="text-4xl leading-none block mb-3">🎂</span>
+                <h3 className="font-display font-bold text-xl text-brand-navy">Add your birthday</h3>
+                <p className="text-sm text-brand-navy/75 mt-1">Enter your birthday to get free rewards from local vendors</p>
+              </div>
+              <input
+                type="date"
+                value={birthdayEntryValue}
+                onChange={e => setBirthdayEntryValue(e.target.value)}
+                max={new Date().toISOString().split('T')[0]}
+                className="w-full px-5 py-4 rounded-2xl bg-brand-navy/5 border-2 border-brand-navy/10 text-brand-navy font-bold text-base focus:outline-none focus:border-brand-gold/60 text-center"
+              />
+              <button
+                onClick={async () => {
+                  if (!birthdayEntryValue || !currentUser) return;
+                  setSavingBirthdayEntry(true);
+                  try {
+                    await updateDoc(doc(db, 'users', currentUser.uid), { birthday: birthdayEntryValue });
+                    setShowBirthdayEntry(false);
+                    setShowBirthdaySheet(true);
+                  } finally {
+                    setSavingBirthdayEntry(false);
+                  }
+                }}
+                disabled={!birthdayEntryValue || savingBirthdayEntry}
+                className="w-full py-4 rounded-2xl bg-brand-navy text-white font-bold text-sm disabled:opacity-40 active:scale-[0.98] transition-all"
+              >
+                {savingBirthdayEntry ? 'Saving…' : 'Save birthday'}
+              </button>
             </div>
           </motion.div>
         </motion.div>
