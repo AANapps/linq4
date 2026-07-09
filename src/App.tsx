@@ -12765,11 +12765,12 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   // Triggered by the Scan button on any card — starts native NFC scan directly
   const handleNFCScan = useCallback(async () => {
     if (nfcPhase !== 'idle') return;
-    const isNative = ['ios', 'android'].includes(Capacitor.getPlatform());
+    // iOS shows its own native NFC sheet. Everyone else (Android + Web NFC)
+    // has no system UI for scanning, so we show our own strip while waiting.
+    const isIOS = Capacitor.getPlatform() === 'ios';
     const ctrl = new AbortController();
     nfcAbortRef.current = ctrl;
-    // Web NFC (Android Chrome): show scanning strip while waiting. Native: OS handles its own UI.
-    if (!isNative) { setNfcPhase('scanning'); setNfcMsg(''); }
+    if (!isIOS) { setNfcPhase('scanning'); setNfcMsg(''); }
 
     const scanResult = await scanNFCTag('Hold near the store NFC tag to collect your stamp', ctrl);
 
@@ -14729,8 +14730,9 @@ function WelcomeModal({ uid: _uid, step, onNext, onDone }: { uid: string; step: 
 }
 
 // Slim floating banner — replaces the old full-screen NFCStampModal popup.
-// Native iOS/Android: the OS shows its own NFC sheet; we only show feedback after.
-// Web NFC (Android Chrome): shows a "Hold near tag" strip while scanning.
+// Native iOS: the OS shows its own NFC sheet; we only show feedback after.
+// Native Android + Web NFC (Android Chrome): shows a "Hold near tag" strip while scanning,
+// since reader mode / Web NFC has no system UI of its own.
 function NFCScanOverlay({ phase, msg, onCancel }: {
   phase: 'scanning' | 'processing' | 'success' | 'error';
   msg: string;
@@ -29328,6 +29330,12 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
         const credential = EmailAuthProvider.credential(user.email || '', currentPasswordForEmail);
         await reauthenticateWithCredential(user, credential);
       } else {
+        // reauthenticateWithPopup is a Web-SDK-only API — it doesn't work inside
+        // the native Capacitor WebView (no window to pop up), so fail fast with
+        // a clear message rather than let it hang or throw an opaque native error.
+        if (Capacitor.isNativePlatform()) {
+          throw new Error('GOOGLE_REAUTH_UNAVAILABLE');
+        }
         await reauthenticateWithPopup(user, new GoogleAuthProvider());
       }
       await verifyBeforeUpdateEmail(user, newEmail.trim(), emailVerificationActionCodeSettings);
@@ -29339,6 +29347,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
         : code === 'auth/email-already-in-use' ? 'That email is already in use by another account'
         : code === 'auth/invalid-email' ? 'Enter a valid email address'
         : code === 'auth/requires-recent-login' ? 'Please log out and back in, then try again'
+        : err?.message === 'GOOGLE_REAUTH_UNAVAILABLE' ? 'Changing email for Google accounts isn\'t supported in the app yet — please contact support'
         : 'Could not change email — please try again'
       );
     } finally {

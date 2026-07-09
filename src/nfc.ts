@@ -59,7 +59,7 @@ function extractStoreId(records: NdefRecord[]): string | null {
 
 // ── Native NFC (Capacitor — iOS + Android) ────────────────────────────────────
 
-async function nativeScan(alertMessage: string): Promise<NFCScanResult> {
+async function nativeScan(alertMessage: string, signal?: AbortSignal): Promise<NFCScanResult> {
   const { CapacitorNfc } = await import('@capgo/capacitor-nfc');
 
   return new Promise(async (resolve) => {
@@ -67,6 +67,7 @@ async function nativeScan(alertMessage: string): Promise<NFCScanResult> {
     const finish = (result: NFCScanResult) => {
       if (settled) return;
       settled = true;
+      signal?.removeEventListener('abort', onAbort);
       resolve(result);
     };
 
@@ -82,6 +83,14 @@ async function nativeScan(alertMessage: string): Promise<NFCScanResult> {
         ? { ok: true, storeId }
         : { ok: false, error: 'Not a valid Linq store tag.' });
     });
+
+    const onAbort = async () => {
+      await listener.remove();
+      await CapacitorNfc.stopScanning().catch(() => {});
+      finish({ ok: false, error: 'Scan cancelled.', cancelled: true });
+    };
+    signal?.addEventListener('abort', onAbort);
+    if (signal?.aborted) { onAbort(); return; }
 
     try {
       await CapacitorNfc.startScanning({
@@ -141,8 +150,10 @@ function webNFCScan(signal: AbortSignal): Promise<NFCScanResult> {
 /**
  * Scan an NFC tag and return the store ID encoded in it.
  *
- * - iOS / Android (Capacitor build): invokes the native NFC system sheet.
+ * - iOS (Capacitor build): invokes the native NFC system sheet.
  *   The OS handles its own scanning UI; no custom popup is needed.
+ * - Android (Capacitor build): reader mode runs headlessly with no system UI,
+ *   so the caller must show its own "Hold near tag" indicator while awaiting.
  * - Android Chrome (web): uses the Web NFC NDEFReader API.
  *   Caller should show a "Hold near tag" indicator while awaiting.
  * - Other browsers: immediately returns an error.
@@ -154,7 +165,7 @@ export async function scanNFCTag(
   const platform = Capacitor.getPlatform();
 
   if (platform === 'ios' || platform === 'android') {
-    return nativeScan(alertMessage);
+    return nativeScan(alertMessage, abortController?.signal);
   }
 
   if ('NDEFReader' in window) {
