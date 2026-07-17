@@ -2849,7 +2849,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
   };
 
   React.useEffect(() => {
-    if (Capacitor.getPlatform() === 'ios') return;
+    if (Capacitor.isNativePlatform()) return;
     if (phoneMode !== 'phone' && phoneMode !== 'email' && phoneMode !== 'email-signup') return;
     const timer = setTimeout(() => {
       if (recaptchaVerifier.current) return;
@@ -2867,21 +2867,30 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
     if (!phone.trim()) { setError('Enter your phone number'); return; }
     setLoading(true);
     try {
-      if (Capacitor.getPlatform() === 'ios') {
-        const sinceLaunch = Date.now() - APP_LAUNCH_TIME;
-        if (sinceLaunch < IOS_APNS_WARMUP_MS) {
-          await new Promise(r => setTimeout(r, IOS_APNS_WARMUP_MS - sinceLaunch));
+      if (Capacitor.isNativePlatform()) {
+        if (Capacitor.getPlatform() === 'ios') {
+          const sinceLaunch = Date.now() - APP_LAUNCH_TIME;
+          if (sinceLaunch < IOS_APNS_WARMUP_MS) {
+            await new Promise(r => setTimeout(r, IOS_APNS_WARMUP_MS - sinceLaunch));
+          }
         }
-        // On iOS the native plugin resolves signInWithPhoneNumber() with no value —
-        // the verification ID is delivered separately via the phoneCodeSent event.
-        const verificationId = await new Promise<string>((resolve, reject) => {
-          const cleanup = () => { codeSentHandle?.remove(); failedHandle?.remove(); };
+        // On native platforms the plugin resolves signInWithPhoneNumber() with no value —
+        // the verification ID is delivered separately via the phoneCodeSent event. On
+        // Android the code can also be auto-verified on-device (no SMS entry needed),
+        // which fires phoneVerificationCompleted instead and signs the user in directly.
+        const verificationId = await new Promise<string | null>((resolve, reject) => {
+          const cleanup = () => { codeSentHandle?.remove(); completedHandle?.remove(); failedHandle?.remove(); };
           let codeSentHandle: { remove: () => void } | undefined;
+          let completedHandle: { remove: () => void } | undefined;
           let failedHandle: { remove: () => void } | undefined;
           FirebaseAuthentication.addListener('phoneCodeSent', (event) => {
             cleanup();
             resolve(event.verificationId);
           }).then((h) => { codeSentHandle = h; });
+          FirebaseAuthentication.addListener('phoneVerificationCompleted', () => {
+            cleanup();
+            resolve(null);
+          }).then((h) => { completedHandle = h; });
           FirebaseAuthentication.addListener('phoneVerificationFailed', (event) => {
             cleanup();
             reject(new Error(event.message));
@@ -2890,8 +2899,10 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
             phoneNumber: toE164(dialCode, phone.trim()),
           }).catch((e) => { cleanup(); reject(e); });
         });
-        setNativeVerificationId(verificationId);
-        setPhoneMode('otp');
+        if (verificationId) {
+          setNativeVerificationId(verificationId);
+          setPhoneMode('otp');
+        }
       } else {
         if (!recaptchaVerifier.current) {
           try {
@@ -2910,7 +2921,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
       }
     } catch (e: any) {
       setError(e.message || 'Failed to send code. Check the number and try again.');
-      if (Capacitor.getPlatform() !== 'ios') {
+      if (!Capacitor.isNativePlatform()) {
         recaptchaVerifier.current?.clear();
         recaptchaVerifier.current = null;
       }
@@ -2924,7 +2935,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
     if (!otp.trim()) { setError('Enter the 6-digit code'); return; }
     setLoading(true);
     try {
-      if (Capacitor.getPlatform() === 'ios') {
+      if (Capacitor.isNativePlatform()) {
         if (!nativeVerificationId) { setError('Session expired — go back and try again.'); return; }
         const credential = PhoneAuthProvider.credential(nativeVerificationId, otp.trim());
         await signInWithCredential(auth, credential);
