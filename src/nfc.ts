@@ -101,7 +101,15 @@ async function nativeScan(alertMessage: string, signal?: AbortSignal): Promise<N
       await listener.remove();
       console.error('[NFC] startScanning error:', err);
       if (!settled) {
-        finish({ ok: false, error: err?.message ?? 'Could not start NFC scan.', cancelled: true });
+        // A real native failure (NFC off, no chip, etc.) — surface it.
+        // Do NOT mark as `cancelled`: that flag means the user backed out,
+        // and callers silently reset to idle for it with no message shown.
+        const message = err?.code === 'NFC_DISABLED'
+          ? 'NFC is turned off. Enable it in your phone Settings to collect stamps.'
+          : err?.code === 'NO_NFC'
+          ? 'This device does not support NFC.'
+          : err?.message ?? 'Could not start NFC scan.';
+        finish({ ok: false, error: message });
       }
     }
   });
