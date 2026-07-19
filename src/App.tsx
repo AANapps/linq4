@@ -2971,6 +2971,31 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
         </div>
       )}
 
+      {phoneMode === 'phone' && !Capacitor.isNativePlatform() && (
+        <div className="max-w-xs mx-auto w-full space-y-3" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.5rem)' }}>
+          <p className="text-white/70 text-sm text-center font-bold">Are you a customer? Get the app</p>
+          <a
+            href="https://apps.apple.com/app/linq/id6474052885"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-3 w-full py-3 rounded-2xl bg-black text-white font-bold text-sm hover:bg-black/80 transition-all"
+          >
+            <svg viewBox="0 0 384 512" className="w-4 h-5 fill-white shrink-0"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-16.9 76.5-16.9 32.4 0 49.2 16.9 76.4 16.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.8-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>
+            Download on the App Store
+          </a>
+          <a
+            href="https://play.google.com/store/apps/details?id=app.mylinq.linq"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-3 w-full py-3 rounded-2xl bg-white text-gray-800 font-bold text-sm hover:bg-white/90 transition-all"
+          >
+            <svg viewBox="0 0 488 512" className="w-5 h-5 shrink-0"><path d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z" fill="#4285F4"/><path d="M488 261.8c0 16.5-1.6 28.7-3.9 41.4H248v-85.3h236.1C489.2 233 488 248 488 261.8z" fill="#4285F4"/><path d="M104.8 300.5l-79.9 62C48.5 416.6 138.9 480 248 480c69.9 0 128.5-23.1 171.2-61.3l-76.5-59.3C317.5 381.4 285 392 248 392c-56.3 0-104.3-37.7-121.2-89.4l-22-2.1z" fill="#34A853"/><path d="M24.9 362.5C9 328.7 0 291.3 0 256s9-72.7 24.9-106.5l79.9 62C97.8 232.2 94.3 243.7 94.3 256s3.5 23.8 10.5 38.5l-79.9 68z" fill="#FBBC05"/><path d="M248 120c37.5 0 71.4 12.9 98 34.1l73.3-73.3C374.9 44.5 315.6 16 248 16 138.9 16 48.5 79.4 24.9 149.5l79.9 62C121.7 157.7 169.7 120 248 120z" fill="#EA4335"/></svg>
+            Get it on Google Play
+          </a>
+          <div className="pt-2 border-t border-white/15" />
+        </div>
+      )}
+
       {(phoneMode === 'otp' || phoneMode === 'email' || phoneMode === 'email-signup' || phoneMode === 'forgot-password') && (
         <button
           onClick={() => {
@@ -2997,31 +3022,6 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
             )}
           </div>
         </div>
-
-        {phoneMode === 'phone' && !Capacitor.isNativePlatform() && (
-          <div className="mb-8 space-y-3">
-            <p className="text-white/70 text-sm text-center font-bold">Are you a customer? Get the app</p>
-            <a
-              href="https://apps.apple.com/app/linq/id6474052885"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-3 w-full py-3 rounded-2xl bg-black text-white font-bold text-sm hover:bg-black/80 transition-all"
-            >
-              <svg viewBox="0 0 384 512" className="w-4 h-5 fill-white shrink-0"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-16.9 76.5-16.9 32.4 0 49.2 16.9 76.4 16.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.8-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>
-              Download on the App Store
-            </a>
-            <a
-              href="https://play.google.com/store/apps/details?id=app.mylinq.linq"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-3 w-full py-3 rounded-2xl bg-white text-gray-800 font-bold text-sm hover:bg-white/90 transition-all"
-            >
-              <svg viewBox="0 0 488 512" className="w-5 h-5 shrink-0"><path d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z" fill="#4285F4"/><path d="M488 261.8c0 16.5-1.6 28.7-3.9 41.4H248v-85.3h236.1C489.2 233 488 248 488 261.8z" fill="#4285F4"/><path d="M104.8 300.5l-79.9 62C48.5 416.6 138.9 480 248 480c69.9 0 128.5-23.1 171.2-61.3l-76.5-59.3C317.5 381.4 285 392 248 392c-56.3 0-104.3-37.7-121.2-89.4l-22-2.1z" fill="#34A853"/><path d="M24.9 362.5C9 328.7 0 291.3 0 256s9-72.7 24.9-106.5l79.9 62C97.8 232.2 94.3 243.7 94.3 256s3.5 23.8 10.5 38.5l-79.9 68z" fill="#FBBC05"/><path d="M248 120c37.5 0 71.4 12.9 98 34.1l73.3-73.3C374.9 44.5 315.6 16 248 16 138.9 16 48.5 79.4 24.9 149.5l79.9 62C121.7 157.7 169.7 120 248 120z" fill="#EA4335"/></svg>
-              Get it on Google Play
-            </a>
-            <div className="pt-2 border-t border-white/15" />
-          </div>
-        )}
 
         <div className="mb-8">
           <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mb-4">
