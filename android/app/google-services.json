@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "453114241783-3nq3ri91d8tf1gvedhmh5uu0nr3aauko.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "co.uk.adastranetwork.linq",
+            "certificate_hash": "1371b09a13b4c31f1ba07873bebb6a33e8de18bd"
+          }
+        },
+        {
           "client_id": "453114241783-jlcjgqvf65hmjihgufv7et9g8imc2g7q.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -29,6 +37,14 @@
             {
               "client_id": "453114241783-jlcjgqvf65hmjihgufv7et9g8imc2g7q.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "453114241783-ncpg7hf3kpstlj86h2jkehr0epvrevp6.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "co.uk.adastranetwork.linq",
+                "app_store_id": "6474052885"
+              }
             }
           ]
         }
