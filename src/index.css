@@ -37,7 +37,7 @@
 
 /* Universal safe-area header — matches the main Linq header top padding */
 .safe-top {
-  padding-top: calc(env(safe-area-inset-top, 0px) + 0.875rem) !important;
+  padding-top: calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 0.875rem) !important;
 }
 
 .card-shadow {

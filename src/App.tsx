@@ -2186,7 +2186,7 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-between gradient-logo-blue px-6 pb-16 relative overflow-hidden" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 4rem)' }}>
+      <div className="min-h-screen flex flex-col items-center justify-between gradient-logo-blue px-6 pb-16 relative overflow-hidden" style={{ paddingTop: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 4rem)' }}>
         <div className="flex-1 flex flex-col items-center justify-center gap-7">
           <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={{ fontFamily: 'Poppins, sans-serif', color: '#ffffff' }}>Linq</span>
           <div className="w-7 h-7 rounded-full border-[3px] border-white/25 border-t-white animate-spin" />
@@ -2241,7 +2241,7 @@ export default function App() {
 
   if (nativeVendorBlocked) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gradient-logo-blue px-6 gap-5 text-center" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+      <div className="min-h-screen flex flex-col items-center justify-center gradient-logo-blue px-6 gap-5 text-center" style={{ paddingTop: 'var(--safe-area-inset-top, env(safe-area-inset-top, 0px))' }}>
         <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={{ fontFamily: 'Poppins, sans-serif', color: '#ffffff' }}>Linq</span>
         <div>
           <p className="text-white font-bold text-xl mb-2">Vendor accounts aren't supported here</p>
@@ -2279,7 +2279,7 @@ export default function App() {
 
   if (profileLoadError || (!profile && !needsOnboarding)) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-between gradient-logo-blue px-6 pb-16" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 4rem)' }}>
+      <div className="min-h-screen flex flex-col items-center justify-between gradient-logo-blue px-6 pb-16" style={{ paddingTop: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 4rem)' }}>
         <div className="flex-1 flex flex-col items-center justify-center gap-6">
           <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={{ fontFamily: 'Poppins, sans-serif', color: '#ffffff' }}>Linq</span>
           {profileLoadError ? (
@@ -2310,9 +2310,9 @@ export default function App() {
   return (
     <div className={cn("min-h-screen bg-white", !isVendor && !isNativeIOS && "md:flex md:justify-center")}>
     <div className="holo-ambient" aria-hidden="true" />
-    <div className={cn("w-full relative", !isVendor && !isNativeIOS && "md:max-w-sm")} style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 6rem)' }}>
+    <div className={cn("w-full relative", !isVendor && !isNativeIOS && "md:max-w-sm")} style={{ paddingBottom: 'calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) + 6rem)' }}>
       {/* Header */}
-      <header className="glass-panel sticky top-0 z-50 px-5 pb-3.5 flex items-center justify-between relative" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.875rem)' }}>
+      <header className="glass-panel sticky top-0 z-50 px-5 pb-3.5 flex items-center justify-between relative" style={{ paddingTop: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 0.875rem)' }}>
         <button
           onClick={() => setShowCreatePost(true)}
           className="w-9 h-9 gradient-red rounded-xl flex items-center justify-center shadow-md shadow-blue-500/20 active:scale-95 transition-transform"
@@ -2645,7 +2645,7 @@ export default function App() {
         isVendor
           ? "left-0 right-0 lg:hidden"
           : isNativeIOS ? "left-0 right-0 md:hidden" : "left-0 right-0 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-full md:max-w-sm"
-      )} style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)' }}>
+      )} style={{ paddingBottom: 'calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) + 0.75rem)' }}>
         <span className="holo-hairline top-0" aria-hidden="true" />
         {['consumer','admin'].includes(profile?.role ?? '') ? (
           <NavButton
@@ -2972,7 +2972,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
       )}
 
       {phoneMode === 'phone' && !Capacitor.isNativePlatform() && (
-        <div className="max-w-xs mx-auto w-full space-y-3" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.5rem)' }}>
+        <div className="max-w-xs mx-auto w-full space-y-3" style={{ paddingTop: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 1.5rem)' }}>
           <p className="text-white/70 text-sm text-center font-bold">Are you a customer? Get the app</p>
           <a
             href="https://apps.apple.com/app/linq/id6474052885"
@@ -3006,7 +3006,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
             }
           }}
           className="flex items-center gap-2 text-white/70 hover:text-white transition-colors"
-          style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3.5rem)', marginBottom: '2rem' }}
+          style={{ paddingTop: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 3.5rem)', marginBottom: '2rem' }}
         >
           <ArrowLeft size={18} />
           <span className="text-sm font-medium">Back</span>
@@ -3241,7 +3241,7 @@ function GuestApp({ viewingStore, setViewingStore, onRequireAuth }: {
 
   if (viewingStore) {
     return (
-      <div className="min-h-screen bg-brand-bg" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+      <div className="min-h-screen bg-brand-bg" style={{ paddingTop: 'var(--safe-area-inset-top, env(safe-area-inset-top, 0px))' }}>
         <div className="max-w-2xl mx-auto px-4 pt-6 pb-10">
           <StoreProfileView
             store={viewingStore}
@@ -3257,7 +3257,7 @@ function GuestApp({ viewingStore, setViewingStore, onRequireAuth }: {
   }
 
   return (
-    <div className="min-h-screen bg-brand-bg flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+    <div className="min-h-screen bg-brand-bg flex flex-col" style={{ paddingTop: 'var(--safe-area-inset-top, env(safe-area-inset-top, 0px))' }}>
       <div className="flex items-center justify-between px-5 py-4 max-w-2xl mx-auto w-full">
         <span className="font-black italic text-2xl text-brand-navy" style={{ fontFamily: 'Poppins, sans-serif' }}>Linq</span>
         <button onClick={onRequireAuth} className="px-4 py-2 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-95 transition-transform">
@@ -3273,7 +3273,7 @@ function GuestApp({ viewingStore, setViewingStore, onRequireAuth }: {
       </div>
       <div
         className="fixed bottom-0 left-0 right-0 z-50 max-w-2xl mx-auto flex items-center justify-around border-t border-brand-navy/10 bg-white py-3"
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.5rem)' }}
+        style={{ paddingBottom: 'calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) + 0.5rem)' }}
       >
         <button onClick={() => setActiveTab('deals')} className={`flex flex-col items-center gap-1 px-4 ${activeTab === 'deals' ? 'text-brand-gold' : 'text-brand-navy/40'}`}>
           <Tag size={20} />
@@ -3905,7 +3905,7 @@ function OnboardingScreen({ user, onComplete }: {
 
   return (
     <div className="min-h-screen flex flex-col bg-brand-bg px-8 relative overflow-hidden">
-      <div className="flex items-center justify-center gap-2 mb-10" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3.5rem)' }}>
+      <div className="flex items-center justify-center gap-2 mb-10" style={{ paddingTop: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 3.5rem)' }}>
         {Array.from({ length: TOTAL_STEPS }).map((_, i) => {
           if (skipRoleStep && i === 0) return null;
           return (
@@ -4533,7 +4533,7 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
         transition={{ type: 'spring', damping: 38, stiffness: 520 }}
         className={cn("fixed inset-0 z-[250] flex flex-col", isNativeIOS && "md:items-center md:justify-center md:bg-black/40")}
       >
-        <button onClick={onClose} className={cn("flex-shrink-0 w-full", isNativeIOS && "md:hidden")} style={{ height: 'calc(env(safe-area-inset-top, 0px) + 4rem)' }} />
+        <button onClick={onClose} className={cn("flex-shrink-0 w-full", isNativeIOS && "md:hidden")} style={{ height: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 4rem)' }} />
         <div className={cn("flex-1 bg-brand-bg rounded-t-[2.5rem] shadow-2xl flex flex-col overflow-hidden", isNativeIOS && "md:flex-none md:w-full md:max-w-lg md:max-h-[85vh] md:rounded-[2.5rem]")}>
           {/* Header lives outside the scroll container so nothing can paint over it */}
           <div className="bg-brand-bg px-5 pt-5 pb-4 border-b border-black/5 flex-shrink-0">
@@ -4778,7 +4778,7 @@ function UserCollectionModal({ uid, isOwnProfile, stickers, revealedIds, onRevea
         )}
 
         {/* Header */}
-        <div className="sticky top-0 z-10 px-5 pb-3" style={{ background: 'rgba(0,5,16,0.92)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.25rem)' }}>
+        <div className="sticky top-0 z-10 px-5 pb-3" style={{ background: 'rgba(0,5,16,0.92)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingTop: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 1.25rem)' }}>
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-display text-xl font-bold" style={{ color: '#fff', textShadow: '0 0 18px #a855f7aa' }}>
               🕹️ My Collection
@@ -5443,7 +5443,7 @@ function StickerQRScanModal({ onClose, onSticker }: {
       className="fixed inset-0 z-[300] flex flex-col max-w-md mx-auto bg-black overflow-hidden"
     >
       {/* Header */}
-      <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-5 pb-4 bg-gradient-to-b from-black/80 to-transparent" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.25rem)' }}>
+      <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-5 pb-4 bg-gradient-to-b from-black/80 to-transparent" style={{ paddingTop: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 1.25rem)' }}>
         <div className="flex items-center gap-3">
           <button onClick={() => { stopCamera(); onClose(); }} className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center active:scale-90 transition-transform">
             <X size={18} className="text-white" />
@@ -12065,7 +12065,7 @@ function ProgrammeDetailModal({ prog, sc, onJoin, onView, onClose, joiningProgra
         transition={{ type: 'spring', damping: 38, stiffness: 520 }}
         className="fixed inset-0 z-[150] flex flex-col max-w-md mx-auto"
       >
-        <button onClick={onClose} className="flex-shrink-0 w-full" style={{ height: 'calc(env(safe-area-inset-top, 0px) + 4rem)' }} />
+        <button onClick={onClose} className="flex-shrink-0 w-full" style={{ height: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 4rem)' }} />
         <div className="flex-1 overflow-y-auto gradient-logo-blue rounded-t-[2.5rem] shadow-2xl">
           <div className="sticky top-0 gradient-logo-blue px-5 pt-5 pb-4 z-10 border-b border-white/5">
             <div className="flex items-start justify-between gap-3">
@@ -12782,7 +12782,12 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
     nfcAbortRef.current = ctrl;
     if (!isIOS) { setNfcPhase('scanning'); setNfcMsg(''); }
 
+    // Android/Web NFC has no system timeout of its own — auto-dismiss the
+    // "hold near tag" strip after 10s so it doesn't sit there forever.
+    const autoDismiss = !isIOS ? setTimeout(() => ctrl.abort(), 10000) : null;
+
     const scanResult = await scanNFCTag('Hold near the store NFC tag to collect your stamp', ctrl);
+    if (autoDismiss) clearTimeout(autoDismiss);
 
     if (scanResult.ok === false) {
       if (scanResult.cancelled) { setNfcPhase('idle'); return; }
@@ -13979,7 +13984,7 @@ function BadgeNotifCard({ badge, queueCount, onDismiss }: { badge: AppBadge; que
     >
       <div
         className="w-full bg-brand-bg rounded-t-3xl px-6 pt-6 space-y-4 shadow-2xl"
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 2rem)' }}
+        style={{ paddingBottom: 'calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) + 2rem)' }}
         onClick={e => e.stopPropagation()}
       >
         <div className="flex justify-center">
@@ -14778,9 +14783,10 @@ function NFCScanOverlay({ phase, msg, onCancel }: {
             </div>
             <button
               onClick={onCancel}
-              className="text-white/70 text-xs font-bold px-2.5 py-1 rounded-lg bg-white/10 active:bg-white/20 shrink-0"
+              className="text-white/70 w-7 h-7 rounded-lg bg-white/10 active:bg-white/20 shrink-0 flex items-center justify-center"
+              aria-label="Cancel scan"
             >
-              Cancel
+              <X size={16} />
             </button>
           </>
         )}
@@ -14930,7 +14936,7 @@ function VendorQRScanner({ store, stampQty, onScanned, onClose, subtitle }: {
       {/* Overlay */}
       <div className="relative z-10 flex flex-col h-full">
         {/* Header */}
-        <div className="flex items-center gap-3 px-5 pb-4" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3rem)' }}>
+        <div className="flex items-center gap-3 px-5 pb-4" style={{ paddingTop: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 3rem)' }}>
           <button onClick={onClose} className="p-2 bg-black/40 rounded-full text-white">
             <X size={20} />
           </button>
@@ -15071,7 +15077,7 @@ function VendorQRDisplay({ store, onClose }: { store: StoreProfile; onClose: () 
         className="fixed inset-0 z-[200] flex flex-col items-center justify-center"
         style={{ backgroundColor: cardTheme }}
       >
-        <button onClick={onClose} className="absolute right-5 p-2 bg-white/20 rounded-full" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 3rem)' }}>
+        <button onClick={onClose} className="absolute right-5 p-2 bg-white/20 rounded-full" style={{ top: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 3rem)' }}>
           <X size={20} className="text-white" />
         </button>
 
@@ -15317,7 +15323,7 @@ function SpendQRScannerModal({ onClose, onPackReady }: { onClose: () => void; on
       transition={{ type: 'spring', damping: 38, stiffness: 520 }}
       className="fixed inset-0 z-[200] bg-black flex flex-col"
     >
-      <div className="flex items-center gap-3 px-5 pb-4 shrink-0" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}>
+      <div className="flex items-center gap-3 px-5 pb-4 shrink-0" style={{ paddingTop: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 1rem)' }}>
         <button onClick={() => { stopCamera(); onClose(); }} className="p-2 bg-white/10 rounded-full"><X size={20} className="text-white" /></button>
         <div>
           <p className="text-white/60 text-xs font-bold uppercase tracking-widest">Scan vendor QR</p>
@@ -15516,7 +15522,7 @@ function VisitQRScannerModal({ storeId, onClose, onPackReady }: { storeId: strin
 
   return createPortal(
     <motion.div initial={{ opacity: 0, y: '100%' }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: '100%' }} transition={{ type: 'spring', damping: 38, stiffness: 520 }} className="fixed inset-0 z-[200] bg-black flex flex-col">
-      <div className="flex items-center gap-3 px-5 pb-4 shrink-0" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}>
+      <div className="flex items-center gap-3 px-5 pb-4 shrink-0" style={{ paddingTop: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 1rem)' }}>
         <button onClick={() => { stopCamera(); onClose(); }} className="p-2 bg-white/10 rounded-full"><X size={20} className="text-white" /></button>
         <div>
           <p className="text-white/60 text-xs font-bold uppercase tracking-widest">Scan store QR</p>
@@ -23935,7 +23941,7 @@ function MatrixRainCanvas({ opacity = 0.35, fadeColor = 'rgba(17,40,110,0.18)' }
 
 function LinqleMatrixBanner({ onClose, dateStr }: { onClose: () => void; dateStr: string }) {
   return (
-    <div className="relative flex items-center justify-between px-5 pb-3 border-b border-white/8 shrink-0 overflow-hidden bg-[#0F172A]" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.25rem)' }}>
+    <div className="relative flex items-center justify-between px-5 pb-3 border-b border-white/8 shrink-0 overflow-hidden bg-[#0F172A]" style={{ paddingTop: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 1.25rem)' }}>
       <MatrixRainCanvas />
       <div className="relative z-10">
         <h2 className="font-black text-xl tracking-wide"><span className="text-blue-400">Li</span><span className="text-white">nqle</span></h2>
@@ -29510,7 +29516,7 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
       transition={{ type: 'spring', damping: 38, stiffness: 520 }}
       className="fixed inset-0 bg-brand-bg z-[200] flex flex-col max-w-md mx-auto"
     >
-      <header className="glass-panel px-6 pb-4 flex items-center gap-4" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.875rem)' }}>
+      <header className="glass-panel px-6 pb-4 flex items-center gap-4" style={{ paddingTop: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 0.875rem)' }}>
         <button onClick={onClose} className="p-2 -ml-2 text-brand-navy/75"><ArrowLeft size={24} /></button>
         <h2 className="font-display text-xl font-bold flex-1">Edit Profile</h2>
         <button onClick={handleSave} disabled={saving || !isDirty} className="px-5 py-2 bg-brand-navy text-white rounded-2xl font-bold text-sm disabled:opacity-40 active:scale-95 transition-all">
@@ -31671,7 +31677,7 @@ function NotificationsPanel({ notifications, onClose }: { notifications: Notific
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 pb-5 border-b border-black/5" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.25rem)' }}>
+        <div className="flex items-center justify-between px-6 pb-5 border-b border-black/5" style={{ paddingTop: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 1.25rem)' }}>
           <div>
             <h2 className="font-display text-xl font-bold">Notifications</h2>
             {unreadCount > 0 && (
@@ -37092,7 +37098,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
               transition={{ type: 'spring', stiffness: 540, damping: 40 }}
               className="fixed top-0 left-0 right-0 bottom-0 z-[9999] bg-brand-bg flex flex-col overflow-hidden max-w-md mx-auto"
               onClick={e => e.stopPropagation()}>
-              <div className="px-5 pb-3 flex items-center justify-between shrink-0" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.25rem)' }}>
+              <div className="px-5 pb-3 flex items-center justify-between shrink-0" style={{ paddingTop: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 1.25rem)' }}>
                 <h3 className="font-bold text-brand-navy text-lg">Challenges</h3>
                 <button onClick={() => setPubChallengeOpen(false)} className="w-8 h-8 rounded-full bg-brand-navy/8 flex items-center justify-center">
                   <X size={16} className="text-brand-navy" />
