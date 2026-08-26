@@ -78,6 +78,7 @@ const openUrl = async (url: string) => {
 };
 
 const isNativeIOS = Capacitor.getPlatform() === 'ios';
+const isNativeAndroid = Capacitor.getPlatform() === 'android';
 
 // Routes the email verification link to our own app (instead of Firebase's generic hosted
 // page) so we can show a "go back to Linq" confirmation. Requires linq4.vercel.app to be
@@ -2817,7 +2818,10 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
   onEmailSignIn: (email: string, password: string) => Promise<string | null>;
   onBrowseAsGuest: () => void;
 }) {
-  const [phoneMode, setPhoneMode] = React.useState<'phone' | 'otp' | 'email' | 'email-signup' | 'forgot-password'>('phone');
+  // Android has no phone sign-up at all — Play Integrity/SHA attestation makes it too fragile
+  // across devices, so Android starts (and stays) on email, while iOS keeps native phone auth.
+  const homeMode: 'phone' | 'email' = isNativeAndroid ? 'email' : 'phone';
+  const [phoneMode, setPhoneMode] = React.useState<'phone' | 'otp' | 'email' | 'email-signup' | 'forgot-password'>(homeMode);
   const [dialCode, setDialCode] = React.useState(guessDefaultDialCode);
   const [phone, setPhone] = React.useState('');
   const [otp, setOtp] = React.useState('');
@@ -2996,13 +3000,13 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
         </div>
       )}
 
-      {(phoneMode === 'otp' || phoneMode === 'email' || phoneMode === 'email-signup' || phoneMode === 'forgot-password') && (
+      {phoneMode !== homeMode && (phoneMode === 'otp' || phoneMode === 'email' || phoneMode === 'email-signup' || phoneMode === 'forgot-password') && (
         <button
           onClick={() => {
             if (phoneMode === 'forgot-password') {
               setPhoneMode('email'); setResetEmail(''); setResetSent(false); setError('');
             } else {
-              setPhoneMode('phone'); setOtp(''); setEmail(''); setPassword(''); setError('');
+              setPhoneMode(homeMode); setOtp(''); setEmail(''); setPassword(''); setError('');
             }
           }}
           className="flex items-center gap-2 text-white/70 hover:text-white transition-colors"
@@ -3200,15 +3204,17 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
             </button>
           )}
 
-          {phoneMode === 'phone' && (
+          {phoneMode === homeMode && (
             <div className="pt-3">
-              <button
-                onClick={() => { setPhoneMode('email'); setError(''); setResetSent(false); }}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-white/10 border border-white/20 text-white font-bold text-sm hover:bg-white/20 transition-all"
-              >
-                <Mail size={15} />
-                Sign in with Email
-              </button>
+              {phoneMode === 'phone' && (
+                <button
+                  onClick={() => { setPhoneMode('email'); setError(''); setResetSent(false); }}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-white/10 border border-white/20 text-white font-bold text-sm hover:bg-white/20 transition-all"
+                >
+                  <Mail size={15} />
+                  Sign in with Email
+                </button>
+              )}
               <button
                 onClick={onBrowseAsGuest}
                 className="w-full text-white/50 text-sm py-3 hover:text-white/80 transition-colors underline underline-offset-2"
