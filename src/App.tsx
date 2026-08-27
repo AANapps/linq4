@@ -3416,14 +3416,13 @@ function OnboardingScreen({ user, onComplete }: {
   onComplete: (data: ConsumerOnboardingData | VendorOnboardingData) => Promise<void>;
 }) {
   const isWeb = !Capacitor.isNativePlatform();
-  // iOS app is consumer-only (no vendor signup), so there's nothing to choose — skip role selection.
-  const skipRoleStep = isWeb || isNativeIOS;
-  const [role, setRole] = React.useState<'consumer' | 'vendor' | null>(isWeb ? 'vendor' : isNativeIOS ? 'consumer' : null);
+  // Vendor signup only exists on web; both native apps (iOS and Android) are consumer-only — no role picker.
+  const role: 'consumer' | 'vendor' = isWeb ? 'vendor' : 'consumer';
   const isVendor = role === 'vendor';
-  // Step 0 = role selection (Android native only); vendor steps 1-7; consumer steps 1-3 (name+handle, location, privacy — always last)
-  const TOTAL_STEPS = isVendor ? 8 : 4;
+  // Vendor steps 0-6; consumer steps 0-1 (location, name+handle).
+  const TOTAL_STEPS = isVendor ? 7 : 2;
 
-  const [step, setStep] = React.useState(skipRoleStep ? 1 : 0);
+  const [step, setStep] = React.useState(0);
   const [saving, setSaving] = React.useState(false);
   const [privacyAccepted, setPrivacyAccepted] = React.useState(false);
   const [onboardingLegal, setOnboardingLegal] = React.useState<'privacy' | 'terms' | null>(null);
@@ -3494,18 +3493,16 @@ function OnboardingScreen({ user, onComplete }: {
     );
   };
 
-  const canAdvance =
-    step === 0 ? role !== null
-    : step === TOTAL_STEPS - 1 ? privacyAccepted
-    : isVendor
-      ? step === 1 ? businessName.trim().length > 0
-      : step === 2 ? !!country && companyNumber.trim().length > 0
-      : step === 3 ? !!category
-      : step === 4 ? !!cardType
-      : step === 5 ? addrLine1.trim().length > 0 && addrTown.trim().length > 0 && phone.trim().length > 0
-      : locationStatus === 'granted' || locationStatus === 'denied'
-    : step === 1 ? fullName.trim().length > 0 && handle.trim().length >= 3 && !handleError && !handleChecking
-      : locationStatus === 'granted' || locationStatus === 'denied';
+  const canAdvance = isVendor
+    ? step === 0 ? businessName.trim().length > 0
+      : step === 1 ? !!country && companyNumber.trim().length > 0
+      : step === 2 ? !!category
+      : step === 3 ? !!cardType
+      : step === 4 ? addrLine1.trim().length > 0 && addrTown.trim().length > 0 && phone.trim().length > 0
+      : step === 5 ? locationStatus === 'granted' || locationStatus === 'denied'
+      : privacyAccepted
+    : step === 0 ? locationStatus === 'granted' || locationStatus === 'denied'
+      : fullName.trim().length > 0 && handle.trim().length >= 3 && !handleError && !handleChecking;
 
   const validateHandle = (val: string) => {
     const clean = val.toLowerCase().replace(/\s/g, '');
@@ -3539,7 +3536,16 @@ function OnboardingScreen({ user, onComplete }: {
   };
 
   const consumerSteps = [
-    // Step 0 — Identity (name + handle)
+    // Step 0 — Location
+    <>
+      <div className="w-14 h-14 bg-brand-gold/10 rounded-full flex items-center justify-center mx-auto mb-4">
+        <MapPin className="w-7 h-7 text-brand-gold" />
+      </div>
+      <h2 className="font-display font-bold text-2xl text-brand-navy mb-1">Find nearby deals</h2>
+      <p className="text-sm text-brand-navy/75 mb-8">Allow location access to discover businesses around you</p>
+      <LocationStep locationData={locationData} locationStatus={locationStatus} onRequest={requestLocation} />
+    </>,
+    // Step 1 — Identity (name + handle)
     <>
       <div className="w-14 h-14 bg-brand-gold/10 rounded-full flex items-center justify-center mx-auto mb-4">
         <UserCheck className="w-7 h-7 text-brand-gold" />
@@ -3587,43 +3593,6 @@ function OnboardingScreen({ user, onComplete }: {
         </div>
       </div>
     </>,
-    // Step 1 — Location
-    <>
-      <div className="w-14 h-14 bg-brand-gold/10 rounded-full flex items-center justify-center mx-auto mb-4">
-        <MapPin className="w-7 h-7 text-brand-gold" />
-      </div>
-      <h2 className="font-display font-bold text-2xl text-brand-navy mb-1">Find nearby deals</h2>
-      <p className="text-sm text-brand-navy/75 mb-8">Allow location access to discover businesses around you</p>
-      <LocationStep locationData={locationData} locationStatus={locationStatus} onRequest={requestLocation} />
-    </>,
-    // Step 2 — Privacy consent
-    <div className="w-full text-left space-y-4">
-      <div className="w-14 h-14 bg-brand-navy/8 rounded-full flex items-center justify-center mx-auto mb-4">
-        <ShieldCheck className="w-7 h-7 text-brand-navy" />
-      </div>
-      <h2 className="font-display font-bold text-2xl text-brand-navy text-center mb-1">Privacy & Terms</h2>
-      <p className="text-sm text-brand-navy/75 text-center mb-4">Please read and agree before continuing</p>
-      <div className="bg-white rounded-2xl border border-brand-navy/10 p-4 space-y-3 text-xs text-brand-navy/75 leading-relaxed max-h-48 overflow-y-auto">
-        <p><span className="font-bold text-brand-navy">Data we collect:</span> Your profile, loyalty activity (stamps, points, visits), and anonymised behavioural patterns such as visit times, day of week, and suburb.</p>
-        <p><span className="font-bold text-brand-navy">How it's used:</span> To run your loyalty cards, personalise your experience, and produce anonymised aggregated insights that may be shared with third parties (e.g. research partners, councils, real estate firms). <span className="font-semibold text-brand-navy">Your personal details are never shared.</span> Only statistical patterns.</p>
-        <p><span className="font-bold text-brand-navy">Retention:</span> Raw event data is kept for 24 months, then aggregated and deleted.</p>
-        <p><span className="font-bold text-brand-navy">Your rights:</span> Delete all your data at any time from Settings → Delete Account.</p>
-      </div>
-      <div className="flex gap-3 text-xs">
-        <button onClick={() => setOnboardingLegal('privacy')} className="text-brand-gold font-semibold underline underline-offset-2">Privacy Policy</button>
-        <span className="text-brand-navy/30">·</span>
-        <button onClick={() => setOnboardingLegal('terms')} className="text-brand-gold font-semibold underline underline-offset-2">Terms of Service</button>
-      </div>
-      <label className="flex items-start gap-3 cursor-pointer group mt-2">
-        <div className={`w-5 h-5 rounded-md border-2 shrink-0 mt-0.5 flex items-center justify-center transition-all ${privacyAccepted ? 'bg-brand-navy border-brand-navy' : 'border-brand-navy/30 group-hover:border-brand-navy/60'}`}
-          onClick={() => setPrivacyAccepted(v => !v)}>
-          {privacyAccepted && <CheckCircle2 size={13} className="text-white" />}
-        </div>
-        <span className="text-xs text-brand-navy/80 leading-relaxed" onClick={() => setPrivacyAccepted(v => !v)}>
-          I have read and agree to the Privacy Policy and Terms of Service, including the collection of anonymised behavioural data.
-        </span>
-      </label>
-    </div>
   ];
 
   const vendorSteps = [
@@ -3866,61 +3835,18 @@ function OnboardingScreen({ user, onComplete }: {
     </div>
   ];
 
-  const roleStep = (
-    <>
-      <div className="w-14 h-14 gradient-red rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-500/20">
-        <Sparkles className="w-7 h-7 text-white" />
-      </div>
-      <h2 className="font-display font-bold text-2xl text-brand-navy mb-1">Welcome to <span className="text-brand-gold">Li</span>nq</h2>
-      <p className="text-sm text-brand-navy/75 mb-8">How would you like to use Linq?</p>
-      <div className="w-full space-y-4">
-        <button
-          onClick={() => setRole('consumer')}
-          className={`w-full rounded-[2rem] p-6 text-left flex items-center gap-4 transition-all active:scale-[0.98] border-2 ${role === 'consumer' ? 'bg-brand-gold/5 border-brand-gold shadow-md' : 'bg-white border-brand-navy/10 hover:border-brand-gold/40'}`}
-        >
-          <div className="w-12 h-12 bg-brand-gold/10 rounded-2xl flex items-center justify-center shrink-0">
-            <Wallet className="w-6 h-6 text-brand-gold" />
-          </div>
-          <div>
-            <p className="font-bold text-brand-navy text-base">I'm a Customer</p>
-            <p className="text-xs text-brand-navy/75 mt-0.5">Collect stamps & earn rewards</p>
-          </div>
-          {role === 'consumer' && <CheckCircle2 className="w-5 h-5 text-brand-gold ml-auto shrink-0" />}
-        </button>
-        {!isNativeIOS && (
-          <button
-            onClick={() => setRole('vendor')}
-            className={`w-full rounded-[2rem] p-6 text-left flex items-center gap-4 transition-all active:scale-[0.98] ${role === 'vendor' ? 'bg-brand-navy opacity-100' : 'bg-brand-navy opacity-80 hover:opacity-100'}`}
-          >
-            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center shrink-0">
-              <Building2 className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <p className="font-bold text-white text-base">I'm a Business</p>
-              <p className="text-xs text-white/50 mt-0.5">Run a loyalty programme</p>
-            </div>
-            {role === 'vendor' && <CheckCircle2 className="w-5 h-5 text-white ml-auto shrink-0" />}
-          </button>
-        )}
-      </div>
-    </>
-  );
-
-  const stepContent = [roleStep, ...(isVendor ? vendorSteps : consumerSteps)];
+  const stepContent = isVendor ? vendorSteps : consumerSteps;
   const isLastStep = step === TOTAL_STEPS - 1;
 
   return (
     <div className="min-h-screen flex flex-col bg-brand-bg px-8 relative overflow-hidden">
       <div className="flex items-center justify-center gap-2 mb-10" style={{ paddingTop: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 3.5rem)' }}>
-        {Array.from({ length: TOTAL_STEPS }).map((_, i) => {
-          if (skipRoleStep && i === 0) return null;
-          return (
-            <div
-              key={i}
-              className={`rounded-full transition-all ${i === step ? 'w-8 h-2 bg-brand-navy' : i < step ? 'w-2 h-2 bg-brand-navy/40' : 'w-2 h-2 bg-brand-navy/15'}`}
-            />
-          );
-        })}
+        {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+          <div
+            key={i}
+            className={`rounded-full transition-all ${i === step ? 'w-8 h-2 bg-brand-navy' : i < step ? 'w-2 h-2 bg-brand-navy/40' : 'w-2 h-2 bg-brand-navy/15'}`}
+          />
+        ))}
       </div>
 
       <div className="flex-1 flex flex-col items-center text-center max-w-xs mx-auto w-full">
@@ -3951,7 +3877,7 @@ function OnboardingScreen({ user, onComplete }: {
             ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}><Sparkles size={16} /></motion.div> Setting up…</>
             : !isLastStep ? 'Continue' : isVendor ? 'Launch My Business' : 'Get Started'}
         </button>
-        {step > 1 && !isLastStep && step < TOTAL_STEPS - 1 && !isVendor && (
+        {!isVendor && step === 0 && !isLastStep && (
           <button onClick={() => setStep(s => s + 1)} className="w-full py-3 text-xs text-brand-navy/72 hover:text-brand-navy/80 transition-colors">
             Skip for now
           </button>
