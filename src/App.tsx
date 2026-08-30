@@ -3418,8 +3418,8 @@ function OnboardingScreen({ user, onComplete }: {
   // Vendor signup only exists on web; both native apps (iOS and Android) are consumer-only — no role picker.
   const role: 'consumer' | 'vendor' = isWeb ? 'vendor' : 'consumer';
   const isVendor = role === 'vendor';
-  // Vendor steps 0-6; consumer steps 0-1 (location, name+handle).
-  const TOTAL_STEPS = isVendor ? 7 : 2;
+  // Vendor steps 0-6; consumer steps 0-2 (gender+birthday, location, name+handle).
+  const TOTAL_STEPS = isVendor ? 7 : 3;
 
   const [step, setStep] = React.useState(0);
   const [saving, setSaving] = React.useState(false);
@@ -3431,6 +3431,8 @@ function OnboardingScreen({ user, onComplete }: {
   const [handle, setHandle] = React.useState('');
   const [handleError, setHandleError] = React.useState('');
   const [handleChecking, setHandleChecking] = React.useState(false);
+  const [gender, setGender] = React.useState('');
+  const [birthday, setBirthday] = React.useState('');
 
   // Vendor fields
   const [businessName, setBusinessName] = React.useState('');
@@ -3500,7 +3502,8 @@ function OnboardingScreen({ user, onComplete }: {
       : step === 4 ? addrLine1.trim().length > 0 && addrTown.trim().length > 0 && phone.trim().length > 0
       : step === 5 ? locationStatus === 'granted' || locationStatus === 'denied'
       : privacyAccepted
-    : step === 0 ? locationStatus === 'granted' || locationStatus === 'denied'
+    : step === 0 ? true
+      : step === 1 ? locationStatus === 'granted' || locationStatus === 'denied'
       : fullName.trim().length > 0 && handle.trim().length >= 3 && !handleError && !handleChecking;
 
   const validateHandle = (val: string) => {
@@ -3530,12 +3533,50 @@ function OnboardingScreen({ user, onComplete }: {
     if (isVendor) {
       await onComplete({ type: 'vendor', businessName, country, companyNumber, category, cardType: cardType ?? 'stamp', addrLine1, addrLine2, addrTown, addrState, addrPostcode, phone, description, location: locationData });
     } else {
-      await onComplete({ type: 'consumer', name: fullName.trim(), handle, gender: '', birthday: '', location: locationData });
+      await onComplete({ type: 'consumer', name: fullName.trim(), handle, gender, birthday, location: locationData });
     }
   };
 
+  const GENDER_OPTIONS = ['Female', 'Male', 'Non-binary', 'Prefer not to say'];
+
   const consumerSteps = [
-    // Step 0 — Location
+    // Step 0 — Gender + Birthday
+    <>
+      <div className="w-14 h-14 bg-brand-gold/10 rounded-full flex items-center justify-center mx-auto mb-4">
+        <Calendar className="w-7 h-7 text-brand-gold" />
+      </div>
+      <h2 className="font-display font-bold text-2xl text-brand-navy mb-1">A bit about you</h2>
+      <p className="text-sm text-brand-navy/75 mb-8">Helps us personalise deals — and unlock birthday gifts</p>
+      <div className="w-full space-y-5 text-left">
+        <div>
+          <label className="text-xs font-semibold text-brand-navy/60 uppercase tracking-wide pl-1 mb-2 block">Gender</label>
+          <div className="grid grid-cols-2 gap-2">
+            {GENDER_OPTIONS.map(opt => (
+              <button
+                key={opt}
+                onClick={() => setGender(opt === gender ? '' : opt)}
+                className={`py-3 px-3 rounded-2xl font-semibold text-sm transition-all active:scale-[0.98] ${
+                  gender === opt ? 'bg-brand-navy text-white shadow-lg shadow-brand-navy/20' : 'bg-white border-2 border-brand-navy/10 text-brand-navy hover:border-brand-gold/40'
+                }`}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-brand-navy/60 uppercase tracking-wide pl-1 mb-2 block">Birthday</label>
+          <input
+            type="date"
+            value={birthday}
+            onChange={e => setBirthday(e.target.value)}
+            max={new Date().toISOString().split('T')[0]}
+            className="w-full px-5 py-4 rounded-2xl bg-white border-2 border-brand-navy/10 text-brand-navy font-bold text-base focus:outline-none focus:border-brand-gold/60"
+          />
+        </div>
+      </div>
+    </>,
+    // Step 1 — Location
     <>
       <div className="w-14 h-14 bg-brand-gold/10 rounded-full flex items-center justify-center mx-auto mb-4">
         <MapPin className="w-7 h-7 text-brand-gold" />
@@ -3544,7 +3585,7 @@ function OnboardingScreen({ user, onComplete }: {
       <p className="text-sm text-brand-navy/75 mb-8">Allow location access to discover businesses around you</p>
       <LocationStep locationData={locationData} locationStatus={locationStatus} onRequest={requestLocation} />
     </>,
-    // Step 1 — Identity (name + handle)
+    // Step 2 — Identity (name + handle)
     <>
       <div className="w-14 h-14 bg-brand-gold/10 rounded-full flex items-center justify-center mx-auto mb-4">
         <UserCheck className="w-7 h-7 text-brand-gold" />
@@ -3876,7 +3917,7 @@ function OnboardingScreen({ user, onComplete }: {
             ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}><Sparkles size={16} /></motion.div> Setting up…</>
             : !isLastStep ? 'Continue' : isVendor ? 'Launch My Business' : 'Get Started'}
         </button>
-        {!isVendor && step === 0 && !isLastStep && (
+        {!isVendor && step === 1 && !isLastStep && (
           <button onClick={() => setStep(s => s + 1)} className="w-full py-3 text-xs text-brand-navy/72 hover:text-brand-navy/80 transition-colors">
             Skip for now
           </button>
