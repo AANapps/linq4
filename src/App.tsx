@@ -2207,8 +2207,8 @@ export default function App() {
         <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={{ fontFamily: 'Poppins, sans-serif', color: '#ffffff' }}>Linq</span>
         <CheckCircle2 className="w-12 h-12 text-white" />
         <div>
-          <p className="text-white font-bold text-xl mb-2">Email verified!</p>
-          <p className="text-white/70 text-sm max-w-xs">Go back to the Linq app to continue.</p>
+          <p className="text-white font-bold text-xl mb-2">Verified</p>
+          <p className="text-white/70 text-sm max-w-xs">Go back to app</p>
         </div>
       </div>
     );
