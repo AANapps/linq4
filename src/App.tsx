@@ -2642,12 +2642,11 @@ export default function App() {
 
       {/* Bottom Navigation */}
       <nav className={cn(
-        "fixed bottom-0 glass-panel pt-3 flex items-end z-50",
+        "fixed bottom-0 bg-white border-t border-brand-navy/10 pt-3 flex items-end z-50",
         isVendor
           ? "left-0 right-0 lg:hidden"
           : isNativeIOS ? "left-0 right-0 md:hidden" : "left-0 right-0 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-full md:max-w-sm"
       )} style={{ paddingBottom: 'calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) + 0.75rem)' }}>
-        <span className="holo-hairline top-0" aria-hidden="true" />
         {['consumer','admin'].includes(profile?.role ?? '') ? (
           <NavButton
             active={activeTab === 'for-you'}
@@ -2687,7 +2686,7 @@ export default function App() {
             onClick={() => { setActiveTab('home'); setViewingStore(null); setViewingUser(null); }}
             className="flex-1 flex flex-col items-center gap-1 -mb-1 -mt-7 transition-all"
           >
-            <span className="holo-border-soft inline-flex rounded-full p-[2px] shadow-lg shadow-blue-500/30 active:scale-95 transition-transform">
+            <span className="bg-white inline-flex rounded-full p-[2px] shadow-lg shadow-blue-500/30 active:scale-95 transition-transform">
               <div className="relative overflow-hidden w-[58px] h-[58px] rounded-full gradient-logo-blue flex items-center justify-center">
                 <span className="card-shine-ray" aria-hidden="true" />
                 <Wallet size={26} className="text-white relative z-10" />
@@ -2700,7 +2699,7 @@ export default function App() {
             onClick={() => setShowVendorQR(true)}
             className="flex-1 flex flex-col items-center gap-1 -mb-1 -mt-7 transition-all"
           >
-            <span className="holo-border-soft inline-flex rounded-full p-[2px] shadow-lg shadow-blue-500/30 active:scale-95 transition-transform">
+            <span className="bg-white inline-flex rounded-full p-[2px] shadow-lg shadow-blue-500/30 active:scale-95 transition-transform">
               <div className="relative overflow-hidden w-[58px] h-[58px] rounded-full gradient-logo-blue flex items-center justify-center">
                 <span className="card-shine-ray" aria-hidden="true" />
                 <DollarSign size={26} className="text-white relative z-10" />
@@ -4123,7 +4122,7 @@ function NavButton({ active, onClick, icon, label, badgeCount }: { active: boole
     >
       <div className={cn(
         "p-2 rounded-xl transition-all",
-        active ? "gradient-red nav-pill-holo" : ""
+        active ? "gradient-red" : ""
       )}>
         {React.cloneElement(icon as React.ReactElement, { size: 24 })}
       </div>

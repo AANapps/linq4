@@ -85,54 +85,8 @@
   100% { transform: translate3d(2%, -1.5%, 0) scale(1.04); filter: hue-rotate(-18deg); }
 }
 
-/* 1px iridescent edge line (place inside a positioned parent) */
-.holo-hairline {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 1.5px;
-  background: linear-gradient(
-    90deg,
-    rgba(96, 165, 250, 0),
-    rgba(96, 165, 250, 0.55),
-    rgba(192, 132, 252, 0.55),
-    rgba(45, 212, 191, 0.5),
-    rgba(96, 165, 250, 0.55),
-    rgba(96, 165, 250, 0)
-  );
-  background-size: 220% 100%;
-  animation: holo-hairline-flow 5.5s linear infinite;
-  pointer-events: none;
-}
-
-@keyframes holo-hairline-flow {
-  0%   { background-position: 0% 50%; }
-  100% { background-position: -220% 50%; }
-}
-
-/* Pastel animated gradient ring (wrap element, use with padding + rounded) */
-.holo-border-soft {
-  background: linear-gradient(
-    135deg,
-    #93c5fd, #c4b5fd, #99f6e4, #f9a8d4, #93c5fd
-  );
-  background-size: 300% 300%;
-  animation: holo-border-anim 6s linear infinite;
-}
-
-/* Animated multi-hue glow for active nav pill */
-.nav-pill-holo {
-  animation: nav-pill-hue 7s ease-in-out infinite;
-}
-
-@keyframes nav-pill-hue {
-  0%, 100% { box-shadow: 0 4px 16px rgba(59, 130, 246, 0.45); }
-  33%      { box-shadow: 0 4px 16px rgba(168, 85, 247, 0.40); }
-  66%      { box-shadow: 0 4px 16px rgba(45, 212, 191, 0.40); }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .holo-ambient, .holo-hairline, .holo-border-soft, .nav-pill-holo {
+  .holo-ambient {
     animation: none;
   }
 }
