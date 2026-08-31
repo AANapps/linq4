@@ -2979,7 +2979,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
 
       {phoneMode === 'phone' && !Capacitor.isNativePlatform() && (
         <div className="max-w-xs mx-auto w-full space-y-3" style={{ paddingTop: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 1.5rem)' }}>
-          <p className="text-white/70 text-sm text-center font-bold">Are you a customer? Get the app</p>
+          <p className="text-white/70 text-sm text-center font-bold">Download now and start collecting stamps</p>
           <a
             href="https://apps.apple.com/app/linq/id6474052885"
             target="_blank"
