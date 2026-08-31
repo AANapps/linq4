@@ -19436,7 +19436,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-purple-700 bg-purple-50 border border-purple-200 px-2.5 py-1 rounded-full">
                   <Sparkles size={9} /> Intelligence
                 </span>
-                {!isSubscribed && !isNativeIOS && (
+                {!isSubscribed && !isInTrial && !isNativeIOS && (
                   <button onClick={handleSubscribe} className="text-xs font-bold text-white bg-purple-600 px-3 py-1.5 rounded-xl active:scale-95 transition-transform">
                     Subscribe
                   </button>
@@ -19444,7 +19444,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
               </div>
 
               <div className="relative md:max-w-md md:mx-auto">
-                {!isSubscribed && !isNativeIOS ? (
+                {!isSubscribed && !isInTrial && !isNativeIOS ? (
                   <div className="space-y-5">
                     {/* CTA card */}
                     <div className="bg-white rounded-[2rem] px-5 py-5 shadow-lg border border-brand-navy/8 space-y-4">
@@ -19593,7 +19593,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     </div>
                   </div>
                 ) : null}
-                {(isSubscribed || isNativeIOS) ? (
+                {(isSubscribed || isInTrial || isNativeIOS) ? (
                 <div className="space-y-6">
                 <>
                   {/* Intelligence: At-risk + Newcomers + Avg/Visit */}
@@ -20384,7 +20384,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
 
                   {/* Advanced spend — shown always, locked if not subscribed */}
                   <div className="relative">
-                    {!isSubscribed && !isNativeIOS && (
+                    {!isSubscribed && !isInTrial && !isNativeIOS && (
                       <div className="absolute inset-0 z-10 flex flex-col items-center justify-start pt-16 pointer-events-none">
                         <div className="pointer-events-auto bg-white rounded-[2rem] px-6 py-5 shadow-2xl text-center space-y-3 mx-4 border border-brand-navy/8 max-w-xs w-full">
                           <div className="w-10 h-10 rounded-[1rem] bg-purple-50 flex items-center justify-center mx-auto">
@@ -20398,7 +20398,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                         </div>
                       </div>
                     )}
-                    {(isSubscribed || isNativeIOS) ? (
+                    {(isSubscribed || isInTrial || isNativeIOS) ? (
                     <div className="space-y-6">
                   {/* Advanced spend metrics row */}
                   {(() => {
@@ -20731,7 +20731,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
 
                   {/* Advanced visit — shown always, locked if not subscribed */}
                   <div className="relative">
-                    {!isSubscribed && !isNativeIOS && (
+                    {!isSubscribed && !isInTrial && !isNativeIOS && (
                       <div className="absolute inset-0 z-10 flex flex-col items-center justify-start pt-16 pointer-events-none">
                         <div className="pointer-events-auto bg-white rounded-[2rem] px-6 py-5 shadow-2xl text-center space-y-3 mx-4 border border-brand-navy/8 max-w-xs w-full">
                           <div className="w-10 h-10 rounded-[1rem] bg-purple-50 flex items-center justify-center mx-auto">
@@ -20745,7 +20745,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                         </div>
                       </div>
                     )}
-                    {(isSubscribed || isNativeIOS) ? (
+                    {(isSubscribed || isInTrial || isNativeIOS) ? (
                     <div className="space-y-6">
                   {/* Advanced visit metrics row */}
                   {(() => {
