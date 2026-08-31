@@ -19443,7 +19443,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 )}
               </div>
 
-              <div className="relative">
+              <div className="relative md:max-w-md md:mx-auto">
                 {!isSubscribed && !isNativeIOS ? (
                   <div className="space-y-5">
                     {/* CTA card */}
@@ -19482,9 +19482,9 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
 
                     {/* Stat squares */}
                     <div className="grid grid-cols-3 gap-3">
-                      <StatSquare icon={<AlertTriangle className="text-rose-500" />} label="Churn Risk" value="8" sub="21d+ no stamp" />
-                      <StatSquare icon={<UserPlus className="text-emerald-500" />} label="Newcomers" value="14" sub="joined last 30d" />
-                      <StatSquare icon={<Zap className="text-amber-500" />} label="Avg/Visit" value="2.3" sub="stamps per scan" />
+                      <StatSquare icon={<AlertTriangle className="text-rose-500" />} label="Churn Risk" value="8" sub="21d+ no stamp" blurValue />
+                      <StatSquare icon={<UserPlus className="text-emerald-500" />} label="Newcomers" value="14" sub="joined last 30d" blurValue />
+                      <StatSquare icon={<Zap className="text-amber-500" />} label="Avg/Visit" value="2.3" sub="stamps per scan" blurValue />
                     </div>
 
                     {/* Weekly stamps bar chart */}
@@ -19496,7 +19496,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                         </div>
                         <span className="text-[9px] font-bold uppercase tracking-widest text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">Example</span>
                       </div>
-                      <div className="flex gap-1.5 items-end" style={{ height: '80px' }}>
+                      <div className="flex gap-1.5 items-end blur-[3px] select-none pointer-events-none" style={{ height: '80px' }}>
                         {[42, 58, 71, 45, 83, 67, 55, 79].map((h, i) => (
                           <div key={i} className="flex-1 flex flex-col items-center gap-1">
                             <div className="w-full flex items-end" style={{ height: '64px' }}>
@@ -19514,20 +19514,22 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                         <p className="font-bold text-brand-navy text-sm">Visit Frequency</p>
                         <span className="text-[9px] font-bold uppercase tracking-widest text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">Example</span>
                       </div>
-                      {[
-                        { label: '3+ / week', pct: 18, color: '#1D4ED8' },
-                        { label: '1–2 / week', pct: 34, color: '#3B82F6' },
-                        { label: 'Monthly',    pct: 31, color: '#60A5FA' },
-                        { label: 'Occasional', pct: 17, color: '#BFDBFE' },
-                      ].map(({ label, pct, color }) => (
-                        <div key={label} className="flex items-center gap-3">
-                          <p className="text-[10px] text-brand-navy/50 font-bold w-20 shrink-0">{label}</p>
-                          <div className="flex-1 h-2 bg-brand-navy/8 rounded-full overflow-hidden">
-                            <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+                      <div className="space-y-3 blur-[3px] select-none pointer-events-none">
+                        {[
+                          { label: '3+ / week', pct: 18, color: '#1D4ED8' },
+                          { label: '1–2 / week', pct: 34, color: '#3B82F6' },
+                          { label: 'Monthly',    pct: 31, color: '#60A5FA' },
+                          { label: 'Occasional', pct: 17, color: '#BFDBFE' },
+                        ].map(({ label, pct, color }) => (
+                          <div key={label} className="flex items-center gap-3">
+                            <p className="text-[10px] text-brand-navy/50 font-bold w-20 shrink-0">{label}</p>
+                            <div className="flex-1 h-2 bg-brand-navy/8 rounded-full overflow-hidden">
+                              <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+                            </div>
+                            <p className="text-[10px] text-brand-navy/50 font-bold w-7 text-right">{pct}%</p>
                           </div>
-                          <p className="text-[10px] text-brand-navy/50 font-bold w-7 text-right">{pct}%</p>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
 
                     {/* Busiest days */}
@@ -19536,7 +19538,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                         <p className="font-bold text-brand-navy text-sm">Busiest Days</p>
                         <span className="text-[9px] font-bold uppercase tracking-widest text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">Example</span>
                       </div>
-                      <div className="flex gap-1.5">
+                      <div className="flex gap-1.5 blur-[3px] select-none pointer-events-none">
                         {[
                           { day: 'Mon', h: 55 }, { day: 'Tue', h: 40 }, { day: 'Wed', h: 70 },
                           { day: 'Thu', h: 95 }, { day: 'Fri', h: 88 }, { day: 'Sat', h: 62 }, { day: 'Sun', h: 30 },
@@ -25422,18 +25424,18 @@ function WallPostItem({ post, currentUser, wallOwnerUid, onViewUser }: { post: a
   );
 }
 
-function StatSquare({ icon, label, value, sub, info }: { icon: React.ReactNode, label: string, value: string, sub?: string, info?: string }) {
+function StatSquare({ icon, label, value, sub, info, blurValue }: { icon: React.ReactNode, label: string, value: string, sub?: string, info?: string, blurValue?: boolean }) {
   return (
     <div className="glass-card aspect-square md:aspect-auto md:h-20 rounded-[1.5rem] md:rounded-xl flex flex-col items-center justify-center p-3 md:p-2 hover:shadow-md transition-all">
       <div className="w-7 h-7 md:w-5 md:h-5 bg-brand-bg rounded-xl md:rounded-lg flex items-center justify-center mb-1.5 md:mb-1">
         {React.cloneElement(icon as React.ReactElement, { size: 13 })}
       </div>
-      <p className="font-display text-base md:text-xs font-bold text-brand-navy leading-none mb-0.5">{value}</p>
+      <p className={cn('font-display text-base md:text-xs font-bold text-brand-navy leading-none mb-0.5', blurValue && 'blur-[3px] select-none')}>{value}</p>
       <div className="flex items-center justify-center gap-0.5">
         <p className="text-[8px] md:text-[7px] text-brand-navy/75 font-bold uppercase tracking-wider text-center">{label}</p>
         {info && <InfoTip text={info} />}
       </div>
-      {sub && <p className="text-[7px] md:text-[6px] text-brand-navy/40 font-bold uppercase tracking-wider text-center mt-0.5 leading-tight">{sub}</p>}
+      {sub && <p className={cn('text-[7px] md:text-[6px] text-brand-navy/40 font-bold uppercase tracking-wider text-center mt-0.5 leading-tight', blurValue && 'blur-[3px] select-none')}>{sub}</p>}
     </div>
   );
 }
