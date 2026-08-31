@@ -2188,17 +2188,19 @@ export default function App() {
     setNeedsOnboarding(false);
   };
 
+  const linqGradientTextStyle: React.CSSProperties = { fontFamily: 'Poppins, sans-serif', background: 'linear-gradient(115deg, var(--brand-g1), var(--brand-g2), var(--brand-g3), var(--brand-g4))', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', WebkitTextFillColor: 'transparent' };
+
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-between gradient-logo-blue px-6 pb-16 relative overflow-hidden" style={{ paddingTop: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 4rem)' }}>
+      <div className="min-h-screen flex flex-col items-center justify-between bg-white px-6 pb-16 relative overflow-hidden" style={{ paddingTop: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 4rem)' }}>
         <div className="flex-1 flex flex-col items-center justify-center gap-7">
-          <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={{ fontFamily: 'Poppins, sans-serif', color: '#ffffff' }}>Linq</span>
-          <div className="w-7 h-7 rounded-full border-[3px] border-white/25 border-t-white animate-spin" />
+          <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={linqGradientTextStyle}>Linq</span>
+          <div className="w-7 h-7 rounded-full border-[3px] border-black/10 border-t-black/60 animate-spin" />
         </div>
         <div className="flex flex-col items-center gap-2">
           <img src={adastraLogoUrl || '/app-logo.png'} alt="Ad Astra Network" className="w-14 h-14 rounded-2xl object-contain" />
-          <p className="text-[10px] text-white/40 font-medium">from</p>
-          <p className="text-xs font-bold text-white/60 tracking-wide">Ad Astra Network</p>
+          <p className="text-[10px] text-black/35 font-medium">from</p>
+          <p className="text-xs font-bold text-black/50 tracking-wide">Ad Astra Network</p>
         </div>
       </div>
     );
@@ -2206,12 +2208,12 @@ export default function App() {
 
   if (emailVerifiedStandalone) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gradient-logo-blue px-6 gap-6 text-center">
-        <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={{ fontFamily: 'Poppins, sans-serif', color: '#ffffff' }}>Linq</span>
-        <CheckCircle2 className="w-12 h-12 text-white" />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white px-6 gap-6 text-center">
+        <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={linqGradientTextStyle}>Linq</span>
+        <CheckCircle2 className="w-12 h-12 text-green-500" />
         <div>
-          <p className="text-white font-bold text-xl mb-2">Verified</p>
-          <p className="text-white/70 text-sm max-w-xs">Go back to app</p>
+          <p className="text-black font-bold text-xl mb-2">Verified</p>
+          <p className="text-black/50 text-sm max-w-xs">Go back to app</p>
         </div>
       </div>
     );
@@ -2219,12 +2221,12 @@ export default function App() {
 
   if (emailChangedStandalone) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gradient-logo-blue px-6 gap-6 text-center">
-        <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={{ fontFamily: 'Poppins, sans-serif', color: '#ffffff' }}>Linq</span>
-        <CheckCircle2 className="w-12 h-12 text-white" />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white px-6 gap-6 text-center">
+        <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={linqGradientTextStyle}>Linq</span>
+        <CheckCircle2 className="w-12 h-12 text-green-500" />
         <div>
-          <p className="text-white font-bold text-xl mb-2">Email updated!</p>
-          <p className="text-white/70 text-sm max-w-xs">Sign in with your new email next time. Go back to the Linq app to continue.</p>
+          <p className="text-black font-bold text-xl mb-2">Email updated!</p>
+          <p className="text-black/50 text-sm max-w-xs">Sign in with your new email next time. Go back to the Linq app to continue.</p>
         </div>
       </div>
     );
@@ -2232,12 +2234,12 @@ export default function App() {
 
   if (browserConsumerBlocked) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gradient-logo-blue px-6 gap-6 text-center">
-        <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={{ fontFamily: 'Poppins, sans-serif', color: '#ffffff' }}>Linq</span>
-        <p className="text-white font-bold text-xl">Vendor & Admin Access Only</p>
-        <p className="text-white/70 text-sm max-w-xs">The Linq web app is for vendors and admins. Customers should use the Linq mobile app.</p>
-        <a href="https://mylinq.app" className="px-8 py-3 bg-white/20 rounded-2xl text-white font-bold text-sm">Go to mylinq.app</a>
-        <button onClick={() => setBrowserConsumerBlocked(false)} className="text-white/50 text-xs underline">Sign in with a different account</button>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white px-6 gap-6 text-center">
+        <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={linqGradientTextStyle}>Linq</span>
+        <p className="text-black font-bold text-xl">Vendor & Admin Access Only</p>
+        <p className="text-black/50 text-sm max-w-xs">The Linq web app is for vendors and admins. Customers should use the Linq mobile app.</p>
+        <a href="https://mylinq.app" className="px-8 py-3 bg-black rounded-2xl text-white font-bold text-sm">Go to mylinq.app</a>
+        <button onClick={() => setBrowserConsumerBlocked(false)} className="text-blue-600 hover:text-blue-700 text-xs">Sign in with a different account</button>
       </div>
     );
   }
@@ -2245,13 +2247,13 @@ export default function App() {
 
   if (nativeVendorBlocked) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gradient-logo-blue px-6 gap-5 text-center" style={{ paddingTop: 'var(--safe-area-inset-top, env(safe-area-inset-top, 0px))' }}>
-        <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={{ fontFamily: 'Poppins, sans-serif', color: '#ffffff' }}>Linq</span>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white px-6 gap-5 text-center" style={{ paddingTop: 'var(--safe-area-inset-top, env(safe-area-inset-top, 0px))' }}>
+        <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={linqGradientTextStyle}>Linq</span>
         <div>
-          <p className="text-white font-bold text-xl mb-2">Vendor accounts aren't supported here</p>
-          <p className="text-white/70 text-sm max-w-xs">This app is for Linq members. Please sign in with a personal account.</p>
+          <p className="text-black font-bold text-xl mb-2">Vendor accounts aren't supported here</p>
+          <p className="text-black/50 text-sm max-w-xs">This app is for Linq members. Please sign in with a personal account.</p>
         </div>
-        <button onClick={() => setNativeVendorBlocked(false)} className="px-8 py-4 bg-white rounded-2xl text-brand-navy font-bold text-base shadow-lg active:scale-95 transition-transform">Sign in with a different account</button>
+        <button onClick={() => setNativeVendorBlocked(false)} className="px-8 py-4 bg-black rounded-2xl text-white font-bold text-base shadow-lg active:scale-95 transition-transform">Sign in with a different account</button>
       </div>
     );
   }
@@ -2283,27 +2285,27 @@ export default function App() {
 
   if (profileLoadError || (!profile && !needsOnboarding)) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-between gradient-logo-blue px-6 pb-16" style={{ paddingTop: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 4rem)' }}>
+      <div className="min-h-screen flex flex-col items-center justify-between bg-white px-6 pb-16" style={{ paddingTop: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 4rem)' }}>
         <div className="flex-1 flex flex-col items-center justify-center gap-6">
-          <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={{ fontFamily: 'Poppins, sans-serif', color: '#ffffff' }}>Linq</span>
+          <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={linqGradientTextStyle}>Linq</span>
           {profileLoadError ? (
             <>
-              <p className="text-white/60 text-sm text-center">Could not connect. Please check your internet connection.</p>
+              <p className="text-black/50 text-sm text-center">Could not connect. Please check your internet connection.</p>
               <button
                 onClick={() => { setProfileLoadError(false); setLoading(true); auth.currentUser?.reload().then(() => { const u = auth.currentUser; if (u) { setLoading(false); } }); window.location.reload(); }}
-                className="px-8 py-3 bg-white/20 rounded-2xl text-white font-bold text-sm"
+                className="px-8 py-3 bg-black rounded-2xl text-white font-bold text-sm"
               >
                 Retry
               </button>
             </>
           ) : (
-            <p className="text-white/40 text-xs">Loading your profile…</p>
+            <p className="text-black/35 text-xs">Loading your profile…</p>
           )}
         </div>
         <div className="flex flex-col items-center gap-2">
           <img src={adastraLogoUrl || '/app-logo.png'} alt="Ad Astra Network" className="w-14 h-14 rounded-2xl object-contain" />
-          <p className="text-[10px] text-white/40 font-medium">from</p>
-          <p className="text-xs font-bold text-white/60 tracking-wide">Ad Astra Network</p>
+          <p className="text-[10px] text-black/35 font-medium">from</p>
+          <p className="text-xs font-bold text-black/50 tracking-wide">Ad Astra Network</p>
         </div>
       </div>
     );
