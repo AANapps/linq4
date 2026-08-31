@@ -19443,7 +19443,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 )}
               </div>
 
-              <div className="relative md:max-w-2xl md:mx-auto">
+              <div className="relative w-full">
                 {!isSubscribed && !isInTrial && !isNativeIOS ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:items-start">
                     {/* CTA card */}
@@ -19488,33 +19488,33 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     </div>
 
                     {/* Weekly stamps bar chart */}
-                    <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                    <div className="glass-card p-5 md:p-6 rounded-[2rem] space-y-3">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="font-bold text-brand-navy text-sm">Weekly Stamps</p>
-                          <p className="text-[10px] text-brand-navy/50">Last 8 weeks</p>
+                          <p className="font-bold text-brand-navy text-sm md:text-base">Weekly Stamps</p>
+                          <p className="text-[10px] md:text-xs text-brand-navy/50">Last 8 weeks</p>
                         </div>
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">Example</span>
+                        <span className="text-[9px] md:text-xs font-bold uppercase tracking-widest text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">Example</span>
                       </div>
-                      <div className="flex gap-1.5 items-end blur-[3px] select-none pointer-events-none" style={{ height: '80px' }}>
+                      <div className="flex gap-1.5 items-end blur-[3px] select-none pointer-events-none md:h-32" style={{ height: '80px' }}>
                         {[42, 58, 71, 45, 83, 67, 55, 79].map((h, i) => (
                           <div key={i} className="flex-1 flex flex-col items-center gap-1">
                             <div className="w-full flex items-end" style={{ height: '64px' }}>
                               <div className="w-full rounded-t-md" style={{ height: `${h}%`, background: 'linear-gradient(180deg, #3B82F6 0%, #1D4ED8 100%)' }} />
                             </div>
-                            <p className="text-[8px] text-brand-navy/40 font-bold">W{i + 1}</p>
+                            <p className="text-[8px] md:text-xs text-brand-navy/40 font-bold">W{i + 1}</p>
                           </div>
                         ))}
                       </div>
                     </div>
 
                     {/* Visit frequency */}
-                    <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                    <div className="glass-card p-5 md:p-6 rounded-[2rem] space-y-3">
                       <div className="flex items-center justify-between">
-                        <p className="font-bold text-brand-navy text-sm">Visit Frequency</p>
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">Example</span>
+                        <p className="font-bold text-brand-navy text-sm md:text-base">Visit Frequency</p>
+                        <span className="text-[9px] md:text-xs font-bold uppercase tracking-widest text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">Example</span>
                       </div>
-                      <div className="space-y-3 blur-[3px] select-none pointer-events-none">
+                      <div className="space-y-3 md:space-y-4 blur-[3px] select-none pointer-events-none">
                         {[
                           { label: '3+ / week', pct: 18, color: '#1D4ED8' },
                           { label: '1–2 / week', pct: 34, color: '#3B82F6' },
@@ -19522,21 +19522,21 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                           { label: 'Occasional', pct: 17, color: '#BFDBFE' },
                         ].map(({ label, pct, color }) => (
                           <div key={label} className="flex items-center gap-3">
-                            <p className="text-[10px] text-brand-navy/50 font-bold w-20 shrink-0">{label}</p>
-                            <div className="flex-1 h-2 bg-brand-navy/8 rounded-full overflow-hidden">
+                            <p className="text-[10px] md:text-sm text-brand-navy/50 font-bold w-20 md:w-24 shrink-0">{label}</p>
+                            <div className="flex-1 h-2 md:h-3 bg-brand-navy/8 rounded-full overflow-hidden">
                               <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
                             </div>
-                            <p className="text-[10px] text-brand-navy/50 font-bold w-7 text-right">{pct}%</p>
+                            <p className="text-[10px] md:text-sm text-brand-navy/50 font-bold w-7 md:w-9 text-right">{pct}%</p>
                           </div>
                         ))}
                       </div>
                     </div>
 
                     {/* Busiest days */}
-                    <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                    <div className="glass-card p-5 md:p-6 rounded-[2rem] space-y-3">
                       <div className="flex items-center justify-between">
-                        <p className="font-bold text-brand-navy text-sm">Busiest Days</p>
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">Example</span>
+                        <p className="font-bold text-brand-navy text-sm md:text-base">Busiest Days</p>
+                        <span className="text-[9px] md:text-xs font-bold uppercase tracking-widest text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">Example</span>
                       </div>
                       <div className="flex gap-1.5 blur-[3px] select-none pointer-events-none">
                         {[
@@ -19547,7 +19547,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                             <div className="w-full flex items-end" style={{ height: '60px' }}>
                               <div className="w-full rounded-t-md" style={{ height: `${h}%`, background: h > 80 ? 'linear-gradient(180deg,#7C3AED,#4F46E5)' : 'linear-gradient(180deg,#A78BFA,#818CF8)' }} />
                             </div>
-                            <p className="text-[8px] text-brand-navy/40 font-bold">{day}</p>
+                            <p className="text-[8px] md:text-xs text-brand-navy/40 font-bold">{day}</p>
                           </div>
                         ))}
                       </div>
@@ -19657,11 +19657,11 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 }
                 const maxVal = Math.max(...periods.map(p => p.count), 1);
                 return (
-                  <div className="glass-card p-6 rounded-[2rem] space-y-4">
+                  <div className="glass-card p-6 md:p-7 rounded-[2rem] space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-bold text-brand-navy">Stamps Chart</p>
-                        <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">
+                        <p className="font-bold text-brand-navy md:text-lg">Stamps Chart</p>
+                        <p className="text-[10px] md:text-xs text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">
                           {chartMode === 'weeks' ? 'By week' : 'By day'}
                         </p>
                       </div>
@@ -19669,7 +19669,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                         <div className="flex p-0.5 bg-brand-navy/8 rounded-xl">
                           {(['days', 'weeks'] as const).map(m => (
                             <button key={m} onClick={() => { setChartMode(m); setChartOffset(0); }}
-                              className={cn('px-3 py-1.5 rounded-[10px] text-[10px] font-bold transition-all', chartMode === m ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/75')}>
+                              className={cn('px-3 py-1.5 rounded-[10px] text-[10px] md:text-xs font-bold transition-all', chartMode === m ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/75')}>
                               {m === 'days' ? 'Days' : 'Weeks'}
                             </button>
                           ))}
@@ -19684,9 +19684,9 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     </div>
                     <div className="flex gap-1 items-end">
                       <div className="flex flex-col justify-between text-right shrink-0 mb-3" style={{ height: '80px', minWidth: '16px' }}>
-                        <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{maxVal}</span>
-                        <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{Math.round(maxVal / 2)}</span>
-                        <span className="text-[8px] text-brand-navy/72 font-bold leading-none">0</span>
+                        <span className="text-[8px] md:text-xs text-brand-navy/72 font-bold leading-none">{maxVal}</span>
+                        <span className="text-[8px] md:text-xs text-brand-navy/72 font-bold leading-none">{Math.round(maxVal / 2)}</span>
+                        <span className="text-[8px] md:text-xs text-brand-navy/72 font-bold leading-none">0</span>
                       </div>
                       <div className="relative flex items-end gap-1 h-28 flex-1">
                         {stampHoverIdx !== null && periods[stampHoverIdx]?.count > 0 && (
@@ -19708,17 +19708,17 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                                 />
                               </div>
                               {sel && p.count > 0 && (
-                                <span className="absolute text-[7px] font-black text-white bg-brand-navy/70 px-1 py-px rounded leading-none pointer-events-none"
+                                <span className="absolute text-[7px] md:text-[10px] font-black text-white bg-brand-navy/70 px-1 py-px rounded leading-none pointer-events-none"
                                   style={{ bottom: `${barH + 20}px` }}>{p.count}</span>
                               )}
-                              <p className="text-[8px] text-brand-navy/72 font-bold leading-none">{p.label}</p>
+                              <p className="text-[8px] md:text-xs text-brand-navy/72 font-bold leading-none">{p.label}</p>
                             </div>
                           );
                         })}
                       </div>
                     </div>
                     {stampTxns.length === 0 && (
-                      <p className="text-center text-xs text-brand-navy/72 font-bold py-2">No stamp data yet</p>
+                      <p className="text-center text-xs md:text-sm text-brand-navy/72 font-bold py-2">No stamp data yet</p>
                     )}
                   </div>
                 );
@@ -19767,14 +19767,14 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 const polyPts = points.map((p, i) => `${toX(i)},${toY(p.cumulative)}`).join(' ');
                 const areaPts = `${toX(0)},${svgH} ${polyPts} ${toX(points.length - 1)},${svgH}`;
                 return (
-                  <div className="glass-card p-6 rounded-[2rem] space-y-3">
+                  <div className="glass-card p-6 md:p-7 rounded-[2rem] space-y-3">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-bold text-brand-navy">User Base Growth</p>
-                        <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Cumulative members · {points[points.length - 1]?.cumulative ?? 0} total</p>
+                        <p className="font-bold text-brand-navy md:text-lg">User Base Growth</p>
+                        <p className="text-[10px] md:text-xs text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Cumulative members · {points[points.length - 1]?.cumulative ?? 0} total</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="flex rounded-xl overflow-hidden border border-brand-navy/10 text-[10px] font-bold">
+                        <div className="flex rounded-xl overflow-hidden border border-brand-navy/10 text-[10px] md:text-xs font-bold">
                           <button onClick={() => { setGrowthPeriod('days'); setGrowthOffset(0); setGrowthHoverIdx(null); }} className={cn('px-2 py-1 transition-colors', isDays ? 'bg-brand-navy text-white' : 'text-brand-navy/60 hover:text-brand-navy')}>Days</button>
                           <button onClick={() => { setGrowthPeriod('weeks'); setGrowthOffset(0); setGrowthHoverIdx(null); }} className={cn('px-2 py-1 transition-colors', !isDays ? 'bg-brand-navy text-white' : 'text-brand-navy/60 hover:text-brand-navy')}>Weeks</button>
                         </div>
@@ -19785,9 +19785,9 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     {/* Y-axis labels + SVG line chart */}
                     <div className="flex gap-1 items-stretch">
                       <div className="flex flex-col justify-between text-right shrink-0" style={{ height: `${svgH}px`, minWidth: '18px' }}>
-                        <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{maxVal}</span>
-                        <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{Math.round(maxVal / 2)}</span>
-                        <span className="text-[8px] text-brand-navy/72 font-bold leading-none">0</span>
+                        <span className="text-[8px] md:text-xs text-brand-navy/72 font-bold leading-none">{maxVal}</span>
+                        <span className="text-[8px] md:text-xs text-brand-navy/72 font-bold leading-none">{Math.round(maxVal / 2)}</span>
+                        <span className="text-[8px] md:text-xs text-brand-navy/72 font-bold leading-none">0</span>
                       </div>
                       <div className="flex-1 flex flex-col gap-1">
                         <svg
@@ -19838,7 +19838,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                         {/* X-axis labels */}
                         <div className="flex justify-between px-1">
                           {points.map((p, i) => (
-                            <span key={i} className="text-[7px] text-brand-navy/60 font-bold leading-none" style={{ width: `${100 / points.length}%`, textAlign: 'center' }}>{p.label}</span>
+                            <span key={i} className="text-[7px] md:text-[10px] text-brand-navy/60 font-bold leading-none" style={{ width: `${100 / points.length}%`, textAlign: 'center' }}>{p.label}</span>
                           ))}
                         </div>
                       </div>
@@ -25426,16 +25426,16 @@ function WallPostItem({ post, currentUser, wallOwnerUid, onViewUser }: { post: a
 
 function StatSquare({ icon, label, value, sub, info, blurValue }: { icon: React.ReactNode, label: string, value: string, sub?: string, info?: string, blurValue?: boolean }) {
   return (
-    <div className="glass-card aspect-square md:aspect-auto md:h-20 rounded-[1.5rem] md:rounded-xl flex flex-col items-center justify-center p-3 md:p-2 hover:shadow-md transition-all">
-      <div className="w-7 h-7 md:w-5 md:h-5 bg-brand-bg rounded-xl md:rounded-lg flex items-center justify-center mb-1.5 md:mb-1">
+    <div className="glass-card aspect-square md:aspect-auto md:h-28 rounded-[1.5rem] flex flex-col items-center justify-center p-3 md:p-4 hover:shadow-md transition-all">
+      <div className="w-7 h-7 md:w-9 md:h-9 bg-brand-bg rounded-xl flex items-center justify-center mb-1.5 md:mb-2">
         {React.cloneElement(icon as React.ReactElement, { size: 13 })}
       </div>
-      <p className={cn('font-display text-base md:text-xs font-bold text-brand-navy leading-none mb-0.5', blurValue && 'blur-[3px] select-none')}>{value}</p>
+      <p className={cn('font-display text-base md:text-2xl font-bold text-brand-navy leading-none mb-0.5 md:mb-1', blurValue && 'blur-[3px] select-none')}>{value}</p>
       <div className="flex items-center justify-center gap-0.5">
-        <p className="text-[8px] md:text-[7px] text-brand-navy/75 font-bold uppercase tracking-wider text-center">{label}</p>
+        <p className="text-[8px] md:text-xs text-brand-navy/75 font-bold uppercase tracking-wider text-center">{label}</p>
         {info && <InfoTip text={info} />}
       </div>
-      {sub && <p className={cn('text-[7px] md:text-[6px] text-brand-navy/40 font-bold uppercase tracking-wider text-center mt-0.5 leading-tight', blurValue && 'blur-[3px] select-none')}>{sub}</p>}
+      {sub && <p className={cn('text-[7px] md:text-[10px] text-brand-navy/40 font-bold uppercase tracking-wider text-center mt-0.5 leading-tight', blurValue && 'blur-[3px] select-none')}>{sub}</p>}
     </div>
   );
 }
