@@ -2313,7 +2313,7 @@ export default function App() {
 
   return (
     <div className={cn("min-h-screen bg-white", !isVendor && !isNativeIOS && "md:flex md:justify-center")}>
-    <div className="holo-ambient" aria-hidden="true" />
+    <div className={cn("holo-ambient", isNativeAndroid && "holo-ambient-static")} aria-hidden="true" />
     <div className={cn("w-full relative", !isVendor && !isNativeIOS && "md:max-w-sm")} style={{ paddingBottom: 'calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) + 6rem)' }}>
       {/* Header */}
       <header className="glass-panel sticky top-0 z-50 px-5 pb-3.5 flex items-center justify-between relative" style={{ paddingTop: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 0.875rem)' }}>

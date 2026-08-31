@@ -27,10 +27,15 @@
 }
 
 @layer base {
+  html {
+    overflow-x: hidden;
+  }
+
   body {
     @apply font-sans antialiased;
     background: #ffffff;
     min-height: 100vh;
+    overflow-x: hidden;
     color: var(--color-brand-navy);
   }
 }
@@ -89,6 +94,13 @@
   .holo-ambient {
     animation: none;
   }
+}
+
+/* Animating filter: hue-rotate() + transform every frame, forever, behind
+   several backdrop-blur panels is expensive to repaint on Android WebView.
+   Freeze it there (blobs stay visible, just static) — desktop/iOS unaffected. */
+.holo-ambient-static {
+  animation: none;
 }
 
 .gradient-red {
