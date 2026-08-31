@@ -19443,11 +19443,11 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 )}
               </div>
 
-              <div className="relative md:max-w-md md:mx-auto">
+              <div className="relative md:max-w-2xl md:mx-auto">
                 {!isSubscribed && !isInTrial && !isNativeIOS ? (
-                  <div className="space-y-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:items-start">
                     {/* CTA card */}
-                    <div className="bg-white rounded-[2rem] px-5 py-5 shadow-lg border border-brand-navy/8 space-y-4">
+                    <div className="md:col-span-2 bg-white rounded-[2rem] px-5 py-5 shadow-lg border border-brand-navy/8 space-y-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-[1rem] bg-purple-50 flex items-center justify-center shrink-0">
                           <Lock size={18} className="text-purple-600" />
@@ -19478,10 +19478,10 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     </div>
 
                     {/* Preview — example data */}
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/30 text-center">Example data — your real insights unlock on subscribe</p>
+                    <p className="md:col-span-2 text-[10px] font-bold uppercase tracking-widest text-brand-navy/30 text-center">Example data — your real insights unlock on subscribe</p>
 
                     {/* Stat squares */}
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="md:col-span-2 grid grid-cols-3 gap-3">
                       <StatSquare icon={<AlertTriangle className="text-rose-500" />} label="Churn Risk" value="8" sub="21d+ no stamp" blurValue />
                       <StatSquare icon={<UserPlus className="text-emerald-500" />} label="Newcomers" value="14" sub="joined last 30d" blurValue />
                       <StatSquare icon={<Zap className="text-amber-500" />} label="Avg/Visit" value="2.3" sub="stamps per scan" blurValue />
@@ -19554,7 +19554,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     </div>
 
                     {/* AI Recommendations */}
-                    <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                    <div className="md:col-span-2 glass-card p-5 rounded-[2rem] space-y-3">
                       <div className="flex items-center justify-between">
                         <p className="font-bold text-brand-navy text-sm">AI Recommendations</p>
                         <Zap size={14} className="text-amber-500" />
@@ -19572,7 +19572,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     </div>
 
                     {/* Competitor benchmarking */}
-                    <div className="glass-card p-5 rounded-[2rem] space-y-3">
+                    <div className="md:col-span-2 glass-card p-5 rounded-[2rem] space-y-3">
                       <div className="flex items-center justify-between">
                         <p className="font-bold text-brand-navy text-sm">Competitor Benchmarking</p>
                         <span className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/40 bg-brand-navy/8 px-2 py-0.5 rounded-full">Coming soon</span>
@@ -19594,7 +19594,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                   </div>
                 ) : null}
                 {(isSubscribed || isInTrial || isNativeIOS) ? (
-                <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
                 <>
                   {/* Intelligence: At-risk + Newcomers + Avg/Visit */}
                   {(() => {
@@ -19624,7 +19624,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     const totalTxStamps = stampTxns.reduce((s, tx) => s + (tx.stamp_count || 1), 0);
                     const avgVisit = stampTxns.length > 0 ? (totalTxStamps / stampTxns.length).toFixed(1) : '—';
                     return (
-                      <div className="grid grid-cols-3 gap-3 md:gap-2">
+                      <div className="md:col-span-2 grid grid-cols-3 gap-3 md:gap-2">
                         <div onClick={() => openStatModal('churnRisk')} className="cursor-pointer active:scale-95 transition-transform">
                           <StatSquare icon={<AlertTriangle className="text-rose-500" />} label="Churn Risk" value={String(atRisk)} sub="21d+ no stamp" info="Members who haven't collected a stamp in 21+ days — at risk of drifting away. Tap to see the list." />
                         </div>
@@ -20088,7 +20088,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     const avgClv = (clvStamps.reduce((s, v) => s + v, 0) / uniqueUids.length).toFixed(1);
                     const topClv = Math.max(...clvStamps);
                     return (
-                      <div className="glass-card p-6 rounded-[2rem] space-y-3">
+                      <div className="md:col-span-2 glass-card p-6 rounded-[2rem] space-y-3">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="font-bold text-brand-navy">Customer Lifetime Value</p>
@@ -20132,7 +20132,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     const barColor = isHealthy ? 'bg-teal-400' : isMid ? 'bg-amber-400' : 'bg-rose-400';
                     const scoreLabel = isHealthy ? 'Healthy' : isMid ? 'Needs Attention' : 'At Risk';
                     return (
-                      <div className={cn('rounded-[1.5rem] border p-5 space-y-3', scoreBg)}>
+                      <div className={cn('md:col-span-2 rounded-[1.5rem] border p-5 space-y-3', scoreBg)}>
                         <div className="flex items-center justify-between">
                           <p className="font-bold text-brand-navy">Monthly Health Score</p>
                           <span className={cn('font-display text-2xl font-black', scoreColor)}>{healthScore}</span>
@@ -20175,7 +20175,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     if (totalMembers < 20) recs.push({ icon: '🚀', text: 'Grow your member base — share your QR code on social media or at your counter' });
                     if (recs.length === 0) recs.push({ icon: '✅', text: 'Great work! Your loyalty programme is performing well — keep the stamps coming' });
                     return (
-                      <div className="glass-card p-6 rounded-[2rem] space-y-3">
+                      <div className="md:col-span-2 glass-card p-6 rounded-[2rem] space-y-3">
                         <div className="flex items-center justify-between">
                           <p className="font-bold text-brand-navy">Recommendations</p>
                           <Zap size={16} className="text-amber-500" />
@@ -20193,7 +20193,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                   })()}
 
                   {/* Intelligence: Competitor Benchmarking — coming soon */}
-                  <div className="glass-card p-6 rounded-[2rem] opacity-60">
+                  <div className="md:col-span-2 glass-card p-6 rounded-[2rem] opacity-60">
                     <div className="flex items-center justify-between mb-2">
                       <p className="font-bold text-brand-navy">Competitor Benchmarking</p>
                       <span className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/40 bg-brand-navy/8 px-2 py-0.5 rounded-full">Coming soon</span>
