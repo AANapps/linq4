@@ -634,7 +634,7 @@ interface VendorOnboardingData {
   country: string;
   companyNumber: string;
   category: string;
-  cardType: 'stamp' | 'spend' | 'visit';
+  cardType: 'stamp' | 'spend' | 'visit' | 'skip';
   addrLine1: string;
   addrLine2: string;
   addrTown: string;
@@ -2162,6 +2162,7 @@ export default function App() {
       };
       const isVisit = data.cardType === 'visit';
       const isSpend = data.cardType === 'spend';
+      const isSkip = data.cardType === 'skip';
       await addDoc(collection(db, 'stores'), {
         name: data.businessName,
         category: data.category,
@@ -2173,10 +2174,12 @@ export default function App() {
         isVerified: false,
         stamps_required_for_reward: 10,
         rewardsGiven: 0,
-        cardEnabled: !isVisit && !isSpend,
-        membershipEnabled: isVisit || isSpend,
-        ...(isVisit ? { membershipType: 'visit', membershipStampsPerVisit: 1, scanMethod: 'qr' } : {}),
-        ...(isSpend ? { membershipType: 'spend', membershipPointsRate: 1, membershipRedemptionRate: 100, scanMethod: 'qr' } : {}),
+        // Skipped at signup — no card type chosen yet, so nothing is visible to
+        // customers until the vendor activates one later from the Cards screen.
+        cardEnabled: !isSkip && !isVisit && !isSpend,
+        membershipEnabled: !isSkip && (isVisit || isSpend),
+        ...(!isSkip && isVisit ? { membershipType: 'visit', membershipStampsPerVisit: 1, scanMethod: 'qr' } : {}),
+        ...(!isSkip && isSpend ? { membershipType: 'spend', membershipPointsRate: 1, membershipRedemptionRate: 100, scanMethod: 'qr' } : {}),
         trialEndsAt: Timestamp.fromDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
         ...(data.location ? { lat: data.location.lat, lng: data.location.lng, location: data.location.city ?? '' } : {}),
       });
@@ -3450,7 +3453,7 @@ function OnboardingScreen({ user, onComplete }: {
   // Shared
   const [locationData, setLocationData] = React.useState<{ lat: number; lng: number; city?: string } | null>(null);
   const [locationStatus, setLocationStatus] = React.useState<'idle' | 'requesting' | 'granted' | 'denied'>('idle');
-  const [cardType, setCardType] = React.useState<'stamp' | 'spend' | 'visit' | null>(null);
+  const [cardType, setCardType] = React.useState<'stamp' | 'spend' | 'visit' | 'skip' | null>(null);
 
   const CATEGORIES: Category[] = [
   'Food', 'Bubble Tea', 'Coffee', 'Drinks', 'Juice', 'Smoothies', 'Bakery',
@@ -3776,6 +3779,14 @@ function OnboardingScreen({ user, onComplete }: {
             </div>
           </button>
         ))}
+        <button
+          onClick={() => setCardType('skip')}
+          className={`w-full text-center rounded-2xl py-3 text-sm font-bold transition-all ${
+            cardType === 'skip' ? 'text-brand-navy underline underline-offset-2' : 'text-brand-navy/50 hover:text-brand-navy/75'
+          }`}
+        >
+          Skip for now — decide later
+        </button>
       </div>
     </>,
     // Step 4 — Contact & Address
@@ -26440,11 +26451,16 @@ function NfcTagUrlRow({ storeId }: { storeId: string }) {
 
 // ─── Vendor Card Section (toggle + builder) ──────────────────────────────────
 function VendorCardSection({ store, isSubscribed }: { store: StoreProfile | null; isSubscribed?: boolean }) {
-  // Derive active card type from Firestore state — single source of truth
-  const activeType: 'stamp' | 'spend' | 'visit' =
+  // Derive active card type from Firestore state — single source of truth.
+  // null means the vendor skipped card setup at signup and hasn't activated one yet.
+  const activeType: 'stamp' | 'spend' | 'visit' | null =
     store?.membershipEnabled && store?.membershipType === 'visit' ? 'visit' :
     store?.membershipEnabled && store?.membershipType === 'spend' ? 'spend' :
-    'stamp';
+    store?.cardEnabled ? 'stamp' :
+    null;
+  // Which builder to show below the selector — falls back to Stamps so there's
+  // always something to preview/configure even before a type is activated.
+  const displayType: 'stamp' | 'spend' | 'visit' = activeType ?? 'stamp';
 
   const [pendingType, setPendingType] = useState<'stamp' | 'spend' | 'visit' | null>(null);
   const [switching, setSwitching] = useState(false);
@@ -26497,6 +26513,15 @@ function VendorCardSection({ store, isSubscribed }: { store: StoreProfile | null
         <p className="text-brand-navy/80 text-sm">Manage your loyalty and membership cards.</p>
       </header>
 
+      {activeType === null && (
+        <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
+          <AlertTriangle size={15} className="text-amber-500 shrink-0 mt-0.5" />
+          <p className="text-xs text-amber-800 leading-relaxed">
+            You skipped card setup during signup — nothing's visible to customers yet. Pick a type below to activate it.
+          </p>
+        </div>
+      )}
+
       {/* ─── 3-way card type selector ─── */}
       <div className="flex gap-1 p-1 bg-brand-navy/5 rounded-2xl">
         {([
@@ -26532,10 +26557,12 @@ function VendorCardSection({ store, isSubscribed }: { store: StoreProfile | null
                 <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
                   <AlertTriangle size={20} className="text-amber-500" />
                 </div>
-                <h3 className="font-display text-lg font-bold text-brand-navy">Switch card type?</h3>
+                <h3 className="font-display text-lg font-bold text-brand-navy">{activeType === null ? 'Activate card?' : 'Switch card type?'}</h3>
               </div>
               <p className="text-sm text-brand-navy/75">
-                Switching to <span className="font-bold text-brand-navy">{pendingType === 'stamp' ? 'Stamps' : pendingType === 'spend' ? 'Spend Points' : 'Visit Points'}</span> will disable your current card. Customers won't see it on your profile until you switch back.
+                {activeType === null
+                  ? <>Activating <span className="font-bold text-brand-navy">{pendingType === 'stamp' ? 'Stamps' : pendingType === 'spend' ? 'Spend Points' : 'Visit Points'}</span> will make it visible on your profile so customers can start collecting.</>
+                  : <>Switching to <span className="font-bold text-brand-navy">{pendingType === 'stamp' ? 'Stamps' : pendingType === 'spend' ? 'Spend Points' : 'Visit Points'}</span> will disable your current card. Customers won't see it on your profile until you switch back.</>}
               </p>
               <div className="flex gap-3">
                 <button
@@ -26550,7 +26577,7 @@ function VendorCardSection({ store, isSubscribed }: { store: StoreProfile | null
                   disabled={switching}
                   className="flex-1 py-3 rounded-2xl bg-brand-navy text-white text-sm font-bold disabled:opacity-40"
                 >
-                  {switching ? 'Switching…' : 'Switch'}
+                  {switching ? (activeType === null ? 'Activating…' : 'Switching…') : (activeType === null ? 'Activate' : 'Switch')}
                 </button>
               </div>
             </div>
@@ -26559,7 +26586,7 @@ function VendorCardSection({ store, isSubscribed }: { store: StoreProfile | null
       </AnimatePresence>
 
       {/* ─── Scan method selector (stamp + visit only) ─── */}
-      {(activeType === 'stamp' || activeType === 'visit') && (
+      {(displayType === 'stamp' || displayType === 'visit') && (
         <div className="glass-card rounded-[2rem] p-5 space-y-4">
           <div>
             <p className="font-bold text-brand-navy text-sm mb-0.5">How customers earn points</p>
@@ -26663,14 +26690,14 @@ function VendorCardSection({ store, isSubscribed }: { store: StoreProfile | null
       </AnimatePresence>
 
       {/* ─── Stamps content ─── */}
-      {activeType === 'stamp' && (
+      {displayType === 'stamp' && (
         <div className="space-y-4">
           <CardBuilder store={store} />
         </div>
       )}
 
       {/* ─── Spend / Visit membership content ─── */}
-      {(activeType === 'spend' || activeType === 'visit') && (
+      {(displayType === 'spend' || displayType === 'visit') && (
         <MembershipCardBuilder store={store} />
       )}
     </div>
