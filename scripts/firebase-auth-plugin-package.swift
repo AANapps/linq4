@@ -14,7 +14,12 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", from: "8.0.0"),
-        .package(url: "https://github.com/firebase/firebase-ios-sdk.git", .upToNextMajor(from: "12.7.0"))
+        .package(url: "https://github.com/firebase/firebase-ios-sdk.git", .upToNextMajor(from: "12.7.0")),
+        // Phone-auth verification falls back to this when silent APNs push isn't
+        // available — Firebase no longer bundles it, so it must be linked explicitly
+        // or sign-in fails with "The reCAPTCHA SDK is not linked to your app".
+        // https://cloud.google.com/recaptcha-enterprise/docs/instrument-ios-apps
+        .package(url: "https://github.com/GoogleCloudPlatform/recaptcha-ios-sdk.git", .upToNextMajor(from: "18.0.0"))
     ],
     targets: [
         .target(
@@ -23,7 +28,8 @@ let package = Package(
                 .product(name: "Capacitor", package: "capacitor-swift-pm"),
                 .product(name: "Cordova", package: "capacitor-swift-pm"),
                 .product(name: "FirebaseAuth", package: "firebase-ios-sdk"),
-                .product(name: "FirebaseCore", package: "firebase-ios-sdk")
+                .product(name: "FirebaseCore", package: "firebase-ios-sdk"),
+                .product(name: "RecaptchaEnterprise", package: "recaptcha-ios-sdk")
             ],
             path: "ios/Plugin")
     ]
