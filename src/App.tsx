@@ -2967,13 +2967,22 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
     if (err) setError(err);
   };
 
-  const bg = { background: 'linear-gradient(160deg, var(--brand-g1) 0%, var(--brand-g2) 40%, var(--brand-g3) 70%, var(--brand-g4) 100%)' };
+  const isNative = Capacitor.isNativePlatform();
+  const bg = isNative
+    ? { background: '#ffffff' }
+    : { background: 'linear-gradient(160deg, var(--brand-g1) 0%, var(--brand-g2) 40%, var(--brand-g3) 70%, var(--brand-g4) 100%)' };
+  const fieldCls = isNative
+    ? 'bg-white border-2 border-brand-navy/10 text-brand-navy placeholder:text-brand-navy/40 focus:outline-none focus:border-brand-gold/60'
+    : 'bg-white/15 border border-white/20 text-white placeholder:text-white/40 focus:outline-none focus:border-white/50 focus:bg-white/20';
+  const iconMutedCls = isNative ? 'text-brand-navy/40' : 'text-white/40';
+  const mutedCls = isNative ? 'text-brand-navy/50' : 'text-white/50';
+  const mutedHoverCls = isNative ? 'text-brand-navy/50 hover:text-brand-navy/80' : 'text-white/50 hover:text-white/80';
 
   return (
     <div className="min-h-screen flex flex-col px-8" style={bg}>
       {loading && (
-        <div className="fixed top-0 left-0 right-0 h-[3px] z-50 overflow-hidden bg-white/20">
-          <motion.div className="absolute top-0 h-full w-1/3 bg-white rounded-full" animate={{ x: ['-100%', '400%'] }} transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }} />
+        <div className={`fixed top-0 left-0 right-0 h-[3px] z-50 overflow-hidden ${isNative ? 'bg-brand-gold/15' : 'bg-white/20'}`}>
+          <motion.div className={`absolute top-0 h-full w-1/3 rounded-full ${isNative ? 'bg-brand-gold' : 'bg-white'}`} animate={{ x: ['-100%', '400%'] }} transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }} />
         </div>
       )}
 
@@ -3011,7 +3020,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
               setPhoneMode(homeMode); setOtp(''); setEmail(''); setPassword(''); setError('');
             }
           }}
-          className="flex items-center gap-2 text-white/70 hover:text-white transition-colors"
+          className={`flex items-center gap-2 transition-colors ${isNative ? 'text-brand-navy/60 hover:text-brand-navy' : 'text-white/70 hover:text-white'}`}
           style={{ paddingTop: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 3.5rem)', marginBottom: '2rem' }}
         >
           <ArrowLeft size={18} />
@@ -3022,7 +3031,12 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
       <div className="flex-1 flex flex-col justify-center max-w-xs mx-auto w-full">
         <div className="mb-10 text-center">
           <div className="flex items-baseline justify-center gap-2">
-            <p className="font-black italic leading-none" style={{ fontFamily: 'Poppins, sans-serif', fontSize: '3rem', color: '#ffffff' }}>Linq</p>
+            <p
+              className="font-black italic leading-none"
+              style={isNative
+                ? { fontFamily: 'Poppins, sans-serif', fontSize: '3rem', background: 'linear-gradient(115deg, var(--brand-g1), var(--brand-g2), var(--brand-g3), var(--brand-g4))', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', WebkitTextFillColor: 'transparent' }
+                : { fontFamily: 'Poppins, sans-serif', fontSize: '3rem', color: '#ffffff' }}
+            >Linq</p>
             {!Capacitor.isNativePlatform() && phoneMode === 'phone' && (
               <span className="text-white/70 text-base font-semibold">Business</span>
             )}
@@ -3030,13 +3044,13 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
         </div>
 
         <div className="mb-8">
-          <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mb-4">
-            {phoneMode === 'email' || phoneMode === 'email-signup' || phoneMode === 'forgot-password' ? <Mail className="w-7 h-7 text-white" /> : <Phone className="w-7 h-7 text-white" />}
+          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 ${isNative ? 'bg-brand-gold/10' : 'bg-white/20'}`}>
+            {phoneMode === 'email' || phoneMode === 'email-signup' || phoneMode === 'forgot-password' ? <Mail className={`w-7 h-7 ${isNative ? 'text-brand-gold' : 'text-white'}`} /> : <Phone className={`w-7 h-7 ${isNative ? 'text-brand-gold' : 'text-white'}`} />}
           </div>
-          <h2 className="font-display font-bold text-2xl text-white mb-1">
+          <h2 className={`font-display font-bold text-2xl mb-1 ${isNative ? 'text-brand-navy' : 'text-white'}`}>
             {phoneMode === 'phone' ? 'Sign in' : phoneMode === 'otp' ? 'Enter the code' : phoneMode === 'email-signup' ? 'Create account' : phoneMode === 'forgot-password' ? 'Reset password' : 'Sign in with email'}
           </h2>
-          <p className="text-white/50 text-sm">
+          <p className={`text-sm ${mutedCls}`}>
             {phoneMode === 'phone' ? 'Enter your phone number to continue'
               : phoneMode === 'otp' ? `We sent a 6-digit code to ${toE164(dialCode, phone)}`
               : phoneMode === 'email-signup' ? 'Create a new account'
@@ -3052,7 +3066,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
                 <select
                   value={dialCode}
                   onChange={e => setDialCode(e.target.value)}
-                  className="shrink-0 rounded-2xl bg-white/15 border border-white/20 text-white text-sm px-3 py-4 focus:outline-none focus:border-white/50 appearance-none"
+                  className={`shrink-0 rounded-2xl text-sm px-3 py-4 appearance-none ${fieldCls}`}
                 >
                   {DIAL_CODES.map(c => (
                     <option key={c.code} value={c.dial} className="text-black">{c.flag} {c.dial}</option>
@@ -3066,7 +3080,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
                   placeholder="Phone number"
                   autoComplete="tel-national"
                   inputMode="numeric"
-                  className="flex-1 min-w-0 px-5 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm focus:outline-none focus:border-white/50 focus:bg-white/20"
+                  className={`flex-1 min-w-0 px-5 py-4 rounded-2xl text-sm ${fieldCls}`}
                 />
               </div>
               <div id="phone-recaptcha" />
@@ -3081,28 +3095,28 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
               autoComplete="one-time-code"
               inputMode="numeric"
               maxLength={6}
-              className="w-full px-5 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm text-center tracking-[0.5em] font-bold focus:outline-none focus:border-white/50 focus:bg-white/20"
+              className={`w-full px-5 py-4 rounded-2xl text-sm text-center tracking-[0.5em] font-bold ${fieldCls}`}
             />
           ) : phoneMode === 'forgot-password' ? (
             resetSent ? (
               <div className="flex flex-col items-center text-center gap-3 py-2">
-                <div className="w-12 h-12 rounded-full bg-white/15 flex items-center justify-center">
-                  <CheckCircle2 size={22} className="text-white" />
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${isNative ? 'bg-brand-gold/10' : 'bg-white/15'}`}>
+                  <CheckCircle2 size={22} className={isNative ? 'text-brand-gold' : 'text-white'} />
                 </div>
-                <p className="text-white/80 text-sm">
-                  We've sent a password reset link to<br /><span className="font-bold text-white">{resetEmail}</span>
+                <p className={`text-sm ${isNative ? 'text-brand-navy/70' : 'text-white/80'}`}>
+                  We've sent a password reset link to<br /><span className={`font-bold ${isNative ? 'text-brand-navy' : 'text-white'}`}>{resetEmail}</span>
                 </p>
                 <button
                   type="button"
                   onClick={() => { setPhoneMode('email'); setResetEmail(''); setResetSent(false); }}
-                  className="text-white/70 text-sm font-medium underline underline-offset-2 hover:text-white transition-colors mt-1"
+                  className={`text-sm font-medium underline underline-offset-2 transition-colors mt-1 ${isNative ? 'text-brand-navy/70 hover:text-brand-navy' : 'text-white/70 hover:text-white'}`}
                 >
                   Back to sign in
                 </button>
               </div>
             ) : (
               <div className="relative">
-                <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
+                <Mail size={16} className={`absolute left-4 top-1/2 -translate-y-1/2 ${iconMutedCls}`} />
                 <input
                   type="email"
                   value={resetEmail}
@@ -3111,14 +3125,14 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
                   placeholder="Email address"
                   autoComplete="email"
                   autoFocus
-                  className="w-full pl-10 pr-5 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm focus:outline-none focus:border-white/50 focus:bg-white/20"
+                  className={`w-full pl-10 pr-5 py-4 rounded-2xl text-sm ${fieldCls}`}
                 />
               </div>
             )
           ) : (
             <>
               <div className="relative">
-                <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
+                <Mail size={16} className={`absolute left-4 top-1/2 -translate-y-1/2 ${iconMutedCls}`} />
                 <input
                   type="email"
                   value={email}
@@ -3126,11 +3140,11 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
                   onKeyDown={e => e.key === 'Enter' && handleEmailSubmit()}
                   placeholder="Email address"
                   autoComplete="email"
-                  className="w-full pl-10 pr-5 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm focus:outline-none focus:border-white/50 focus:bg-white/20"
+                  className={`w-full pl-10 pr-5 py-4 rounded-2xl text-sm ${fieldCls}`}
                 />
               </div>
               <div className="relative">
-                <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
+                <Lock size={16} className={`absolute left-4 top-1/2 -translate-y-1/2 ${iconMutedCls}`} />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
@@ -3138,9 +3152,9 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
                   onKeyDown={e => e.key === 'Enter' && handleEmailSubmit()}
                   placeholder="Password"
                   autoComplete={phoneMode === 'email-signup' ? 'new-password' : 'current-password'}
-                  className="w-full pl-10 pr-12 py-4 rounded-2xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm focus:outline-none focus:border-white/50 focus:bg-white/20"
+                  className={`w-full pl-10 pr-12 py-4 rounded-2xl text-sm ${fieldCls}`}
                 />
-                <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors">
+                <button type="button" onClick={() => setShowPassword(v => !v)} className={`absolute right-4 top-1/2 -translate-y-1/2 transition-colors ${isNative ? 'text-brand-navy/40 hover:text-brand-navy/70' : 'text-white/40 hover:text-white/70'}`}>
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
@@ -3149,7 +3163,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
                   <button
                     type="button"
                     onClick={() => { setPhoneMode('forgot-password'); setResetEmail(email); setError(''); setResetSent(false); }}
-                    className="text-white/60 text-xs font-medium hover:text-white/90 transition-colors"
+                    className={`text-xs font-medium transition-colors ${isNative ? 'text-brand-gold hover:text-brand-navy' : 'text-white/60 hover:text-white/90'}`}
                   >
                     Forgot password?
                   </button>
@@ -3159,25 +3173,29 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
           )}
 
           {error && (
-            <div className="flex items-center gap-2 bg-white/15 border border-white/25 rounded-2xl px-4 py-3">
-              <AlertCircle size={14} className="text-white/80 shrink-0" />
-              <p className="text-white/80 text-xs">{error}</p>
+            <div className={`flex items-center gap-2 rounded-2xl px-4 py-3 ${isNative ? 'bg-red-50 border border-red-200' : 'bg-white/15 border border-white/25'}`}>
+              <AlertCircle size={14} className={`shrink-0 ${isNative ? 'text-red-500' : 'text-white/80'}`} />
+              <p className={`text-xs ${isNative ? 'text-red-600' : 'text-white/80'}`}>{error}</p>
             </div>
           )}
 
           {phoneMode !== 'forgot-password' && (
             <div className="flex items-start gap-2.5 cursor-pointer group pt-1">
               <div
-                className={`w-5 h-5 rounded-md border-2 shrink-0 mt-0.5 flex items-center justify-center transition-all ${agreedToTerms ? 'bg-white border-white' : 'border-white/40 group-hover:border-white/70'}`}
+                className={`w-5 h-5 rounded-md border-2 shrink-0 mt-0.5 flex items-center justify-center transition-all ${
+                  isNative
+                    ? (agreedToTerms ? 'bg-brand-gold border-brand-gold' : 'border-brand-navy/20 group-hover:border-brand-navy/40')
+                    : (agreedToTerms ? 'bg-white border-white' : 'border-white/40 group-hover:border-white/70')
+                }`}
                 onClick={() => setAgreedToTerms(v => !v)}
               >
-                {agreedToTerms && <CheckCircle2 size={13} className="text-brand-navy" />}
+                {agreedToTerms && <CheckCircle2 size={13} className={isNative ? 'text-white' : 'text-brand-navy'} />}
               </div>
-              <span className="text-white/70 text-xs leading-relaxed" onClick={() => setAgreedToTerms(v => !v)}>
+              <span className={`text-xs leading-relaxed ${isNative ? 'text-brand-navy/60' : 'text-white/70'}`} onClick={() => setAgreedToTerms(v => !v)}>
                 I agree to the{' '}
-                <button type="button" onClick={(e) => { e.stopPropagation(); openUrl('https://www.joinlinq.app/privacy.html'); }} className="underline underline-offset-2 text-white/90 hover:text-white">Privacy Policy</button>
+                <button type="button" onClick={(e) => { e.stopPropagation(); openUrl('https://www.joinlinq.app/privacy.html'); }} className={`underline underline-offset-2 transition-colors ${isNative ? 'text-brand-gold hover:text-brand-navy' : 'text-white/90 hover:text-white'}`}>Privacy Policy</button>
                 {' '}and{' '}
-                <button type="button" onClick={(e) => { e.stopPropagation(); openUrl('https://www.joinlinq.app/terms.html'); }} className="underline underline-offset-2 text-white/90 hover:text-white">Terms of Service</button>
+                <button type="button" onClick={(e) => { e.stopPropagation(); openUrl('https://www.joinlinq.app/terms.html'); }} className={`underline underline-offset-2 transition-colors ${isNative ? 'text-brand-gold hover:text-brand-navy' : 'text-white/90 hover:text-white'}`}>Terms of Service</button>
               </span>
             </div>
           )}
@@ -3186,7 +3204,8 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
             <button
               onClick={phoneMode === 'phone' ? handleSendOTP : phoneMode === 'otp' ? handleVerifyOTP : phoneMode === 'forgot-password' ? handleForgotPassword : handleEmailSubmit}
               disabled={phoneMode === 'forgot-password' ? (loading || resetLoading) : (loading || !agreedToTerms)}
-              className="w-full bg-white text-brand-navy font-bold py-4 rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
+              className={`w-full font-bold py-4 rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 mt-2 ${isNative ? 'text-white' : 'bg-white text-brand-navy'}`}
+              style={isNative ? { background: 'linear-gradient(135deg, var(--brand-g1), var(--brand-g2), var(--brand-g3))' } : undefined}
             >
               {loading || resetLoading
                 ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}><Sparkles size={16} /></motion.div> {phoneMode === 'forgot-password' ? 'Sending…' : 'Please wait…'}</>
@@ -3195,13 +3214,13 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
           )}
 
           {phoneMode === 'otp' && (
-            <button onClick={handleSendOTP} disabled={loading} className="w-full text-white/50 text-sm py-2 hover:text-white/80 transition-colors disabled:opacity-40">
+            <button onClick={handleSendOTP} disabled={loading} className={`w-full text-sm py-2 transition-colors disabled:opacity-40 ${mutedHoverCls}`}>
               Resend code
             </button>
           )}
 
           {(phoneMode === 'email' || phoneMode === 'email-signup') && (
-            <button onClick={() => { setPhoneMode(phoneMode === 'email' ? 'email-signup' : 'email'); setError(''); setResetSent(false); }} className="w-full text-white/50 text-sm py-2 hover:text-white/80 transition-colors">
+            <button onClick={() => { setPhoneMode(phoneMode === 'email' ? 'email-signup' : 'email'); setError(''); setResetSent(false); }} className={`w-full text-sm py-2 transition-colors ${mutedHoverCls}`}>
               {phoneMode === 'email' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
             </button>
           )}
@@ -3211,7 +3230,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
               {phoneMode === 'phone' && (
                 <button
                   onClick={() => { setPhoneMode('email'); setError(''); setResetSent(false); }}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-white/10 border border-white/20 text-white font-bold text-sm hover:bg-white/20 transition-all"
+                  className={`w-full flex items-center justify-center gap-2 py-3 rounded-2xl border font-bold text-sm transition-all ${isNative ? 'bg-brand-navy/5 border-brand-navy/10 text-brand-navy hover:bg-brand-navy/10' : 'bg-white/10 border-white/20 text-white hover:bg-white/20'}`}
                 >
                   <Mail size={15} />
                   Sign in with Email
@@ -3219,7 +3238,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
               )}
               <button
                 onClick={onBrowseAsGuest}
-                className="w-full text-white/50 text-sm py-3 hover:text-white/80 transition-colors underline underline-offset-2"
+                className={`w-full text-sm py-3 transition-colors underline underline-offset-2 ${mutedHoverCls}`}
               >
                 Browse deals without an account
               </button>

@@ -20,8 +20,8 @@
 
 /* Runtime-overridable gradient stops (set via JS applyBrandTheme) */
 :root {
-  --brand-g1: #1D4ED8;
-  --brand-g2: #2563EB;
+  --brand-g1: #5B21B6;
+  --brand-g2: #7C3AED;
   --brand-g3: #3B82F6;
   --brand-g4: #60A5FA;
 }
