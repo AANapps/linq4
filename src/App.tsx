@@ -19488,33 +19488,35 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     </div>
 
                     {/* Weekly stamps bar chart */}
-                    <div className="glass-card p-5 md:p-6 rounded-[2rem] space-y-3">
-                      <div className="flex items-center justify-between">
+                    <div className="glass-card p-5 md:p-6 rounded-[2rem] flex flex-col md:h-80">
+                      <div className="flex items-center justify-between shrink-0">
                         <div>
                           <p className="font-bold text-brand-navy text-sm md:text-base">Weekly Stamps</p>
                           <p className="text-[10px] md:text-xs text-brand-navy/50">Last 8 weeks</p>
                         </div>
                         <span className="text-[9px] md:text-xs font-bold uppercase tracking-widest text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">Example</span>
                       </div>
-                      <div className="flex gap-1.5 items-end blur-[3px] select-none pointer-events-none md:h-32" style={{ height: '80px' }}>
-                        {[42, 58, 71, 45, 83, 67, 55, 79].map((h, i) => (
-                          <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                            <div className="w-full flex items-end" style={{ height: '64px' }}>
-                              <div className="w-full rounded-t-md" style={{ height: `${h}%`, background: 'linear-gradient(180deg, #3B82F6 0%, #1D4ED8 100%)' }} />
+                      <div className="flex-1 flex flex-col justify-center mt-3">
+                        <div className="flex gap-1.5 items-end blur-[3px] select-none pointer-events-none" style={{ height: '80px' }}>
+                          {[42, 58, 71, 45, 83, 67, 55, 79].map((h, i) => (
+                            <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                              <div className="w-full flex items-end" style={{ height: '64px' }}>
+                                <div className="w-full rounded-t-md" style={{ height: `${h}%`, background: 'linear-gradient(180deg, #3B82F6 0%, #1D4ED8 100%)' }} />
+                              </div>
+                              <p className="text-[8px] md:text-xs text-brand-navy/40 font-bold">W{i + 1}</p>
                             </div>
-                            <p className="text-[8px] md:text-xs text-brand-navy/40 font-bold">W{i + 1}</p>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
                     </div>
 
                     {/* Visit frequency */}
-                    <div className="glass-card p-5 md:p-6 rounded-[2rem] space-y-3">
-                      <div className="flex items-center justify-between">
+                    <div className="glass-card p-5 md:p-6 rounded-[2rem] flex flex-col md:h-80">
+                      <div className="flex items-center justify-between shrink-0">
                         <p className="font-bold text-brand-navy text-sm md:text-base">Visit Frequency</p>
                         <span className="text-[9px] md:text-xs font-bold uppercase tracking-widest text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">Example</span>
                       </div>
-                      <div className="space-y-3 md:space-y-4 blur-[3px] select-none pointer-events-none">
+                      <div className="flex-1 flex flex-col justify-center space-y-3 md:space-y-4 blur-[3px] select-none pointer-events-none mt-3">
                         {[
                           { label: '3+ / week', pct: 18, color: '#1D4ED8' },
                           { label: '1–2 / week', pct: 34, color: '#3B82F6' },
@@ -19533,23 +19535,25 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     </div>
 
                     {/* Busiest days */}
-                    <div className="glass-card p-5 md:p-6 rounded-[2rem] space-y-3">
-                      <div className="flex items-center justify-between">
+                    <div className="glass-card p-5 md:p-6 rounded-[2rem] flex flex-col md:h-80">
+                      <div className="flex items-center justify-between shrink-0">
                         <p className="font-bold text-brand-navy text-sm md:text-base">Busiest Days</p>
                         <span className="text-[9px] md:text-xs font-bold uppercase tracking-widest text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">Example</span>
                       </div>
-                      <div className="flex gap-1.5 blur-[3px] select-none pointer-events-none">
-                        {[
-                          { day: 'Mon', h: 55 }, { day: 'Tue', h: 40 }, { day: 'Wed', h: 70 },
-                          { day: 'Thu', h: 95 }, { day: 'Fri', h: 88 }, { day: 'Sat', h: 62 }, { day: 'Sun', h: 30 },
-                        ].map(({ day, h }) => (
-                          <div key={day} className="flex-1 flex flex-col items-center gap-1.5">
-                            <div className="w-full flex items-end" style={{ height: '60px' }}>
-                              <div className="w-full rounded-t-md" style={{ height: `${h}%`, background: h > 80 ? 'linear-gradient(180deg,#7C3AED,#4F46E5)' : 'linear-gradient(180deg,#A78BFA,#818CF8)' }} />
+                      <div className="flex-1 flex flex-col justify-center mt-3">
+                        <div className="flex gap-1.5 blur-[3px] select-none pointer-events-none">
+                          {[
+                            { day: 'Mon', h: 55 }, { day: 'Tue', h: 40 }, { day: 'Wed', h: 70 },
+                            { day: 'Thu', h: 95 }, { day: 'Fri', h: 88 }, { day: 'Sat', h: 62 }, { day: 'Sun', h: 30 },
+                          ].map(({ day, h }) => (
+                            <div key={day} className="flex-1 flex flex-col items-center gap-1.5">
+                              <div className="w-full flex items-end" style={{ height: '60px' }}>
+                                <div className="w-full rounded-t-md" style={{ height: `${h}%`, background: h > 80 ? 'linear-gradient(180deg,#7C3AED,#4F46E5)' : 'linear-gradient(180deg,#A78BFA,#818CF8)' }} />
+                              </div>
+                              <p className="text-[8px] md:text-xs text-brand-navy/40 font-bold">{day}</p>
                             </div>
-                            <p className="text-[8px] md:text-xs text-brand-navy/40 font-bold">{day}</p>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
                     </div>
 
@@ -19657,8 +19661,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 }
                 const maxVal = Math.max(...periods.map(p => p.count), 1);
                 return (
-                  <div className="glass-card p-6 md:p-7 rounded-[2rem] space-y-4">
-                    <div className="flex items-center justify-between">
+                  <div className="glass-card p-6 md:p-7 rounded-[2rem] flex flex-col md:h-80">
+                    <div className="flex items-center justify-between shrink-0">
                       <div>
                         <p className="font-bold text-brand-navy md:text-lg">Stamps Chart</p>
                         <p className="text-[10px] md:text-xs text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">
@@ -19682,44 +19686,46 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                         </button>
                       </div>
                     </div>
-                    <div className="flex gap-1 items-end">
-                      <div className="flex flex-col justify-between text-right shrink-0 mb-3" style={{ height: '80px', minWidth: '16px' }}>
-                        <span className="text-[8px] md:text-xs text-brand-navy/72 font-bold leading-none">{maxVal}</span>
-                        <span className="text-[8px] md:text-xs text-brand-navy/72 font-bold leading-none">{Math.round(maxVal / 2)}</span>
-                        <span className="text-[8px] md:text-xs text-brand-navy/72 font-bold leading-none">0</span>
-                      </div>
-                      <div className="relative flex items-end gap-1 h-28 flex-1">
-                        {stampHoverIdx !== null && periods[stampHoverIdx]?.count > 0 && (
-                          <div className="absolute left-0 right-0 border-t border-dashed border-brand-navy/20 pointer-events-none z-10"
-                            style={{ bottom: `${Math.round((periods[stampHoverIdx].count / maxVal) * 80) + 16}px` }} />
-                        )}
-                        {periods.map((p, i) => {
-                          const barH = Math.round((p.count / maxVal) * 80);
-                          const sel = stampHoverIdx === i;
-                          return (
-                            <div key={i} className="relative flex-1 flex flex-col items-center gap-1 cursor-pointer"
-                              onClick={() => setStampHoverIdx(prev => prev === i ? null : i)}>
-                              <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
-                                <motion.div
-                                  initial={{ height: 0 }} animate={{ height: `${barH}px` }}
-                                  transition={{ duration: 0.4, delay: i * 0.03 }}
-                                  className={cn('w-full rounded-t-lg transition-colors', sel ? 'bg-brand-gold' : 'bg-brand-gold/70')}
-                                  style={{ minHeight: p.count > 0 ? '4px' : '0' }}
-                                />
+                    <div className="flex-1 flex flex-col justify-center mt-4">
+                      <div className="flex gap-1 items-end">
+                        <div className="flex flex-col justify-between text-right shrink-0 mb-3" style={{ height: '80px', minWidth: '16px' }}>
+                          <span className="text-[8px] md:text-xs text-brand-navy/72 font-bold leading-none">{maxVal}</span>
+                          <span className="text-[8px] md:text-xs text-brand-navy/72 font-bold leading-none">{Math.round(maxVal / 2)}</span>
+                          <span className="text-[8px] md:text-xs text-brand-navy/72 font-bold leading-none">0</span>
+                        </div>
+                        <div className="relative flex items-end gap-1 h-28 flex-1">
+                          {stampHoverIdx !== null && periods[stampHoverIdx]?.count > 0 && (
+                            <div className="absolute left-0 right-0 border-t border-dashed border-brand-navy/20 pointer-events-none z-10"
+                              style={{ bottom: `${Math.round((periods[stampHoverIdx].count / maxVal) * 80) + 16}px` }} />
+                          )}
+                          {periods.map((p, i) => {
+                            const barH = Math.round((p.count / maxVal) * 80);
+                            const sel = stampHoverIdx === i;
+                            return (
+                              <div key={i} className="relative flex-1 flex flex-col items-center gap-1 cursor-pointer"
+                                onClick={() => setStampHoverIdx(prev => prev === i ? null : i)}>
+                                <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
+                                  <motion.div
+                                    initial={{ height: 0 }} animate={{ height: `${barH}px` }}
+                                    transition={{ duration: 0.4, delay: i * 0.03 }}
+                                    className={cn('w-full rounded-t-lg transition-colors', sel ? 'bg-brand-gold' : 'bg-brand-gold/70')}
+                                    style={{ minHeight: p.count > 0 ? '4px' : '0' }}
+                                  />
+                                </div>
+                                {sel && p.count > 0 && (
+                                  <span className="absolute text-[7px] md:text-[10px] font-black text-white bg-brand-navy/70 px-1 py-px rounded leading-none pointer-events-none"
+                                    style={{ bottom: `${barH + 20}px` }}>{p.count}</span>
+                                )}
+                                <p className="text-[8px] md:text-xs text-brand-navy/72 font-bold leading-none">{p.label}</p>
                               </div>
-                              {sel && p.count > 0 && (
-                                <span className="absolute text-[7px] md:text-[10px] font-black text-white bg-brand-navy/70 px-1 py-px rounded leading-none pointer-events-none"
-                                  style={{ bottom: `${barH + 20}px` }}>{p.count}</span>
-                              )}
-                              <p className="text-[8px] md:text-xs text-brand-navy/72 font-bold leading-none">{p.label}</p>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
                       </div>
+                      {stampTxns.length === 0 && (
+                        <p className="text-center text-xs md:text-sm text-brand-navy/72 font-bold py-2">No stamp data yet</p>
+                      )}
                     </div>
-                    {stampTxns.length === 0 && (
-                      <p className="text-center text-xs md:text-sm text-brand-navy/72 font-bold py-2">No stamp data yet</p>
-                    )}
                   </div>
                 );
               })()}
@@ -19767,8 +19773,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 const polyPts = points.map((p, i) => `${toX(i)},${toY(p.cumulative)}`).join(' ');
                 const areaPts = `${toX(0)},${svgH} ${polyPts} ${toX(points.length - 1)},${svgH}`;
                 return (
-                  <div className="glass-card p-6 md:p-7 rounded-[2rem] space-y-3">
-                    <div className="flex items-center justify-between">
+                  <div className="glass-card p-6 md:p-7 rounded-[2rem] flex flex-col md:h-80">
+                    <div className="flex items-center justify-between shrink-0">
                       <div>
                         <p className="font-bold text-brand-navy md:text-lg">User Base Growth</p>
                         <p className="text-[10px] md:text-xs text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Cumulative members · {points[points.length - 1]?.cumulative ?? 0} total</p>
@@ -19783,6 +19789,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                       </div>
                     </div>
                     {/* Y-axis labels + SVG line chart */}
+                    <div className="flex-1 flex flex-col justify-center mt-3">
                     <div className="flex gap-1 items-stretch">
                       <div className="flex flex-col justify-between text-right shrink-0" style={{ height: `${svgH}px`, minWidth: '18px' }}>
                         <span className="text-[8px] md:text-xs text-brand-navy/72 font-bold leading-none">{maxVal}</span>
@@ -19843,6 +19850,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                         </div>
                       </div>
                     </div>
+                    </div>
                   </div>
                 );
               })()}
@@ -19879,16 +19887,16 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 const maxVal2 = Math.max(...signupBuckets.map(d => d.count), 1);
                 const totalNew = signupBuckets.reduce((s, d) => s + d.count, 0);
                 return (
-                  <div className="glass-card p-6 rounded-[2rem] space-y-4">
-                    <div className="flex items-center justify-between">
+                  <div className="glass-card p-6 md:p-7 rounded-[2rem] flex flex-col md:h-80">
+                    <div className="flex items-center justify-between shrink-0">
                       <div>
-                        <p className="font-bold text-brand-navy">{isDays2 ? 'New Sign-ups / Day' : 'New Sign-ups / Week'}</p>
-                        <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">
+                        <p className="font-bold text-brand-navy md:text-lg">{isDays2 ? 'New Sign-ups / Day' : 'New Sign-ups / Week'}</p>
+                        <p className="text-[10px] md:text-xs text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">
                           {totalNew} new in this period
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="flex rounded-xl overflow-hidden border border-brand-navy/10 text-[10px] font-bold">
+                        <div className="flex rounded-xl overflow-hidden border border-brand-navy/10 text-[10px] md:text-xs font-bold">
                           <button onClick={() => { setSignupsChartPeriod('days'); setSignupsChartOffset(0); }} className={cn('px-2 py-1 transition-colors', isDays2 ? 'bg-brand-navy text-white' : 'text-brand-navy/60 hover:text-brand-navy')}>Days</button>
                           <button onClick={() => { setSignupsChartPeriod('weeks'); setSignupsChartOffset(0); }} className={cn('px-2 py-1 transition-colors', !isDays2 ? 'bg-brand-navy text-white' : 'text-brand-navy/60 hover:text-brand-navy')}>Weeks</button>
                         </div>
@@ -19900,44 +19908,46 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                         </button>
                       </div>
                     </div>
-                    <div className="flex gap-1 items-end">
-                      <div className="flex flex-col justify-between text-right shrink-0 mb-3" style={{ height: '80px', minWidth: '16px' }}>
-                        <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{maxVal2}</span>
-                        <span className="text-[8px] text-brand-navy/72 font-bold leading-none">{Math.round(maxVal2 / 2)}</span>
-                        <span className="text-[8px] text-brand-navy/72 font-bold leading-none">0</span>
-                      </div>
-                      <div className="relative flex items-end gap-1 h-28 flex-1">
-                        {signupsHoverIdx !== null && signupBuckets[signupsHoverIdx]?.count > 0 && (
-                          <div className="absolute left-0 right-0 border-t border-dashed border-brand-navy/20 pointer-events-none z-10"
-                            style={{ bottom: `${Math.round((signupBuckets[signupsHoverIdx].count / maxVal2) * 80) + 16}px` }} />
-                        )}
-                        {signupBuckets.map((d, i) => {
-                          const barH = Math.round((d.count / maxVal2) * 80);
-                          const sel = signupsHoverIdx === i;
-                          return (
-                            <div key={i} className="relative flex-1 flex flex-col items-center gap-1 cursor-pointer"
-                              onClick={() => setSignupsHoverIdx(prev => prev === i ? null : i)}>
-                              <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
-                                <motion.div
-                                  initial={{ height: 0 }} animate={{ height: `${barH}px` }}
-                                  transition={{ duration: 0.4, delay: i * 0.03 }}
-                                  className={cn('w-full rounded-t-lg transition-colors', sel ? 'bg-emerald-400' : 'bg-emerald-400/70')}
-                                  style={{ minHeight: d.count > 0 ? '4px' : '0' }}
-                                />
+                    <div className="flex-1 flex flex-col justify-center mt-4">
+                      <div className="flex gap-1 items-end">
+                        <div className="flex flex-col justify-between text-right shrink-0 mb-3" style={{ height: '80px', minWidth: '16px' }}>
+                          <span className="text-[8px] md:text-xs text-brand-navy/72 font-bold leading-none">{maxVal2}</span>
+                          <span className="text-[8px] md:text-xs text-brand-navy/72 font-bold leading-none">{Math.round(maxVal2 / 2)}</span>
+                          <span className="text-[8px] md:text-xs text-brand-navy/72 font-bold leading-none">0</span>
+                        </div>
+                        <div className="relative flex items-end gap-1 h-28 flex-1">
+                          {signupsHoverIdx !== null && signupBuckets[signupsHoverIdx]?.count > 0 && (
+                            <div className="absolute left-0 right-0 border-t border-dashed border-brand-navy/20 pointer-events-none z-10"
+                              style={{ bottom: `${Math.round((signupBuckets[signupsHoverIdx].count / maxVal2) * 80) + 16}px` }} />
+                          )}
+                          {signupBuckets.map((d, i) => {
+                            const barH = Math.round((d.count / maxVal2) * 80);
+                            const sel = signupsHoverIdx === i;
+                            return (
+                              <div key={i} className="relative flex-1 flex flex-col items-center gap-1 cursor-pointer"
+                                onClick={() => setSignupsHoverIdx(prev => prev === i ? null : i)}>
+                                <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
+                                  <motion.div
+                                    initial={{ height: 0 }} animate={{ height: `${barH}px` }}
+                                    transition={{ duration: 0.4, delay: i * 0.03 }}
+                                    className={cn('w-full rounded-t-lg transition-colors', sel ? 'bg-emerald-400' : 'bg-emerald-400/70')}
+                                    style={{ minHeight: d.count > 0 ? '4px' : '0' }}
+                                  />
+                                </div>
+                                {sel && d.count > 0 && (
+                                  <span className="absolute text-[7px] md:text-[10px] font-black text-white bg-brand-navy/70 px-1 py-px rounded leading-none pointer-events-none"
+                                    style={{ bottom: `${barH + 20}px` }}>{d.count}</span>
+                                )}
+                                <p className="text-[8px] md:text-xs text-brand-navy/72 font-bold leading-none">{d.label}</p>
                               </div>
-                              {sel && d.count > 0 && (
-                                <span className="absolute text-[7px] font-black text-white bg-brand-navy/70 px-1 py-px rounded leading-none pointer-events-none"
-                                  style={{ bottom: `${barH + 20}px` }}>{d.count}</span>
-                              )}
-                              <p className="text-[8px] text-brand-navy/72 font-bold leading-none">{d.label}</p>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
                       </div>
+                      {totalNew === 0 && (
+                        <p className="text-center text-xs md:text-sm text-brand-navy/72 font-bold py-2">No new sign-ups in this period</p>
+                      )}
                     </div>
-                    {totalNew === 0 && (
-                      <p className="text-center text-xs text-brand-navy/72 font-bold py-2">No new sign-ups in this period</p>
-                    )}
                   </div>
                 );
               })()}
@@ -19956,24 +19966,26 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 const maxVal = Math.max(...counts, 1);
                 if (stampTxns.length === 0) return null;
                 return (
-                  <div className="glass-card p-6 rounded-[2rem] space-y-3">
-                    <div>
-                      <p className="font-bold text-brand-navy">Busiest Days</p>
-                      <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Stamps by day of week</p>
+                  <div className="glass-card p-6 md:p-7 rounded-[2rem] flex flex-col md:h-80">
+                    <div className="shrink-0">
+                      <p className="font-bold text-brand-navy md:text-lg">Busiest Days</p>
+                      <p className="text-[10px] md:text-xs text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Stamps by day of week</p>
                     </div>
-                    {days.map((day, i) => (
-                      <div key={day} className="flex items-center gap-3">
-                        <p className="text-[11px] font-bold text-brand-navy/60 w-7 shrink-0">{day}</p>
-                        <div className="flex-1 h-4 bg-brand-navy/5 rounded-full overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }} animate={{ width: `${Math.round((counts[i] / maxVal) * 100)}%` }}
-                            transition={{ duration: 0.5, delay: i * 0.05 }}
-                            className="h-full bg-brand-gold rounded-full"
-                          />
+                    <div className="flex-1 flex flex-col justify-center gap-3 md:gap-4 mt-3">
+                      {days.map((day, i) => (
+                        <div key={day} className="flex items-center gap-3">
+                          <p className="text-[11px] md:text-sm font-bold text-brand-navy/60 w-7 md:w-9 shrink-0">{day}</p>
+                          <div className="flex-1 h-4 md:h-5 bg-brand-navy/5 rounded-full overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }} animate={{ width: `${Math.round((counts[i] / maxVal) * 100)}%` }}
+                              transition={{ duration: 0.5, delay: i * 0.05 }}
+                              className="h-full bg-brand-gold rounded-full"
+                            />
+                          </div>
+                          <p className="text-[11px] md:text-sm font-bold text-brand-navy w-6 md:w-8 text-right shrink-0">{counts[i]}</p>
                         </div>
-                        <p className="text-[11px] font-bold text-brand-navy w-6 text-right shrink-0">{counts[i]}</p>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 );
               })()}
@@ -19997,33 +20009,35 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 const maxVal = Math.max(thisWeek, lastWeek, 1);
                 const pct = lastWeek > 0 ? Math.round(((thisWeek - lastWeek) / lastWeek) * 100) : null;
                 return (
-                  <div className="glass-card p-6 rounded-[2rem] space-y-4">
-                    <div className="flex items-center justify-between">
+                  <div className="glass-card p-6 md:p-7 rounded-[2rem] flex flex-col md:h-80">
+                    <div className="flex items-center justify-between shrink-0">
                       <div>
-                        <p className="font-bold text-brand-navy">Weekly Comparison</p>
-                        <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">This week vs last week</p>
+                        <p className="font-bold text-brand-navy md:text-lg">Weekly Comparison</p>
+                        <p className="text-[10px] md:text-xs text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">This week vs last week</p>
                       </div>
                       {pct !== null && (
-                        <span className={cn('text-[11px] font-bold px-2 py-0.5 rounded-full', pct >= 0 ? 'bg-teal-50 text-teal-600' : 'bg-rose-50 text-rose-500')}>
+                        <span className={cn('text-[11px] md:text-sm font-bold px-2 py-0.5 rounded-full', pct >= 0 ? 'bg-teal-50 text-teal-600' : 'bg-rose-50 text-rose-500')}>
                           {pct >= 0 ? '+' : ''}{pct}%
                         </span>
                       )}
                     </div>
-                    <div className="flex gap-6 items-end h-24">
-                      {[{ label: 'Last week', val: lastWeek, color: 'bg-brand-navy/15' }, { label: 'This week', val: thisWeek, color: 'bg-brand-gold' }].map(({ label, val, color }) => (
-                        <div key={label} className="flex-1 flex flex-col items-center gap-2">
-                          <p className="text-sm font-bold text-brand-navy">{val}</p>
-                          <div className="w-full flex items-end justify-center" style={{ height: '60px' }}>
-                            <motion.div
-                              initial={{ height: 0 }} animate={{ height: `${Math.round((val / maxVal) * 60)}px` }}
-                              transition={{ duration: 0.5 }}
-                              className={cn('w-full rounded-t-xl', color)}
-                              style={{ minHeight: val > 0 ? '4px' : '0' }}
-                            />
+                    <div className="flex-1 flex flex-col justify-center">
+                      <div className="flex gap-6 items-end h-24">
+                        {[{ label: 'Last week', val: lastWeek, color: 'bg-brand-navy/15' }, { label: 'This week', val: thisWeek, color: 'bg-brand-gold' }].map(({ label, val, color }) => (
+                          <div key={label} className="flex-1 flex flex-col items-center gap-2">
+                            <p className="text-sm md:text-lg font-bold text-brand-navy">{val}</p>
+                            <div className="w-full flex items-end justify-center" style={{ height: '60px' }}>
+                              <motion.div
+                                initial={{ height: 0 }} animate={{ height: `${Math.round((val / maxVal) * 60)}px` }}
+                                transition={{ duration: 0.5 }}
+                                className={cn('w-full rounded-t-xl', color)}
+                                style={{ minHeight: val > 0 ? '4px' : '0' }}
+                              />
+                            </div>
+                            <p className="text-[10px] md:text-xs font-bold text-brand-navy/60 text-center">{label}</p>
                           </div>
-                          <p className="text-[10px] font-bold text-brand-navy/60 text-center">{label}</p>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   </div>
                 );
@@ -20054,26 +20068,28 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                   { label: 'Completed Card', count: completed, color: 'bg-teal-400' },
                 ];
                 return (
-                  <div className="glass-card p-6 rounded-[2rem] space-y-3">
-                    <div>
-                      <p className="font-bold text-brand-navy">Retention Funnel</p>
-                      <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Member journey stages</p>
+                  <div className="glass-card p-6 md:p-7 rounded-[2rem] flex flex-col md:h-80">
+                    <div className="shrink-0">
+                      <p className="font-bold text-brand-navy md:text-lg">Retention Funnel</p>
+                      <p className="text-[10px] md:text-xs text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Member journey stages</p>
                     </div>
-                    {steps.map(({ label, count, color }) => (
-                      <div key={label} className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <p className="text-[11px] font-bold text-brand-navy/70">{label}</p>
-                          <p className="text-[11px] font-bold text-brand-navy">{count} <span className="text-brand-navy/40">({total > 0 ? Math.round((count / total) * 100) : 0}%)</span></p>
+                    <div className="flex-1 flex flex-col justify-center gap-2 md:gap-3 mt-3">
+                      {steps.map(({ label, count, color }) => (
+                        <div key={label} className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <p className="text-[11px] md:text-sm font-bold text-brand-navy/70">{label}</p>
+                            <p className="text-[11px] md:text-sm font-bold text-brand-navy">{count} <span className="text-brand-navy/40">({total > 0 ? Math.round((count / total) * 100) : 0}%)</span></p>
+                          </div>
+                          <div className="h-3 md:h-4 bg-brand-navy/5 rounded-full overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }} animate={{ width: `${total > 0 ? Math.round((count / total) * 100) : 0}%` }}
+                              transition={{ duration: 0.6 }}
+                              className={cn('h-full rounded-full', color)}
+                            />
+                          </div>
                         </div>
-                        <div className="h-3 bg-brand-navy/5 rounded-full overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }} animate={{ width: `${total > 0 ? Math.round((count / total) * 100) : 0}%` }}
-                            transition={{ duration: 0.6 }}
-                            className={cn('h-full rounded-full', color)}
-                          />
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 );
               })()}
