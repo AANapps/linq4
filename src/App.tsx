@@ -6197,6 +6197,225 @@ function subStatusInfo(store: StoreProfile): { label: string; color: string } {
   return { label: 'No sub', color: 'bg-brand-navy/8 text-brand-navy/75' };
 }
 
+// Admin-only: creates a business + its first offer with no vendor login attached
+// (ownerUid: 'unclaimed' — ordinary vendors can never match this, so only isAdmin()
+// can edit/delete it until it's reassigned to a real vendor account later).
+function AdminAddBusinessForm({ onClose }: { onClose: () => void }) {
+  const [businessName, setBusinessName] = useState('');
+  const [category, setCategory] = useState<Category>('Food');
+  const [phone, setPhone] = useState('');
+  const [description, setDescription] = useState('');
+  const [addrLine1, setAddrLine1] = useState('');
+  const [addrLine2, setAddrLine2] = useState('');
+  const [addrTown, setAddrTown] = useState('');
+  const [addrState, setAddrState] = useState('');
+  const [addrPostcode, setAddrPostcode] = useState('');
+  const [logoUrl, setLogoUrl] = useState('');
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+
+  const [offerTitle, setOfferTitle] = useState('');
+  const [offerDescription, setOfferDescription] = useState('');
+  const [offerValue, setOfferValue] = useState('');
+  const [offerImageUrl, setOfferImageUrl] = useState('');
+  const [uploadingOfferImage, setUploadingOfferImage] = useState(false);
+
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const tempIdRef = useRef(crypto.randomUUID());
+
+  const handleLogoUpload = async (file: File) => {
+    setUploadingLogo(true);
+    setError('');
+    try {
+      const blob = await compressImage(file, 800);
+      const path = `store_logos/${tempIdRef.current}/${Date.now()}.webp`;
+      const snap = await uploadBytes(storageRef(storage, path), blob, { contentType: 'image/webp' });
+      setLogoUrl(await getDownloadURL(snap.ref));
+    } catch (e: any) {
+      setError('Logo upload failed: ' + e.message);
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const handleOfferImageUpload = async (file: File) => {
+    setUploadingOfferImage(true);
+    setError('');
+    try {
+      const blob = await compressImage(file, 1400);
+      const path = `offer_images/${tempIdRef.current}/${Date.now()}.webp`;
+      const snap = await uploadBytes(storageRef(storage, path), blob, { contentType: 'image/webp' });
+      setOfferImageUrl(await getDownloadURL(snap.ref));
+    } catch (e: any) {
+      setError('Offer image upload failed: ' + e.message);
+    } finally {
+      setUploadingOfferImage(false);
+    }
+  };
+
+  const canSave = businessName.trim() && offerTitle.trim() && offerDescription.trim() && !saving;
+
+  const handleCreate = async () => {
+    if (!canSave) return;
+    setSaving(true);
+    setError('');
+    try {
+      const composedAddr = composeAddress(addrLine1, addrLine2, addrTown, addrState, addrPostcode);
+      const storeRef = await addDoc(collection(db, 'stores'), {
+        name: businessName.trim(),
+        category,
+        address: composedAddr,
+        phone: phone.trim(),
+        description: description.trim(),
+        logoUrl,
+        locations: [{
+          id: 'primary', label: '',
+          line1: addrLine1, line2: addrLine2, town: addrTown, state: addrState, postcode: addrPostcode,
+        }],
+        ownerUid: 'unclaimed',
+        isVerified: false,
+        stamps_required_for_reward: 10,
+        rewardsGiven: 0,
+        cardEnabled: false,
+        membershipEnabled: false,
+        createdAt: serverTimestamp(),
+      });
+      await addDoc(collection(db, 'store_offers'), {
+        storeId: storeRef.id,
+        storeName: businessName.trim(),
+        storeLogoUrl: logoUrl,
+        storeCategory: category,
+        title: offerTitle.trim(),
+        description: offerDescription.trim(),
+        imageUrl: offerImageUrl,
+        offerType: 'standard',
+        maxRedemptionsPerUser: 1,
+        value: parseFloat(offerValue) || 0,
+        status: 'active',
+        createdAt: serverTimestamp(),
+      });
+      onClose();
+    } catch (e: any) {
+      setError(e?.message || 'Failed to create business. Check permissions.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const inputClass = "w-full px-4 py-2.5 rounded-2xl bg-white border border-brand-navy/10 text-sm text-brand-navy outline-none";
+  const labelClass = "text-[11px] font-bold text-brand-navy/60 uppercase tracking-wide mb-1 block";
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: '100%' }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: '100%' }}
+      transition={{ type: 'spring', damping: 38, stiffness: 520 }}
+      className="fixed inset-0 bg-brand-bg z-[210] flex flex-col max-w-md mx-auto"
+    >
+      <header className="glass-panel safe-top px-5 pb-4 flex items-center gap-3">
+        <button onClick={onClose} className="p-2 -ml-2 text-brand-navy/75"><X size={22} /></button>
+        <div className="flex-1">
+          <p className="text-[10px] font-bold text-brand-navy/75 uppercase tracking-widest">Admin</p>
+          <h2 className="font-bold text-brand-navy text-base">Add business + offer</h2>
+        </div>
+      </header>
+
+      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5 pb-10">
+        {error && <p className="text-xs font-bold text-red-500 bg-red-50 px-3 py-2 rounded-xl">{error}</p>}
+
+        <div className="space-y-3">
+          <p className="text-xs font-black text-brand-navy/40 uppercase tracking-widest">Business profile</p>
+
+          <label className="flex flex-col items-center gap-2 cursor-pointer">
+            <div className="w-16 h-16 rounded-2xl overflow-hidden bg-white border border-brand-navy/10 flex items-center justify-center">
+              {logoUrl ? <img src={logoUrl} alt="" className="w-full h-full object-cover" /> : <Building2 size={20} className="text-brand-navy/30" />}
+            </div>
+            <span className="text-xs font-bold text-brand-navy/60 flex items-center gap-1.5">
+              {uploadingLogo ? <><Loader2 size={13} className="animate-spin" /> Uploading…</> : <><Upload size={13} /> {logoUrl ? 'Replace logo' : 'Upload logo'}</>}
+            </span>
+            <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && handleLogoUpload(e.target.files[0])} />
+          </label>
+
+          <div>
+            <label className={labelClass}>Business name</label>
+            <input value={businessName} onChange={e => setBusinessName(e.target.value)} placeholder="Example Cafe" className={inputClass} />
+          </div>
+
+          <div>
+            <label className={labelClass}>Category</label>
+            <select value={category} onChange={e => setCategory(e.target.value as Category)} className={inputClass}>
+              {(['Food', 'Bubble Tea', 'Coffee', 'Drinks', 'Juice', 'Smoothies', 'Bakery', 'Beauty', 'Hair Salon', 'Nail Salon', 'Spa', 'Barber', 'Gym', 'Yoga', 'Personal Training', 'Retail', 'Clothing', 'Bookstore', 'Parking'] as Category[]).map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className={labelClass}>Phone</label>
+            <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Optional" className={inputClass} />
+          </div>
+
+          <div>
+            <label className={labelClass}>Description</label>
+            <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="What this business is about" className={inputClass} />
+          </div>
+
+          <div>
+            <label className={labelClass}>Address</label>
+            <div className="space-y-2">
+              <input value={addrLine1} onChange={e => setAddrLine1(e.target.value)} placeholder="Line 1" className={inputClass} />
+              <input value={addrLine2} onChange={e => setAddrLine2(e.target.value)} placeholder="Line 2 (optional)" className={inputClass} />
+              <div className="grid grid-cols-2 gap-2">
+                <input value={addrTown} onChange={e => setAddrTown(e.target.value)} placeholder="Town/City" className={inputClass} />
+                <input value={addrState} onChange={e => setAddrState(e.target.value)} placeholder="County" className={inputClass} />
+              </div>
+              <input value={addrPostcode} onChange={e => setAddrPostcode(e.target.value)} placeholder="Postcode" className={inputClass} />
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-3 pt-2 border-t border-brand-navy/8">
+          <p className="text-xs font-black text-brand-navy/40 uppercase tracking-widest pt-2">First offer</p>
+
+          <label className="flex flex-col items-center gap-2 cursor-pointer">
+            <div className="w-full aspect-[16/9] rounded-2xl overflow-hidden bg-white border border-brand-navy/10 flex items-center justify-center">
+              {offerImageUrl ? <img src={offerImageUrl} alt="" className="w-full h-full object-cover" /> : <Image size={20} className="text-brand-navy/30" />}
+            </div>
+            <span className="text-xs font-bold text-brand-navy/60 flex items-center gap-1.5">
+              {uploadingOfferImage ? <><Loader2 size={13} className="animate-spin" /> Uploading…</> : <><Upload size={13} /> {offerImageUrl ? 'Replace image' : 'Upload offer image'}</>}
+            </span>
+            <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && handleOfferImageUpload(e.target.files[0])} />
+          </label>
+
+          <div>
+            <label className={labelClass}>Offer title</label>
+            <input value={offerTitle} onChange={e => setOfferTitle(e.target.value)} placeholder="e.g. Free coffee with any pastry" className={inputClass} />
+          </div>
+
+          <div>
+            <label className={labelClass}>Offer description</label>
+            <textarea value={offerDescription} onChange={e => setOfferDescription(e.target.value)} rows={3} placeholder="Details a member would see" className={inputClass} />
+          </div>
+
+          <div>
+            <label className={labelClass}>Price / value (£)</label>
+            <input value={offerValue} onChange={e => setOfferValue(e.target.value.replace(/[^0-9.]/g, ''))} inputMode="decimal" placeholder="0.00" className={inputClass} />
+          </div>
+        </div>
+
+        <button
+          onClick={handleCreate}
+          disabled={!canSave}
+          className="w-full py-3.5 rounded-2xl bg-brand-navy text-white font-bold text-sm disabled:opacity-40 flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+        >
+          {saving ? <><Loader2 size={15} className="animate-spin" /> Creating…</> : <><Plus size={15} /> Create business + offer</>}
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
 function AdminStoresPanel({ onClose }: { onClose: () => void }) {
   const [stores, setStores] = useState<StoreProfile[]>([]);
   const [search, setSearch] = useState('');
@@ -6214,6 +6433,7 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
   const [storesPanelTab, setStoresPanelTab] = useState<'businesses' | 'pending'>('businesses');
   const [pendingVendors, setPendingVendors] = useState<UserProfile[]>([]);
   const [approvingUid, setApprovingUid] = useState<string | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
 
   const handleToggleSub = async (store: StoreProfile) => {
     setTogglingId(store.id);
@@ -6361,7 +6581,18 @@ function AdminStoresPanel({ onClose }: { onClose: () => void }) {
           <p className="text-[10px] font-bold text-brand-navy/75 uppercase tracking-widest">Admin</p>
           <h2 className="font-bold text-brand-navy text-base">Businesses</h2>
         </div>
+        <button
+          onClick={() => setShowAddForm(true)}
+          className="p-2 -mr-2 text-brand-navy/75"
+          aria-label="Add business"
+        >
+          <Plus size={22} />
+        </button>
       </header>
+
+      {showAddForm && (
+        <AdminAddBusinessForm onClose={() => setShowAddForm(false)} />
+      )}
 
       <div className="px-5 pt-3 pb-0 flex gap-2">
         <button
