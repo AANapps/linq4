@@ -19,7 +19,7 @@ let package = Package(
         // available — Firebase no longer bundles it, so it must be linked explicitly
         // or sign-in fails with "The reCAPTCHA SDK is not linked to your app".
         // https://cloud.google.com/recaptcha-enterprise/docs/instrument-ios-apps
-        .package(url: "https://github.com/GoogleCloudPlatform/recaptcha-ios-sdk.git", .upToNextMajor(from: "18.0.0"))
+        .package(url: "https://github.com/GoogleCloudPlatform/recaptcha-enterprise-mobile-sdk.git", .upToNextMajor(from: "18.9.0"))
     ],
     targets: [
         .target(
@@ -29,7 +29,7 @@ let package = Package(
                 .product(name: "Cordova", package: "capacitor-swift-pm"),
                 .product(name: "FirebaseAuth", package: "firebase-ios-sdk"),
                 .product(name: "FirebaseCore", package: "firebase-ios-sdk"),
-                .product(name: "RecaptchaEnterprise", package: "recaptcha-ios-sdk")
+                .product(name: "RecaptchaEnterprise", package: "recaptcha-enterprise-mobile-sdk")
             ],
             path: "ios/Plugin")
     ]
