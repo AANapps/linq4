@@ -71,7 +71,14 @@ workflows:
         script: npx cap sync android
       - name: Build Android release AAB
         script: |
+          # Ensure full commit history is present (Codemagic clones full by default,
+          # but guard against a shallow clone silently producing a tiny count).
+          git fetch --unshallow 2>/dev/null || true
           cd android
-          ./gradlew bundleRelease
+          # Commit count only ever goes up, so this is always higher than any
+          # previous build's versionCode — no manual tracking/bumping needed.
+          VERSION_CODE=$(git rev-list --count HEAD)
+          echo "Using versionCode=$VERSION_CODE"
+          ./gradlew bundleRelease -PversionCode=$VERSION_CODE
     artifacts:
       - android/app/build/outputs/bundle/release/*.aab

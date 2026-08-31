@@ -7,7 +7,11 @@ android {
         applicationId "co.uk.adastranetwork.linq"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 8
+        // CI (codemagic.yaml) passes -PversionCode=<git commit count> so every build is
+        // guaranteed higher than the last, regardless of what's already live on Play
+        // Console — no more manually tracking/bumping this number. Local/manual builds
+        // fall back to a fixed high value.
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode').toInteger() : 8
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
