@@ -26491,7 +26491,7 @@ function VendorCardSection({ store, isSubscribed }: { store: StoreProfile | null
   };
 
   return (
-    <div className="space-y-6 pb-20 lg:max-w-2xl">
+    <div className="space-y-6 pb-20">
       <header>
         <h2 className="font-display text-3xl font-bold mb-1">Cards</h2>
         <p className="text-brand-navy/80 text-sm">Manage your loyalty and membership cards.</p>
