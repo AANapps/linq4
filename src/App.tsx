@@ -6218,6 +6218,9 @@ function AdminAddBusinessForm({ onClose }: { onClose: () => void }) {
   const [offerValue, setOfferValue] = useState('');
   const [offerImageUrl, setOfferImageUrl] = useState('');
   const [uploadingOfferImage, setUploadingOfferImage] = useState(false);
+  const [maxRedemptions, setMaxRedemptions] = useState(1);
+  const [validDays, setValidDays] = useState(30);
+  const MAX_OPTIONS = [{ v: 1, l: '1 time' }, { v: 2, l: '2 times' }, { v: 3, l: '3 times' }, { v: 5, l: '5 times' }, { v: 0, l: 'Unlimited' }];
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -6260,6 +6263,7 @@ function AdminAddBusinessForm({ onClose }: { onClose: () => void }) {
     setSaving(true);
     setError('');
     try {
+      const noExpiry = validDays === 0;
       const composedAddr = composeAddress(addrLine1, addrLine2, addrTown, addrState, addrPostcode);
       const storeRef = await addDoc(collection(db, 'stores'), {
         name: businessName.trim(),
@@ -6289,10 +6293,11 @@ function AdminAddBusinessForm({ onClose }: { onClose: () => void }) {
         description: offerDescription.trim(),
         imageUrl: offerImageUrl,
         offerType: 'standard',
-        maxRedemptionsPerUser: 1,
+        maxRedemptionsPerUser: maxRedemptions,
         value: parseFloat(offerValue) || 0,
         status: 'active',
         createdAt: serverTimestamp(),
+        ...(noExpiry ? {} : { validDays, expiresAt: new Date(Date.now() + validDays * 24 * 60 * 60 * 1000) }),
       });
       onClose();
     } catch (e: any) {
@@ -6401,6 +6406,41 @@ function AdminAddBusinessForm({ onClose }: { onClose: () => void }) {
           <div>
             <label className={labelClass}>Price / value (£)</label>
             <input value={offerValue} onChange={e => setOfferValue(e.target.value.replace(/[^0-9.]/g, ''))} inputMode="decimal" placeholder="0.00" className={inputClass} />
+          </div>
+
+          <div>
+            <label className={labelClass}>Max redemptions per user</label>
+            <div className="flex gap-2 flex-wrap">
+              {MAX_OPTIONS.map(opt => (
+                <button
+                  key={opt.v}
+                  type="button"
+                  onClick={() => setMaxRedemptions(opt.v)}
+                  className={cn('px-4 py-2 rounded-2xl text-sm font-bold transition-all', maxRedemptions === opt.v ? 'gradient-logo-blue text-white shadow' : 'bg-white border border-brand-navy/10 text-brand-navy/75')}
+                >
+                  {opt.l}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className={labelClass}>Time limit</label>
+            <div className="flex gap-2 flex-wrap">
+              {[7, 14, 30, 60, 90, 0].map(d => (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => setValidDays(d)}
+                  className={cn('px-4 py-2 rounded-2xl text-sm font-bold transition-all', validDays === d ? 'gradient-logo-blue text-white shadow' : 'bg-white border border-brand-navy/10 text-brand-navy/75')}
+                >
+                  {d === 0 ? 'Unlimited' : `${d}d`}
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] text-brand-navy/40 mt-1.5 px-1">
+              {validDays === 0 ? 'Offer stays live until you delete it — no expiry.' : `Offer auto-deletes after ${validDays} days.`}
+            </p>
           </div>
         </div>
 
