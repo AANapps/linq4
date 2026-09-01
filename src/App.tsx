@@ -14986,9 +14986,10 @@ function WelcomeModal({ uid: _uid, step, onNext, onDone }: { uid: string; step: 
   );
 }
 
-// Slim floating banner — replaces the old full-screen NFCStampModal popup.
+// Full-screen bottom-sheet popup — same structure as the QR scan popup
+// (backdrop blur + white rounded-t sheet, z-[130] so it sits above the bottom nav).
 // Native iOS: the OS shows its own NFC sheet; we only show feedback after.
-// Native Android + Web NFC (Android Chrome): shows a "Hold near tag" strip while scanning,
+// Native Android + Web NFC (Android Chrome): shows a "Hold near tag" sheet while scanning,
 // since reader mode / Web NFC has no system UI of its own.
 function NFCScanOverlay({ phase, msg, onCancel }: {
   phase: 'scanning' | 'processing' | 'success' | 'error';
@@ -15000,68 +15001,56 @@ function NFCScanOverlay({ phase, msg, onCancel }: {
   }, [phase]);
 
   return (
-    <motion.div
-      initial={{ y: 100, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      exit={{ y: 100, opacity: 0 }}
-      transition={{ type: 'spring', stiffness: 420, damping: 36 }}
-      className="fixed bottom-24 left-0 right-0 max-w-md mx-auto px-4 z-50 pointer-events-none"
-    >
-      <div className={cn(
-        'rounded-2xl px-4 py-3 flex items-center gap-3 shadow-2xl pointer-events-auto',
-        phase === 'success' ? 'bg-green-500' : phase === 'error' ? 'bg-red-500' : 'bg-brand-navy',
-      )}>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[130] flex items-end justify-center" onClick={onCancel}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+        transition={{ type: 'spring', stiffness: 520, damping: 38 }}
+        className="relative z-10 w-full max-w-md bg-white rounded-t-[2.5rem] p-8 pb-12 shadow-2xl"
+        onClick={e => e.stopPropagation()}>
+        <div className="bg-brand-navy/20 rounded-full mx-auto mb-6" style={{ width: 40, height: 4 }} />
+
         {phase === 'scanning' && (
-          <>
-            <motion.div
-              animate={{ scale: [1, 1.25, 1] }}
-              transition={{ duration: 1.2, repeat: Infinity }}
-            >
-              <Wifi size={20} className="text-white -rotate-90 shrink-0" />
-            </motion.div>
-            <div className="flex-1 min-w-0">
-              <p className="text-white font-bold text-sm">Hold near NFC tag</p>
-              <p className="text-white/65 text-xs">Waiting for store tag…</p>
+          <div className="text-center py-2">
+            <div className="relative w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+              <motion.div className="absolute inset-0 rounded-full border-2 border-brand-navy/20"
+                animate={{ scale: [1, 1.6, 1], opacity: [0.6, 0, 0.6] }} transition={{ duration: 1.5, repeat: Infinity }} />
+              <motion.div className="absolute inset-0 rounded-full border-2 border-brand-navy/10"
+                animate={{ scale: [1, 2, 1], opacity: [0.4, 0, 0.4] }} transition={{ duration: 1.5, repeat: Infinity, delay: 0.3 }} />
+              <div className="w-14 h-14 rounded-full bg-brand-navy flex items-center justify-center">
+                <Wifi size={24} className="text-white -rotate-90" />
+              </div>
             </div>
-            <button
-              onClick={onCancel}
-              className="text-white/70 w-7 h-7 rounded-lg bg-white/10 active:bg-white/20 shrink-0 flex items-center justify-center"
-              aria-label="Cancel scan"
-            >
-              <X size={16} />
-            </button>
-          </>
+            <p className="font-bold text-brand-navy mb-1">Hold near NFC tag</p>
+            <p className="text-brand-navy/60 text-xs mb-6">Waiting for store tag…</p>
+            <button onClick={onCancel} className="w-full text-brand-navy/75 text-sm font-bold py-2">Cancel</button>
+          </div>
         )}
+
         {phase === 'processing' && (
-          <>
-            <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }}>
-              <Loader2 size={20} className="text-white shrink-0" />
-            </motion.div>
-            <p className="text-white font-bold text-sm flex-1">Adding stamp…</p>
-          </>
+          <div className="text-center py-6">
+            <Loader2 size={32} className="animate-spin text-brand-navy mx-auto mb-3" />
+            <p className="text-brand-navy/75 font-medium">{msg || 'Adding stamp…'}</p>
+          </div>
         )}
-        {phase === 'success' && (
-          <>
-            <CheckCircle2 size={20} className="text-white shrink-0" />
-            <p className="text-white font-bold text-sm flex-1">{msg || 'Stamp added!'}</p>
-          </>
-        )}
-        {phase === 'error' && (
-          <>
-            <X size={20} className="text-white shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-white font-bold text-sm">Could not stamp</p>
-              <p className="text-white/80 text-xs truncate">{msg}</p>
+
+        {(phase === 'success' || phase === 'error') && (
+          <div className="text-center py-4">
+            <div className={cn('w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4',
+              phase === 'success' ? 'bg-green-100' : 'bg-red-100')}>
+              {phase === 'success'
+                ? <CheckCircle2 size={28} className="text-green-500" />
+                : <AlertCircle size={28} className="text-red-500" />}
             </div>
-            <button
-              onClick={onCancel}
-              className="text-white/70 text-xs font-bold px-2.5 py-1 rounded-lg bg-white/10 shrink-0"
-            >
-              Dismiss
+            <p className={cn('font-bold text-base mb-1', phase === 'success' ? 'text-green-600' : 'text-red-500')}>
+              {msg || (phase === 'success' ? 'Stamp added!' : 'Could not stamp')}
+            </p>
+            <button onClick={onCancel} className="mt-4 w-full text-brand-navy/75 text-sm font-bold py-2">
+              {phase === 'success' ? 'Done' : 'Dismiss'}
             </button>
-          </>
+          </div>
         )}
-      </div>
+      </motion.div>
     </motion.div>
   );
 }
