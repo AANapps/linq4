@@ -58,7 +58,8 @@ import {
   startAfter,
   Timestamp,
   runTransaction,
-  writeBatch
+  writeBatch,
+  deleteField
 } from 'firebase/firestore';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { getFunctions, httpsCallable } from 'firebase/functions';
@@ -25844,6 +25845,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
   const [uploadError, setUploadError] = useState('');
   const [createError, setCreateError] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!store?.id) return;
@@ -25879,18 +25881,34 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
     }
   };
 
-  const handleCreate = async () => {
-    if (!store || !title.trim() || !description.trim() || offers.length >= offerLimit) return;
+  const resetForm = () => {
+    setTitle(''); setDescription(''); setImageUrl(''); setMaxRedemptions(1); setValue(''); setOfferType('standard'); setValidDays(30);
+    setEditingId(null);
+    setCreateError('');
+  };
+
+  const openEdit = (offer: StoreOffer) => {
+    setEditingId(offer.id);
+    setTitle(offer.title);
+    setDescription(offer.description);
+    setImageUrl(offer.imageUrl || '');
+    setValue(offer.value ? String(offer.value) : '');
+    setOfferType(offer.offerType || 'standard');
+    setMaxRedemptions(offer.maxRedemptionsPerUser ?? 1);
+    setValidDays(offer.expiresAt ? (offer.validDays ?? 30) : 0);
+    setCreateError('');
+    setShowForm(true);
+  };
+
+  const handleSave = async () => {
+    if (!store || !title.trim() || !description.trim()) return;
+    if (!editingId && offers.length >= offerLimit) return;
     setCreateError('');
     setSaving(true);
     try {
       const isBirthday = offerType === 'birthday';
       const noExpiry = isBirthday || validDays === 0;
-      await addDoc(collection(db, 'store_offers'), {
-        storeId: store.id,
-        storeName: store.name,
-        storeLogoUrl: store.logoUrl || '',
-        storeCategory: store.category || '',
+      const fields = {
         title: title.trim(),
         description: description.trim(),
         imageUrl,
@@ -25898,16 +25916,32 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
         // Birthday offers are always once per year per user, regardless of the redemptions setting.
         maxRedemptionsPerUser: isBirthday ? 1 : maxRedemptions,
         value: parseFloat(value) || 0,
-        status: 'active',
-        createdAt: serverTimestamp(),
+      };
+      if (editingId) {
         // Birthday offers, and offers set to "Unlimited", run continuously until the vendor deletes them — no expiry.
-        ...(noExpiry ? {} : { validDays, expiresAt: new Date(Date.now() + validDays * 24 * 60 * 60 * 1000) }),
-      });
-      setTitle(''); setDescription(''); setImageUrl(''); setMaxRedemptions(1); setValue(''); setOfferType('standard'); setValidDays(30);
+        await updateDoc(doc(db, 'store_offers', editingId), {
+          ...fields,
+          ...(noExpiry
+            ? { expiresAt: deleteField() }
+            : { validDays, expiresAt: new Date(Date.now() + validDays * 24 * 60 * 60 * 1000) }),
+        });
+      } else {
+        await addDoc(collection(db, 'store_offers'), {
+          storeId: store.id,
+          storeName: store.name,
+          storeLogoUrl: store.logoUrl || '',
+          storeCategory: store.category || '',
+          ...fields,
+          status: 'active',
+          createdAt: serverTimestamp(),
+          ...(noExpiry ? {} : { validDays, expiresAt: new Date(Date.now() + validDays * 24 * 60 * 60 * 1000) }),
+        });
+      }
+      resetForm();
       setSaved(true); setTimeout(() => setSaved(false), 2000);
       setShowForm(false);
     } catch (e: any) {
-      setCreateError(e?.message || 'Failed to create offer. Check permissions.');
+      setCreateError(e?.message || 'Failed to save offer. Check permissions.');
     } finally {
       setSaving(false);
     }
@@ -25954,8 +25988,8 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
             className="v-card p-5 space-y-4"
           >
             <div className="flex items-center justify-between">
-              <h3 className="font-bold text-brand-navy text-sm">New Offer</h3>
-              <button onClick={() => setShowForm(false)} className="w-7 h-7 rounded-full bg-brand-bg flex items-center justify-center active:scale-90 transition-transform">
+              <h3 className="font-bold text-brand-navy text-sm">{editingId ? 'Edit Offer' : 'New Offer'}</h3>
+              <button onClick={() => { setShowForm(false); resetForm(); }} className="w-7 h-7 rounded-full bg-brand-bg flex items-center justify-center active:scale-90 transition-transform">
                 <X size={14} className="text-brand-navy/60" />
               </button>
             </div>
@@ -26074,11 +26108,11 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
               <p className="text-red-500 text-xs font-semibold bg-red-50 rounded-2xl px-4 py-2">{createError}</p>
             )}
             <button
-              onClick={handleCreate}
+              onClick={handleSave}
               disabled={saving || !title.trim() || !description.trim()}
               className="w-full bg-brand-navy text-white py-3.5 rounded-xl font-bold text-sm disabled:opacity-50 active:scale-[0.98] transition-all"
             >
-              {saving ? 'Creating...' : saved ? '✓ Created!' : 'Create Offer'}
+              {saving ? (editingId ? 'Saving...' : 'Creating...') : saved ? '✓ Saved!' : (editingId ? 'Save Changes' : 'Create Offer')}
             </button>
           </motion.div>
         )}
@@ -26088,7 +26122,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
       {offers.length === 0 && !showForm && (
         <p className="text-center text-sm text-brand-navy/50">Create your first deal to attract customers.</p>
       )}
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(84px,100px))] gap-2">
+      <div className="grid grid-cols-5 gap-2.5">
         {offers.map(offer => {
           const exp = offer.expiresAt
             ? (() => {
@@ -26097,50 +26131,62 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
               })()
             : null;
           return (
-            <div key={offer.id} className="relative aspect-square rounded-xl overflow-hidden bg-brand-bg border border-brand-navy/10">
+            <button
+              key={offer.id}
+              onClick={() => openEdit(offer)}
+              className="relative aspect-square rounded-xl overflow-hidden bg-brand-bg border border-brand-navy/10 text-left active:scale-95 transition-transform"
+            >
               {offer.imageUrl ? (
                 <img src={offer.imageUrl} alt="" className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
-                  <Ticket size={20} className="text-brand-navy/20" />
+                  <Ticket size={26} className="text-brand-navy/20" />
                 </div>
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent" />
 
-              <div className="absolute top-1 left-1 right-1 flex items-center justify-between gap-0.5">
-                <span className={cn('text-[7px] font-black px-1.5 py-0.5 rounded-full', offer.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-white/90 text-brand-navy/75')}>
+              <div className="absolute top-1.5 left-1.5 right-1.5 flex items-center justify-between gap-1">
+                <span className={cn('text-[8px] font-black px-1.5 py-0.5 rounded-full', offer.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-white/90 text-brand-navy/75')}>
                   {offer.status === 'active' ? 'Live' : 'Paused'}
                 </span>
-                <button onClick={() => deleteOffer(offer.id)} className="w-4 h-4 rounded-full bg-black/40 flex items-center justify-center active:scale-90 transition-transform shrink-0">
-                  <Trash2 size={8} className="text-white" />
-                </button>
+                <span
+                  role="button"
+                  onClick={(e) => { e.stopPropagation(); deleteOffer(offer.id); }}
+                  className="w-5 h-5 rounded-full bg-black/40 flex items-center justify-center active:scale-90 transition-transform shrink-0"
+                >
+                  <Trash2 size={9} className="text-white" />
+                </span>
               </div>
 
-              <div className="absolute bottom-0 left-0 right-0 p-1.5 space-y-1">
-                <p className="text-white font-bold text-[10px] leading-tight line-clamp-2">{offer.title}</p>
-                <div className="flex items-center gap-0.5 flex-wrap">
-                  {offer.offerType === 'birthday' && <span className="text-[10px] leading-none">🎂</span>}
-                  {offer.offerType === 'seasonal' && <span className="text-[10px] leading-none">🌸</span>}
+              <div className="absolute bottom-0 left-0 right-0 p-2 space-y-1">
+                <p className="text-white font-bold text-[11px] leading-tight line-clamp-2">{offer.title}</p>
+                <div className="flex items-center gap-1 flex-wrap">
+                  {offer.offerType === 'birthday' && <span className="text-xs leading-none">🎂</span>}
+                  {offer.offerType === 'seasonal' && <span className="text-xs leading-none">🌸</span>}
                   {exp !== null && (
-                    <span className={cn('text-[7px] font-black px-1 py-0.5 rounded-full', exp <= 3 ? 'bg-red-100 text-red-500' : 'bg-amber-100 text-amber-600')}>{exp}d</span>
+                    <span className={cn('text-[8px] font-black px-1.5 py-0.5 rounded-full', exp <= 3 ? 'bg-red-100 text-red-500' : 'bg-amber-100 text-amber-600')}>{exp}d</span>
                   )}
-                  {(offer.value ?? 0) > 0 && <span className="text-[7px] font-black text-emerald-300">${offer.value!.toFixed(0)}</span>}
-                  <button onClick={() => toggleStatus(offer)} className="ml-auto w-4 h-4 rounded-full bg-white/25 flex items-center justify-center active:scale-90 transition-transform shrink-0">
-                    {offer.status === 'active' ? <Pause size={8} className="text-white" /> : <Play size={8} className="text-white" />}
-                  </button>
+                  {(offer.value ?? 0) > 0 && <span className="text-[8px] font-black text-emerald-300">${offer.value!.toFixed(0)}</span>}
+                  <span
+                    role="button"
+                    onClick={(e) => { e.stopPropagation(); toggleStatus(offer); }}
+                    className="ml-auto w-5 h-5 rounded-full bg-white/25 flex items-center justify-center active:scale-90 transition-transform shrink-0"
+                  >
+                    {offer.status === 'active' ? <Pause size={9} className="text-white" /> : <Play size={9} className="text-white" />}
+                  </span>
                 </div>
               </div>
-            </div>
+            </button>
           );
         })}
 
         {!atLimit && (
           <button
-            onClick={() => setShowForm(true)}
-            className="aspect-square rounded-xl border-2 border-dashed border-brand-navy/20 flex flex-col items-center justify-center gap-1 text-brand-navy/40 active:scale-95 transition-transform"
+            onClick={() => { resetForm(); setShowForm(true); }}
+            className="aspect-square rounded-xl border-2 border-dashed border-brand-navy/20 flex flex-col items-center justify-center gap-1.5 text-brand-navy/40 active:scale-95 transition-transform"
           >
-            <Plus size={18} />
-            <span className="text-[9px] font-bold">Add</span>
+            <Plus size={24} />
+            <span className="text-[10px] font-bold">Add</span>
           </button>
         )}
       </div>
