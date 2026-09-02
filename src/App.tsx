@@ -1377,6 +1377,7 @@ export default function App() {
   const [showVendorQR, setShowVendorQR] = useState(false);
   const [vendorQREnabled, setVendorQREnabled] = useState(false);
   const [vendorIsSpend, setVendorIsSpend] = useState(false);
+  const [vendorIssueMode, setVendorIssueMode] = useState<null | 'card' | 'offer' | 'scan-user'>(null);
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior }); }, [activeTab]);
   const screenSessionRef = useRef<{ screen: string; enteredAt: number } | null>(null);
@@ -2529,6 +2530,8 @@ export default function App() {
               onVendorQRStatus={setVendorQREnabled}
               onVendorIsSpend={setVendorIsSpend}
               blockedUids={blockedUids}
+              vendorIssueMode={vendorIssueMode}
+              setVendorIssueMode={setVendorIssueMode}
             />
             </AppErrorBoundary>
           )}
@@ -2733,13 +2736,31 @@ export default function App() {
             <span className="text-[10px] font-bold uppercase tracking-wider text-brand-navy/75">Issue Points</span>
           </button>
         ) : null}
-        <NavButton
-          active={activeTab === 'discover'}
-          onClick={() => { setActiveTab('discover'); setViewingStore(null); setViewingUser(null); }}
-          icon={['consumer','admin'].includes(profile?.role ?? '') ? <Compass /> : <Plus />}
-          label={['consumer','admin'].includes(profile?.role ?? '') ? 'Discovery' : 'Card'}
-          flat={isVendor}
-        />
+        {['consumer','admin'].includes(profile?.role ?? '') ? (
+          <NavButton
+            active={activeTab === 'discover'}
+            onClick={() => { setActiveTab('discover'); setViewingStore(null); setViewingUser(null); }}
+            icon={<Compass />}
+            label="Discovery"
+          />
+        ) : (
+          <>
+            <NavButton
+              active={activeTab === 'discover' && vendorIssueMode === 'card'}
+              onClick={() => { setVendorIssueMode('card'); setActiveTab('discover'); setViewingStore(null); setViewingUser(null); }}
+              icon={<CreditCard />}
+              label="Cards"
+              flat
+            />
+            <NavButton
+              active={activeTab === 'discover' && vendorIssueMode === 'offer'}
+              onClick={() => { setVendorIssueMode('offer'); setActiveTab('discover'); setViewingStore(null); setViewingUser(null); }}
+              icon={<Ticket />}
+              label="Offers"
+              flat
+            />
+          </>
+        )}
         <NavButton
           active={activeTab === 'profile'}
           onClick={() => { setActiveTab('profile'); setViewingStore(null); setViewingUser(null); }}
@@ -18553,7 +18574,7 @@ function PaymentVerifyingScreen() {
 
 // --- Vendor App ---
 
-function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, onViewUser, notifications, activeChatId, setActiveChatId, onLogout, onDeleteAccount, showVendorQR, setShowVendorQR, onVendorQRStatus, onVendorIsSpend, blockedUids }: { activeTab: string, setActiveTab: (tab: string) => void, profile: UserProfile | null, user: FirebaseUser, profileCollection: 'users' | 'vendors', onViewUser: (u: UserProfile) => void, notifications: Notification[], activeChatId: string | null, setActiveChatId: (id: string | null) => void, onLogout: () => void, onDeleteAccount: () => Promise<void>, showVendorQR?: boolean, setShowVendorQR?: (v: boolean) => void, onVendorQRStatus?: (enabled: boolean) => void, onVendorIsSpend?: (v: boolean) => void, blockedUids?: Set<string>, key?: React.Key }) {
+function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, onViewUser, notifications, activeChatId, setActiveChatId, onLogout, onDeleteAccount, showVendorQR, setShowVendorQR, onVendorQRStatus, onVendorIsSpend, blockedUids, vendorIssueMode, setVendorIssueMode }: { activeTab: string, setActiveTab: (tab: string) => void, profile: UserProfile | null, user: FirebaseUser, profileCollection: 'users' | 'vendors', onViewUser: (u: UserProfile) => void, notifications: Notification[], activeChatId: string | null, setActiveChatId: (id: string | null) => void, onLogout: () => void, onDeleteAccount: () => Promise<void>, showVendorQR?: boolean, setShowVendorQR?: (v: boolean) => void, onVendorQRStatus?: (enabled: boolean) => void, onVendorIsSpend?: (v: boolean) => void, blockedUids?: Set<string>, vendorIssueMode: null | 'card' | 'offer' | 'scan-user', setVendorIssueMode: (m: null | 'card' | 'offer' | 'scan-user') => void, key?: React.Key }) {
   const [store, setStore] = useState<StoreProfile | null>(null);
   const [userCards, setUserCards] = useState<Card[]>([]);
 
@@ -18571,7 +18592,6 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
   const [issueMode, setIssueMode] = useState<'stamp' | 'sub'>('stamp');
   const [isIssuing, setIsIssuing] = useState(false);
   const [lastIssueTime, setLastIssueTime] = useState(0);
-  const [vendorIssueMode, setVendorIssueMode] = useState<null | 'card' | 'offer' | 'scan-user'>(null);
   const [issueStatus, setIssueStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
   const [activityVisible, setActivityVisible] = useState(5);
@@ -25967,7 +25987,10 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
 
   return (
     <div className="space-y-6 pb-20">
-      <header>
+      <header
+        className="sticky z-10 -mx-6 lg:-mx-8 px-6 lg:px-8 bg-brand-bg/95 backdrop-blur-sm pb-3 pt-1 border-b border-brand-navy/5"
+        style={{ top: 'calc(3.5rem + var(--safe-area-inset-top, env(safe-area-inset-top, 0px)))' }}
+      >
         <h2 className="font-display text-3xl font-bold mb-0.5">Offers</h2>
         <p className="text-brand-navy/80 text-sm">
           {atLimit
