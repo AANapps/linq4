@@ -2387,15 +2387,16 @@ export default function App() {
             {([
               { tab: 'home',     icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
               { tab: 'messages', icon: <MessageCircle size={18} />,   label: 'Messages',    badge: unreadMessages },
-              { tab: 'discover', icon: <Plus size={18} />,            label: 'Card' },
+              { tab: 'discover', icon: <CreditCard size={18} />,      label: 'Cards',  mode: 'card' as const },
+              { tab: 'discover', icon: <Ticket size={18} />,          label: 'Offers', mode: 'offer' as const },
               { tab: 'profile',  icon: <UserIcon size={18} />,        label: 'Profile' },
-            ] as const).map(({ tab, icon, label, badge }) => (
+            ] as const).map(({ tab, icon, label, badge, mode }) => (
               <button
-                key={tab}
-                onClick={() => { setActiveTab(tab); setViewingStore(null); setViewingUser(null); }}
+                key={label}
+                onClick={() => { if (mode) setVendorIssueMode(mode); setActiveTab(tab); setViewingStore(null); setViewingUser(null); }}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold w-full text-left transition-all",
-                  activeTab === tab ? "bg-brand-navy text-white" : "text-brand-navy/60 hover:bg-brand-navy/5 hover:text-brand-navy"
+                  activeTab === tab && (!mode || vendorIssueMode === mode) ? "bg-brand-navy text-white" : "text-brand-navy/60 hover:bg-brand-navy/5 hover:text-brand-navy"
                 )}
               >
                 {icon}
