@@ -877,6 +877,7 @@ interface Chat {
   lastActivity: any;
   unreadCount?: { [uid: string]: number };
   isBroadcast?: boolean;
+  broadcastId?: string;
   storeId?: string;
   storeName?: string;
   storeLogoUrl?: string;
@@ -18243,6 +18244,13 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
             businessLogoUrl: store.logoUrl || '',
             lastMessage: msgBody.trim(),
             lastActivity: serverTimestamp(),
+            // Lets the recipient's view/reply get tracked against this broadcast, and hides
+            // this chat from the vendor's own inbox until the recipient actually replies.
+            isBroadcast: true,
+            broadcastId,
+            storeId: store.id,
+            storeName: store.name,
+            storeLogoUrl: store.logoUrl || '',
           }, { merge: true });
           await updateDoc(chatRef, { [`unreadCount.${uid}`]: increment(1) });
           await addDoc(collection(db, 'chats', chatId, 'messages'), {
@@ -34303,7 +34311,9 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
   const [newMessage, setNewMessage] = useState('');
   const [chatPartner, setChatPartner] = useState<UserProfile | null>(null);
   const [activeChatBusinessInfo, setActiveChatBusinessInfo] = useState<{ businessName: string; businessLogoUrl: string } | null>(null);
-  const [activeBroadcastChat, setActiveBroadcastChat] = useState<{ storeName: string; storeLogoUrl: string; storeId?: string; broadcastId?: string } | null>(null);
+  // Tracks an unreplied broadcast on the currently-open chat so we can record a "view" once
+  // and, if the consumer sends a reply, a "reply" — against stores/{storeId}/broadcasts/{broadcastId}.
+  const pendingBroadcastRef = useRef<{ storeId: string; broadcastId: string } | null>(null);
   const [selectedMsgId, setSelectedMsgId] = useState<string | null>(null);
   const [showChatMenu, setShowChatMenu] = useState(false);
   const [chatReportSent, setChatReportSent] = useState(false);
@@ -34343,14 +34353,14 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
       msgLastDocRef.current = null;
       setChatPartner(null);
       setActiveChatBusinessInfo(null);
-      setActiveBroadcastChat(null);
+      pendingBroadcastRef.current = null;
       return;
     }
     setOlderMessages([]);
     setMsgHasMore(false);
     msgLastDocRef.current = null;
     setActiveChatBusinessInfo(null);
-    setActiveBroadcastChat(null);
+    pendingBroadcastRef.current = null;
 
     // Fetch partner — poll briefly if doc not yet created (race with background creation)
     const loadPartner = async (retries = 5) => {
@@ -34365,21 +34375,15 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
         if (unreadCount[currentUser.uid]) {
           updateDoc(doc(db, 'chats', activeChatId), { [`unreadCount.${currentUser.uid}`]: 0 }).catch(() => {});
         }
-        if (chatData.isBroadcast) {
-          setActiveBroadcastChat({
-            storeName: chatData.storeName || 'Business',
-            storeLogoUrl: chatData.storeLogoUrl || '',
-            storeId: chatData.storeId,
-            broadcastId: chatData.broadcastId,
-          });
-          // Record view on the broadcast doc
-          if (chatData.storeId && chatData.broadcastId) {
-            updateDoc(
-              doc(db, 'stores', chatData.storeId, 'broadcasts', chatData.broadcastId),
-              { viewers: arrayUnion(currentUser.uid) }
-            ).catch(() => {});
-          }
-          return;
+        // An unreplied broadcast sits inside this same 1:1 chat (not a separate thread) — the
+        // consumer sees it rendered inline via ChatMessage.isBroadcast below. Record the view,
+        // and remember it so a reply gets tracked too. Never counted for the vendor's own chats.
+        if (!vendorStore && chatData.isBroadcast && chatData.storeId && chatData.broadcastId) {
+          pendingBroadcastRef.current = { storeId: chatData.storeId, broadcastId: chatData.broadcastId };
+          updateDoc(
+            doc(db, 'stores', chatData.storeId, 'broadcasts', chatData.broadcastId),
+            { viewers: arrayUnion(currentUser.uid) }
+          ).catch(() => {});
         }
         if (chatData.businessName) {
           setActiveChatBusinessInfo({ businessName: chatData.businessName, businessLogoUrl: chatData.businessLogoUrl || '' });
@@ -34535,12 +34539,17 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
         ...(partnerUid ? { [`unreadCount.${partnerUid}`]: increment(1) } : {})
       });
 
-      // Track reply on the broadcast doc (only for consumer replies, not vendor's own messages)
-      if (activeBroadcastChat?.storeId && activeBroadcastChat?.broadcastId) {
+      // Track reply on the broadcast doc (only for consumer replies, not vendor's own messages),
+      // and clear the chat's isBroadcast flag so it stops being hidden from the vendor's inbox —
+      // a real reply means it's now a genuine conversation, not just an outgoing blast.
+      if (!vendorStore && pendingBroadcastRef.current) {
+        const { storeId, broadcastId } = pendingBroadcastRef.current;
         updateDoc(
-          doc(db, 'stores', activeBroadcastChat.storeId, 'broadcasts', activeBroadcastChat.broadcastId),
+          doc(db, 'stores', storeId, 'broadcasts', broadcastId),
           { repliers: arrayUnion(currentUser.uid) }
         ).catch(() => {});
+        updateDoc(doc(db, 'chats', activeChatId), { isBroadcast: false }).catch(() => {});
+        pendingBroadcastRef.current = null;
       }
 
       // Send notification to partner
@@ -34561,65 +34570,9 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
     }
   };
 
-  if (activeChatId && activeBroadcastChat) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        className="fixed inset-0 bg-brand-bg z-[100] flex flex-col max-w-md mx-auto"
-      >
-        <header className="glass-panel safe-top px-6 pb-4 flex items-center gap-4">
-          <button onClick={() => setActiveChatId(null)} className="p-2 -ml-2 text-brand-navy/75">
-            <ArrowLeft size={24} />
-          </button>
-          <div className="flex items-center gap-3 flex-1">
-            <div className="w-10 h-10 rounded-xl overflow-hidden border-2 border-white shadow-sm bg-brand-navy/5 flex items-center justify-center shrink-0">
-              {activeBroadcastChat.storeLogoUrl
-                ? <img src={activeBroadcastChat.storeLogoUrl} alt="" className="w-full h-full object-cover" />
-                : <Store size={18} className="text-brand-navy/80" />}
-            </div>
-            <div>
-              <h3 className="font-bold text-sm leading-tight">{activeBroadcastChat.storeName}</h3>
-              <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest">Broadcast</p>
-            </div>
-          </div>
-        </header>
-        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto py-4 space-y-3 px-4">
-          {msgHasMore && (
-            <div className="flex justify-center py-2">
-              <button
-                onClick={loadOlderMessages}
-                disabled={msgLoadingMore}
-                className="px-5 py-2 rounded-2xl bg-brand-navy/8 text-brand-navy/75 text-xs font-bold active:scale-95 transition-all disabled:opacity-50 flex items-center gap-1.5"
-              >
-                {msgLoadingMore ? (
-                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
-                    <Sparkles className="w-3 h-3" />
-                  </motion.div>
-                ) : <ChevronUp size={13} />}
-                {msgLoadingMore ? 'Loading…' : 'Load more'}
-              </button>
-            </div>
-          )}
-          {[...olderMessages, ...messages].map(msg => (
-            <div key={msg.id} className="bg-white rounded-2xl p-4 border border-black/5 shadow-sm">
-              {msg.title && <p className="font-bold text-sm text-brand-navy mb-1">{msg.title}</p>}
-              <p className="text-sm text-brand-navy/80 leading-relaxed">{msg.text}</p>
-              <p className="text-[10px] text-brand-navy/72 mt-2 font-bold uppercase tracking-widest">
-                {msg.createdAt?.toDate ? format(msg.createdAt.toDate(), 'MMM d, h:mm a') : 'Just now'}
-              </p>
-            </div>
-          ))}
-          {messages.length === 0 && (
-            <div className="text-center py-16 text-brand-navy/72">
-              <Send size={32} className="mx-auto mb-3 opacity-20" />
-              <p className="text-sm font-bold">No messages yet</p>
-            </div>
-          )}
-        </div>
-      </motion.div>
-    );
-  }
+  // Broadcast messages render inline (via ChatMessage.isBroadcast, below) inside the normal
+  // 1:1 chat with that business — there's no separate broadcast-only viewer, since a consumer
+  // must be able to reply to it like any other message.
 
   if (activeChatId && (chatPartner || activeChatBusinessInfo)) {
     return (

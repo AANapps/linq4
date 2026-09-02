@@ -65,6 +65,12 @@ service cloud.firestore {
 
       match /broadcasts/{broadcastId} {
         allow read, create: if isAuthenticated() && isStoreOwner(storeId);
+        // Recipients need to record their own view/reply (arrayUnion into viewers/repliers)
+        // for the vendor's broadcast stats to be accurate — restricted to just those two fields.
+        allow update: if isAuthenticated() && (
+          isStoreOwner(storeId) ||
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewers', 'repliers'])
+        );
         allow delete: if isAuthenticated() && isStoreOwner(storeId);
       }
     }
