@@ -68,6 +68,7 @@ import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
 import { App as CapApp } from '@capacitor/app';
 import { Geolocation } from '@capacitor/geolocation';
+import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 
 const openUrl = async (url: string) => {
   if (Capacitor.isNativePlatform()) {
@@ -119,7 +120,20 @@ const storage = getStorage();
 // ── Sound + haptic utilities ─────────────────────────────────────────────────
 
 function haptic(pattern: number | number[]) {
-  try { if ('vibrate' in navigator) navigator.vibrate(pattern); } catch { /* non-fatal */ }
+  // Routed through Capacitor Haptics so real taps/buzzes fire on iOS (which never
+  // implemented the Web Vibration API) as well as Android; the web build falls
+  // back to navigator.vibrate internally via Haptics' own web implementation.
+  const arr = Array.isArray(pattern) ? pattern : [pattern];
+  (async () => {
+    try {
+      if (arr.length >= 3) {
+        await Haptics.notification({ type: NotificationType.Success });
+      } else {
+        const peak = Math.max(...arr);
+        await Haptics.impact({ style: peak > 60 ? ImpactStyle.Heavy : peak > 25 ? ImpactStyle.Medium : ImpactStyle.Light });
+      }
+    } catch { /* non-fatal */ }
+  })();
 }
 
 function playSound(type: 'stamp' | 'complete' | 'points') {
@@ -13311,6 +13325,35 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
     setJoiningProgramId(null);
   };
 
+  // Join a standard challenge from the stamp-celebration "Join these" list — mirrors the
+  // Challenges-tab join flow (participantUids + challenge_entries) so progress tracks correctly.
+  const handleJoinChallengeFromCelebration = async (challengeId: string) => {
+    if (!user) return;
+    const c = activeStandardChallenges.find(ch => ch.id === challengeId);
+    if (!c) return;
+    const isEnded = c.endsAt ? (c.endsAt.toMillis?.() ?? (c.endsAt.seconds ?? 0) * 1000) < Date.now() : false;
+    const joinedCount = activeStandardChallenges.filter(ch => (ch.participantUids || []).includes(user.uid)).length;
+    if (isEnded || joinedCount >= 5) return;
+    await updateDoc(doc(db, 'challenges', challengeId), { participantUids: arrayUnion(user.uid) });
+    const stampsAtJoinPerStore: Record<string, number> = {};
+    if (c.vendorIds?.length) {
+      for (const vid of c.vendorIds) {
+        const card = initialCards.find(cd => cd.store_id === vid);
+        if (card) {
+          stampsAtJoinPerStore[vid] = (card.total_completed_cycles || 0) * (card.stamps_required || 10) + (card.current_stamps || 0);
+        }
+      }
+    }
+    await addDoc(collection(db, 'challenge_entries'), {
+      challengeId,
+      uid: user.uid,
+      count: 0,
+      totalStampsAtJoin: profile?.totalStamps || 0,
+      ...(c.vendorIds?.length ? { stampsAtJoinPerStore } : {}),
+      createdAt: serverTimestamp(),
+    });
+    logEvent('challenge_started', user.uid, { challengeId, goal: c.goal, type: c.type, source: 'stamp_celebration' });
+  };
 
   // Show every non-archived, non-hidden card the user holds.
   const activeCards = initialCards.filter(c => !c.isArchived && !c.isHidden && !c.vendorDisabled);
@@ -14181,6 +14224,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
             pages={celebrationPages!}
             onClose={() => { setCelebrationPages(null); celebrationArchiveFnRef.current = null; }}
             onArchiveTier={celebrationArchiveFnRef.current ?? undefined}
+            onJoinChallenge={handleJoinChallengeFromCelebration}
             avatarConfig={profile?.avatar}
             userUid={user.uid}
             pendingPack={pendingPack ?? undefined}
@@ -16574,6 +16618,7 @@ function StampCelebrationModal({
   pages,
   onClose,
   onArchiveTier,
+  onJoinChallenge,
   avatarConfig,
   userUid,
   pendingPack,
@@ -16583,6 +16628,7 @@ function StampCelebrationModal({
   pages: CelebrationPage[];
   onClose: () => void;
   onArchiveTier?: (tierStamps: number, isFinal: boolean) => Promise<void>;
+  onJoinChallenge?: (challengeId: string) => Promise<void>;
   avatarConfig?: UserAvatar;
   userUid?: string;
   pendingPack?: CollectibleSticker[] | null;
@@ -16596,6 +16642,8 @@ function StampCelebrationModal({
   const [rankRevealed, setRankRevealed] = useState(false);
   const [monopolyPackOpen, setMonopolyPackOpen] = useState(false);
   const [stageRedeemed, setStageRedeemed] = useState(false);
+  const [joiningChallengeId, setJoiningChallengeId] = useState<string | null>(null);
+  const [joinedChallengeIds, setJoinedChallengeIds] = useState<Set<string>>(new Set());
   const page = pages[pageIdx];
   const isLast = pageIdx === pages.length - 1;
   const pct = Math.min(100, page.totalStamps > 0 ? Math.round((page.currentStamps / page.totalStamps) * 100) : 0);
@@ -16668,6 +16716,24 @@ function StampCelebrationModal({
   const ctaLabel = isLast
     ? (isUpsell ? 'Join the challenge!' : isUpsellList ? 'Explore Challenges!' : CTA_LABELS[pageIdx % CTA_LABELS.length])
     : 'Next';
+
+  const goNext = () => {
+    haptic(isLast ? [40, 30, 90] : 22);
+    if (isLast) onClose(); else setPageIdx(i => i + 1);
+  };
+
+  const handleJoinNewChallenge = async (challengeId: string) => {
+    if (!onJoinChallenge || joiningChallengeId || joinedChallengeIds.has(challengeId)) return;
+    setJoiningChallengeId(challengeId);
+    try {
+      await onJoinChallenge(challengeId);
+      setJoinedChallengeIds(prev => new Set(prev).add(challengeId));
+      haptic([40, 30, 80]);
+    } catch (err) {
+      console.error('join challenge from celebration failed:', err);
+    }
+    setJoiningChallengeId(null);
+  };
 
   return (
     <div
@@ -16766,7 +16832,7 @@ function StampCelebrationModal({
 
                 <motion.button
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: rankRevealed ? 1 : 0.35, y: 0 }} transition={{ delay: 0.35 }}
-                  onClick={rankRevealed ? (isLast ? onClose : () => setPageIdx(i => i + 1)) : undefined}
+                  onClick={rankRevealed ? goNext : undefined}
                   style={{ pointerEvents: rankRevealed ? 'auto' : 'none', background: 'linear-gradient(160deg, #1D4ED8 0%, #4F46E5 40%, #7C3AED 100%)' }}
                   className="w-full py-3.5 rounded-2xl font-bold text-sm text-white active:scale-[0.98] transition-all relative overflow-hidden"
                 >
@@ -16928,7 +16994,7 @@ function StampCelebrationModal({
 
                     <motion.button
                       initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-                      onClick={isLast ? onClose : () => setPageIdx(i => i + 1)}
+                      onClick={goNext}
                       className="w-full py-3.5 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-[0.98] transition-all"
                     >
                       {isLast ? 'Done 🎉' : 'Continue 🎉'}
@@ -17076,22 +17142,45 @@ function StampCelebrationModal({
                   )}
 
                   {/* 3 new unjoined challenges */}
-                  {page.newChallengesList?.map((c, i) => (
-                    <motion.div
-                      key={c.id}
-                      initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 + i * 0.07 }}
-                      className="rounded-2xl bg-white border border-brand-navy/8 p-3.5 flex items-center justify-between gap-3 shadow-sm"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="font-bold text-sm text-brand-navy truncate">{c.title}</p>
-                        <p className="text-[10px] text-brand-navy/50 mt-0.5 truncate">{c.reward}</p>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-[9px] font-black text-brand-navy/40 uppercase tracking-widest">{c.totalStamps} stamps</span>
-                        <span className="text-[9px] font-black px-2 py-0.5 rounded-full text-white" style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)' }}>Join</span>
-                      </div>
-                    </motion.div>
-                  ))}
+                  {page.newChallengesList?.map((c, i) => {
+                    const isJoining = joiningChallengeId === c.id;
+                    const isJoined = joinedChallengeIds.has(c.id);
+                    return (
+                      <motion.div
+                        key={c.id}
+                        initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 + i * 0.07 }}
+                        className="rounded-2xl bg-white border border-brand-navy/8 p-3.5 flex items-center justify-between gap-3 shadow-sm"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-sm text-brand-navy truncate">{c.title}</p>
+                          <p className="text-[10px] text-brand-navy/50 mt-0.5 truncate">{c.reward}</p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-[9px] font-black text-brand-navy/40 uppercase tracking-widest">{c.totalStamps} stamps</span>
+                          <motion.button
+                            onClick={() => handleJoinNewChallenge(c.id)}
+                            disabled={isJoining || isJoined}
+                            whileTap={isJoined ? {} : { scale: 0.9 }}
+                            animate={isJoined ? { scale: [1, 1.25, 1] } : { scale: 1 }}
+                            transition={{ type: 'spring', stiffness: 500, damping: 15 }}
+                            className={cn(
+                              "text-[9px] font-black px-2.5 py-1 rounded-full text-white flex items-center gap-1 transition-opacity",
+                              isJoined ? 'bg-emerald-500' : 'active:opacity-80'
+                            )}
+                            style={isJoined ? undefined : { background: 'linear-gradient(135deg, #4F46E5, #7C3AED)' }}
+                          >
+                            {isJoining ? (
+                              <Loader2 size={10} className="animate-spin" />
+                            ) : isJoined ? (
+                              <>✓ Joined</>
+                            ) : (
+                              'Join'
+                            )}
+                          </motion.button>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
                 </div>
 
                 {(page.newChallengesList?.length ?? 0) > 0 && (
@@ -17113,7 +17202,7 @@ function StampCelebrationModal({
 
                 <motion.button
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
-                  onClick={isLast ? onClose : () => setPageIdx(i => i + 1)}
+                  onClick={goNext}
                   className="w-full py-3.5 rounded-2xl font-bold text-sm text-white active:scale-[0.98] transition-all gradient-logo-blue relative overflow-hidden"
                 >
                   <span className="card-shine-ray" aria-hidden="true" />
@@ -17132,7 +17221,7 @@ function StampCelebrationModal({
                 )}
                 <motion.button
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
-                  onClick={isLast ? onClose : () => setPageIdx(i => i + 1)}
+                  onClick={goNext}
                   className="w-full py-3.5 rounded-2xl font-bold text-sm text-white active:scale-[0.98] transition-all gradient-logo-blue relative overflow-hidden"
                 >
                   <span className="card-shine-ray" aria-hidden="true" />
@@ -17194,7 +17283,7 @@ function StampCelebrationModal({
 
                 <motion.button
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
-                  onClick={isLast ? onClose : () => setPageIdx(i => i + 1)}
+                  onClick={goNext}
                   className="w-full py-3.5 rounded-2xl font-bold text-sm text-white active:scale-[0.98] transition-all gradient-logo-blue relative overflow-hidden"
                 >
                   <span className="card-shine-ray" aria-hidden="true" />
@@ -17308,7 +17397,7 @@ function StampCelebrationModal({
 
                 <motion.button
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
-                  onClick={isLast ? onClose : () => setPageIdx(i => i + 1)}
+                  onClick={goNext}
                   className="w-full py-3.5 rounded-2xl font-bold text-sm text-white active:scale-[0.98] transition-all relative overflow-hidden"
                   style={{ background: `linear-gradient(135deg, ${page.membershipColor || '#2563EB'}, ${page.membershipColor || '#2563EB'}cc)` }}
                 >
@@ -17582,7 +17671,7 @@ function StampCelebrationModal({
                 {/* CTA */}
                 <motion.button
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
-                  onClick={isLast ? onClose : () => setPageIdx(i => i + 1)}
+                  onClick={goNext}
                   style={{ background: 'linear-gradient(160deg, #1D4ED8 0%, #4F46E5 40%, #7C3AED 100%)' }}
                   className="w-full py-3.5 rounded-2xl font-bold text-sm text-white active:scale-[0.98] transition-all relative overflow-hidden"
                 >
@@ -32811,6 +32900,10 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
   const [showAllDeals, setShowAllDeals] = useState(false);
   const [feedChallenges, setFeedChallenges] = useState<Challenge[]>([]);
   const [feedCompletedChallenges, setFeedCompletedChallenges] = useState<Challenge[]>([]);
+  const [feedCollectibleChallenges, setFeedCollectibleChallenges] = useState<Challenge[]>([]);
+  const [myFeedStickerCards, setMyFeedStickerCards] = useState<StickerCardDoc[]>([]);
+  const [joiningFeedProgramId, setJoiningFeedProgramId] = useState<string | null>(null);
+  const [joinedFeedProgramIds, setJoinedFeedProgramIds] = useState<Set<string>>(new Set());
   const [forYouUserCoords, setForYouUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [challengeView, setChallengeView] = useState<'active' | 'completed'>('active');
   const [completedIdx, setCompletedIdx] = useState(0);
@@ -32947,6 +33040,22 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
       setFeedCompletedChallenges(snap.docs.map(d => ({ id: d.id, ...d.data() } as Challenge)))
     , () => {});
   }, []);
+
+  // Collectible (card/sticker) challenges — shown as tiles alongside the ticker + leaderboard
+  useEffect(() => {
+    const q = query(collection(db, 'challenges'), where('type', '==', 'collectible'), where('status', '==', 'active'));
+    return onSnapshot(q, snap =>
+      setFeedCollectibleChallenges(snap.docs.map(d => ({ id: d.id, ...d.data() } as Challenge)))
+    , () => {});
+  }, []);
+
+  useEffect(() => {
+    if (!currentUser) { setMyFeedStickerCards([]); return; }
+    const q = query(collection(db, 'sticker_cards'), where('user_id', '==', currentUser.uid));
+    return onSnapshot(q, snap =>
+      setMyFeedStickerCards(snap.docs.map(d => ({ id: d.id, ...d.data() } as StickerCardDoc)))
+    , () => {});
+  }, [currentUser?.uid]);
 
   useEffect(() => {
     if (feedChallenges.length <= 1) return;
@@ -33109,6 +33218,12 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
     if (!forYouUserCoords) return true;
     return haversineKm(forYouUserCoords.lat, forYouUserCoords.lng, c.challengeLat, c.challengeLng) <= 1000;
   });
+  const visibleFeedCollectibleChallenges = feedCollectibleChallenges.filter(c => {
+    if (c.challengeLat == null || c.challengeLng == null) return true;
+    if (!forYouUserCoords) return true;
+    return haversineKm(forYouUserCoords.lat, forYouUserCoords.lng, c.challengeLat, c.challengeLng) <= 1000;
+  });
+  const feedMaxSets = STICKER_ORDER.reduce((sum, t) => sum + STICKER_CONFIG[t].variants.length, 0);
 
   const handleJoinStore = async (store: StoreProfile) => {
     if (!currentUser) return;
@@ -33136,6 +33251,30 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
       if (onViewStore) onViewStore(store);
     } catch (err) { console.error(err); }
     setJoiningStoreId(null);
+  };
+
+  // Join a collectible/card challenge from its For You tile — same write shape as the Challenges-tab join.
+  const handleJoinCollectibleProgramme = async (prog: Challenge) => {
+    if (!currentUser) return;
+    setJoiningFeedProgramId(prog.id);
+    try {
+      const cardId = `${prog.id}_${currentUser.uid}`;
+      const userName = currentProfile?.name || currentUser.displayName || currentUser.email?.split('@')[0] || 'Player';
+      await setDoc(doc(db, 'sticker_cards', cardId), {
+        user_id: currentUser.uid,
+        programme_id: prog.id,
+        stickers: [],
+        revealedIds: [],
+        uniqueTiers: [],
+        userName,
+      });
+      setJoinedFeedProgramIds(prev => new Set(prev).add(prog.id));
+      haptic([40, 30, 80]);
+      logEvent('store_joined', currentUser.uid, { programmeId: prog.id, cardType: 'collectible', source: 'for_you_feed' });
+    } catch (err) {
+      console.error('join collectible programme failed:', err);
+    }
+    setJoiningFeedProgramId(null);
   };
 
   const handleLike = async (post: GlobalPost) => {
@@ -33370,9 +33509,11 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
             />
           )}
 
-          {/* Daily stats ticker + Leaderboard button — side by side */}
-          <div className="flex gap-3 items-stretch">
-              <DailyStatsTicker stats={{ stamps: dailyStats.stamps + statsBoost.stamps, points: dailyStats.points + statsBoost.points, visits: dailyStats.visits + statsBoost.visits, rewards: dailyStats.rewards + statsBoost.rewards }} />
+          {/* Daily stats ticker + Leaderboard button + Card collectible challenges — side by side, scrolls if there isn't room */}
+          <div className="flex gap-3 items-stretch overflow-x-auto snap-x snap-mandatory scrollbar-hide -mx-6 px-6 pb-1">
+              <div className="shrink-0 snap-start" style={{ width: '212px' }}>
+                <DailyStatsTicker stats={{ stamps: dailyStats.stamps + statsBoost.stamps, points: dailyStats.points + statsBoost.points, visits: dailyStats.visits + statsBoost.visits, rewards: dailyStats.rewards + statsBoost.rewards }} />
+              </div>
 
               {/* Leaderboard square button */}
               <button
@@ -33381,7 +33522,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                   lbOpenedAtRef.current = Date.now();
                   confetti({ particleCount: 80, spread: 60, startVelocity: 30, gravity: 0.8, scalar: 0.9, origin: { y: 0.6 }, zIndex: 9999, colors: ['#FFD700', '#FFC200', '#FFE566', '#FFAA00', '#FFF8DC'] });
                 }}
-                className="relative rounded-[1.5rem] overflow-hidden active:scale-[0.97] transition-transform shrink-0 shadow-lg"
+                className="relative rounded-[1.5rem] overflow-hidden active:scale-[0.97] transition-transform shrink-0 snap-start shadow-lg"
                 style={{ background: uiColors.leaderboardTile.css, width: '136px', minHeight: '148px' }}
               >
                 <div className="absolute top-3 left-3 text-lg leading-none">🥇</div>
@@ -33422,6 +33563,71 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                     style={tileTextStyle(uiColors.leaderboardTile, 0.6)}>Leaderboard</p>
                 </div>
               </button>
+
+              {/* Card collectible challenge tiles */}
+              {visibleFeedCollectibleChallenges.map(prog => {
+                const stickerCard = myFeedStickerCards.find(sc => sc.programme_id === prog.id);
+                const joined = !!stickerCard || joinedFeedProgramIds.has(prog.id);
+                const mySets = stickerCard ? totalSetsCompleted(stickerCard.stickers) : 0;
+                const isComplete = stickerCard ? allSetsWon(stickerCard.stickers) : false;
+                const pct = joined ? (isComplete ? 100 : Math.min(99, Math.round((mySets / feedMaxSets) * 100))) : 0;
+                const isEnded = prog.endsAt ? (prog.endsAt.toMillis?.() ?? (prog.endsAt.seconds ?? 0) * 1000) < Date.now() : false;
+                return (
+                  <div
+                    key={prog.id}
+                    className="relative rounded-[1.5rem] overflow-hidden shrink-0 snap-start shadow-lg flex flex-col"
+                    style={{ background: uiColors.challengesFypTile.css, width: '136px', minHeight: '148px' }}
+                  >
+                    {prog.imageUrl ? (
+                      <img src={prog.imageUrl} alt={prog.title} className="w-full h-14 object-cover shrink-0" />
+                    ) : (
+                      <div className="w-full h-14 shrink-0 flex items-center justify-center text-xl" style={{ background: 'rgba(0,0,0,0.08)' }}>🎴</div>
+                    )}
+                    <div className="relative z-10 flex-1 flex flex-col justify-between gap-1.5 px-2.5 py-2">
+                      <p className={cn('font-bold text-[10px] leading-tight line-clamp-2', uiColors.challengesFypTile.dark ? 'text-white' : 'text-gray-700')}
+                        style={tileTextStyle(uiColors.challengesFypTile)}>
+                        {prog.title}
+                      </p>
+                      <AnimatePresence mode="wait" initial={false}>
+                        {joined ? (
+                          <motion.div
+                            key="progress"
+                            initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.85 }}
+                            transition={{ type: 'spring', stiffness: 420, damping: 22 }}
+                            className="space-y-1"
+                          >
+                            <div className="flex items-baseline justify-between">
+                              <span className={cn('text-[9px] font-black', uiColors.challengesFypTile.dark ? 'text-white/70' : 'text-gray-500')}
+                                style={tileTextStyle(uiColors.challengesFypTile, 0.7)}>{mySets}/{feedMaxSets}</span>
+                              <span className={cn('text-[9px] font-black', isComplete ? 'text-emerald-500' : uiColors.challengesFypTile.dark ? 'text-white/70' : 'text-gray-500')}>{pct}%</span>
+                            </div>
+                            <div className={cn('relative h-2 rounded-full overflow-hidden', uiColors.challengesFypTile.dark ? 'bg-white/20' : 'bg-black/10')}>
+                              <motion.div
+                                className="absolute inset-y-0 left-0 rounded-full"
+                                style={{ background: isComplete ? 'linear-gradient(90deg,#34d399,#10b981)' : 'linear-gradient(90deg,#7c3aed,#4f46e5,#2563eb)' }}
+                                initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.75, ease: [0.34, 1.56, 0.64, 1] }}
+                              />
+                            </div>
+                          </motion.div>
+                        ) : (
+                          <motion.button
+                            key="join"
+                            initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.85 }}
+                            whileTap={{ scale: 0.93 }}
+                            transition={{ type: 'spring', stiffness: 420, damping: 22 }}
+                            onClick={() => handleJoinCollectibleProgramme(prog)}
+                            disabled={joiningFeedProgramId === prog.id || isEnded}
+                            className="w-full py-1.5 rounded-lg text-[10px] font-bold text-white flex items-center justify-center gap-1 active:opacity-80"
+                            style={{ background: isEnded ? 'rgba(0,0,0,0.2)' : 'linear-gradient(135deg,#4F46E5,#7C3AED)' }}
+                          >
+                            {joiningFeedProgramId === prog.id ? <Loader2 size={11} className="animate-spin" /> : isEnded ? 'Ended' : 'Join'}
+                          </motion.button>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
           {/* Leaderboard popup modal */}
