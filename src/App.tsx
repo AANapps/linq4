@@ -17149,35 +17149,35 @@ function StampCelebrationModal({
                       <motion.div
                         key={c.id}
                         initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 + i * 0.07 }}
-                        className="rounded-2xl bg-white border border-brand-navy/8 p-3.5 flex items-center justify-between gap-3 shadow-sm"
+                        className="rounded-2xl bg-white border border-brand-navy/8 p-3.5 space-y-2.5 shadow-sm"
                       >
-                        <div className="min-w-0 flex-1">
-                          <p className="font-bold text-sm text-brand-navy truncate">{c.title}</p>
-                          <p className="text-[10px] text-brand-navy/50 mt-0.5 truncate">{c.reward}</p>
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-bold text-sm text-brand-navy truncate">{c.title}</p>
+                            <p className="text-[10px] text-brand-navy/50 mt-0.5 truncate">{c.reward}</p>
+                          </div>
+                          <span className="text-[9px] font-black text-brand-navy/40 uppercase tracking-widest shrink-0">{c.totalStamps} stamps</span>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-[9px] font-black text-brand-navy/40 uppercase tracking-widest">{c.totalStamps} stamps</span>
-                          <motion.button
-                            onClick={() => handleJoinNewChallenge(c.id)}
-                            disabled={isJoining || isJoined}
-                            whileTap={isJoined ? {} : { scale: 0.9 }}
-                            animate={isJoined ? { scale: [1, 1.25, 1] } : { scale: 1 }}
-                            transition={{ type: 'spring', stiffness: 500, damping: 15 }}
-                            className={cn(
-                              "text-[9px] font-black px-2.5 py-1 rounded-full text-white flex items-center gap-1 transition-opacity",
-                              isJoined ? 'bg-emerald-500' : 'active:opacity-80'
-                            )}
-                            style={isJoined ? undefined : { background: 'linear-gradient(135deg, #4F46E5, #7C3AED)' }}
-                          >
-                            {isJoining ? (
-                              <Loader2 size={10} className="animate-spin" />
-                            ) : isJoined ? (
-                              <>✓ Joined</>
-                            ) : (
-                              'Join'
-                            )}
-                          </motion.button>
-                        </div>
+                        <motion.button
+                          onClick={() => handleJoinNewChallenge(c.id)}
+                          disabled={isJoining || isJoined}
+                          whileTap={isJoined ? {} : { scale: 0.97 }}
+                          animate={isJoined ? { scale: [1, 1.06, 1] } : { scale: 1 }}
+                          transition={{ type: 'spring', stiffness: 500, damping: 15 }}
+                          className={cn(
+                            "w-full py-3 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-1.5 transition-opacity",
+                            isJoined ? 'bg-emerald-500' : 'active:opacity-80'
+                          )}
+                          style={isJoined ? undefined : { background: 'linear-gradient(135deg, #4F46E5, #7C3AED)' }}
+                        >
+                          {isJoining ? (
+                            <Loader2 size={16} className="animate-spin" />
+                          ) : isJoined ? (
+                            <>✓ Joined</>
+                          ) : (
+                            'Join Challenge'
+                          )}
+                        </motion.button>
                       </motion.div>
                     );
                   })}
@@ -33449,6 +33449,11 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
         )
       ) : (
         <>
+          {/* Activity ticker — top of the For You page */}
+          {!loading && activityPosts.length > 0 && (
+            <ActivityTicker posts={activityPosts} />
+          )}
+
           {/* Linqle + Total Saved + Daily Vote — top row */}
           <div className="flex gap-3 items-stretch" style={{ minHeight: '106px' }}>
             {onOpenLinqle && (
@@ -33796,11 +33801,6 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
               );
             })()}
           </AnimatePresence>
-
-          {/* Activity ticker */}
-          {!loading && activityPosts.length > 0 && (
-            <ActivityTicker posts={activityPosts} />
-          )}
 
           {/* Main mixed feed */}
           {loading ? <FeedLoadingSpinner /> : (
