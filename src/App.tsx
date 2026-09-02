@@ -30769,7 +30769,7 @@ function DailyStatsTicker({ stats }: { stats: { stamps: number; points: number; 
   const cur = items[idx];
   return (
     <div
-      className="flex-1 rounded-[1.5rem] overflow-hidden relative border border-blue-200/60"
+      className="w-full h-full rounded-[1.5rem] overflow-hidden relative border border-blue-200/60"
       style={{
         minHeight: 148,
         background: 'linear-gradient(135deg, rgba(219,234,254,0.85) 0%, rgba(237,233,254,0.85) 100%)',
@@ -30777,7 +30777,7 @@ function DailyStatsTicker({ stats }: { stats: { stamps: number; points: number; 
         boxShadow: '0 8px 32px rgba(99,102,241,0.22), 0 2px 8px rgba(59,130,246,0.15)',
       }}
     >
-      <div className="relative z-10 flex flex-col justify-between p-4" style={{ minHeight: 148 }}>
+      <div className="relative z-10 flex flex-col justify-between h-full p-3" style={{ minHeight: 148 }}>
         <AnimatePresence mode="wait">
           <motion.div
             key={idx}
@@ -30785,28 +30785,26 @@ function DailyStatsTicker({ stats }: { stats: { stamps: number; points: number; 
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ type: 'spring', stiffness: 160, damping: 22 }}
-            className="flex-1 flex flex-col justify-center items-center text-center"
+            className="flex-1 flex flex-col justify-center items-center text-center gap-0.5 min-w-0"
           >
-            <div className="flex items-end justify-center gap-2">
-              <RollingNumber value={cur.value} className="text-[3.2rem] leading-none" color="#4F46E5" />
-              <AnimatePresence mode="wait">
-                <motion.span
-                  key={deltaKey}
-                  initial={{ opacity: 0, y: 8, scale: 0.8 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -6, scale: 0.8 }}
-                  transition={{ type: 'spring', stiffness: 200, damping: 18 }}
-                  className="text-sm font-black mb-1 leading-none"
-                  style={{ color: '#16a34a' }}
-                >
-                  +{delta}
-                </motion.span>
-              </AnimatePresence>
-            </div>
-            <p className="text-sm font-black uppercase tracking-widest mt-2" style={{ color: '#7C3AED' }}>{cur.label}</p>
+            <RollingNumber value={cur.value} className="text-3xl leading-none" color="#4F46E5" />
+            <AnimatePresence mode="wait">
+              <motion.span
+                key={deltaKey}
+                initial={{ opacity: 0, y: 6, scale: 0.8 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -4, scale: 0.8 }}
+                transition={{ type: 'spring', stiffness: 200, damping: 18 }}
+                className="text-[10px] font-black leading-none"
+                style={{ color: '#16a34a' }}
+              >
+                +{delta}
+              </motion.span>
+            </AnimatePresence>
+            <p className="text-[9px] font-black uppercase tracking-widest mt-1 truncate max-w-full" style={{ color: '#7C3AED' }}>{cur.label}</p>
           </motion.div>
         </AnimatePresence>
-        <div className="flex gap-1 mt-3">
+        <div className="flex gap-1 justify-center mt-2">
           {items.map((_, i) => (
             <div key={i} className={cn('rounded-full transition-all', i === idx ? 'w-3 h-1.5 bg-indigo-400' : 'w-1.5 h-1.5 bg-indigo-200')} />
           ))}
@@ -33511,7 +33509,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
 
           {/* Daily stats ticker + Leaderboard button + Card collectible challenges — side by side, scrolls if there isn't room */}
           <div className="flex gap-3 items-stretch overflow-x-auto snap-x snap-mandatory scrollbar-hide -mx-6 px-6 pb-1">
-              <div className="shrink-0 snap-start" style={{ width: '212px' }}>
+              <div className="shrink-0 snap-start" style={{ width: '136px' }}>
                 <DailyStatsTicker stats={{ stamps: dailyStats.stamps + statsBoost.stamps, points: dailyStats.points + statsBoost.points, visits: dailyStats.visits + statsBoost.visits, rewards: dailyStats.rewards + statsBoost.rewards }} />
               </div>
 
