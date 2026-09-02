@@ -989,6 +989,39 @@
 
     .roi-inner { max-width: var(--max-w); margin: 0 auto; }
 
+    .roi-currency-row {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .roi-currency-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ink-dim);
+    }
+
+    .roi-currency-select {
+      appearance: none;
+      -webkit-appearance: none;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--ink);
+      background: var(--glass-bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23475569' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 0.75rem center;
+      border: 1px solid var(--glass-border);
+      border-radius: 100px;
+      padding: 0.5rem 2rem 0.5rem 1rem;
+      cursor: pointer;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .roi-currency-select:focus-visible { box-shadow: 0 0 0 3px rgba(96,165,250,0.4); outline: none; }
+
     .roi-panel {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -1770,6 +1803,22 @@
         <h2 class="section-title reveal">What could loyalty<br/><em class="holo-text">be worth to you?</em></h2>
         <p class="section-body reveal">Drag the sliders to match your business and see what a loyalty programme could add to your bottom line — after the cost of the rewards you give away.</p>
 
+        <div class="roi-currency-row reveal">
+          <label class="roi-currency-label" for="roi-currency">Currency</label>
+          <select class="roi-currency-select" id="roi-currency">
+            <option value="GBP">GBP — £</option>
+            <option value="USD">USD — $</option>
+            <option value="EUR">EUR — €</option>
+            <option value="AUD">AUD — A$</option>
+            <option value="NZD">NZD — NZ$</option>
+            <option value="CAD">CAD — C$</option>
+            <option value="INR">INR — ₹</option>
+            <option value="SGD">SGD — S$</option>
+            <option value="AED">AED</option>
+            <option value="ZAR">ZAR — R</option>
+          </select>
+        </div>
+
         <div class="roi-panel reveal">
           <div class="roi-controls">
             <div class="roi-field">
@@ -1947,14 +1996,45 @@
       const spend = document.getElementById('roi-spend');
       const customers = document.getElementById('roi-customers');
       const days = document.getElementById('roi-days');
-      if (!spend || !customers || !days) return;
+      const currencySelect = document.getElementById('roi-currency');
+      if (!spend || !customers || !days || !currencySelect) return;
 
       const JOIN_RATE = 0.30;      // share of customers who join the programme
       const VISIT_UPLIFT = 0.20;   // extra visits from members
       const STAMPS_PER_REWARD = 10;
       const REWARD_COST_RATIO = 0.30; // cost of a free item vs. its sale price
 
-      const gbp = n => '£' + Math.round(n).toLocaleString('en-GB');
+      const CURRENCY_SYMBOLS = {
+        GBP: '£', USD: '$', EUR: '€', AUD: 'A$', NZD: 'NZ$',
+        CAD: 'C$', INR: '₹', SGD: 'S$', AED: 'AED ', ZAR: 'R'
+      };
+      // Maps a browser locale's region to the currency it most likely uses, so the
+      // calculator opens already set to the visitor's own currency (best-effort —
+      // there's no server-side geo lookup here, just Intl locale data).
+      const REGION_CURRENCY = {
+        GB: 'GBP', US: 'USD', AU: 'AUD', NZ: 'NZD', CA: 'CAD',
+        IN: 'INR', SG: 'SGD', AE: 'AED', ZA: 'ZAR',
+        IE: 'EUR', DE: 'EUR', FR: 'EUR', ES: 'EUR', IT: 'EUR', NL: 'EUR',
+        PT: 'EUR', BE: 'EUR', AT: 'EUR', FI: 'EUR', GR: 'EUR'
+      };
+
+      function detectCurrency() {
+        try {
+          const locales = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language];
+          for (const loc of locales) {
+            const region = (loc || '').split('-')[1]?.toUpperCase();
+            if (region && REGION_CURRENCY[region]) return REGION_CURRENCY[region];
+          }
+        } catch {}
+        return 'GBP';
+      }
+
+      currencySelect.value = detectCurrency();
+
+      function fmt(n) {
+        const symbol = CURRENCY_SYMBOLS[currencySelect.value] || '£';
+        return symbol + Math.round(n).toLocaleString('en-GB');
+      }
 
       function update() {
         [spend, customers, days].forEach(el => {
@@ -1963,7 +2043,7 @@
         });
 
         const s = +spend.value, c = +customers.value, d = +days.value;
-        document.getElementById('roi-spend-val').textContent = '£' + s;
+        document.getElementById('roi-spend-val').textContent = fmt(s);
         document.getElementById('roi-customers-val').textContent = c;
         document.getElementById('roi-days-val').textContent = d;
 
@@ -1975,12 +2055,13 @@
         const netYearly = (extraRevenue - rewardCost) * 12;
 
         document.getElementById('roi-visits').textContent = Math.round(extraVisits).toLocaleString('en-GB');
-        document.getElementById('roi-monthly').textContent = gbp(extraRevenue);
-        document.getElementById('roi-cost').textContent = '−' + gbp(rewardCost);
-        document.getElementById('roi-net').textContent = gbp(netYearly);
+        document.getElementById('roi-monthly').textContent = fmt(extraRevenue);
+        document.getElementById('roi-cost').textContent = '−' + fmt(rewardCost);
+        document.getElementById('roi-net').textContent = fmt(netYearly);
       }
 
       [spend, customers, days].forEach(el => el.addEventListener('input', update));
+      currencySelect.addEventListener('change', update);
       update();
     })();
 
