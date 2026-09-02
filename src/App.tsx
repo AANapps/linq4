@@ -1257,6 +1257,8 @@ interface CelebrationPage {
   nextStageReward?: string;
   collectiblePromoName?: string;
   collectiblePromoReward?: string;
+  collectiblePromoImageUrl?: string;
+  collectiblePromoId?: string;
   storeLogoUrl?: string;
   storeTheme?: string;
   storeCategory?: string;
@@ -12576,6 +12578,19 @@ function buildStampCelebrationPages(
     pages.push({ type: 'challenges_list', currentStamps: 0, totalStamps: 0, reward: '', encouragement: '', done: false, challengesList, newChallengesList });
   }
 
+  // Card collectible challenge promo — shown when there's an active programme the user hasn't joined yet
+  const unjoinedCollectible = collectiblePrograms.find(p => !joinedStickerCards.some(sc => sc.programme_id === p.id));
+  if (unjoinedCollectible) {
+    pages.push({
+      type: 'collectible_promo',
+      currentStamps: 0, totalStamps: 0, reward: '', encouragement: '', done: false,
+      collectiblePromoName: unjoinedCollectible.title,
+      collectiblePromoReward: unjoinedCollectible.reward,
+      collectiblePromoImageUrl: unjoinedCollectible.imageUrl,
+      collectiblePromoId: unjoinedCollectible.id,
+    });
+  }
+
   // Sticker pack — always last if user has joined any collectible programme
   if (joinedStickerCards.length > 0) {
     pages.push({ type: 'monopoly_pack', currentStamps: 0, totalStamps: 0, reward: '', encouragement: '', done: false });
@@ -12850,6 +12865,17 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           const newChallengesList = notJoined.map(c => ({ title: c.title, totalStamps: c.goal, reward: c.reward, id: c.id }));
           pages.push({ type: 'challenges_list', currentStamps: 0, totalStamps: 0, reward: '', encouragement: '', done: false, challengesList, newChallengesList });
         }
+        const unjoinedCollectible = visibleActivePrograms.find(p => !myStickerCards.some(sc => sc.programme_id === p.id));
+        if (unjoinedCollectible) {
+          pages.push({
+            type: 'collectible_promo',
+            currentStamps: 0, totalStamps: 0, reward: '', encouragement: '', done: false,
+            collectiblePromoName: unjoinedCollectible.title,
+            collectiblePromoReward: unjoinedCollectible.reward,
+            collectiblePromoImageUrl: unjoinedCollectible.imageUrl,
+            collectiblePromoId: unjoinedCollectible.id,
+          });
+        }
         if (pages.length > 0) setCelebrationPages(pages);
       }
     }
@@ -12920,6 +12946,17 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           });
           const newChallengesList = notJoined.map(c => ({ title: c.title, totalStamps: c.goal, reward: c.reward, id: c.id }));
           pages.push({ type: 'challenges_list', currentStamps: 0, totalStamps: 0, reward: '', encouragement: '', done: false, challengesList, newChallengesList });
+        }
+        const unjoinedCollectible = visibleActivePrograms.find(p => !myStickerCards.some(sc => sc.programme_id === p.id));
+        if (unjoinedCollectible) {
+          pages.push({
+            type: 'collectible_promo',
+            currentStamps: 0, totalStamps: 0, reward: '', encouragement: '', done: false,
+            collectiblePromoName: unjoinedCollectible.title,
+            collectiblePromoReward: unjoinedCollectible.reward,
+            collectiblePromoImageUrl: unjoinedCollectible.imageUrl,
+            collectiblePromoId: unjoinedCollectible.id,
+          });
         }
         if (pages.length > 0) setCelebrationPages(pages);
       }
@@ -13353,6 +13390,12 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       createdAt: serverTimestamp(),
     });
     logEvent('challenge_started', user.uid, { challengeId, goal: c.goal, type: c.type, source: 'stamp_celebration' });
+  };
+
+  const handleJoinCollectibleFromCelebration = async (challengeId: string) => {
+    const prog = activePrograms.find(p => p.id === challengeId);
+    if (!prog) return;
+    await handleJoinProgramme(prog);
   };
 
   // Show every non-archived, non-hidden card the user holds.
@@ -14225,6 +14268,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
             onClose={() => { setCelebrationPages(null); celebrationArchiveFnRef.current = null; }}
             onArchiveTier={celebrationArchiveFnRef.current ?? undefined}
             onJoinChallenge={handleJoinChallengeFromCelebration}
+            onJoinCollectible={handleJoinCollectibleFromCelebration}
             avatarConfig={profile?.avatar}
             userUid={user.uid}
             pendingPack={pendingPack ?? undefined}
@@ -16614,11 +16658,54 @@ function getCharityFeedback(type: 'animal' | 'tree', newCount: number): { emoji:
   return { emoji: '🦁', title: 'Wildlife champion!', detail: 'Your support is making a real difference for endangered species.' };
 }
 
+// Decorative teaser — 5 mystery cards (one per sticker tier) auto-flip in a staggered loop
+// to preview the kinds of collectible cards on offer. Purely visual, no real sticker data.
+function CollectibleCardsTeaser() {
+  return (
+    <div className="flex justify-center gap-2.5">
+      {STICKER_ORDER.map((tier, i) => {
+        const cfg = STICKER_CONFIG[tier];
+        return (
+          <div key={tier} style={{ width: 46, height: 62, perspective: 500 }}>
+            <motion.div
+              style={{ width: '100%', height: '100%', position: 'relative', transformStyle: 'preserve-3d' }}
+              animate={{ rotateY: [0, 0, 180, 180, 0] }}
+              transition={{ duration: 3.4, times: [0, 0.06, 0.5, 0.9, 1], repeat: Infinity, repeatDelay: 1.6, delay: i * 0.32, ease: 'easeInOut' }}
+            >
+              {/* Front — mystery back */}
+              <div style={{
+                position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
+                background: 'linear-gradient(148deg, #16103A, #2B1458)',
+                border: `1.5px solid ${cfg.border}`, borderRadius: 11,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: `0 4px 14px ${cfg.color}44`,
+              }}>
+                <span style={{ fontSize: 17, color: cfg.border, fontWeight: 900 }}>?</span>
+              </div>
+              {/* Back — revealed tier sample */}
+              <div style={{
+                position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
+                transform: 'rotateY(180deg)',
+                background: cfg.solid, border: `1.5px solid ${cfg.border}`, borderRadius: 11,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: `0 4px 14px ${cfg.color}66`,
+              }}>
+                <span style={{ fontSize: 22 }}>{cfg.variants[0]?.emoji}</span>
+              </div>
+            </motion.div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function StampCelebrationModal({
   pages,
   onClose,
   onArchiveTier,
   onJoinChallenge,
+  onJoinCollectible,
   avatarConfig,
   userUid,
   pendingPack,
@@ -16629,6 +16716,7 @@ function StampCelebrationModal({
   onClose: () => void;
   onArchiveTier?: (tierStamps: number, isFinal: boolean) => Promise<void>;
   onJoinChallenge?: (challengeId: string) => Promise<void>;
+  onJoinCollectible?: (challengeId: string) => Promise<void>;
   avatarConfig?: UserAvatar;
   userUid?: string;
   pendingPack?: CollectibleSticker[] | null;
@@ -16644,6 +16732,7 @@ function StampCelebrationModal({
   const [stageRedeemed, setStageRedeemed] = useState(false);
   const [joiningChallengeId, setJoiningChallengeId] = useState<string | null>(null);
   const [joinedChallengeIds, setJoinedChallengeIds] = useState<Set<string>>(new Set());
+  const [joiningCollectiblePromo, setJoiningCollectiblePromo] = useState(false);
   const page = pages[pageIdx];
   const isLast = pageIdx === pages.length - 1;
   const pct = Math.min(100, page.totalStamps > 0 ? Math.round((page.currentStamps / page.totalStamps) * 100) : 0);
@@ -16733,6 +16822,20 @@ function StampCelebrationModal({
       console.error('join challenge from celebration failed:', err);
     }
     setJoiningChallengeId(null);
+  };
+
+  const handleJoinCollectiblePromo = async () => {
+    if (joiningCollectiblePromo) return;
+    if (!onJoinCollectible || !page.collectiblePromoId) { goNext(); return; }
+    setJoiningCollectiblePromo(true);
+    try {
+      await onJoinCollectible(page.collectiblePromoId);
+      haptic([40, 30, 90]);
+    } catch (err) {
+      console.error('join collectible from celebration failed:', err);
+    }
+    setJoiningCollectiblePromo(false);
+    if (isLast) onClose(); else setPageIdx(i => i + 1);
   };
 
   return (
@@ -17236,7 +17339,7 @@ function StampCelebrationModal({
                     initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
                     className="text-[10px] font-bold uppercase tracking-widest text-brand-gold"
                   >
-                    🎴 Sticker Game
+                    🎴 Card Collectible Challenge
                   </motion.p>
                   <motion.h2
                     initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
@@ -17246,16 +17349,34 @@ function StampCelebrationModal({
                   </motion.h2>
                 </div>
 
-                <motion.div
-                  initial={{ scale: 0, rotate: -12 }} animate={{ scale: 1, rotate: 0 }}
-                  transition={{ type: 'spring', stiffness: 300, damping: 18, delay: 0.1 }}
-                  className="flex justify-center"
-                >
-                  <div className="text-8xl select-none">🎴</div>
-                </motion.div>
+                {page.collectiblePromoImageUrl ? (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.1 }}
+                    className="rounded-2xl overflow-hidden shadow-lg"
+                  >
+                    <img src={page.collectiblePromoImageUrl} alt={page.collectiblePromoName ?? ''} className="w-full h-36 object-cover" />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    initial={{ scale: 0, rotate: -12 }} animate={{ scale: 1, rotate: 0 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 18, delay: 0.1 }}
+                    className="flex justify-center"
+                  >
+                    <div className="text-8xl select-none">🎴</div>
+                  </motion.div>
+                )}
 
                 <motion.div
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                  className="space-y-2"
+                >
+                  <p className="text-center text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">Cards up for grabs</p>
+                  <CollectibleCardsTeaser />
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
                   className="rounded-2xl bg-brand-navy/5 p-4 text-center space-y-2"
                 >
                   <p className="text-xs font-semibold text-brand-navy/75">
@@ -17283,11 +17404,17 @@ function StampCelebrationModal({
 
                 <motion.button
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
-                  onClick={goNext}
-                  className="w-full py-3.5 rounded-2xl font-bold text-sm text-white active:scale-[0.98] transition-all gradient-logo-blue relative overflow-hidden"
+                  whileTap={{ scale: 0.98 }}
+                  disabled={joiningCollectiblePromo}
+                  onClick={handleJoinCollectiblePromo}
+                  className="w-full py-3.5 rounded-2xl font-bold text-sm text-white active:scale-[0.98] transition-all gradient-logo-blue relative overflow-hidden flex items-center justify-center gap-2"
                 >
                   <span className="card-shine-ray" aria-hidden="true" />
-                  <span className="relative z-10">{ctaLabel}</span>
+                  {joiningCollectiblePromo ? (
+                    <Loader2 size={16} className="animate-spin relative z-10" />
+                  ) : (
+                    <span className="relative z-10">Join & Start Collecting</span>
+                  )}
                 </motion.button>
               </>
             ) : isVisitPoints ? (
