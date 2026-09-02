@@ -30839,28 +30839,37 @@ function ActivityTicker({ posts }: { posts: GlobalPost[] }) {
       <AnimatePresence mode="wait">
         <motion.div
           key={idx}
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -14 }}
-          transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+          initial={{ opacity: 0, y: -16, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -10, scale: 0.97 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 30 }}
         >
-          <div className="rounded-2xl overflow-hidden relative" style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #4F46E5 50%, #7C3AED 100%)' }}>
-            <span className="card-shine-ray" aria-hidden="true" />
-            <div className="relative z-10 flex items-center gap-3 px-4 py-3">
-              <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-white/40 shrink-0 bg-white/20 flex items-center justify-center">
+          <div
+            className="rounded-[1.1rem] overflow-hidden relative border border-black/[0.06]"
+            style={{
+              background: 'rgba(255,255,255,0.75)',
+              backdropFilter: 'blur(24px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+              boxShadow: '0 10px 30px rgba(15,23,42,0.10), 0 1px 2px rgba(15,23,42,0.05)',
+            }}
+          >
+            <div className="flex items-center gap-3 px-3.5 py-3">
+              <div className="w-9 h-9 rounded-[0.65rem] overflow-hidden shrink-0 bg-brand-navy/5 flex items-center justify-center">
                 {post.isAnonymous
-                  ? <UserIcon size={18} className="text-white/70" />
+                  ? <UserIcon size={16} className="text-brand-navy/40" />
                   : <PixelAvatar config={undefined} uid={post.authorUid} size={36} view="head" />}
               </div>
-              <p className="flex-1 text-white text-sm font-bold leading-snug">{content}</p>
-              <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-base shrink-0">
-                {post.activityEmoji}
-              </div>
+              <p className="flex-1 min-w-0 text-brand-navy text-[13px] leading-snug line-clamp-2">{content}</p>
+              {post.activityEmoji && (
+                <div className="w-7 h-7 rounded-full bg-brand-navy/[0.04] flex items-center justify-center text-sm shrink-0">
+                  {post.activityEmoji}
+                </div>
+              )}
             </div>
             {posts.length > 1 && (
-              <div className="relative z-10 flex gap-1 justify-center pb-2">
+              <div className="flex gap-1 justify-center pb-2.5">
                 {posts.slice(0, Math.min(posts.length, 10)).map((_, i) => (
-                  <div key={i} className={cn('rounded-full transition-all', i === idx % Math.min(posts.length, 10) ? 'w-3 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/35')} />
+                  <div key={i} className={cn('rounded-full transition-all', i === idx % Math.min(posts.length, 10) ? 'w-3 h-1 bg-brand-navy/50' : 'w-1 h-1 bg-brand-navy/15')} />
                 ))}
               </div>
             )}
