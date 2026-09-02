@@ -2330,14 +2330,14 @@ export default function App() {
   const isVendor = profile?.role === 'vendor';
 
   return (
-    <div className={cn("min-h-screen bg-white", !isVendor && !isNativeIOS && "md:flex md:justify-center")}>
-    <div className={cn("holo-ambient", isNativeAndroid && "holo-ambient-static")} aria-hidden="true" />
+    <div className={cn("min-h-screen", isVendor ? "v-surface" : "bg-white", !isVendor && !isNativeIOS && "md:flex md:justify-center")}>
+    {!isVendor && <div className={cn("holo-ambient", isNativeAndroid && "holo-ambient-static")} aria-hidden="true" />}
     <div className={cn("w-full relative", !isVendor && !isNativeIOS && "md:max-w-sm")} style={{ paddingBottom: 'calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) + 6rem)' }}>
       {/* Header */}
-      <header className="glass-panel sticky top-0 z-50 px-5 pb-3.5 flex items-center justify-between relative" style={{ paddingTop: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 0.875rem)' }}>
+      <header className={cn("sticky top-0 z-50 px-5 pb-3.5 flex items-center justify-between relative", isVendor ? "v-header" : "glass-panel")} style={{ paddingTop: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 0.875rem)' }}>
         <button
           onClick={() => setShowCreatePost(true)}
-          className="w-9 h-9 gradient-red rounded-xl flex items-center justify-center shadow-md shadow-blue-500/20 active:scale-95 transition-transform"
+          className={cn("w-9 h-9 rounded-xl flex items-center justify-center active:scale-95 transition-transform", isVendor ? "bg-brand-navy" : "gradient-red shadow-md shadow-blue-500/20")}
         >
           <Plus className="w-5 h-5 text-white" />
         </button>
@@ -2406,7 +2406,7 @@ export default function App() {
             <div className="px-3 pb-6">
               <button
                 onClick={() => setShowVendorQR(true)}
-                className="w-full py-3 rounded-2xl gradient-logo-blue text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md active:scale-[0.98] transition-transform"
+                className="w-full py-3 rounded-xl bg-brand-gold text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
               >
                 <DollarSign size={18} />
                 Issue Points
@@ -2682,6 +2682,7 @@ export default function App() {
             onClick={() => { setActiveTab('home'); setViewingStore(null); setViewingUser(null); }}
             icon={<LayoutDashboard />}
             label="Dashboard"
+            flat
           />
         )}
         {['consumer','admin'].includes(profile?.role ?? '') ? (
@@ -2699,6 +2700,7 @@ export default function App() {
               icon={<MessageCircle />}
               label="Messages"
               badgeCount={unreadMessages}
+              flat
             />
           ) : null
         )}
@@ -2720,9 +2722,8 @@ export default function App() {
             onClick={() => setShowVendorQR(true)}
             className="flex-1 flex flex-col items-center gap-1 -mb-1 -mt-7 transition-all"
           >
-            <span className="bg-white inline-flex rounded-full p-[2px] shadow-lg shadow-blue-500/30 active:scale-95 transition-transform">
-              <div className="relative overflow-hidden w-[58px] h-[58px] rounded-full gradient-logo-blue flex items-center justify-center">
-                <span className="card-shine-ray" aria-hidden="true" />
+            <span className="bg-white inline-flex rounded-full p-[2px] shadow-md active:scale-95 transition-transform">
+              <div className="relative overflow-hidden w-[58px] h-[58px] rounded-full bg-brand-navy flex items-center justify-center">
                 <DollarSign size={26} className="text-white relative z-10" />
               </div>
             </span>
@@ -2734,12 +2735,14 @@ export default function App() {
           onClick={() => { setActiveTab('discover'); setViewingStore(null); setViewingUser(null); }}
           icon={['consumer','admin'].includes(profile?.role ?? '') ? <Compass /> : <Plus />}
           label={['consumer','admin'].includes(profile?.role ?? '') ? 'Discovery' : 'Card'}
+          flat={isVendor}
         />
         <NavButton
           active={activeTab === 'profile'}
           onClick={() => { setActiveTab('profile'); setViewingStore(null); setViewingUser(null); }}
           icon={<UserIcon />}
           label="Profile"
+          flat={isVendor}
         />
       </nav>
     </div>
@@ -4167,7 +4170,7 @@ async function updateChallengeProgress(customerUid: string, storeId: string, qty
   }
 }
 
-function NavButton({ active, onClick, icon, label, badgeCount }: { active: boolean, onClick: () => void, icon: React.ReactNode, label: string, badgeCount?: number }) {
+function NavButton({ active, onClick, icon, label, badgeCount, flat }: { active: boolean, onClick: () => void, icon: React.ReactNode, label: string, badgeCount?: number, flat?: boolean }) {
   return (
     <button
       onClick={onClick}
@@ -4178,11 +4181,11 @@ function NavButton({ active, onClick, icon, label, badgeCount }: { active: boole
     >
       <div className={cn(
         "p-2 rounded-xl transition-all",
-        active ? "gradient-red" : ""
+        active ? (flat ? "bg-brand-navy" : "gradient-red") : ""
       )}>
         {React.cloneElement(icon as React.ReactElement, { size: 24 })}
       </div>
-      <span className={cn("text-[10px] font-bold uppercase tracking-wider", active && "text-brand-gold")}>{label}</span>
+      <span className={cn("text-[10px] font-bold uppercase tracking-wider", active && (flat ? "text-brand-navy" : "text-brand-gold"))}>{label}</span>
       {badgeCount !== undefined && badgeCount > 0 && (
         <span className="absolute top-0.5 right-2 w-3 h-3 bg-red-500 rounded-full border-2 border-white" />
       )}
@@ -14583,10 +14586,10 @@ function NFCOrderModal({ onClose, onOrder }: { onClose: () => void; onOrder: () 
       <motion.div
         initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
         transition={{ type: 'spring', stiffness: 540, damping: 40 }}
-        className="w-full max-w-md bg-white rounded-[2.5rem] overflow-hidden shadow-2xl"
+        className="w-full max-w-md bg-white rounded-2xl overflow-hidden shadow-lg border border-slate-200"
       >
         <div className="px-7 pt-8 pb-7 space-y-5">
-          <div className="w-16 h-16 rounded-[1.5rem] bg-blue-50 flex items-center justify-center mx-auto">
+          <div className="w-16 h-16 rounded-xl bg-blue-50 flex items-center justify-center mx-auto">
             <Wifi size={32} className="text-blue-600" />
           </div>
           <div className="text-center space-y-2">
@@ -14612,7 +14615,7 @@ function NFCOrderModal({ onClose, onOrder }: { onClose: () => void; onOrder: () 
           </div>
           <button
             onClick={onOrder}
-            className="w-full py-4 rounded-2xl bg-brand-navy text-white font-black text-sm active:scale-[0.97] transition-transform"
+            className="w-full py-4 rounded-xl bg-brand-navy text-white font-bold text-sm active:scale-[0.97] transition-transform"
           >
             Order Now — $50
           </button>
@@ -15406,7 +15409,7 @@ function VendorQRDisplay({ store, onClose }: { store: StoreProfile; onClose: () 
             <h2 className="text-white font-bold text-2xl">{store.name}</h2>
           </div>
 
-          <div className="bg-white rounded-3xl p-5 shadow-2xl flex items-center justify-center" style={{ width: 230, height: 230 }}>
+          <div className="bg-white rounded-2xl p-5 shadow-lg flex items-center justify-center" style={{ width: 230, height: 230 }}>
             {error
               ? <p className="text-xs text-red-500 text-center px-2">{error}</p>
               : (rotating || !qrValue)
@@ -17975,7 +17978,7 @@ function AddAutomationModal({ store, onClose }: { store: StoreProfile; onClose: 
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         transition={{ type: 'spring', damping: 38, stiffness: 520 }}
-        className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[160] max-w-sm mx-auto bg-white rounded-[2rem] shadow-2xl p-6 space-y-5"
+        className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[160] max-w-sm mx-auto bg-white rounded-2xl shadow-lg border border-slate-200 p-6 space-y-5"
       >
         <div className="flex items-center justify-between">
           <h3 className="font-display text-lg font-bold text-brand-navy">New Automation</h3>
@@ -18280,7 +18283,7 @@ function VendorBroadcastPanel({ store, storeCards, onClose }: {
         className="fixed inset-0 z-[150] flex flex-col max-w-md mx-auto"
       >
         <button onClick={onClose} className="flex-shrink-0 h-8 w-full" />
-        <div className="flex-1 flex flex-col overflow-hidden bg-brand-bg rounded-t-[2.5rem] shadow-2xl">
+        <div className="flex-1 flex flex-col overflow-hidden bg-brand-bg rounded-t-2xl shadow-lg">
           <div className="flex-shrink-0 px-5 pt-5 pb-4 border-b border-black/5">
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -19327,7 +19330,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
 
   if (!store && activeTab !== 'profile') {
     return (
-      <div className="glass-card p-10 rounded-[2.5rem] border-2 border-dashed border-brand-rose/40 text-center space-y-6">
+      <div className="v-card p-10 border-2 border-dashed border-brand-navy/15 text-center space-y-6">
         <div className="w-20 h-20 bg-brand-bg rounded-full flex items-center justify-center mx-auto">
           <Store className="w-10 h-10 text-brand-navy/32" />
         </div>
@@ -19378,16 +19381,12 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
           /* ── Messages paywall: landing page ── */
           <div className="-mx-6 -mt-4">
             {/* Hero */}
-            <div className="relative overflow-hidden px-6 pt-14 pb-10 text-white"
-              style={{ background: 'linear-gradient(160deg, #0f172a 0%, #1e1b4b 45%, #4f46e5 100%)' }}>
-              <div className="shine-ray" />
-              <div className="relative z-10">
-                <div className="w-14 h-14 bg-white/15 rounded-[1.25rem] flex items-center justify-center mb-6 border border-white/20">
-                  <MessageSquare size={26} className="text-white" />
-                </div>
-                <h1 className="font-display text-3xl font-bold leading-tight mb-3">Reach Customers Directly</h1>
-                <p className="text-white/75 text-sm leading-relaxed">Send messages straight to your customers' phones via push notifications — no email list, no spam folder, no guesswork.</p>
+            <div className="px-6 pt-14 pb-10 text-white bg-brand-navy">
+              <div className="w-14 h-14 bg-white/10 rounded-xl flex items-center justify-center mb-6 border border-white/15">
+                <MessageSquare size={26} className="text-white" />
               </div>
+              <h1 className="font-display text-3xl font-bold leading-tight mb-3">Reach Customers Directly</h1>
+              <p className="text-white/70 text-sm leading-relaxed">Send messages straight to your customers' phones via push notifications — no email list, no spam folder, no guesswork.</p>
             </div>
 
             {/* Stats comparison */}
@@ -19440,8 +19439,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
             <div className="px-6 pb-8 bg-white space-y-3">
               <button
                 onClick={handleSubscribe}
-                className="w-full font-bold py-4 rounded-2xl active:scale-[0.98] transition-transform text-base text-white"
-                style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' }}
+                className="w-full font-bold py-4 rounded-xl active:scale-[0.98] transition-transform text-base text-white bg-brand-navy"
               >
                 Subscribe Now — $49/month
               </button>
@@ -19476,6 +19474,50 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
             <h2 className="font-display text-3xl font-bold mb-1">Dashboard</h2>
             <p className="text-brand-navy/75">{store?.name || 'Your Store'}</p>
           </header>
+
+          {/* Quick actions — jump straight to the Card tab's builders */}
+          <div className="flex gap-3">
+            <button
+              onClick={() => { setVendorIssueMode('card'); setActiveTab('discover'); }}
+              className="flex-1 v-card p-3.5 flex items-center gap-2.5 active:scale-95 transition-transform text-left"
+            >
+              <div className="w-9 h-9 rounded-lg bg-brand-navy flex items-center justify-center shrink-0">
+                <CreditCard size={16} className="text-white" />
+              </div>
+              <p className="font-bold text-brand-navy text-sm">Card</p>
+            </button>
+            <button
+              onClick={() => { setVendorIssueMode('offer'); setActiveTab('discover'); }}
+              className="flex-1 v-card p-3.5 flex items-center gap-2.5 active:scale-95 transition-transform text-left"
+            >
+              <div className="w-9 h-9 rounded-lg bg-purple-600 flex items-center justify-center shrink-0">
+                <Ticket size={16} className="text-white" />
+              </div>
+              <p className="font-bold text-brand-navy text-sm">Offer</p>
+            </button>
+            {store?.membershipEnabled && store.membershipType === 'spend' && (
+              <button
+                onClick={() => { setVendorIssueMode('scan-user'); setActiveTab('discover'); }}
+                className="flex-1 v-card p-3.5 flex items-center gap-2.5 active:scale-95 transition-transform text-left"
+              >
+                <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center shrink-0">
+                  <DollarSign size={16} className="text-white" />
+                </div>
+                <p className="font-bold text-brand-navy text-sm">Issue Points</p>
+              </button>
+            )}
+            {store?.membershipEnabled && store.membershipType === 'visit' && (
+              <button
+                onClick={() => { setVendorIssueMode('scan-user'); setActiveTab('discover'); }}
+                className="flex-1 v-card p-3.5 flex items-center gap-2.5 active:scale-95 transition-transform text-left"
+              >
+                <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center shrink-0">
+                  <Smartphone size={16} className="text-white" />
+                </div>
+                <p className="font-bold text-brand-navy text-sm">Issue Points</p>
+              </button>
+            )}
+          </div>
 
           {/* Welcome tutorial banner — one-time, dismissed by clicking Viewed */}
           {!profile.vendorIntroComplete && (
@@ -19526,9 +19568,9 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
           {store && !store.nfcOrdered && (
             <button
               onClick={() => setShowNFCOrder(true)}
-              className="w-full rounded-3xl border border-brand-navy/8 bg-white p-4 flex items-center gap-3 text-left active:bg-brand-navy/3 transition-colors shadow-sm"
+              className="w-full v-card p-4 flex items-center gap-3 text-left active:bg-brand-navy/3 transition-colors"
             >
-              <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0">
+              <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
                 <Wifi size={22} className="text-blue-600" />
               </div>
               <div className="flex-1 min-w-0">
@@ -19539,8 +19581,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
             </button>
           )}
           {store?.nfcOrdered && (
-            <div className="w-full rounded-3xl border border-blue-200 bg-blue-50 p-4 flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center shrink-0">
+            <div className="w-full rounded-xl border border-blue-200 bg-blue-50 p-4 flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
                 <Wifi size={22} className="text-blue-600" />
               </div>
               <div className="flex-1 min-w-0">
@@ -19585,7 +19627,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                   .slice(0, 10);
                 if (top10.length === 0) return null;
                 return (
-                  <div className="glass-card p-6 rounded-[2rem] space-y-3">
+                  <div className="v-card p-5 space-y-3">
                     <div className="flex items-center justify-between">
                       <p className="font-bold text-brand-navy">Top 10 Users</p>
                       <Trophy size={16} className="text-brand-gold" />
@@ -19614,7 +19656,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 const completedCount = uniqueUids.filter(uid => stampCards.filter(c => c.user_id === uid).some(c => (c.total_completed_cycles || 0) > 0)).length;
                 const completionPct = Math.round((completedCount / uniqueUids.length) * 100);
                 return (
-                  <div className="glass-card p-6 rounded-[2rem]">
+                  <div className="v-card p-5">
                     <div className="flex items-center justify-between mb-3">
                       <div>
                         <p className="font-bold text-brand-navy">Challenge Performance</p>
@@ -19651,9 +19693,9 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 {!isSubscribed && !isInTrial && !isNativeIOS ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:items-start">
                     {/* CTA card */}
-                    <div className="md:col-span-2 bg-white rounded-[2rem] px-5 py-5 shadow-lg border border-brand-navy/8 space-y-4">
+                    <div className="md:col-span-2 v-card px-5 py-5 space-y-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-[1rem] bg-purple-50 flex items-center justify-center shrink-0">
+                        <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center shrink-0">
                           <Lock size={18} className="text-purple-600" />
                         </div>
                         <div>
@@ -19676,7 +19718,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                           </div>
                         ))}
                       </div>
-                      <button onClick={handleSubscribe} className="w-full py-3 rounded-2xl font-bold text-white text-sm active:scale-[0.98] transition-transform" style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' }}>
+                      <button onClick={handleSubscribe} className="w-full py-3 rounded-xl font-bold text-white text-sm active:scale-[0.98] transition-transform bg-purple-600">
                         Subscribe Now — $49/month
                       </button>
                     </div>
@@ -19692,7 +19734,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     </div>
 
                     {/* Weekly stamps bar chart */}
-                    <div className="glass-card p-5 md:p-6 rounded-[2rem] flex flex-col md:h-80">
+                    <div className="v-card p-5 md:p-6 flex flex-col md:h-80">
                       <div className="flex items-center justify-between shrink-0">
                         <div>
                           <p className="font-bold text-brand-navy text-sm md:text-base">Weekly Stamps</p>
@@ -19705,7 +19747,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                           {[42, 58, 71, 45, 83, 67, 55, 79].map((h, i) => (
                             <div key={i} className="flex-1 flex flex-col items-center gap-1">
                               <div className="w-full flex items-end" style={{ height: '64px' }}>
-                                <div className="w-full rounded-t-md" style={{ height: `${h}%`, background: 'linear-gradient(180deg, #3B82F6 0%, #1D4ED8 100%)' }} />
+                                <div className="w-full rounded-t-md" style={{ height: `${h}%`, background: '#2563EB' }} />
                               </div>
                               <p className="text-[8px] md:text-xs text-brand-navy/40 font-bold">W{i + 1}</p>
                             </div>
@@ -19715,7 +19757,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     </div>
 
                     {/* Visit frequency */}
-                    <div className="glass-card p-5 md:p-6 rounded-[2rem] flex flex-col md:h-80">
+                    <div className="v-card p-5 md:p-6 flex flex-col md:h-80">
                       <div className="flex items-center justify-between shrink-0">
                         <p className="font-bold text-brand-navy text-sm md:text-base">Visit Frequency</p>
                         <span className="text-[9px] md:text-xs font-bold uppercase tracking-widest text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">Example</span>
@@ -19739,7 +19781,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     </div>
 
                     {/* Busiest days */}
-                    <div className="glass-card p-5 md:p-6 rounded-[2rem] flex flex-col md:h-80">
+                    <div className="v-card p-5 md:p-6 flex flex-col md:h-80">
                       <div className="flex items-center justify-between shrink-0">
                         <p className="font-bold text-brand-navy text-sm md:text-base">Busiest Days</p>
                         <span className="text-[9px] md:text-xs font-bold uppercase tracking-widest text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">Example</span>
@@ -19752,7 +19794,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                           ].map(({ day, h }) => (
                             <div key={day} className="flex-1 flex flex-col items-center gap-1.5">
                               <div className="w-full flex items-end" style={{ height: '60px' }}>
-                                <div className="w-full rounded-t-md" style={{ height: `${h}%`, background: h > 80 ? 'linear-gradient(180deg,#7C3AED,#4F46E5)' : 'linear-gradient(180deg,#A78BFA,#818CF8)' }} />
+                                <div className="w-full rounded-t-md" style={{ height: `${h}%`, background: h > 80 ? '#7C3AED' : '#C4B5FD' }} />
                               </div>
                               <p className="text-[8px] md:text-xs text-brand-navy/40 font-bold">{day}</p>
                             </div>
@@ -19762,7 +19804,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     </div>
 
                     {/* AI Recommendations */}
-                    <div className="md:col-span-2 glass-card p-5 rounded-[2rem] space-y-3">
+                    <div className="md:col-span-2 v-card p-5 space-y-3">
                       <div className="flex items-center justify-between">
                         <p className="font-bold text-brand-navy text-sm">AI Recommendations</p>
                         <Zap size={14} className="text-amber-500" />
@@ -19780,7 +19822,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     </div>
 
                     {/* Competitor benchmarking */}
-                    <div className="md:col-span-2 glass-card p-5 rounded-[2rem] space-y-3">
+                    <div className="md:col-span-2 v-card p-5 space-y-3">
                       <div className="flex items-center justify-between">
                         <p className="font-bold text-brand-navy text-sm">Competitor Benchmarking</p>
                         <span className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/40 bg-brand-navy/8 px-2 py-0.5 rounded-full">Coming soon</span>
@@ -19865,7 +19907,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 }
                 const maxVal = Math.max(...periods.map(p => p.count), 1);
                 return (
-                  <div className="glass-card p-6 md:p-7 rounded-[2rem] flex flex-col md:h-80">
+                  <div className="v-card p-6 md:p-7 flex flex-col md:h-80">
                     <div className="flex items-center justify-between shrink-0">
                       <div>
                         <p className="font-bold text-brand-navy md:text-lg">Stamps Chart</p>
@@ -19877,7 +19919,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                         <div className="flex p-0.5 bg-brand-navy/8 rounded-xl">
                           {(['days', 'weeks'] as const).map(m => (
                             <button key={m} onClick={() => { setChartMode(m); setChartOffset(0); }}
-                              className={cn('px-3 py-1.5 rounded-[10px] text-[10px] md:text-xs font-bold transition-all', chartMode === m ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/75')}>
+                              className={cn('px-3 py-1.5 rounded-lg text-[10px] md:text-xs font-bold transition-all', chartMode === m ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/75')}>
                               {m === 'days' ? 'Days' : 'Weeks'}
                             </button>
                           ))}
@@ -19977,7 +20019,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 const polyPts = points.map((p, i) => `${toX(i)},${toY(p.cumulative)}`).join(' ');
                 const areaPts = `${toX(0)},${svgH} ${polyPts} ${toX(points.length - 1)},${svgH}`;
                 return (
-                  <div className="glass-card p-6 md:p-7 rounded-[2rem] flex flex-col md:h-80">
+                  <div className="v-card p-6 md:p-7 flex flex-col md:h-80">
                     <div className="flex items-center justify-between shrink-0">
                       <div>
                         <p className="font-bold text-brand-navy md:text-lg">User Base Growth</p>
@@ -20091,7 +20133,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 const maxVal2 = Math.max(...signupBuckets.map(d => d.count), 1);
                 const totalNew = signupBuckets.reduce((s, d) => s + d.count, 0);
                 return (
-                  <div className="glass-card p-6 md:p-7 rounded-[2rem] flex flex-col md:h-80">
+                  <div className="v-card p-6 md:p-7 flex flex-col md:h-80">
                     <div className="flex items-center justify-between shrink-0">
                       <div>
                         <p className="font-bold text-brand-navy md:text-lg">{isDays2 ? 'New Sign-ups / Day' : 'New Sign-ups / Week'}</p>
@@ -20170,7 +20212,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 const maxVal = Math.max(...counts, 1);
                 if (stampTxns.length === 0) return null;
                 return (
-                  <div className="glass-card p-6 md:p-7 rounded-[2rem] flex flex-col md:h-80">
+                  <div className="v-card p-6 md:p-7 flex flex-col md:h-80">
                     <div className="shrink-0">
                       <p className="font-bold text-brand-navy md:text-lg">Busiest Days</p>
                       <p className="text-[10px] md:text-xs text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Stamps by day of week</p>
@@ -20213,7 +20255,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                 const maxVal = Math.max(thisWeek, lastWeek, 1);
                 const pct = lastWeek > 0 ? Math.round(((thisWeek - lastWeek) / lastWeek) * 100) : null;
                 return (
-                  <div className="glass-card p-6 md:p-7 rounded-[2rem] flex flex-col md:h-80">
+                  <div className="v-card p-6 md:p-7 flex flex-col md:h-80">
                     <div className="flex items-center justify-between shrink-0">
                       <div>
                         <p className="font-bold text-brand-navy md:text-lg">Weekly Comparison</p>
@@ -20272,7 +20314,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                   { label: 'Completed Card', count: completed, color: 'bg-teal-400' },
                 ];
                 return (
-                  <div className="glass-card p-6 md:p-7 rounded-[2rem] flex flex-col md:h-80">
+                  <div className="v-card p-6 md:p-7 flex flex-col md:h-80">
                     <div className="shrink-0">
                       <p className="font-bold text-brand-navy md:text-lg">Retention Funnel</p>
                       <p className="text-[10px] md:text-xs text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Member journey stages</p>
@@ -20308,7 +20350,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     const avgClv = (clvStamps.reduce((s, v) => s + v, 0) / uniqueUids.length).toFixed(1);
                     const topClv = Math.max(...clvStamps);
                     return (
-                      <div className="md:col-span-2 glass-card p-6 rounded-[2rem] space-y-3">
+                      <div className="md:col-span-2 v-card p-6 space-y-3">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="font-bold text-brand-navy">Customer Lifetime Value</p>
@@ -20352,7 +20394,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     const barColor = isHealthy ? 'bg-teal-400' : isMid ? 'bg-amber-400' : 'bg-rose-400';
                     const scoreLabel = isHealthy ? 'Healthy' : isMid ? 'Needs Attention' : 'At Risk';
                     return (
-                      <div className={cn('md:col-span-2 rounded-[1.5rem] border p-5 space-y-3', scoreBg)}>
+                      <div className={cn('md:col-span-2 rounded-xl border p-5 space-y-3', scoreBg)}>
                         <div className="flex items-center justify-between">
                           <p className="font-bold text-brand-navy">Monthly Health Score</p>
                           <span className={cn('font-display text-2xl font-black', scoreColor)}>{healthScore}</span>
@@ -20395,7 +20437,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     if (totalMembers < 20) recs.push({ icon: '🚀', text: 'Grow your member base — share your QR code on social media or at your counter' });
                     if (recs.length === 0) recs.push({ icon: '✅', text: 'Great work! Your loyalty programme is performing well — keep the stamps coming' });
                     return (
-                      <div className="md:col-span-2 glass-card p-6 rounded-[2rem] space-y-3">
+                      <div className="md:col-span-2 v-card p-6 space-y-3">
                         <div className="flex items-center justify-between">
                           <p className="font-bold text-brand-navy">Recommendations</p>
                           <Zap size={16} className="text-amber-500" />
@@ -20413,7 +20455,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                   })()}
 
                   {/* Intelligence: Competitor Benchmarking — coming soon */}
-                  <div className="md:col-span-2 glass-card p-6 rounded-[2rem] opacity-60">
+                  <div className="md:col-span-2 v-card p-6 opacity-60">
                     <div className="flex items-center justify-between mb-2">
                       <p className="font-bold text-brand-navy">Competitor Benchmarking</p>
                       <span className="text-[9px] font-bold uppercase tracking-widest text-brand-navy/40 bg-brand-navy/8 px-2 py-0.5 rounded-full">Coming soon</span>
@@ -20588,7 +20630,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
           {dashTab === 'spend' && (
             <div className="space-y-6">
               {spendCards.length === 0 ? (
-                <div className="glass-card p-8 rounded-[2rem] text-center space-y-3">
+                <div className="v-card p-8 text-center space-y-3">
                   <DollarSign size={32} className="text-emerald-300 mx-auto" />
                   <p className="font-bold text-brand-navy">No spend points data</p>
                   <p className="text-sm text-brand-navy/60">Enable a spend points or spend membership card to see analytics here.</p>
@@ -20606,13 +20648,13 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                   <div className="relative">
                     {!isSubscribed && !isInTrial && !isNativeIOS && (
                       <div className="absolute inset-0 z-10 flex flex-col items-center justify-start pt-16 pointer-events-none">
-                        <div className="pointer-events-auto bg-white rounded-[2rem] px-6 py-5 shadow-2xl text-center space-y-3 mx-4 border border-brand-navy/8 max-w-xs w-full">
-                          <div className="w-10 h-10 rounded-[1rem] bg-purple-50 flex items-center justify-center mx-auto">
+                        <div className="pointer-events-auto bg-white rounded-2xl px-6 py-5 shadow-lg text-center space-y-3 mx-4 border border-slate-200 max-w-xs w-full">
+                          <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center mx-auto">
                             <Lock size={20} className="text-purple-600" />
                           </div>
                           <p className="font-bold text-brand-navy text-base leading-tight">Subscribe to Unlock</p>
                           <p className="text-xs text-brand-navy/60 leading-relaxed">Subscribe to see live charts, segments, and growth analytics for your spend programme.</p>
-                          <button onClick={handleSubscribe} className="w-full py-3 rounded-2xl font-bold text-white text-sm active:scale-[0.98] transition-transform" style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' }}>
+                          <button onClick={handleSubscribe} className="w-full py-3 rounded-xl font-bold text-white text-sm active:scale-[0.98] transition-transform bg-purple-600">
                             Subscribe Now — $49/month
                           </button>
                         </div>
@@ -20666,7 +20708,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     }
                     const maxVal = Math.max(...periods.map(p => p.count), 1);
                     return (
-                      <div className="glass-card p-6 rounded-[2rem] space-y-4">
+                      <div className="v-card p-6 space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="font-bold text-brand-navy">Points Issued</p>
@@ -20675,7 +20717,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                           <div className="flex items-center gap-2">
                             <div className="flex p-0.5 bg-brand-navy/8 rounded-xl">
                               {(['days', 'weeks'] as const).map(m => (
-                                <button key={m} onClick={() => { setSpendChartMode(m); setSpendChartOffset(0); }} className={cn('px-3 py-1.5 rounded-[10px] text-[10px] font-bold transition-all', spendChartMode === m ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/75')}>
+                                <button key={m} onClick={() => { setSpendChartMode(m); setSpendChartOffset(0); }} className={cn('px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all', spendChartMode === m ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/75')}>
                                   {m === 'days' ? 'Days' : 'Weeks'}
                                 </button>
                               ))}
@@ -20751,7 +20793,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     }
                     const maxVal = Math.max(...pts.map(p => p.cumulative), 1);
                     return (
-                      <div className="glass-card p-6 rounded-[2rem] space-y-4">
+                      <div className="v-card p-6 space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="font-bold text-brand-navy">User Base Growth</p>
@@ -20795,7 +20837,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                       .slice(0, 10);
                     if (top10.length === 0) return null;
                     return (
-                      <div className="glass-card p-6 rounded-[2rem] space-y-3">
+                      <div className="v-card p-6 space-y-3">
                         <div className="flex items-center justify-between">
                           <p className="font-bold text-brand-navy">Top 10 by Points</p>
                           <Trophy size={16} className="text-emerald-500" />
@@ -20831,7 +20873,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                       { label: 'Outstanding', val: outstandingMoney, color: 'bg-amber-400' },
                     ];
                     return (
-                      <div className="glass-card p-6 rounded-[2rem] space-y-3">
+                      <div className="v-card p-6 space-y-3">
                         <div>
                           <p className="font-bold text-brand-navy">Points Economy</p>
                           <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Monetary value of point flow</p>
@@ -20875,7 +20917,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                       { label: 'New / Low', sub: `Bottom 30% · ${uids.length - midCut} customers`, pts: lowPts, color: 'bg-brand-navy/20' },
                     ];
                     return (
-                      <div className="glass-card p-6 rounded-[2rem] space-y-3">
+                      <div className="v-card p-6 space-y-3">
                         <div>
                           <p className="font-bold text-brand-navy">Customer Segments</p>
                           <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Points contribution by tier</p>
@@ -20908,7 +20950,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                         <StatSquare icon={<DollarSign className="text-emerald-500" />} label="Avg Tx" value="\$14.20" sub="per transaction" />
                         <StatSquare icon={<TrendingUp className="text-blue-500" />} label="This Month" value="\$340" sub="spend tracked" />
                       </div>
-                      <div className="glass-card p-6 rounded-[2rem] space-y-4">
+                      <div className="v-card p-6 space-y-4">
                         <p className="font-bold text-brand-navy">Points Issued</p>
                         <div className="flex gap-1 items-end h-28 flex-1">
                           {[20, 45, 30, 65, 50, 70, 35, 55].map((h, i) => (
@@ -20933,7 +20975,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
           {dashTab === 'visit' && (
             <div className="space-y-6">
               {visitCards.length === 0 ? (
-                <div className="glass-card p-8 rounded-[2rem] text-center space-y-3">
+                <div className="v-card p-8 text-center space-y-3">
                   <MapPin size={32} className="text-blue-300 mx-auto" />
                   <p className="font-bold text-brand-navy">No visit points data</p>
                   <p className="text-sm text-brand-navy/60">Enable a visit points or visit membership card to see analytics here.</p>
@@ -20953,13 +20995,13 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                   <div className="relative">
                     {!isSubscribed && !isInTrial && !isNativeIOS && (
                       <div className="absolute inset-0 z-10 flex flex-col items-center justify-start pt-16 pointer-events-none">
-                        <div className="pointer-events-auto bg-white rounded-[2rem] px-6 py-5 shadow-2xl text-center space-y-3 mx-4 border border-brand-navy/8 max-w-xs w-full">
-                          <div className="w-10 h-10 rounded-[1rem] bg-purple-50 flex items-center justify-center mx-auto">
+                        <div className="pointer-events-auto bg-white rounded-2xl px-6 py-5 shadow-lg text-center space-y-3 mx-4 border border-slate-200 max-w-xs w-full">
+                          <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center mx-auto">
                             <Lock size={20} className="text-purple-600" />
                           </div>
                           <p className="font-bold text-brand-navy text-base leading-tight">Subscribe to Unlock</p>
                           <p className="text-xs text-brand-navy/60 leading-relaxed">Subscribe to see live charts, visit tiers, busiest days, and growth for your visit programme.</p>
-                          <button onClick={handleSubscribe} className="w-full py-3 rounded-2xl font-bold text-white text-sm active:scale-[0.98] transition-transform" style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' }}>
+                          <button onClick={handleSubscribe} className="w-full py-3 rounded-xl font-bold text-white text-sm active:scale-[0.98] transition-transform bg-purple-600">
                             Subscribe Now — $49/month
                           </button>
                         </div>
@@ -21021,7 +21063,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     }
                     const maxVal = Math.max(...periods.map(p => p.count), 1);
                     return (
-                      <div className="glass-card p-6 rounded-[2rem] space-y-4">
+                      <div className="v-card p-6 space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="font-bold text-brand-navy">Visits Chart</p>
@@ -21030,7 +21072,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                           <div className="flex items-center gap-2">
                             <div className="flex p-0.5 bg-brand-navy/8 rounded-xl">
                               {(['days', 'weeks'] as const).map(m => (
-                                <button key={m} onClick={() => { setVisitChartMode(m); setVisitChartOffset(0); }} className={cn('px-3 py-1.5 rounded-[10px] text-[10px] font-bold transition-all', visitChartMode === m ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/75')}>
+                                <button key={m} onClick={() => { setVisitChartMode(m); setVisitChartOffset(0); }} className={cn('px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all', visitChartMode === m ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/75')}>
                                   {m === 'days' ? 'Days' : 'Weeks'}
                                 </button>
                               ))}
@@ -21091,7 +21133,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     }
                     const maxVal = Math.max(...pts.map(p => p.cumulative), 1);
                     return (
-                      <div className="glass-card p-6 rounded-[2rem] space-y-4">
+                      <div className="v-card p-6 space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="font-bold text-brand-navy">User Base Growth</p>
@@ -21135,7 +21177,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                       .slice(0, 10);
                     if (top10.length === 0) return null;
                     return (
-                      <div className="glass-card p-6 rounded-[2rem] space-y-3">
+                      <div className="v-card p-6 space-y-3">
                         <div className="flex items-center justify-between">
                           <p className="font-bold text-brand-navy">Top 10 by Points</p>
                           <Trophy size={16} className="text-blue-400" />
@@ -21179,7 +21221,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     }));
                     const maxCount = Math.max(...counts.map(b => b.count), 1);
                     return (
-                      <div className="glass-card p-6 rounded-[2rem] space-y-3">
+                      <div className="v-card p-6 space-y-3">
                         <div>
                           <p className="font-bold text-brand-navy">Visit Loyalty Tiers</p>
                           <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Members by visit frequency</p>
@@ -21215,7 +21257,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                     const maxVal = Math.max(...counts, 1);
                     if (visitTxns.length === 0) return null;
                     return (
-                      <div className="glass-card p-6 rounded-[2rem] space-y-3">
+                      <div className="v-card p-6 space-y-3">
                         <div>
                           <p className="font-bold text-brand-navy">Busiest Days</p>
                           <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Visits by day of week</p>
@@ -21249,7 +21291,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                       { label: 'Outstanding', val: outstanding, color: 'bg-amber-400' },
                     ];
                     return (
-                      <div className="glass-card p-6 rounded-[2rem] space-y-3">
+                      <div className="v-card p-6 space-y-3">
                         <div>
                           <p className="font-bold text-brand-navy">Points Economy</p>
                           <p className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-widest mt-0.5">Lifetime visit point flow</p>
@@ -21280,7 +21322,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
                         <StatSquare icon={<RefreshCw className="text-blue-500" />} label="Avg Interval" value="8.4d" sub="days between visits" />
                         <StatSquare icon={<Gift className="text-purple-500" />} label="Redeemed" value="22%" sub="pts used" />
                       </div>
-                      <div className="glass-card p-6 rounded-[2rem] space-y-4">
+                      <div className="v-card p-6 space-y-4">
                         <p className="font-bold text-brand-navy">Visits Chart</p>
                         <div className="flex gap-1 items-end h-28 flex-1">
                           {[30, 55, 40, 70, 45, 60, 35, 50].map((h, i) => (
@@ -21311,7 +21353,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
               const name = tx.userName || txProf?.name || 'Customer';
               const photo = tx.userPhoto || txProf?.photoURL || '';
               return (
-                <div key={tx.id} className="glass-card p-4 rounded-2xl flex items-center gap-3">
+                <div key={tx.id} className="v-card p-4 flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full overflow-hidden bg-brand-navy/5 shrink-0 flex items-center justify-center">
                     {photo
                       ? <img src={photo} alt="" className="w-full h-full object-cover" />
@@ -21369,9 +21411,9 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
             <div className="grid grid-cols-2 gap-4">
               <button
                 onClick={() => setVendorIssueMode('card')}
-                className="glass-card rounded-[2rem] p-6 flex flex-col items-center gap-4 active:scale-95 transition-transform text-center"
+                className="v-card p-6 flex flex-col items-center gap-4 active:scale-95 transition-transform text-center"
               >
-                <div className="w-16 h-16 gradient-logo-blue rounded-2xl flex items-center justify-center shadow-lg">
+                <div className="w-16 h-16 rounded-xl bg-brand-navy flex items-center justify-center">
                   <CreditCard size={28} className="text-white" />
                 </div>
                 <div>
@@ -21381,9 +21423,9 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
               </button>
               <button
                 onClick={() => setVendorIssueMode('offer')}
-                className="glass-card rounded-[2rem] p-6 flex flex-col items-center gap-4 active:scale-95 transition-transform text-center"
+                className="v-card p-6 flex flex-col items-center gap-4 active:scale-95 transition-transform text-center"
               >
-                <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(135deg, #7C3AED, #A855F7)' }}>
+                <div className="w-16 h-16 rounded-xl bg-purple-600 flex items-center justify-center">
                   <Ticket size={28} className="text-white" />
                 </div>
                 <div>
@@ -21394,9 +21436,9 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
               {store?.membershipEnabled && store.membershipType === 'spend' && (
                 <button
                   onClick={() => setVendorIssueMode('scan-user')}
-                  className="glass-card rounded-[2rem] p-6 flex flex-col items-center gap-4 active:scale-95 transition-transform text-center col-span-2"
+                  className="v-card p-6 flex flex-col items-center gap-4 active:scale-95 transition-transform text-center col-span-2"
                 >
-                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(135deg, #1D4ED8, #3B82F6)' }}>
+                  <div className="w-16 h-16 rounded-xl bg-blue-600 flex items-center justify-center">
                     <DollarSign size={28} className="text-white" />
                   </div>
                   <div>
@@ -21408,9 +21450,9 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
               {store?.membershipEnabled && store.membershipType === 'visit' && (
                 <button
                   onClick={() => setVendorIssueMode('scan-user')}
-                  className="glass-card rounded-[2rem] p-6 flex flex-col items-center gap-4 active:scale-95 transition-transform text-center col-span-2"
+                  className="v-card p-6 flex flex-col items-center gap-4 active:scale-95 transition-transform text-center col-span-2"
                 >
-                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(135deg, #1D4ED8, #3B82F6)' }}>
+                  <div className="w-16 h-16 rounded-xl bg-blue-600 flex items-center justify-center">
                     <Smartphone size={28} className="text-white" />
                   </div>
                   <div>
@@ -25646,13 +25688,13 @@ function WallPostItem({ post, currentUser, wallOwnerUid, onViewUser }: { post: a
 
 function StatSquare({ icon, label, value, sub, info, blurValue }: { icon: React.ReactNode, label: string, value: string, sub?: string, info?: string, blurValue?: boolean }) {
   return (
-    <div className="glass-card aspect-square md:aspect-auto md:h-28 rounded-[1.5rem] flex flex-col items-center justify-center p-3 md:p-4 hover:shadow-md transition-all">
-      <div className="w-7 h-7 md:w-9 md:h-9 bg-brand-bg rounded-xl flex items-center justify-center mb-1.5 md:mb-2">
+    <div className="v-card aspect-square md:aspect-auto md:h-28 flex flex-col items-center justify-center p-3 md:p-4 transition-shadow hover:shadow-sm">
+      <div className="w-7 h-7 md:w-9 md:h-9 bg-slate-50 rounded-lg flex items-center justify-center mb-1.5 md:mb-2">
         {React.cloneElement(icon as React.ReactElement, { size: 13 })}
       </div>
       <p className={cn('font-display text-base md:text-2xl font-bold text-brand-navy leading-none mb-0.5 md:mb-1', blurValue && 'blur-[3px] select-none')}>{value}</p>
       <div className="flex items-center justify-center gap-0.5">
-        <p className="text-[8px] md:text-xs text-brand-navy/75 font-bold uppercase tracking-wider text-center">{label}</p>
+        <p className="text-[8px] md:text-xs text-brand-navy/60 font-bold uppercase tracking-wider text-center">{label}</p>
         {info && <InfoTip text={info} />}
       </div>
       {sub && <p className={cn('text-[7px] md:text-[10px] text-brand-navy/40 font-bold uppercase tracking-wider text-center mt-0.5 leading-tight', blurValue && 'blur-[3px] select-none')}>{sub}</p>}
@@ -25905,7 +25947,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
         {!atLimit && (
           <button
             onClick={() => setShowForm(v => !v)}
-            className="gradient-logo-blue text-white px-4 py-2.5 rounded-2xl font-bold text-sm flex items-center gap-2 shadow active:scale-95 transition-transform"
+            className="bg-brand-navy text-white px-4 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 active:scale-95 transition-transform"
           >
             {showForm ? <X size={16} /> : <Plus size={16} />}
             {showForm ? 'Cancel' : 'New Offer'}
@@ -25918,7 +25960,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
         {showForm && (
           <motion.div
             initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-            className="glass-card p-5 rounded-[2rem] space-y-4"
+            className="v-card p-5 space-y-4"
           >
             <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Offer title (e.g. 20% off coffee)" className={inputCls} />
             <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Description — what the customer gets, any conditions..." rows={3} className={cn(inputCls, 'resize-none')} />
@@ -25976,7 +26018,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
                     onClick={() => setOfferType(opt.v)}
                     className={cn(
                       'flex-1 px-2 py-2.5 rounded-2xl text-xs font-bold transition-all leading-tight text-center',
-                      offerType === opt.v ? 'gradient-logo-blue text-white shadow' : 'bg-brand-bg border border-brand-navy/10 text-brand-navy/75'
+                      offerType === opt.v ? 'bg-brand-navy text-white' : 'bg-brand-bg border border-brand-navy/10 text-brand-navy/75'
                     )}
                   >
                     {opt.label}
@@ -26000,7 +26042,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
                     <button
                       key={opt.v}
                       onClick={() => setMaxRedemptions(opt.v)}
-                      className={cn('px-4 py-2 rounded-2xl text-sm font-bold transition-all', maxRedemptions === opt.v ? 'gradient-logo-blue text-white shadow' : 'bg-brand-bg border border-brand-navy/10 text-brand-navy/75')}
+                      className={cn('px-4 py-2 rounded-2xl text-sm font-bold transition-all', maxRedemptions === opt.v ? 'bg-brand-navy text-white' : 'bg-brand-bg border border-brand-navy/10 text-brand-navy/75')}
                     >
                       {opt.l}
                     </button>
@@ -26019,7 +26061,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
                       key={d}
                       type="button"
                       onClick={() => setValidDays(d)}
-                      className={cn('px-4 py-2 rounded-2xl text-sm font-bold transition-all', validDays === d ? 'gradient-logo-blue text-white shadow' : 'bg-brand-bg border border-brand-navy/10 text-brand-navy/75')}
+                      className={cn('px-4 py-2 rounded-2xl text-sm font-bold transition-all', validDays === d ? 'bg-brand-navy text-white' : 'bg-brand-bg border border-brand-navy/10 text-brand-navy/75')}
                     >
                       {d === 0 ? 'Unlimited' : `${d}d`}
                     </button>
@@ -26037,7 +26079,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
             <button
               onClick={handleCreate}
               disabled={saving || !title.trim() || !description.trim()}
-              className="w-full gradient-logo-blue text-white py-3.5 rounded-2xl font-bold text-sm disabled:opacity-50 active:scale-[0.98] transition-all shadow"
+              className="w-full bg-brand-navy text-white py-3.5 rounded-xl font-bold text-sm disabled:opacity-50 active:scale-[0.98] transition-all"
             >
               {saving ? 'Creating...' : saved ? '✓ Created!' : 'Create Offer'}
             </button>
@@ -26055,7 +26097,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
       ) : (
         <div className="space-y-3">
           {offers.map(offer => (
-            <div key={offer.id} className="glass-card rounded-[1.5rem] overflow-hidden">
+            <div key={offer.id} className="v-card overflow-hidden">
               {offer.imageUrl && <img src={offer.imageUrl} alt="" className="w-full h-32 object-cover" />}
               <div className="p-4 space-y-2">
                 <div className="flex items-start justify-between gap-3">
@@ -26473,7 +26515,7 @@ function ScanUserPanel({ store, onIssue, onShowQR, isSubscribed }: {
       </div>
 
       {isVisit && (
-        <div className="glass-card rounded-[2rem] p-5 space-y-4">
+        <div className="v-card p-5 space-y-4">
           <p className="text-xs font-bold text-brand-navy/75 uppercase tracking-widest">Scan method</p>
           <div className="flex gap-2 p-1 bg-brand-navy/5 rounded-2xl">
             {([
@@ -26505,12 +26547,10 @@ function ScanUserPanel({ store, onIssue, onShowQR, isSubscribed }: {
               <p className="text-xs text-brand-navy/60 leading-relaxed">Display your QR code — customers scan it from their Linq wallet card to earn points.</p>
               <button
                 onClick={onShowQR}
-                className="w-full relative overflow-hidden flex items-center justify-center gap-2 py-4 rounded-2xl font-bold text-white text-sm shadow-lg active:scale-[0.98] transition-all"
-                style={{ background: 'linear-gradient(135deg, #1D4ED8, #3B82F6)' }}
+                className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-white text-sm bg-blue-600 active:scale-[0.98] transition-all"
               >
-                <span className="card-shine-ray" />
-                <QrCode size={16} className="relative z-10" />
-                <span className="relative z-10">Show QR Code</span>
+                <QrCode size={16} />
+                <span>Show QR Code</span>
               </button>
             </div>
           ) : (
@@ -26522,7 +26562,7 @@ function ScanUserPanel({ store, onIssue, onShowQR, isSubscribed }: {
         </div>
       )}
 
-      <div className="glass-card rounded-[2rem] p-6 space-y-4">
+      <div className="v-card p-6 space-y-4">
         <p className="text-xs font-bold text-brand-navy/75 uppercase tracking-widest">{isVisit ? 'Or enter manually' : 'Customer details'}</p>
 
         {/* Lookup mode toggle */}
@@ -26600,8 +26640,7 @@ function ScanUserPanel({ store, onIssue, onShowQR, isSubscribed }: {
         <button
           onClick={lookupMode === 'phone' ? handlePhoneIssue : () => onIssue(handle, amount, setStatus, setWorking)}
           disabled={working || (lookupMode === 'handle' ? !handle : !phoneInput) || (!isVisit && !amount)}
-          className="w-full py-4 rounded-2xl font-bold text-sm text-white disabled:opacity-40 transition-all active:scale-95"
-          style={{ background: 'linear-gradient(160deg, #1D4ED8 0%, #2563EB 40%, #3B82F6 70%, #60A5FA 100%)' }}
+          className="w-full py-4 rounded-xl font-bold text-sm text-white bg-blue-600 disabled:opacity-40 transition-all active:scale-95"
         >
           {working ? 'Issuing…' : 'Issue Points'}
         </button>
@@ -26745,7 +26784,7 @@ function VendorCardSection({ store, isSubscribed }: { store: StoreProfile | null
             transition={{ duration: 0.15 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/40"
           >
-            <div className="glass-card rounded-[2rem] p-6 w-full max-w-sm space-y-4">
+            <div className="v-card p-6 w-full max-w-sm space-y-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
                   <AlertTriangle size={20} className="text-amber-500" />
@@ -26780,7 +26819,7 @@ function VendorCardSection({ store, isSubscribed }: { store: StoreProfile | null
 
       {/* ─── Scan method selector (stamp + visit only) ─── */}
       {(displayType === 'stamp' || displayType === 'visit') && (
-        <div className="glass-card rounded-[2rem] p-5 space-y-4">
+        <div className="v-card p-5 space-y-4">
           <div>
             <p className="font-bold text-brand-navy text-sm mb-0.5">How customers earn points</p>
             <p className="text-xs text-brand-navy/60">Choose how your customers collect stamps or visit points.</p>
@@ -26840,7 +26879,7 @@ function VendorCardSection({ store, isSubscribed }: { store: StoreProfile | null
       <AnimatePresence>
         {pendingScanMethod && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/40">
-            <div className="glass-card rounded-[2rem] p-6 w-full max-w-sm space-y-4">
+            <div className="v-card p-6 w-full max-w-sm space-y-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
                   <AlertTriangle size={20} className="text-amber-500" />
@@ -27054,7 +27093,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
         </p>
       </div>
 
-      <div className="glass-card p-6 rounded-[2.5rem] space-y-6">
+      <div className="v-card p-6 space-y-6">
 
         {/* Tier inputs */}
         <div className="space-y-2">
@@ -27179,7 +27218,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
               {openColorPicker === 'primary' && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setOpenColorPicker(null)} />
-                  <div className="absolute top-full left-0 mt-2 z-50 bg-white rounded-2xl shadow-2xl border border-black/5 p-3 w-52">
+                  <div className="absolute top-full left-0 mt-2 z-50 bg-white rounded-xl shadow-lg border border-slate-200 p-3 w-52">
                     <div className="flex flex-wrap gap-2 mb-2">
                       {DARK_THEMES.map(c => (
                         <button key={c} onClick={() => { setTheme(c); setOpenColorPicker(null); }}
@@ -27211,7 +27250,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
               {openColorPicker === 'secondary' && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setOpenColorPicker(null)} />
-                  <div className="absolute top-full left-0 mt-2 z-50 bg-white rounded-2xl shadow-2xl border border-black/5 p-3 w-52">
+                  <div className="absolute top-full left-0 mt-2 z-50 bg-white rounded-xl shadow-lg border border-slate-200 p-3 w-52">
                     <div className="flex flex-wrap gap-2 mb-2">
                       {['#ffffff', '#f5a623', '#a78bfa', '#34d399', '#fb7185', '#60a5fa'].map(c => (
                         <button key={c} onClick={() => { setStampBorderColor(c); setOpenColorPicker(null); }}
@@ -27577,7 +27616,7 @@ function MembershipCardBuilder({ store }: { store: StoreProfile | null }) {
         <p className="text-brand-navy/75 text-sm">Customise your membership card.</p>
       </header>
 
-      <div className="glass-card p-6 rounded-[2.5rem] space-y-6">
+      <div className="v-card p-6 space-y-6">
 
         {/* Name */}
         <div className="space-y-2">
