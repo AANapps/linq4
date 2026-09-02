@@ -26088,7 +26088,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
       {offers.length === 0 && !showForm && (
         <p className="text-center text-sm text-brand-navy/50">Create your first deal to attract customers.</p>
       )}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(84px,100px))] gap-2">
         {offers.map(offer => {
           const exp = offer.expiresAt
             ? (() => {
@@ -26097,36 +26097,36 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
               })()
             : null;
           return (
-            <div key={offer.id} className="relative aspect-square rounded-2xl overflow-hidden bg-brand-bg border border-brand-navy/10">
+            <div key={offer.id} className="relative aspect-square rounded-xl overflow-hidden bg-brand-bg border border-brand-navy/10">
               {offer.imageUrl ? (
                 <img src={offer.imageUrl} alt="" className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
-                  <Ticket size={32} className="text-brand-navy/20" />
+                  <Ticket size={20} className="text-brand-navy/20" />
                 </div>
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent" />
 
-              <div className="absolute top-2 left-2 right-2 flex items-center justify-between gap-1">
-                <span className={cn('text-[9px] font-black px-2 py-0.5 rounded-full', offer.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-white/90 text-brand-navy/75')}>
+              <div className="absolute top-1 left-1 right-1 flex items-center justify-between gap-0.5">
+                <span className={cn('text-[7px] font-black px-1.5 py-0.5 rounded-full', offer.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-white/90 text-brand-navy/75')}>
                   {offer.status === 'active' ? 'Live' : 'Paused'}
                 </span>
-                <button onClick={() => deleteOffer(offer.id)} className="w-6 h-6 rounded-full bg-black/40 flex items-center justify-center active:scale-90 transition-transform shrink-0">
-                  <Trash2 size={11} className="text-white" />
+                <button onClick={() => deleteOffer(offer.id)} className="w-4 h-4 rounded-full bg-black/40 flex items-center justify-center active:scale-90 transition-transform shrink-0">
+                  <Trash2 size={8} className="text-white" />
                 </button>
               </div>
 
-              <div className="absolute bottom-0 left-0 right-0 p-2.5 space-y-1.5">
-                <p className="text-white font-bold text-xs leading-tight line-clamp-2">{offer.title}</p>
-                <div className="flex items-center gap-1 flex-wrap">
-                  {offer.offerType === 'birthday' && <span className="text-[15px] leading-none">🎂</span>}
-                  {offer.offerType === 'seasonal' && <span className="text-[15px] leading-none">🌸</span>}
+              <div className="absolute bottom-0 left-0 right-0 p-1.5 space-y-1">
+                <p className="text-white font-bold text-[10px] leading-tight line-clamp-2">{offer.title}</p>
+                <div className="flex items-center gap-0.5 flex-wrap">
+                  {offer.offerType === 'birthday' && <span className="text-[10px] leading-none">🎂</span>}
+                  {offer.offerType === 'seasonal' && <span className="text-[10px] leading-none">🌸</span>}
                   {exp !== null && (
-                    <span className={cn('text-[9px] font-black px-1.5 py-0.5 rounded-full', exp <= 3 ? 'bg-red-100 text-red-500' : 'bg-amber-100 text-amber-600')}>{exp}d</span>
+                    <span className={cn('text-[7px] font-black px-1 py-0.5 rounded-full', exp <= 3 ? 'bg-red-100 text-red-500' : 'bg-amber-100 text-amber-600')}>{exp}d</span>
                   )}
-                  {(offer.value ?? 0) > 0 && <span className="text-[9px] font-black text-emerald-300">${offer.value!.toFixed(2)}</span>}
-                  <button onClick={() => toggleStatus(offer)} className="ml-auto w-6 h-6 rounded-full bg-white/25 flex items-center justify-center active:scale-90 transition-transform shrink-0">
-                    {offer.status === 'active' ? <Pause size={11} className="text-white" /> : <Play size={11} className="text-white" />}
+                  {(offer.value ?? 0) > 0 && <span className="text-[7px] font-black text-emerald-300">${offer.value!.toFixed(0)}</span>}
+                  <button onClick={() => toggleStatus(offer)} className="ml-auto w-4 h-4 rounded-full bg-white/25 flex items-center justify-center active:scale-90 transition-transform shrink-0">
+                    {offer.status === 'active' ? <Pause size={8} className="text-white" /> : <Play size={8} className="text-white" />}
                   </button>
                 </div>
               </div>
@@ -26137,10 +26137,10 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
         {!atLimit && (
           <button
             onClick={() => setShowForm(true)}
-            className="aspect-square rounded-2xl border-2 border-dashed border-brand-navy/20 flex flex-col items-center justify-center gap-1.5 text-brand-navy/40 active:scale-95 transition-transform"
+            className="aspect-square rounded-xl border-2 border-dashed border-brand-navy/20 flex flex-col items-center justify-center gap-1 text-brand-navy/40 active:scale-95 transition-transform"
           >
-            <Plus size={28} />
-            <span className="text-[11px] font-bold">Add offer</span>
+            <Plus size={18} />
+            <span className="text-[9px] font-bold">Add</span>
           </button>
         )}
       </div>
