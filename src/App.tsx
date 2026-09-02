@@ -291,7 +291,9 @@ import {
   Globe,
   Info,
   Copy,
-  Check
+  Check,
+  Pause,
+  Play
 } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
@@ -19484,7 +19486,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
               <div className="w-9 h-9 rounded-lg bg-brand-navy flex items-center justify-center shrink-0">
                 <CreditCard size={16} className="text-white" />
               </div>
-              <p className="font-bold text-brand-navy text-sm">Card</p>
+              <p className="font-bold text-brand-navy text-sm">My Cards</p>
             </button>
             <button
               onClick={() => { setVendorIssueMode('offer'); setActiveTab('discover'); }}
@@ -19493,7 +19495,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
               <div className="w-9 h-9 rounded-lg bg-purple-600 flex items-center justify-center shrink-0">
                 <Ticket size={16} className="text-white" />
               </div>
-              <p className="font-bold text-brand-navy text-sm">Offer</p>
+              <p className="font-bold text-brand-navy text-sm">My Offers</p>
             </button>
             {store?.membershipEnabled && store.membershipType === 'spend' && (
               <button
@@ -25926,33 +25928,22 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
     : null;
   const isInTrial = trialEndsMs !== null && trialEndsMs > Date.now();
   const isSubscribed = store?.subscriptionStatus === 'active' || store?.subscriptionStatus === 'trialing' || isInTrial;
-  const offerLimit = isSubscribed ? 5 : 1;
+  const offerLimit = isSubscribed ? 10 : 1;
   const atLimit = offers.length >= offerLimit;
 
   return (
     <div className="space-y-6 pb-20">
-      <header className="flex items-center justify-between">
-        <div>
-          <h2 className="font-display text-3xl font-bold mb-0.5">Offers</h2>
-          <p className="text-brand-navy/80 text-sm">
-            {atLimit
-              ? isSubscribed
-                ? `${offerLimit}/${offerLimit} offers used — delete one to add more.`
-                : '1/1 offer used — subscribe to create up to 5 offers.'
-              : isSubscribed
-                ? 'Create deals shown in the Deals section.'
-                : 'Free plan: 1 offer allowed. Subscribe for up to 5.'}
-          </p>
-        </div>
-        {!atLimit && (
-          <button
-            onClick={() => setShowForm(v => !v)}
-            className="bg-brand-navy text-white px-4 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 active:scale-95 transition-transform"
-          >
-            {showForm ? <X size={16} /> : <Plus size={16} />}
-            {showForm ? 'Cancel' : 'New Offer'}
-          </button>
-        )}
+      <header>
+        <h2 className="font-display text-3xl font-bold mb-0.5">Offers</h2>
+        <p className="text-brand-navy/80 text-sm">
+          {atLimit
+            ? isSubscribed
+              ? `${offerLimit}/${offerLimit} offers used — delete one to add more.`
+              : '1/1 offer used — subscribe to create up to 10 offers.'
+            : isSubscribed
+              ? 'Create deals shown in the Deals section.'
+              : 'Free plan: 1 offer allowed. Subscribe for up to 10.'}
+        </p>
       </header>
 
       {/* Create form */}
@@ -25962,6 +25953,12 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
             initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
             className="v-card p-5 space-y-4"
           >
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-brand-navy text-sm">New Offer</h3>
+              <button onClick={() => setShowForm(false)} className="w-7 h-7 rounded-full bg-brand-bg flex items-center justify-center active:scale-90 transition-transform">
+                <X size={14} className="text-brand-navy/60" />
+              </button>
+            </div>
             <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Offer title (e.g. 20% off coffee)" className={inputCls} />
             <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Description — what the customer gets, any conditions..." rows={3} className={cn(inputCls, 'resize-none')} />
 
@@ -26087,58 +26084,66 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
         )}
       </AnimatePresence>
 
-      {/* Existing offers */}
-      {offers.length === 0 && !showForm ? (
-        <div className="py-16 text-center text-brand-navy/25">
-          <Ticket size={48} className="mx-auto mb-3 opacity-30" />
-          <p className="font-bold">No offers yet</p>
-          <p className="text-sm mt-1">Create your first deal to attract customers.</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {offers.map(offer => (
-            <div key={offer.id} className="v-card overflow-hidden">
-              {offer.imageUrl && <img src={offer.imageUrl} alt="" className="w-full h-32 object-cover" />}
-              <div className="p-4 space-y-2">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-brand-navy truncate">{offer.title}</p>
-                    <p className="text-xs text-brand-navy/80 mt-0.5 line-clamp-2">{offer.description}</p>
-                  </div>
-                  <span className={cn('text-[10px] font-black px-2.5 py-1 rounded-full shrink-0', offer.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-brand-navy/10 text-brand-navy/75')}>
-                    {offer.status === 'active' ? 'Live' : 'Paused'}
-                  </span>
+      {/* Existing offers — square card grid */}
+      {offers.length === 0 && !showForm && (
+        <p className="text-center text-sm text-brand-navy/50">Create your first deal to attract customers.</p>
+      )}
+      <div className="grid grid-cols-2 gap-3">
+        {offers.map(offer => {
+          const exp = offer.expiresAt
+            ? (() => {
+                const ms = (offer.expiresAt?.toDate?.() ?? new Date(offer.expiresAt)).getTime() - Date.now();
+                return Math.ceil(ms / 86400000);
+              })()
+            : null;
+          return (
+            <div key={offer.id} className="relative aspect-square rounded-2xl overflow-hidden bg-brand-bg border border-brand-navy/10">
+              {offer.imageUrl ? (
+                <img src={offer.imageUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Ticket size={32} className="text-brand-navy/20" />
                 </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {offer.offerType === 'birthday' && (
-                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-pink-100 text-pink-600">🎂 Birthday</span>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent" />
+
+              <div className="absolute top-2 left-2 right-2 flex items-center justify-between gap-1">
+                <span className={cn('text-[9px] font-black px-2 py-0.5 rounded-full', offer.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-white/90 text-brand-navy/75')}>
+                  {offer.status === 'active' ? 'Live' : 'Paused'}
+                </span>
+                <button onClick={() => deleteOffer(offer.id)} className="w-6 h-6 rounded-full bg-black/40 flex items-center justify-center active:scale-90 transition-transform shrink-0">
+                  <Trash2 size={11} className="text-white" />
+                </button>
+              </div>
+
+              <div className="absolute bottom-0 left-0 right-0 p-2.5 space-y-1.5">
+                <p className="text-white font-bold text-xs leading-tight line-clamp-2">{offer.title}</p>
+                <div className="flex items-center gap-1 flex-wrap">
+                  {offer.offerType === 'birthday' && <span className="text-[15px] leading-none">🎂</span>}
+                  {offer.offerType === 'seasonal' && <span className="text-[15px] leading-none">🌸</span>}
+                  {exp !== null && (
+                    <span className={cn('text-[9px] font-black px-1.5 py-0.5 rounded-full', exp <= 3 ? 'bg-red-100 text-red-500' : 'bg-amber-100 text-amber-600')}>{exp}d</span>
                   )}
-                  {offer.offerType === 'seasonal' && (
-                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">🌸 Seasonal</span>
-                  )}
-                  {offer.expiresAt && (() => {
-                    const ms = (offer.expiresAt?.toDate?.() ?? new Date(offer.expiresAt)).getTime() - Date.now();
-                    const days = Math.ceil(ms / 86400000);
-                    return <span className={cn('text-[10px] font-black px-2 py-0.5 rounded-full', days <= 3 ? 'bg-red-100 text-red-500' : 'bg-amber-100 text-amber-600')}>{days}d left</span>;
-                  })()}
-                  <span className="text-[11px] text-brand-navy/75 font-bold">
-                    {offer.offerType === 'birthday' ? 'Once a year' : `${offer.maxRedemptionsPerUser === 0 ? 'Unlimited' : `${offer.maxRedemptionsPerUser}x`} per user`}
-                  </span>
-                  {(offer.value ?? 0) > 0 && <><span className="text-[11px] text-brand-navy/75 font-bold">•</span><span className="text-[11px] font-bold text-emerald-600">${offer.value!.toFixed(2)} saving</span></>}
-                </div>
-                <div className="flex gap-2 pt-1">
-                  <button onClick={() => toggleStatus(offer)} className="flex-1 py-2 rounded-xl bg-brand-bg border border-brand-navy/10 text-xs font-bold text-brand-navy/75 active:scale-95 transition-transform">
-                    {offer.status === 'active' ? 'Pause' : 'Resume'}
-                  </button>
-                  <button onClick={() => deleteOffer(offer.id)} className="px-4 py-2 rounded-xl bg-red-50 text-red-500 text-xs font-bold active:scale-95 transition-transform">
-                    Delete
+                  {(offer.value ?? 0) > 0 && <span className="text-[9px] font-black text-emerald-300">${offer.value!.toFixed(2)}</span>}
+                  <button onClick={() => toggleStatus(offer)} className="ml-auto w-6 h-6 rounded-full bg-white/25 flex items-center justify-center active:scale-90 transition-transform shrink-0">
+                    {offer.status === 'active' ? <Pause size={11} className="text-white" /> : <Play size={11} className="text-white" />}
                   </button>
                 </div>
               </div>
             </div>
-          ))}
-        </div>
-      )}
+          );
+        })}
+
+        {!atLimit && (
+          <button
+            onClick={() => setShowForm(true)}
+            className="aspect-square rounded-2xl border-2 border-dashed border-brand-navy/20 flex flex-col items-center justify-center gap-1.5 text-brand-navy/40 active:scale-95 transition-transform"
+          >
+            <Plus size={28} />
+            <span className="text-[11px] font-bold">Add offer</span>
+          </button>
+        )}
+      </div>
     </div>
   );
 }
