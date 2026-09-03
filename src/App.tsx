@@ -101,20 +101,13 @@ const IOS_APNS_WARMUP_MS = 3000;
 // other letterform is pixel-identical to the font. Baked as a path (not live <text>) so it
 // renders identically everywhere regardless of font-loading/engine quirks.
 const LINQ_WORDMARK_PATH = 'M252 -168H466L436 0H0L125 -708H347Z M615 -699Q615 -734 634 -764Q653 -794 688 -812Q722 -829 764 -829Q815 -829 844 -804Q874 -778 874 -737Q874 -702 855 -673Q836 -644 802 -626Q768 -609 726 -609Q674 -609 644 -634Q615 -659 615 -699ZM828 -564 728 0H506L606 -564Z M1493 -390Q1493 -360 1487 -327L1429 0H1208L1261 -299Q1263 -315 1263 -321Q1263 -352 1246 -369Q1228 -386 1197 -386Q1161 -386 1136 -363Q1111 -340 1103 -300L1050 0H828L928 -564H1150L1135 -479Q1168 -519 1216 -544Q1264 -568 1323 -568Q1405 -568 1449 -520Q1493 -473 1493 -390Z M1844 -568Q1889 -568 1921 -556Q1953 -543 1975 -514L1984 -564H2205L2042 360H1821L1895 -62Q1858 -27 1822 -10Q1786 6 1743 6Q1685 6 1638 -22Q1592 -49 1565 -100Q1538 -150 1538 -217Q1538 -247 1544 -278Q1559 -361 1604 -427Q1650 -493 1714 -530Q1778 -568 1844 -568ZM1936 -306Q1936 -342 1916 -359Q1895 -376 1869 -376Q1839 -376 1808 -352Q1778 -327 1769 -278Q1767 -262 1767 -256Q1767 -219 1788 -203Q1808 -187 1835 -187Q1866 -187 1896 -210Q1925 -233 1934 -282Q1936 -291 1936 -306Z';
-const LINQ_WORDMARK_VIEWBOX = '-30 -859 2265 1249';
 const LINQ_WORDMARK_ASPECT = 2265 / 1249;
-// "Hero" variant for the loading-screen zoom animation — same trace, but the L's top and the
-// q's descender are stretched further still, for a more dramatic exaggerated mark in motion.
-const LINQ_WORDMARK_HERO_PATH = 'M252 -168H466L436 0H0L164 -928H455Z M615 -699Q615 -734 634 -764Q653 -794 688 -812Q722 -829 764 -829Q815 -829 844 -804Q874 -778 874 -737Q874 -702 855 -673Q836 -644 802 -626Q768 -609 726 -609Q674 -609 644 -634Q615 -659 615 -699ZM828 -564 728 0H506L606 -564Z M1493 -390Q1493 -360 1487 -327L1429 0H1208L1261 -299Q1263 -315 1263 -321Q1263 -352 1246 -369Q1228 -386 1197 -386Q1161 -386 1136 -363Q1111 -340 1103 -300L1050 0H828L928 -564H1150L1135 -479Q1168 -519 1216 -544Q1264 -568 1323 -568Q1405 -568 1449 -520Q1493 -473 1493 -390Z M1844 -568Q1889 -568 1921 -556Q1953 -543 1975 -514L1984 -564H2205L2012 530H1792L1895 -62Q1858 -27 1822 -10Q1786 6 1743 6Q1685 6 1638 -22Q1592 -49 1565 -100Q1538 -150 1538 -217Q1538 -247 1544 -278Q1559 -361 1604 -427Q1650 -493 1714 -530Q1778 -568 1844 -568ZM1936 -306Q1936 -342 1916 -359Q1895 -376 1869 -376Q1839 -376 1808 -352Q1778 -327 1769 -278Q1767 -262 1767 -256Q1767 -219 1788 -203Q1808 -187 1835 -187Q1866 -187 1896 -210Q1925 -233 1934 -282Q1936 -291 1936 -306Z';
-const LINQ_WORDMARK_HERO_VIEWBOX = '-40 -1089 2285 1759';
-const LINQ_WORDMARK_HERO_ASPECT = 2285 / 1759;
 
-function LinqWordmark({ height = 60, className, hero = false }: { height?: number; className?: string; hero?: boolean }) {
+function LinqWordmark({ height = 60, className }: { height?: number; className?: string }) {
   const gradId = useId();
-  const aspect = hero ? LINQ_WORDMARK_HERO_ASPECT : LINQ_WORDMARK_ASPECT;
-  const width = Math.round(height * aspect);
+  const width = Math.round(height * LINQ_WORDMARK_ASPECT);
   return (
-    <svg width={width} height={height} viewBox={hero ? LINQ_WORDMARK_HERO_VIEWBOX : LINQ_WORDMARK_VIEWBOX} aria-label="Linq" className={className} style={{ userSelect: 'none', display: 'block' }}>
+    <svg width={width} height={height} viewBox="-30 -859 2265 1249" aria-label="Linq" className={className} style={{ userSelect: 'none', display: 'block' }}>
       <defs>
         <linearGradient id={gradId} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="2205" y2="0">
           <stop offset="0%" stopColor="#0473cd" />
@@ -122,7 +115,7 @@ function LinqWordmark({ height = 60, className, hero = false }: { height?: numbe
           <stop offset="100%" stopColor="#7312e1" />
         </linearGradient>
       </defs>
-      <path fill={`url(#${gradId})`} d={hero ? LINQ_WORDMARK_HERO_PATH : LINQ_WORDMARK_PATH} />
+      <path fill={`url(#${gradId})`} d={LINQ_WORDMARK_PATH} />
     </svg>
   );
 }
@@ -1412,16 +1405,6 @@ export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  // Drives the loading screen's zoom-through-the-logo reveal: once auth resolves we keep the
-  // splash mounted a little longer so it can play the zoom/fade before the real screen swaps in.
-  const [splashExiting, setSplashExiting] = useState(false);
-  const [splashDone, setSplashDone] = useState(false);
-  useEffect(() => {
-    if (loading || splashExiting || splashDone) return;
-    setSplashExiting(true);
-    const t = setTimeout(() => setSplashDone(true), 750);
-    return () => clearTimeout(t);
-  }, [loading, splashExiting, splashDone]);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [needsEmailVerification, setNeedsEmailVerification] = useState(false);
   const [profileLoadError, setProfileLoadError] = useState(false);
@@ -2289,36 +2272,18 @@ export default function App() {
     setNeedsOnboarding(false);
   };
 
-  if (loading || !splashDone) {
+  if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-between bg-white px-6 pb-16 relative overflow-hidden" style={{ paddingTop: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 4rem)' }}>
         <div className="flex-1 flex flex-col items-center justify-center gap-7">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.85 }}
-            animate={splashExiting
-              ? { opacity: [1, 1, 0], scale: 30 }
-              : { opacity: 1, scale: [1, 1.045, 1] }}
-            transition={splashExiting
-              ? { duration: 0.75, times: [0, 0.6, 1], ease: [0.6, 0, 0.9, 0.2] }
-              : { opacity: { duration: 0.4 }, scale: { duration: 1.7, repeat: Infinity, ease: 'easeInOut', delay: 0.4 } }}
-          >
-            <LinqWordmark height={64} hero />
-          </motion.div>
-          <motion.div
-            animate={{ opacity: splashExiting ? 0 : 1 }}
-            transition={{ duration: 0.25 }}
-            className="w-7 h-7 rounded-full border-[3px] border-black/10 border-t-black/60 animate-spin"
-          />
+          <LinqWordmark height={64} />
+          <div className="w-7 h-7 rounded-full border-[3px] border-black/10 border-t-black/60 animate-spin" />
         </div>
-        <motion.div
-          animate={{ opacity: splashExiting ? 0 : 1 }}
-          transition={{ duration: 0.25 }}
-          className="flex flex-col items-center gap-2"
-        >
+        <div className="flex flex-col items-center gap-2">
           <img src={adastraLogoUrl || '/app-logo.png'} alt="Ad Astra Network" className="w-14 h-14 rounded-2xl object-contain" />
           <p className="text-[10px] text-black/35 font-medium">from</p>
           <p className="text-xs font-bold text-black/50 tracking-wide">Ad Astra Network</p>
-        </motion.div>
+        </div>
       </div>
     );
   }
