@@ -34347,31 +34347,29 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                     key={prog.id}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => onViewChallenges?.()}
-                    className="relative w-full text-left rounded-[1.75rem] overflow-hidden border border-black/5 shadow-sm"
-                    style={{ minHeight: '128px' }}
+                    className="w-full text-left rounded-[1.75rem] overflow-hidden border border-black/5 shadow-sm bg-white"
                   >
                     {prog.imageUrl ? (
-                      <img src={prog.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                      <img src={prog.imageUrl} alt="" className="w-full h-36 object-cover" />
                     ) : (
-                      <div className="absolute inset-0" style={{ background: uiColors.challengesFypTile.css }} />
+                      <div className="w-full h-36" style={{ background: uiColors.challengesFypTile.css }} />
                     )}
-                    {/* Bottom vignette only, so an image or the admin gradient stays clean up top */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
 
-                    <div className="relative z-10 flex items-end justify-between gap-3 px-5 py-4" style={{ minHeight: '128px' }}>
+                    <div className="flex items-end justify-between gap-3 px-5 py-4">
                       <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-white/70">Challenge</p>
-                        <p className="font-display text-lg font-bold text-white leading-tight truncate mt-0.5">{prog.title}</p>
-                        <p className="text-xs text-white/70 mt-0.5 truncate">{prog.reward}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-brand-navy/40">Challenge</p>
+                        <p className="font-display text-lg font-bold text-brand-navy leading-tight truncate mt-0.5">{prog.title}</p>
+                        <p className="text-xs text-brand-navy/50 mt-0.5 truncate">{prog.reward}</p>
                         {joined && (
                           <div className="mt-2.5 max-w-[220px] space-y-1">
-                            <div className="flex items-center justify-between text-[10px] font-bold text-white/80">
+                            <div className="flex items-center justify-between text-[10px] font-bold text-brand-navy/60">
                               <span>{mySets}/{feedMaxSets} sets</span>
                               <span>{pct}%</span>
                             </div>
-                            <div className="h-1 rounded-full overflow-hidden bg-white/20">
+                            <div className="h-1 rounded-full overflow-hidden bg-brand-navy/8">
                               <motion.div
-                                className="h-full rounded-full bg-white"
+                                className="h-full rounded-full"
+                                style={{ background: '#2563EB' }}
                                 initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.75, ease: 'easeOut' }}
                               />
                             </div>
@@ -34384,13 +34382,13 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                           disabled={joiningFeedProgramId === prog.id || isEnded}
                           className={cn(
                             "shrink-0 px-4 py-2 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 active:opacity-70 transition-opacity disabled:opacity-50",
-                            isEnded ? "bg-white/25 text-white" : "bg-white text-black"
+                            isEnded ? "bg-brand-navy/10 text-brand-navy/40" : "bg-brand-navy text-white"
                           )}
                         >
                           {joiningFeedProgramId === prog.id ? <Loader2 size={12} className="animate-spin" /> : isEnded ? 'Ended' : 'Join'}
                         </button>
                       ) : (
-                        <ChevronRight size={18} className="text-white/60 shrink-0 mb-1" />
+                        <ChevronRight size={18} className="text-brand-navy/30 shrink-0 mb-1" />
                       )}
                     </div>
                   </motion.button>
