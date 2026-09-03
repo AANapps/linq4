@@ -2233,7 +2233,7 @@ export default function App() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-between bg-white px-6 pb-16 relative overflow-hidden" style={{ paddingTop: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 4rem)' }}>
         <div className="flex-1 flex flex-col items-center justify-center gap-7">
-          <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={linqGradientTextStyle}>Linq</span>
+          <span className="text-6xl font-black italic tracking-tight select-none leading-[1.2] pb-2" style={linqGradientTextStyle}>Linq</span>
           <div className="w-7 h-7 rounded-full border-[3px] border-black/10 border-t-black/60 animate-spin" />
         </div>
         <div className="flex flex-col items-center gap-2">
@@ -2248,7 +2248,7 @@ export default function App() {
   if (emailVerifiedStandalone) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white px-6 gap-6 text-center">
-        <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={linqGradientTextStyle}>Linq</span>
+        <span className="text-6xl font-black italic tracking-tight select-none leading-[1.2] pb-2" style={linqGradientTextStyle}>Linq</span>
         <CheckCircle2 className="w-12 h-12 text-green-500" />
         <div>
           <p className="text-black font-bold text-xl mb-2">Verified</p>
@@ -2261,7 +2261,7 @@ export default function App() {
   if (emailChangedStandalone) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white px-6 gap-6 text-center">
-        <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={linqGradientTextStyle}>Linq</span>
+        <span className="text-6xl font-black italic tracking-tight select-none leading-[1.2] pb-2" style={linqGradientTextStyle}>Linq</span>
         <CheckCircle2 className="w-12 h-12 text-green-500" />
         <div>
           <p className="text-black font-bold text-xl mb-2">Email updated!</p>
@@ -2274,7 +2274,7 @@ export default function App() {
   if (browserConsumerBlocked) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white px-6 gap-6 text-center">
-        <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={linqGradientTextStyle}>Linq</span>
+        <span className="text-6xl font-black italic tracking-tight select-none leading-[1.2] pb-2" style={linqGradientTextStyle}>Linq</span>
         <p className="text-black font-bold text-xl">Vendor & Admin Access Only</p>
         <p className="text-black/50 text-sm max-w-xs">The Linq web app is for vendors and admins. Customers should use the Linq mobile app.</p>
         <a href="https://mylinq.app" className="px-8 py-3 bg-black rounded-2xl text-white font-bold text-sm">Go to mylinq.app</a>
@@ -2287,7 +2287,7 @@ export default function App() {
   if (nativeVendorBlocked) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white px-6 gap-5 text-center" style={{ paddingTop: 'var(--safe-area-inset-top, env(safe-area-inset-top, 0px))' }}>
-        <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={linqGradientTextStyle}>Linq</span>
+        <span className="text-6xl font-black italic tracking-tight select-none leading-[1.2] pb-2" style={linqGradientTextStyle}>Linq</span>
         <div>
           <p className="text-black font-bold text-xl mb-2">Vendor accounts aren't supported here</p>
           <p className="text-black/50 text-sm max-w-xs">This app is for Linq members. Please sign in with a personal account.</p>
@@ -2326,7 +2326,7 @@ export default function App() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-between bg-white px-6 pb-16" style={{ paddingTop: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 4rem)' }}>
         <div className="flex-1 flex flex-col items-center justify-center gap-6">
-          <span className="text-6xl font-black italic tracking-tight select-none leading-none" style={linqGradientTextStyle}>Linq</span>
+          <span className="text-6xl font-black italic tracking-tight select-none leading-[1.2] pb-2" style={linqGradientTextStyle}>Linq</span>
           {profileLoadError ? (
             <>
               <p className="text-black/50 text-sm text-center">Could not connect. Please check your internet connection.</p>
@@ -2365,14 +2365,14 @@ export default function App() {
           <Plus className="w-5 h-5 text-white" />
         </button>
         <button onClick={() => setShowSettings(true)} className="absolute left-1/2 -translate-x-1/2 hover:opacity-80 transition-opacity">
-          <svg width="56" height="28" viewBox="0 0 56 28" aria-label="Linq" style={{ userSelect: 'none', display: 'block', overflow: 'visible' }}>
+          <svg width="56" height="34" viewBox="0 0 56 34" aria-label="Linq" style={{ userSelect: 'none', display: 'block', overflow: 'visible' }}>
             <defs>
               <linearGradient id="hdrLinqGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0%" stopColor="#60a5fa" />
                 <stop offset="100%" stopColor="#a855f7" />
               </linearGradient>
             </defs>
-            <text x="2" y="22" fontFamily="Poppins, sans-serif" fontWeight="900" fontStyle="italic" fontSize="26" fill="url(#hdrLinqGrad)">Linq</text>
+            <text x="2" y="24" fontFamily="Poppins, sans-serif" fontWeight="900" fontStyle="italic" fontSize="26" fill="url(#hdrLinqGrad)">Linq</text>
           </svg>
         </button>
         <div className="flex items-center gap-0.5">
@@ -3069,7 +3069,7 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
         <div className="mb-10 text-center">
           <div className="flex items-baseline justify-center gap-2">
             <p
-              className="font-black italic leading-none"
+              className="font-black italic leading-[1.2] pb-1"
               style={{ fontFamily: 'Poppins, sans-serif', fontSize: '3rem', background: 'linear-gradient(115deg, var(--brand-g1), var(--brand-g2), var(--brand-g3), var(--brand-g4))', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', WebkitTextFillColor: 'transparent' }}
             >Linq</p>
             {!Capacitor.isNativePlatform() && phoneMode === 'phone' && (
@@ -28990,15 +28990,14 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                 {vendorStore?.isVerified && <CheckCircle2 size={18} className="text-blue-400" />}
               </div>
 
-              <div className="flex items-center gap-3 mt-2 text-sm">
-                <button onClick={() => { setFollowModalTab('following'); setShowFollowModal(true); }} className="flex items-center gap-1 font-bold hover:text-brand-gold transition-colors">
-                  <span>{following.length}</span>
-                  <span className="text-brand-navy/75 font-normal">Following</span>
+              <div className="flex items-center gap-4 mt-2 flex-wrap">
+                <button onClick={() => { setFollowModalTab('followers'); setShowFollowModal(true); }} className="flex items-baseline gap-1 active:opacity-60 transition-opacity">
+                  <span className="font-display text-sm font-black">{fmtK(followers.length + storeFollowerCount)}</span>
+                  <span className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-wide">Followers</span>
                 </button>
-                <span className="text-brand-navy/32">•</span>
-                <button onClick={() => { setFollowModalTab('followers'); setShowFollowModal(true); }} className="flex items-center gap-1 font-bold hover:text-brand-gold transition-colors">
-                  <span>{followers.length + storeFollowerCount}</span>
-                  <span className="text-brand-navy/75 font-normal">Followers</span>
+                <button onClick={() => { setFollowModalTab('following'); setShowFollowModal(true); }} className="flex items-baseline gap-1 active:opacity-60 transition-opacity">
+                  <span className="font-display text-sm font-black">{fmtK(following.length)}</span>
+                  <span className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-wide">Following</span>
                 </button>
               </div>
             </div>
@@ -29026,15 +29025,18 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           )}
         </header>
 
-        {/* Stats bar — Members | Stamps or Points | Rewards */}
-        <div className="flex items-center divide-x divide-brand-navy/10">
+        {/* Stats bar — Members | Stamps or Points | Rewards — circular stat badges */}
+        <div className="grid grid-cols-3 gap-2">
           {[
-            { val: totalMembers,             label: 'Members' },
-            { val: profileMiddleStat.val,    label: profileMiddleStat.label },
-            { val: profileRewardStat.val,    label: profileRewardStat.label },
+            { val: totalMembers,             label: 'Members',              icon: '👥' },
+            { val: profileMiddleStat.val,    label: profileMiddleStat.label, icon: profileMiddleStat.label === 'Points' ? '⭐' : '🎟️' },
+            { val: profileRewardStat.val,    label: profileRewardStat.label, icon: profileRewardStat.label === 'Redeemed' ? '✅' : '🎁' },
           ].map(s => (
-            <div key={s.label} className="flex-1 flex flex-col items-center gap-0.5 py-2">
-              <p className="font-black text-base leading-none text-brand-navy">{s.val}</p>
+            <div key={s.label} className="flex flex-col items-center gap-1.5">
+              <div className="relative w-14 h-14 rounded-full flex items-center justify-center shadow-md shrink-0" style={{ background: uiColors.profileStatsTile.css }}>
+                <span className="font-display font-black text-base leading-none text-white" style={tileTextStyle(uiColors.profileStatsTile)}>{fmtK(s.val)}</span>
+                <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white border border-black/5 shadow-sm flex items-center justify-center text-[10px] leading-none">{s.icon}</span>
+              </div>
               <p className="text-[9px] font-bold uppercase tracking-wider text-brand-navy/50">{s.label}</p>
             </div>
           ))}
