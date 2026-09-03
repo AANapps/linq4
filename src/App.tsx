@@ -496,6 +496,7 @@ interface UiColors {
   challengesTile: UiColorSlot;
   stickersTile: UiColorSlot;
   badgesTile: UiColorSlot;
+  profileStatsTile: UiColorSlot;
 }
 type UiColorPreset = UiColorSlot & { id: string; label: string };
 
@@ -532,6 +533,18 @@ const VIVID_GRADIENT_PRESETS: UiColorPreset[] = [
   { id: 'vivid-rose',   label: 'Rose',       css: 'linear-gradient(135deg, #BE123C 0%, #F43F5E 55%, #FB7185 100%)', dark: true },
   { id: 'vivid-indigo', label: 'Indigo',     css: 'linear-gradient(135deg, #3730A3 0%, #6366F1 55%, #818CF8 100%)', dark: true },
   { id: 'vivid-sky',    label: 'Sky',        css: 'linear-gradient(135deg, #0369A1 0%, #0EA5E9 55%, #38BDF8 100%)', dark: true },
+];
+const DARK_GRADIENT_PRESETS: UiColorPreset[] = [
+  { id: 'grad-dull-blue', label: 'Dull Blue', css: 'linear-gradient(135deg, #24384A 0%, #3D5F7A 60%, #4F7B9C 100%)', dark: true },
+  { id: 'grad-navy',      label: 'Navy',      css: 'linear-gradient(135deg, #0F1B30 0%, #1E3050 55%, #2E4A78 100%)', dark: true },
+  { id: 'grad-deep-navy', label: 'Deep Navy', css: 'linear-gradient(135deg, #05080F 0%, #0F172A 55%, #1E293B 100%)', dark: true },
+  { id: 'grad-purple',    label: 'Purple',    css: 'linear-gradient(135deg, #1B1042 0%, #2D1B69 55%, #4C2E9E 100%)', dark: true },
+  { id: 'grad-emerald',   label: 'Emerald',   css: 'linear-gradient(135deg, #06251C 0%, #0D3B2E 55%, #135E49 100%)', dark: true },
+  { id: 'grad-slate',     label: 'Slate',     css: 'linear-gradient(135deg, #0F1826 0%, #1E293B 55%, #334155 100%)', dark: true },
+  { id: 'grad-charcoal',  label: 'Charcoal',  css: 'linear-gradient(135deg, #0E0E17 0%, #1C1C2E 55%, #2B2B45 100%)', dark: true },
+  { id: 'grad-teal',      label: 'Dk Teal',   css: 'linear-gradient(135deg, #06211F 0%, #0D3B38 55%, #135955 100%)', dark: true },
+  { id: 'grad-rose',      label: 'Dk Rose',   css: 'linear-gradient(135deg, #260606 0%, #3B0A0A 55%, #5C1010 100%)', dark: true },
+  { id: 'grad-black',     label: 'Black',     css: 'linear-gradient(135deg, #000000 0%, #1A1A1A 100%)', dark: true },
 ];
 const PASTEL_GRADIENT_PRESETS: UiColorPreset[] = [
   { id: 'pastel-turquoise', label: 'Turquoise', css: 'linear-gradient(135deg, #A7F3D0 0%, #6EE7D4 45%, #99F6E4 75%, #CCFBF1 100%)', dark: false },
@@ -588,10 +601,11 @@ const UI_COLOR_DEFAULTS: UiColors = {
   challengesTile:    { css: 'linear-gradient(160deg, #1D4ED8 0%, #2563EB 40%, #3B82F6 70%, #60A5FA 100%)', dark: true },
   stickersTile:      { css: 'linear-gradient(160deg, #1D4ED8 0%, #2563EB 40%, #3B82F6 70%, #60A5FA 100%)', dark: true },
   badgesTile:        { css: 'linear-gradient(135deg, #fef08a 0%, #fbbf24 30%, #f59e0b 65%, #d97706 100%)', dark: false },
+  profileStatsTile:  { css: 'linear-gradient(135deg, #3730A3 0%, #6366F1 55%, #818CF8 100%)', dark: true },
 };
 const UI_COLOR_SLOT_DEFS: { key: keyof UiColors; label: string; desc: string; presets: UiColorPreset[] }[] = [
-  { key: 'linqleTile',        label: 'Linqle Tile',        desc: 'For You word game card',      presets: SOLID_DARK_PRESETS },
-  { key: 'savedTile',         label: 'Saved with Linq',    desc: 'For You savings card',        presets: SOLID_DARK_PRESETS },
+  { key: 'linqleTile',        label: 'Linqle Tile',        desc: 'For You word game card',      presets: [...SOLID_DARK_PRESETS, ...DARK_GRADIENT_PRESETS] },
+  { key: 'savedTile',         label: 'Saved with Linq',    desc: 'For You savings card',        presets: [...SOLID_DARK_PRESETS, ...DARK_GRADIENT_PRESETS] },
   { key: 'leaderboardTile',   label: 'Leaderboard Tile',   desc: 'For You leaderboard card',    presets: LIGHT_GRADIENT_PRESETS },
   { key: 'challengesFypTile', label: 'Challenges Tile',    desc: 'For You challenges carousel', presets: VIVID_GRADIENT_PRESETS },
   { key: 'dailyVoteTile',     label: 'Daily Vote Tile',    desc: 'For You daily poll card',     presets: PASTEL_GRADIENT_PRESETS },
@@ -599,6 +613,7 @@ const UI_COLOR_SLOT_DEFS: { key: keyof UiColors; label: string; desc: string; pr
   { key: 'challengesTile',   label: 'Challenges Tile',   desc: 'Profile challenges count + card backgrounds', presets: VIVID_GRADIENT_PRESETS },
   { key: 'stickersTile',     label: 'Stickers Tile',     desc: 'Profile stickers count tile',  presets: VIVID_GRADIENT_PRESETS },
   { key: 'badgesTile',       label: 'Badges Tile',       desc: 'Profile badges count tile',    presets: VIVID_GRADIENT_PRESETS },
+  { key: 'profileStatsTile', label: 'Profile Stat Row',  desc: 'Stamps/Cards/Rewards/Challenges circles', presets: VIVID_GRADIENT_PRESETS },
 ];
 
 // ─── Default gender-specific SVG avatars (no external URL, no data cost) ────
@@ -8096,6 +8111,62 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores,
   );
 }
 
+// ─── Gradient colour helpers (admin UI colour picker) ──────────────────────────
+function hexToHsl(hex: string): [number, number, number] {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16) / 255, g = parseInt(h.slice(2, 4), 16) / 255, b = parseInt(h.slice(4, 6), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let hh = 0;
+  const l = (max + min) / 2;
+  let s = 0;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: hh = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: hh = (b - r) / d + 2; break;
+      default: hh = (r - g) / d + 4; break;
+    }
+    hh /= 6;
+  }
+  return [hh * 360, s * 100, l * 100];
+}
+function hslToHex(h: number, s: number, l: number): string {
+  h = ((h % 360) + 360) % 360; s = Math.max(0, Math.min(100, s)) / 100; l = Math.max(0, Math.min(100, l)) / 100;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+  const m = l - c / 2;
+  let r = 0, g = 0, b = 0;
+  if (h < 60) { r = c; g = x; b = 0; } else if (h < 120) { r = x; g = c; b = 0; } else if (h < 180) { r = 0; g = c; b = x; }
+  else if (h < 240) { r = 0; g = x; b = c; } else if (h < 300) { r = x; g = 0; b = c; } else { r = c; g = 0; b = x; }
+  const toHex = (v: number) => Math.round((v + m) * 255).toString(16).padStart(2, '0');
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+// Best-effort parse of the first/last hex stops + angle out of any linear-gradient() string
+// (including 3-4 stop preset gradients) so the 2-stop editor has a sane starting point.
+function parseGradientForEdit(css: string): { angle: number; c1: string; c2: string } | null {
+  const hexMatches = css.match(/#[0-9a-fA-F]{6}/g);
+  if (!hexMatches || hexMatches.length < 2) return null;
+  const angleMatch = css.match(/\(\s*(\d+)deg/);
+  return { angle: angleMatch ? parseInt(angleMatch[1], 10) : 135, c1: hexMatches[0], c2: hexMatches[hexMatches.length - 1] };
+}
+// Contextual gradient suggestions derived from a base colour — tonal, deep, soft, analogous, complementary.
+function suggestGradients(baseHex: string): { id: string; label: string; css: string }[] {
+  if (!/^#[0-9a-fA-F]{6}$/.test(baseHex)) return [];
+  const [h, s, l] = hexToHsl(baseHex);
+  const lighter = hslToHex(h, s, Math.min(95, l + 22));
+  const darker = hslToHex(h, s, Math.max(8, l - 22));
+  const analogous = hslToHex(h + 28, s, l);
+  const complementary = hslToHex(h + 180, Math.max(35, s - 10), l);
+  return [
+    { id: 'sg-tone', label: 'Tonal', css: `linear-gradient(135deg, ${darker} 0%, ${baseHex} 55%, ${lighter} 100%)` },
+    { id: 'sg-deep', label: 'Deep', css: `linear-gradient(135deg, ${darker} 0%, ${baseHex} 100%)` },
+    { id: 'sg-soft', label: 'Soft', css: `linear-gradient(135deg, ${baseHex} 0%, ${lighter} 100%)` },
+    { id: 'sg-analog', label: 'Analogous', css: `linear-gradient(135deg, ${baseHex} 0%, ${analogous} 100%)` },
+    { id: 'sg-comp', label: 'Complementary', css: `linear-gradient(135deg, ${baseHex} 0%, ${complementary} 100%)` },
+  ];
+}
+
 const BANNER_DEST_OPTIONS = [
   { value: 'for-you', label: 'For You Feed' },
   { value: 'home', label: 'Wallet / Home' },
@@ -8106,36 +8177,109 @@ const BANNER_DEST_OPTIONS = [
   { value: 'url', label: 'External URL…' },
 ];
 
-function ColorSwatchPicker({ value, onChange, presets, label }: {
+function ColorSwatchPicker({ value, onChange, presets, label, allowGradient }: {
   value: string;
   onChange: (v: string) => void;
   presets?: { id: string; css: string; dark?: boolean; label: string }[];
   label?: string;
+  allowGradient?: boolean;
+  key?: React.Key;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const solidValue = /^#[0-9a-fA-F]{6}$/.test(value) ? value : '#2563EB';
+  const parsedGrad = parseGradientForEdit(value);
+  const [mode, setMode] = useState<'solid' | 'gradient'>(/^linear-gradient\(/.test(value) ? 'gradient' : 'solid');
+  const [gradC1, setGradC1] = useState(parsedGrad?.c1 ?? solidValue);
+  const [gradC2, setGradC2] = useState(parsedGrad?.c2 ?? '#1D4ED8');
+  const [gradAngle, setGradAngle] = useState(parsedGrad?.angle ?? 135);
+
+  const applyGradient = (c1: string, c2: string, angle: number) => onChange(`linear-gradient(${angle}deg, ${c1} 0%, ${c2} 100%)`);
+  const suggested = allowGradient && mode === 'gradient' ? suggestGradients(gradC1) : [];
+
   return (
     <div className="space-y-2">
-      {/* Large swatch — tap to open rainbow picker */}
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        className="relative w-full h-14 rounded-2xl border-2 border-black/10 overflow-hidden shadow-sm active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
-        style={{ background: value }}
-      >
-        <input
-          ref={inputRef}
-          type="color"
-          value={solidValue}
-          onChange={e => onChange(e.target.value)}
-          onInput={e => onChange((e.target as HTMLInputElement).value)}
-          className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
-          style={{ appearance: 'none' }}
-        />
-        <span className="relative z-10 text-[10px] font-bold tracking-wider opacity-60 mix-blend-overlay select-none">
-          {label ?? 'Tap to pick colour'}
-        </span>
-      </button>
+      {allowGradient && (
+        <div className="flex p-0.5 bg-brand-navy/6 rounded-xl w-fit">
+          {(['solid', 'gradient'] as const).map(m => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => {
+                setMode(m);
+                if (m === 'gradient') applyGradient(gradC1, gradC2, gradAngle);
+                else onChange(gradC1);
+              }}
+              className={cn('px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide transition-all capitalize', mode === m ? 'bg-white shadow-sm text-brand-navy' : 'text-brand-navy/50')}
+            >
+              {m}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {allowGradient && mode === 'gradient' ? (
+        <div className="space-y-2">
+          <div
+            className="relative w-full h-14 rounded-2xl border-2 border-black/10 overflow-hidden shadow-sm flex items-center justify-center"
+            style={{ background: `linear-gradient(${gradAngle}deg, ${gradC1} 0%, ${gradC2} 100%)` }}
+          >
+            <span className="relative z-10 text-[10px] font-bold tracking-wider opacity-60 mix-blend-overlay select-none">Gradient preview</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="relative w-11 h-11 rounded-xl border-2 border-black/10 overflow-hidden shrink-0" style={{ background: gradC1 }}>
+              <input type="color" value={gradC1} onChange={e => { const v = e.target.value; setGradC1(v); applyGradient(v, gradC2, gradAngle); }} className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
+            </label>
+            <span className="text-brand-navy/30 text-xs shrink-0">→</span>
+            <label className="relative w-11 h-11 rounded-xl border-2 border-black/10 overflow-hidden shrink-0" style={{ background: gradC2 }}>
+              <input type="color" value={gradC2} onChange={e => { const v = e.target.value; setGradC2(v); applyGradient(gradC1, v, gradAngle); }} className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
+            </label>
+            <input
+              type="range" min={0} max={360} value={gradAngle}
+              onChange={e => { const v = parseInt(e.target.value, 10); setGradAngle(v); applyGradient(gradC1, gradC2, v); }}
+              className="flex-1"
+            />
+            <span className="text-[10px] font-bold text-brand-navy/50 w-9 text-right shrink-0">{gradAngle}°</span>
+          </div>
+          {suggested.length > 0 && (
+            <div>
+              <p className="text-[9px] font-bold text-brand-navy/40 uppercase tracking-wider mb-1">Suggested for this colour</p>
+              <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-hide">
+                {suggested.map(s => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => onChange(s.css)}
+                    className={cn('shrink-0 w-8 h-8 rounded-xl border-2 transition-all active:scale-90', value === s.css ? 'border-brand-navy/60 scale-110' : 'border-transparent')}
+                    style={{ background: s.css }}
+                    title={s.label}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* Large swatch — tap to open rainbow picker */
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="relative w-full h-14 rounded-2xl border-2 border-black/10 overflow-hidden shadow-sm active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+          style={{ background: value }}
+        >
+          <input
+            ref={inputRef}
+            type="color"
+            value={solidValue}
+            onChange={e => { onChange(e.target.value); setGradC1(e.target.value); }}
+            onInput={e => onChange((e.target as HTMLInputElement).value)}
+            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+            style={{ appearance: 'none' }}
+          />
+          <span className="relative z-10 text-[10px] font-bold tracking-wider opacity-60 mix-blend-overlay select-none">
+            {label ?? 'Tap to pick colour'}
+          </span>
+        </button>
+      )}
       {/* Preset quick-picks row */}
       {presets && presets.length > 0 && (
         <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-hide">
@@ -8296,10 +8440,12 @@ function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColo
                   <div>
                     <p className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-wider mb-1.5">Background</p>
                     <ColorSwatchPicker
+                      key={editingSlot}
                       value={current.css}
                       onChange={css => pickBg(editingSlot, css)}
                       presets={slot.presets.map(p => ({ id: p.id, css: p.css, label: p.label }))}
                       label="Tap to open colour picker"
+                      allowGradient
                     />
                   </div>
                   <div>
@@ -29294,21 +29440,26 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         )}
       </AnimatePresence>
 
-      {/* Stamps / Cards / Rewards / Challenges — clean separator */}
-      <div className="flex items-center divide-x divide-brand-navy/10">
+      {/* Stamps / Cards / Rewards / Challenges — circular stat badges */}
+      <div className="grid grid-cols-4 gap-2">
         {[
-          { val: lifetimeStamps,     label: 'Stamps'  },
-          { val: activeCardsCount,   label: 'Cards'   },
-          { val: archivedCardsCount, label: 'Rewards' },
+          { val: lifetimeStamps,     label: 'Stamps',  icon: '🎟️' },
+          { val: activeCardsCount,   label: 'Cards',   icon: '💳' },
+          { val: archivedCardsCount, label: 'Rewards', icon: '🎁' },
         ].map(s => (
-          <div key={s.label} className="flex-1 flex flex-col items-center gap-0.5 py-2">
-            <p className="font-black text-base leading-none text-brand-navy">{s.val}</p>
+          <div key={s.label} className="flex flex-col items-center gap-1.5">
+            <div className="relative w-14 h-14 rounded-full flex items-center justify-center shadow-md shrink-0" style={{ background: uiColors.profileStatsTile.css }}>
+              <span className="font-display font-black text-base leading-none text-white" style={tileTextStyle(uiColors.profileStatsTile)}>{fmtK(s.val)}</span>
+              <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white border border-black/5 shadow-sm flex items-center justify-center text-[10px] leading-none">{s.icon}</span>
+            </div>
             <p className="text-[9px] font-bold uppercase tracking-wider text-brand-navy/50">{s.label}</p>
           </div>
         ))}
-        <button onClick={() => setChallengeOpen(true)}
-          className="flex-1 flex flex-col items-center gap-0.5 py-2 active:opacity-60 transition-opacity">
-          <p className="font-black text-base leading-none text-brand-navy">{activeChallenges.length}</p>
+        <button onClick={() => setChallengeOpen(true)} className="flex flex-col items-center gap-1.5 active:opacity-70 transition-opacity">
+          <div className="relative w-14 h-14 rounded-full flex items-center justify-center shadow-md shrink-0" style={{ background: uiColors.profileStatsTile.css }}>
+            <span className="font-display font-black text-base leading-none text-white" style={tileTextStyle(uiColors.profileStatsTile)}>{fmtK(activeChallenges.length)}</span>
+            <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white border border-black/5 shadow-sm flex items-center justify-center text-[10px] leading-none">🏆</span>
+          </div>
           <p className="text-[9px] font-bold uppercase tracking-wider text-brand-navy/50">Challenges</p>
         </button>
       </div>
