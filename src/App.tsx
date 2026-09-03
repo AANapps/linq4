@@ -9486,16 +9486,20 @@ function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
     const clean = input.trim().toUpperCase();
     if (clean.length !== 5 || !/^[A-Z]+$/.test(clean) || words.includes(clean)) return;
     const newStartDate = startDate || todayStr;
-    // Compute insert index from selectedDate
+    // Set the word directly at the selected date's slot — never shift any other day's
+    // word. Picking a date (today or any future date) always assigns that word to that
+    // exact date, replacing whatever was scheduled there; it doesn't get queued in after
+    // the existing words like an insert would.
     const s = new Date(newStartDate); s.setHours(0,0,0,0);
     const sel = new Date(selectedDate); sel.setHours(0,0,0,0);
     const targetIdx = Math.floor((sel.getTime() - s.getTime()) / 86400000);
     let updated: string[];
-    if (targetIdx < 0 || targetIdx >= words.length) {
-      updated = [...words, clean]; // append (auto-assign or beyond queue)
+    if (targetIdx < 0) {
+      updated = [...words, clean]; // before the queue's start — shouldn't happen via the date picker; fall back to append
     } else {
       updated = [...words];
-      updated.splice(targetIdx, 0, clean); // insert, shifting later words +1 day
+      while (updated.length <= targetIdx) updated.push(''); // pad any gap days so the word lands on the exact date picked
+      updated[targetIdx] = clean;
     }
     saveQueue(updated, newStartDate);
     setInput('');
@@ -9598,11 +9602,11 @@ function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
           {/* Scheduled word for selected date */}
           <div className={`px-4 py-3 rounded-2xl flex items-center justify-between ${scheduledWord ? (selectedIsToday ? 'bg-green-50 border border-green-200' : 'bg-brand-navy/4 border border-brand-navy/10') : 'bg-blue-50 border border-blue-200'}`}>
             <p className={`text-xs font-semibold ${scheduledWord ? (selectedIsToday ? 'text-green-700' : 'text-brand-navy/75') : 'text-blue-600'}`}>
-              {scheduledWord ? (selectedIsToday ? "Today's word" : 'Scheduled word') : (isAutoSlot ? 'Next available slot' : 'No word — will insert here')}
+              {scheduledWord ? (selectedIsToday ? "Today's word" : 'Scheduled word') : (isAutoSlot ? 'Next available slot' : 'No word for this date yet')}
             </p>
             {scheduledWord
               ? <p className={`font-black tracking-[0.25em] ${selectedIsToday ? 'text-green-700' : 'text-brand-navy'}`}>{scheduledWord}</p>
-              : <p className="text-xs text-blue-500">{isAutoSlot ? 'Add a word below' : '↓ inserting shifts later words +1 day'}</p>}
+              : <p className="text-xs text-blue-500">Add a word below</p>}
           </div>
 
           {/* Add word */}
@@ -9620,7 +9624,7 @@ function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
               />
               <button onClick={handleAdd} disabled={!inputValid || saving}
                 className="px-4 py-2.5 rounded-2xl bg-green-500 text-white font-bold text-sm active:scale-95 transition-all disabled:opacity-40">
-                {saving ? '…' : 'Add'}
+                {saving ? '…' : scheduledWord ? 'Replace' : 'Add'}
               </button>
             </div>
           </div>
@@ -9642,7 +9646,7 @@ function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
                 return (
                   <div key={i} className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl border ${isToday ? 'bg-green-50 border-green-200' : isPlayed ? 'bg-brand-navy/3 border-brand-navy/6' : 'bg-white border-brand-navy/8'}`}>
                     <span className="text-xs font-bold text-brand-navy/40 w-5 text-right shrink-0">{i + 1}</span>
-                    <span className={`flex-1 font-black tracking-[0.2em] text-sm ${isToday ? 'text-green-700' : isPlayed ? 'text-brand-navy/25 line-through' : 'text-brand-navy'}`}>{w}</span>
+                    <span className={`flex-1 font-black tracking-[0.2em] text-sm ${w ? (isToday ? 'text-green-700' : isPlayed ? 'text-brand-navy/25 line-through' : 'text-brand-navy') : 'text-amber-500 italic tracking-normal font-bold'}`}>{w || 'empty — needs a word'}</span>
                     {isToday
                       ? <span className="text-[10px] font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded-full shrink-0">Today</span>
                       : <span className={`text-[10px] shrink-0 ${isPlayed ? 'text-brand-navy/30' : 'text-brand-navy/60'}`}>{wordDateLabel}</span>
