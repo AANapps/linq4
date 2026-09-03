@@ -13228,6 +13228,18 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
     hasJoinedActiveProgramRef.current = myStickerCards.some(sc => activeProgrammeIds.has(sc.programme_id));
   }, [myStickerCards, activePrograms]);
 
+  // Shared onPackReady handler for every "just earned stickers" flow (Linqle, daily vote,
+  // spend/visit scans, ...). issueUserStickers ties new stickers to the user's active
+  // collectible sticker card (if any) — resolve that same card here so pendingPackCardId
+  // isn't blindly nulled out, which used to stop the pack's follow-up collection view
+  // from opening for anyone enrolled in an active collectible programme.
+  const handlePackReady = useCallback((stickers: CollectibleSticker[]) => {
+    const activeProgrammeIds = new Set(activePrograms.map(p => p.id));
+    const tiedCard = myStickerCards.find(sc => activeProgrammeIds.has(sc.programme_id));
+    setPendingPack(stickers);
+    setPendingPackCardId(tiedCard?.id ?? null);
+  }, [myStickerCards, activePrograms]);
+
   useEffect(() => {
     const activeCards = initialCards.filter(c => !c.isArchived);
     if (activeCards.length === 0) return;
@@ -13984,7 +13996,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           onViewStore={onViewStore}
           onViewChallenges={() => { setActiveTab('home'); setWalletSubTab('challenges'); }}
           onOpenLinqle={() => setViewingLinqle(true)}
-          onPackReady={(stickers) => { setPendingPack(stickers); setPendingPackCardId(null); }}
+          onPackReady={handlePackReady}
           onNavigate={(tab) => {
             if (tab === 'challenges') { setActiveTab('home'); setWalletSubTab('challenges'); }
             else setActiveTab(tab);
@@ -14018,7 +14030,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                   currentUser={user}
                   currentProfile={profile}
                   onClose={() => setViewingLinqle(false)}
-                  onPackReady={(stickers) => { setPendingPack(stickers); setPendingPackCardId(null); }}
+                  onPackReady={handlePackReady}
                 />
               </div>
             </motion.div>
@@ -14176,7 +14188,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                       return (
                         <div key={card.id} className="snap-center shrink-0 w-[83vw] max-w-[340px] flex flex-col rounded-[2rem] shadow-xl">
                           {card.card_type === 'membership'
-                            ? <MembershipCard card={card} store={store} onViewStore={onViewStore} onScan={handleNFCScan} onPackReady={(s) => { setPendingPack(s); setPendingPackCardId(null); }} userHandle={profile?.handle} />
+                            ? <MembershipCard card={card} store={store} onViewStore={onViewStore} onScan={handleNFCScan} onPackReady={handlePackReady} userHandle={profile?.handle} />
                             : card.card_type === 'sub'
                             ? <SubLoyaltyCard card={card} store={store} onViewStore={onViewStore} onScan={handleNFCScan} />
                             : <LoyaltyCard card={card} store={store} onViewStore={onViewStore} onScan={handleNFCScan} />}
@@ -14191,7 +14203,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                       return (
                         <div key={card.id} className="rounded-3xl shadow-xl overflow-hidden">
                           {card.card_type === 'membership'
-                            ? <MembershipCard card={card} store={store} onViewStore={onViewStore} compact onScan={handleNFCScan} onPackReady={(s) => { setPendingPack(s); setPendingPackCardId(null); }} userHandle={profile?.handle} />
+                            ? <MembershipCard card={card} store={store} onViewStore={onViewStore} compact onScan={handleNFCScan} onPackReady={handlePackReady} userHandle={profile?.handle} />
                             : card.card_type === 'sub'
                             ? <SubLoyaltyCard card={card} store={store} onViewStore={onViewStore} compact onScan={handleNFCScan} />
                             : <LoyaltyCard card={card} store={store} onViewStore={onViewStore} compact onScan={handleNFCScan} />}
