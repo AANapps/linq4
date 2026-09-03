@@ -2558,6 +2558,7 @@ export default function App() {
               profile={profile}
               onViewUser={handleViewUser}
               blockedUids={blockedUids}
+              uiColors={uiColors}
               onMessage={(chatId) => {
                 setActiveChatId(chatId);
                 setActiveTab('messages');
@@ -29285,7 +29286,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
               </button>
               <span className="text-xs font-bold text-brand-navy/40 uppercase tracking-widest">Preview — customer view</span>
             </div>
-            <StoreProfileView store={vendorStore} onBack={() => setShowStorePreview(false)} user={user} profile={profile} onViewUser={() => {}} isPreview />
+            <StoreProfileView store={vendorStore} onBack={() => setShowStorePreview(false)} user={user} profile={profile} onViewUser={() => {}} uiColors={uiColors} isPreview />
           </div>
         </div>
       );
@@ -36009,7 +36010,8 @@ function ProfileCardRow({ store, card, membershipCard, userId, onJoinLoyalty, on
   );
 }
 
-function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser, onMessage, isPreview, onRequireAuth, blockedUids }: { store: StoreProfile, onBack: () => void, user?: FirebaseUser, profile: UserProfile | null, onViewUser: (u: UserProfile) => void, onMessage?: (chatId: string) => void, isPreview?: boolean, onRequireAuth?: () => void, blockedUids?: Set<string>, key?: React.Key }) {
+function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser, onMessage, isPreview, onRequireAuth, blockedUids, uiColors: uiColorsProp }: { store: StoreProfile, onBack: () => void, user?: FirebaseUser, profile: UserProfile | null, onViewUser: (u: UserProfile) => void, onMessage?: (chatId: string) => void, isPreview?: boolean, onRequireAuth?: () => void, blockedUids?: Set<string>, uiColors?: UiColors, key?: React.Key }) {
+  const uiColors = uiColorsProp ?? UI_COLOR_DEFAULTS;
   const [posts, setPosts] = useState<Post[]>([]);
   const [vendorGlobalPosts, setVendorGlobalPosts] = useState<GlobalPost[]>([]);
   const [storeReviews, setStoreReviews] = useState<any[]>([]);
@@ -36544,18 +36546,21 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
         </div>
       </div>
 
-      {/* Stats strip */}
+      {/* Stats strip — circular stat badges, matching the profile screens */}
       <div className="pt-10">
         {!isOwnStore && (
-          <div className="flex items-center divide-x divide-brand-navy/10">
+          <div className="grid grid-cols-4 gap-2">
             {[
-              { val: statsMembers,       label: 'Members'          },
-              { val: fmtK(storeFollowerCount), label: 'Followers'  },
-              { val: statsMiddle.val,    label: statsMiddle.label  },
-              { val: statsRewards.val,   label: statsRewards.label },
+              { val: statsMembers,             label: 'Members',           icon: '👥' },
+              { val: fmtK(storeFollowerCount),  label: 'Followers',         icon: '❤️' },
+              { val: statsMiddle.val,           label: statsMiddle.label,  icon: statsMiddle.label === 'Stamps' ? '🎟️' : '⭐' },
+              { val: statsRewards.val,          label: statsRewards.label, icon: statsRewards.label === 'Pts Redeemed' ? '✅' : '🎁' },
             ].map(s => (
-              <div key={s.label} className="flex-1 flex flex-col items-center gap-0.5 py-2">
-                <p className="font-black text-base leading-none text-brand-navy">{s.val}</p>
+              <div key={s.label} className="flex flex-col items-center gap-1.5">
+                <div className="relative w-14 h-14 rounded-full flex items-center justify-center shadow-md shrink-0" style={{ background: uiColors.profileStatsTile.css }}>
+                  <span className="font-display font-black text-base leading-none text-white" style={tileTextStyle(uiColors.profileStatsTile)}>{s.val}</span>
+                  <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white border border-black/5 shadow-sm flex items-center justify-center text-[10px] leading-none">{s.icon}</span>
+                </div>
                 <p className="text-[9px] font-bold uppercase tracking-wider text-brand-navy/50">{s.label}</p>
               </div>
             ))}
