@@ -4218,6 +4218,46 @@ function CollectorTierSheet({ stamps, onClose }: { stamps: number; onClose: () =
   );
 }
 
+// Inline tier-progress bar for profile headers — fills from 0 on every mount (i.e. every
+// time the profile screen is opened), mirroring CollectorTierSheet's bar but shown inline
+// instead of behind a tap.
+function TierProgressBar({ stamps, onClick }: { stamps: number; onClick?: () => void }) {
+  const { tier, progress, isMax } = getCollectorTier(stamps);
+  const Icon = tier.icon;
+  const toNext = isMax ? 0 : tier.max - stamps;
+  const Wrapper = onClick ? motion.button : motion.div;
+  return (
+    <Wrapper
+      onClick={onClick}
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className={cn("w-full rounded-2xl bg-white border border-brand-navy/8 p-3.5 space-y-2 text-left", onClick && "active:scale-[0.98] transition-transform")}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="w-6 h-6 rounded-full flex items-center justify-center shrink-0" style={{ background: tier.color }}>
+            <Icon size={12} className="text-white" />
+          </span>
+          <span className="font-bold text-sm text-brand-navy truncate">{tier.name} Collector</span>
+        </div>
+        <span className="text-[10px] font-bold text-brand-navy/50 uppercase tracking-wide shrink-0">
+          {isMax ? 'Max tier' : `${toNext.toLocaleString()} to next`}
+        </span>
+      </div>
+      <div className="h-2 rounded-full overflow-hidden bg-brand-navy/8">
+        <motion.div
+          className="h-full rounded-full"
+          style={{ background: tier.color }}
+          initial={{ width: 0 }}
+          animate={{ width: `${progress * 100}%` }}
+          transition={{ duration: 0.9, ease: 'easeOut', delay: 0.15 }}
+        />
+      </div>
+    </Wrapper>
+  );
+}
+
 function StreakBadge({ streak, size = 'sm' }: { streak?: number; size?: 'sm' | 'lg' }) {
   if (!streak || streak <= 0) return null;
   return (
@@ -29371,8 +29411,10 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           </div>
         </div>
 
-        <p className="text-[8px] text-brand-navy/75 font-bold uppercase tracking-wider mt-2">{getCollectorTier(lifetimeStamps).tier.name} · tap avatar to customise</p>
+        <p className="text-[8px] text-brand-navy/75 font-bold uppercase tracking-wider mt-2">Tap avatar to customise</p>
       </header>
+
+      <TierProgressBar stamps={lifetimeStamps} onClick={() => setShowCollectorTier(true)} />
 
       {!profile.birthday && (
         <button
@@ -37956,6 +37998,10 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
           </div>
         </div>
       </header>
+
+      {targetUser.role !== 'vendor' && (
+        <TierProgressBar stamps={publicUserStamps} onClick={() => setShowCollectorTier(true)} />
+      )}
 
       {/* Stamps / Cards / Rewards / Challenges — circular stat badges */}
       <div className="grid grid-cols-4 gap-2">
