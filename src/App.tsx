@@ -2406,14 +2406,19 @@ export default function App() {
           <Plus className="w-5 h-5 text-white" />
         </button>
         <button onClick={() => setShowSettings(true)} className="absolute left-1/2 -translate-x-1/2 hover:opacity-80 transition-opacity">
-          <svg width="56" height="34" viewBox="0 0 56 34" aria-label="Linq" style={{ userSelect: 'none', display: 'block', overflow: 'visible' }}>
+          <svg width="62" height="34" viewBox="-30 -859 2265 1249" aria-label="Linq" style={{ userSelect: 'none', display: 'block', overflow: 'visible' }}>
+            {/* Static "Linq" wordmark traced from Poppins Black Italic, with the q's descender
+                lengthened — the live font glyph's stock terminal is a stubby flat cut that reads
+                as clipped at small sizes. Baked as a path (not live <text>) so it renders
+                identically everywhere regardless of font-loading/engine quirks. */}
             <defs>
-              <linearGradient id="hdrLinqGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#60a5fa" />
-                <stop offset="100%" stopColor="#a855f7" />
+              <linearGradient id="hdrLinqGrad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="2205" y2="0">
+                <stop offset="0%" stopColor="#0473cd" />
+                <stop offset="50%" stopColor="#3c43d7" />
+                <stop offset="100%" stopColor="#7312e1" />
               </linearGradient>
             </defs>
-            <text x="2" y="24" fontFamily="Poppins, sans-serif" fontWeight="900" fontStyle="italic" fontSize="26" fill="url(#hdrLinqGrad)">Linq</text>
+            <path fill="url(#hdrLinqGrad)" d="M252 -168H466L436 0H0L125 -708H347Z M615 -699Q615 -734 634 -764Q653 -794 688 -812Q722 -829 764 -829Q815 -829 844 -804Q874 -778 874 -737Q874 -702 855 -673Q836 -644 802 -626Q768 -609 726 -609Q674 -609 644 -634Q615 -659 615 -699ZM828 -564 728 0H506L606 -564Z M1493 -390Q1493 -360 1487 -327L1429 0H1208L1261 -299Q1263 -315 1263 -321Q1263 -352 1246 -369Q1228 -386 1197 -386Q1161 -386 1136 -363Q1111 -340 1103 -300L1050 0H828L928 -564H1150L1135 -479Q1168 -519 1216 -544Q1264 -568 1323 -568Q1405 -568 1449 -520Q1493 -473 1493 -390Z M1844 -568Q1889 -568 1921 -556Q1953 -543 1975 -514L1984 -564H2205L2042 360H1821L1895 -62Q1858 -27 1822 -10Q1786 6 1743 6Q1685 6 1638 -22Q1592 -49 1565 -100Q1538 -150 1538 -217Q1538 -247 1544 -278Q1559 -361 1604 -427Q1650 -493 1714 -530Q1778 -568 1844 -568ZM1936 -306Q1936 -342 1916 -359Q1895 -376 1869 -376Q1839 -376 1808 -352Q1778 -327 1769 -278Q1767 -262 1767 -256Q1767 -219 1788 -203Q1808 -187 1835 -187Q1866 -187 1896 -210Q1925 -233 1934 -282Q1936 -291 1936 -306Z" />
           </svg>
         </button>
         <div className="flex items-center gap-0.5">
