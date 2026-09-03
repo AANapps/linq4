@@ -29155,10 +29155,6 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
             <p className="text-brand-gold font-bold text-xs uppercase tracking-[0.2em] truncate">@{profile.handle || user.email?.split('@')[0]}</p>
 
             <div className="flex items-center gap-4 mt-2 flex-wrap">
-              <button onClick={() => setActiveSubTab('posts')} className="flex items-baseline gap-1 active:opacity-60 transition-opacity">
-                <span className="font-display text-sm font-black">{fmtK(myGlobalPosts.length)}</span>
-                <span className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-wide">Posts</span>
-              </button>
               <button onClick={() => { setFollowModalTab('followers'); setShowFollowModal(true); }} className="flex items-baseline gap-1 active:opacity-60 transition-opacity">
                 <span className="font-display text-sm font-black">{fmtK(followers.length)}</span>
                 <span className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-wide">Followers</span>
