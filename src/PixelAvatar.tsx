@@ -224,6 +224,7 @@ export function PixelAvatar({
       viewBox={vb}
       width={size}
       height={h}
+      preserveAspectRatio="xMidYMid slice"
       style={{ imageRendering: 'pixelated', display: 'block' }}
       className={className}
       xmlns="http://www.w3.org/2000/svg"

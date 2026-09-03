@@ -29126,9 +29126,9 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
           <Settings size={18} className="text-brand-navy/75" />
         </button>
 
-        <div className="flex items-start gap-4">
-          {/* Photo — top left */}
-          <div className="flex flex-col items-center shrink-0">
+        {/* Avatar + Posts/Followers/Following stat row — Instagram-style */}
+        <div className="flex items-center gap-4 pr-11">
+          <div className="shrink-0">
             <CollectorRing stamps={lifetimeStamps} onClick={() => setShowCollectorTier(true)}>
               <button
                 onClick={(e) => {
@@ -29145,30 +29145,32 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                 <PixelAvatar config={profile.avatar} uid={profile.uid} size={64} view="head" />
               </button>
             </CollectorRing>
-            <div className="flex items-center gap-1 mt-1.5">
-              <p className="text-[8px] text-brand-navy/75 font-bold uppercase tracking-wider">{getCollectorTier(lifetimeStamps).tier.name} · tap to customise</p>
-            </div>
           </div>
 
-          {/* Name, handle, followers — right of photo */}
-          <div className="flex-1 min-w-0 pt-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="font-display text-2xl font-bold">{profile.name}</h2>
-              <StreakBadge streak={profile.streak} size="lg" />
-            </div>
-            <p className="text-brand-gold font-bold text-xs uppercase tracking-[0.2em]">@{profile.handle || user.email?.split('@')[0]}</p>
-            <div className="flex items-center gap-3 mt-2 text-sm">
-              <button onClick={() => { setFollowModalTab('following'); setShowFollowModal(true); }} className="flex items-center gap-1 font-bold hover:text-brand-gold transition-colors">
-                <span>{following.length}</span>
-                <span className="text-brand-navy/75 font-normal">Following</span>
-              </button>
-              <span className="text-brand-navy/32">•</span>
-              <button onClick={() => { setFollowModalTab('followers'); setShowFollowModal(true); }} className="flex items-center gap-1 font-bold hover:text-brand-gold transition-colors">
-                <span>{followers.length}</span>
-                <span className="text-brand-navy/75 font-normal">Followers</span>
-              </button>
-            </div>
+          <div className="flex-1 flex items-center justify-around min-w-0">
+            <button onClick={() => setActiveSubTab('posts')} className="flex flex-col items-center gap-0.5 px-1 min-w-0 active:opacity-60 transition-opacity">
+              <span className="font-display text-lg font-black leading-none">{fmtK(myGlobalPosts.length)}</span>
+              <span className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-wide">Posts</span>
+            </button>
+            <button onClick={() => { setFollowModalTab('followers'); setShowFollowModal(true); }} className="flex flex-col items-center gap-0.5 px-1 min-w-0 active:opacity-60 transition-opacity">
+              <span className="font-display text-lg font-black leading-none">{fmtK(followers.length)}</span>
+              <span className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-wide">Followers</span>
+            </button>
+            <button onClick={() => { setFollowModalTab('following'); setShowFollowModal(true); }} className="flex flex-col items-center gap-0.5 px-1 min-w-0 active:opacity-60 transition-opacity">
+              <span className="font-display text-lg font-black leading-none">{fmtK(following.length)}</span>
+              <span className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-wide">Following</span>
+            </button>
           </div>
+        </div>
+
+        {/* Name, handle, tier — full width below */}
+        <div className="mt-3 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h2 className="font-display text-xl font-bold truncate">{profile.name}</h2>
+            <StreakBadge streak={profile.streak} size="lg" />
+          </div>
+          <p className="text-brand-gold font-bold text-xs uppercase tracking-[0.2em] truncate">@{profile.handle || user.email?.split('@')[0]}</p>
+          <p className="text-[8px] text-brand-navy/75 font-bold uppercase tracking-wider mt-1">{getCollectorTier(lifetimeStamps).tier.name} · tap avatar to customise</p>
         </div>
       </header>
 
