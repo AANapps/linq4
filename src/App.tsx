@@ -319,7 +319,9 @@ import {
   Copy,
   Check,
   Pause,
-  Play
+  Play,
+  Gem,
+  Shield
 } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
@@ -1486,6 +1488,23 @@ export default function App() {
     }).catch(() => {});
   }, [user]);
 
+  const [collectorTierConfig, setCollectorTierConfig] = useState<CollectorTiersConfig>(DEFAULT_COLLECTOR_TIERS_CONFIG);
+  useEffect(() => {
+    if (!user) return;
+    getDoc(doc(db, 'app_config', 'collector_tiers')).then(snap => {
+      if (!snap.exists()) return;
+      const data = snap.data() as Partial<CollectorTiersConfig>;
+      if (!data.tiers?.length) return;
+      setCollectorTierConfig({
+        tiers: data.tiers,
+        metrics: DEFAULT_COLLECTOR_TIERS_CONFIG.metrics.map(def => {
+          const saved = data.metrics?.find(m => m.key === def.key);
+          return saved ? { ...def, ...saved } : def;
+        }),
+      });
+    }).catch(() => {});
+  }, [user]);
+
   // If the target user is a vendor, go straight to their store instead of their user profile
   const handleViewUser = async (targetUser: UserProfile) => {
     if (targetUser.role === 'vendor') {
@@ -1507,7 +1526,7 @@ export default function App() {
   const [scannedPhysicalCard, setScannedPhysicalCard] = useState<{ sticker: CollectibleSticker; alreadyClaimed: boolean } | null>(null);
   const [userCards, setUserCards] = useState<Card[]>([]);
   const [showSettings, setShowSettings] = useState(false);
-  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges' | 'stores' | 'users' | 'posts' | 'offers' | 'linqle' | 'daily-vote' | 'cards' | 'banners' | 'ui-colors' | 'announcements' | 'leaderboard' | 'fraud' | 'physical-cards' | 'stats'>(null);
+  const [adminView, setAdminView] = useState<null | 'menu' | 'challenges' | 'badges' | 'stores' | 'users' | 'posts' | 'offers' | 'linqle' | 'daily-vote' | 'cards' | 'banners' | 'ui-colors' | 'announcements' | 'leaderboard' | 'fraud' | 'physical-cards' | 'stats' | 'collector-tiers'>(null);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -2553,6 +2572,7 @@ export default function App() {
               currentUser={user}
               currentProfile={profile}
               uiColors={uiColors}
+              collectorTierConfig={collectorTierConfig}
               onViewUser={(u) => { setViewingUser(null); handleViewUser(u); }}
               onMessage={(chatId) => {
                 setActiveChatId(chatId);
@@ -2584,6 +2604,7 @@ export default function App() {
               pendingNFCStoreId={pendingNFCStoreId}
               onClearPendingNFC={() => setPendingNFCStoreId(null)}
               uiColors={uiColors}
+              collectorTierConfig={collectorTierConfig}
             />
             </AppErrorBoundary>
           ) : (
@@ -2651,6 +2672,7 @@ export default function App() {
             onOpenLeaderboard={() => setAdminView('leaderboard')}
             onOpenFraud={() => setAdminView('fraud')}
             onOpenStats={() => setAdminView('stats')}
+            onOpenCollectorTiers={() => setAdminView('collector-tiers')}
           />
         )}
         {adminView === 'stats' && (
@@ -2693,6 +2715,13 @@ export default function App() {
           <UiColorsAdmin
             uiColors={uiColors}
             onColorsChange={setUiColors}
+            onClose={() => setAdminView('menu')}
+          />
+        )}
+        {adminView === 'collector-tiers' && (
+          <CollectorTiersAdminPanel
+            config={collectorTierConfig}
+            onConfigChange={setCollectorTierConfig}
             onClose={() => setAdminView('menu')}
           />
         )}
@@ -4130,27 +4159,93 @@ async function bumpStreak(uid: string): Promise<number> {
   }
 }
 
-const COLLECTOR_TIERS: { name: string; min: number; max: number; color: string; icon: React.ElementType }[] = [
-  { name: 'Newcomer', min: 0,   max: 25,       color: '#94a3b8', icon: Star },
-  { name: 'Bronze',   min: 25,  max: 100,      color: '#cd7f32', icon: Medal },
-  { name: 'Silver',   min: 100, max: 300,      color: '#9ca3af', icon: Award },
-  { name: 'Gold',     min: 300, max: 700,      color: '#eab308', icon: Trophy },
-  { name: 'Platinum', min: 700, max: Infinity, color: '#a78bfa', icon: Crown },
+// ─── Collector tiers — admin-configurable tier ladder + what earns points ──────
+interface CollectorTierDef { id: string; name: string; min: number; color: string; icon: string; }
+type CollectorMetricKey = 'stamps' | 'visits' | 'linqleWins' | 'pollWins' | 'challengesWon' | 'redeemed';
+interface CollectorMetricConfig { key: CollectorMetricKey; weight: number; enabled: boolean; }
+interface CollectorTiersConfig { tiers: CollectorTierDef[]; metrics: CollectorMetricConfig[]; }
+
+const COLLECTOR_METRIC_DEFS: { key: CollectorMetricKey; label: string; desc: string }[] = [
+  { key: 'stamps',        label: 'Stamps',            desc: 'Lifetime stamps collected across all cards' },
+  { key: 'visits',        label: 'Visits',             desc: 'Lifetime membership visits' },
+  { key: 'linqleWins',    label: 'Linqle Wins',        desc: 'Daily word game wins' },
+  { key: 'pollWins',      label: 'Correct Poll Votes', desc: 'Correctly-guessed daily polls' },
+  { key: 'challengesWon', label: 'Challenges Won',     desc: 'Completed challenges' },
+  { key: 'redeemed',      label: 'Rewards Redeemed',   desc: 'Stamp cards redeemed for a reward' },
 ];
 
-function getCollectorTier(stamps: number) {
-  const tier = COLLECTOR_TIERS.find(t => stamps < t.max) ?? COLLECTOR_TIERS[COLLECTOR_TIERS.length - 1];
-  const isMax = tier.max === Infinity;
-  const progress = isMax ? 1 : Math.min(1, Math.max(0, (stamps - tier.min) / (tier.max - tier.min)));
-  return { tier, progress, isMax };
+const TIER_ICON_OPTIONS: { id: string; icon: React.ElementType }[] = [
+  { id: 'star', icon: Star }, { id: 'medal', icon: Medal }, { id: 'award', icon: Award },
+  { id: 'trophy', icon: Trophy }, { id: 'crown', icon: Crown }, { id: 'gem', icon: Gem },
+  { id: 'flame', icon: Flame }, { id: 'zap', icon: Zap }, { id: 'shield', icon: Shield },
+];
+function tierIconFor(id: string): React.ElementType {
+  return TIER_ICON_OPTIONS.find(o => o.id === id)?.icon ?? Star;
 }
 
-function CollectorRing({ stamps, size = 88, onClick, children }: { stamps: number; size?: number; onClick?: () => void; children?: React.ReactNode }) {
-  const { tier, progress } = getCollectorTier(stamps);
+const DEFAULT_COLLECTOR_TIERS_CONFIG: CollectorTiersConfig = {
+  tiers: [
+    { id: 'newcomer', name: 'Newcomer', min: 0,   color: '#94a3b8', icon: 'star' },
+    { id: 'bronze',   name: 'Bronze',   min: 25,  color: '#cd7f32', icon: 'medal' },
+    { id: 'silver',   name: 'Silver',   min: 100, color: '#9ca3af', icon: 'award' },
+    { id: 'gold',     name: 'Gold',     min: 300, color: '#eab308', icon: 'trophy' },
+    { id: 'platinum', name: 'Platinum', min: 700, color: '#a78bfa', icon: 'crown' },
+  ],
+  metrics: [
+    { key: 'stamps',        weight: 1, enabled: true },
+    { key: 'visits',        weight: 0, enabled: false },
+    { key: 'linqleWins',    weight: 0, enabled: false },
+    { key: 'pollWins',      weight: 0, enabled: false },
+    { key: 'challengesWon', weight: 0, enabled: false },
+    { key: 'redeemed',      weight: 0, enabled: false },
+  ],
+};
+
+function getCollectorMetricValue(key: CollectorMetricKey, profile: UserProfile | null | undefined, cards: Card[]): number {
+  switch (key) {
+    case 'stamps':
+      return Math.max(
+        profile?.totalStamps || 0,
+        cards.reduce((sum, c) => sum + (c.current_stamps || 0) + (c.total_completed_cycles || 0) * (c.stamps_required || 10), 0)
+      );
+    case 'visits':
+      return cards.reduce((sum, c) => sum + (c.total_visits || 0), 0);
+    case 'linqleWins':
+      return profile?.linqleTotalWins || 0;
+    case 'pollWins':
+      return profile?.correctPolls || 0;
+    case 'challengesWon':
+      return profile?.challengesWon || 0;
+    case 'redeemed':
+      return profile?.totalRedeemed || 0;
+    default:
+      return 0;
+  }
+}
+
+// Weighted sum of every enabled metric — this is what a user's tier is based on. With the
+// default config (only "stamps" enabled at weight 1) this is identical to lifetime stamps.
+function computeCollectorScore(config: CollectorTiersConfig, profile: UserProfile | null | undefined, cards: Card[]): number {
+  return config.metrics
+    .filter(m => m.enabled && m.weight)
+    .reduce((sum, m) => sum + getCollectorMetricValue(m.key, profile, cards) * m.weight, 0);
+}
+
+function getCollectorTier(score: number, tiersInput?: CollectorTierDef[]) {
+  const tiers = tiersInput && tiersInput.length > 0 ? tiersInput : DEFAULT_COLLECTOR_TIERS_CONFIG.tiers;
+  const sorted = [...tiers].sort((a, b) => a.min - b.min);
+  const withMax = sorted.map((t, i) => ({ ...t, max: i < sorted.length - 1 ? sorted[i + 1].min : Infinity }));
+  const tier = [...withMax].reverse().find(t => score >= t.min) ?? withMax[0];
+  const isMax = tier.max === Infinity;
+  const progress = isMax ? 1 : Math.min(1, Math.max(0, (score - tier.min) / (tier.max - tier.min)));
+  return { tier, progress, isMax, icon: tierIconFor(tier.icon) };
+}
+
+function CollectorRing({ stamps, size = 88, onClick, children, tiers }: { stamps: number; size?: number; onClick?: () => void; children?: React.ReactNode; tiers?: CollectorTierDef[] }) {
+  const { tier, progress, icon: Icon } = getCollectorTier(stamps, tiers);
   const stroke = 3;
   const r = (size - stroke) / 2;
   const circumference = 2 * Math.PI * r;
-  const Icon = tier.icon;
   return (
     <button onClick={onClick} className="relative shrink-0 active:scale-95 transition-transform" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="absolute inset-0 -rotate-90">
@@ -4176,9 +4271,8 @@ function CollectorRing({ stamps, size = 88, onClick, children }: { stamps: numbe
   );
 }
 
-function CollectorTierSheet({ stamps, onClose }: { stamps: number; onClose: () => void }) {
-  const { tier, progress, isMax } = getCollectorTier(stamps);
-  const Icon = tier.icon;
+function CollectorTierSheet({ stamps, onClose, tiers }: { stamps: number; onClose: () => void; tiers?: CollectorTierDef[] }) {
+  const { tier, progress, isMax, icon: Icon } = getCollectorTier(stamps, tiers);
   const toNext = isMax ? 0 : tier.max - stamps;
   return (
     <motion.div
@@ -4198,7 +4292,7 @@ function CollectorTierSheet({ stamps, onClose }: { stamps: number; onClose: () =
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-bold text-brand-navy text-lg leading-tight">{tier.name} Collector</p>
-            <p className="text-xs text-brand-navy/80 mt-1">{stamps.toLocaleString()} lifetime stamps</p>
+            <p className="text-xs text-brand-navy/80 mt-1">{stamps.toLocaleString()} point{stamps === 1 ? '' : 's'}</p>
           </div>
         </div>
         {!isMax && (
@@ -4208,7 +4302,7 @@ function CollectorTierSheet({ stamps, onClose }: { stamps: number; onClose: () =
                 initial={{ width: 0 }} animate={{ width: `${progress * 100}%` }}
                 transition={{ duration: 0.6, ease: 'easeOut' }} />
             </div>
-            <p className="text-xs text-brand-navy/70 mt-2">{toNext.toLocaleString()} more stamp{toNext === 1 ? '' : 's'} to reach the next tier</p>
+            <p className="text-xs text-brand-navy/70 mt-2">{toNext.toLocaleString()} more point{toNext === 1 ? '' : 's'} to reach the next tier</p>
           </div>
         )}
         {isMax && <p className="text-sm text-brand-navy/70">You've reached the highest collector tier — legendary stamping! 🏆</p>}
@@ -4221,9 +4315,8 @@ function CollectorTierSheet({ stamps, onClose }: { stamps: number; onClose: () =
 // Inline tier-progress bar for profile headers — fills from 0 on every mount (i.e. every
 // time the profile screen is opened), mirroring CollectorTierSheet's bar but shown inline
 // instead of behind a tap.
-function TierProgressBar({ stamps, onClick }: { stamps: number; onClick?: () => void }) {
-  const { tier, progress, isMax } = getCollectorTier(stamps);
-  const Icon = tier.icon;
+function TierProgressBar({ stamps, onClick, tiers }: { stamps: number; onClick?: () => void; tiers?: CollectorTierDef[] }) {
+  const { tier, progress, isMax, icon: Icon } = getCollectorTier(stamps, tiers);
   const toNext = isMax ? 0 : tier.max - stamps;
   const Wrapper = onClick ? motion.button : motion.div;
   return (
@@ -7942,7 +8035,7 @@ function AdminStatsPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
-function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts, onOpenOffers, onOpenLinqle, onOpenDailyVote, onOpenCards, onOpenPhysicalCards, onOpenBanners, onOpenUiColors, onOpenAppEdit, onOpenAnnouncements, onOpenLeaderboard, onOpenFraud, onOpenStats }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void; onOpenOffers: () => void; onOpenLinqle: () => void; onOpenDailyVote: () => void; onOpenCards: () => void; onOpenPhysicalCards: () => void; onOpenBanners: () => void; onOpenUiColors: () => void; onOpenAppEdit: () => void; onOpenAnnouncements: () => void; onOpenLeaderboard: () => void; onOpenFraud: () => void; onOpenStats: () => void }) {
+function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores, onOpenUsers, onOpenPosts, onOpenOffers, onOpenLinqle, onOpenDailyVote, onOpenCards, onOpenPhysicalCards, onOpenBanners, onOpenUiColors, onOpenAppEdit, onOpenAnnouncements, onOpenLeaderboard, onOpenFraud, onOpenStats, onOpenCollectorTiers }: { onClose: () => void; onOpenChallenges: () => void; onOpenBadges: () => void; onOpenStores: () => void; onOpenUsers: () => void; onOpenPosts: () => void; onOpenOffers: () => void; onOpenLinqle: () => void; onOpenDailyVote: () => void; onOpenCards: () => void; onOpenPhysicalCards: () => void; onOpenBanners: () => void; onOpenUiColors: () => void; onOpenAppEdit: () => void; onOpenAnnouncements: () => void; onOpenLeaderboard: () => void; onOpenFraud: () => void; onOpenStats: () => void; onOpenCollectorTiers: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -8197,6 +8290,20 @@ function AdminMenuModal({ onClose, onOpenChallenges, onOpenBadges, onOpenStores,
             <div>
               <p className="font-bold text-brand-navy text-sm">Stats Ticker</p>
               <p className="text-[11px] text-brand-navy/75 mt-0.5">Boost displayed daily stats</p>
+            </div>
+          </motion.button>
+
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={onOpenCollectorTiers}
+            className="rounded-[2rem] bg-white border border-black/5 shadow-sm p-6 flex flex-col items-start gap-3 text-left active:bg-brand-navy/5 transition-colors"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-violet-100 flex items-center justify-center">
+              <Crown size={22} className="text-violet-500" />
+            </div>
+            <div>
+              <p className="font-bold text-brand-navy text-sm">Collector Tiers</p>
+              <p className="text-[11px] text-brand-navy/75 mt-0.5">Tier names/colours & what earns points</p>
             </div>
           </motion.button>
 
@@ -8585,6 +8692,178 @@ function UiColorsAdmin({ uiColors, onColorsChange, onClose }: { uiColors: UiColo
         )}
         <button
           onClick={saveAll}
+          disabled={saving || !isDirty}
+          className="w-full gradient-red text-white font-bold py-4 rounded-2xl active:scale-[0.98] transition-all disabled:opacity-40 text-sm tracking-wide"
+        >
+          {saving ? 'Saving…' : isDirty ? 'Save Changes' : 'Saved'}
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
+function CollectorTiersAdminPanel({ config, onConfigChange, onClose }: { config: CollectorTiersConfig; onConfigChange: (c: CollectorTiersConfig) => void; onClose: () => void }) {
+  const [tiers, setTiers] = useState<CollectorTierDef[]>(config.tiers);
+  const [metrics, setMetrics] = useState<CollectorMetricConfig[]>(config.metrics);
+  const [saving, setSaving] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+  const [saveError, setSaveError] = useState('');
+
+  const updateTier = (id: string, patch: Partial<CollectorTierDef>) => {
+    setTiers(prev => prev.map(t => t.id === id ? { ...t, ...patch } : t));
+    setIsDirty(true);
+  };
+  const addTier = () => {
+    const lastMin = tiers.length > 0 ? Math.max(...tiers.map(t => t.min)) : 0;
+    setTiers(prev => [...prev, { id: `tier-${Date.now()}`, name: 'New Tier', min: lastMin + 100, color: '#64748b', icon: 'star' }]);
+    setIsDirty(true);
+  };
+  const removeTier = (id: string) => {
+    if (tiers.length <= 1) return;
+    setTiers(prev => prev.filter(t => t.id !== id));
+    setIsDirty(true);
+  };
+  const updateMetric = (key: CollectorMetricKey, patch: Partial<CollectorMetricConfig>) => {
+    setMetrics(prev => prev.map(m => m.key === key ? { ...m, ...patch } : m));
+    setIsDirty(true);
+  };
+
+  const sortedTiers = [...tiers].sort((a, b) => a.min - b.min);
+
+  const save = async () => {
+    setSaving(true);
+    setSaveError('');
+    try {
+      const payload = { tiers: sortedTiers, metrics };
+      await setDoc(doc(db, 'app_config', 'collector_tiers'), payload, { merge: true });
+      onConfigChange(payload);
+      setIsDirty(false);
+    } catch (err: any) {
+      console.error('CollectorTiers save failed:', err);
+      setSaveError(err?.message || 'Save failed — check connection');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex flex-col max-w-md mx-auto">
+      <div className="flex-1 overflow-y-auto bg-brand-bg">
+        <div className="sticky top-0 bg-brand-bg/95 backdrop-blur-sm safe-top px-5 pb-4 border-b border-black/5 z-10">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-display text-2xl font-bold text-brand-navy">Collector Tiers</h2>
+              <p className="text-xs text-brand-navy/80 mt-0.5">Tier ladder & what earns points</p>
+            </div>
+            <button onClick={onClose} className="p-2 rounded-2xl bg-white border border-black/5 shadow-sm active:scale-95 transition-all">
+              <X size={18} className="text-brand-navy/75" />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-5 space-y-7 pb-4">
+          {/* Tiers */}
+          <div className="space-y-3">
+            <div>
+              <p className="font-bold text-brand-navy text-sm">Tiers</p>
+              <p className="text-[11px] text-brand-navy/60">Sorted automatically by points needed — the lowest tier always starts at 0</p>
+            </div>
+            <div className="space-y-3">
+              {sortedTiers.map((t, i) => (
+                <div key={t.id} className="bg-white rounded-2xl border border-black/5 p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: t.color }}>
+                      {React.createElement(tierIconFor(t.icon), { size: 16, className: 'text-white' })}
+                    </span>
+                    <input
+                      value={t.name}
+                      onChange={e => updateTier(t.id, { name: e.target.value })}
+                      className="flex-1 min-w-0 font-bold text-sm text-brand-navy bg-transparent outline-none border-b border-transparent focus:border-brand-navy/20"
+                    />
+                    {tiers.length > 1 && (
+                      <button onClick={() => removeTier(t.id)} className="p-1.5 rounded-lg text-brand-navy/30 hover:text-rose-500 transition-colors shrink-0">
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold text-brand-navy/40 uppercase tracking-wider mb-1">Points needed</p>
+                    <input
+                      type="number"
+                      value={t.min}
+                      disabled={i === 0}
+                      onChange={e => updateTier(t.id, { min: Math.max(0, parseInt(e.target.value, 10) || 0) })}
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-brand-bg border border-black/10 text-xs font-bold disabled:opacity-50"
+                    />
+                  </div>
+                  <div className="flex gap-1.5">
+                    {TIER_ICON_OPTIONS.map(opt => {
+                      const OptIcon = opt.icon;
+                      const active = t.icon === opt.id;
+                      return (
+                        <button key={opt.id} onClick={() => updateTier(t.id, { icon: opt.id })}
+                          className={cn('w-7 h-7 rounded-lg flex items-center justify-center border-2 transition-all', active ? 'border-brand-navy/60 bg-brand-navy/5' : 'border-transparent bg-brand-bg')}>
+                          <OptIcon size={13} className="text-brand-navy/70" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <ColorSwatchPicker value={t.color} onChange={color => updateTier(t.id, { color })} label="Tap to pick tier colour" />
+                </div>
+              ))}
+            </div>
+            <button onClick={addTier} className="w-full py-3 rounded-2xl border-2 border-dashed border-brand-navy/15 text-brand-navy/50 font-bold text-xs active:scale-[0.98] transition-all">
+              + Add tier
+            </button>
+          </div>
+
+          <div className="border-t border-brand-navy/8" />
+
+          {/* Metrics */}
+          <div className="space-y-3">
+            <div>
+              <p className="font-bold text-brand-navy text-sm">What earns points</p>
+              <p className="text-[11px] text-brand-navy/60">Each enabled metric adds (its value × weight) to a user's score — a user's tier is based on that total, not raw stamps</p>
+            </div>
+            <div className="space-y-2">
+              {COLLECTOR_METRIC_DEFS.map(def => {
+                const m = metrics.find(x => x.key === def.key)!;
+                return (
+                  <div key={def.key} className="bg-white rounded-2xl border border-black/5 p-3.5 flex items-center gap-3">
+                    <button
+                      onClick={() => updateMetric(def.key, { enabled: !m.enabled })}
+                      className={cn('w-11 h-6 rounded-full transition-all relative shrink-0', m.enabled ? 'bg-green-500' : 'bg-brand-navy/15')}
+                    >
+                      <span className={cn('absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all', m.enabled ? 'left-5' : 'left-0.5')} />
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-xs text-brand-navy">{def.label}</p>
+                      <p className="text-[10px] text-brand-navy/50 truncate">{def.desc}</p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={m.weight}
+                        disabled={!m.enabled}
+                        onChange={e => updateMetric(def.key, { weight: parseFloat(e.target.value) || 0 })}
+                        className="w-16 px-2 py-1.5 rounded-lg bg-brand-bg border border-black/10 text-xs font-bold text-center disabled:opacity-40"
+                      />
+                      <span className="text-[9px] font-bold text-brand-navy/40">pts ea.</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="shrink-0 bg-brand-bg border-t border-brand-navy/8 px-5 pt-4 pb-8">
+        {saveError && <p className="text-red-500 text-xs font-bold text-center mb-2">{saveError}</p>}
+        <button
+          onClick={save}
           disabled={saving || !isDirty}
           className="w-full gradient-red text-white font-bold py-4 rounded-2xl active:scale-[0.98] transition-all disabled:opacity-40 text-sm tracking-wide"
         >
@@ -12872,7 +13151,7 @@ function buildStampCelebrationPages(
 
 // --- Consumer App ---
 
-function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onViewUser, cards: initialCards, notifications, activeChatId, setActiveChatId, onLogout, onDeleteAccount, pendingNFCStoreId, onClearPendingNFC, uiColors: uiColorsProp, blockedUids }: { activeTab: string, setActiveTab: (tab: string) => void, profile: UserProfile | null, user: FirebaseUser, onViewStore: (s: StoreProfile) => void, onViewUser: (u: UserProfile) => void, cards: Card[], notifications: Notification[], activeChatId: string | null, setActiveChatId: (id: string | null) => void, onLogout: () => void, onDeleteAccount: () => Promise<void>, pendingNFCStoreId?: string | null, onClearPendingNFC?: () => void, uiColors?: UiColors, blockedUids?: Set<string>, key?: React.Key }) {
+function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onViewUser, cards: initialCards, notifications, activeChatId, setActiveChatId, onLogout, onDeleteAccount, pendingNFCStoreId, onClearPendingNFC, uiColors: uiColorsProp, blockedUids, collectorTierConfig }: { activeTab: string, setActiveTab: (tab: string) => void, profile: UserProfile | null, user: FirebaseUser, onViewStore: (s: StoreProfile) => void, onViewUser: (u: UserProfile) => void, cards: Card[], notifications: Notification[], activeChatId: string | null, setActiveChatId: (id: string | null) => void, onLogout: () => void, onDeleteAccount: () => Promise<void>, pendingNFCStoreId?: string | null, onClearPendingNFC?: () => void, uiColors?: UiColors, blockedUids?: Set<string>, collectorTierConfig?: CollectorTiersConfig, key?: React.Key }) {
   const uiColors = uiColorsProp ?? UI_COLOR_DEFAULTS;
   const [stores, setStores] = useState<StoreProfile[]>([]);
   const [walletSubTab, setWalletSubTab] = useState<'stamps' | 'challenges'>('stamps');
@@ -14534,6 +14813,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           onOpenLinqle={() => setViewingLinqle(true)}
           user={user}
           uiColors={uiColors}
+          collectorTierConfig={collectorTierConfig ?? DEFAULT_COLLECTOR_TIERS_CONFIG}
         />
       )}
 
@@ -28657,8 +28937,9 @@ function StoreLeaderboard({ storeId, storeName, logoUrl, type, userId }: {
   );
 }
 
-function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, onViewUser, onViewStore, onGoToDeals, onOpenLinqle, onSeeAllMembers, user, uiColors: uiColorsProp, profileCollection = 'users' }: { profile: UserProfile | null, userCards: Card[], stores?: StoreProfile[], onLogout: () => void, onDeleteAccount: () => Promise<void>, onViewUser: (u: UserProfile) => void, onViewStore?: (s: StoreProfile) => void, onGoToDeals?: () => void, onOpenLinqle?: () => void, onSeeAllMembers?: () => void, user: FirebaseUser, uiColors?: UiColors, profileCollection?: 'users' | 'vendors' }) {
+function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, onViewUser, onViewStore, onGoToDeals, onOpenLinqle, onSeeAllMembers, user, uiColors: uiColorsProp, profileCollection = 'users', collectorTierConfig }: { profile: UserProfile | null, userCards: Card[], stores?: StoreProfile[], onLogout: () => void, onDeleteAccount: () => Promise<void>, onViewUser: (u: UserProfile) => void, onViewStore?: (s: StoreProfile) => void, onGoToDeals?: () => void, onOpenLinqle?: () => void, onSeeAllMembers?: () => void, user: FirebaseUser, uiColors?: UiColors, profileCollection?: 'users' | 'vendors', collectorTierConfig?: CollectorTiersConfig }) {
   const uiColors = uiColorsProp ?? UI_COLOR_DEFAULTS;
+  const tierConfig = collectorTierConfig ?? DEFAULT_COLLECTOR_TIERS_CONFIG;
   const [activeSubTab, setActiveSubTab] = useState<'posts' | 'stickers' | 'badges' | 'interactions'>('stickers');
   const [pressedSticker, setPressedSticker] = useState<string | null>(null);
   const longPressTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -28942,6 +29223,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
     profile.totalStamps || 0,
     userCards.reduce((acc, c) => acc + (c.current_stamps || 0), 0)
   );
+  const collectorScore = computeCollectorScore(tierConfig, profile, userCards);
   // Build tiers-per-store map: live store data is authoritative, cards fill gaps for stores not yet loaded.
   const storeMap = new Map<string, StoreProfile>((stores || []).map(s => [s.id!, s]));
   const tiersByStore = new Map<string, number>();
@@ -29373,7 +29655,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         {/* Avatar — left; name/handle above the Posts/Followers/Following stat row — right */}
         <div className="flex items-center gap-4 pr-11">
           <div className="shrink-0">
-            <CollectorRing stamps={lifetimeStamps} onClick={() => setShowCollectorTier(true)}>
+            <CollectorRing stamps={collectorScore} tiers={tierConfig.tiers} onClick={() => setShowCollectorTier(true)}>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -29414,7 +29696,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
         <p className="text-[8px] text-brand-navy/75 font-bold uppercase tracking-wider mt-2">Tap avatar to customise</p>
       </header>
 
-      <TierProgressBar stamps={lifetimeStamps} onClick={() => setShowCollectorTier(true)} />
+      <TierProgressBar stamps={collectorScore} tiers={tierConfig.tiers} onClick={() => setShowCollectorTier(true)} />
 
       {!profile.birthday && (
         <button
@@ -29468,7 +29750,7 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
       {/* Collector tier sheet */}
       <AnimatePresence>
         {showCollectorTier && (
-          <CollectorTierSheet stamps={lifetimeStamps} onClose={() => setShowCollectorTier(false)} />
+          <CollectorTierSheet stamps={collectorScore} tiers={tierConfig.tiers} onClose={() => setShowCollectorTier(false)} />
         )}
       </AnimatePresence>
 
@@ -37487,8 +37769,9 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
 }
 
 
-function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser, currentProfile, onViewStore, onViewUser, onMessage, uiColors: uiColorsProp }: { targetUser: UserProfile, onBack: () => void, currentUser: FirebaseUser, currentProfile: UserProfile | null, onViewStore: (s: StoreProfile) => void, onViewUser: (u: UserProfile) => void, onMessage?: (uid: string) => void, uiColors?: UiColors, key?: React.Key }) {
+function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser, currentProfile, onViewStore, onViewUser, onMessage, uiColors: uiColorsProp, collectorTierConfig }: { targetUser: UserProfile, onBack: () => void, currentUser: FirebaseUser, currentProfile: UserProfile | null, onViewStore: (s: StoreProfile) => void, onViewUser: (u: UserProfile) => void, onMessage?: (uid: string) => void, uiColors?: UiColors, collectorTierConfig?: CollectorTiersConfig, key?: React.Key }) {
   const uiColors = uiColorsProp ?? UI_COLOR_DEFAULTS;
+  const tierConfig = collectorTierConfig ?? DEFAULT_COLLECTOR_TIERS_CONFIG;
   const [targetUser, setTargetUser] = useState<UserProfile>(initialTargetUser);
   const [cards, setCards] = useState<Card[]>([]);
   const [allCards, setAllCards] = useState<Card[]>([]);
@@ -37817,6 +38100,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
     targetUser.totalStamps || 0,
     allCards.reduce((acc, c) => acc + (c.current_stamps || 0), 0)
   );
+  const publicUserCollectorScore = computeCollectorScore(tierConfig, targetUser, allCards);
 
   const pubBadgeMetrics: Record<BadgeMetric, number> = {
     stamps: publicUserStamps,
@@ -37971,7 +38255,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
         <div className="flex items-center gap-4">
           {targetUser.role !== 'vendor' && (
             <div className="shrink-0">
-              <CollectorRing stamps={publicUserStamps} onClick={() => setShowCollectorTier(true)}>
+              <CollectorRing stamps={publicUserCollectorScore} tiers={tierConfig.tiers} onClick={() => setShowCollectorTier(true)}>
                 <div className="bg-gradient-to-b from-indigo-50 to-purple-50 rounded-full p-2 border-4 border-white shadow-xl">
                   <PixelAvatar config={targetUser.avatar} uid={targetUser.uid} size={64} view="full" />
                 </div>
@@ -38000,7 +38284,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
       </header>
 
       {targetUser.role !== 'vendor' && (
-        <TierProgressBar stamps={publicUserStamps} onClick={() => setShowCollectorTier(true)} />
+        <TierProgressBar stamps={publicUserCollectorScore} tiers={tierConfig.tiers} onClick={() => setShowCollectorTier(true)} />
       )}
 
       {/* Stamps / Cards / Rewards / Challenges — circular stat badges */}
@@ -38149,7 +38433,7 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
 
       <AnimatePresence>
         {showCollectorTier && (
-          <CollectorTierSheet stamps={publicUserStamps} onClose={() => setShowCollectorTier(false)} />
+          <CollectorTierSheet stamps={publicUserCollectorScore} tiers={tierConfig.tiers} onClose={() => setShowCollectorTier(false)} />
         )}
       </AnimatePresence>
 
