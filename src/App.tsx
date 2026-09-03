@@ -1387,6 +1387,7 @@ export default function App() {
   const [nativeVendorBlocked, setNativeVendorBlocked] = useState(false);
   const [emailVerifiedStandalone, setEmailVerifiedStandalone] = useState(false);
   const [emailChangedStandalone, setEmailChangedStandalone] = useState(false);
+  const [verificationLinkExpired, setVerificationLinkExpired] = useState(false);
   const [profileCollection, setProfileCollection] = useState<'users' | 'vendors' | null>(null);
   const [browsingAsGuest, setBrowsingAsGuest] = useState(false);
   const intendedRoleRef = useRef<'consumer' | 'vendor' | null>(null);
@@ -1831,33 +1832,52 @@ export default function App() {
     // Clear the action params from the URL immediately
     window.history.replaceState({}, document.title, window.location.pathname);
 
+    const resolveVerifiedSession = async () => {
+      setNeedsEmailVerification(false);
+      const refreshed = auth.currentUser;
+      if (!refreshed) {
+        // Link was opened in a browser tab with no signed-in session (e.g. tapped from the
+        // verification email on a different device, or while the native app holds the session).
+        // The email is still verified server-side — just let the user know to go back to the app.
+        setEmailVerifiedStandalone(true);
+        return;
+      }
+      const userDoc = await getDoc(doc(db, 'users', refreshed.uid));
+      const inUsers = userDoc.exists();
+      const existingDoc = inUsers ? userDoc : await getDoc(doc(db, 'vendors', refreshed.uid));
+      if (!existingDoc.exists()) {
+        setNeedsOnboarding(true);
+      } else {
+        const data = existingDoc.data();
+        setProfileCollection(inUsers ? 'users' : 'vendors');
+        setProfile(data as UserProfile);
+        setNeedsOnboarding(!data.onboardingComplete);
+      }
+    };
+
     applyActionCode(auth, oobCode)
       .then(async () => {
         const currentUser = auth.currentUser;
         if (currentUser) await currentUser.reload();
-        setNeedsEmailVerification(false);
-        const refreshed = auth.currentUser;
-        if (!refreshed) {
-          // Link was opened in a browser tab with no signed-in session (e.g. tapped from the
-          // verification email on a different device, or while the native app holds the session).
-          // The email is still verified server-side — just let the user know to go back to the app.
-          setEmailVerifiedStandalone(true);
-          return;
-        }
-        const userDoc = await getDoc(doc(db, 'users', refreshed.uid));
-        const inUsers = userDoc.exists();
-        const existingDoc = inUsers ? userDoc : await getDoc(doc(db, 'vendors', refreshed.uid));
-        if (!existingDoc.exists()) {
-          setNeedsOnboarding(true);
-        } else {
-          const data = existingDoc.data();
-          setProfileCollection(inUsers ? 'users' : 'vendors');
-          setProfile(data as UserProfile);
-          setNeedsOnboarding(!data.onboardingComplete);
-        }
+        await resolveVerifiedSession();
       })
-      .catch((err) => {
+      .catch(async (err) => {
         console.error('Email verification failed:', err);
+        // Email scanners (Gmail Safe Browsing, Outlook Safe Links, corporate security
+        // proxies) often pre-fetch links in emails to check for phishing — which silently
+        // consumes this single-use verification code before the person actually taps it.
+        // Firebase then reports the link as expired/already-used even though the email
+        // really was verified moments earlier. Check before showing an error: if it's
+        // already verified, just continue instead of dead-ending on a broken-link message.
+        const currentUser = auth.currentUser;
+        if (currentUser) {
+          await currentUser.reload().catch(() => {});
+          if (auth.currentUser?.emailVerified) {
+            await resolveVerifiedSession();
+            return;
+          }
+        }
+        setVerificationLinkExpired(true);
       });
   }, []);
 
@@ -2254,6 +2274,27 @@ export default function App() {
           <p className="text-black font-bold text-xl mb-2">Verified</p>
           <p className="text-black/50 text-sm max-w-xs">Go back to app</p>
         </div>
+      </div>
+    );
+  }
+
+  if (verificationLinkExpired) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white px-6 gap-6 text-center">
+        <span className="text-6xl font-black italic tracking-tight select-none leading-[1.2] pb-2" style={linqGradientTextStyle}>Linq</span>
+        <AlertCircle className="w-12 h-12 text-amber-500" />
+        <div>
+          <p className="text-black font-bold text-xl mb-2">Link already used</p>
+          <p className="text-black/50 text-sm max-w-xs">This can happen when your email app scans links automatically before you tap them. If you already saw a "Verified" message, you're all set — just go back to the app. Otherwise, request a new link below.</p>
+        </div>
+        {user && !user.emailVerified && (
+          <button
+            onClick={() => { handleResendVerification(); setVerificationLinkExpired(false); setNeedsEmailVerification(true); }}
+            className="px-8 py-3 bg-black rounded-2xl text-white font-bold text-sm"
+          >
+            Resend verification email
+          </button>
+        )}
       </div>
     );
   }
