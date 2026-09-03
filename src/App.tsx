@@ -34833,6 +34833,13 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
   const [showCustomerPicker, setShowCustomerPicker] = useState(false);
   const [showNewChatPicker, setShowNewChatPicker] = useState(false);
   const [storeCustomers, setStoreCustomers] = useState<UserProfile[]>([]);
+  // New-chat search — people + shops, plus mutual-follow state for the Friends/Not Friend badge
+  const [newChatSearch, setNewChatSearch] = useState('');
+  const [newChatUserResults, setNewChatUserResults] = useState<UserProfile[]>([]);
+  const [newChatSearching, setNewChatSearching] = useState(false);
+  const [newChatAllStores, setNewChatAllStores] = useState<StoreProfile[]>([]);
+  const [myFollowingUids, setMyFollowingUids] = useState<Set<string>>(new Set());
+  const [myFollowerUids, setMyFollowerUids] = useState<Set<string>>(new Set());
   const [showBroadcast, setShowBroadcast] = useState(false);
   const [partnerUnreadCount, setPartnerUnreadCount] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -35004,6 +35011,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
   const handleStartCustomerChat = async (customer: UserProfile) => {
     const chatId = [currentUser.uid, customer.uid].sort().join('_');
     setShowCustomerPicker(false);
+    setShowNewChatPicker(false);
     setActiveChatId(chatId);
     try {
       const chatRef = doc(db, 'chats', chatId);
@@ -35024,6 +35032,76 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
       }
     } catch (err) {
       console.error('Chat create error:', err);
+    }
+  };
+
+  // Mutual-follow state for the new-chat picker's Friends/Not Friend badge — only needed
+  // while that picker is open.
+  useEffect(() => {
+    if (!showNewChatPicker || vendorStore) return;
+    const unsub1 = onSnapshot(query(collection(db, 'follows'), where('followerUid', '==', currentUser.uid)), snap => {
+      setMyFollowingUids(new Set(snap.docs.map(d => d.data().followingUid as string)));
+    });
+    const unsub2 = onSnapshot(query(collection(db, 'follows'), where('followingUid', '==', currentUser.uid)), snap => {
+      setMyFollowerUids(new Set(snap.docs.map(d => d.data().followerUid as string)));
+    });
+    return () => { unsub1(); unsub2(); };
+  }, [showNewChatPicker, vendorStore, currentUser.uid]);
+
+  // All stores, fetched once when the picker opens, filtered client-side as the admin types.
+  useEffect(() => {
+    if (!showNewChatPicker || vendorStore || newChatAllStores.length > 0) return;
+    getDocs(collection(db, 'stores')).then(snap => {
+      setNewChatAllStores(snap.docs.map(d => ({ id: d.id, ...d.data() } as StoreProfile)));
+    }).catch(() => {});
+  }, [showNewChatPicker, vendorStore, newChatAllStores.length]);
+
+  // People search — debounced Firestore prefix query on name/handle.
+  useEffect(() => {
+    if (!showNewChatPicker || vendorStore) return;
+    const clean = newChatSearch.trim();
+    if (!clean) { setNewChatUserResults([]); return; }
+    setNewChatSearching(true);
+    const handleClean = clean.replace(/^@/, '');
+    const timer = setTimeout(async () => {
+      try {
+        const [byHandle, byName] = await Promise.all([
+          getDocs(query(collection(db, 'users'), where('handle', '>=', handleClean), where('handle', '<=', handleClean + ''), limit(10))),
+          getDocs(query(collection(db, 'users'), where('name', '>=', clean), where('name', '<=', clean + ''), limit(10))),
+        ]);
+        const seen = new Set<string>();
+        const merged: UserProfile[] = [];
+        [...byHandle.docs, ...byName.docs].forEach(d => {
+          if (d.id === currentUser.uid) return;
+          if (!seen.has(d.id)) { seen.add(d.id); merged.push({ uid: d.id, ...d.data() } as UserProfile); }
+        });
+        setNewChatUserResults(merged);
+      } catch { setNewChatUserResults([]); }
+      setNewChatSearching(false);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [newChatSearch, showNewChatPicker, vendorStore, currentUser.uid]);
+
+  const newChatStoreResults = newChatSearch.trim()
+    ? newChatAllStores.filter(s => s.name?.toLowerCase().includes(newChatSearch.trim().toLowerCase())).slice(0, 10)
+    : [];
+
+  const handleStartStoreChat = async (targetStore: StoreProfile) => {
+    setShowNewChatPicker(false);
+    if (!targetStore.ownerUid) return;
+    const chatId = [currentUser.uid, targetStore.ownerUid].sort().join('_');
+    setActiveChatId(chatId);
+    const chatRef = doc(db, 'chats', chatId);
+    const chatSnap = await getDoc(chatRef);
+    if (!chatSnap.exists()) {
+      await setDoc(chatRef, {
+        uids: [currentUser.uid, targetStore.ownerUid],
+        lastActivity: serverTimestamp(),
+        lastMessage: '',
+        createdAt: serverTimestamp(),
+        businessName: targetStore.name,
+        businessLogoUrl: targetStore.logoUrl || '',
+      });
     }
   };
 
@@ -35381,7 +35459,7 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
         </button>
       </header>
 
-      {/* Consumer new-chat store picker */}
+      {/* Consumer new-chat picker — search people and shops */}
       <AnimatePresence>
         {showNewChatPicker && !vendorStore && (
           <motion.div
@@ -35397,41 +35475,87 @@ function MessagesScreen({ currentUser, currentProfile, activeChatId, setActiveCh
               exit={{ y: '100%' }}
               transition={{ type: 'spring', stiffness: 500, damping: 38 }}
               onClick={e => e.stopPropagation()}
-              className="absolute bottom-0 left-0 right-0 bg-brand-bg rounded-t-[2rem] px-6 pt-5 pb-10 max-h-[70vh] overflow-y-auto max-w-md mx-auto"
+              className="absolute bottom-0 left-0 right-0 bg-brand-bg rounded-t-[2rem] px-6 pt-5 pb-10 max-h-[80vh] flex flex-col max-w-md mx-auto"
             >
-              <div className="w-10 h-1 bg-brand-navy/10 rounded-full mx-auto mb-5" />
-              <h3 className="font-display text-xl font-bold mb-4">Message a Store</h3>
-              {[...new Map(userCards.filter(c => c.store_id && c.storeName).map(c => [c.store_id, c])).values()].length === 0 ? (
-                <p className="text-sm text-brand-navy/60 text-center py-6">Join a loyalty card to message that store.</p>
-              ) : (
-                <div className="space-y-2">
-                  {[...new Map(userCards.filter(c => c.store_id && c.storeName).map(c => [c.store_id, c])).values()].map(c => (
-                    <button
-                      key={c.store_id}
-                      onClick={async () => {
-                        setShowNewChatPicker(false);
-                        const storeSnap = await getDocs(query(collection(db, 'stores'), where('__name__', '==', c.store_id)));
-                        if (storeSnap.empty) return;
-                        const storeOwnerUid = storeSnap.docs[0].data().ownerUid;
-                        if (!storeOwnerUid) return;
-                        const chatId = [currentUser.uid, storeOwnerUid].sort().join('_');
-                        setActiveChatId(chatId);
-                        const chatRef = doc(db, 'chats', chatId);
-                        const chatSnap = await getDoc(chatRef);
-                        if (!chatSnap.exists()) {
-                          await setDoc(chatRef, { uids: [currentUser.uid, storeOwnerUid], lastActivity: serverTimestamp(), lastMessage: '', createdAt: serverTimestamp(), businessName: c.storeName, businessLogoUrl: c.storeLogoUrl || '' });
-                        }
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-white border border-brand-navy/8 active:scale-[0.98] transition-all text-left"
-                    >
-                      <div className="w-10 h-10 rounded-xl overflow-hidden bg-brand-navy/5 shrink-0">
-                        {c.storeLogoUrl ? <img src={c.storeLogoUrl} alt="" className="w-full h-full object-cover" /> : <Building2 size={18} className="text-brand-navy/30 m-auto mt-2.5" />}
+              <div className="w-10 h-1 bg-brand-navy/10 rounded-full mx-auto mb-5 shrink-0" />
+              <h3 className="font-display text-xl font-bold mb-4 shrink-0">New Message</h3>
+              <div className="relative mb-4 shrink-0">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-navy/40" />
+                <input
+                  value={newChatSearch}
+                  onChange={e => setNewChatSearch(e.target.value)}
+                  placeholder="Search people or shops..."
+                  autoFocus
+                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-white border border-brand-navy/8 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/20"
+                />
+              </div>
+
+              <div className="flex-1 overflow-y-auto space-y-5">
+                {!newChatSearch.trim() ? (
+                  <p className="text-sm text-brand-navy/60 text-center py-6">Search for someone's name, @handle, or a shop.</p>
+                ) : (
+                  <>
+                    {newChatStoreResults.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">Shops</p>
+                        {newChatStoreResults.map(s => (
+                          <button
+                            key={s.id}
+                            onClick={() => handleStartStoreChat(s)}
+                            className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-white border border-brand-navy/8 active:scale-[0.98] transition-all text-left"
+                          >
+                            <div className="w-10 h-10 rounded-xl overflow-hidden bg-brand-navy/5 shrink-0">
+                              {s.logoUrl ? <img src={s.logoUrl} alt="" className="w-full h-full object-cover" /> : <Building2 size={18} className="text-brand-navy/30 m-auto mt-2.5" />}
+                            </div>
+                            <p className="font-bold text-sm flex-1 min-w-0 truncate">{s.name}</p>
+                          </button>
+                        ))}
                       </div>
-                      <p className="font-bold text-sm">{c.storeName}</p>
-                    </button>
-                  ))}
-                </div>
-              )}
+                    )}
+
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 px-1">People</p>
+                      {newChatSearching ? (
+                        <div className="flex justify-center py-4">
+                          <Loader2 size={18} className="animate-spin text-brand-navy/30" />
+                        </div>
+                      ) : newChatUserResults.length === 0 ? (
+                        <p className="text-xs text-brand-navy/50 text-center py-4">No people found</p>
+                      ) : (
+                        newChatUserResults.map(u => {
+                          const isAnon = !!u.privacyMode;
+                          const isFriend = myFollowingUids.has(u.uid) && myFollowerUids.has(u.uid);
+                          return (
+                            <button
+                              key={u.uid}
+                              onClick={() => { if (!isAnon) handleStartCustomerChat(u); }}
+                              disabled={isAnon}
+                              className={cn(
+                                "w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-white border border-brand-navy/8 transition-all text-left",
+                                isAnon ? "opacity-50 cursor-not-allowed" : "active:scale-[0.98]"
+                              )}
+                            >
+                              <div className={cn("w-10 h-10 rounded-full overflow-hidden shrink-0 flex items-center justify-center", isAnon ? "bg-brand-navy/10" : "bg-blue-50")}>
+                                {isAnon ? <Lock size={16} className="text-brand-navy/40" /> : <PixelAvatar config={u.avatar} uid={u.uid} size={40} view="head" />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-bold text-sm truncate">{isAnon ? 'Anonymous' : u.name}</p>
+                                {!isAnon && u.handle && <p className="text-xs text-brand-navy/50 truncate">@{u.handle}</p>}
+                              </div>
+                              <span className={cn(
+                                "text-[9px] font-bold px-2 py-1 rounded-full shrink-0 uppercase tracking-wide",
+                                isAnon ? "bg-brand-navy/10 text-brand-navy/40" : isFriend ? "bg-emerald-50 text-emerald-600" : "bg-brand-navy/8 text-brand-navy/50"
+                              )}>
+                                {isAnon ? 'Anonymous' : isFriend ? 'Friends' : 'Not Friend'}
+                              </span>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
             </motion.div>
           </motion.div>
         )}
