@@ -9405,16 +9405,24 @@ function BannersAdminPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
-const LINQLE_EPOCH = new Date('2026-01-01').getTime();
+// Parse a "YYYY-MM-DD" date string as LOCAL midnight. `new Date("YYYY-MM-DD")` parses a
+// date-only string as UTC midnight per spec, which silently lands on the previous LOCAL
+// calendar day in any timezone behind UTC — breaking comparisons against a live `new Date()`
+// (which is always local). Every Linqle date string must go through this, not `new Date()`
+// directly, or "today" comparisons drift by a day depending on the reader's timezone.
+function parseLocalDateStr(dateStr: string): Date {
+  return new Date(dateStr + 'T00:00:00');
+}
+const LINQLE_EPOCH = parseLocalDateStr('2026-01-01').getTime();
 function linqleDayIndex(dateStr: string) {
-  const d = new Date(dateStr); d.setHours(0, 0, 0, 0);
+  const d = parseLocalDateStr(dateStr);
   return Math.floor((d.getTime() - LINQLE_EPOCH) / 86400000);
 }
 function linqleTodayWord(words: string[], startDate?: string) {
   if (!words.length) return null;
   const today = new Date(); today.setHours(0, 0, 0, 0);
   if (startDate) {
-    const start = new Date(startDate); start.setHours(0, 0, 0, 0);
+    const start = parseLocalDateStr(startDate);
     const idx = Math.floor((today.getTime() - start.getTime()) / 86400000);
     if (idx < 0 || idx >= words.length) return null;
     return words[idx].toUpperCase();
@@ -9433,7 +9441,7 @@ function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
   const todayStr = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
 
   const nextAvailableStr = (w: string[], sd: string) => {
-    const base = new Date(sd || todayStr);
+    const base = parseLocalDateStr(sd || todayStr);
     base.setDate(base.getDate() + w.length);
     return `${base.getFullYear()}-${String(base.getMonth()+1).padStart(2,'0')}-${String(base.getDate()).padStart(2,'0')}`;
   };
@@ -9490,8 +9498,8 @@ function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
     // word. Picking a date (today or any future date) always assigns that word to that
     // exact date, replacing whatever was scheduled there; it doesn't get queued in after
     // the existing words like an insert would.
-    const s = new Date(newStartDate); s.setHours(0,0,0,0);
-    const sel = new Date(selectedDate); sel.setHours(0,0,0,0);
+    const s = parseLocalDateStr(newStartDate);
+    const sel = parseLocalDateStr(selectedDate);
     const targetIdx = Math.floor((sel.getTime() - s.getTime()) / 86400000);
     let updated: string[];
     if (targetIdx < 0) {
@@ -9507,7 +9515,7 @@ function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
   };
 
   const handleRemove = async (wordIdx: number) => {
-    const base = new Date(startDate);
+    const base = parseLocalDateStr(startDate);
     base.setDate(base.getDate() + wordIdx);
     const playsDateStr = `${base.getFullYear()}-${String(base.getMonth()+1).padStart(2,'0')}-${String(base.getDate()).padStart(2,'0')}`;
     try {
@@ -9539,14 +9547,14 @@ function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
   };
 
   const todayQueueIdx = startDate ? (() => {
-    const t = new Date(todayStr); t.setHours(0,0,0,0);
-    const s = new Date(startDate); s.setHours(0,0,0,0);
+    const t = parseLocalDateStr(todayStr);
+    const s = parseLocalDateStr(startDate);
     return Math.floor((t.getTime() - s.getTime()) / 86400000);
   })() : 0;
 
   const selectedQueueIdx = startDate ? (() => {
-    const s = new Date(startDate); s.setHours(0,0,0,0);
-    const sel = new Date(selectedDate); sel.setHours(0,0,0,0);
+    const s = parseLocalDateStr(startDate);
+    const sel = parseLocalDateStr(selectedDate);
     return Math.floor((sel.getTime() - s.getTime()) / 86400000);
   })() : -1;
 
@@ -9638,7 +9646,7 @@ function LinqleAdminPanel({ onClose }: { onClose: () => void }) {
             <div className="space-y-2">
               <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75">Full queue ({words.length})</p>
               {words.map((w, i) => {
-                const d = new Date(startDate);
+                const d = parseLocalDateStr(startDate);
                 d.setDate(d.getDate() + i);
                 const wordDateLabel = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
                 const isPlayed = i < todayQueueIdx;
