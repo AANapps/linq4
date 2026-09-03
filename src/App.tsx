@@ -26602,7 +26602,7 @@ function OffersModal({ offers, currentUser, currentProfile, onClose, onRequireAu
   const filtered = offers.filter(o => {
     const matchesCat = activeCategory === 'All' || o.storeCategory === activeCategory;
     const q = search.toLowerCase();
-    const matchesSearch = !q || o.title.toLowerCase().includes(q) || o.storeName.toLowerCase().includes(q) || o.description.toLowerCase().includes(q);
+    const matchesSearch = !q || o.title.toLowerCase().includes(q) || o.storeName.toLowerCase().includes(q) || o.description.toLowerCase().includes(q) || (o.storeCategory ?? '').toLowerCase().includes(q);
     return matchesCat && matchesSearch;
   });
 
@@ -32824,13 +32824,14 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
   const q = searchQuery.trim().toLowerCase();
   const searchActive = q.length > 0;
   const searchedStores = storeDeals.filter(s =>
-    s.name?.toLowerCase().includes(q) || (s.reward ?? '').toLowerCase().includes(q)
+    s.name?.toLowerCase().includes(q) || (s.reward ?? '').toLowerCase().includes(q) || (s.category ?? '').toLowerCase().includes(q)
   );
   const searchedOffers = offersByDist.filter(o =>
     o.title?.toLowerCase().includes(q) || o.storeName?.toLowerCase().includes(q) || o.storeCategory?.toLowerCase().includes(q)
   );
   const searchedChallenges = visibleChallenges.filter(c =>
-    c.reward?.toLowerCase().includes(q) || c.title?.toLowerCase().includes(q)
+    c.reward?.toLowerCase().includes(q) || c.title?.toLowerCase().includes(q) ||
+    (c.vendorIds || []).some(vid => (allStores.find(s => s.id === vid)?.category ?? '').toLowerCase().includes(q))
   );
 
   return (
