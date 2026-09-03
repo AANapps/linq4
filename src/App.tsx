@@ -497,6 +497,7 @@ interface UiColors {
   stickersTile: UiColorSlot;
   badgesTile: UiColorSlot;
   profileStatsTile: UiColorSlot;
+  loyaltyCardTile: UiColorSlot;
 }
 type UiColorPreset = UiColorSlot & { id: string; label: string };
 
@@ -602,6 +603,7 @@ const UI_COLOR_DEFAULTS: UiColors = {
   stickersTile:      { css: 'linear-gradient(160deg, #1D4ED8 0%, #2563EB 40%, #3B82F6 70%, #60A5FA 100%)', dark: true },
   badgesTile:        { css: 'linear-gradient(135deg, #fef08a 0%, #fbbf24 30%, #f59e0b 65%, #d97706 100%)', dark: false },
   profileStatsTile:  { css: 'linear-gradient(135deg, #3730A3 0%, #6366F1 55%, #818CF8 100%)', dark: true },
+  loyaltyCardTile:   { css: 'linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)', dark: false },
 };
 const UI_COLOR_SLOT_DEFS: { key: keyof UiColors; label: string; desc: string; presets: UiColorPreset[] }[] = [
   { key: 'linqleTile',        label: 'Linqle Tile',        desc: 'For You word game card',      presets: [...SOLID_DARK_PRESETS, ...DARK_GRADIENT_PRESETS] },
@@ -614,6 +616,7 @@ const UI_COLOR_SLOT_DEFS: { key: keyof UiColors; label: string; desc: string; pr
   { key: 'stickersTile',     label: 'Stickers Tile',     desc: 'Profile stickers count tile',  presets: VIVID_GRADIENT_PRESETS },
   { key: 'badgesTile',       label: 'Badges Tile',       desc: 'Profile badges count tile',    presets: VIVID_GRADIENT_PRESETS },
   { key: 'profileStatsTile', label: 'Profile Stat Row',  desc: 'Stamps/Cards/Rewards/Challenges circles', presets: VIVID_GRADIENT_PRESETS },
+  { key: 'loyaltyCardTile',  label: 'Loyalty Card Tile', desc: "Profile's joined stores list",  presets: LIGHT_GRADIENT_PRESETS },
 ];
 
 // ─── Default gender-specific SVG avatars (no external URL, no data cost) ────
@@ -29481,7 +29484,8 @@ function ProfileScreen({ profile, userCards, stores, onLogout, onDeleteAccount, 
                 const pct = Math.min(100, Math.round((card.current_stamps / (store.stamps_required_for_reward || 10)) * 100));
                 return (
                   <div key={card.id}
-                    className="glass-card snap-start shrink-0 w-52 rounded-2xl overflow-hidden shadow-xl">
+                    className="snap-start shrink-0 w-52 rounded-2xl overflow-hidden border border-black/5"
+                    style={{ background: uiColors.loyaltyCardTile.css }}>
                     <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-brand-navy/6">
                       <div className="w-8 h-8 rounded-xl overflow-hidden shrink-0 shadow-sm cursor-pointer active:scale-95 transition-transform"
                         onClick={() => onViewStore?.(store)}>
@@ -37865,50 +37869,58 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
       </div>
 
       <header className="relative">
-        <div className="flex items-start gap-4">
+        {/* Avatar — left; name/handle above the Followers/Following stat row — right */}
+        <div className="flex items-center gap-4">
           {targetUser.role !== 'vendor' && (
-            <CollectorRing stamps={publicUserStamps} onClick={() => setShowCollectorTier(true)}>
-              <div className="bg-gradient-to-b from-indigo-50 to-purple-50 rounded-full p-2 border-4 border-white shadow-xl shrink-0">
-                <PixelAvatar config={targetUser.avatar} uid={targetUser.uid} size={64} view="full" />
-              </div>
-            </CollectorRing>
+            <div className="shrink-0">
+              <CollectorRing stamps={publicUserStamps} onClick={() => setShowCollectorTier(true)}>
+                <div className="bg-gradient-to-b from-indigo-50 to-purple-50 rounded-full p-2 border-4 border-white shadow-xl">
+                  <PixelAvatar config={targetUser.avatar} uid={targetUser.uid} size={64} view="full" />
+                </div>
+              </CollectorRing>
+            </div>
           )}
-          <div className="flex-1 min-w-0 pt-1">
+          <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="font-display text-2xl font-bold">{targetUser.name}</h2>
+              <h2 className="font-display text-lg font-bold truncate">{targetUser.name}</h2>
               <StreakBadge streak={targetUser.streak} size="lg" />
             </div>
-            <p className="text-brand-gold font-bold text-xs uppercase tracking-[0.2em]">@{targetUser.handle || targetUser.email?.split('@')[0]}</p>
-            <div className="flex items-center gap-3 mt-2 text-sm">
-              <span className="flex items-center gap-1 font-bold">
-                <span>{targetFollowing}</span>
-                <span className="text-brand-navy/90 font-normal">Following</span>
+            <p className="text-brand-gold font-bold text-xs uppercase tracking-[0.2em] truncate">@{targetUser.handle || targetUser.email?.split('@')[0]}</p>
+
+            <div className="flex items-center gap-4 mt-2 flex-wrap">
+              <span className="flex items-baseline gap-1">
+                <span className="font-display text-sm font-black">{fmtK(targetFollowers)}</span>
+                <span className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-wide">Followers</span>
               </span>
-              <span className="text-brand-navy/50">•</span>
-              <span className="flex items-center gap-1 font-bold">
-                <span>{targetFollowers}</span>
-                <span className="text-brand-navy/90 font-normal">Followers</span>
+              <span className="flex items-baseline gap-1">
+                <span className="font-display text-sm font-black">{fmtK(targetFollowing)}</span>
+                <span className="text-[10px] text-brand-navy/75 font-bold uppercase tracking-wide">Following</span>
               </span>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Stats / Cards / Rewards / Challenges — clean separator */}
-      <div className="flex items-center divide-x divide-brand-navy/10">
+      {/* Stamps / Cards / Rewards / Challenges — circular stat badges */}
+      <div className="grid grid-cols-4 gap-2">
         {[
-          { val: publicUserStamps,  label: 'Stamps'  },
-          { val: cards.length,      label: 'Cards'   },
-          { val: publicUserRewards, label: 'Rewards' },
+          { val: publicUserStamps,  label: 'Stamps',  icon: '🎟️' },
+          { val: cards.length,      label: 'Cards',   icon: '💳' },
+          { val: publicUserRewards, label: 'Rewards', icon: '🎁' },
         ].map(s => (
-          <div key={s.label} className="flex-1 flex flex-col items-center gap-0.5 py-2">
-            <p className="font-black text-base leading-none text-brand-navy">{s.val}</p>
+          <div key={s.label} className="flex flex-col items-center gap-1.5">
+            <div className="relative w-14 h-14 rounded-full flex items-center justify-center shadow-md shrink-0" style={{ background: uiColors.profileStatsTile.css }}>
+              <span className="font-display font-black text-base leading-none text-white" style={tileTextStyle(uiColors.profileStatsTile)}>{fmtK(s.val)}</span>
+              <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white border border-black/5 shadow-sm flex items-center justify-center text-[10px] leading-none">{s.icon}</span>
+            </div>
             <p className="text-[9px] font-bold uppercase tracking-wider text-brand-navy/50">{s.label}</p>
           </div>
         ))}
-        <button onClick={() => setPubChallengeOpen(true)}
-          className="flex-1 flex flex-col items-center gap-0.5 py-2 active:opacity-60 transition-opacity">
-          <p className="font-black text-base leading-none text-brand-navy">{activePub.length}</p>
+        <button onClick={() => setPubChallengeOpen(true)} className="flex flex-col items-center gap-1.5 active:opacity-70 transition-opacity">
+          <div className="relative w-14 h-14 rounded-full flex items-center justify-center shadow-md shrink-0" style={{ background: uiColors.profileStatsTile.css }}>
+            <span className="font-display font-black text-base leading-none text-white" style={tileTextStyle(uiColors.profileStatsTile)}>{fmtK(activePub.length)}</span>
+            <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white border border-black/5 shadow-sm flex items-center justify-center text-[10px] leading-none">🏆</span>
+          </div>
           <p className="text-[9px] font-bold uppercase tracking-wider text-brand-navy/50">Challenges</p>
         </button>
       </div>
@@ -38081,7 +38093,8 @@ function PublicUserProfile({ targetUser: initialTargetUser, onBack, currentUser,
                 <div
                   key={card.id}
                   onClick={isAnon ? undefined : () => onViewStore(store)}
-                  className={cn("glass-card snap-start shrink-0 w-52 rounded-2xl overflow-hidden shadow-xl transition-transform", isAnon ? "cursor-default" : "cursor-pointer active:scale-[0.98]")}
+                  className={cn("snap-start shrink-0 w-52 rounded-2xl overflow-hidden border border-black/5 transition-transform", isAnon ? "cursor-default" : "cursor-pointer active:scale-[0.98]")}
+                  style={{ background: uiColors.loyaltyCardTile.css }}
                 >
                   <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-brand-navy/6">
                     <div className="w-8 h-8 rounded-xl shrink-0 shadow-sm overflow-hidden flex items-center justify-center bg-purple-100">
