@@ -14757,6 +14757,9 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
             cardId={pendingPackCardId}
             uid={user.uid}
             onClose={() => {
+              // Once the reveal animation closes, follow up by opening that card's full
+              // sticker collection — this was queued but never actually triggered before.
+              if (pendingPackCardId) setPendingCollectionCardId(pendingPackCardId);
               setPendingPack(null);
               setPendingPackCardId(null);
             }}
@@ -14809,6 +14812,9 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
             pendingPack={pendingPack ?? undefined}
             pendingPackCardId={pendingPackCardId ?? undefined}
             onPackClosed={() => {
+              // Same follow-up as the standalone pack modal — open the card's collection
+              // once the reveal closes.
+              if (pendingPackCardId) setPendingCollectionCardId(pendingPackCardId);
               setPendingPack(null);
               setPendingPackCardId(null);
             }}
