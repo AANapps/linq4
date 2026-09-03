@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import confetti from 'canvas-confetti';
 import { PixelAvatar, AvatarCustomiserModal, AvatarViewModal } from './PixelAvatar';
@@ -13185,6 +13185,13 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
 
   const visibleActivePrograms = activePrograms.filter(challengeInRange);
   const visibleActiveStandardChallenges = activeStandardChallenges.filter(challengeInRange);
+  // Live (not frozen-at-build-time) set of challenges the user is already a participant in —
+  // passed to the stamp-celebration modal so its "Join Challenge" buttons stay correct even if
+  // Firestore's participantUids updates land after that modal's pages were built.
+  const liveJoinedChallengeIds = useMemo(
+    () => new Set(activeStandardChallenges.filter(c => (c.participantUids || []).includes(user.uid)).map(c => c.id)),
+    [activeStandardChallenges, user.uid]
+  );
 
   // Notify user about collectible programme they haven't joined (once per programme)
   useEffect(() => {
@@ -14298,6 +14305,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
             onArchiveTier={celebrationArchiveFnRef.current ?? undefined}
             onJoinChallenge={handleJoinChallengeFromCelebration}
             onJoinCollectible={handleJoinCollectibleFromCelebration}
+            liveJoinedChallengeIds={liveJoinedChallengeIds}
             avatarConfig={profile?.avatar}
             userUid={user.uid}
             pendingPack={pendingPack ?? undefined}
@@ -16740,6 +16748,7 @@ function StampCelebrationModal({
   pendingPack,
   pendingPackCardId,
   onPackClosed,
+  liveJoinedChallengeIds,
 }: {
   pages: CelebrationPage[];
   onClose: () => void;
@@ -16751,6 +16760,7 @@ function StampCelebrationModal({
   pendingPack?: CollectibleSticker[] | null;
   pendingPackCardId?: string | null;
   onPackClosed?: () => void;
+  liveJoinedChallengeIds?: Set<string>;
 }) {
   const [pageIdx, setPageIdx] = useState(0);
   const [isArchivingTier, setIsArchivingTier] = useState(false);
@@ -17276,7 +17286,7 @@ function StampCelebrationModal({
                   {/* 3 new unjoined challenges */}
                   {page.newChallengesList?.map((c, i) => {
                     const isJoining = joiningChallengeId === c.id;
-                    const isJoined = joinedChallengeIds.has(c.id);
+                    const isJoined = joinedChallengeIds.has(c.id) || !!liveJoinedChallengeIds?.has(c.id);
                     return (
                       <motion.div
                         key={c.id}
