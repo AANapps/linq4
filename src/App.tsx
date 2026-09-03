@@ -14057,19 +14057,16 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                 <button
                   onClick={() => setWalletSubTab('challenges')}
                   className={cn(
-                    'flex-1 py-2.5 rounded-xl text-sm font-bold transition-all relative overflow-hidden text-white',
-                    walletSubTab === 'challenges' ? 'shadow-md' : ''
+                    'flex-1 py-2.5 rounded-xl text-sm font-bold transition-all relative flex items-center justify-center gap-1.5',
+                    walletSubTab === 'challenges'
+                      ? 'bg-white text-brand-navy shadow-sm'
+                      : 'bg-white/50 text-brand-navy/80'
                   )}
-                  style={{ background: 'linear-gradient(90deg,#7c3aed,#4f46e5,#2563eb)' }}
                 >
-                  <span className="challenge-dot" style={{ top: '20%', animationDelay: '0s' }} />
-                  <span className="challenge-dot" style={{ top: '58%', animationDelay: '0.7s' }} />
-                  <span className="challenge-sparkle" style={{ top: '5%',  left: '15%', animationDelay: '0.2s' }}>✦</span>
-                  <span className="challenge-sparkle" style={{ top: '50%', left: '50%', animationDelay: '1.0s' }}>✦</span>
-                  <span className="challenge-sparkle" style={{ top: '8%',  left: '80%', animationDelay: '0.5s' }}>★</span>
-                  <span className={cn('relative z-10', walletSubTab !== 'challenges' && 'tab-shake')}>🏆 Win</span>
+                  <Trophy size={14} className={walletSubTab === 'challenges' ? 'text-amber-500' : 'text-brand-navy/40'} />
+                  <span>Win</span>
                   {totalUnrevealed > 0 && (
-                    <span className="absolute top-1 right-3 w-4 h-4 bg-white/30 text-white text-[9px] font-black rounded-full flex items-center justify-center z-10">
+                    <span className="absolute top-1 right-2.5 min-w-[16px] h-[16px] px-1 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
                       {totalUnrevealed > 9 ? '9+' : totalUnrevealed}
                     </span>
                   )}
@@ -34369,7 +34366,7 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
               </button>
             </div>
 
-          {/* Card collectible challenge banner — same width as the ticker + leaderboard row above */}
+          {/* Challenges banner — Apple-style card; tapping anywhere opens the Challenges page */}
           {visibleFeedCollectibleChallenges.length > 0 && (
             <div className="space-y-3">
               {visibleFeedCollectibleChallenges.map(prog => {
@@ -34380,51 +34377,57 @@ function ForYouScreen({ onViewUser, onViewStore, onViewChallenges, onOpenLinqle,
                 const pct = joined ? (isComplete ? 100 : Math.min(99, Math.round((mySets / feedMaxSets) * 100))) : 0;
                 const isEnded = prog.endsAt ? (prog.endsAt.toMillis?.() ?? (prog.endsAt.seconds ?? 0) * 1000) < Date.now() : false;
                 return (
-                  <div
+                  <motion.button
                     key={prog.id}
-                    className="relative rounded-[1.5rem] overflow-hidden shadow-lg"
-                    style={{ minHeight: '130px' }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => onViewChallenges?.()}
+                    className="relative w-full text-left rounded-[1.75rem] overflow-hidden border border-black/5 shadow-sm"
+                    style={{ minHeight: '128px' }}
                   >
                     {prog.imageUrl ? (
                       <img src={prog.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
                     ) : (
                       <div className="absolute inset-0" style={{ background: uiColors.challengesFypTile.css }} />
                     )}
-                    <div className="absolute inset-0 bg-black/40" />
-                    <div className="relative z-10 flex items-center gap-4 px-5 py-4" style={{ minHeight: '130px' }}>
+                    {/* Bottom vignette only, so an image or the admin gradient stays clean up top */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+
+                    <div className="relative z-10 flex items-end justify-between gap-3 px-5 py-4" style={{ minHeight: '128px' }}>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-white/70">Card Collectible Challenge</p>
-                        <p className="font-display text-lg font-black text-white leading-tight truncate">{prog.title}</p>
-                        <p className="text-xs text-white/75 mt-0.5 truncate">🏆 {prog.reward}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-white/70">Challenge</p>
+                        <p className="font-display text-lg font-bold text-white leading-tight truncate mt-0.5">{prog.title}</p>
+                        <p className="text-xs text-white/70 mt-0.5 truncate">{prog.reward}</p>
                         {joined && (
-                          <div className="mt-2.5 space-y-1 max-w-[240px]">
-                            <div className="flex items-baseline justify-between text-[11px] font-black text-white">
+                          <div className="mt-2.5 max-w-[220px] space-y-1">
+                            <div className="flex items-center justify-between text-[10px] font-bold text-white/80">
                               <span>{mySets}/{feedMaxSets} sets</span>
-                              <span className={isComplete ? 'text-emerald-300' : ''}>{pct}%</span>
+                              <span>{pct}%</span>
                             </div>
-                            <div className="relative h-2 bg-white/20 rounded-full overflow-hidden">
+                            <div className="h-1 rounded-full overflow-hidden bg-white/20">
                               <motion.div
-                                className="absolute inset-y-0 left-0 rounded-full"
-                                style={{ background: isComplete ? 'linear-gradient(90deg,#34d399,#10b981)' : 'linear-gradient(90deg,#7c3aed,#4f46e5,#2563eb)' }}
-                                initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.75, ease: [0.34, 1.56, 0.64, 1] }}
+                                className="h-full rounded-full bg-white"
+                                initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.75, ease: 'easeOut' }}
                               />
                             </div>
                           </div>
                         )}
                       </div>
-                      {!joined && (
-                        <motion.button
-                          whileTap={{ scale: 0.93 }}
-                          onClick={() => handleJoinCollectibleProgramme(prog)}
+                      {!joined ? (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleJoinCollectibleProgramme(prog); }}
                           disabled={joiningFeedProgramId === prog.id || isEnded}
-                          className="shrink-0 px-5 py-2.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-1.5 active:opacity-80"
-                          style={{ background: isEnded ? 'rgba(255,255,255,0.2)' : 'linear-gradient(135deg,#4F46E5,#7C3AED)' }}
+                          className={cn(
+                            "shrink-0 px-4 py-2 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 active:opacity-70 transition-opacity disabled:opacity-50",
+                            isEnded ? "bg-white/25 text-white" : "bg-white text-black"
+                          )}
                         >
-                          {joiningFeedProgramId === prog.id ? <Loader2 size={14} className="animate-spin" /> : isEnded ? 'Ended' : 'Join'}
-                        </motion.button>
+                          {joiningFeedProgramId === prog.id ? <Loader2 size={12} className="animate-spin" /> : isEnded ? 'Ended' : 'Join'}
+                        </button>
+                      ) : (
+                        <ChevronRight size={18} className="text-white/60 shrink-0 mb-1" />
                       )}
                     </div>
-                  </div>
+                  </motion.button>
                 );
               })}
             </div>
