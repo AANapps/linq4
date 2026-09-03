@@ -14057,16 +14057,19 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                 <button
                   onClick={() => setWalletSubTab('challenges')}
                   className={cn(
-                    'flex-1 py-2.5 rounded-xl text-sm font-bold transition-all relative flex items-center justify-center gap-1.5',
-                    walletSubTab === 'challenges'
-                      ? 'bg-white text-brand-navy shadow-sm'
-                      : 'bg-white/50 text-brand-navy/80'
+                    'flex-1 py-2.5 rounded-xl text-sm font-bold transition-all relative overflow-hidden text-white',
+                    walletSubTab === 'challenges' ? 'shadow-md' : ''
                   )}
+                  style={{ background: 'linear-gradient(90deg,#7c3aed,#4f46e5,#2563eb)' }}
                 >
-                  <Trophy size={14} className={walletSubTab === 'challenges' ? 'text-amber-500' : 'text-brand-navy/40'} />
-                  <span>Win</span>
+                  <span className="challenge-dot" style={{ top: '20%', animationDelay: '0s' }} />
+                  <span className="challenge-dot" style={{ top: '58%', animationDelay: '0.7s' }} />
+                  <span className="challenge-sparkle" style={{ top: '5%',  left: '15%', animationDelay: '0.2s' }}>✦</span>
+                  <span className="challenge-sparkle" style={{ top: '50%', left: '50%', animationDelay: '1.0s' }}>✦</span>
+                  <span className="challenge-sparkle" style={{ top: '8%',  left: '80%', animationDelay: '0.5s' }}>★</span>
+                  <span className={cn('relative z-10', walletSubTab !== 'challenges' && 'tab-shake')}>🏆 Win</span>
                   {totalUnrevealed > 0 && (
-                    <span className="absolute top-1 right-2.5 min-w-[16px] h-[16px] px-1 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                    <span className="absolute top-1 right-3 w-4 h-4 bg-white/30 text-white text-[9px] font-black rounded-full flex items-center justify-center z-10">
                       {totalUnrevealed > 9 ? '9+' : totalUnrevealed}
                     </span>
                   )}
@@ -14219,13 +14222,12 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                   <>
                     {/* ── My Challenges ── */}
                     {joinedProgs.length > 0 && (
-                      <div className="rounded-[2rem] overflow-hidden shadow-lg border border-black/5">
-                        <div className="gradient-logo-blue px-5 py-3 relative overflow-hidden">
-                          <span className="shine-ray" aria-hidden="true" />
-                          <p className="text-[10px] font-bold uppercase tracking-widest text-white/60 relative z-10">My Challenges</p>
-                          <h3 className="font-display text-base font-bold text-white relative z-10">Your progress</h3>
+                      <div className="rounded-[1.75rem] overflow-hidden shadow-sm border border-black/5 bg-white">
+                        <div className="px-5 pt-4 pb-2">
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">My Challenges</p>
+                          <h3 className="font-display text-base font-bold text-brand-navy">Your progress</h3>
                         </div>
-                        <div className="bg-white divide-y divide-black/5">
+                        <div className="divide-y divide-black/5">
                           {joinedProgs.map(prog => {
                             const sc = myStickerCards.find(s => s.programme_id === prog.id)!;
                             const unrevealed = sc.stickers.filter((s: CollectibleSticker) => !(sc.revealedIds || []).includes(s.id));
@@ -14293,21 +14295,16 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                                 <div className="space-y-1">
                                   <div className="flex items-baseline justify-between">
                                     <span className="text-xs font-black text-brand-navy">{myProgSets}<span className="text-brand-navy/40 font-bold text-[10px]"> / {maxSets} sets</span></span>
-                                    <span className={cn('text-xs font-black', isComplete ? 'text-green-500' : 'text-brand-gold')}>{pct}%</span>
+                                    <span className={cn('text-xs font-black', isComplete ? 'text-emerald-500' : 'text-brand-navy/60')}>{pct}%</span>
                                   </div>
-                                  <div className="relative h-5 bg-brand-navy/8 rounded-xl overflow-hidden">
+                                  <div className="relative h-2 bg-brand-navy/8 rounded-full overflow-hidden">
                                     <motion.div
-                                      className="absolute inset-y-0 left-0 rounded-xl overflow-hidden"
-                                      style={{
-                                        background: isComplete ? 'linear-gradient(90deg,#34d399,#10b981)' : 'linear-gradient(90deg,#7c3aed,#4f46e5,#2563eb)',
-                                        boxShadow: isComplete ? '3px 0 12px rgba(52,211,153,0.5)' : '3px 0 12px rgba(99,102,241,0.5)',
-                                      }}
+                                      className="absolute inset-y-0 left-0 rounded-full"
+                                      style={{ background: isComplete ? '#10b981' : '#2563EB' }}
                                       initial={{ width: 0 }}
                                       animate={{ width: `${pct}%` }}
-                                      transition={{ duration: 0.85, ease: [0.34, 1.56, 0.64, 1] }}
-                                    >
-                                      {!isComplete && <span className="challenge-shimmer" />}
-                                    </motion.div>
+                                      transition={{ duration: 0.85, ease: 'easeOut' }}
+                                    />
                                   </div>
                                 </div>
                                 {isComplete && (
@@ -14344,13 +14341,12 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
 
                     {/* ── Available to Join ── */}
                     {availableProgs.length > 0 && (
-                      <div className="rounded-[2rem] overflow-hidden shadow-lg border border-black/5">
-                        <div className="gradient-logo-blue px-5 py-3 relative overflow-hidden">
-                          <span className="shine-ray" aria-hidden="true" />
-                          <p className="text-[10px] font-bold uppercase tracking-widest text-white/60 relative z-10">Available to Join</p>
-                          <h3 className="font-display text-base font-bold text-white relative z-10">Sticker challenges</h3>
+                      <div className="rounded-[1.75rem] overflow-hidden shadow-sm border border-black/5 bg-white">
+                        <div className="px-5 pt-4 pb-2">
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40">Available to Join</p>
+                          <h3 className="font-display text-base font-bold text-brand-navy">Sticker challenges</h3>
                         </div>
-                        <div className="bg-white divide-y divide-black/5">
+                        <div className="divide-y divide-black/5">
                           {availableProgs.map(prog => (
                             <div key={prog.id}>
                               {prog.imageUrl && <img src={prog.imageUrl} alt="" className="w-full object-cover h-36" />}
@@ -14441,7 +14437,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                     const isEnded = c.endsAt ? (c.endsAt.toMillis?.() ?? (c.endsAt.seconds ?? 0) * 1000) < Date.now() : false;
                     if (isRedeemed) return null; // shown in archived section
                     return (
-                      <div key={c.id} id={`challenge-${c.id}`} className={cn("rounded-[2rem] shadow-lg overflow-hidden transition-all duration-500", isHighlighted ? 'ring-2 ring-brand-gold/60' : '')}>
+                      <div key={c.id} id={`challenge-${c.id}`} className={cn("rounded-[1.75rem] shadow-sm border border-black/5 bg-white overflow-hidden transition-all duration-500", isHighlighted ? 'ring-2 ring-brand-gold/60' : '')}>
                         {/* Challenge image — full bleed above info */}
                         {c.imageUrl && (
                           <img src={c.imageUrl} alt="" className="w-full object-cover h-40" />
@@ -14453,32 +14449,31 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                             <span className="text-white text-[11px] font-black uppercase tracking-widest">Ended</span>
                           </div>
                         )}
-                        {/* Gradient header */}
-                        <div className="gradient-logo-blue px-5 py-4 relative overflow-hidden">
-                          <span className="shine-ray" aria-hidden="true" />
-                          <div className="flex items-start justify-between gap-3 relative z-10">
+                        {/* Header */}
+                        <div className="px-5 pt-4 pb-3">
+                          <div className="flex items-start justify-between gap-3">
                             <div className="flex-1 min-w-0">
-                              <p className="text-[10px] font-bold uppercase tracking-widest text-white/50 mb-0.5">Challenge</p>
-                              <p className="font-bold text-white text-base leading-tight">{c.title}</p>
-                              {c.description && <p className="text-xs text-white/60 mt-1">{c.description}</p>}
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-0.5">Challenge</p>
+                              <p className="font-bold text-brand-navy text-base leading-tight">{c.title}</p>
+                              {c.description && <p className="text-xs text-brand-navy/50 mt-1">{c.description}</p>}
                             </div>
-                            <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 mt-0.5", isComplete ? 'bg-green-400/30' : 'bg-white/15')}>
-                              <Trophy size={18} className={isComplete ? 'text-green-300' : 'text-white'} />
+                            <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 mt-0.5", isComplete ? 'bg-emerald-50' : 'bg-brand-navy/5')}>
+                              <Trophy size={18} className={isComplete ? 'text-emerald-500' : 'text-brand-navy/50'} />
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 flex-wrap mt-2.5 relative z-10">
-                            <span className="text-[10px] font-bold bg-white/20 text-white px-2.5 py-1 rounded-full">
+                          <div className="flex items-center gap-2 flex-wrap mt-2.5">
+                            <span className="text-[10px] font-bold bg-brand-navy/5 text-brand-navy/70 px-2.5 py-1 rounded-full">
                               🎁 {c.reward}
                             </span>
                             {c.endsAt && (
-                              <span className="text-[10px] font-bold bg-white/10 text-white/70 px-2.5 py-1 rounded-full flex items-center gap-1">
+                              <span className="text-[10px] font-bold bg-brand-navy/5 text-brand-navy/50 px-2.5 py-1 rounded-full flex items-center gap-1">
                                 <Clock size={9} /> <CountdownTimer endsAt={c.endsAt} />
                               </span>
                             )}
                           </div>
                         </div>
-                        {/* White body */}
-                        <div className="bg-white px-5 py-4 space-y-3">
+                        {/* Body */}
+                        <div className="px-5 pb-4 space-y-3 border-t border-black/5 pt-3">
 
                           {c.vendorIds?.length ? (
                             <div>
@@ -14514,36 +14509,17 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                                   {stampsProgress}
                                   <span className="text-brand-navy/40 font-bold text-xs"> / {c.goal} {c.unit}</span>
                                 </span>
-                                <span className={cn('text-sm font-black', isComplete ? 'text-green-500' : 'text-indigo-500')}>{progressPct}%</span>
+                                <span className={cn('text-sm font-black', isComplete ? 'text-emerald-500' : 'text-brand-navy/70')}>{progressPct}%</span>
                               </div>
-                              {/* Animated bar */}
-                              <div className="relative h-6 bg-brand-navy/6 rounded-2xl overflow-hidden">
+                              {/* Progress bar */}
+                              <div className="relative h-2 bg-brand-navy/6 rounded-full overflow-hidden">
                                 <motion.div
-                                  className="absolute inset-y-0 left-0 rounded-2xl overflow-hidden"
-                                  style={{
-                                    background: isComplete
-                                      ? 'linear-gradient(90deg,#34d399,#10b981)'
-                                      : 'linear-gradient(90deg,#7c3aed,#4f46e5,#2563eb)',
-                                    boxShadow: isComplete
-                                      ? '3px 0 14px rgba(52,211,153,0.5)'
-                                      : '3px 0 14px rgba(99,102,241,0.55)',
-                                  }}
+                                  className="absolute inset-y-0 left-0 rounded-full"
+                                  style={{ background: isComplete ? '#10b981' : '#2563EB' }}
                                   initial={{ width: 0 }}
                                   animate={{ width: `${progressPct}%` }}
-                                  transition={{ duration: 0.85, ease: [0.34, 1.56, 0.64, 1] }}
-                                >
-                                  {!isComplete && progressPct > 4 && (
-                                    <>
-                                      <span className="challenge-dot" style={{ top: '18%', animationDelay: '0s' }} />
-                                      <span className="challenge-dot" style={{ top: '58%', animationDelay: '0.63s' }} />
-                                      <span className="challenge-dot" style={{ top: '36%', animationDelay: '1.26s' }} />
-                                      <span className="challenge-sparkle" style={{ top: '8%',  left: '18%', animationDelay: '0.1s' }}>✦</span>
-                                      <span className="challenge-sparkle" style={{ top: '52%', left: '45%', animationDelay: '0.85s' }}>✦</span>
-                                      <span className="challenge-sparkle" style={{ top: '15%', left: '72%', animationDelay: '1.5s' }}>✦</span>
-                                      <span className="challenge-sparkle" style={{ top: '60%', left: '88%', animationDelay: '0.4s' }}>★</span>
-                                    </>
-                                  )}
-                                </motion.div>
+                                  transition={{ duration: 0.85, ease: 'easeOut' }}
+                                />
                               </div>
                               {isComplete && (
                                 <motion.p
@@ -14634,21 +14610,11 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                                   logEvent('challenge_started', user.uid, { challengeId: c.id, goal: c.goal, type: c.type });
                                 }}
                                 className={cn(
-                                  'relative w-full py-3 rounded-2xl text-sm font-bold transition-all active:scale-95 overflow-hidden',
-                                  (joinedCount >= 5 || isEnded) ? 'bg-brand-navy/20 text-brand-navy/75 cursor-not-allowed' : 'text-white'
+                                  'w-full py-3 rounded-full text-sm font-bold transition-all active:scale-95',
+                                  (joinedCount >= 5 || isEnded) ? 'bg-brand-navy/10 text-brand-navy/50 cursor-not-allowed' : 'bg-brand-navy text-white'
                                 )}
-                                style={!(joinedCount >= 5 || isEnded) ? { background: 'linear-gradient(90deg,#7c3aed,#4f46e5,#2563eb)' } : {}}
                               >
-                                {!(joinedCount >= 5 || isEnded) && (
-                                  <>
-                                    <span className="challenge-dot" style={{ top: '25%', animationDelay: '0s' }} />
-                                    <span className="challenge-dot" style={{ top: '60%', animationDelay: '0.7s' }} />
-                                    <span className="challenge-sparkle" style={{ top: '5%',  left: '20%', animationDelay: '0.2s' }}>✦</span>
-                                    <span className="challenge-sparkle" style={{ top: '55%', left: '55%', animationDelay: '1.0s' }}>✦</span>
-                                    <span className="challenge-sparkle" style={{ top: '10%', left: '80%', animationDelay: '0.5s' }}>★</span>
-                                  </>
-                                )}
-                                <span className="relative z-10">{isEnded ? 'Challenge Ended' : 'Join Challenge'}</span>
+                                {isEnded ? 'Challenge Ended' : 'Join Challenge'}
                               </button>
                             </>
                           )}
