@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, useId } from 'react';
 import { createPortal } from 'react-dom';
 import confetti from 'canvas-confetti';
 import { PixelAvatar, AvatarCustomiserModal, AvatarViewModal } from './PixelAvatar';
@@ -94,6 +94,31 @@ const emailVerificationActionCodeSettings = {
 // before attempting phone auth — otherwise Firebase falls back to the reCAPTCHA webview.
 const APP_LAUNCH_TIME = Date.now();
 const IOS_APNS_WARMUP_MS = 3000;
+
+// "Linq" wordmark traced from Poppins Black Italic (fontTools), with the q's descender
+// lengthened along its own edge angle — the live font glyph's stock terminal is a stubby
+// flat cut that reads as clipped/broken at the sizes this logo is actually shown at. Every
+// other letterform is pixel-identical to the font. Baked as a path (not live <text>) so it
+// renders identically everywhere regardless of font-loading/engine quirks.
+const LINQ_WORDMARK_PATH = 'M252 -168H466L436 0H0L125 -708H347Z M615 -699Q615 -734 634 -764Q653 -794 688 -812Q722 -829 764 -829Q815 -829 844 -804Q874 -778 874 -737Q874 -702 855 -673Q836 -644 802 -626Q768 -609 726 -609Q674 -609 644 -634Q615 -659 615 -699ZM828 -564 728 0H506L606 -564Z M1493 -390Q1493 -360 1487 -327L1429 0H1208L1261 -299Q1263 -315 1263 -321Q1263 -352 1246 -369Q1228 -386 1197 -386Q1161 -386 1136 -363Q1111 -340 1103 -300L1050 0H828L928 -564H1150L1135 -479Q1168 -519 1216 -544Q1264 -568 1323 -568Q1405 -568 1449 -520Q1493 -473 1493 -390Z M1844 -568Q1889 -568 1921 -556Q1953 -543 1975 -514L1984 -564H2205L2042 360H1821L1895 -62Q1858 -27 1822 -10Q1786 6 1743 6Q1685 6 1638 -22Q1592 -49 1565 -100Q1538 -150 1538 -217Q1538 -247 1544 -278Q1559 -361 1604 -427Q1650 -493 1714 -530Q1778 -568 1844 -568ZM1936 -306Q1936 -342 1916 -359Q1895 -376 1869 -376Q1839 -376 1808 -352Q1778 -327 1769 -278Q1767 -262 1767 -256Q1767 -219 1788 -203Q1808 -187 1835 -187Q1866 -187 1896 -210Q1925 -233 1934 -282Q1936 -291 1936 -306Z';
+const LINQ_WORDMARK_ASPECT = 2265 / 1249;
+
+function LinqWordmark({ height = 60, className }: { height?: number; className?: string }) {
+  const gradId = useId();
+  const width = Math.round(height * LINQ_WORDMARK_ASPECT);
+  return (
+    <svg width={width} height={height} viewBox="-30 -859 2265 1249" aria-label="Linq" className={className} style={{ userSelect: 'none', display: 'block' }}>
+      <defs>
+        <linearGradient id={gradId} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="2205" y2="0">
+          <stop offset="0%" stopColor="#0473cd" />
+          <stop offset="50%" stopColor="#3c43d7" />
+          <stop offset="100%" stopColor="#7312e1" />
+        </linearGradient>
+      </defs>
+      <path fill={`url(#${gradId})`} d={LINQ_WORDMARK_PATH} />
+    </svg>
+  );
+}
 
 const openMaps = async (query: string) => {
   const encoded = encodeURIComponent(query);
@@ -2247,13 +2272,11 @@ export default function App() {
     setNeedsOnboarding(false);
   };
 
-  const linqGradientTextStyle: React.CSSProperties = { fontFamily: 'Poppins, sans-serif', background: 'linear-gradient(115deg, var(--brand-g1), var(--brand-g2), var(--brand-g3), var(--brand-g4))', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', WebkitTextFillColor: 'transparent' };
-
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-between bg-white px-6 pb-16 relative overflow-hidden" style={{ paddingTop: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 4rem)' }}>
         <div className="flex-1 flex flex-col items-center justify-center gap-7">
-          <span className="text-6xl font-black italic tracking-tight select-none leading-[1.2] pb-2" style={linqGradientTextStyle}>Linq</span>
+          <LinqWordmark height={64} />
           <div className="w-7 h-7 rounded-full border-[3px] border-black/10 border-t-black/60 animate-spin" />
         </div>
         <div className="flex flex-col items-center gap-2">
@@ -2268,7 +2291,7 @@ export default function App() {
   if (emailVerifiedStandalone) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white px-6 gap-6 text-center">
-        <span className="text-6xl font-black italic tracking-tight select-none leading-[1.2] pb-2" style={linqGradientTextStyle}>Linq</span>
+        <LinqWordmark height={64} />
         <CheckCircle2 className="w-12 h-12 text-green-500" />
         <div>
           <p className="text-black font-bold text-xl mb-2">Verified</p>
@@ -2281,7 +2304,7 @@ export default function App() {
   if (verificationLinkExpired) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white px-6 gap-6 text-center">
-        <span className="text-6xl font-black italic tracking-tight select-none leading-[1.2] pb-2" style={linqGradientTextStyle}>Linq</span>
+        <LinqWordmark height={64} />
         <AlertCircle className="w-12 h-12 text-amber-500" />
         <div>
           <p className="text-black font-bold text-xl mb-2">Link already used</p>
@@ -2302,7 +2325,7 @@ export default function App() {
   if (emailChangedStandalone) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white px-6 gap-6 text-center">
-        <span className="text-6xl font-black italic tracking-tight select-none leading-[1.2] pb-2" style={linqGradientTextStyle}>Linq</span>
+        <LinqWordmark height={64} />
         <CheckCircle2 className="w-12 h-12 text-green-500" />
         <div>
           <p className="text-black font-bold text-xl mb-2">Email updated!</p>
@@ -2315,7 +2338,7 @@ export default function App() {
   if (browserConsumerBlocked) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white px-6 gap-6 text-center">
-        <span className="text-6xl font-black italic tracking-tight select-none leading-[1.2] pb-2" style={linqGradientTextStyle}>Linq</span>
+        <LinqWordmark height={64} />
         <p className="text-black font-bold text-xl">Vendor & Admin Access Only</p>
         <p className="text-black/50 text-sm max-w-xs">The Linq web app is for vendors and admins. Customers should use the Linq mobile app.</p>
         <a href="https://mylinq.app" className="px-8 py-3 bg-black rounded-2xl text-white font-bold text-sm">Go to mylinq.app</a>
@@ -2328,7 +2351,7 @@ export default function App() {
   if (nativeVendorBlocked) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white px-6 gap-5 text-center" style={{ paddingTop: 'var(--safe-area-inset-top, env(safe-area-inset-top, 0px))' }}>
-        <span className="text-6xl font-black italic tracking-tight select-none leading-[1.2] pb-2" style={linqGradientTextStyle}>Linq</span>
+        <LinqWordmark height={64} />
         <div>
           <p className="text-black font-bold text-xl mb-2">Vendor accounts aren't supported here</p>
           <p className="text-black/50 text-sm max-w-xs">This app is for Linq members. Please sign in with a personal account.</p>
@@ -2367,7 +2390,7 @@ export default function App() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-between bg-white px-6 pb-16" style={{ paddingTop: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 4rem)' }}>
         <div className="flex-1 flex flex-col items-center justify-center gap-6">
-          <span className="text-6xl font-black italic tracking-tight select-none leading-[1.2] pb-2" style={linqGradientTextStyle}>Linq</span>
+          <LinqWordmark height={64} />
           {profileLoadError ? (
             <>
               <p className="text-black/50 text-sm text-center">Could not connect. Please check your internet connection.</p>
@@ -2406,20 +2429,7 @@ export default function App() {
           <Plus className="w-5 h-5 text-white" />
         </button>
         <button onClick={() => setShowSettings(true)} className="absolute left-1/2 -translate-x-1/2 hover:opacity-80 transition-opacity">
-          <svg width="62" height="34" viewBox="-30 -859 2265 1249" aria-label="Linq" style={{ userSelect: 'none', display: 'block', overflow: 'visible' }}>
-            {/* Static "Linq" wordmark traced from Poppins Black Italic, with the q's descender
-                lengthened — the live font glyph's stock terminal is a stubby flat cut that reads
-                as clipped at small sizes. Baked as a path (not live <text>) so it renders
-                identically everywhere regardless of font-loading/engine quirks. */}
-            <defs>
-              <linearGradient id="hdrLinqGrad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="2205" y2="0">
-                <stop offset="0%" stopColor="#0473cd" />
-                <stop offset="50%" stopColor="#3c43d7" />
-                <stop offset="100%" stopColor="#7312e1" />
-              </linearGradient>
-            </defs>
-            <path fill="url(#hdrLinqGrad)" d="M252 -168H466L436 0H0L125 -708H347Z M615 -699Q615 -734 634 -764Q653 -794 688 -812Q722 -829 764 -829Q815 -829 844 -804Q874 -778 874 -737Q874 -702 855 -673Q836 -644 802 -626Q768 -609 726 -609Q674 -609 644 -634Q615 -659 615 -699ZM828 -564 728 0H506L606 -564Z M1493 -390Q1493 -360 1487 -327L1429 0H1208L1261 -299Q1263 -315 1263 -321Q1263 -352 1246 -369Q1228 -386 1197 -386Q1161 -386 1136 -363Q1111 -340 1103 -300L1050 0H828L928 -564H1150L1135 -479Q1168 -519 1216 -544Q1264 -568 1323 -568Q1405 -568 1449 -520Q1493 -473 1493 -390Z M1844 -568Q1889 -568 1921 -556Q1953 -543 1975 -514L1984 -564H2205L2042 360H1821L1895 -62Q1858 -27 1822 -10Q1786 6 1743 6Q1685 6 1638 -22Q1592 -49 1565 -100Q1538 -150 1538 -217Q1538 -247 1544 -278Q1559 -361 1604 -427Q1650 -493 1714 -530Q1778 -568 1844 -568ZM1936 -306Q1936 -342 1916 -359Q1895 -376 1869 -376Q1839 -376 1808 -352Q1778 -327 1769 -278Q1767 -262 1767 -256Q1767 -219 1788 -203Q1808 -187 1835 -187Q1866 -187 1896 -210Q1925 -233 1934 -282Q1936 -291 1936 -306Z" />
-          </svg>
+          <LinqWordmark height={34} />
         </button>
         <div className="flex items-center gap-0.5">
           {['consumer','admin'].includes(profile?.role ?? '') && (
@@ -3113,11 +3123,8 @@ function LandingPage({ onLogin, onEmailSignUp, onEmailSignIn, onBrowseAsGuest }:
 
       <div className="flex-1 flex flex-col justify-center max-w-xs mx-auto w-full">
         <div className="mb-10 text-center">
-          <div className="flex items-baseline justify-center gap-2">
-            <p
-              className="font-black italic leading-[1.2] pb-1"
-              style={{ fontFamily: 'Poppins, sans-serif', fontSize: '3rem', background: 'linear-gradient(115deg, var(--brand-g1), var(--brand-g2), var(--brand-g3), var(--brand-g4))', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', WebkitTextFillColor: 'transparent' }}
-            >Linq</p>
+          <div className="flex items-center justify-center gap-2">
+            <LinqWordmark height={52} />
             {!Capacitor.isNativePlatform() && phoneMode === 'phone' && (
               <span className="text-black/50 text-base font-semibold">Business</span>
             )}
@@ -3364,7 +3371,7 @@ function GuestApp({ viewingStore, setViewingStore, onRequireAuth }: {
   return (
     <div className="min-h-screen bg-brand-bg flex flex-col" style={{ paddingTop: 'var(--safe-area-inset-top, env(safe-area-inset-top, 0px))' }}>
       <div className="flex items-center justify-between px-5 py-4 max-w-2xl mx-auto w-full">
-        <span className="font-black italic text-2xl text-brand-navy" style={{ fontFamily: 'Poppins, sans-serif' }}>Linq</span>
+        <LinqWordmark height={26} />
         <button onClick={onRequireAuth} className="px-4 py-2 rounded-2xl bg-brand-navy text-white font-bold text-sm active:scale-95 transition-transform">
           Sign up
         </button>
