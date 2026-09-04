@@ -1240,6 +1240,8 @@ interface StoreOffer {
   offerType?: 'standard' | 'birthday' | 'seasonal';
   maxRedemptionsPerUser: number;
   value?: number;
+  // Missing/undefined means 'fixed' — kept optional for offers created before this field existed.
+  discountType?: 'fixed' | 'percent';
   status: 'active' | 'paused';
   createdAt: any;
   validDays?: number;
@@ -4666,6 +4668,17 @@ const CURRENCIES = [
 ];
 function currencySymbol(code?: string) { return CURRENCY_SYMBOLS[code || 'AUD'] ?? (code || 'A$'); }
 
+// Percent-off offers don't have a fixed $ value, so they're shown as "20% off" instead of "Save $4.00",
+// and (see OfferDetailSheet.handleRedeem) they never add to the customer's "Saved with Linq" total.
+function offerBadgeText(offer: Pick<StoreOffer, 'value' | 'discountType'>): string | null {
+  if (!offer.value) return null;
+  return offer.discountType === 'percent' ? `${offer.value}% off` : `Save $${offer.value.toFixed(2)}`;
+}
+function offerCompactValue(offer: Pick<StoreOffer, 'value' | 'discountType'>): string | null {
+  if (!offer.value) return null;
+  return offer.discountType === 'percent' ? `${offer.value}%` : `$${offer.value.toFixed(0)}`;
+}
+
 function CountUpValue({ value, prefix = '\$', className = '', style }: { value: number; prefix?: string; className?: string; style?: React.CSSProperties }) {
   const [display, setDisplay] = useState(0);
   useEffect(() => {
@@ -6465,6 +6478,7 @@ function AdminAddBusinessForm({ onClose }: { onClose: () => void }) {
   const [offerTitle, setOfferTitle] = useState('');
   const [offerDescription, setOfferDescription] = useState('');
   const [offerValue, setOfferValue] = useState('');
+  const [offerDiscountType, setOfferDiscountType] = useState<'fixed' | 'percent'>('fixed');
   const [offerImageUrl, setOfferImageUrl] = useState('');
   const [uploadingOfferImage, setUploadingOfferImage] = useState(false);
   const [maxRedemptions, setMaxRedemptions] = useState(1);
@@ -6543,7 +6557,8 @@ function AdminAddBusinessForm({ onClose }: { onClose: () => void }) {
         imageUrl: offerImageUrl,
         offerType: 'standard',
         maxRedemptionsPerUser: maxRedemptions,
-        value: parseFloat(offerValue) || 0,
+        discountType: offerDiscountType,
+        value: offerDiscountType === 'percent' ? Math.min(100, Math.max(0, parseFloat(offerValue) || 0)) : (parseFloat(offerValue) || 0),
         status: 'active',
         createdAt: serverTimestamp(),
         ...(noExpiry ? {} : { validDays, expiresAt: new Date(Date.now() + validDays * 24 * 60 * 60 * 1000) }),
@@ -6653,8 +6668,26 @@ function AdminAddBusinessForm({ onClose }: { onClose: () => void }) {
           </div>
 
           <div>
-            <label className={labelClass}>Price / value (£)</label>
-            <input value={offerValue} onChange={e => setOfferValue(e.target.value.replace(/[^0-9.]/g, ''))} inputMode="decimal" placeholder="0.00" className={inputClass} />
+            <label className={labelClass}>Savings value</label>
+            <div className="flex gap-2 mb-2">
+              {([{ v: 'fixed' as const, label: '£ Fixed amount' }, { v: 'percent' as const, label: '% Off' }]).map(opt => (
+                <button
+                  key={opt.v}
+                  type="button"
+                  onClick={() => setOfferDiscountType(opt.v)}
+                  className={cn('flex-1 px-3 py-2 rounded-2xl text-xs font-bold transition-all', offerDiscountType === opt.v ? 'gradient-logo-blue text-white shadow' : 'bg-white border border-brand-navy/10 text-brand-navy/75')}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <input
+              value={offerValue}
+              onChange={e => setOfferValue(e.target.value.replace(/[^0-9.]/g, ''))}
+              inputMode="decimal"
+              placeholder={offerDiscountType === 'percent' ? '0' : '0.00'}
+              className={inputClass}
+            />
           </div>
 
           <div>
@@ -10872,6 +10905,7 @@ function AdminOffersPanel({ onClose }: { onClose: () => void }) {
                       </span>
                       {offer.offerType === 'birthday' && <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-pink-100 text-pink-600">🎂 Birthday</span>}
                       {offer.offerType === 'seasonal' && <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">🌸 Seasonal</span>}
+                      {offerBadgeText(offer) && <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-blue-100 text-blue-600">{offerBadgeText(offer)}</span>}
                       {exp && <span className={cn('text-[10px] font-black px-2 py-0.5 rounded-full', exp.red ? 'bg-red-100 text-red-500' : 'bg-amber-100 text-amber-600')}>{exp.text}</span>}
                     </div>
                   </div>
@@ -26392,6 +26426,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
   const [maxRedemptions, setMaxRedemptions] = useState(1);
   const [imageUrl, setImageUrl] = useState('');
   const [value, setValue] = useState('');
+  const [discountType, setDiscountType] = useState<'fixed' | 'percent'>('fixed');
   const [offerType, setOfferType] = useState<'standard' | 'birthday' | 'seasonal'>('standard');
   const [validDays, setValidDays] = useState<number>(30);
   const [uploading, setUploading] = useState(false);
@@ -26437,7 +26472,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
   };
 
   const resetForm = () => {
-    setTitle(''); setDescription(''); setImageUrl(''); setMaxRedemptions(1); setValue(''); setOfferType('standard'); setValidDays(30);
+    setTitle(''); setDescription(''); setImageUrl(''); setMaxRedemptions(1); setValue(''); setDiscountType('fixed'); setOfferType('standard'); setValidDays(30);
     setEditingId(null);
     setCreateError('');
   };
@@ -26448,6 +26483,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
     setDescription(offer.description);
     setImageUrl(offer.imageUrl || '');
     setValue(offer.value ? String(offer.value) : '');
+    setDiscountType(offer.discountType || 'fixed');
     setOfferType(offer.offerType || 'standard');
     setMaxRedemptions(offer.maxRedemptionsPerUser ?? 1);
     setValidDays(offer.expiresAt ? (offer.validDays ?? 30) : 0);
@@ -26463,6 +26499,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
     try {
       const isBirthday = offerType === 'birthday';
       const noExpiry = isBirthday || validDays === 0;
+      const rawValue = parseFloat(value) || 0;
       const fields = {
         title: title.trim(),
         description: description.trim(),
@@ -26470,7 +26507,8 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
         offerType,
         // Birthday offers are always once per year per user, regardless of the redemptions setting.
         maxRedemptionsPerUser: isBirthday ? 1 : maxRedemptions,
-        value: parseFloat(value) || 0,
+        discountType,
+        value: discountType === 'percent' ? Math.min(100, Math.max(0, rawValue)) : rawValue,
       };
       if (editingId) {
         // Birthday offers, and offers set to "Unlimited", run continuously until the vendor deletes them — no expiry.
@@ -26556,20 +26594,45 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
 
             {/* Savings value */}
             <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75 mb-1.5 block">Savings Value ($)</label>
+              <label className="text-xs font-bold uppercase tracking-widest text-brand-navy/75 mb-1.5 block">Savings Value</label>
+              <div className="flex gap-2 mb-2">
+                {([
+                  { v: 'fixed' as const, label: '$ Fixed amount' },
+                  { v: 'percent' as const, label: '% Off' },
+                ]).map(opt => (
+                  <button
+                    key={opt.v}
+                    type="button"
+                    onClick={() => setDiscountType(opt.v)}
+                    className={cn(
+                      'flex-1 px-3 py-2 rounded-2xl text-xs font-bold transition-all',
+                      discountType === opt.v ? 'bg-brand-navy text-white' : 'bg-brand-bg border border-brand-navy/10 text-brand-navy/75'
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-brand-navy/75 text-sm">$</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-brand-navy/75 text-sm">
+                  {discountType === 'percent' ? '%' : '$'}
+                </span>
                 <input
                   type="number"
                   min="0"
-                  step="0.01"
+                  max={discountType === 'percent' ? 100 : undefined}
+                  step={discountType === 'percent' ? 1 : 0.01}
                   value={value}
                   onChange={e => setValue(e.target.value)}
-                  placeholder="0.00"
+                  placeholder={discountType === 'percent' ? '0' : '0.00'}
                   className={cn(inputCls, 'pl-8')}
                 />
               </div>
-              <p className="text-[11px] text-brand-navy/35 mt-1 px-1">The dollar amount the customer saves — added to their savings when redeemed.</p>
+              <p className="text-[11px] text-brand-navy/35 mt-1 px-1">
+                {discountType === 'percent'
+                  ? 'e.g. enter 20 for 20% off. Percentage offers vary by purchase size, so they don\'t add to the customer\'s "Saved with Linq" total.'
+                  : 'The dollar amount the customer saves — added to their "Saved with Linq" total when redeemed.'}
+              </p>
             </div>
 
             {/* Image */}
@@ -26724,7 +26787,7 @@ function VendorOfferPanel({ store }: { store: StoreProfile | null }) {
                   {exp !== null && (
                     <span className={cn('text-[8px] font-black px-1.5 py-0.5 rounded-full', exp <= 3 ? 'bg-red-100 text-red-500' : 'bg-amber-100 text-amber-600')}>{exp}d</span>
                   )}
-                  {(offer.value ?? 0) > 0 && <span className="text-[8px] font-black text-emerald-300">${offer.value!.toFixed(0)}</span>}
+                  {offerCompactValue(offer) && <span className="text-[8px] font-black text-emerald-300">{offerCompactValue(offer)}</span>}
                   <span
                     role="button"
                     onClick={(e) => { e.stopPropagation(); toggleStatus(offer); }}
@@ -26789,9 +26852,12 @@ function OfferDetailSheet({ offer, currentUser, currentProfile, onClose, onRequi
         storeName: offer.storeName,
         offerTitle: offer.title,
         value: offer.value ?? 0,
+        discountType: offer.discountType ?? 'fixed',
         redeemedAt: serverTimestamp(),
       });
-      if ((offer.value ?? 0) > 0) {
+      // % offers don't have a fixed dollar value — the real saving depends on the purchase total,
+      // so unlike $ offers they don't add to the customer's "Saved with Linq" total.
+      if (offer.discountType !== 'percent' && (offer.value ?? 0) > 0) {
         await updateDoc(doc(db, 'users', currentUser.uid), { totalSaved: increment(offer.value!) });
       }
       setRedeemed(true);
@@ -26869,11 +26935,15 @@ function OfferDetailSheet({ offer, currentUser, currentProfile, onClose, onRequi
           {(offer.value ?? 0) > 0 && (
             <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 border border-emerald-100 px-4 py-3">
               <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center shrink-0">
-                <span className="text-white font-black text-sm">$</span>
+                <span className="text-white font-black text-sm">{offer.discountType === 'percent' ? '%' : '$'}</span>
               </div>
               <div>
-                <p className="font-black text-emerald-700 text-xl leading-none">${offer.value!.toFixed(2)} saving</p>
-                <p className="text-[11px] text-emerald-600/70 font-medium mt-0.5">Added to your savings when redeemed</p>
+                <p className="font-black text-emerald-700 text-xl leading-none">
+                  {offer.discountType === 'percent' ? `${offer.value}% off` : `$${offer.value!.toFixed(2)} saving`}
+                </p>
+                <p className="text-[11px] text-emerald-600/70 font-medium mt-0.5">
+                  {offer.discountType === 'percent' ? 'Applied at the till — varies with your purchase' : 'Added to your savings when redeemed'}
+                </p>
               </div>
             </div>
           )}
@@ -27045,7 +27115,12 @@ function OffersModal({ offers, currentUser, currentProfile, onClose, onRequireAu
                     <p className="text-xs text-brand-navy/80 mt-0.5">{offer.storeName}</p>
                     <p className="text-xs text-brand-navy/75 mt-1 line-clamp-1">{offer.description}</p>
                   </div>
-                  <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full shrink-0">{offer.storeCategory}</span>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">{offer.storeCategory}</span>
+                    {offerBadgeText(offer) && (
+                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">{offerBadgeText(offer)}</span>
+                    )}
+                  </div>
                 </div>
               </button>
             ))}
@@ -33279,8 +33354,8 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
                           ? <img src={offer.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
                           : <div className="absolute inset-0 gradient-logo-blue flex items-center justify-center"><Ticket size={28} className="text-white/40" /></div>}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
-                        {(offer.value ?? 0) > 0 && (
-                          <div className="absolute top-2.5 left-2.5 bg-red-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-sm">Save ${offer.value!.toFixed(2)}</div>
+                        {offerBadgeText(offer) && (
+                          <div className="absolute top-2.5 left-2.5 bg-red-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-sm">{offerBadgeText(offer)}</div>
                         )}
                         <div className="absolute bottom-0 left-0 right-0 px-3 pb-2.5">
                           <p className="font-extrabold text-white text-xs leading-snug line-clamp-1">{offer.title}</p>
@@ -33369,14 +33444,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
         <ChevronRight size={18} className="text-white/60 shrink-0" />
       </button>
 
-      <StoreDealsSection
-        stores={storeDeals}
-        onViewStore={onViewStore}
-        storeDistances={storeDistances}
-        onNavigate={onNavigate}
-      />
-
-      {/* Store Offers section */}
+      {/* Store Offers section — surfaced above Store Deals so offers are the first thing browsable, Uber-Eats-style */}
       {storeOffers.length > 0 && (() => {
         const allCats = [...new Set(offersByDist.map(o => o.storeCategory || 'Other'))].sort();
         const cats = allCats.map(label => ({
@@ -33387,9 +33455,14 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
         })).filter(c => c.offers.length > 0);
         return (
           <div className="space-y-4">
-            <div className="flex items-center gap-2 px-1">
-              <Ticket size={15} className="text-violet-500" />
-              <h2 className="font-bold text-brand-navy text-sm">Store Offers</h2>
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2">
+                <Ticket size={15} className="text-violet-500" />
+                <h2 className="font-bold text-brand-navy text-sm">Store Offers</h2>
+              </div>
+              <button onClick={() => setShowOffersModal(true)} className="flex items-center gap-0.5 text-xs font-bold text-brand-gold active:scale-95 transition-transform">
+                See all <ChevronRight size={14} />
+              </button>
             </div>
             {cats.map(cat => (
               <div key={cat.label}>
@@ -33414,9 +33487,9 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
                         ? <img src={offer.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
                         : <div className="absolute inset-0 gradient-logo-blue flex items-center justify-center"><Ticket size={28} className="text-white/40" /></div>}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
-                      {(offer.value ?? 0) > 0 && (
+                      {offerBadgeText(offer) && (
                         <div className="absolute top-2.5 left-2.5 bg-red-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-sm">
-                          Save ${offer.value!.toFixed(2)}
+                          {offerBadgeText(offer)}
                         </div>
                       )}
                       <div className="absolute bottom-0 left-0 right-0 px-3 pb-2.5">
@@ -33431,6 +33504,13 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
           </div>
         );
       })()}
+
+      <StoreDealsSection
+        stores={storeDeals}
+        onViewStore={onViewStore}
+        storeDistances={storeDistances}
+        onNavigate={onNavigate}
+      />
 
       <DealSliderSection
         title="Experiences"
@@ -37485,8 +37565,8 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
                     ? <img src={offer.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
                     : <div className="absolute inset-0 flex items-center justify-center" style={{ background: store.theme ? `linear-gradient(135deg, ${store.theme}cc, ${store.theme}88)` : 'linear-gradient(135deg, #1D4ED8, #2563EB)' }}><Ticket size={28} className="text-white/40" /></div>}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
-                  {(offer.value ?? 0) > 0 && (
-                    <div className="absolute top-2.5 left-2.5 bg-red-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-sm">Save ${offer.value!.toFixed(2)}</div>
+                  {offerBadgeText(offer) && (
+                    <div className="absolute top-2.5 left-2.5 bg-red-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-sm">{offerBadgeText(offer)}</div>
                   )}
                   <div className="absolute bottom-0 left-0 right-0 px-3 pb-2.5">
                     <p className="font-extrabold text-white text-xs leading-snug line-clamp-1">{offer.title}</p>
