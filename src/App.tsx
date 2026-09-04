@@ -10815,6 +10815,7 @@ function AdminOffersPanel({ onClose }: { onClose: () => void }) {
   const [search, setSearch] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
 
   useEffect(() => {
     return onSnapshot(
@@ -10864,7 +10865,18 @@ function AdminOffersPanel({ onClose }: { onClose: () => void }) {
           <h2 className="font-bold text-brand-navy text-base">Offers</h2>
         </div>
         <span className="text-xs font-bold text-brand-navy/75">{offers.length} total</span>
+        <button
+          onClick={() => setShowAddForm(true)}
+          className="p-2 -mr-2 text-brand-navy/75"
+          aria-label="Add offer"
+        >
+          <Plus size={22} />
+        </button>
       </header>
+
+      {showAddForm && (
+        <AdminAddOfferForm onClose={() => setShowAddForm(false)} />
+      )}
 
       <div className="px-5 pt-3 pb-2">
         <input
@@ -10926,6 +10938,279 @@ function AdminOffersPanel({ onClose }: { onClose: () => void }) {
             <p className="font-bold text-sm">No offers found</p>
           </div>
         )}
+      </div>
+    </motion.div>
+  );
+}
+
+// Admin-only: creates an offer for an existing vendor's store, picked from a search list.
+// Writes to store_offers the same way VendorOfferPanel does — no ownership check, since
+// isAdmin() already covers create on that collection (see firestore.rules).
+function AdminAddOfferForm({ onClose }: { onClose: () => void }) {
+  const MAX_OPTIONS = [{ v: 1, l: '1 time' }, { v: 2, l: '2 times' }, { v: 3, l: '3 times' }, { v: 5, l: '5 times' }, { v: 0, l: 'Unlimited' }];
+
+  const [stores, setStores] = useState<StoreProfile[]>([]);
+  const [selectedStore, setSelectedStore] = useState<StoreProfile | null>(null);
+  const [storeSearch, setStoreSearch] = useState('');
+
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [value, setValue] = useState('');
+  const [discountType, setDiscountType] = useState<'fixed' | 'percent'>('fixed');
+  const [offerType, setOfferType] = useState<'standard' | 'birthday' | 'seasonal'>('standard');
+  const [maxRedemptions, setMaxRedemptions] = useState(1);
+  const [validDays, setValidDays] = useState(30);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const tempIdRef = useRef(crypto.randomUUID());
+
+  useEffect(() => {
+    return onSnapshot(collection(db, 'stores'), snap =>
+      setStores(snap.docs.map(d => ({ id: d.id, ...d.data() } as StoreProfile)).sort((a, b) => (a.name || '').localeCompare(b.name || '')))
+    , () => {});
+  }, []);
+
+  const filteredStores = storeSearch.trim()
+    ? stores.filter(s => s.name?.toLowerCase().includes(storeSearch.toLowerCase()))
+    : stores;
+
+  const handleImageUpload = async (file: File) => {
+    setUploading(true);
+    setError('');
+    try {
+      const blob = await compressImage(file, 1400);
+      const path = `offer_images/${selectedStore?.id || tempIdRef.current}/${Date.now()}.webp`;
+      const snap = await uploadBytes(storageRef(storage, path), blob, { contentType: 'image/webp' });
+      setImageUrl(await getDownloadURL(snap.ref));
+    } catch (e: any) {
+      setError('Image upload failed: ' + e.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const canSave = !!selectedStore && title.trim() && description.trim() && !saving;
+
+  const handleCreate = async () => {
+    if (!canSave || !selectedStore) return;
+    setSaving(true);
+    setError('');
+    try {
+      const isBirthday = offerType === 'birthday';
+      const noExpiry = isBirthday || validDays === 0;
+      const rawValue = parseFloat(value) || 0;
+      await addDoc(collection(db, 'store_offers'), {
+        storeId: selectedStore.id,
+        storeName: selectedStore.name,
+        storeLogoUrl: selectedStore.logoUrl || '',
+        storeCategory: selectedStore.category || '',
+        title: title.trim(),
+        description: description.trim(),
+        imageUrl,
+        offerType,
+        maxRedemptionsPerUser: isBirthday ? 1 : maxRedemptions,
+        discountType,
+        value: discountType === 'percent' ? Math.min(100, Math.max(0, rawValue)) : rawValue,
+        status: 'active',
+        createdAt: serverTimestamp(),
+        ...(noExpiry ? {} : { validDays, expiresAt: new Date(Date.now() + validDays * 24 * 60 * 60 * 1000) }),
+      });
+      onClose();
+    } catch (e: any) {
+      setError(e?.message || 'Failed to create offer. Check permissions.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const inputClass = "w-full px-4 py-2.5 rounded-2xl bg-white border border-brand-navy/10 text-sm text-brand-navy outline-none";
+  const labelClass = "text-[11px] font-bold text-brand-navy/60 uppercase tracking-wide mb-1 block";
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: '100%' }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: '100%' }}
+      transition={{ type: 'spring', damping: 38, stiffness: 520 }}
+      className="fixed inset-0 bg-brand-bg z-[210] flex flex-col max-w-md mx-auto"
+    >
+      <header className="glass-panel safe-top px-5 pb-4 flex items-center gap-3">
+        <button onClick={onClose} className="p-2 -ml-2 text-brand-navy/75"><X size={22} /></button>
+        <div className="flex-1">
+          <p className="text-[10px] font-bold text-brand-navy/75 uppercase tracking-widest">Admin</p>
+          <h2 className="font-bold text-brand-navy text-base">New offer for vendor</h2>
+        </div>
+      </header>
+
+      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5 pb-10">
+        {error && <p className="text-xs font-bold text-red-500 bg-red-50 px-3 py-2 rounded-xl">{error}</p>}
+
+        {/* Store picker */}
+        <div>
+          <label className={labelClass}>Store</label>
+          {selectedStore ? (
+            <div className="flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-white border border-brand-navy/10">
+              {selectedStore.logoUrl ? (
+                <img src={selectedStore.logoUrl} alt="" className="w-9 h-9 rounded-xl object-cover" />
+              ) : (
+                <div className="w-9 h-9 rounded-xl bg-brand-navy/10 flex items-center justify-center"><Building2 size={16} className="text-brand-navy/40" /></div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-brand-navy text-sm truncate">{selectedStore.name}</p>
+                <p className="text-[11px] text-brand-navy/60 truncate">{selectedStore.category}</p>
+              </div>
+              <button onClick={() => setSelectedStore(null)} className="p-1.5 rounded-full bg-brand-navy/8">
+                <X size={14} className="text-brand-navy/60" />
+              </button>
+            </div>
+          ) : (
+            <>
+              <input
+                value={storeSearch}
+                onChange={e => setStoreSearch(e.target.value)}
+                placeholder="Search stores by name…"
+                className={inputClass}
+              />
+              <div className="mt-2 max-h-56 overflow-y-auto space-y-1.5">
+                {filteredStores.slice(0, 30).map(s => (
+                  <button
+                    key={s.id}
+                    onClick={() => { setSelectedStore(s); setStoreSearch(''); }}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-xl bg-white border border-brand-navy/5 text-left active:scale-[0.98] transition-transform"
+                  >
+                    {s.logoUrl ? (
+                      <img src={s.logoUrl} alt="" className="w-8 h-8 rounded-lg object-cover" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-lg bg-brand-navy/10 flex items-center justify-center"><Building2 size={14} className="text-brand-navy/40" /></div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-brand-navy text-xs truncate">{s.name}</p>
+                      <p className="text-[10px] text-brand-navy/50 truncate">{s.category}</p>
+                    </div>
+                  </button>
+                ))}
+                {filteredStores.length === 0 && (
+                  <p className="text-center text-xs text-brand-navy/40 py-4">No stores found</p>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div>
+          <label className={labelClass}>Offer title</label>
+          <input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. 20% off any coffee" className={inputClass} />
+        </div>
+
+        <div>
+          <label className={labelClass}>Offer description</label>
+          <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Details a member would see" className={inputClass} />
+        </div>
+
+        <div>
+          <label className={labelClass}>Offer image</label>
+          <label className="flex flex-col items-center gap-2 cursor-pointer">
+            <div className="w-full aspect-[16/9] rounded-2xl overflow-hidden bg-white border border-brand-navy/10 flex items-center justify-center">
+              {imageUrl ? <img src={imageUrl} alt="" className="w-full h-full object-cover" /> : <Image size={20} className="text-brand-navy/30" />}
+            </div>
+            <span className="text-xs font-bold text-brand-navy/60 flex items-center gap-1.5">
+              {uploading ? <><Loader2 size={13} className="animate-spin" /> Uploading…</> : <><Upload size={13} /> {imageUrl ? 'Replace image' : 'Upload offer image'}</>}
+            </span>
+            <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && handleImageUpload(e.target.files[0])} disabled={uploading} />
+          </label>
+        </div>
+
+        <div>
+          <label className={labelClass}>Savings value</label>
+          <div className="flex gap-2 mb-2">
+            {([{ v: 'fixed' as const, label: '$ Fixed amount' }, { v: 'percent' as const, label: '% Off' }]).map(opt => (
+              <button
+                key={opt.v}
+                type="button"
+                onClick={() => setDiscountType(opt.v)}
+                className={cn('flex-1 px-3 py-2 rounded-2xl text-xs font-bold transition-all', discountType === opt.v ? 'gradient-logo-blue text-white shadow' : 'bg-white border border-brand-navy/10 text-brand-navy/75')}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <input
+            value={value}
+            onChange={e => setValue(e.target.value.replace(/[^0-9.]/g, ''))}
+            inputMode="decimal"
+            placeholder={discountType === 'percent' ? '0' : '0.00'}
+            className={inputClass}
+          />
+        </div>
+
+        <div>
+          <label className={labelClass}>Offer type</label>
+          <div className="flex gap-2">
+            {([
+              { v: 'standard', label: '🏷️ Standard' },
+              { v: 'birthday', label: '🎂 Birthday' },
+              { v: 'seasonal', label: '🌸 Seasonal' },
+            ] as const).map(opt => (
+              <button
+                key={opt.v}
+                type="button"
+                onClick={() => setOfferType(opt.v)}
+                className={cn('flex-1 px-2 py-2.5 rounded-2xl text-xs font-bold transition-all leading-tight text-center', offerType === opt.v ? 'gradient-logo-blue text-white shadow' : 'bg-white border border-brand-navy/10 text-brand-navy/75')}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {offerType !== 'birthday' && (
+          <div>
+            <label className={labelClass}>Max redemptions per user</label>
+            <div className="flex gap-2 flex-wrap">
+              {MAX_OPTIONS.map(opt => (
+                <button
+                  key={opt.v}
+                  type="button"
+                  onClick={() => setMaxRedemptions(opt.v)}
+                  className={cn('px-4 py-2 rounded-2xl text-sm font-bold transition-all', maxRedemptions === opt.v ? 'gradient-logo-blue text-white shadow' : 'bg-white border border-brand-navy/10 text-brand-navy/75')}
+                >
+                  {opt.l}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {offerType !== 'birthday' && (
+          <div>
+            <label className={labelClass}>Time limit</label>
+            <div className="flex gap-2 flex-wrap">
+              {[7, 14, 30, 60, 90, 0].map(d => (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => setValidDays(d)}
+                  className={cn('px-4 py-2 rounded-2xl text-sm font-bold transition-all', validDays === d ? 'gradient-logo-blue text-white shadow' : 'bg-white border border-brand-navy/10 text-brand-navy/75')}
+                >
+                  {d === 0 ? 'Unlimited' : `${d}d`}
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] text-brand-navy/40 mt-1.5 px-1">
+              {validDays === 0 ? 'Offer stays live until you delete it — no expiry.' : `Offer auto-deletes after ${validDays} days.`}
+            </p>
+          </div>
+        )}
+
+        <button
+          onClick={handleCreate}
+          disabled={!canSave}
+          className="w-full py-3.5 rounded-2xl bg-brand-navy text-white font-bold text-sm disabled:opacity-40 flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+        >
+          {saving ? <><Loader2 size={15} className="animate-spin" /> Creating…</> : <><Plus size={15} /> Create offer</>}
+        </button>
       </div>
     </motion.div>
   );
