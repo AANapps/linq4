@@ -167,7 +167,7 @@ function webNFCScan(signal: AbortSignal): Promise<NFCScanResult> {
  * - Other browsers: immediately returns an error.
  */
 export async function scanNFCTag(
-  alertMessage = "Hold near the store's stamper to collect your stamp",
+  alertMessage = 'Hold near the store NFC tag to collect your stamp',
   abortController?: AbortController,
 ): Promise<NFCScanResult> {
   const platform = Capacitor.getPlatform();

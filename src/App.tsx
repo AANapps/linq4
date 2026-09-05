@@ -13973,7 +13973,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
     // "hold near tag" strip after 10s so it doesn't sit there forever.
     const autoDismiss = !isIOS ? setTimeout(() => ctrl.abort(), 10000) : null;
 
-    const scanResult = await scanNFCTag("Hold near the store's stamper to collect your stamp", ctrl);
+    const scanResult = await scanNFCTag('Hold near the store NFC tag to collect your stamp', ctrl);
     if (autoDismiss) clearTimeout(autoDismiss);
 
     if (scanResult.ok === false) {
@@ -15981,7 +15981,7 @@ function NFCScanOverlay({ phase, msg, onCancel }: {
                 <Wifi size={24} className="text-white -rotate-90" />
               </div>
             </div>
-            <p className="font-bold text-brand-navy mb-1">Hold near stamper</p>
+            <p className="font-bold text-brand-navy mb-1">Hold near NFC tag</p>
             <p className="text-brand-navy/60 text-xs mb-6">Waiting for store tag…</p>
             <button onClick={onCancel} className="w-full text-brand-navy/75 text-sm font-bold py-2">Cancel</button>
           </div>
