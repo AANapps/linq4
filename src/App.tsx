@@ -4326,23 +4326,27 @@ function TierProgressBar({ stamps, onClick, tiers }: { stamps: number; onClick?:
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className={cn("w-full rounded-2xl bg-white border border-brand-navy/8 p-3.5 space-y-2 text-left", onClick && "active:scale-[0.98] transition-transform")}
+      className={cn("relative w-full rounded-2xl overflow-hidden p-3.5 space-y-2.5 text-left", onClick && "active:scale-[0.98] transition-transform")}
+      style={{ background: tier.color, boxShadow: `0 8px 22px -8px ${tier.color}b3` }}
     >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="w-6 h-6 rounded-full flex items-center justify-center shrink-0" style={{ background: tier.color }}>
-            <Icon size={12} className="text-white" />
+      {/* Metallic sheen — diagonal light/dark banding plus a periodic glossy sweep */}
+      <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.05) 32%, rgba(255,255,255,0.25) 52%, rgba(0,0,0,0.18) 100%)' }} />
+      <span className="card-shine-ray" />
+
+      <div className="relative z-10 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-white/20 border-2 border-white/85 shadow-md">
+            <Icon size={18} className="text-white drop-shadow" />
           </span>
-          <span className="font-bold text-sm text-brand-navy truncate">{tier.name} Collector</span>
+          <span className="font-bold text-sm text-white truncate" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.25)' }}>{tier.name} Collector</span>
         </div>
-        <span className="text-[10px] font-bold text-brand-navy/50 uppercase tracking-wide shrink-0">
+        <span className="text-[10px] font-bold text-white/90 uppercase tracking-wide shrink-0" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
           {isMax ? 'Max tier' : `${toNext.toLocaleString()} to next`}
         </span>
       </div>
-      <div className="h-2 rounded-full overflow-hidden bg-brand-navy/8">
+      <div className="relative z-10 h-2 rounded-full overflow-hidden bg-black/15">
         <motion.div
-          className="h-full rounded-full"
-          style={{ background: tier.color }}
+          className="h-full rounded-full bg-white"
           initial={{ width: 0 }}
           animate={{ width: `${progress * 100}%` }}
           transition={{ duration: 0.9, ease: 'easeOut', delay: 0.15 }}
@@ -14009,6 +14013,18 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
     return () => { clearTimeout(timer); clearTimeout(clear); };
   }, [highlightedChallengeId]);
 
+  // Cards and challenges now live on one continuous Wallet page — jumping here from
+  // elsewhere (e.g. the For You feed) still needs to land on the Challenges section,
+  // so scroll to it whenever something asks to view "challenges".
+  useEffect(() => {
+    if (activeTab !== 'home' || walletSubTab !== 'challenges') return;
+    const timer = setTimeout(() => {
+      document.getElementById('challenges-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 300);
+    const clear = setTimeout(() => setWalletSubTab('stamps'), 1200);
+    return () => { clearTimeout(timer); clearTimeout(clear); };
+  }, [activeTab, walletSubTab]);
+
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'stores'), (snapshot) => {
       setStores(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StoreProfile)));
@@ -14511,7 +14527,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           </AnimatePresence>
 
           {/* Challenges — Monopoly sticker programme */}
-          <div className="space-y-5">
+          <div id="challenges-section" className="space-y-5">
               {visibleActivePrograms.length === 0 ? (
                 <div className="glass-card p-10 rounded-[2.5rem] border-2 border-dashed border-amber-300/60 text-center">
                   <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-4">
