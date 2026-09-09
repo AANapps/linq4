@@ -13487,7 +13487,7 @@ function buildStampCelebrationPages(
 function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onViewUser, cards: initialCards, notifications, activeChatId, setActiveChatId, onLogout, onDeleteAccount, pendingNFCStoreId, onClearPendingNFC, uiColors: uiColorsProp, blockedUids, collectorTierConfig }: { activeTab: string, setActiveTab: (tab: string) => void, profile: UserProfile | null, user: FirebaseUser, onViewStore: (s: StoreProfile) => void, onViewUser: (u: UserProfile) => void, cards: Card[], notifications: Notification[], activeChatId: string | null, setActiveChatId: (id: string | null) => void, onLogout: () => void, onDeleteAccount: () => Promise<void>, pendingNFCStoreId?: string | null, onClearPendingNFC?: () => void, uiColors?: UiColors, blockedUids?: Set<string>, collectorTierConfig?: CollectorTiersConfig, key?: React.Key }) {
   const uiColors = uiColorsProp ?? UI_COLOR_DEFAULTS;
   const [stores, setStores] = useState<StoreProfile[]>([]);
-  const [walletSubTab, setWalletSubTab] = useState<'stamps' | 'challenges'>('stamps');
+  const [showWinModal, setShowWinModal] = useState(false);
   const [walletLayout, setWalletLayout] = useState<'carousel' | 'list'>('carousel');
   const [walletManaging, setWalletManaging] = useState(false);
   const [showGlobalQRScan, setShowGlobalQRScan] = useState(false);
@@ -14013,18 +14013,6 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
     return () => { clearTimeout(timer); clearTimeout(clear); };
   }, [highlightedChallengeId]);
 
-  // Cards and challenges now live on one continuous Wallet page — jumping here from
-  // elsewhere (e.g. the For You feed) still needs to land on the Challenges section,
-  // so scroll to it whenever something asks to view "challenges".
-  useEffect(() => {
-    if (activeTab !== 'home' || walletSubTab !== 'challenges') return;
-    const timer = setTimeout(() => {
-      document.getElementById('challenges-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 300);
-    const clear = setTimeout(() => setWalletSubTab('stamps'), 1200);
-    return () => { clearTimeout(timer); clearTimeout(clear); };
-  }, [activeTab, walletSubTab]);
-
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'stores'), (snapshot) => {
       setStores(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StoreProfile)));
@@ -14327,11 +14315,11 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         <ForYouScreen
           onViewUser={onViewUser}
           onViewStore={onViewStore}
-          onViewChallenges={() => { setActiveTab('home'); setWalletSubTab('challenges'); }}
+          onViewChallenges={() => { setActiveTab('home'); setShowWinModal(true); }}
           onOpenLinqle={() => setViewingLinqle(true)}
           onPackReady={handlePackReady}
           onNavigate={(tab) => {
-            if (tab === 'challenges') { setActiveTab('home'); setWalletSubTab('challenges'); }
+            if (tab === 'challenges') { setActiveTab('home'); setShowWinModal(true); }
             else setActiveTab(tab);
           }}
           currentUser={user}
@@ -14388,13 +14376,37 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           currentProfile={profile}
           onViewStore={onViewStore}
           userCards={initialCards}
-          onViewChallenge={(c) => { setActiveTab('home'); setWalletSubTab('challenges'); setHighlightedChallengeId(c.id); }}
+          onViewChallenge={(c) => { setActiveTab('home'); setShowWinModal(true); setHighlightedChallengeId(c.id); }}
           onNavigate={(tab) => setActiveTab(tab)}
         />
       )}
 
       {activeTab === 'home' && (
         <div className="space-y-6">
+
+          {/* Win Challenges — opens as a popup rather than sitting inline on the page */}
+          {!walletManaging && (() => {
+            const totalUnrevealed = myStickerCards.reduce((n, sc) => n + sc.stickers.filter(s => !(sc.revealedIds || []).includes(s.id)).length, 0);
+            return (
+              <button
+                onClick={() => setShowWinModal(true)}
+                className="w-full py-3.5 rounded-2xl text-sm font-bold transition-all relative overflow-hidden text-white flex items-center justify-center gap-2 active:scale-[0.98]"
+                style={{ background: 'linear-gradient(90deg,#7c3aed,#4f46e5,#2563eb)' }}
+              >
+                <span className="challenge-dot" style={{ top: '20%', animationDelay: '0s' }} />
+                <span className="challenge-dot" style={{ top: '58%', animationDelay: '0.7s' }} />
+                <span className="challenge-sparkle" style={{ top: '5%',  left: '15%', animationDelay: '0.2s' }}>✦</span>
+                <span className="challenge-sparkle" style={{ top: '50%', left: '50%', animationDelay: '1.0s' }}>✦</span>
+                <span className="challenge-sparkle" style={{ top: '8%',  left: '80%', animationDelay: '0.5s' }}>★</span>
+                <span className="relative z-10">🏆 Win Challenges</span>
+                {totalUnrevealed > 0 && (
+                  <span className="relative z-10 min-w-5 h-5 px-1 bg-white/30 text-white text-[10px] font-black rounded-full flex items-center justify-center">
+                    {totalUnrevealed > 9 ? '9+' : totalUnrevealed}
+                  </span>
+                )}
+              </button>
+            );
+          })()}
 
           {/* Stamps */}
           <div className="space-y-4">
@@ -14526,6 +14538,70 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
             )}
           </AnimatePresence>
 
+        </div>
+      )}
+
+      {/* Quick-earn bar — floats just above the bottom nav on the Wallet tab */}
+      {activeTab === 'home' && !walletManaging && (
+        <div
+          className={cn(
+            "fixed left-0 right-0 z-40 flex gap-3 px-4",
+            isNativeIOS ? "md:hidden" : "md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-full md:max-w-sm"
+          )}
+          style={{ bottom: 'calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) + 6.75rem)' }}
+        >
+          <button
+            onClick={handleNFCScan}
+            className="quick-earn-btn-blue relative flex-1 flex items-center justify-center gap-2.5 py-4 rounded-[1.75rem] overflow-hidden border active:scale-[0.97] transition-transform"
+            style={{
+              borderColor: 'rgba(59,130,246,0.35)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              boxShadow: '0 10px 26px -6px rgba(37,99,235,0.40), inset 0 1px 0 rgba(255,255,255,0.7)',
+            }}
+          >
+            <div className="w-10 h-10 rounded-xl gradient-logo-blue flex items-center justify-center shrink-0 shadow-sm">
+              <Smartphone size={20} className="text-white" />
+            </div>
+            <span className="text-[14px] font-bold text-brand-navy whitespace-nowrap">Tap to collect</span>
+          </button>
+          <button
+            onClick={() => setShowGlobalQRScan(true)}
+            className="quick-earn-btn-violet relative flex-1 flex items-center justify-center gap-2.5 py-4 rounded-[1.75rem] overflow-hidden border active:scale-[0.97] transition-transform"
+            style={{
+              borderColor: 'rgba(91,33,182,0.35)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              boxShadow: '0 10px 26px -6px rgba(91,33,182,0.38), inset 0 1px 0 rgba(255,255,255,0.7)',
+            }}
+          >
+            <div className="w-10 h-10 rounded-xl gradient-red flex items-center justify-center shrink-0 shadow-sm">
+              <QrCode size={20} className="text-white" />
+            </div>
+            <span className="text-[14px] font-bold text-brand-navy whitespace-nowrap">Scan QR to collect</span>
+          </button>
+        </div>
+      )}
+
+      {/* Win Challenges — pops up over the Wallet page instead of sitting inline at the bottom */}
+      <AnimatePresence>
+        {showWinModal && (
+          <motion.div
+            initial={{ opacity: 0, y: '100%' }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: '100%' }}
+            transition={{ type: 'spring', damping: 38, stiffness: 520 }}
+            className={cn("fixed inset-0 z-[250] flex flex-col", isNativeIOS && "md:items-center md:justify-center md:bg-black/40")}
+          >
+            <button onClick={() => setShowWinModal(false)} className={cn("flex-shrink-0 w-full", isNativeIOS && "md:hidden")} style={{ height: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 4rem)' }} />
+            <div className={cn("flex-1 bg-brand-bg rounded-t-[2.5rem] shadow-2xl flex flex-col overflow-hidden", isNativeIOS && "md:flex-none md:w-full md:max-w-lg md:max-h-[85vh] md:rounded-[2.5rem]")}>
+              <div className="bg-brand-bg px-5 pt-5 pb-4 border-b border-black/5 flex-shrink-0 flex items-center justify-between gap-3">
+                <h2 className="font-display text-xl font-bold text-brand-navy">🏆 Win Challenges</h2>
+                <button onClick={() => setShowWinModal(false)} className="w-9 h-9 rounded-full bg-brand-navy/[0.06] flex items-center justify-center shrink-0">
+                  <X size={18} className="text-brand-navy/70" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto px-4 pt-4 pb-8">
           {/* Challenges — Monopoly sticker programme */}
           <div id="challenges-section" className="space-y-5">
               {visibleActivePrograms.length === 0 ? (
@@ -14947,50 +15023,11 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
               )}
 
             </div>
-        </div>
-      )}
-
-      {/* Quick-earn bar — floats just above the bottom nav on the Wallet tab */}
-      {activeTab === 'home' && !walletManaging && (
-        <div
-          className={cn(
-            "fixed left-0 right-0 z-40 flex gap-3 px-4",
-            isNativeIOS ? "md:hidden" : "md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-full md:max-w-sm"
-          )}
-          style={{ bottom: 'calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) + 6.75rem)' }}
-        >
-          <button
-            onClick={handleNFCScan}
-            className="quick-earn-btn-blue relative flex-1 flex items-center justify-center gap-2.5 py-4 rounded-[1.75rem] overflow-hidden border active:scale-[0.97] transition-transform"
-            style={{
-              borderColor: 'rgba(59,130,246,0.35)',
-              backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)',
-              boxShadow: '0 10px 26px -6px rgba(37,99,235,0.40), inset 0 1px 0 rgba(255,255,255,0.7)',
-            }}
-          >
-            <div className="w-10 h-10 rounded-xl gradient-logo-blue flex items-center justify-center shrink-0 shadow-sm">
-              <Smartphone size={20} className="text-white" />
+              </div>
             </div>
-            <span className="text-[14px] font-bold text-brand-navy whitespace-nowrap">Tap to collect</span>
-          </button>
-          <button
-            onClick={() => setShowGlobalQRScan(true)}
-            className="quick-earn-btn-violet relative flex-1 flex items-center justify-center gap-2.5 py-4 rounded-[1.75rem] overflow-hidden border active:scale-[0.97] transition-transform"
-            style={{
-              borderColor: 'rgba(91,33,182,0.35)',
-              backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)',
-              boxShadow: '0 10px 26px -6px rgba(91,33,182,0.38), inset 0 1px 0 rgba(255,255,255,0.7)',
-            }}
-          >
-            <div className="w-10 h-10 rounded-xl gradient-red flex items-center justify-center shrink-0 shadow-sm">
-              <QrCode size={20} className="text-white" />
-            </div>
-            <span className="text-[14px] font-bold text-brand-navy whitespace-nowrap">Scan QR to collect</span>
-          </button>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Sticker Collection Modal */}
       <AnimatePresence>
