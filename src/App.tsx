@@ -27967,7 +27967,7 @@ function VendorCardSection({ store, isSubscribed }: { store: StoreProfile | null
   );
 }
 
-function CardBuilder({ store, hideSaveButton }: { store: StoreProfile | null; hideSaveButton?: boolean }) {
+function CardBuilder({ store }: { store: StoreProfile | null }) {
   const initTiers = (s: StoreProfile | null) => {
     if (s?.rewardTiers?.length) return s.rewardTiers;
     const total = s?.stamps_required_for_reward || 10;
@@ -28124,30 +28124,9 @@ function CardBuilder({ store, hideSaveButton }: { store: StoreProfile | null; hi
 
   return (
     <div className="space-y-6 pb-20">
-      <header className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="font-display text-3xl font-bold mb-1">Card Builder</h2>
-          <p className="text-brand-navy/75">Design your loyalty reward tiers.</p>
-        </div>
-        <div className="shrink-0 flex items-center gap-2">
-          <button onClick={handleToggleActive} disabled={togglingActive}
-            className={cn(
-              'px-4 py-2.5 rounded-xl font-bold text-sm transition-all disabled:opacity-50 active:scale-95',
-              cardActive ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'
-            )}>
-            {togglingActive ? '…' : cardActive ? 'Disable' : 'Activate'}
-          </button>
-          {!hideSaveButton ? (
-            <button onClick={handleSave} disabled={saving}
-              className="bg-brand-navy text-white px-4 py-2.5 rounded-xl font-bold text-sm flex items-center gap-1.5 disabled:opacity-50 transition-all">
-              {saved ? <><CheckCircle2 size={15} /> Saved!</> : saving ? 'Saving...' : <><Save size={15} /> Save</>}
-            </button>
-          ) : (saving || saved) && (
-            <span className="text-xs font-bold text-brand-navy/40 flex items-center gap-1">
-              {saved ? <><CheckCircle2 size={13} /> Saved</> : 'Saving…'}
-            </span>
-          )}
-        </div>
+      <header>
+        <h2 className="font-display text-3xl font-bold mb-1">Card Builder</h2>
+        <p className="text-brand-navy/75">Design your loyalty reward tiers.</p>
       </header>
 
       <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-200 rounded-2xl px-4 py-3">
@@ -28536,10 +28515,19 @@ function CardBuilder({ store, hideSaveButton }: { store: StoreProfile | null; hi
           )}
         </div>
 
-        <button onClick={handleSave} disabled={saving}
-          className="w-full bg-brand-navy text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 disabled:opacity-50 transition-all">
-          {saved ? <><CheckCircle2 size={16} /> Saved!</> : saving ? 'Saving...' : <><Save size={16} /> Save — Set as New Card</>}
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={handleToggleActive} disabled={togglingActive}
+            className={cn(
+              'shrink-0 py-4 px-5 rounded-2xl font-black text-sm shadow-sm disabled:opacity-50 active:scale-95 transition-all',
+              cardActive ? 'bg-red-600 text-white' : 'bg-green-600 text-white'
+            )}>
+            {togglingActive ? '…' : cardActive ? 'Disable' : 'Activate'}
+          </button>
+          <button onClick={handleSave} disabled={saving}
+            className="flex-1 bg-brand-navy text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 disabled:opacity-50 transition-all">
+            {saved ? <><CheckCircle2 size={16} /> Saved!</> : saving ? 'Saving...' : <><Save size={16} /> Save — Set as New Card</>}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -36532,7 +36520,7 @@ function AdminStoreEditModal({ store, onClose }: { store: StoreProfile; onClose:
         {/* Card builder section */}
         <div>
           <p className="text-xs font-bold text-brand-navy/80 mb-3 uppercase tracking-widest">Stamp Card Settings</p>
-          <CardBuilder store={store} hideSaveButton />
+          <CardBuilder store={store} />
         </div>
       </div>
     </motion.div>
