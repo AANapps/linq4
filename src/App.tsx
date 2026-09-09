@@ -27967,12 +27967,15 @@ function VendorCardSection({ store, isSubscribed }: { store: StoreProfile | null
   );
 }
 
-function CardBuilder({ store }: { store: StoreProfile | null }) {
+function CardBuilder({ store, hideSaveButton }: { store: StoreProfile | null; hideSaveButton?: boolean }) {
   const initTiers = (s: StoreProfile | null) => {
     if (s?.rewardTiers?.length) return s.rewardTiers;
     const total = s?.stamps_required_for_reward || 10;
     return [{ stamps: total, reward: s?.reward || '' }];
   };
+
+  const [cardActive, setCardActive] = useState(store?.cardEnabled !== false);
+  const [togglingActive, setTogglingActive] = useState(false);
 
   const [numTiers, setNumTiers] = useState(() => Math.min(5, store?.rewardTiers?.length || 1));
   const [tiers, setTiers] = useState<{ stamps: number; reward: string; value?: number }[]>(() => initTiers(store));
@@ -28002,6 +28005,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
     setStampBorderColor(store.stampBorderColor || '#ffffff');
     setCardPattern(store.cardPattern || 'solid');
     setBusinessRules(store.businessRules || '');
+    setCardActive(store.cardEnabled !== false);
   }, [store?.id]);
 
   const DEFAULT_RULE_TEMPLATES = [
@@ -28073,9 +28077,6 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
         stampBorderColor,
         cardPattern,
         businessRules,
-        // Saving the card design is what activates it — a business shouldn't
-        // be joinable until its stamp card has actually been configured.
-        cardEnabled: true,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -28083,6 +28084,20 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
       console.error(err);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleToggleActive = async () => {
+    if (!store) return;
+    setTogglingActive(true);
+    try {
+      const next = !cardActive;
+      await updateDoc(doc(db, 'stores', store.id), { cardEnabled: next });
+      setCardActive(next);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setTogglingActive(false);
     }
   };
 
@@ -28114,10 +28129,25 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
           <h2 className="font-display text-3xl font-bold mb-1">Card Builder</h2>
           <p className="text-brand-navy/75">Design your loyalty reward tiers.</p>
         </div>
-        <button onClick={handleSave} disabled={saving}
-          className="shrink-0 bg-brand-navy text-white px-4 py-2.5 rounded-xl font-bold text-sm flex items-center gap-1.5 disabled:opacity-50 transition-all">
-          {saved ? <><CheckCircle2 size={15} /> Saved!</> : saving ? 'Saving...' : <><Save size={15} /> Save</>}
-        </button>
+        <div className="shrink-0 flex items-center gap-2">
+          <button onClick={handleToggleActive} disabled={togglingActive}
+            className={cn(
+              'px-4 py-2.5 rounded-xl font-bold text-sm transition-all disabled:opacity-50 active:scale-95',
+              cardActive ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'
+            )}>
+            {togglingActive ? '…' : cardActive ? 'Disable' : 'Activate'}
+          </button>
+          {!hideSaveButton ? (
+            <button onClick={handleSave} disabled={saving}
+              className="bg-brand-navy text-white px-4 py-2.5 rounded-xl font-bold text-sm flex items-center gap-1.5 disabled:opacity-50 transition-all">
+              {saved ? <><CheckCircle2 size={15} /> Saved!</> : saving ? 'Saving...' : <><Save size={15} /> Save</>}
+            </button>
+          ) : (saving || saved) && (
+            <span className="text-xs font-bold text-brand-navy/40 flex items-center gap-1">
+              {saved ? <><CheckCircle2 size={13} /> Saved</> : 'Saving…'}
+            </span>
+          )}
+        </div>
       </header>
 
       <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-200 rounded-2xl px-4 py-3">
@@ -36502,7 +36532,7 @@ function AdminStoreEditModal({ store, onClose }: { store: StoreProfile; onClose:
         {/* Card builder section */}
         <div>
           <p className="text-xs font-bold text-brand-navy/80 mb-3 uppercase tracking-widest">Stamp Card Settings</p>
-          <CardBuilder store={store} />
+          <CardBuilder store={store} hideSaveButton />
         </div>
       </div>
     </motion.div>
