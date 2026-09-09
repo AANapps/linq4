@@ -14972,7 +14972,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
             <div className="w-10 h-10 rounded-xl gradient-logo-blue flex items-center justify-center shrink-0 shadow-sm">
               <Smartphone size={20} className="text-white" />
             </div>
-            <span className="text-[14px] font-bold text-brand-navy whitespace-nowrap">Tap for points</span>
+            <span className="text-[14px] font-bold text-brand-navy whitespace-nowrap">Tap to collect</span>
           </button>
           <button
             onClick={() => setShowGlobalQRScan(true)}
@@ -14987,7 +14987,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
             <div className="w-10 h-10 rounded-xl gradient-red flex items-center justify-center shrink-0 shadow-sm">
               <QrCode size={20} className="text-white" />
             </div>
-            <span className="text-[14px] font-bold text-brand-navy whitespace-nowrap">Scan QR for points</span>
+            <span className="text-[14px] font-bold text-brand-navy whitespace-nowrap">Scan QR to collect</span>
           </button>
         </div>
       )}
