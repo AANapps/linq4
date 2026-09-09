@@ -14962,18 +14962,32 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           <div className="flex-1 flex gap-3 px-4 py-3">
             <button
               onClick={handleNFCScan}
-              className="flex-1 flex items-center justify-center gap-2.5 py-4 rounded-2xl bg-brand-navy/[0.05] active:bg-brand-navy/10 transition-colors"
+              className="relative flex-1 flex items-center justify-center gap-2.5 py-4 rounded-2xl overflow-hidden border active:scale-[0.97] transition-transform"
+              style={{
+                background: 'linear-gradient(135deg, rgba(59,130,246,0.28), rgba(96,165,250,0.12))',
+                borderColor: 'rgba(59,130,246,0.35)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                boxShadow: '0 6px 18px -4px rgba(37,99,235,0.35), inset 0 1px 0 rgba(255,255,255,0.7)',
+              }}
             >
-              <div className="w-10 h-10 rounded-xl gradient-logo-blue flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl gradient-logo-blue flex items-center justify-center shrink-0 shadow-sm">
                 <Smartphone size={20} className="text-white" />
               </div>
               <span className="text-[14px] font-bold text-brand-navy whitespace-nowrap">Tap for points</span>
             </button>
             <button
               onClick={() => setShowGlobalQRScan(true)}
-              className="flex-1 flex items-center justify-center gap-2.5 py-4 rounded-2xl bg-brand-navy/[0.05] active:bg-brand-navy/10 transition-colors"
+              className="relative flex-1 flex items-center justify-center gap-2.5 py-4 rounded-2xl overflow-hidden border active:scale-[0.97] transition-transform"
+              style={{
+                background: 'linear-gradient(135deg, rgba(236,72,153,0.26), rgba(168,85,247,0.14))',
+                borderColor: 'rgba(217,70,239,0.35)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                boxShadow: '0 6px 18px -4px rgba(219,39,119,0.32), inset 0 1px 0 rgba(255,255,255,0.7)',
+              }}
             >
-              <div className="w-10 h-10 rounded-xl gradient-red flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl gradient-red flex items-center justify-center shrink-0 shadow-sm">
                 <QrCode size={20} className="text-white" />
               </div>
               <span className="text-[14px] font-bold text-brand-navy whitespace-nowrap">Scan QR for points</span>
