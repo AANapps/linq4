@@ -14943,25 +14943,26 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
           )}
           style={{ bottom: 'calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) + 5.25rem)' }}
         >
-          <button
-            onClick={handleNFCScan}
-            className="flex-1 flex items-center justify-center gap-2 py-3.5 active:bg-brand-navy/5 transition-colors"
-          >
-            <div className="w-7 h-7 rounded-lg gradient-logo-blue flex items-center justify-center shrink-0">
-              <Smartphone size={14} className="text-white" />
-            </div>
-            <span className="text-[12px] font-bold text-brand-navy whitespace-nowrap">Tap for points</span>
-          </button>
-          <div className="w-px my-2.5 bg-brand-navy/10" />
-          <button
-            onClick={() => setShowGlobalQRScan(true)}
-            className="flex-1 flex items-center justify-center gap-2 py-3.5 active:bg-brand-navy/5 transition-colors"
-          >
-            <div className="w-7 h-7 rounded-lg gradient-red flex items-center justify-center shrink-0">
-              <QrCode size={14} className="text-white" />
-            </div>
-            <span className="text-[12px] font-bold text-brand-navy whitespace-nowrap">Scan QR for points</span>
-          </button>
+          <div className="flex-1 flex gap-3 px-4 py-3">
+            <button
+              onClick={handleNFCScan}
+              className="flex-1 flex items-center justify-center gap-2.5 py-4 rounded-2xl bg-brand-navy/[0.05] active:bg-brand-navy/10 transition-colors"
+            >
+              <div className="w-10 h-10 rounded-xl gradient-logo-blue flex items-center justify-center shrink-0">
+                <Smartphone size={20} className="text-white" />
+              </div>
+              <span className="text-[14px] font-bold text-brand-navy whitespace-nowrap">Tap for points</span>
+            </button>
+            <button
+              onClick={() => setShowGlobalQRScan(true)}
+              className="flex-1 flex items-center justify-center gap-2.5 py-4 rounded-2xl bg-brand-navy/[0.05] active:bg-brand-navy/10 transition-colors"
+            >
+              <div className="w-10 h-10 rounded-xl gradient-red flex items-center justify-center shrink-0">
+                <QrCode size={20} className="text-white" />
+              </div>
+              <span className="text-[14px] font-bold text-brand-navy whitespace-nowrap">Scan QR for points</span>
+            </button>
+          </div>
         </div>
       )}
 
