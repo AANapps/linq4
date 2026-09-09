@@ -248,6 +248,23 @@
   background: linear-gradient(135deg, #1D4ED8, #2563EB);
 }
 
+@keyframes quick-earn-aurora {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.quick-earn-btn-blue {
+  background: linear-gradient(120deg, rgba(59,130,246,0.32), rgba(99,102,241,0.20), rgba(56,189,248,0.30), rgba(59,130,246,0.32));
+  background-size: 320% 320%;
+  animation: quick-earn-aurora 12s ease-in-out infinite;
+}
+.quick-earn-btn-pink {
+  background: linear-gradient(120deg, rgba(236,72,153,0.30), rgba(168,85,247,0.22), rgba(217,70,239,0.28), rgba(236,72,153,0.30));
+  background-size: 320% 320%;
+  animation: quick-earn-aurora 12s ease-in-out infinite;
+  animation-delay: -4s;
+}
+
 
 @keyframes scan {
   0% { top: 0; }
