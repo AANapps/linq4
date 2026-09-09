@@ -14559,6 +14559,26 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         </div>
       )}
 
+      {/* Win Challenges edge tab — semicircle peeking off the right edge on the Wallet tab */}
+      {activeTab === 'home' && !walletManaging && (
+        <button
+          onClick={() => setShowWinModal(true)}
+          aria-label="Win Challenges"
+          className="fixed right-0 z-40 flex items-center justify-center active:scale-95 transition-transform"
+          style={{
+            top: '38%',
+            width: 56,
+            height: 64,
+            borderTopLeftRadius: 9999,
+            borderBottomLeftRadius: 9999,
+            background: 'linear-gradient(135deg, #3B82F6, #7C3AED)',
+            boxShadow: '-6px 6px 18px -6px rgba(91,33,182,0.5)',
+          }}
+        >
+          <span className="tab-shake text-2xl" style={{ marginLeft: -10 }}>🏆</span>
+        </button>
+      )}
+
       {/* Win Challenges — pops up over the Wallet page instead of sitting inline at the bottom */}
       <AnimatePresence>
         {showWinModal && (
