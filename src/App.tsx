@@ -14559,8 +14559,8 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         </div>
       )}
 
-      {/* Win Challenges edge tab — semicircle peeking off the right edge on the Wallet tab */}
-      {activeTab === 'home' && !walletManaging && (
+      {/* Win Challenges edge tab — semicircle peeking off the right edge on every tab */}
+      {!walletManaging && (
         <button
           onClick={() => setShowWinModal(true)}
           aria-label="Win Challenges"
