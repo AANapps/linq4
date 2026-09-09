@@ -14384,30 +14384,6 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       {activeTab === 'home' && (
         <div className="space-y-6">
 
-          {/* Win Challenges — opens as a popup rather than sitting inline on the page */}
-          {!walletManaging && (() => {
-            const totalUnrevealed = myStickerCards.reduce((n, sc) => n + sc.stickers.filter(s => !(sc.revealedIds || []).includes(s.id)).length, 0);
-            return (
-              <button
-                onClick={() => setShowWinModal(true)}
-                className="w-full py-3.5 rounded-2xl text-sm font-bold transition-all relative overflow-hidden text-white flex items-center justify-center gap-2 active:scale-[0.98]"
-                style={{ background: 'linear-gradient(90deg,#7c3aed,#4f46e5,#2563eb)' }}
-              >
-                <span className="challenge-dot" style={{ top: '20%', animationDelay: '0s' }} />
-                <span className="challenge-dot" style={{ top: '58%', animationDelay: '0.7s' }} />
-                <span className="challenge-sparkle" style={{ top: '5%',  left: '15%', animationDelay: '0.2s' }}>✦</span>
-                <span className="challenge-sparkle" style={{ top: '50%', left: '50%', animationDelay: '1.0s' }}>✦</span>
-                <span className="challenge-sparkle" style={{ top: '8%',  left: '80%', animationDelay: '0.5s' }}>★</span>
-                <span className="relative z-10">🏆 Win Challenges</span>
-                {totalUnrevealed > 0 && (
-                  <span className="relative z-10 min-w-5 h-5 px-1 bg-white/30 text-white text-[10px] font-black rounded-full flex items-center justify-center">
-                    {totalUnrevealed > 9 ? '9+' : totalUnrevealed}
-                  </span>
-                )}
-              </button>
-            );
-          })()}
-
           {/* Stamps */}
           <div className="space-y-4">
               <div className="flex items-center justify-between gap-2">
