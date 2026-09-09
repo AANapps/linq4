@@ -26189,8 +26189,8 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
             );
 
             if (activeCategory !== 'All') return (
-              /* Single category — vertical list */
-              <div className={cn("space-y-3", isNativeIOS && "md:grid md:grid-cols-2 md:gap-3 md:space-y-0 lg:grid-cols-3")}>
+              /* Single category — vertical card grid */
+              <div className={cn("grid grid-cols-2 gap-3", isNativeIOS && "lg:grid-cols-3")}>
                 {filteredStores.map((store, i) => {
                   const dist = distancesMap.get(store.id);
                   const distLabel = dist != null
@@ -26203,38 +26203,38 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
                   return (
                     <motion.div key={store.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.04 }}
-                      className="rounded-[1.5rem] overflow-hidden flex cursor-pointer active:scale-[0.98] transition-transform shadow-sm"
+                      className="rounded-2xl relative cursor-pointer active:scale-[0.98] transition-transform bg-white shadow-sm border border-brand-navy/5"
                       onClick={() => onViewStore(store)}
                     >
-                      {/* Cover image — left side */}
-                      <div className="relative shrink-0 overflow-hidden bg-brand-navy/5" style={{ width: '90px', height: '90px' }}>
+                      {/* Cover image */}
+                      <div className="relative rounded-t-2xl overflow-hidden bg-brand-navy/5" style={{ height: '92px' }}>
                         {store.coverUrl
                           ? <img src={store.coverUrl} alt="" className="w-full h-full object-cover" />
                           : store.logoUrl
                             ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
                             : <div className="w-full h-full flex items-center justify-center"><Building2 size={24} className="text-brand-navy/20" /></div>}
                         {store.isVerified && (
-                          <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full flex items-center justify-center shadow-sm" style={{ background: bg }}>
+                          <div className="absolute top-2 right-2 w-4 h-4 rounded-full flex items-center justify-center shadow-sm" style={{ background: bg }}>
                             <CheckCircle2 size={9} className="text-white" />
                           </div>
                         )}
                         {topReward && (
-                          <div className="absolute bottom-1.5 left-1.5 right-1.5 text-white text-[7px] font-black px-1.5 py-0.5 rounded-full shadow-sm truncate text-center" style={{ background: bg }}>
+                          <div className="absolute top-2 left-2 text-white text-[7px] font-black px-1.5 py-0.5 rounded-full shadow-sm max-w-[75%] truncate" style={{ background: bg }}>
                             {topReward}
                           </div>
                         )}
                       </div>
-                      {/* Info — right side */}
-                      <div className="flex-1 min-w-0 px-4 py-3 flex flex-col justify-center gap-0.5" style={{ background: bg }}>
-                        <p className="font-bold text-white text-sm leading-snug line-clamp-1">{store.name}</p>
+                      {/* Vendor logo — straddles the image/footer seam */}
+                      <div className="flex justify-center" style={{ marginTop: -16 }}>
+                        <VendorLogoBadge logoUrl={store.logoUrl} name={store.name} size={32} />
+                      </div>
+                      <div className="px-2.5 pt-1.5 pb-3 text-center">
+                        <p className="font-bold text-brand-navy text-xs leading-snug line-clamp-1">{store.name}</p>
                         {distLabel && (
-                          <p className="text-white/70 text-[10px] font-semibold flex items-center gap-0.5">
-                            <MapPin size={9} />{distLabel}
+                          <p className="text-brand-navy/45 text-[9px] font-semibold mt-0.5 flex items-center justify-center gap-0.5">
+                            <MapPin size={8} />{distLabel}
                           </p>
                         )}
-                      </div>
-                      <div className="flex items-center pr-4" style={{ background: bg }}>
-                        <ChevronRight size={16} className="text-white/40" />
                       </div>
                     </motion.div>
                   );
@@ -26281,10 +26281,10 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
                           return (
                             <motion.div key={store.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                               transition={{ delay: i * 0.05 }}
-                              className="shrink-0 rounded-[1.5rem] overflow-hidden flex flex-col cursor-pointer active:scale-[0.97] transition-transform shadow-sm"
-                              style={{ width: '148px' }} onClick={() => onViewStore(store)}
+                              className="shrink-0 rounded-2xl flex flex-col cursor-pointer active:scale-[0.97] transition-transform bg-white shadow-sm border border-brand-navy/5"
+                              style={{ width: '140px' }} onClick={() => onViewStore(store)}
                             >
-                              <div className="relative overflow-hidden bg-brand-navy/5" style={{ height: '110px' }}>
+                              <div className="relative rounded-t-2xl overflow-hidden bg-brand-navy/5" style={{ height: '96px' }}>
                                 {store.coverUrl
                                   ? <img src={store.coverUrl} alt="" className="w-full h-full object-cover" />
                                   : store.logoUrl
@@ -26301,10 +26301,13 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
                                   </div>
                                 )}
                               </div>
-                              <div className="px-3 py-2.5 flex flex-col gap-0.5" style={{ background: bg }}>
-                                <p className="text-white text-[9px] font-bold line-clamp-1">{store.name}</p>
+                              <div className="flex justify-center" style={{ marginTop: -16 }}>
+                                <VendorLogoBadge logoUrl={store.logoUrl} name={store.name} size={32} />
+                              </div>
+                              <div className="px-2.5 pt-1.5 pb-3 text-center">
+                                <p className="text-brand-navy text-[10px] font-bold line-clamp-1">{store.name}</p>
                                 {distLabel && (
-                                  <p className="text-white/65 text-[9px] font-semibold flex items-center gap-0.5">
+                                  <p className="text-brand-navy/45 text-[9px] font-semibold mt-0.5 flex items-center justify-center gap-0.5">
                                     <MapPin size={8} />{distLabel}
                                   </p>
                                 )}
@@ -26331,10 +26334,10 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
                         const bg = catColor(store.category);
                         return (
                           <motion.div key={store.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                            className="shrink-0 rounded-[1.5rem] overflow-hidden flex flex-col cursor-pointer active:scale-[0.97] transition-transform shadow-sm"
-                            style={{ width: '148px' }} onClick={() => onViewStore(store)}
+                            className="shrink-0 rounded-2xl flex flex-col cursor-pointer active:scale-[0.97] transition-transform bg-white shadow-sm border border-brand-navy/5"
+                            style={{ width: '140px' }} onClick={() => onViewStore(store)}
                           >
-                            <div className="relative overflow-hidden bg-brand-navy/5" style={{ height: '110px' }}>
+                            <div className="relative rounded-t-2xl overflow-hidden bg-brand-navy/5" style={{ height: '96px' }}>
                               {store.coverUrl ? <img src={store.coverUrl} alt="" className="w-full h-full object-cover" />
                                 : store.logoUrl ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
                                 : <div className="w-full h-full flex items-center justify-center"><Building2 size={28} className="text-brand-navy/20" /></div>}
@@ -26344,9 +26347,12 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
                                 </div>
                               )}
                             </div>
-                            <div className="px-3 py-2.5 flex flex-col gap-0.5" style={{ background: bg }}>
-                              <p className="text-white text-[9px] font-bold line-clamp-1">{store.name}</p>
-                              {distLabel && <p className="text-white/65 text-[9px] font-semibold flex items-center gap-0.5"><MapPin size={8} />{distLabel}</p>}
+                            <div className="flex justify-center" style={{ marginTop: -16 }}>
+                              <VendorLogoBadge logoUrl={store.logoUrl} name={store.name} size={32} />
+                            </div>
+                            <div className="px-2.5 pt-1.5 pb-3 text-center">
+                              <p className="text-brand-navy text-[10px] font-bold line-clamp-1">{store.name}</p>
+                              {distLabel && <p className="text-brand-navy/45 text-[9px] font-semibold mt-0.5 flex items-center justify-center gap-0.5"><MapPin size={8} />{distLabel}</p>}
                             </div>
                           </motion.div>
                         );
@@ -33384,6 +33390,24 @@ const REWARD_TAG_COLORS: Record<string, string[]> = {
   product: ['#065F46', '#064E3B'],
 };
 
+// Small circular vendor-logo badge that straddles the seam between a deal card's
+// image and its footer — gives every deal/store tile a consistent, branded look.
+function VendorLogoBadge({ logoUrl, name, size = 32 }: { logoUrl?: string; name: string; size?: number }) {
+  const initials = (name || '').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+  return (
+    <div
+      className="rounded-full overflow-hidden border-2 border-white shadow-md bg-white shrink-0"
+      style={{ width: size, height: size }}
+    >
+      {logoUrl
+        ? <img src={logoUrl} alt={name} className="w-full h-full object-cover" />
+        : <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-brand-navy/10 to-brand-navy/20">
+            <span className="text-brand-navy font-black" style={{ fontSize: size * 0.32 }}>{initials}</span>
+          </div>}
+    </div>
+  );
+}
+
 function DealSliderSection({ title, icon, challenges, onViewStore, onViewChallenge, stores, showAll, onToggleAll }: {
   title: string; icon: React.ReactNode; challenges: Challenge[]; onViewStore?: (s: StoreProfile) => void; onViewChallenge?: (c: Challenge) => void; stores?: StoreProfile[]; showAll: boolean; onToggleAll: () => void;
 }) {
@@ -33410,21 +33434,27 @@ function DealSliderSection({ title, icon, challenges, onViewStore, onViewChallen
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.04 }}
-              className={cn('rounded-[1.5rem] overflow-hidden relative cursor-pointer active:scale-[0.97] transition-transform bg-white shadow-sm border border-brand-navy/5', showAll ? '' : 'shrink-0 w-36')}
-              style={{ height: '160px' }}
+              className={cn('rounded-2xl relative cursor-pointer active:scale-[0.97] transition-transform bg-white shadow-sm border border-brand-navy/5', showAll ? '' : 'shrink-0 w-36')}
               onClick={() => onViewChallenge?.(c)}
             >
-              {c.imageUrl
-                ? <img src={c.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                : <div className="absolute inset-0 bg-brand-navy/3 flex items-center justify-center">
-                    {c.rewardTag === 'experience' ? <Star size={28} className="text-brand-navy/10" />
-                      : c.rewardTag === 'service' ? <Tag size={28} className="text-brand-navy/10" />
-                      : <Package size={28} className="text-brand-navy/10" />}
-                  </div>}
-              {c.imageUrl && <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />}
-              <div className="absolute bottom-0 left-0 right-0 px-3 pb-3">
-                <p className={cn('font-extrabold text-xs leading-tight line-clamp-2', c.imageUrl ? 'text-white' : 'text-brand-navy')}>{c.reward}</p>
-                <p className={cn('text-[9px] font-medium line-clamp-1 mt-0.5', c.imageUrl ? 'text-white/60' : 'text-brand-navy/45')}>{c.title}</p>
+              <div className="relative rounded-t-2xl overflow-hidden" style={{ height: '96px' }}>
+                {c.imageUrl
+                  ? <img src={c.imageUrl} alt="" className="w-full h-full object-cover" />
+                  : <div className="w-full h-full bg-brand-navy/3 flex items-center justify-center">
+                      {c.rewardTag === 'experience' ? <Star size={26} className="text-brand-navy/10" />
+                        : c.rewardTag === 'service' ? <Tag size={26} className="text-brand-navy/10" />
+                        : <Package size={26} className="text-brand-navy/10" />}
+                    </div>}
+                <span className="absolute top-2 left-2 text-white text-[7px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full shadow-sm" style={{ background: colors[0] }}>
+                  {c.rewardTag || 'product'}
+                </span>
+              </div>
+              <div className="flex justify-center" style={{ marginTop: -16 }}>
+                <VendorLogoBadge logoUrl={vendorStore?.logoUrl} name={vendorStore?.name || c.title} size={32} />
+              </div>
+              <div className="px-3 pt-1.5 pb-3 text-center">
+                <p className="font-extrabold text-brand-navy text-xs leading-tight line-clamp-2">{c.reward}</p>
+                <p className="text-brand-navy/45 text-[9px] font-medium line-clamp-1 mt-0.5">{vendorStore?.name || c.title}</p>
               </div>
             </motion.div>
           );
@@ -33821,21 +33851,25 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: i * 0.04 }}
                       onClick={() => setSelectedOffer(offer)}
-                      className="shrink-0 rounded-[1.5rem] overflow-hidden relative cursor-pointer active:scale-[0.97] transition-transform shadow-md shadow-black/10"
-                      style={{ width: '220px', height: '120px' }}
+                      className="shrink-0 rounded-2xl relative cursor-pointer active:scale-[0.97] transition-transform bg-white shadow-sm border border-brand-navy/5 text-left"
+                      style={{ width: '190px' }}
                     >
-                      {offer.imageUrl
-                        ? <img src={offer.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                        : <div className="absolute inset-0 gradient-logo-blue flex items-center justify-center"><Ticket size={28} className="text-white/40" /></div>}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
-                      {offerBadgeText(offer) && (
-                        <div className="absolute top-2.5 left-2.5 bg-red-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-sm">
-                          {offerBadgeText(offer)}
-                        </div>
-                      )}
-                      <div className="absolute bottom-0 left-0 right-0 px-3 pb-2.5">
-                        <p className="font-extrabold text-white text-xs leading-snug line-clamp-1">{offer.title}</p>
-                        <p className="text-white/60 text-[9px] font-medium mt-0.5">{offer.storeName}</p>
+                      <div className="relative rounded-t-2xl overflow-hidden" style={{ height: '96px' }}>
+                        {offer.imageUrl
+                          ? <img src={offer.imageUrl} alt="" className="w-full h-full object-cover" />
+                          : <div className="w-full h-full gradient-logo-blue flex items-center justify-center"><Ticket size={26} className="text-white/40" /></div>}
+                        {offerBadgeText(offer) && (
+                          <div className="absolute top-2 left-2 bg-red-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-sm">
+                            {offerBadgeText(offer)}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex justify-center" style={{ marginTop: -16 }}>
+                        <VendorLogoBadge logoUrl={offer.storeLogoUrl} name={offer.storeName} size={32} />
+                      </div>
+                      <div className="px-3 pt-1.5 pb-3 text-center">
+                        <p className="font-extrabold text-brand-navy text-xs leading-snug line-clamp-1">{offer.title}</p>
+                        <p className="text-brand-navy/45 text-[9px] font-medium mt-0.5 line-clamp-1">{offer.storeName}</p>
                       </div>
                     </motion.button>
                   ))}
