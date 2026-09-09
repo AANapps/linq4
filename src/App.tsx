@@ -26218,17 +26218,17 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
                             <CheckCircle2 size={9} className="text-white" />
                           </div>
                         )}
-                        {topReward && (
-                          <div className="absolute top-2 left-2 text-white text-[7px] font-black px-1.5 py-0.5 rounded-full shadow-sm max-w-[75%] truncate" style={{ background: bg }}>
-                            {topReward}
-                          </div>
-                        )}
                       </div>
                       {/* Vendor logo — straddles the image/footer seam */}
                       <div className="relative z-10 flex justify-center" style={{ marginTop: -16 }}>
                         <VendorLogoBadge logoUrl={store.logoUrl} name={store.name} size={32} />
                       </div>
                       <div className="px-2.5 pt-1.5 pb-3 text-center">
+                        {topReward && (
+                          <p className="text-white text-[8px] font-black px-2 py-0.5 rounded-full inline-block mb-1 max-w-full truncate" style={{ background: bg }}>
+                            {topReward}
+                          </p>
+                        )}
                         <p className="font-bold text-brand-navy text-xs leading-snug line-clamp-1">{store.name}</p>
                         {distLabel && (
                           <p className="text-brand-navy/45 text-[9px] font-semibold mt-0.5 flex items-center justify-center gap-0.5">
@@ -26295,16 +26295,16 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
                                     <CheckCircle2 size={10} className="text-white" />
                                   </div>
                                 )}
-                                {topReward && (
-                                  <div className="absolute top-2 left-2 text-white text-[7px] font-black px-1.5 py-0.5 rounded-full shadow-sm max-w-[85%] truncate" style={{ background: bg }}>
-                                    {topReward}
-                                  </div>
-                                )}
                               </div>
                               <div className="relative z-10 flex justify-center" style={{ marginTop: -16 }}>
                                 <VendorLogoBadge logoUrl={store.logoUrl} name={store.name} size={32} />
                               </div>
                               <div className="px-2.5 pt-1.5 pb-3 text-center">
+                                {topReward && (
+                                  <p className="text-white text-[8px] font-black px-2 py-0.5 rounded-full inline-block mb-1 max-w-full truncate" style={{ background: bg }}>
+                                    {topReward}
+                                  </p>
+                                )}
                                 <p className="text-brand-navy text-[10px] font-bold line-clamp-1">{store.name}</p>
                                 {distLabel && (
                                   <p className="text-brand-navy/45 text-[9px] font-semibold mt-0.5 flex items-center justify-center gap-0.5">
@@ -26341,16 +26341,16 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
                               {store.coverUrl ? <img src={store.coverUrl} alt="" className="w-full h-full object-cover" />
                                 : store.logoUrl ? <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
                                 : <div className="w-full h-full flex items-center justify-center"><Building2 size={28} className="text-brand-navy/20" /></div>}
-                              {topReward && (
-                                <div className="absolute top-2 left-2 text-white text-[7px] font-black px-1.5 py-0.5 rounded-full shadow-sm max-w-[85%] truncate" style={{ background: bg }}>
-                                  {topReward}
-                                </div>
-                              )}
                             </div>
                             <div className="relative z-10 flex justify-center" style={{ marginTop: -16 }}>
                               <VendorLogoBadge logoUrl={store.logoUrl} name={store.name} size={32} />
                             </div>
                             <div className="px-2.5 pt-1.5 pb-3 text-center">
+                              {topReward && (
+                                <p className="text-white text-[8px] font-black px-2 py-0.5 rounded-full inline-block mb-1 max-w-full truncate" style={{ background: bg }}>
+                                  {topReward}
+                                </p>
+                              )}
                               <p className="text-brand-navy text-[10px] font-bold line-clamp-1">{store.name}</p>
                               {distLabel && <p className="text-brand-navy/45 text-[9px] font-semibold mt-0.5 flex items-center justify-center gap-0.5"><MapPin size={8} />{distLabel}</p>}
                             </div>
