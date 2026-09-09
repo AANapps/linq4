@@ -14503,20 +14503,26 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
               {!walletManaging && (activeCards.length > 0 ? (
                 walletLayout === 'carousel' ? (
                   <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-3 -mx-4 px-4 scrollbar-hide">
-                    <div className="flex flex-col gap-2 shrink-0 w-28 self-start" style={{ height: '25vh' }}>
+                    <div className="flex flex-col gap-2.5 shrink-0 w-40 snap-start self-start" style={{ height: '25vh' }}>
                       <button
                         onClick={handleNFCScan}
-                        className="flex-1 rounded-2xl gradient-red text-white flex flex-col items-center justify-center gap-1.5 shadow-lg px-2 text-center active:scale-95 transition-transform"
+                        className="relative flex-1 rounded-[1.75rem] glass-card overflow-hidden flex flex-col items-center justify-center gap-2 px-3 active:scale-95 transition-transform"
                       >
-                        <Smartphone size={20} />
-                        <span className="text-[11px] font-bold leading-tight">Tap for points</span>
+                        <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(135deg, rgba(96,165,250,0.24), rgba(147,197,253,0.10) 55%, transparent 85%)' }} />
+                        <div className="relative z-10 w-10 h-10 rounded-2xl gradient-logo-blue flex items-center justify-center shadow-sm">
+                          <Smartphone size={18} className="text-white" />
+                        </div>
+                        <span className="relative z-10 text-[11px] font-bold text-brand-navy leading-tight text-center">Tap for points</span>
                       </button>
                       <button
                         onClick={() => setShowGlobalQRScan(true)}
-                        className="flex-1 rounded-2xl bg-brand-navy text-white flex flex-col items-center justify-center gap-1.5 shadow-lg px-2 text-center active:scale-95 transition-transform"
+                        className="relative flex-1 rounded-[1.75rem] glass-card overflow-hidden flex flex-col items-center justify-center gap-2 px-3 active:scale-95 transition-transform"
                       >
-                        <QrCode size={20} />
-                        <span className="text-[11px] font-bold leading-tight">Scan QR for points</span>
+                        <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(135deg, rgba(45,212,191,0.20), rgba(192,132,252,0.12) 55%, transparent 85%)' }} />
+                        <div className="relative z-10 w-10 h-10 rounded-2xl gradient-red flex items-center justify-center shadow-sm">
+                          <QrCode size={18} className="text-white" />
+                        </div>
+                        <span className="relative z-10 text-[11px] font-bold text-brand-navy leading-tight text-center">Scan QR for points</span>
                       </button>
                     </div>
                     {activeCards.map(card => {
