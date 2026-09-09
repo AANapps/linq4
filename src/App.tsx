@@ -13489,6 +13489,7 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
   const [walletSubTab, setWalletSubTab] = useState<'stamps' | 'challenges'>('stamps');
   const [walletLayout, setWalletLayout] = useState<'carousel' | 'list'>('carousel');
   const [walletManaging, setWalletManaging] = useState(false);
+  const [showGlobalQRScan, setShowGlobalQRScan] = useState(false);
   const [expandedStepsIds, setExpandedStepsIds] = useState<Set<string>>(new Set());
   const [redeemingChallenge, setRedeemingChallenge] = useState<{ challenge: Challenge; entry: any; userName: string } | null>(null);
   const [myStickerCards, setMyStickerCards] = useState<StickerCardDoc[]>([]);
@@ -14502,6 +14503,22 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
               {!walletManaging && (activeCards.length > 0 ? (
                 walletLayout === 'carousel' ? (
                   <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-3 -mx-4 px-4 scrollbar-hide">
+                    <div className="flex flex-col gap-2 shrink-0 w-28 self-start" style={{ height: '25vh' }}>
+                      <button
+                        onClick={handleNFCScan}
+                        className="flex-1 rounded-2xl gradient-red text-white flex flex-col items-center justify-center gap-1.5 shadow-lg px-2 text-center active:scale-95 transition-transform"
+                      >
+                        <Smartphone size={20} />
+                        <span className="text-[11px] font-bold leading-tight">Tap for points</span>
+                      </button>
+                      <button
+                        onClick={() => setShowGlobalQRScan(true)}
+                        className="flex-1 rounded-2xl bg-brand-navy text-white flex flex-col items-center justify-center gap-1.5 shadow-lg px-2 text-center active:scale-95 transition-transform"
+                      >
+                        <QrCode size={20} />
+                        <span className="text-[11px] font-bold leading-tight">Scan QR for points</span>
+                      </button>
+                    </div>
                     {activeCards.map(card => {
                       const store = stores.find(s => s.id === card.store_id);
                       return (
@@ -14547,6 +14564,12 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
               ))}
             </div>
           )}
+
+          <AnimatePresence>
+            {showGlobalQRScan && (
+              <ConsumerQRScanner onClose={() => setShowGlobalQRScan(false)} onPackReady={handlePackReady} />
+            )}
+          </AnimatePresence>
 
           {/* Challenges sub-tab — Monopoly sticker programme */}
           {walletSubTab === 'challenges' && (
@@ -16764,7 +16787,7 @@ function VisitQRScannerModal({ storeId, onClose, onPackReady }: { storeId: strin
 }
 
 function ConsumerQRScanner({ card, store, onClose, onPackReady, initialQty }: {
-  card: Card; store?: StoreProfile; onClose: () => void; onPackReady?: (s: CollectibleSticker[]) => void; initialQty?: number;
+  card?: Card; store?: StoreProfile; onClose: () => void; onPackReady?: (s: CollectibleSticker[]) => void; initialQty?: number;
 }) {
   type SS = 'idle' | 'scanning' | 'processing' | 'success' | 'error';
   const [scanState, setScanState] = useState<SS>('idle');
@@ -16772,6 +16795,7 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady, initialQty }: {
   const [qty, setQty] = useState(initialQty ?? 1);
   const [camError, setCamError] = useState('');
   const [physicalCardResult, setPhysicalCardResult] = useState<{ sticker: CollectibleSticker; alreadyClaimed: boolean } | null>(null);
+  const [resolvedStore, setResolvedStore] = useState<StoreProfile | undefined>(store);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number>(0);
@@ -16779,9 +16803,9 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady, initialQty }: {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const scanningRef = useRef(false); // guards against ghost ticks resuming after stopCamera
   const hasBarcodeDetector = typeof window !== 'undefined' && 'BarcodeDetector' in window;
-  const limit = card.stamps_required || store?.stamps_required_for_reward || 10;
-  const remaining = Math.max(1, limit - (card.current_stamps || 0));
-  const cardTheme = store?.theme || card.storeTheme || '#2563EB';
+  const limit = card?.stamps_required || resolvedStore?.stamps_required_for_reward || 10;
+  const remaining = Math.max(1, limit - (card?.current_stamps || 0));
+  const cardTheme = resolvedStore?.theme || card?.storeTheme || '#2563EB';
 
   const stopCamera = () => {
     scanningRef.current = false; // kill any tick that resumes mid-await
@@ -16821,18 +16845,22 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady, initialQty }: {
 
     const decoded = decodeVendorQR(raw);
     if (!decoded) { setScanState('error'); setStatusMsg('Invalid QR — ask vendor to refresh.'); stopCamera(); return; }
-    if (decoded.storeId !== card.store_id) { setScanState('error'); setStatusMsg('Wrong store QR code.'); stopCamera(); return; }
+    if (card && decoded.storeId !== card.store_id) { setScanState('error'); setStatusMsg('Wrong store QR code.'); stopCamera(); return; }
     stopCamera();
     setScanState('processing'); setStatusMsg('Verifying…');
     const currentUid = auth.currentUser?.uid;
     if (!currentUid) { setScanState('error'); setStatusMsg('You need to be signed in.'); return; }
+    if (!card && resolvedStore?.id !== decoded.storeId) {
+      const storeSnap = await getDoc(doc(db, 'stores', decoded.storeId));
+      if (storeSnap.exists()) setResolvedStore({ id: storeSnap.id, ...storeSnap.data() } as StoreProfile);
+    }
     try {
       await runTransaction(db, async tx => {
         const tokenRef = doc(db, 'qr_tokens', decoded.tokenId);
         const tokenSnap = await tx.get(tokenRef);
         if (!tokenSnap.exists()) throw new Error('QR code not found — ask vendor to refresh.');
         const data = tokenSnap.data();
-        if (data.storeId !== card.store_id) throw new Error('Wrong store QR code.');
+        if (card && data.storeId !== card.store_id) throw new Error('Wrong store QR code.');
         const createdMs = typeof data.createdAt === 'number'
           ? data.createdAt
           : (data.createdAt?.toMillis?.() ?? null);
@@ -16975,10 +17003,10 @@ function ConsumerQRScanner({ card, store, onClose, onPackReady, initialQty }: {
         {/* Store header */}
         <div className="flex items-center gap-3 mb-6">
           <div className="w-12 h-12 rounded-2xl overflow-hidden shrink-0">
-            <img src={store?.logoUrl || card.storeLogoUrl || storeFallbackImg(store?.name || card.storeName, store?.theme)} alt="" className="w-full h-full object-cover" />
+            <img src={resolvedStore?.logoUrl || card?.storeLogoUrl || storeFallbackImg(resolvedStore?.name || card?.storeName, resolvedStore?.theme)} alt="" className="w-full h-full object-cover" />
           </div>
           <div className="min-w-0">
-            <h3 className="font-display text-lg font-bold text-brand-navy">{store?.name || 'Store'}</h3>
+            <h3 className="font-display text-lg font-bold text-brand-navy">{resolvedStore?.name || 'Store'}</h3>
             <p className="text-brand-navy/60 text-xs font-bold flex items-center gap-1"><QrCode size={11} /> Scan store QR code</p>
           </div>
         </div>
