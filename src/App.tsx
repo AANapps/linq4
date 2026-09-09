@@ -4842,12 +4842,11 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
 
                 const collectedCount = slots.filter(sl => sl.count > 0).length;
                 return (
-                  <div key={tier} className="rounded-2xl p-3 overflow-hidden relative"
-                    style={{ background: cfg.solid, boxShadow: `0 4px 18px ${cfg.color}55` }}>
-                    <span className="shine-ray" style={{ animationDelay: `${STICKER_ORDER.indexOf(tier) * 0.6}s` }} />
+                  <div key={tier} className="rounded-2xl p-3 overflow-hidden relative border"
+                    style={{ background: '#fff', borderColor: `${cfg.color}26`, boxShadow: `0 4px 18px ${cfg.color}26` }}>
                     <div className="flex items-center justify-between mb-2.5 relative z-10">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-white">{cfg.label}</span>
-                      <span className="text-[10px] font-black text-white">
+                      <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: cfg.color }}>{cfg.label}</span>
+                      <span className="text-[10px] font-black" style={{ color: cfg.color }}>
                         {collectedCount}/{slotCount}{collectedCount >= slotCount ? ' ✓' : ''}
                       </span>
                     </div>
@@ -4875,8 +4874,8 @@ function StickerCollectionModal({ stickerCard: initialCard, programme, onClose }
                                 </div>
                               </div>
                             ) : (
-                              <div style={{ width: '100%', height: '100%', borderRadius: 4, border: '3px solid rgba(255,255,255,0.25)', background: 'rgba(0,0,0,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                                <span style={{ fontSize: 18, opacity: 0.25, userSelect: 'none' as const, color: '#fff' }}>?</span>
+                              <div style={{ width: '100%', height: '100%', borderRadius: 4, border: `2px dashed ${cfg.color}40`, background: `${cfg.color}0d`, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                                <span style={{ fontSize: 18, opacity: 0.4, userSelect: 'none' as const, color: cfg.color }}>?</span>
                               </div>
                             )}
                             {sl.count > 1 && (
@@ -14381,49 +14380,8 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
       {activeTab === 'home' && (
         <div className="space-y-6">
 
-          {/* Sub-tabs */}
-          {(() => {
-            const totalUnrevealed = myStickerCards.reduce((n, sc) => n + sc.stickers.filter(s => !(sc.revealedIds || []).includes(s.id)).length, 0);
-            return (
-              <div className="flex bg-brand-navy/[0.06] rounded-2xl p-1 gap-1">
-                <button
-                  onClick={() => setWalletSubTab('stamps')}
-                  className={cn(
-                    'flex-1 py-2.5 rounded-xl text-sm font-bold transition-all',
-                    walletSubTab === 'stamps'
-                      ? 'bg-white text-brand-navy shadow-sm'
-                      : 'bg-white/50 text-brand-navy/80'
-                  )}
-                >
-                  Wallet
-                </button>
-                <button
-                  onClick={() => setWalletSubTab('challenges')}
-                  className={cn(
-                    'flex-1 py-2.5 rounded-xl text-sm font-bold transition-all relative overflow-hidden text-white',
-                    walletSubTab === 'challenges' ? 'shadow-md' : ''
-                  )}
-                  style={{ background: 'linear-gradient(90deg,#7c3aed,#4f46e5,#2563eb)' }}
-                >
-                  <span className="challenge-dot" style={{ top: '20%', animationDelay: '0s' }} />
-                  <span className="challenge-dot" style={{ top: '58%', animationDelay: '0.7s' }} />
-                  <span className="challenge-sparkle" style={{ top: '5%',  left: '15%', animationDelay: '0.2s' }}>✦</span>
-                  <span className="challenge-sparkle" style={{ top: '50%', left: '50%', animationDelay: '1.0s' }}>✦</span>
-                  <span className="challenge-sparkle" style={{ top: '8%',  left: '80%', animationDelay: '0.5s' }}>★</span>
-                  <span className={cn('relative z-10', walletSubTab !== 'challenges' && 'tab-shake')}>🏆 Win</span>
-                  {totalUnrevealed > 0 && (
-                    <span className="absolute top-1 right-3 w-4 h-4 bg-white/30 text-white text-[9px] font-black rounded-full flex items-center justify-center z-10">
-                      {totalUnrevealed > 9 ? '9+' : totalUnrevealed}
-                    </span>
-                  )}
-                </button>
-              </div>
-            );
-          })()}
-
-          {/* Stamps sub-tab */}
-          {walletSubTab === 'stamps' && (
-            <div className="space-y-4">
+          {/* Stamps */}
+          <div className="space-y-4">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-brand-navy/75 text-sm shrink-0">{activeCards.length} card{activeCards.length !== 1 ? 's' : ''}</p>
                 <div className="flex items-center gap-2 ml-auto">
@@ -14545,7 +14503,6 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
                 </div>
               ))}
             </div>
-          )}
 
           <AnimatePresence>
             {showGlobalQRScan && (
@@ -14553,9 +14510,8 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
             )}
           </AnimatePresence>
 
-          {/* Challenges sub-tab — Monopoly sticker programme */}
-          {walletSubTab === 'challenges' && (
-            <div className="space-y-5">
+          {/* Challenges — Monopoly sticker programme */}
+          <div className="space-y-5">
               {visibleActivePrograms.length === 0 ? (
                 <div className="glass-card p-10 rounded-[2.5rem] border-2 border-dashed border-amber-300/60 text-center">
                   <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -14975,38 +14931,36 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
               )}
 
             </div>
-          )}
         </div>
       )}
 
-      {/* Quick-earn bar — floats just above the bottom nav on the Wallet tab */}
+      {/* Quick-earn bar — docked directly on top of the bottom nav on the Wallet tab */}
       {activeTab === 'home' && !walletManaging && (
         <div
           className={cn(
-            "fixed left-0 right-0 z-40 flex gap-3 px-4",
+            "fixed left-0 right-0 z-40 bg-white border-t border-brand-navy/10 flex",
             isNativeIOS ? "md:hidden" : "md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-full md:max-w-sm"
           )}
-          style={{ bottom: 'calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) + 6.75rem)' }}
+          style={{ bottom: 'calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) + 5.25rem)' }}
         >
           <button
             onClick={handleNFCScan}
-            className="relative flex-1 rounded-2xl glass-card border border-white/80 shadow-lg overflow-hidden flex items-center justify-center gap-2 py-3.5 px-2 active:scale-95 transition-transform"
+            className="flex-1 flex items-center justify-center gap-2 py-3.5 active:bg-brand-navy/5 transition-colors"
           >
-            <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(160deg, rgba(96,165,250,0.34), rgba(147,197,253,0.14) 45%, transparent 80%)' }} />
-            <div className="relative z-10 w-7 h-7 rounded-xl gradient-logo-blue flex items-center justify-center shadow-sm shrink-0">
+            <div className="w-7 h-7 rounded-lg gradient-logo-blue flex items-center justify-center shrink-0">
               <Smartphone size={14} className="text-white" />
             </div>
-            <span className="relative z-10 text-[12px] font-bold text-brand-navy leading-tight whitespace-nowrap">Tap for points</span>
+            <span className="text-[12px] font-bold text-brand-navy whitespace-nowrap">Tap for points</span>
           </button>
+          <div className="w-px my-2.5 bg-brand-navy/10" />
           <button
             onClick={() => setShowGlobalQRScan(true)}
-            className="relative flex-1 rounded-2xl glass-card border border-white/80 shadow-lg overflow-hidden flex items-center justify-center gap-2 py-3.5 px-2 active:scale-95 transition-transform"
+            className="flex-1 flex items-center justify-center gap-2 py-3.5 active:bg-brand-navy/5 transition-colors"
           >
-            <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(160deg, rgba(45,212,191,0.30), rgba(192,132,252,0.20) 45%, transparent 80%)' }} />
-            <div className="relative z-10 w-7 h-7 rounded-xl gradient-red flex items-center justify-center shadow-sm shrink-0">
+            <div className="w-7 h-7 rounded-lg gradient-red flex items-center justify-center shrink-0">
               <QrCode size={14} className="text-white" />
             </div>
-            <span className="relative z-10 text-[12px] font-bold text-brand-navy leading-tight whitespace-nowrap">Scan QR for points</span>
+            <span className="text-[12px] font-bold text-brand-navy whitespace-nowrap">Scan QR for points</span>
           </button>
         </div>
       )}
