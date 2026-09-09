@@ -6544,7 +6544,7 @@ function AdminAddBusinessForm({ onClose }: { onClose: () => void }) {
         isVerified: false,
         stamps_required_for_reward: 10,
         rewardsGiven: 0,
-        cardEnabled: false,
+        cardEnabled: true,
         membershipEnabled: false,
         createdAt: serverTimestamp(),
       });
@@ -36357,6 +36357,7 @@ function AdminStoreEditModal({ store, onClose }: { store: StoreProfile; onClose:
   const [coverUploading, setCoverUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [isVerified, setIsVerified] = useState(store.isVerified || false);
+  const [cardEnabled, setCardEnabled] = useState(store.cardEnabled !== false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -36371,7 +36372,7 @@ function AdminStoreEditModal({ store, onClose }: { store: StoreProfile; onClose:
     try {
       await updateDoc(doc(db, 'stores', store.id), {
         name, category, description, location, address: location, phone,
-        logoUrl, coverUrl, isVerified,
+        logoUrl, coverUrl, isVerified, cardEnabled,
       });
       setSaved(true);
       setTimeout(() => { setSaved(false); onClose(); }, 800);
@@ -36493,6 +36494,14 @@ function AdminStoreEditModal({ store, onClose }: { store: StoreProfile; onClose:
           <label className="flex items-center gap-3 px-4 py-3 bg-white rounded-2xl border border-brand-navy/10 cursor-pointer">
             <input type="checkbox" checked={isVerified} onChange={e => setIsVerified(e.target.checked)} className="w-4 h-4 accent-blue-500" />
             <span className="text-sm font-bold text-brand-navy">Verified badge</span>
+          </label>
+
+          <label className="flex items-center gap-3 px-4 py-3 bg-white rounded-2xl border border-brand-navy/10 cursor-pointer">
+            <input type="checkbox" checked={cardEnabled} onChange={e => setCardEnabled(e.target.checked)} className="w-4 h-4 accent-blue-500" />
+            <div>
+              <span className="text-sm font-bold text-brand-navy block">Loyalty card enabled</span>
+              <span className="text-[11px] text-brand-navy/50">Off = no "Join Loyalty Program" button on the vendor profile, even with tiers configured below.</span>
+            </div>
           </label>
         </div>
 
