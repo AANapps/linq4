@@ -26225,7 +26225,7 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
                         )}
                       </div>
                       {/* Vendor logo — straddles the image/footer seam */}
-                      <div className="flex justify-center" style={{ marginTop: -16 }}>
+                      <div className="relative z-10 flex justify-center" style={{ marginTop: -16 }}>
                         <VendorLogoBadge logoUrl={store.logoUrl} name={store.name} size={32} />
                       </div>
                       <div className="px-2.5 pt-1.5 pb-3 text-center">
@@ -26301,7 +26301,7 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
                                   </div>
                                 )}
                               </div>
-                              <div className="flex justify-center" style={{ marginTop: -16 }}>
+                              <div className="relative z-10 flex justify-center" style={{ marginTop: -16 }}>
                                 <VendorLogoBadge logoUrl={store.logoUrl} name={store.name} size={32} />
                               </div>
                               <div className="px-2.5 pt-1.5 pb-3 text-center">
@@ -26347,7 +26347,7 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
                                 </div>
                               )}
                             </div>
-                            <div className="flex justify-center" style={{ marginTop: -16 }}>
+                            <div className="relative z-10 flex justify-center" style={{ marginTop: -16 }}>
                               <VendorLogoBadge logoUrl={store.logoUrl} name={store.name} size={32} />
                             </div>
                             <div className="px-2.5 pt-1.5 pb-3 text-center">
@@ -33449,7 +33449,7 @@ function DealSliderSection({ title, icon, challenges, onViewStore, onViewChallen
                   {c.rewardTag || 'product'}
                 </span>
               </div>
-              <div className="flex justify-center" style={{ marginTop: -16 }}>
+              <div className="relative z-10 flex justify-center" style={{ marginTop: -16 }}>
                 <VendorLogoBadge logoUrl={vendorStore?.logoUrl} name={vendorStore?.name || c.title} size={32} />
               </div>
               <div className="px-3 pt-1.5 pb-3 text-center">
@@ -33864,7 +33864,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
                           </div>
                         )}
                       </div>
-                      <div className="flex justify-center" style={{ marginTop: -16 }}>
+                      <div className="relative z-10 flex justify-center" style={{ marginTop: -16 }}>
                         <VendorLogoBadge logoUrl={offer.storeLogoUrl} name={offer.storeName} size={32} />
                       </div>
                       <div className="px-3 pt-1.5 pb-3 text-center">
