@@ -28136,7 +28136,71 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
         </p>
       </div>
 
-      <div className="v-card p-6 space-y-6">
+      <div className="grid gap-6 md:grid-cols-2 md:gap-8 md:items-start">
+
+        {/* Left column — live preview, sized to match a real stamp card in the wallet */}
+        <div className="v-card p-6">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75 mb-3">Live Preview</p>
+          <div className="w-full max-w-[340px] mx-auto rounded-[2rem] p-5 space-y-4 relative overflow-hidden shadow-xl" style={{ background: `linear-gradient(135deg, ${theme} 0%, ${theme}dd 100%)` }}>
+            {cardPattern !== 'solid' && (
+              <div className="absolute inset-0 pointer-events-none rounded-[2rem]" style={getCardPatternStyle(cardPattern)} />
+            )}
+            <div className="relative z-[1] flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {store?.logoUrl
+                  ? <img src={store.logoUrl} alt="" className="w-11 h-11 rounded-2xl object-cover border-2 border-white/30" />
+                  : <div className="w-11 h-11 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center"><Store size={18} className="text-white/50" /></div>}
+                <div>
+                  <p className="text-white font-bold">{store?.name || 'Your Business'}</p>
+                  <p className="text-white/50 text-xs">{totalStamps} stamps · {numTiers} reward{numTiers > 1 ? 's' : ''}</p>
+                </div>
+              </div>
+              {tiers[numTiers - 1]?.reward && (
+                <div className="bg-white/10 border border-white/20 rounded-xl px-2.5 py-1">
+                  <p className="text-white text-[10px] font-bold">{tiers[numTiers - 1].reward}</p>
+                </div>
+              )}
+            </div>
+            <div className="relative z-[1] grid gap-1.5" style={{ gridTemplateColumns: `repeat(${Math.min(totalStamps, 5)}, 1fr)` }}>
+              {Array.from({ length: totalStamps }).map((_, i) => {
+                const stampNum = i + 1;
+                const isTier = tiers.slice(0, numTiers).some(t => t.stamps === stampNum);
+                const isFilled = i < 3;
+                return (
+                  <div key={i}
+                    className={cn("aspect-square rounded-xl border-2 flex items-center justify-center",
+                      isFilled ? isTier ? "bg-brand-gold" : "bg-white/30"
+                      : isTier ? "bg-white/10 border-dashed" : "border-dashed"
+                    )}
+                    style={{ borderColor: isTier ? (isFilled ? stampBorderColor : `${stampBorderColor}99`) : (isFilled ? stampBorderColor : `${stampBorderColor}66`) }}
+                  >
+                    {isFilled
+                      ? isTier ? <Gift size={10} className="text-brand-navy" />
+                        : stampIconUrl ? <img src={stampIconUrl} alt="" className="w-full h-full object-cover rounded-[inherit]" />
+                        : <span className="text-base leading-none">{stampIcon}</span>
+                      : isTier ? <Gift size={10} style={{ color: stampBorderColor, opacity: 0.7 }} /> : <span className="text-[8px] font-bold" style={{ color: stampBorderColor, opacity: 0.8 }}>{stampNum}</span>}
+                  </div>
+                );
+              })}
+            </div>
+            {numTiers > 1 && (
+              <div className="relative z-[1] space-y-1">
+                {tiers.slice(0, numTiers).map((t, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded-full bg-white/10 border border-white/30 flex items-center justify-center flex-shrink-0">
+                      <span className="text-white/60 text-[8px] font-bold">{i + 1}</span>
+                    </div>
+                    <p className="text-white/50 text-[10px]">{t.stamps} stamps → <span className="text-white/80 font-semibold">{t.reward || '—'}</span></p>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="relative z-[1] text-white/30 text-[10px] text-right">3 / {totalStamps} Stamps (preview)</p>
+          </div>
+        </div>
+
+        {/* Right column — card configuration */}
+        <div className="v-card p-6 space-y-6">
 
         {/* Tier inputs */}
         <div className="space-y-2">
@@ -28422,67 +28486,6 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
           </div>
         </div>
 
-        {/* Live preview — sized to match a real stamp card in the wallet */}
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75 mb-3">Live Preview</p>
-          <div className="w-full max-w-[340px] mx-auto rounded-[2rem] p-5 space-y-4 relative overflow-hidden shadow-xl" style={{ background: `linear-gradient(135deg, ${theme} 0%, ${theme}dd 100%)` }}>
-            {cardPattern !== 'solid' && (
-              <div className="absolute inset-0 pointer-events-none rounded-[2rem]" style={getCardPatternStyle(cardPattern)} />
-            )}
-            <div className="relative z-[1] flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {store?.logoUrl
-                  ? <img src={store.logoUrl} alt="" className="w-11 h-11 rounded-2xl object-cover border-2 border-white/30" />
-                  : <div className="w-11 h-11 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center"><Store size={18} className="text-white/50" /></div>}
-                <div>
-                  <p className="text-white font-bold">{store?.name || 'Your Business'}</p>
-                  <p className="text-white/50 text-xs">{totalStamps} stamps · {numTiers} reward{numTiers > 1 ? 's' : ''}</p>
-                </div>
-              </div>
-              {tiers[numTiers - 1]?.reward && (
-                <div className="bg-white/10 border border-white/20 rounded-xl px-2.5 py-1">
-                  <p className="text-white text-[10px] font-bold">{tiers[numTiers - 1].reward}</p>
-                </div>
-              )}
-            </div>
-            <div className="relative z-[1] grid gap-1.5" style={{ gridTemplateColumns: `repeat(${Math.min(totalStamps, 5)}, 1fr)` }}>
-              {Array.from({ length: totalStamps }).map((_, i) => {
-                const stampNum = i + 1;
-                const isTier = tiers.slice(0, numTiers).some(t => t.stamps === stampNum);
-                const isFilled = i < 3;
-                return (
-                  <div key={i}
-                    className={cn("aspect-square rounded-xl border-2 flex items-center justify-center",
-                      isFilled ? isTier ? "bg-brand-gold" : "bg-white/30"
-                      : isTier ? "bg-white/10 border-dashed" : "border-dashed"
-                    )}
-                    style={{ borderColor: isTier ? (isFilled ? stampBorderColor : `${stampBorderColor}99`) : (isFilled ? stampBorderColor : `${stampBorderColor}66`) }}
-                  >
-                    {isFilled
-                      ? isTier ? <Gift size={10} className="text-brand-navy" />
-                        : stampIconUrl ? <img src={stampIconUrl} alt="" className="w-full h-full object-cover rounded-[inherit]" />
-                        : <span className="text-base leading-none">{stampIcon}</span>
-                      : isTier ? <Gift size={10} style={{ color: stampBorderColor, opacity: 0.7 }} /> : <span className="text-[8px] font-bold" style={{ color: stampBorderColor, opacity: 0.8 }}>{stampNum}</span>}
-                  </div>
-                );
-              })}
-            </div>
-            {numTiers > 1 && (
-              <div className="relative z-[1] space-y-1">
-                {tiers.slice(0, numTiers).map((t, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded-full bg-white/10 border border-white/30 flex items-center justify-center flex-shrink-0">
-                      <span className="text-white/60 text-[8px] font-bold">{i + 1}</span>
-                    </div>
-                    <p className="text-white/50 text-[10px]">{t.stamps} stamps → <span className="text-white/80 font-semibold">{t.reward || '—'}</span></p>
-                  </div>
-                ))}
-              </div>
-            )}
-            <p className="relative z-[1] text-white/30 text-[10px] text-right">3 / {totalStamps} Stamps (preview)</p>
-          </div>
-        </div>
-
         <p className="text-xs text-brand-navy/75">Existing cards finish their current cycle first. New cycles use these settings.</p>
 
         {/* Business Rules / T&Cs */}
@@ -28527,6 +28530,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
             className="flex-1 bg-brand-navy text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 disabled:opacity-50 transition-all">
             {saved ? <><CheckCircle2 size={16} /> Saved!</> : saving ? 'Saving...' : <><Save size={16} /> Save — Set as New Card</>}
           </button>
+        </div>
         </div>
       </div>
     </div>
