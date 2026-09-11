@@ -243,6 +243,19 @@
     }
     .nav-cta:hover { border-color: rgba(37,99,235,0.45); transform: translateY(-1px); }
 
+    /* ── FLOATING LOGIN (persistent, top right, all tabs) ── */
+    .float-login-wrap {
+      position: fixed;
+      top: 0.9rem;
+      right: 1rem;
+      z-index: 200;
+    }
+
+    @media (max-width: 480px) {
+      .float-login-wrap { top: 0.7rem; right: 0.75rem; }
+      .float-login-wrap .nav-cta { padding: 0.45rem 1rem; font-size: 0.82rem; }
+    }
+
     /* ── FLOATING JOIN NOW (persistent, all tabs) ── */
     .float-cta-wrap {
       position: fixed;
@@ -1524,10 +1537,17 @@
     <div class="nav-logo holo-text">Linq</div>
   </nav>
 
-  <!-- FLOATING JOIN NOW — fixed to the bottom of the viewport on every tab -->
+  <!-- FLOATING LOGIN — fixed top right, on every tab -->
+  <div class="float-login-wrap">
+    <a href="https://www.joinlinq.app/vendor" target="_blank" rel="noopener noreferrer" class="nav-cta">
+      Login
+    </a>
+  </div>
+
+  <!-- FLOATING SIGN UP FREE — fixed to the bottom of the viewport on every tab -->
   <div class="float-cta-wrap">
     <a href="https://www.joinlinq.app/vendor" target="_blank" rel="noopener noreferrer" class="float-cta">
-      Join Now <svg class="ic"><use href="#i-arrow"/></svg>
+      Sign Up Free <svg class="ic"><use href="#i-arrow"/></svg>
     </a>
   </div>
 
