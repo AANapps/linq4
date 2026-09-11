@@ -1286,8 +1286,8 @@
 
     /* ════════════════════════════════════
        BUSINESS — SOCIAL PROOF (placeholder)
-       Dashed borders flag this as content to
-       swap for real logos/quotes — not fake data.
+       Dashed border flags this as content to
+       swap for real logos — not fake data.
     ════════════════════════════════════ */
     .proof-bg { padding: var(--space-xl) var(--space-md); }
     .proof-inner { max-width: var(--max-w); margin: 0 auto; }
@@ -1297,7 +1297,7 @@
       flex-wrap: wrap;
       gap: 0.75rem;
       justify-content: center;
-      margin: 1.75rem 0 2.75rem;
+      margin: 1.75rem 0 0.5rem;
     }
 
     .proof-logo {
@@ -1308,35 +1308,6 @@
       font-weight: 600;
       color: var(--ink-dim);
       background: rgba(255,255,255,0.4);
-    }
-
-    .testimonial-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 1rem;
-    }
-
-    .testimonial-card {
-      background: var(--glass-bg);
-      border: 1px dashed rgba(15,23,42,0.20);
-      backdrop-filter: blur(24px) saturate(160%);
-      -webkit-backdrop-filter: blur(24px) saturate(160%);
-      border-radius: var(--radius-md);
-      padding: 1.75rem;
-    }
-
-    .testimonial-quote {
-      font-size: 0.95rem;
-      color: var(--ink-dim);
-      font-style: italic;
-      line-height: 1.6;
-      margin-bottom: 1rem;
-    }
-
-    .testimonial-author {
-      font-size: 0.78rem;
-      font-weight: 700;
-      color: var(--ink-dim);
     }
 
     /* ════════════════════════════════════
@@ -1920,10 +1891,10 @@
       </div>
     </div>
 
-    <!-- SOCIAL PROOF — placeholder until real logos & quotes are ready to swap in -->
+    <!-- SOCIAL PROOF — placeholder until real logos are ready to swap in -->
     <div class="proof-bg">
       <div class="proof-inner">
-        <p class="eyebrow reveal" style="text-align:center;">Placeholder — swap in your real logos &amp; quotes</p>
+        <p class="eyebrow reveal" style="text-align:center;">Placeholder — swap in your real logos</p>
         <h2 class="section-title reveal" style="text-align:center;">Loved by businesses<br/><em class="holo-text">like yours.</em></h2>
 
         <div class="proof-logos reveal">
@@ -1931,21 +1902,6 @@
           <div class="proof-logo">Your Logo</div>
           <div class="proof-logo">Your Logo</div>
           <div class="proof-logo">Your Logo</div>
-        </div>
-
-        <div class="testimonial-grid">
-          <div class="testimonial-card reveal reveal-delay-1">
-            <p class="testimonial-quote">"Add a real customer quote here."</p>
-            <p class="testimonial-author">Name, Business name</p>
-          </div>
-          <div class="testimonial-card reveal reveal-delay-2">
-            <p class="testimonial-quote">"Add a real customer quote here."</p>
-            <p class="testimonial-author">Name, Business name</p>
-          </div>
-          <div class="testimonial-card reveal reveal-delay-3">
-            <p class="testimonial-quote">"Add a real customer quote here."</p>
-            <p class="testimonial-author">Name, Business name</p>
-          </div>
         </div>
       </div>
     </div>
