@@ -27992,6 +27992,7 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
   const [ruleTemplates, setRuleTemplates] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [previewLayout, setPreviewLayout] = useState<'carousel' | 'list'>('carousel');
 
   useEffect(() => {
     if (!store) return;
@@ -28122,6 +28123,35 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
   const totalStamps = tiers[tiers.length - 1]?.stamps || 10;
   const tierStampSet = new Set(tiers.map(t => t.stamps));
 
+  // Fake card + store fed straight into the real wallet card component, so the
+  // preview is pixel-identical to what customers see — not a hand-drawn mockup —
+  // and always reflects the in-progress (not yet saved) settings above.
+  const previewStore: StoreProfile = {
+    ...(store || ({} as StoreProfile)),
+    id: store?.id || 'preview-store',
+    name: store?.name || 'Your Business',
+    theme,
+    cardPattern,
+    stampIcon: stampIconUrl ? '' : stampIcon,
+    stampIconUrl,
+    stampBorderColor,
+    rewardTiers: tiers.slice(0, numTiers),
+    stamps_required_for_reward: totalStamps,
+    reward: tiers[numTiers - 1]?.reward || '',
+    businessRules,
+    currency,
+  };
+  const previewCard: Card = {
+    id: 'preview-card',
+    user_id: 'preview-user',
+    store_id: previewStore.id,
+    current_stamps: Math.min(3, totalStamps),
+    total_completed_cycles: 0,
+    last_tap_timestamp: null,
+    stamps_required: totalStamps,
+    card_type: 'stamp',
+  };
+
   return (
     <div className="space-y-6 pb-20">
       <header>
@@ -28138,64 +28168,38 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
 
       <div className="grid gap-6 md:grid-cols-2 md:gap-8 md:items-start">
 
-        {/* Right column — live preview, sized to match a real stamp card in the wallet. Sticky so it stays in view while the settings column scrolls. */}
+        {/* Right column — live preview. Renders the real wallet card component (not a mockup), so it's exactly what customers see. Sticky so it stays in view while the settings column scrolls. */}
         <div className="v-card p-6 md:order-2 md:sticky md:top-20 md:self-start">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75 mb-3">Live Preview</p>
-          <div className="w-full max-w-[340px] mx-auto rounded-[2rem] p-5 space-y-4 relative overflow-hidden shadow-xl" style={{ background: `linear-gradient(135deg, ${theme} 0%, ${theme}dd 100%)` }}>
-            {cardPattern !== 'solid' && (
-              <div className="absolute inset-0 pointer-events-none rounded-[2rem]" style={getCardPatternStyle(cardPattern)} />
-            )}
-            <div className="relative z-[1] flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {store?.logoUrl
-                  ? <img src={store.logoUrl} alt="" className="w-11 h-11 rounded-2xl object-cover border-2 border-white/30" />
-                  : <div className="w-11 h-11 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center"><Store size={18} className="text-white/50" /></div>}
-                <div>
-                  <p className="text-white font-bold">{store?.name || 'Your Business'}</p>
-                  <p className="text-white/50 text-xs">{totalStamps} stamps · {numTiers} reward{numTiers > 1 ? 's' : ''}</p>
-                </div>
-              </div>
-              {tiers[numTiers - 1]?.reward && (
-                <div className="bg-white/10 border border-white/20 rounded-xl px-2.5 py-1">
-                  <p className="text-white text-[10px] font-bold">{tiers[numTiers - 1].reward}</p>
-                </div>
-              )}
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75">Live Preview</p>
+            <div className="flex items-center bg-brand-navy/[0.07] rounded-xl p-0.5">
+              <button
+                type="button"
+                onClick={() => setPreviewLayout('carousel')}
+                className={cn(
+                  'flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all',
+                  previewLayout === 'carousel' ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/75'
+                )}
+              >
+                <MoveHorizontal size={12} /> Swipe
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreviewLayout('list')}
+                className={cn(
+                  'flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all',
+                  previewLayout === 'list' ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-navy/75'
+                )}
+              >
+                <LayoutList size={12} /> List
+              </button>
             </div>
-            <div className="relative z-[1] grid gap-1.5" style={{ gridTemplateColumns: `repeat(${Math.min(totalStamps, 5)}, 1fr)` }}>
-              {Array.from({ length: totalStamps }).map((_, i) => {
-                const stampNum = i + 1;
-                const isTier = tiers.slice(0, numTiers).some(t => t.stamps === stampNum);
-                const isFilled = i < 3;
-                return (
-                  <div key={i}
-                    className={cn("aspect-square rounded-xl border-2 flex items-center justify-center",
-                      isFilled ? isTier ? "bg-brand-gold" : "bg-white/30"
-                      : isTier ? "bg-white/10 border-dashed" : "border-dashed"
-                    )}
-                    style={{ borderColor: isTier ? (isFilled ? stampBorderColor : `${stampBorderColor}99`) : (isFilled ? stampBorderColor : `${stampBorderColor}66`) }}
-                  >
-                    {isFilled
-                      ? isTier ? <Gift size={10} className="text-brand-navy" />
-                        : stampIconUrl ? <img src={stampIconUrl} alt="" className="w-full h-full object-cover rounded-[inherit]" />
-                        : <span className="text-base leading-none">{stampIcon}</span>
-                      : isTier ? <Gift size={10} style={{ color: stampBorderColor, opacity: 0.7 }} /> : <span className="text-[8px] font-bold" style={{ color: stampBorderColor, opacity: 0.8 }}>{stampNum}</span>}
-                  </div>
-                );
-              })}
+          </div>
+          <p className="text-[11px] text-brand-navy/50 mb-3">Exactly how this card looks in your customer's wallet — {previewLayout === 'carousel' ? 'swipe view' : 'list view'}.</p>
+          <div className="pointer-events-none w-full max-w-[340px] mx-auto" aria-hidden="true">
+            <div className={previewLayout === 'carousel' ? "flex flex-col rounded-[2rem] shadow-xl" : "rounded-3xl shadow-xl overflow-hidden"}>
+              <LoyaltyCard card={previewCard} store={previewStore} compact={previewLayout === 'list'} />
             </div>
-            {numTiers > 1 && (
-              <div className="relative z-[1] space-y-1">
-                {tiers.slice(0, numTiers).map((t, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded-full bg-white/10 border border-white/30 flex items-center justify-center flex-shrink-0">
-                      <span className="text-white/60 text-[8px] font-bold">{i + 1}</span>
-                    </div>
-                    <p className="text-white/50 text-[10px]">{t.stamps} stamps → <span className="text-white/80 font-semibold">{t.reward || '—'}</span></p>
-                  </div>
-                ))}
-              </div>
-            )}
-            <p className="relative z-[1] text-white/30 text-[10px] text-right">3 / {totalStamps} Stamps (preview)</p>
           </div>
         </div>
 
