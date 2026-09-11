@@ -28138,8 +28138,8 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
 
       <div className="grid gap-6 md:grid-cols-2 md:gap-8 md:items-start">
 
-        {/* Left column — live preview, sized to match a real stamp card in the wallet */}
-        <div className="v-card p-6">
+        {/* Right column — live preview, sized to match a real stamp card in the wallet. Sticky so it stays in view while the settings column scrolls. */}
+        <div className="v-card p-6 md:order-2 md:sticky md:top-20 md:self-start">
           <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/75 mb-3">Live Preview</p>
           <div className="w-full max-w-[340px] mx-auto rounded-[2rem] p-5 space-y-4 relative overflow-hidden shadow-xl" style={{ background: `linear-gradient(135deg, ${theme} 0%, ${theme}dd 100%)` }}>
             {cardPattern !== 'solid' && (
@@ -28199,8 +28199,8 @@ function CardBuilder({ store }: { store: StoreProfile | null }) {
           </div>
         </div>
 
-        {/* Right column — card configuration */}
-        <div className="v-card p-6 space-y-6">
+        {/* Left column — card configuration */}
+        <div className="v-card p-6 space-y-6 md:order-1">
 
         {/* Tier inputs */}
         <div className="space-y-2">
