@@ -1424,6 +1424,7 @@ export default function App() {
   const [showVendorQR, setShowVendorQR] = useState(false);
   const [vendorQREnabled, setVendorQREnabled] = useState(false);
   const [vendorIsSpend, setVendorIsSpend] = useState(false);
+  const [vendorStoreName, setVendorStoreName] = useState('');
   const [vendorIssueMode, setVendorIssueMode] = useState<null | 'card' | 'offer' | 'scan-user'>(null);
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior }); }, [activeTab]);
@@ -2477,6 +2478,12 @@ export default function App() {
       {/* Vendor sidebar — desktop only */}
       {isVendor && (
         <aside className="hidden lg:flex flex-col fixed top-14 bottom-0 left-0 w-56 border-r border-brand-navy/8 bg-white z-40">
+          {vendorStoreName && (
+            <div className="px-4 pt-5 pb-3 border-b border-brand-navy/8">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-navy/40 mb-0.5">Your Store</p>
+              <p className="font-display font-bold text-sm text-brand-navy truncate">{vendorStoreName}</p>
+            </div>
+          )}
           <div className="flex-1 flex flex-col gap-0.5 px-3 py-5">
             {([
               { tab: 'home',      icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
@@ -2628,6 +2635,7 @@ export default function App() {
               setShowVendorQR={setShowVendorQR}
               onVendorQRStatus={setVendorQREnabled}
               onVendorIsSpend={setVendorIsSpend}
+              onVendorStoreName={setVendorStoreName}
               blockedUids={blockedUids}
               vendorIssueMode={vendorIssueMode}
               setVendorIssueMode={setVendorIssueMode}
@@ -19485,7 +19493,7 @@ function PaymentVerifyingScreen() {
 
 // --- Vendor App ---
 
-function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, onViewUser, notifications, activeChatId, setActiveChatId, onLogout, onDeleteAccount, showVendorQR, setShowVendorQR, onVendorQRStatus, onVendorIsSpend, blockedUids, vendorIssueMode, setVendorIssueMode }: { activeTab: string, setActiveTab: (tab: string) => void, profile: UserProfile | null, user: FirebaseUser, profileCollection: 'users' | 'vendors', onViewUser: (u: UserProfile) => void, notifications: Notification[], activeChatId: string | null, setActiveChatId: (id: string | null) => void, onLogout: () => void, onDeleteAccount: () => Promise<void>, showVendorQR?: boolean, setShowVendorQR?: (v: boolean) => void, onVendorQRStatus?: (enabled: boolean) => void, onVendorIsSpend?: (v: boolean) => void, blockedUids?: Set<string>, vendorIssueMode: null | 'card' | 'offer' | 'scan-user', setVendorIssueMode: (m: null | 'card' | 'offer' | 'scan-user') => void, key?: React.Key }) {
+function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, onViewUser, notifications, activeChatId, setActiveChatId, onLogout, onDeleteAccount, showVendorQR, setShowVendorQR, onVendorQRStatus, onVendorIsSpend, onVendorStoreName, blockedUids, vendorIssueMode, setVendorIssueMode }: { activeTab: string, setActiveTab: (tab: string) => void, profile: UserProfile | null, user: FirebaseUser, profileCollection: 'users' | 'vendors', onViewUser: (u: UserProfile) => void, notifications: Notification[], activeChatId: string | null, setActiveChatId: (id: string | null) => void, onLogout: () => void, onDeleteAccount: () => Promise<void>, showVendorQR?: boolean, setShowVendorQR?: (v: boolean) => void, onVendorQRStatus?: (enabled: boolean) => void, onVendorIsSpend?: (v: boolean) => void, onVendorStoreName?: (name: string) => void, blockedUids?: Set<string>, vendorIssueMode: null | 'card' | 'offer' | 'scan-user', setVendorIssueMode: (m: null | 'card' | 'offer' | 'scan-user') => void, key?: React.Key }) {
   const [store, setStore] = useState<StoreProfile | null>(null);
   const [userCards, setUserCards] = useState<Card[]>([]);
 
@@ -19569,6 +19577,7 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
     const isSpendEnabled = store?.membershipEnabled === true && store.membershipType === 'spend';
     onVendorQRStatus?.(!!store && (store.cardEnabled === true || isVisitEnabled || isSpendEnabled));
     onVendorIsSpend?.(isSpendEnabled);
+    onVendorStoreName?.(store?.name || '');
   }, [store]);
 
   const trialEndsMs = store?.trialEndsAt
