@@ -2479,8 +2479,9 @@ export default function App() {
         <aside className="hidden lg:flex flex-col fixed top-14 bottom-0 left-0 w-56 border-r border-brand-navy/8 bg-white z-40">
           <div className="flex-1 flex flex-col gap-0.5 px-3 py-5">
             {([
-              { tab: 'home',     icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
-              { tab: 'messages', icon: <MessageCircle size={18} />,   label: 'Messages',    badge: unreadMessages },
+              { tab: 'home',      icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
+              { tab: 'customers', icon: <Users size={18} />,           label: 'Customers' },
+              { tab: 'messages',  icon: <MessageCircle size={18} />,   label: 'Messages',    badge: unreadMessages },
               { tab: 'discover', icon: <CreditCard size={18} />,      label: 'Cards',  mode: 'card' as const },
               { tab: 'discover', icon: <Ticket size={18} />,          label: 'Offers', mode: 'offer' as const },
               { tab: 'profile',  icon: <UserIcon size={18} />,        label: 'Profile' },
@@ -19513,6 +19514,8 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
   const [statModal, setStatModal] = useState<null | 'members' | 'stamps' | 'activeCards' | 'churnRisk' | 'newcomers'>(null);
   const [statModalSearch, setStatModalSearch] = useState('');
   const [statModalVisible, setStatModalVisible] = useState(10);
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [customerVisible, setCustomerVisible] = useState(20);
   // Derive the single active dashboard tab directly from store config — no state needed
   const dashTab: 'stamps' | 'spend' | 'visit' =
     store?.membershipEnabled && store?.membershipType === 'spend' ? 'spend' :
@@ -19831,6 +19834,28 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
     (c.card_type === 'sub' && (store?.pointsEarnMode === 'visit' || store?.pointsEarnMode === 'both')) ||
     (c.card_type === 'membership' && c.membership_type === 'visit')
   );
+
+  // Keep customer profiles cached for every card holder of the active programme —
+  // not just the ones drilled into via a stat tile — so the standalone Customers
+  // tab always has names/avatars ready without an extra loading step.
+  useEffect(() => {
+    const relevant = dashTab === 'stamps' ? stampCards : dashTab === 'spend' ? spendCards : visitCards;
+    const uids: string[] = [...new Set<string>(relevant.filter(c => !c.isArchived).map((c: Card) => c.user_id))];
+    const missing = uids.filter(uid => !memberProfiles.has(uid));
+    if (missing.length === 0) return;
+    const chunks: string[][] = [];
+    for (let i = 0; i < missing.length; i += 10) chunks.push(missing.slice(i, i + 10));
+    Promise.all(chunks.map(chunk => getDocs(query(collection(db, 'users'), where('uid', 'in', chunk)))))
+      .then(results => {
+        setMemberProfiles(prev => {
+          const updated = new Map(prev);
+          results.forEach(snap => snap.docs.forEach(d => updated.set(d.id, { uid: d.id, ...d.data() } as UserProfile)));
+          return updated;
+        });
+      })
+      .catch(console.error);
+  }, [dashTab, stampCards, spendCards, visitCards]);
+
   const stampTxns = chartTransactions.filter(tx => !tx.card_type || tx.card_type === 'stamp');
   const spendTxns = chartTransactions.filter(tx =>
     (tx.card_type === 'sub' && tx.earn_mode !== 'visit') ||
@@ -22333,6 +22358,100 @@ function VendorApp({ activeTab, setActiveTab, profile, user, profileCollection, 
           </div>
         )
       )}
+
+      {activeTab === 'customers' && (() => {
+        const relevant = dashTab === 'stamps' ? stampCards : dashTab === 'spend' ? spendCards : visitCards;
+        const q = customerSearch.trim().toLowerCase();
+        const now = Date.now();
+        const uids: string[] = [...new Set<string>(relevant.filter(c => !c.isArchived).map((c: Card) => c.user_id))];
+        const rows = uids.map(uid => {
+          const cards = relevant.filter(c => c.user_id === uid && !c.isArchived);
+          const card = cards[0];
+          const prof = memberProfiles.get(uid);
+          const lastMs = Math.max(
+            card?.last_tap_timestamp?.toMillis?.() ?? (card?.last_tap_timestamp?.seconds ?? 0) * 1000,
+            card?.last_transaction_at?.toMillis?.() ?? (card?.last_transaction_at?.seconds ?? 0) * 1000,
+            0
+          );
+          let progressLabel = 'No active card';
+          let progressPct: number | null = null;
+          if (card) {
+            if (dashTab === 'stamps') {
+              const limit = card.stamps_required || stampsPerReward;
+              progressLabel = `${card.current_stamps || 0}/${limit} stamps`;
+              progressPct = Math.min(100, ((card.current_stamps || 0) / limit) * 100);
+            } else if (dashTab === 'visit') {
+              const visits = card.membership_visits ?? card.total_visits ?? 0;
+              progressLabel = `${card.current_points || 0} pts · ${visits} visit${visits === 1 ? '' : 's'}`;
+            } else {
+              progressLabel = `${card.current_points || 0} pts${card.total_spent ? ` · $${card.total_spent.toFixed(0)} spent` : ''}`;
+            }
+          }
+          return { uid, prof, progressLabel, progressPct, lastMs };
+        }).filter(row => {
+          if (!q) return true;
+          return (row.prof?.name || '').toLowerCase().includes(q) || (row.prof?.handle || '').toLowerCase().includes(q) || row.uid.toLowerCase().includes(q);
+        }).sort((a, b) => b.lastMs - a.lastMs);
+
+        return (
+          <div className="space-y-4 pb-20">
+            <header>
+              <h2 className="font-display text-3xl font-bold mb-1">Customers</h2>
+              <p className="text-brand-navy/75">Everyone with an active card at {store?.name || 'your business'}, and how far along they are.</p>
+            </header>
+            <div className="relative">
+              <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-navy/72 pointer-events-none" />
+              <input
+                type="text"
+                value={customerSearch}
+                onChange={e => { setCustomerSearch(e.target.value); setCustomerVisible(20); }}
+                placeholder="Search by name or handle…"
+                className="w-full pl-10 pr-4 py-3 rounded-2xl bg-white border border-brand-navy/10 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+              />
+            </div>
+            <div className="v-card divide-y divide-brand-navy/5">
+              {rows.length === 0 ? (
+                <p className="text-center text-brand-navy/60 py-10 text-sm font-semibold px-4">
+                  {customerSearch ? 'No customers match your search.' : 'No customers yet — share your QR code to get your first one.'}
+                </p>
+              ) : rows.slice(0, customerVisible).map(({ uid, prof, progressLabel, progressPct, lastMs }) => (
+                <div key={uid} className="flex items-center gap-3 px-4 py-3">
+                  <div className="w-10 h-10 rounded-full overflow-hidden bg-blue-50 shrink-0 flex items-center justify-center">
+                    <PixelAvatar config={prof?.avatar} uid={prof?.uid ?? uid} size={40} view="head" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1">
+                      <p className="font-bold text-sm truncate">{prof?.name || 'Unknown'}</p>
+                      <StreakBadge streak={prof?.streak} />
+                    </div>
+                    <p className="text-[11px] text-brand-navy/60">@{prof?.handle || uid.slice(0, 8)} · {lastMs > 0 ? `active ${Math.floor((now - lastMs) / 86400000)}d ago` : 'no activity yet'}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="font-bold text-sm whitespace-nowrap">{progressLabel}</p>
+                    {progressPct != null && (
+                      <div className="w-20 h-1.5 bg-brand-navy/10 rounded-full mt-1 ml-auto">
+                        <div className="h-full bg-brand-gold rounded-full" style={{ width: `${progressPct}%` }} />
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => { setActiveChatId(uid); setActiveTab('messages'); }}
+                    className="w-8 h-8 rounded-full bg-brand-navy/5 flex items-center justify-center shrink-0 active:scale-95 transition-transform"
+                    aria-label="Message"
+                  >
+                    <MessageCircle size={14} className="text-brand-navy/70" />
+                  </button>
+                </div>
+              ))}
+            </div>
+            {rows.length > customerVisible && (
+              <button onClick={() => setCustomerVisible(v => v + 20)} className="w-full py-2.5 rounded-2xl bg-brand-navy/5 text-brand-navy/75 text-xs font-bold">
+                Load 20 more ({rows.length - customerVisible} remaining)
+              </button>
+            )}
+          </div>
+        );
+      })()}
 
       {activeTab === 'discover' && (
         vendorIssueMode === null ? (
