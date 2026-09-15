@@ -6529,7 +6529,8 @@ function AdminAddBusinessForm({ onClose }: { onClose: () => void }) {
     }
   };
 
-  const canSave = businessName.trim() && offerTitle.trim() && offerDescription.trim() && !saving;
+  const hasOffer = offerTitle.trim().length > 0 || offerDescription.trim().length > 0;
+  const canSave = businessName.trim() && (!hasOffer || (offerTitle.trim() && offerDescription.trim())) && !saving;
 
   const handleCreate = async () => {
     if (!canSave) return;
@@ -6557,22 +6558,24 @@ function AdminAddBusinessForm({ onClose }: { onClose: () => void }) {
         membershipEnabled: false,
         createdAt: serverTimestamp(),
       });
-      await addDoc(collection(db, 'store_offers'), {
-        storeId: storeRef.id,
-        storeName: businessName.trim(),
-        storeLogoUrl: logoUrl,
-        storeCategory: category,
-        title: offerTitle.trim(),
-        description: offerDescription.trim(),
-        imageUrl: offerImageUrl,
-        offerType: 'standard',
-        maxRedemptionsPerUser: maxRedemptions,
-        discountType: offerDiscountType,
-        value: offerDiscountType === 'percent' ? Math.min(100, Math.max(0, parseFloat(offerValue) || 0)) : (parseFloat(offerValue) || 0),
-        status: 'active',
-        createdAt: serverTimestamp(),
-        ...(noExpiry ? {} : { validDays, expiresAt: new Date(Date.now() + validDays * 24 * 60 * 60 * 1000) }),
-      });
+      if (hasOffer) {
+        await addDoc(collection(db, 'store_offers'), {
+          storeId: storeRef.id,
+          storeName: businessName.trim(),
+          storeLogoUrl: logoUrl,
+          storeCategory: category,
+          title: offerTitle.trim(),
+          description: offerDescription.trim(),
+          imageUrl: offerImageUrl,
+          offerType: 'standard',
+          maxRedemptionsPerUser: maxRedemptions,
+          discountType: offerDiscountType,
+          value: offerDiscountType === 'percent' ? Math.min(100, Math.max(0, parseFloat(offerValue) || 0)) : (parseFloat(offerValue) || 0),
+          status: 'active',
+          createdAt: serverTimestamp(),
+          ...(noExpiry ? {} : { validDays, expiresAt: new Date(Date.now() + validDays * 24 * 60 * 60 * 1000) }),
+        });
+      }
       onClose();
     } catch (e: any) {
       setError(e?.message || 'Failed to create business. Check permissions.');
@@ -6596,7 +6599,7 @@ function AdminAddBusinessForm({ onClose }: { onClose: () => void }) {
         <button onClick={onClose} className="p-2 -ml-2 text-brand-navy/75"><X size={22} /></button>
         <div className="flex-1">
           <p className="text-[10px] font-bold text-brand-navy/75 uppercase tracking-widest">Admin</p>
-          <h2 className="font-bold text-brand-navy text-base">Add business + offer</h2>
+          <h2 className="font-bold text-brand-navy text-base">Add business</h2>
         </div>
       </header>
 
@@ -6655,7 +6658,7 @@ function AdminAddBusinessForm({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="space-y-3 pt-2 border-t border-brand-navy/8">
-          <p className="text-xs font-black text-brand-navy/40 uppercase tracking-widest pt-2">First offer</p>
+          <p className="text-xs font-black text-brand-navy/40 uppercase tracking-widest pt-2">First offer (optional)</p>
 
           <label className="flex flex-col items-center gap-2 cursor-pointer">
             <div className="w-full aspect-[16/9] rounded-2xl overflow-hidden bg-white border border-brand-navy/10 flex items-center justify-center">
@@ -6741,7 +6744,7 @@ function AdminAddBusinessForm({ onClose }: { onClose: () => void }) {
           disabled={!canSave}
           className="w-full py-3.5 rounded-2xl bg-brand-navy text-white font-bold text-sm disabled:opacity-40 flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
         >
-          {saving ? <><Loader2 size={15} className="animate-spin" /> Creating…</> : <><Plus size={15} /> Create business + offer</>}
+          {saving ? <><Loader2 size={15} className="animate-spin" /> Creating…</> : <><Plus size={15} /> {hasOffer ? 'Create business + offer' : 'Create business'}</>}
         </button>
       </div>
     </motion.div>
