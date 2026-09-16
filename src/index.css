@@ -254,17 +254,17 @@
   100% { background-position: 0% 50%; }
 }
 .quick-earn-btn-blue {
-  background: linear-gradient(120deg, rgba(255,255,255,0.22), rgba(255,255,255,0.08), rgba(255,255,255,0.16), rgba(255,255,255,0.22));
+  background: linear-gradient(120deg, rgba(255,255,255,0.14), rgba(255,255,255,0.03), rgba(255,255,255,0.09), rgba(255,255,255,0.14));
   background-size: 320% 320%;
   animation: quick-earn-aurora 12s ease-in-out infinite;
-  border-color: rgba(255,255,255,0.55);
+  border-color: rgba(255,255,255,0.5);
 }
 .quick-earn-btn-violet {
-  background: linear-gradient(120deg, rgba(255,255,255,0.18), rgba(255,255,255,0.06), rgba(255,255,255,0.14), rgba(255,255,255,0.18));
+  background: linear-gradient(120deg, rgba(255,255,255,0.11), rgba(255,255,255,0.02), rgba(255,255,255,0.07), rgba(255,255,255,0.11));
   background-size: 320% 320%;
   animation: quick-earn-aurora 12s ease-in-out infinite;
   animation-delay: -4s;
-  border-color: rgba(255,255,255,0.5);
+  border-color: rgba(255,255,255,0.45);
 }
 
 /* --- Liquid glass (Tap/Scan quick-earn buttons) -------------------------
@@ -273,21 +273,21 @@
    specular bloom near the top like light catching a convex surface. */
 .liquid-glass-btn {
   isolation: isolate;
-  backdrop-filter: blur(20px) saturate(200%) contrast(1.08);
-  -webkit-backdrop-filter: blur(20px) saturate(200%) contrast(1.08);
+  backdrop-filter: blur(6px) saturate(180%) contrast(1.05);
+  -webkit-backdrop-filter: blur(6px) saturate(180%) contrast(1.05);
   box-shadow:
-    inset 0 1.5px 1px rgba(255, 255, 255, 0.85),
-    inset 0 -8px 14px -8px rgba(15, 23, 42, 0.18),
-    0 10px 24px -8px rgba(15, 23, 42, 0.32);
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.7),
+    inset 0 -8px 14px -8px rgba(15, 23, 42, 0.14),
+    0 10px 24px -8px rgba(15, 23, 42, 0.28);
 }
 
 /* Where the engine can actually apply the SVG displacement to the backdrop,
-   swap in a lighter blur + the warp filter for real refraction of whatever
-   sits behind the button. Falls back to the plain frosted blur above. */
+   swap in an even lighter blur + the warp filter for real refraction of
+   whatever sits behind the button. Falls back to the plain frosted blur above. */
 @supports (backdrop-filter: blur(1px) url(#liquid-glass-distortion)) {
   .liquid-glass-btn {
-    backdrop-filter: blur(6px) saturate(200%) contrast(1.08) url(#liquid-glass-distortion);
-    -webkit-backdrop-filter: blur(20px) saturate(200%) contrast(1.08);
+    backdrop-filter: blur(1.5px) saturate(180%) contrast(1.05) url(#liquid-glass-distortion);
+    -webkit-backdrop-filter: blur(6px) saturate(180%) contrast(1.05);
   }
 }
 
