@@ -25071,21 +25071,27 @@ function DailyVoteModal({ currentUser, currentProfile, onClose, onPackReady }: {
     });
   }, [today, voteId]);
 
-  // Auto-close in Firestore when timer expires
+  // Auto-close in Firestore when timer expires — transactional because every user
+  // with the poll open fires this at the same instant it hits zero; without a guard,
+  // whichever client's write lands last can stomp the correct winner with one
+  // computed from its own (possibly incomplete) locally-synced vote tally.
   useEffect(() => {
     if (!isExpired || voteData?.closed || !voteId || autoClosedRef.current) return;
     autoClosedRef.current = true;
-    let winner: number;
-    if (voteData?.pollType === 'correct' && voteData?.correctAnswer != null) {
-      winner = voteData.correctAnswer;
-    } else {
-      winner = (voteData?.options || []).reduce((best, _, i) => {
+    const localWinner = (() => {
+      if (voteData?.pollType === 'correct' && voteData?.correctAnswer != null) return voteData.correctAnswer;
+      return (voteData?.options || []).reduce((best, _, i) => {
         const a = (preCloseCounts[String(i)] ?? 0) + (adminVotes[String(i)] ?? 0);
         const b = (preCloseCounts[String(best)] ?? 0) + (adminVotes[String(best)] ?? 0);
         return a > b ? i : best;
       }, 0);
-    }
-    updateDoc(doc(db, 'daily_vote', today), { closed: true, winner }).catch(console.error);
+    })();
+    runTransaction(db, async tx => {
+      const ref = doc(db, 'daily_vote', today);
+      const snap = await tx.get(ref);
+      if (!snap.exists() || snap.data().closed || snap.data().voteId !== voteId) return;
+      tx.update(ref, { closed: true, winner: localWinner });
+    }).catch(console.error);
   }, [isExpired, voteData?.closed, voteId]);
 
   const collectReward = async () => {
@@ -32532,14 +32538,15 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
   const [closingPoll, setClosingPoll] = useState(false);
   const [claimingStickers, setClaimingStickers] = useState(false);
 
-  // Auto-close when timer expires (admin polls only)
+  // Auto-close when timer expires (admin polls only) — transactional because every
+  // viewer with this post open fires this at once when the timer hits zero; without
+  // a guard, whichever client's write lands last can stomp the correct winner with
+  // one computed from its own (possibly incomplete) locally-synced vote tally.
   useEffect(() => {
     if (!isAdminPoll || !pollTimerExpired || post.pollClosed || !post.id || post.postType !== 'poll' || closingPoll) return;
     setClosingPoll(true);
-    let winner: number;
-    if (post.pollType === 'correct' && post.pollCorrectAnswer != null) {
-      winner = post.pollCorrectAnswer;
-    } else {
+    const localWinner = (() => {
+      if (post.pollType === 'correct' && post.pollCorrectAnswer != null) return post.pollCorrectAnswer;
       const votes = post.pollVotes || {};
       const adminV = post.pollAdminVotes || {};
       let bestIdx = 0, bestCount = -1;
@@ -32547,11 +32554,13 @@ function FeedPostCard({ post, currentUser, currentProfile, onViewUser, onViewSto
         const count = (votes[String(i)]?.length || 0) + (adminV[String(i)] || 0);
         if (count > bestCount) { bestCount = count; bestIdx = i; }
       });
-      winner = bestIdx;
-    }
-    updateDoc(doc(db, 'global_posts', post.id), {
-      pollClosed: true,
-      pollWinner: winner,
+      return bestIdx;
+    })();
+    runTransaction(db, async tx => {
+      const ref = doc(db, 'global_posts', post.id);
+      const snap = await tx.get(ref);
+      if (!snap.exists() || snap.data().pollClosed) return;
+      tx.update(ref, { pollClosed: true, pollWinner: localWinner });
     }).catch(() => {}).finally(() => setClosingPoll(false));
   }, [isAdminPoll, pollTimerExpired, post.pollClosed, post.id, post.postType]);
 
