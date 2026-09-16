@@ -26159,6 +26159,7 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
   currentProfile?: UserProfile | null;
 }) {
   const [search, setSearch] = useState('');
+  const [searchFocused, setSearchFocused] = useState(false);
   const [searchType, setSearchType] = useState<'stores' | 'users'>('stores');
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
@@ -26311,33 +26312,46 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-navy/75" />
           <input
             value={search}
+            onFocus={() => setSearchFocused(true)}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={searchType === 'stores' ? "Search businesses..." : "Search users..."}
+            placeholder="Search..."
             className="w-full pl-11 pr-4 py-3 rounded-xl bg-white/70 border border-brand-rose/20 focus:outline-none focus:ring-2 focus:ring-brand-navy/20 font-medium"
           />
         </div>
-        <div className="flex gap-1.5">
-          <button
-            onClick={() => setSearchType('stores')}
-            className={cn(
-              "flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5",
-              searchType === 'stores' ? "gradient-red text-white shadow-md" : "text-brand-navy/60 hover:bg-white/60"
-            )}
-          >
-            <Store size={14} />
-            Business
-          </button>
-          <button
-            onClick={() => setSearchType('users')}
-            className={cn(
-              "flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5",
-              searchType === 'users' ? "gradient-red text-white shadow-md" : "text-brand-navy/60 hover:bg-white/60"
-            )}
-          >
-            <Users size={14} />
-            User
-          </button>
-        </div>
+        <AnimatePresence initial={false}>
+          {searchFocused && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div className="flex gap-1.5">
+                <button
+                  onClick={() => setSearchType('stores')}
+                  className={cn(
+                    "flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5",
+                    searchType === 'stores' ? "gradient-red text-white shadow-md" : "text-brand-navy/60 hover:bg-white/60"
+                  )}
+                >
+                  <Store size={14} />
+                  Business
+                </button>
+                <button
+                  onClick={() => setSearchType('users')}
+                  className={cn(
+                    "flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5",
+                    searchType === 'users' ? "gradient-red text-white shadow-md" : "text-brand-navy/60 hover:bg-white/60"
+                  )}
+                >
+                  <Users size={14} />
+                  User
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {searchType === 'stores' && (
