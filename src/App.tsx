@@ -5776,10 +5776,11 @@ function StickerQRScanModal({ onClose, onSticker }: {
 }
 
 function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: CollectibleSticker[]; cardId?: string | null; uid?: string | null; onClose: () => void }) {
-  type PackPhase = 'sealed' | 'opening' | 'dealing' | 'reveal' | 'done';
+  type PackPhase = 'sealed' | 'opening' | 'reveal' | 'done';
   const [phase, setPhase] = useState<PackPhase>('sealed');
-  const [dealtCount, setDealtCount] = useState(0);
+  const [revealIndex, setRevealIndex] = useState(0);
   const [localRevealedIds, setLocalRevealedIds] = useState<Set<string>>(new Set());
+  const [skippedIds, setSkippedIds] = useState<Set<string>>(new Set());
   const [burstTier, setBurstTier] = useState<StickerTier | null>(null);
   const [burstKey, setBurstKey] = useState(0);
 
@@ -5789,46 +5790,12 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
     try { if ('vibrate' in navigator) (navigator as any).vibrate(pattern); } catch {}
   };
 
-  const revealedIdsRef = useRef<Set<string>>(new Set());
-  useEffect(() => { revealedIdsRef.current = localRevealedIds; }, [localRevealedIds]);
-
   const handlePackOpen = () => {
     vibrate([100, 50, 100, 50, 200, 80, 300]);
     setPhase('opening');
     setTimeout(() => {
-      setPhase('dealing');
-      const N = displayStickers.length;
-      for (let i = 0; i < N; i++) {
-        setTimeout(() => { setDealtCount(i + 1); vibrate(35); }, i * 400);
-      }
-      const revealStart = N * 400 + 520;
-      setTimeout(() => {
-        setPhase('reveal');
-        // Auto-reveal cards one after another — skip any the player already tapped open
-        displayStickers.forEach((s, i) => {
-          setTimeout(() => {
-            if (revealedIdsRef.current.has(s.id)) return;
-            setLocalRevealedIds(prev => new Set([...prev, s.id]));
-            vibrate(VIBRATE_PATTERNS[s.tier]);
-            if (['red', 'blue', 'gold'].includes(s.tier)) {
-              setBurstTier(s.tier);
-              setBurstKey(k => k + 1);
-              setTimeout(() => setBurstTier(null), 900);
-            }
-          }, (i + 1) * 750);
-        });
-        // Mark all stickers revealed in Firestore
-        if (cardId) {
-          updateDoc(doc(db, 'sticker_cards', cardId), {
-            revealedIds: arrayUnion(...displayStickers.map(s => s.id)),
-          }).catch(console.error);
-        } else if (uid) {
-          updateDoc(doc(db, 'user_stickers', uid), {
-            revealedIds: arrayUnion(...displayStickers.map(s => s.id)),
-            uniqueTiers: arrayUnion(...displayStickers.map(s => s.tier)),
-          }).catch(console.error);
-        }
-      }, revealStart);
+      setRevealIndex(0);
+      setPhase('reveal');
     }, 680);
   };
 
@@ -5840,18 +5807,43 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
       setBurstKey(k => k + 1);
       setTimeout(() => setBurstTier(null), 900);
     }
+    if (cardId) {
+      updateDoc(doc(db, 'sticker_cards', cardId), { revealedIds: arrayUnion(sticker.id) }).catch(console.error);
+    } else if (uid) {
+      updateDoc(doc(db, 'user_stickers', uid), {
+        revealedIds: arrayUnion(sticker.id),
+        uniqueTiers: arrayUnion(sticker.tier),
+      }).catch(console.error);
+    }
   };
 
-  const allRevealed = displayStickers.length > 0 && displayStickers.every(s => localRevealedIds.has(s.id));
+  const handleSkip = () => {
+    const current = displayStickers[revealIndex];
+    if (!current || localRevealedIds.has(current.id) || skippedIds.has(current.id)) return;
+    vibrate(25);
+    setSkippedIds(prev => new Set([...prev, current.id]));
+  };
+
+  // Advance to the next card a beat after the current one is revealed or skipped
+  const currentCard = displayStickers[revealIndex] || null;
+  const currentHandled = !!currentCard && (localRevealedIds.has(currentCard.id) || skippedIds.has(currentCard.id));
+  useEffect(() => {
+    if (phase !== 'reveal' || !currentHandled || !currentCard) return;
+    const delay = skippedIds.has(currentCard.id) ? 500 : 1100;
+    const t = setTimeout(() => setRevealIndex(i => i + 1), delay);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, currentHandled, currentCard?.id]);
 
   useEffect(() => {
-    if (allRevealed && phase === 'reveal') {
-      const premium = displayStickers.some(s => ['gold', 'blue', 'red'].includes(s.tier));
+    if (phase === 'reveal' && displayStickers.length > 0 && revealIndex >= displayStickers.length) {
+      const premium = displayStickers.some(s => ['gold', 'blue', 'red'].includes(s.tier) && localRevealedIds.has(s.id));
       vibrate(premium ? [150, 60, 150, 60, 300] : [80, 40, 120]);
-      const t = setTimeout(() => setPhase('done'), 850);
+      const t = setTimeout(() => setPhase('done'), 300);
       return () => clearTimeout(t);
     }
-  }, [allRevealed, phase]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, revealIndex, displayStickers.length]);
 
   const topTier = displayStickers.length > 0
     ? displayStickers.reduce((b, s) => STICKER_ORDER.indexOf(s.tier) > STICKER_ORDER.indexOf(b.tier) ? s : b).tier
@@ -6002,74 +5994,66 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
           </motion.div>
         )}
 
-        {/* ── DEALING ── */}
-        {phase === 'dealing' && (
-          <div className="flex flex-col items-center gap-5">
-            <motion.p className="text-white/40 text-[11px] font-bold uppercase tracking-[0.2em]"
-              animate={{ opacity: [0.3, 0.8, 0.3] }} transition={{ duration: 1.2, repeat: Infinity }}
-            >Dealing your cards…</motion.p>
-            <div className="flex gap-5 items-end justify-center">
-              {displayStickers.map((s, i) => (
-                <AnimatePresence key={s.id}>
-                  {dealtCount > i && (
-                    <motion.div
-                      initial={{ y: -200, scale: 0.3, rotate: -25, opacity: 0 }}
-                      animate={{ y: 0, scale: 1, rotate: (i - 1) * 4, opacity: 1 }}
-                      transition={{ type: 'spring', damping: 16, stiffness: 260 }}
-                      style={{
-                        width: 120, height: 165,
-                        background: 'linear-gradient(148deg, #16103A, #2B1458)',
-                        border: `2.5px solid ${STICKER_CONFIG[s.tier].border}`,
-                        borderRadius: 20,
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
-                        boxShadow: `0 10px 36px ${STICKER_CONFIG[s.tier].color}55`,
-                        overflow: 'hidden',
-                        position: 'relative',
-                      }}
-                    >
-                      <motion.div style={{
-                        position: 'absolute', inset: 0, borderRadius: 18,
-                        background: 'linear-gradient(108deg, transparent 32%, rgba(255,255,255,0.1) 50%, transparent 68%)',
-                        backgroundSize: '300% 100%',
-                      }}
-                        animate={{ backgroundPosition: ['-200% 0', '300% 0'] }}
-                        transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-                      />
-                      <motion.div style={{ fontSize: 46, filter: `drop-shadow(0 0 14px ${STICKER_CONFIG[s.tier].color}cc)`, lineHeight: 1, zIndex: 2 }}
-                        animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 1.3, repeat: Infinity }}
-                      >?</motion.div>
-                      <span style={{ fontSize: 8, fontWeight: 900, color: STICKER_CONFIG[s.tier].border, letterSpacing: '0.15em', zIndex: 2 }}>{STICKER_CONFIG[s.tier].label.toUpperCase()}</span>
-                    </motion.div>
+        {/* ── REVEAL (one card at a time) ── */}
+        {phase === 'reveal' && (
+          <div className="flex flex-col items-center gap-6 w-full">
+            {displayStickers.length > 1 && (
+              <div className="flex gap-1.5">
+                {displayStickers.map((s, i) => (
+                  <div key={s.id} className={cn('h-1.5 rounded-full transition-all',
+                    i === revealIndex ? 'w-6 bg-white' : i < revealIndex ? 'w-4 bg-white/60' : 'w-4 bg-white/20')} />
+                ))}
+              </div>
+            )}
+
+            <AnimatePresence mode="wait">
+              {currentCard && (
+                <motion.div key={currentCard.id}
+                  initial={{ x: 90, opacity: 0, scale: 0.92 }}
+                  animate={{ x: 0, opacity: 1, scale: 1 }}
+                  exit={{ x: -90, opacity: 0, scale: 0.92 }}
+                  transition={{ type: 'spring', damping: 22, stiffness: 260 }}
+                  className="flex flex-col items-center gap-5"
+                >
+                  {skippedIds.has(currentCard.id) ? (
+                    <div style={{ width: 140, height: 192, borderRadius: 20, border: '2px dashed rgba(147,197,253,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span className="text-blue-300/50 font-black text-xs uppercase tracking-widest">Skipped</span>
+                    </div>
+                  ) : (
+                    <MysteryRevealCard
+                      sticker={currentCard}
+                      isRevealed={localRevealedIds.has(currentCard.id)}
+                      onReveal={() => handleCardReveal(currentCard)}
+                    />
                   )}
-                </AnimatePresence>
-              ))}
-            </div>
+                  {!currentHandled && (
+                    <motion.button
+                      onClick={handleSkip}
+                      whileTap={{ scale: 0.92 }}
+                      className="text-[11px] font-bold uppercase tracking-widest text-blue-300/50 active:text-blue-200/70 transition-colors"
+                    >Skip</motion.button>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
 
-        {/* ── REVEAL + DONE ── */}
-        {(phase === 'reveal' || phase === 'done') && (
+        {/* ── DONE ── */}
+        {phase === 'done' && (
           <motion.div className="flex flex-col items-center gap-6 w-full"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.28 }}
           >
-            {phase === 'reveal' && !allRevealed && (
-              <motion.p className="text-white/50 text-[11px] font-bold uppercase tracking-[0.2em]"
-                animate={{ opacity: [0.3, 0.85, 0.3] }} transition={{ duration: 1.4, repeat: Infinity }}
-              >Revealing…</motion.p>
-            )}
-
-            {phase === 'done' && (
-              <motion.div className="text-center space-y-2" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-                <motion.p className="text-white font-black text-3xl leading-tight"
-                  initial={{ scale: 0.55, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: 'spring', damping: 9, stiffness: 200 }}
-                >{doneTitle}</motion.p>
-                <motion.p className="text-white text-sm font-bold"
-                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
-                >Play Linqle &amp; daily vote to earn more stickers</motion.p>
-              </motion.div>
-            )}
+            <motion.div className="text-center space-y-2" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+              <motion.p className="text-white font-black text-3xl leading-tight"
+                initial={{ scale: 0.55, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: 'spring', damping: 9, stiffness: 200 }}
+              >{doneTitle}</motion.p>
+              <motion.p className="text-white text-sm font-bold"
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
+              >Play Linqle &amp; daily vote to earn more stickers</motion.p>
+            </motion.div>
 
             <div className="flex gap-3 justify-center items-end">
               {displayStickers.map((s, i) => (
@@ -6078,29 +6062,33 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
                   animate={{ scale: 1, y: 0, rotate: (i - 1) * 5 }}
                   transition={{ type: 'spring', damping: 16, stiffness: 240, delay: i * 0.08 }}
                 >
-                  <MysteryRevealCard
-                    sticker={s}
-                    isRevealed={localRevealedIds.has(s.id)}
-                    onReveal={() => handleCardReveal(s)}
-                  />
+                  {skippedIds.has(s.id) ? (
+                    <div style={{ width: 140, height: 192, borderRadius: 20, border: '2px dashed rgba(147,197,253,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span className="text-blue-300/50 font-black text-xs uppercase tracking-widest">Skipped</span>
+                    </div>
+                  ) : (
+                    <MysteryRevealCard
+                      sticker={s}
+                      isRevealed={localRevealedIds.has(s.id)}
+                      onReveal={() => handleCardReveal(s)}
+                    />
+                  )}
                 </motion.div>
               ))}
             </div>
 
-            {phase === 'done' && (
-              <motion.div className="w-full space-y-2.5" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}>
-                <motion.p className="text-white/50 text-[11px] font-bold text-center uppercase tracking-widest"
-                  whileTap={{ scale: 0.95 }}
-                >View progress in Challenges tab</motion.p>
-                <motion.button
-                  className="w-full py-4 rounded-2xl font-bold text-base"
-                  style={{ background: 'rgba(255,255,255,0.11)', color: 'white',
-                    border: '1.5px solid rgba(255,255,255,0.22)', backdropFilter: 'blur(8px)' }}
-                  onClick={onClose}
-                  whileTap={{ scale: 0.96 }}
-                >Collect</motion.button>
-              </motion.div>
-            )}
+            <motion.div className="w-full space-y-2.5" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}>
+              <motion.p className="text-white/50 text-[11px] font-bold text-center uppercase tracking-widest"
+                whileTap={{ scale: 0.95 }}
+              >View progress in Challenges tab</motion.p>
+              <motion.button
+                className="w-full py-4 rounded-2xl font-bold text-base"
+                style={{ background: 'rgba(255,255,255,0.11)', color: 'white',
+                  border: '1.5px solid rgba(255,255,255,0.22)', backdropFilter: 'blur(8px)' }}
+                onClick={onClose}
+                whileTap={{ scale: 0.96 }}
+              >Collect</motion.button>
+            </motion.div>
           </motion.div>
         )}
 
