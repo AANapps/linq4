@@ -257,12 +257,74 @@
   background: linear-gradient(120deg, rgba(59,130,246,0.30), rgba(96,165,250,0.22), rgba(124,58,237,0.16), rgba(59,130,246,0.30));
   background-size: 320% 320%;
   animation: quick-earn-aurora 12s ease-in-out infinite;
+  border-color: rgba(59,130,246,0.35);
 }
 .quick-earn-btn-violet {
   background: linear-gradient(120deg, rgba(91,33,182,0.28), rgba(124,58,237,0.24), rgba(59,130,246,0.18), rgba(91,33,182,0.28));
   background-size: 320% 320%;
   animation: quick-earn-aurora 12s ease-in-out infinite;
   animation-delay: -4s;
+  border-color: rgba(91,33,182,0.35);
+}
+
+/* --- Liquid glass (Tap/Scan quick-earn buttons) -------------------------
+   Apple-style "liquid glass": background bends/blurs through the material,
+   a thin warm/cool fringe at the rim (chromatic dispersion), and a glossy
+   specular bloom near the top like light catching a convex surface. */
+.liquid-glass-btn {
+  isolation: isolate;
+  backdrop-filter: blur(20px) saturate(200%) contrast(1.08);
+  -webkit-backdrop-filter: blur(20px) saturate(200%) contrast(1.08);
+  box-shadow:
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.85),
+    inset 0 -8px 14px -8px rgba(15, 23, 42, 0.18),
+    0 10px 24px -8px rgba(15, 23, 42, 0.32);
+}
+
+/* Where the engine can actually apply the SVG displacement to the backdrop,
+   swap in a lighter blur + the warp filter for real refraction of whatever
+   sits behind the button. Falls back to the plain frosted blur above. */
+@supports (backdrop-filter: blur(1px) url(#liquid-glass-distortion)) {
+  .liquid-glass-btn {
+    backdrop-filter: blur(6px) saturate(200%) contrast(1.08) url(#liquid-glass-distortion);
+    -webkit-backdrop-filter: blur(20px) saturate(200%) contrast(1.08);
+  }
+}
+
+.liquid-glass-btn::before,
+.liquid-glass-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+.liquid-glass-btn::before {
+  background: linear-gradient(125deg, rgba(255,90,90,0.65) 0%, transparent 28%, transparent 72%, rgba(90,170,255,0.6) 100%);
+  transform: translate(0.7px, -0.7px);
+  opacity: 0.75;
+}
+.liquid-glass-btn::after {
+  background: linear-gradient(305deg, rgba(255,90,90,0.5) 0%, transparent 28%, transparent 72%, rgba(90,170,255,0.5) 100%);
+  transform: translate(-0.7px, 0.7px);
+  opacity: 0.6;
+}
+
+.liquid-glass-specular {
+  position: absolute;
+  top: -10%;
+  left: 6%;
+  width: 60%;
+  height: 46%;
+  background: radial-gradient(ellipse at 30% 0%, rgba(255,255,255,0.65), rgba(255,255,255,0) 72%);
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  z-index: 1;
 }
 
 

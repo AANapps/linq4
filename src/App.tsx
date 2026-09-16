@@ -14580,33 +14580,23 @@ function ConsumerApp({ activeTab, setActiveTab, profile, user, onViewStore, onVi
         >
           <button
             onClick={handleNFCScan}
-            className="quick-earn-btn-blue relative flex-1 flex items-center justify-center gap-2.5 py-4 rounded-[1.75rem] overflow-hidden border active:scale-[0.97] transition-transform"
-            style={{
-              borderColor: 'rgba(59,130,246,0.35)',
-              backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)',
-              boxShadow: '0 10px 26px -6px rgba(37,99,235,0.40), inset 0 1px 0 rgba(255,255,255,0.7)',
-            }}
+            className="quick-earn-btn-blue liquid-glass-btn relative flex-1 flex items-center justify-center gap-2.5 py-4 rounded-[1.75rem] overflow-hidden border active:scale-[0.97] transition-transform"
           >
-            <div className="w-10 h-10 rounded-xl gradient-logo-blue flex items-center justify-center shrink-0 shadow-sm">
+            <span className="liquid-glass-specular" aria-hidden="true" />
+            <div className="relative z-10 w-10 h-10 rounded-xl gradient-logo-blue flex items-center justify-center shrink-0 shadow-sm">
               <Smartphone size={20} className="text-white" />
             </div>
-            <span className="text-[14px] font-bold text-brand-navy whitespace-nowrap">Tap to collect</span>
+            <span className="relative z-10 text-[14px] font-bold text-brand-navy whitespace-nowrap">Tap to collect</span>
           </button>
           <button
             onClick={() => setShowGlobalQRScan(true)}
-            className="quick-earn-btn-violet relative flex-1 flex items-center justify-center gap-2.5 py-4 rounded-[1.75rem] overflow-hidden border active:scale-[0.97] transition-transform"
-            style={{
-              borderColor: 'rgba(91,33,182,0.35)',
-              backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)',
-              boxShadow: '0 10px 26px -6px rgba(91,33,182,0.38), inset 0 1px 0 rgba(255,255,255,0.7)',
-            }}
+            className="quick-earn-btn-violet liquid-glass-btn relative flex-1 flex items-center justify-center gap-2.5 py-4 rounded-[1.75rem] overflow-hidden border active:scale-[0.97] transition-transform"
           >
-            <div className="w-10 h-10 rounded-xl gradient-red flex items-center justify-center shrink-0 shadow-sm">
+            <span className="liquid-glass-specular" aria-hidden="true" />
+            <div className="relative z-10 w-10 h-10 rounded-xl gradient-red flex items-center justify-center shrink-0 shadow-sm">
               <QrCode size={20} className="text-white" />
             </div>
-            <span className="text-[14px] font-bold text-brand-navy whitespace-nowrap">Scan QR to collect</span>
+            <span className="relative z-10 text-[14px] font-bold text-brand-navy whitespace-nowrap">Scan QR to collect</span>
           </button>
         </div>
       )}
