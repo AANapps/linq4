@@ -5789,6 +5789,9 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
     try { if ('vibrate' in navigator) (navigator as any).vibrate(pattern); } catch {}
   };
 
+  const revealedIdsRef = useRef<Set<string>>(new Set());
+  useEffect(() => { revealedIdsRef.current = localRevealedIds; }, [localRevealedIds]);
+
   const handlePackOpen = () => {
     vibrate([100, 50, 100, 50, 200, 80, 300]);
     setPhase('opening');
@@ -5801,9 +5804,10 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
       const revealStart = N * 400 + 520;
       setTimeout(() => {
         setPhase('reveal');
-        // Auto-reveal cards one after another
+        // Auto-reveal cards one after another — skip any the player already tapped open
         displayStickers.forEach((s, i) => {
           setTimeout(() => {
+            if (revealedIdsRef.current.has(s.id)) return;
             setLocalRevealedIds(prev => new Set([...prev, s.id]));
             vibrate(VIBRATE_PATTERNS[s.tier]);
             if (['red', 'blue', 'gold'].includes(s.tier)) {
@@ -6077,6 +6081,7 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
                   <MysteryRevealCard
                     sticker={s}
                     isRevealed={localRevealedIds.has(s.id)}
+                    onReveal={() => handleCardReveal(s)}
                   />
                 </motion.div>
               ))}
