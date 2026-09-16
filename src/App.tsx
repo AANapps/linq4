@@ -26286,40 +26286,39 @@ function DiscoveryScreen({ stores, cards, onJoin, onViewStore, onViewUser, curre
 
   return (
     <div className="space-y-6">
-      <div className="space-y-4">
-          <div className="flex gap-2 p-1 glass-card rounded-2xl">
-            <button 
-              onClick={() => setSearchType('stores')}
-              className={cn(
-                "flex-1 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2",
-                searchType === 'stores' ? "gradient-red text-white shadow-lg" : "text-brand-navy/75 hover:bg-brand-bg"
-              )}
-            >
-              <Store size={18} />
-              Businesses
-            </button>
-            <button 
-              onClick={() => setSearchType('users')}
-              className={cn(
-                "flex-1 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2",
-                searchType === 'users' ? "gradient-red text-white shadow-lg" : "text-brand-navy/75 hover:bg-brand-bg"
-              )}
-            >
-              <Users size={18} />
-              Users
-            </button>
-          </div>
-          
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-navy/75" />
-            <input 
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={searchType === 'stores' ? "Search businesses..." : "Search users..."}
-              className="w-full pl-12 pr-4 py-4 rounded-2xl glass-card border-brand-rose/20 focus:outline-none focus:ring-2 focus:ring-brand-navy/20 font-medium"
-            />
-          </div>
+      <div className="glass-card rounded-2xl p-2 space-y-2">
+        <div className="relative">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-navy/75" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={searchType === 'stores' ? "Search businesses..." : "Search users..."}
+            className="w-full pl-11 pr-4 py-3 rounded-xl bg-white/70 border border-brand-rose/20 focus:outline-none focus:ring-2 focus:ring-brand-navy/20 font-medium"
+          />
         </div>
+        <div className="flex gap-1.5">
+          <button
+            onClick={() => setSearchType('stores')}
+            className={cn(
+              "flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5",
+              searchType === 'stores' ? "gradient-red text-white shadow-md" : "text-brand-navy/60 hover:bg-white/60"
+            )}
+          >
+            <Store size={14} />
+            Business
+          </button>
+          <button
+            onClick={() => setSearchType('users')}
+            className={cn(
+              "flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5",
+              searchType === 'users' ? "gradient-red text-white shadow-md" : "text-brand-navy/60 hover:bg-white/60"
+            )}
+          >
+            <Users size={14} />
+            User
+          </button>
+        </div>
+      </div>
 
       {searchType === 'stores' && (
         <>
