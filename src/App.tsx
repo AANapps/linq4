@@ -4711,6 +4711,26 @@ function offerCompactValue(offer: Pick<StoreOffer, 'value' | 'discountType'>): s
   if (!offer.value) return null;
   return offer.discountType === 'percent' ? `${offer.value}%` : `$${offer.value.toFixed(0)}`;
 }
+// Compact countdown for a limited-time offer — largest sensible unit only (weeks, then days, then hours).
+function offerTimeLeftText(offer: Pick<StoreOffer, 'expiresAt'>): string | null {
+  if (!offer.expiresAt) return null;
+  const ms = (offer.expiresAt?.toDate?.() ?? new Date(offer.expiresAt)).getTime() - Date.now();
+  if (ms <= 0) return null;
+  const hours = ms / 3600000;
+  if (hours < 24) return `${Math.max(1, Math.ceil(hours))}h`;
+  const days = ms / 86400000;
+  if (days < 7) return `${Math.ceil(days)}d`;
+  return `${Math.ceil(days / 7)}w`;
+}
+function OfferTimerBadge({ offer }: { offer: Pick<StoreOffer, 'expiresAt'> }) {
+  const label = offerTimeLeftText(offer);
+  if (!label) return null;
+  return (
+    <div className="absolute top-2.5 right-2.5 flex items-center gap-1 bg-black/55 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-sm">
+      <Clock size={9} />{label}
+    </div>
+  );
+}
 
 function CountUpValue({ value, prefix = '\$', className = '', style }: { value: number; prefix?: string; className?: string; style?: React.CSSProperties }) {
   const [display, setDisplay] = useState(0);
@@ -27684,7 +27704,12 @@ function OffersModal({ offers, currentUser, currentProfile, onClose, onRequireAu
                 onClick={() => setSelectedOffer(offer)}
                 className="w-full text-left glass-card rounded-[1.5rem] overflow-hidden active:scale-[0.98] transition-transform"
               >
-                {offer.imageUrl && <img src={offer.imageUrl} alt="" className="w-full h-36 object-cover" />}
+                {offer.imageUrl && (
+                  <div className="relative">
+                    <img src={offer.imageUrl} alt="" className="w-full h-36 object-cover" />
+                    <OfferTimerBadge offer={offer} />
+                  </div>
+                )}
                 <div className="p-4 flex items-start gap-3">
                   {offer.storeLogoUrl ? (
                     <img src={offer.storeLogoUrl} alt="" className="w-10 h-10 rounded-xl object-cover shrink-0" />
@@ -34005,6 +34030,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
                         {offerBadgeText(offer) && (
                           <div className="absolute top-2.5 left-2.5 bg-red-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-sm">{offerBadgeText(offer)}</div>
                         )}
+                        <OfferTimerBadge offer={offer} />
                         <div className="absolute bottom-0 left-0 right-0 px-3 pb-2.5">
                           <p className="font-extrabold text-white text-xs leading-snug line-clamp-1">{offer.title}</p>
                           <p className="text-white/60 text-[9px] font-medium mt-0.5">{offer.storeName}</p>
@@ -34140,6 +34166,7 @@ function DealsScreen({ currentUser, currentProfile, onViewStore, onViewChallenge
                             {offerBadgeText(offer)}
                           </div>
                         )}
+                        <OfferTimerBadge offer={offer} />
                       </div>
                       <div className="relative z-10 flex justify-center" style={{ marginTop: -16 }}>
                         <VendorLogoBadge logoUrl={offer.storeLogoUrl} name={offer.storeName} size={32} />
@@ -38220,6 +38247,7 @@ function StoreProfileView({ store: storeProp, onBack, user, profile, onViewUser,
                   {offerBadgeText(offer) && (
                     <div className="absolute top-2.5 left-2.5 bg-red-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-sm">{offerBadgeText(offer)}</div>
                   )}
+                  <OfferTimerBadge offer={offer} />
                   <div className="absolute bottom-0 left-0 right-0 px-3 pb-2.5">
                     <p className="font-extrabold text-white text-xs leading-snug line-clamp-1">{offer.title}</p>
                     <p className="text-white/60 text-[9px] font-medium mt-0.5 uppercase tracking-wide">{offer.storeCategory}</p>
