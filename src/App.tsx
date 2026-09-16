@@ -5316,8 +5316,8 @@ function MysteryRevealCard({ sticker, isRevealed, onReveal }: {
           onReveal?.();
         }
       }}
-      style={{ width: 140, height: 192, perspective: '1000px', position: 'relative',
-        cursor: localRevealed ? 'default' : 'pointer', flexShrink: 0 }}
+      style={{ width: '100%', height: '100%', perspective: '1000px', position: 'relative',
+        cursor: localRevealed ? 'default' : 'pointer' }}
     >
       {/* Unrevealed glow pulse */}
       {!localRevealed && (
@@ -5778,7 +5778,6 @@ function StickerQRScanModal({ onClose, onSticker }: {
 function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: CollectibleSticker[]; cardId?: string | null; uid?: string | null; onClose: () => void }) {
   type PackPhase = 'sealed' | 'opening' | 'reveal' | 'done';
   const [phase, setPhase] = useState<PackPhase>('sealed');
-  const [revealIndex, setRevealIndex] = useState(0);
   const [localRevealedIds, setLocalRevealedIds] = useState<Set<string>>(new Set());
   const [skippedIds, setSkippedIds] = useState<Set<string>>(new Set());
   const [burstTier, setBurstTier] = useState<StickerTier | null>(null);
@@ -5793,10 +5792,7 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
   const handlePackOpen = () => {
     vibrate([100, 50, 100, 50, 200, 80, 300]);
     setPhase('opening');
-    setTimeout(() => {
-      setRevealIndex(0);
-      setPhase('reveal');
-    }, 680);
+    setTimeout(() => setPhase('reveal'), 680);
   };
 
   const handleCardReveal = (sticker: CollectibleSticker) => {
@@ -5817,33 +5813,23 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
     }
   };
 
-  const handleSkip = () => {
-    const current = displayStickers[revealIndex];
-    if (!current || localRevealedIds.has(current.id) || skippedIds.has(current.id)) return;
+  const handleSkip = (sticker: CollectibleSticker) => {
+    if (localRevealedIds.has(sticker.id) || skippedIds.has(sticker.id)) return;
     vibrate(25);
-    setSkippedIds(prev => new Set([...prev, current.id]));
+    setSkippedIds(prev => new Set([...prev, sticker.id]));
   };
 
-  // Advance to the next card a beat after the current one is revealed or skipped
-  const currentCard = displayStickers[revealIndex] || null;
-  const currentHandled = !!currentCard && (localRevealedIds.has(currentCard.id) || skippedIds.has(currentCard.id));
-  useEffect(() => {
-    if (phase !== 'reveal' || !currentHandled || !currentCard) return;
-    const delay = skippedIds.has(currentCard.id) ? 500 : 1100;
-    const t = setTimeout(() => setRevealIndex(i => i + 1), delay);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, currentHandled, currentCard?.id]);
+  const allHandled = displayStickers.length > 0 && displayStickers.every(s => localRevealedIds.has(s.id) || skippedIds.has(s.id));
 
   useEffect(() => {
-    if (phase === 'reveal' && displayStickers.length > 0 && revealIndex >= displayStickers.length) {
+    if (phase === 'reveal' && allHandled) {
       const premium = displayStickers.some(s => ['gold', 'blue', 'red'].includes(s.tier) && localRevealedIds.has(s.id));
       vibrate(premium ? [150, 60, 150, 60, 300] : [80, 40, 120]);
-      const t = setTimeout(() => setPhase('done'), 300);
+      const t = setTimeout(() => setPhase('done'), 700);
       return () => clearTimeout(t);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, revealIndex, displayStickers.length]);
+  }, [phase, allHandled]);
 
   const topTier = displayStickers.length > 0
     ? displayStickers.reduce((b, s) => STICKER_ORDER.indexOf(s.tier) > STICKER_ORDER.indexOf(b.tier) ? s : b).tier
@@ -5858,6 +5844,35 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
 
   // Deterministic burst particles (no Math.random in render)
   const burstAngles = [0,30,60,90,120,150,180,210,240,270,300,330];
+
+  // One card column — sized responsively by its flex parent, independently tappable,
+  // with its own skip control so all cards in the pack can be handled at the same time.
+  const renderCardColumn = (s: CollectibleSticker) => {
+    const handled = localRevealedIds.has(s.id) || skippedIds.has(s.id);
+    return (
+      <div className="w-full flex flex-col items-center gap-2">
+        <div className="w-full" style={{ aspectRatio: '140 / 192' }}>
+          {skippedIds.has(s.id) ? (
+            <div style={{ width: '100%', height: '100%', borderRadius: 20, border: '2px dashed rgba(147,197,253,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span className="text-blue-300/50 font-black text-xs uppercase tracking-widest">Skipped</span>
+            </div>
+          ) : (
+            <MysteryRevealCard
+              sticker={s}
+              isRevealed={localRevealedIds.has(s.id)}
+              onReveal={() => handleCardReveal(s)}
+            />
+          )}
+        </div>
+        <button
+          onClick={() => handleSkip(s)}
+          disabled={handled}
+          className={cn('text-[10px] font-bold uppercase tracking-widest transition-colors',
+            handled ? 'opacity-0 pointer-events-none' : 'text-blue-300/50 active:text-blue-200/70')}
+        >Skip</button>
+      </div>
+    );
+  };
 
   return (
     <motion.div
@@ -5905,7 +5920,7 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
         })}
       </AnimatePresence>
 
-      <div className="flex flex-col items-center justify-center w-full max-w-sm px-6 relative z-10">
+      <div className="flex flex-col items-center justify-center w-full max-w-sm sm:max-w-lg md:max-w-2xl lg:max-w-3xl px-6 sm:px-10 md:px-14 relative z-10">
 
         {/* ── SEALED ── */}
         {phase === 'sealed' && (
@@ -5994,48 +6009,27 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
           </motion.div>
         )}
 
-        {/* ── REVEAL (one card at a time) ── */}
+        {/* ── REVEAL (all cards shown together, each independently tappable) ── */}
         {phase === 'reveal' && (
           <div className="flex flex-col items-center gap-6 w-full">
-            {displayStickers.length > 1 && (
-              <div className="flex gap-1.5">
-                {displayStickers.map((s, i) => (
-                  <div key={s.id} className={cn('h-1.5 rounded-full transition-all',
-                    i === revealIndex ? 'w-6 bg-white' : i < revealIndex ? 'w-4 bg-white/60' : 'w-4 bg-white/20')} />
-                ))}
-              </div>
+            {!allHandled && (
+              <motion.p className="text-white/50 text-[11px] font-bold uppercase tracking-[0.2em]"
+                animate={{ opacity: [0.3, 0.85, 0.3] }} transition={{ duration: 1.4, repeat: Infinity }}
+              >Tap a card to reveal</motion.p>
             )}
 
-            <AnimatePresence mode="wait">
-              {currentCard && (
-                <motion.div key={currentCard.id}
-                  initial={{ x: 90, opacity: 0, scale: 0.92 }}
-                  animate={{ x: 0, opacity: 1, scale: 1 }}
-                  exit={{ x: -90, opacity: 0, scale: 0.92 }}
-                  transition={{ type: 'spring', damping: 22, stiffness: 260 }}
-                  className="flex flex-col items-center gap-5"
+            <div className="flex gap-3 sm:gap-5 md:gap-8 justify-center items-start w-full">
+              {displayStickers.map((s, i) => (
+                <motion.div key={s.id}
+                  className="flex-1 min-w-0 max-w-[120px] sm:max-w-[170px] md:max-w-[210px] lg:max-w-[250px]"
+                  initial={{ scale: 0, y: 60, rotate: (i - 1) * 10 }}
+                  animate={{ scale: 1, y: 0, rotate: 0 }}
+                  transition={{ type: 'spring', damping: 16, stiffness: 240, delay: i * 0.08 }}
                 >
-                  {skippedIds.has(currentCard.id) ? (
-                    <div style={{ width: 140, height: 192, borderRadius: 20, border: '2px dashed rgba(147,197,253,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span className="text-blue-300/50 font-black text-xs uppercase tracking-widest">Skipped</span>
-                    </div>
-                  ) : (
-                    <MysteryRevealCard
-                      sticker={currentCard}
-                      isRevealed={localRevealedIds.has(currentCard.id)}
-                      onReveal={() => handleCardReveal(currentCard)}
-                    />
-                  )}
-                  {!currentHandled && (
-                    <motion.button
-                      onClick={handleSkip}
-                      whileTap={{ scale: 0.92 }}
-                      className="text-[11px] font-bold uppercase tracking-widest text-blue-300/50 active:text-blue-200/70 transition-colors"
-                    >Skip</motion.button>
-                  )}
+                  {renderCardColumn(s)}
                 </motion.div>
-              )}
-            </AnimatePresence>
+              ))}
+            </div>
           </div>
         )}
 
@@ -6055,24 +6049,15 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
               >Play Linqle &amp; daily vote to earn more stickers</motion.p>
             </motion.div>
 
-            <div className="flex gap-3 justify-center items-end">
+            <div className="flex gap-3 sm:gap-5 md:gap-8 justify-center items-start w-full">
               {displayStickers.map((s, i) => (
                 <motion.div key={s.id}
+                  className="flex-1 min-w-0 max-w-[120px] sm:max-w-[170px] md:max-w-[210px] lg:max-w-[250px]"
                   initial={{ scale: 0, y: 60, rotate: (i - 1) * 10 }}
-                  animate={{ scale: 1, y: 0, rotate: (i - 1) * 5 }}
+                  animate={{ scale: 1, y: 0, rotate: 0 }}
                   transition={{ type: 'spring', damping: 16, stiffness: 240, delay: i * 0.08 }}
                 >
-                  {skippedIds.has(s.id) ? (
-                    <div style={{ width: 140, height: 192, borderRadius: 20, border: '2px dashed rgba(147,197,253,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span className="text-blue-300/50 font-black text-xs uppercase tracking-widest">Skipped</span>
-                    </div>
-                  ) : (
-                    <MysteryRevealCard
-                      sticker={s}
-                      isRevealed={localRevealedIds.has(s.id)}
-                      onReveal={() => handleCardReveal(s)}
-                    />
-                  )}
+                  {renderCardColumn(s)}
                 </motion.div>
               ))}
             </div>
