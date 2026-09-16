@@ -254,17 +254,17 @@
   100% { background-position: 0% 50%; }
 }
 .quick-earn-btn-blue {
-  background: linear-gradient(120deg, rgba(59,130,246,0.30), rgba(96,165,250,0.22), rgba(124,58,237,0.16), rgba(59,130,246,0.30));
+  background: linear-gradient(120deg, rgba(255,255,255,0.22), rgba(255,255,255,0.08), rgba(255,255,255,0.16), rgba(255,255,255,0.22));
   background-size: 320% 320%;
   animation: quick-earn-aurora 12s ease-in-out infinite;
-  border-color: rgba(59,130,246,0.35);
+  border-color: rgba(255,255,255,0.55);
 }
 .quick-earn-btn-violet {
-  background: linear-gradient(120deg, rgba(91,33,182,0.28), rgba(124,58,237,0.24), rgba(59,130,246,0.18), rgba(91,33,182,0.28));
+  background: linear-gradient(120deg, rgba(255,255,255,0.18), rgba(255,255,255,0.06), rgba(255,255,255,0.14), rgba(255,255,255,0.18));
   background-size: 320% 320%;
   animation: quick-earn-aurora 12s ease-in-out infinite;
   animation-delay: -4s;
-  border-color: rgba(91,33,182,0.35);
+  border-color: rgba(255,255,255,0.5);
 }
 
 /* --- Liquid glass (Tap/Scan quick-earn buttons) -------------------------
