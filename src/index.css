@@ -389,3 +389,9 @@
   border-radius: 9999px;
 }
 
+/* Google Places Autocomplete's suggestion dropdown is appended to <body> — keep it
+   above onboarding/admin modals, which use z-index values up to 9999. */
+.pac-container {
+  z-index: 10000 !important;
+}
+

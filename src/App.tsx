@@ -703,6 +703,7 @@ interface VendorOnboardingData {
   phone: string;
   description: string;
   location: { lat: number; lng: number; city?: string } | null;
+  geocodedLocation?: { lat: number; lng: number } | null;
 }
 
 interface UserProfile {
@@ -2259,10 +2260,14 @@ export default function App() {
         totalRedeemed: 0
       });
       const composedAddr = composeAddress(data.addrLine1, data.addrLine2, data.addrTown, data.addrState, data.addrPostcode);
+      // The address-autocomplete pick (geocodedLocation) is tied to the actual typed
+      // address and is far more reliable than the device's GPS reading at signup time,
+      // which can be wherever the vendor happened to be standing — prefer it when present.
+      const preciseLoc = data.geocodedLocation ?? data.location;
       const primaryLocation = {
         id: 'primary', label: '', line1: data.addrLine1, line2: data.addrLine2,
         town: data.addrTown, state: data.addrState, postcode: data.addrPostcode,
-        ...(data.location ? { lat: data.location.lat, lng: data.location.lng } : {}),
+        ...(preciseLoc ? { lat: preciseLoc.lat, lng: preciseLoc.lng } : {}),
       };
       const isVisit = data.cardType === 'visit';
       const isSpend = data.cardType === 'spend';
@@ -2285,7 +2290,7 @@ export default function App() {
         ...(!isSkip && isVisit ? { membershipType: 'visit', membershipStampsPerVisit: 1, scanMethod: 'qr' } : {}),
         ...(!isSkip && isSpend ? { membershipType: 'spend', membershipPointsRate: 1, membershipRedemptionRate: 100, scanMethod: 'qr' } : {}),
         trialEndsAt: Timestamp.fromDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
-        ...(data.location ? { lat: data.location.lat, lng: data.location.lng, location: data.location.city ?? '' } : {}),
+        ...(preciseLoc ? { lat: preciseLoc.lat, lng: preciseLoc.lng, location: data.location?.city ?? data.addrTown ?? '' } : {}),
       });
       setProfileCollection('vendors');
     }
@@ -3590,6 +3595,7 @@ function OnboardingScreen({ user, onComplete }: {
   const [addrTown, setAddrTown] = React.useState('');
   const [addrState, setAddrState] = React.useState('');
   const [addrPostcode, setAddrPostcode] = React.useState('');
+  const [addrLatLng, setAddrLatLng] = React.useState<{ lat: number; lng: number } | null>(null);
   const [phone, setPhone] = React.useState('');
   const [description, setDescription] = React.useState('');
 
@@ -3677,7 +3683,7 @@ function OnboardingScreen({ user, onComplete }: {
   const handleFinish = async () => {
     setSaving(true);
     if (isVendor) {
-      await onComplete({ type: 'vendor', businessName, country, companyNumber, category, cardType: cardType ?? 'stamp', addrLine1, addrLine2, addrTown, addrState, addrPostcode, phone, description, location: locationData });
+      await onComplete({ type: 'vendor', businessName, country, companyNumber, category, cardType: cardType ?? 'stamp', addrLine1, addrLine2, addrTown, addrState, addrPostcode, phone, description, location: locationData, geocodedLocation: addrLatLng });
     } else {
       await onComplete({ type: 'consumer', name: fullName.trim(), handle, gender, birthday, location: locationData });
     }
@@ -3940,24 +3946,40 @@ function OnboardingScreen({ user, onComplete }: {
       <h2 className="font-display font-bold text-2xl text-brand-navy mb-1">Business address</h2>
       <p className="text-sm text-brand-navy/75 mb-6">So customers nearby can find you</p>
       <div className="w-full space-y-3">
+        <PlaceAutocompleteInput
+          countryCode={country}
+          placeholder="Search your business name or address"
+          className="w-full px-5 py-4 rounded-2xl bg-brand-gold/5 border-2 border-brand-gold/30 text-brand-navy text-sm focus:outline-none focus:border-brand-gold/60 placeholder:text-brand-navy/50"
+          onSelect={parsed => {
+            setAddrLine1(parsed.line1);
+            setAddrLine2(parsed.line2);
+            setAddrTown(parsed.town);
+            setAddrState(parsed.state);
+            setAddrPostcode(parsed.postcode);
+            setAddrLatLng({ lat: parsed.lat, lng: parsed.lng });
+          }}
+        />
+        {addrLatLng && (
+          <p className="text-xs font-bold text-green-600 flex items-center gap-1">✓ Exact location saved</p>
+        )}
         <input
           type="text"
           value={addrLine1}
-          onChange={e => setAddrLine1(e.target.value)}
+          onChange={e => { setAddrLine1(e.target.value); setAddrLatLng(null); }}
           placeholder="Address line 1 *"
           className="w-full px-5 py-4 rounded-2xl bg-white border-2 border-brand-navy/10 text-brand-navy text-sm focus:outline-none focus:border-brand-gold/60 placeholder:text-brand-navy/72"
         />
         <input
           type="text"
           value={addrLine2}
-          onChange={e => setAddrLine2(e.target.value)}
+          onChange={e => { setAddrLine2(e.target.value); setAddrLatLng(null); }}
           placeholder="Address line 2 (optional)"
           className="w-full px-5 py-4 rounded-2xl bg-white border-2 border-brand-navy/10 text-brand-navy text-sm focus:outline-none focus:border-brand-gold/60 placeholder:text-brand-navy/72"
         />
         <input
           type="text"
           value={addrTown}
-          onChange={e => setAddrTown(e.target.value)}
+          onChange={e => { setAddrTown(e.target.value); setAddrLatLng(null); }}
           placeholder="Town / Suburb *"
           className="w-full px-5 py-4 rounded-2xl bg-white border-2 border-brand-navy/10 text-brand-navy text-sm focus:outline-none focus:border-brand-gold/60 placeholder:text-brand-navy/72"
         />
@@ -3965,14 +3987,14 @@ function OnboardingScreen({ user, onComplete }: {
           <input
             type="text"
             value={addrState}
-            onChange={e => setAddrState(e.target.value)}
+            onChange={e => { setAddrState(e.target.value); setAddrLatLng(null); }}
             placeholder="State"
             className="flex-1 px-5 py-4 rounded-2xl bg-white border-2 border-brand-navy/10 text-brand-navy text-sm focus:outline-none focus:border-brand-gold/60 placeholder:text-brand-navy/72"
           />
           <input
             type="text"
             value={addrPostcode}
-            onChange={e => setAddrPostcode(e.target.value)}
+            onChange={e => { setAddrPostcode(e.target.value); setAddrLatLng(null); }}
             placeholder="Postcode"
             inputMode="numeric"
             className="w-28 px-5 py-4 rounded-2xl bg-white border-2 border-brand-navy/10 text-brand-navy text-sm focus:outline-none focus:border-brand-gold/60 placeholder:text-brand-navy/72"
@@ -6482,6 +6504,7 @@ function AdminAddBusinessForm({ onClose }: { onClose: () => void }) {
   const [addrTown, setAddrTown] = useState('');
   const [addrState, setAddrState] = useState('');
   const [addrPostcode, setAddrPostcode] = useState('');
+  const [addrLatLng, setAddrLatLng] = useState<{ lat: number; lng: number } | null>(null);
   const [logoUrl, setLogoUrl] = useState('');
   const [uploadingLogo, setUploadingLogo] = useState(false);
 
@@ -6549,6 +6572,7 @@ function AdminAddBusinessForm({ onClose }: { onClose: () => void }) {
         locations: [{
           id: 'primary', label: '',
           line1: addrLine1, line2: addrLine2, town: addrTown, state: addrState, postcode: addrPostcode,
+          ...(addrLatLng ? { lat: addrLatLng.lat, lng: addrLatLng.lng } : {}),
         }],
         ownerUid: 'unclaimed',
         isVerified: false,
@@ -6557,6 +6581,7 @@ function AdminAddBusinessForm({ onClose }: { onClose: () => void }) {
         cardEnabled: false,
         membershipEnabled: false,
         createdAt: serverTimestamp(),
+        ...(addrLatLng ? { lat: addrLatLng.lat, lng: addrLatLng.lng } : {}),
       });
       if (hasOffer) {
         await addDoc(collection(db, 'store_offers'), {
@@ -6646,13 +6671,28 @@ function AdminAddBusinessForm({ onClose }: { onClose: () => void }) {
           <div>
             <label className={labelClass}>Address</label>
             <div className="space-y-2">
-              <input value={addrLine1} onChange={e => setAddrLine1(e.target.value)} placeholder="Line 1" className={inputClass} />
-              <input value={addrLine2} onChange={e => setAddrLine2(e.target.value)} placeholder="Line 2 (optional)" className={inputClass} />
+              <PlaceAutocompleteInput
+                placeholder="Search business name or address"
+                className={inputClass + " bg-brand-gold/5 border-brand-gold/30"}
+                onSelect={parsed => {
+                  setAddrLine1(parsed.line1);
+                  setAddrLine2(parsed.line2);
+                  setAddrTown(parsed.town);
+                  setAddrState(parsed.state);
+                  setAddrPostcode(parsed.postcode);
+                  setAddrLatLng({ lat: parsed.lat, lng: parsed.lng });
+                }}
+              />
+              {addrLatLng && (
+                <p className="text-xs font-bold text-green-600">✓ Exact location saved</p>
+              )}
+              <input value={addrLine1} onChange={e => { setAddrLine1(e.target.value); setAddrLatLng(null); }} placeholder="Line 1" className={inputClass} />
+              <input value={addrLine2} onChange={e => { setAddrLine2(e.target.value); setAddrLatLng(null); }} placeholder="Line 2 (optional)" className={inputClass} />
               <div className="grid grid-cols-2 gap-2">
-                <input value={addrTown} onChange={e => setAddrTown(e.target.value)} placeholder="Town/City" className={inputClass} />
-                <input value={addrState} onChange={e => setAddrState(e.target.value)} placeholder="County" className={inputClass} />
+                <input value={addrTown} onChange={e => { setAddrTown(e.target.value); setAddrLatLng(null); }} placeholder="Town/City" className={inputClass} />
+                <input value={addrState} onChange={e => { setAddrState(e.target.value); setAddrLatLng(null); }} placeholder="County" className={inputClass} />
               </div>
-              <input value={addrPostcode} onChange={e => setAddrPostcode(e.target.value)} placeholder="Postcode" className={inputClass} />
+              <input value={addrPostcode} onChange={e => { setAddrPostcode(e.target.value); setAddrLatLng(null); }} placeholder="Postcode" className={inputClass} />
             </div>
           </div>
         </div>
@@ -24826,6 +24866,103 @@ async function geocodeAddressGlobal(address: string): Promise<{ lat: number; lng
     _geocodeCache.set(address, null);
     return null;
   }
+}
+
+// Lazy-loads the Google Maps JS SDK (places library) once and reuses it across every
+// PlaceAutocompleteInput on the page, instead of each mount injecting its own <script>.
+let _googlePlacesLoadPromise: Promise<void> | null = null;
+function loadGooglePlacesScript(): Promise<void> {
+  if ((window as any).google?.maps?.places) return Promise.resolve();
+  if (_googlePlacesLoadPromise) return _googlePlacesLoadPromise;
+  _googlePlacesLoadPromise = new Promise((resolve, reject) => {
+    const key = import.meta.env.VITE_GOOGLE_PLACES_API_KEY;
+    if (!key) { reject(new Error('VITE_GOOGLE_PLACES_API_KEY not configured')); return; }
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places&loading=async`;
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Failed to load Google Maps script'));
+    document.head.appendChild(script);
+  });
+  return _googlePlacesLoadPromise;
+}
+
+interface ParsedPlace {
+  line1: string; line2: string; town: string; state: string; postcode: string;
+  countryCode: string; lat: number; lng: number; formattedAddress: string;
+}
+
+function parseGooglePlace(place: any): ParsedPlace | null {
+  const loc = place?.geometry?.location;
+  if (!loc) return null;
+  const comps: any[] = place.address_components || [];
+  const get = (type: string, useShort = false) => {
+    const c = comps.find(c => c.types.includes(type));
+    return c ? (useShort ? c.short_name : c.long_name) : '';
+  };
+  const line1 = [get('street_number'), get('route')].filter(Boolean).join(' ');
+  const town = get('locality') || get('postal_town') || get('sublocality_level_1') || get('administrative_area_level_2');
+  return {
+    line1: line1 || place.name || '',
+    line2: get('subpremise'),
+    town,
+    state: get('administrative_area_level_1', true),
+    postcode: get('postal_code'),
+    countryCode: get('country', true),
+    lat: typeof loc.lat === 'function' ? loc.lat() : loc.lat,
+    lng: typeof loc.lng === 'function' ? loc.lng() : loc.lng,
+    formattedAddress: place.formatted_address || '',
+  };
+}
+
+// Business/address search box backed by Google Places Autocomplete — picking a result
+// hands back the exact rooftop/POI coordinate plus parsed address parts, so callers can
+// auto-fill their structured fields instead of trusting free-text geocoding of what's typed.
+// Renders nothing if VITE_GOOGLE_PLACES_API_KEY isn't configured, so pages that use it
+// degrade to whatever manual fields they render alongside it.
+function PlaceAutocompleteInput({ onSelect, placeholder, countryCode, className }: {
+  onSelect: (parsed: ParsedPlace) => void;
+  placeholder?: string;
+  countryCode?: string;
+  className?: string;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [ready, setReady] = useState(false);
+  const [unavailable, setUnavailable] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadGooglePlacesScript()
+      .then(() => { if (!cancelled) setReady(true); })
+      .catch(() => { if (!cancelled) setUnavailable(true); });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!ready || !inputRef.current) return;
+    const g = (window as any).google;
+    const autocomplete = new g.maps.places.Autocomplete(inputRef.current, {
+      fields: ['address_components', 'geometry', 'name', 'formatted_address'],
+      ...(countryCode ? { componentRestrictions: { country: countryCode.toLowerCase() } } : {}),
+    });
+    const listener = autocomplete.addListener('place_changed', () => {
+      const parsed = parseGooglePlace(autocomplete.getPlace());
+      if (parsed) onSelect(parsed);
+    });
+    return () => g.maps.event.removeListener(listener);
+  }, [ready, countryCode]);
+
+  if (unavailable) return null;
+
+  return (
+    <input
+      ref={inputRef}
+      type="text"
+      defaultValue=""
+      placeholder={placeholder || 'Search your business or address'}
+      className={className}
+    />
+  );
 }
 
 interface LinqleScore { uid: string; name: string; handle?: string; photoURL?: string; avatar?: any; guesses: number; timeMs: number; won: boolean; completedAt: any; }
