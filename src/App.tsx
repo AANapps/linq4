@@ -5779,7 +5779,6 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
   type PackPhase = 'sealed' | 'opening' | 'reveal' | 'done';
   const [phase, setPhase] = useState<PackPhase>('sealed');
   const [localRevealedIds, setLocalRevealedIds] = useState<Set<string>>(new Set());
-  const [skippedIds, setSkippedIds] = useState<Set<string>>(new Set());
   const [burstTier, setBurstTier] = useState<StickerTier | null>(null);
   const [burstKey, setBurstKey] = useState(0);
 
@@ -5813,13 +5812,26 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
     }
   };
 
-  const handleSkip = (sticker: CollectibleSticker) => {
-    if (localRevealedIds.has(sticker.id) || skippedIds.has(sticker.id)) return;
-    vibrate(25);
-    setSkippedIds(prev => new Set([...prev, sticker.id]));
+  // One button, skips the whole reveal: every remaining card is marked revealed
+  // behind the scenes (so it's saved and won't show up as unrevealed later) without
+  // playing its flip, and the flow jumps straight to the done screen.
+  const handleSkipAll = () => {
+    const remaining = displayStickers.filter(s => !localRevealedIds.has(s.id));
+    if (remaining.length === 0) return;
+    vibrate(30);
+    setLocalRevealedIds(prev => new Set([...prev, ...remaining.map(s => s.id)]));
+    if (cardId) {
+      updateDoc(doc(db, 'sticker_cards', cardId), { revealedIds: arrayUnion(...remaining.map(s => s.id)) }).catch(console.error);
+    } else if (uid) {
+      updateDoc(doc(db, 'user_stickers', uid), {
+        revealedIds: arrayUnion(...remaining.map(s => s.id)),
+        uniqueTiers: arrayUnion(...remaining.map(s => s.tier)),
+      }).catch(console.error);
+    }
+    setPhase('done');
   };
 
-  const allHandled = displayStickers.length > 0 && displayStickers.every(s => localRevealedIds.has(s.id) || skippedIds.has(s.id));
+  const allHandled = displayStickers.length > 0 && displayStickers.every(s => localRevealedIds.has(s.id));
 
   useEffect(() => {
     if (phase === 'reveal' && allHandled) {
@@ -5845,34 +5857,16 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
   // Deterministic burst particles (no Math.random in render)
   const burstAngles = [0,30,60,90,120,150,180,210,240,270,300,330];
 
-  // One card column — sized responsively by its flex parent, independently tappable,
-  // with its own skip control so all cards in the pack can be handled at the same time.
-  const renderCardColumn = (s: CollectibleSticker) => {
-    const handled = localRevealedIds.has(s.id) || skippedIds.has(s.id);
-    return (
-      <div className="w-full flex flex-col items-center gap-2">
-        <div className="w-full" style={{ aspectRatio: '140 / 192' }}>
-          {skippedIds.has(s.id) ? (
-            <div style={{ width: '100%', height: '100%', borderRadius: 20, border: '2px dashed rgba(147,197,253,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span className="text-blue-300/50 font-black text-xs uppercase tracking-widest">Skipped</span>
-            </div>
-          ) : (
-            <MysteryRevealCard
-              sticker={s}
-              isRevealed={localRevealedIds.has(s.id)}
-              onReveal={() => handleCardReveal(s)}
-            />
-          )}
-        </div>
-        <button
-          onClick={() => handleSkip(s)}
-          disabled={handled}
-          className={cn('text-[10px] font-bold uppercase tracking-widest transition-colors',
-            handled ? 'opacity-0 pointer-events-none' : 'text-blue-300/50 active:text-blue-200/70')}
-        >Skip</button>
-      </div>
-    );
-  };
+  // One card slot — sized responsively by its flex parent, independently tappable.
+  const renderCardSlot = (s: CollectibleSticker) => (
+    <div className="w-full" style={{ aspectRatio: '140 / 192' }}>
+      <MysteryRevealCard
+        sticker={s}
+        isRevealed={localRevealedIds.has(s.id)}
+        onReveal={() => handleCardReveal(s)}
+      />
+    </div>
+  );
 
   return (
     <motion.div
@@ -5881,6 +5875,15 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[300] flex flex-col items-center justify-center overflow-hidden gradient-logo-blue"
     >
+      {/* Skip — reveals every remaining card behind the scenes and fast-forwards to done */}
+      {phase === 'reveal' && !allHandled && (
+        <button
+          onClick={handleSkipAll}
+          className="absolute right-5 z-20 text-[11px] font-bold uppercase tracking-widest text-white/40 active:text-white/70 transition-colors"
+          style={{ top: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 1.25rem)' }}
+        >Skip</button>
+      )}
+
       {/* Stars */}
       {PACK_STARS.map((star, i) => (
         <motion.div key={i} className="absolute rounded-full bg-white pointer-events-none"
@@ -6026,7 +6029,7 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
                   animate={{ scale: 1, y: 0, rotate: 0 }}
                   transition={{ type: 'spring', damping: 16, stiffness: 240, delay: i * 0.08 }}
                 >
-                  {renderCardColumn(s)}
+                  {renderCardSlot(s)}
                 </motion.div>
               ))}
             </div>
@@ -6057,7 +6060,7 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
                   animate={{ scale: 1, y: 0, rotate: 0 }}
                   transition={{ type: 'spring', damping: 16, stiffness: 240, delay: i * 0.08 }}
                 >
-                  {renderCardColumn(s)}
+                  {renderCardSlot(s)}
                 </motion.div>
               ))}
             </div>
