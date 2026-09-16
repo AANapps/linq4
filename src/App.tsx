@@ -31569,6 +31569,18 @@ function ProfileSettingsModal({ profile, user, onClose, onLogout, onDeleteAccoun
                         </button>
                       )}
                     </div>
+                    <PlaceAutocompleteInput
+                      countryCode={(profile as any).country}
+                      placeholder="Search business name or address"
+                      className="w-full px-3 py-2.5 rounded-xl bg-brand-gold/5 border border-brand-gold/30 text-xs font-medium focus:outline-none"
+                      onSelect={parsed => setStoreLocations(prev => prev.map((l, i) => i === idx ? {
+                        ...l, line1: parsed.line1, line2: parsed.line2, town: parsed.town, state: parsed.state, postcode: parsed.postcode,
+                        lat: parsed.lat, lng: parsed.lng,
+                      } : l))}
+                    />
+                    {loc.lat != null && loc.lng != null && (
+                      <p className="text-[11px] font-bold text-green-600">✓ Exact location saved</p>
+                    )}
                     <input value={loc.line1} onChange={e => upd({ line1: e.target.value })} placeholder="Address line 1" className="w-full px-3 py-2.5 rounded-xl bg-brand-bg border border-brand-navy/8 text-xs font-medium focus:outline-none" />
                     <input value={loc.line2} onChange={e => upd({ line2: e.target.value })} placeholder="Address line 2 (optional)" className="w-full px-3 py-2.5 rounded-xl bg-brand-bg border border-brand-navy/8 text-xs font-medium focus:outline-none" />
                     <input value={loc.town} onChange={e => upd({ town: e.target.value })} placeholder="Town / Suburb" className="w-full px-3 py-2.5 rounded-xl bg-brand-bg border border-brand-navy/8 text-xs font-medium focus:outline-none" />
