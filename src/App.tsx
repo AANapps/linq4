@@ -5868,6 +5868,26 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
     </div>
   );
 
+  // 2-up grid — 2 cards on the top row, any odd one left over centered on its own
+  // row below, each card as big as the available width allows.
+  const renderCardGrid = () => (
+    <div className="grid grid-cols-2 justify-center gap-4 sm:gap-6 md:gap-8 w-full" style={{ justifyItems: 'center' }}>
+      {displayStickers.map((s, i) => {
+        const isTrailingOdd = displayStickers.length % 2 === 1 && i === displayStickers.length - 1;
+        return (
+          <motion.div key={s.id}
+            className={cn('w-full max-w-[160px] sm:max-w-[210px] md:max-w-[250px] lg:max-w-[290px]', isTrailingOdd && 'col-span-2')}
+            initial={{ scale: 0, y: 60 }}
+            animate={{ scale: 1, y: 0 }}
+            transition={{ type: 'spring', damping: 16, stiffness: 240, delay: i * 0.08 }}
+          >
+            {renderCardSlot(s)}
+          </motion.div>
+        );
+      })}
+    </div>
+  );
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -5879,7 +5899,7 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
       {phase === 'reveal' && !allHandled && (
         <button
           onClick={handleSkipAll}
-          className="absolute right-5 z-20 text-[11px] font-bold uppercase tracking-widest text-white/40 active:text-white/70 transition-colors"
+          className="absolute right-5 z-20 px-3.5 py-1.5 rounded-full bg-white/12 border border-white/20 text-[11px] font-bold uppercase tracking-widest text-white/70 active:text-white active:bg-white/20 transition-colors"
           style={{ top: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 1.25rem)' }}
         >Skip</button>
       )}
@@ -6021,18 +6041,7 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
               >Tap a card to reveal</motion.p>
             )}
 
-            <div className="flex gap-3 sm:gap-5 md:gap-8 justify-center items-start w-full">
-              {displayStickers.map((s, i) => (
-                <motion.div key={s.id}
-                  className="flex-1 min-w-0 max-w-[120px] sm:max-w-[170px] md:max-w-[210px] lg:max-w-[250px]"
-                  initial={{ scale: 0, y: 60, rotate: (i - 1) * 10 }}
-                  animate={{ scale: 1, y: 0, rotate: 0 }}
-                  transition={{ type: 'spring', damping: 16, stiffness: 240, delay: i * 0.08 }}
-                >
-                  {renderCardSlot(s)}
-                </motion.div>
-              ))}
-            </div>
+            {renderCardGrid()}
           </div>
         )}
 
@@ -6052,18 +6061,7 @@ function PackOpeningModal({ stickers, cardId, uid, onClose }: { stickers: Collec
               >Play Linqle &amp; daily vote to earn more stickers</motion.p>
             </motion.div>
 
-            <div className="flex gap-3 sm:gap-5 md:gap-8 justify-center items-start w-full">
-              {displayStickers.map((s, i) => (
-                <motion.div key={s.id}
-                  className="flex-1 min-w-0 max-w-[120px] sm:max-w-[170px] md:max-w-[210px] lg:max-w-[250px]"
-                  initial={{ scale: 0, y: 60, rotate: (i - 1) * 10 }}
-                  animate={{ scale: 1, y: 0, rotate: 0 }}
-                  transition={{ type: 'spring', damping: 16, stiffness: 240, delay: i * 0.08 }}
-                >
-                  {renderCardSlot(s)}
-                </motion.div>
-              ))}
-            </div>
+            {renderCardGrid()}
 
             <motion.div className="w-full space-y-2.5" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}>
               <motion.p className="text-white/50 text-[11px] font-bold text-center uppercase tracking-widest"
